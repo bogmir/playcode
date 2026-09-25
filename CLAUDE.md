@@ -483,7 +483,7 @@ Each is pinned by a test as it behaves today, not endorsed.
 - [ ] **`ExportSiteLive` hardcodes `_site`** and a shared temporary zip path, so its generate button cannot be tested; `StaticSite.generate/1` is tested instead
 - [x] **Custom changeset messages had no Spanish translation** - all 15, not just "must be given together with the end year". `gettext.extract` cannot see a plain string in `add_error`/`message:`, so they are hand-added to `errors.pot` and the PO files; `test/playcode_web/error_translations_test.exs` finds them in `lib/` and fails on any without Spanish
 - [ ] **`mix playcode.import.filemaker` includes archived plays**; `/admin/filemaker` excludes them
-- [ ] **`Places.Authority.Stub` ships in `lib/`**
+- [x] **`Places.Authority.Stub` shipped in `lib/`** - now `test/support/place_authority_stub.ex`, compiled only in test
 
 ### Low Priority / Future
 - [ ] **"Review character in text" UI** — admin page to review and assign/reassign `character_id` (the `who` attribute) on speeches across an entire play. Researchers need to: (1) define character identifiers (`xml_id`, the "acrónimo" e.g. `don_diego`) in the dramatis personae, (2) associate each `<speaker>` with a character to generate `<sp who="#don_diego">`, and (3) bulk-review all speech-character associations throughout the play. Character CRUD and import-time `who` resolution already exist; what's missing is the review/bulk-assign UI.
