@@ -150,11 +150,6 @@ msgstr "Explorar, editar y gestionar las obras importadas."
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: lib/playcode_web/live/admin/import_live.ex:92
-#, elixir-autogen, elixir-format
-msgid "Cannot read directory"
-msgstr "No se puede leer el directorio"
-
 #: lib/playcode_web/live/admin/play_form_live.ex:292
 #, elixir-autogen, elixir-format
 msgid "Catalan"
@@ -598,11 +593,6 @@ msgstr "Nueva contraseña"
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr "Siguiente"
-
-#: lib/playcode_web/live/admin/import_live.ex:77
-#, elixir-autogen, elixir-format
-msgid "No .xml files found in %{dir}"
-msgstr "No se encontraron archivos .xml en %{dir}"
 
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1510
 #, elixir-autogen, elixir-format

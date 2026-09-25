@@ -235,7 +235,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 - `GET /admin/plays/new` - Create play
 - `GET /admin/plays/:id/edit` - Edit play metadata
 - `GET /admin/plays/:id` - Play detail (structure, stats, export buttons)
-- `GET /admin/plays/import` - Import TEI-XML files (upload, server path, or directory)
+- `GET /admin/plays/import` - Import TEI-XML files (file upload; bulk server-side import is `mix playcode.import.tei`)
 - `GET /admin/activity-log` - Activity audit log with filters (`:view_activity_log`)
 - `GET /admin/users` - Invite, deactivate, reactivate, force logout, change role (`:manage_users`)
 - `GET /admin/export` - Static site generation UI (`:deploy_site`)
@@ -476,7 +476,7 @@ Then visit:
 
 ### Found by the test rework (2026-09-26)
 Each is pinned by a test as it behaves today, not endorsed.
-- [ ] **`ImportLive` `import_directory`** - no form sends it, but any researcher's socket can push the event and make the server read and import every `.xml` under any path (`import_live.ex`, pinned in `import_live_test.exs`)
+- [x] **`ImportLive` `import_directory`** - any researcher's socket could push it and make the server import every `.xml` under any path. Handler deleted; `import_live_test.exs` asserts the pushed event imports nothing
 - [ ] **Drafts are public** - an incomplete play is hidden from `/plays` but served by `/plays/:code`, `/api/v1` and `/export/:id/*` (sequential ids); pinned in `play_catalogue_live_test.exs`
 - [ ] **Inline `<stage>` is flattened** - a plain `<stage>` inside a verse line or prose paragraph (~2,500 in the corpus) becomes part of the line's text on import; the corpus sweep does not count these
 - [x] **Activity-log order was unstable within one second** - `activity_logs.inserted_at` is now microsecond precision (migration `20260926120000`), so a burst of entries lists newest first; the `to:` date filter ends at `23:59:59.999999`

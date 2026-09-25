@@ -55,43 +55,9 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   end
 
   def handle_event("cancel_import", _params, socket) do
-    Enum.each(socket.assigns.pending, fn {path, _filename} ->
-      if String.starts_with?(path, System.tmp_dir!()), do: File.rm(path)
-    end)
+    Enum.each(socket.assigns.pending, fn {path, _filename} -> File.rm(path) end)
 
     {:noreply, socket |> assign(:pending, []) |> assign(:previews, [])}
-  end
-
-  def handle_event("import_directory", %{"directory" => dir}, socket) do
-    dir = String.trim(dir)
-
-    case File.ls(dir) do
-      {:ok, files} ->
-        xml_files =
-          files
-          |> Enum.filter(&String.ends_with?(&1, ".xml"))
-          |> Enum.sort()
-
-        if xml_files == [] do
-          {:noreply,
-           put_flash(socket, :error, gettext("No .xml files found in %{dir}", dir: dir))}
-        else
-          pending =
-            Enum.map(xml_files, fn file ->
-              {Path.join(dir, file), file}
-            end)
-
-          {:noreply, start_or_confirm(socket, pending)}
-        end
-
-      {:error, reason} ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           "#{gettext("Cannot read directory")}: #{format_error(reason)}"
-         )}
-    end
   end
 
   # An import that lands on a play we already hold replaces its whole text. Say so and
@@ -187,10 +153,8 @@ defmodule PlaycodeWeb.Admin.ImportLive do
           update(socket, :errors, &[{filename, reason} | &1])
       end
 
-    # Clean up temp files created by upload consume (not directory imports)
-    if String.starts_with?(path, System.tmp_dir!()) do
-      File.rm(path)
-    end
+    # Every pending path is the temp copy the "import" handler made.
+    File.rm(path)
 
     send(self(), {:import_next, rest})
     {:noreply, update(socket, :import_done, &(&1 + 1))}

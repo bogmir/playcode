@@ -91,10 +91,12 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
     assert Catalogue.list_plays() == []
   end
 
-  # Pinned as it is today, not endorsed. No form on the page sends this event, but any
-  # researcher's socket can, and the server then reads and imports every .xml in
-  # whatever server path it names. Listed as a follow-up.
-  test "a pushed import_directory event imports from any server path", %{conn: conn} do
+  # No form sends import_directory any more, so the handler went too: a researcher's
+  # socket could push it and make the server read and import every .xml under any
+  # path it named. The view now has no clause for the event and crashes, as it does
+  # for any unknown event. This test pinned the hole before the fix.
+  @tag :capture_log
+  test "a pushed import_directory event reads nothing from the server", %{conn: conn} do
     dir = Path.join(System.tmp_dir!(), "import-dir-#{System.unique_integer([:positive])}")
     File.mkdir_p!(dir)
     on_exit(fn -> File.rm_rf(dir) end)
@@ -102,9 +104,9 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
     File.write!(Path.join(dir, "play.xml"), tei(code: code))
 
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
-    render_submit(lv, "import_directory", %{"directory" => dir})
-    await_import(lv)
+    Process.flag(:trap_exit, true)
+    catch_exit(render_submit(lv, "import_directory", %{"directory" => dir}))
 
-    assert Catalogue.get_play_by_code!(code)
+    assert Catalogue.list_plays() == []
   end
 end
