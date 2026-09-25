@@ -330,7 +330,7 @@ defmodule PlaycodeWeb.Admin.FilemakerSyncLive do
     with {:ok, index} <- Filemaker.load_index(path),
          {:ok, versions} <- Filemaker.load_versions(path),
          true <- map_size(index) > 0 or map_size(versions) > 0 do
-      plays = FilemakerSync.all_plays() |> Enum.reject(& &1.deleted_at)
+      plays = FilemakerSync.all_plays()
       {:ok, FilemakerSync.plan(index, plays, versions), plays}
     else
       false -> {:error, :no_records}

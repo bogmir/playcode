@@ -46,9 +46,9 @@ defmodule Playcode.Import.FilemakerSync do
   @doc "The FileMaker code hiding at the front of a play code."
   def base_code(code), do: code |> String.split("_") |> List.first()
 
-  @doc "Every play in the database, for `plan/2`."
+  @doc "Every play not archived, for `plan/2`. An archived play is not synced."
   def all_plays do
-    Play |> order_by([p], p.code) |> Repo.all()
+    Play |> where([p], is_nil(p.deleted_at)) |> order_by([p], p.code) |> Repo.all()
   end
 
   @doc "Diffs the export against the given plays. Writes nothing."

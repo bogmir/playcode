@@ -482,7 +482,7 @@ Each is pinned by a test as it behaves today, not endorsed.
 - [x] **Activity-log order was unstable within one second** - `activity_logs.inserted_at` is now microsecond precision (migration `20260926120000`), so a burst of entries lists newest first; the `to:` date filter ends at `23:59:59.999999`
 - [ ] **`ExportSiteLive` hardcodes `_site`** and a shared temporary zip path, so its generate button cannot be tested; `StaticSite.generate/1` is tested instead
 - [x] **Custom changeset messages had no Spanish translation** - all 15, not just "must be given together with the end year". `gettext.extract` cannot see a plain string in `add_error`/`message:`, so they are hand-added to `errors.pot` and the PO files; `test/playcode_web/error_translations_test.exs` finds them in `lib/` and fails on any without Spanish
-- [ ] **`mix playcode.import.filemaker` includes archived plays**; `/admin/filemaker` excludes them
+- [x] **`mix playcode.import.filemaker` included archived plays** (and crashed applying to one: `Catalogue.get_play!/1` hides them); `/admin/filemaker` excluded them. Both now skip archived plays, through `FilemakerSync.all_plays/0`
 - [x] **`Places.Authority.Stub` shipped in `lib/`** - now `test/support/place_authority_stub.ex`, compiled only in test
 
 ### Low Priority / Future

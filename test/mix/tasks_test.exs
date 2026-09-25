@@ -126,6 +126,17 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert Catalogue.get_play!(play.id).language == "en"
     end
 
+    # Same rule as /admin/filemaker and every Catalogue read.
+    test "an archived play is left out", %{play: play} do
+      {:ok, _} = Catalogue.delete_play(play)
+
+      out = run("playcode.import.filemaker", ["--path", @export])
+
+      refute out =~ "EMOTHE0038"
+      assert out =~ "updated 0, failed 0"
+      assert Catalogue.get_play!(play.id, include_deleted: true).language == "es"
+    end
+
     test "a missing export is refused" do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.filemaker", [
