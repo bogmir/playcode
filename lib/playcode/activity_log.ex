@@ -108,7 +108,7 @@ defmodule Playcode.ActivityLog do
   defp filter_to(query, date_string) when is_binary(date_string) do
     case Date.from_iso8601(date_string) do
       {:ok, date} ->
-        {:ok, dt} = DateTime.new(date, ~T[23:59:59], "Etc/UTC")
+        {:ok, dt} = DateTime.new(date, ~T[23:59:59.999999], "Etc/UTC")
         where(query, [e], e.inserted_at <= ^dt)
 
       _ ->

@@ -108,16 +108,29 @@ defmodule Playcode.ActivityLogTest do
       end
     end
 
+    # Entries logged within the same second, as a burst of admin actions is, still
+    # list newest first.
     test "the most recent entry comes first", %{entries: e} do
-      # Timestamps have one-second precision, so age one entry explicitly.
+      burst =
+        for _ <- 1..10 do
+          {:ok, entry} = ActivityLog.log(%{action: "export", resource_type: "play"})
+          entry.id
+        end
+
+      assert Enum.map(ActivityLog.list_entries(), & &1.id) ==
+               Enum.reverse([e.a.id, e.b.id, e.c.id | burst])
+    end
+
+    test "a `to` date includes the last fraction of that day", %{entries: e} do
+      # No public function logs at a chosen instant, so set the timestamp directly.
       import Ecto.Query
+      alias Playcode.{ActivityLog.Entry, Repo}
 
-      from(entry in Playcode.ActivityLog.Entry, where: entry.id in ^[e.a.id, e.c.id])
-      |> Playcode.Repo.update_all(
-        set: [inserted_at: DateTime.add(DateTime.utc_now(:second), -60)]
-      )
+      today = Date.utc_today()
+      {:ok, last_moment} = DateTime.new(today, ~T[23:59:59.500000], "Etc/UTC")
+      Repo.update_all(from(x in Entry, where: x.id == ^e.a.id), set: [inserted_at: last_moment])
 
-      assert hd(ActivityLog.list_entries()).id == e.b.id
+      assert e.a.id in Enum.map(ActivityLog.list_entries(to: Date.to_iso8601(today)), & &1.id)
     end
 
     test "pages", %{entries: _} do

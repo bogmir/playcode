@@ -18,7 +18,7 @@ defmodule Playcode.ActivityLog.Entry do
     belongs_to :user, Playcode.Accounts.User
     belongs_to :play, Playcode.Catalogue.Play
 
-    timestamps(type: :utc_datetime, updated_at: false)
+    timestamps(type: :utc_datetime_usec, updated_at: false)
   end
 
   def changeset(entry, attrs) do
