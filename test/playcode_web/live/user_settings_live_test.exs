@@ -101,7 +101,9 @@ defmodule PlaycodeWeb.UserSettingsLiveTest do
         |> submit_password(user.email, "not my password", "a brand new password")
         |> render_submit()
 
-      assert html =~ t("is not valid")
+      # Changeset messages live in the errors domain. This read `t/2` (the default
+      # domain) and passed only while the message had no Spanish translation.
+      assert html =~ Gettext.dgettext(PlaycodeWeb.Gettext, "errors", "is not valid")
       assert Accounts.get_user_by_email_and_password(user.email, valid_user_password())
     end
   end

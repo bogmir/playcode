@@ -107,3 +107,50 @@ msgstr ""
 
 msgid "must be equal to %{number}"
 msgstr ""
+
+## Custom changeset messages: plain strings, so extract never
+## finds them. Add each new one here by hand.
+msgid "must have the @ sign and no spaces"
+msgstr ""
+
+msgid "does not match password"
+msgstr ""
+
+msgid "is not valid"
+msgstr ""
+
+msgid "is already in use for this play"
+msgstr ""
+
+msgid "must be given together with the end year"
+msgstr ""
+
+msgid "must be given together with the start year"
+msgstr ""
+
+msgid "must not be before the start year"
+msgstr ""
+
+msgid "at least one name is required"
+msgstr ""
+
+msgid "is still used by one or more plays"
+msgstr ""
+
+msgid "is the parent of other places"
+msgstr ""
+
+msgid "would create a loop"
+msgstr ""
+
+msgid "is already linked to another place"
+msgstr ""
+
+msgid "cannot be itself"
+msgstr ""
+
+msgid "another name is already preferred for this language"
+msgstr ""
+
+msgid "is already linked to this play"
+msgstr ""

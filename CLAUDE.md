@@ -481,7 +481,7 @@ Each is pinned by a test as it behaves today, not endorsed.
 - [ ] **Inline `<stage>` is flattened** - a plain `<stage>` inside a verse line or prose paragraph (~2,500 in the corpus) becomes part of the line's text on import; the corpus sweep does not count these
 - [ ] **Activity-log order is unstable within one second** - `desc inserted_at` has second precision, then `desc id` on UUIDs
 - [ ] **`ExportSiteLive` hardcodes `_site`** and a shared temporary zip path, so its generate button cannot be tested; `StaticSite.generate/1` is tested instead
-- [ ] **"must be given together with the end year"** (`play.ex`) has no Spanish translation
+- [x] **Custom changeset messages had no Spanish translation** - all 15, not just "must be given together with the end year". `gettext.extract` cannot see a plain string in `add_error`/`message:`, so they are hand-added to `errors.pot` and the PO files; `test/playcode_web/error_translations_test.exs` finds them in `lib/` and fails on any without Spanish
 - [ ] **`mix playcode.import.filemaker` includes archived plays**; `/admin/filemaker` excludes them
 - [ ] **`Places.Authority.Stub` ships in `lib/`**
 

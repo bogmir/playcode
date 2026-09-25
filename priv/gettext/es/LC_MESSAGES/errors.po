@@ -100,3 +100,48 @@ msgstr "debe ser mayor o igual que %{number}"
 
 msgid "must be equal to %{number}"
 msgstr "debe ser igual a %{number}"
+
+msgid "must have the @ sign and no spaces"
+msgstr "debe contener una @ y ningún espacio"
+
+msgid "does not match password"
+msgstr "no coincide con la contraseña"
+
+msgid "is not valid"
+msgstr "no es válida"
+
+msgid "is already in use for this play"
+msgstr "ya se usa en esta obra"
+
+msgid "must be given together with the end year"
+msgstr "debe indicarse junto con el año final"
+
+msgid "must be given together with the start year"
+msgstr "debe indicarse junto con el año inicial"
+
+msgid "must not be before the start year"
+msgstr "no puede ser anterior al año inicial"
+
+msgid "at least one name is required"
+msgstr "se necesita al menos un nombre"
+
+msgid "is still used by one or more plays"
+msgstr "aún lo usan una o más obras"
+
+msgid "is the parent of other places"
+msgstr "contiene otros lugares"
+
+msgid "would create a loop"
+msgstr "crearía un ciclo"
+
+msgid "is already linked to another place"
+msgstr "ya está vinculado a otro lugar"
+
+msgid "cannot be itself"
+msgstr "no puede ser el mismo lugar"
+
+msgid "another name is already preferred for this language"
+msgstr "ya hay otro nombre preferido para esta lengua"
+
+msgid "is already linked to this play"
+msgstr "ya está vinculado a esta obra"
