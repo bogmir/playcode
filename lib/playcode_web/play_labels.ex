@@ -55,4 +55,18 @@ defmodule PlaycodeWeb.PlayLabels do
   def place_role_label(_other), do: ""
 
   def place_role_options, do: Enum.map(PlayPlace.roles(), &{place_role_label(&1), &1})
+
+  @editor_roles ~w(principal translator critical_editor researcher editor digital_editor reviewer)
+
+  @doc "The Spanish-or-English name of a `play_editors.role`; an unknown one as stored."
+  def editor_role_label("principal"), do: gettext("Principal investigator")
+  def editor_role_label("translator"), do: gettext("Translator")
+  def editor_role_label("critical_editor"), do: gettext("Critical edition editor")
+  def editor_role_label("researcher"), do: gettext("Researcher")
+  def editor_role_label("editor"), do: gettext("Editor")
+  def editor_role_label("digital_editor"), do: gettext("Digital editor")
+  def editor_role_label("reviewer"), do: gettext("Reviewer")
+  def editor_role_label(role), do: role
+
+  def editor_role_options, do: Enum.map(@editor_roles, &{editor_role_label(&1), &1})
 end

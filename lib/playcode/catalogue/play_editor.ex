@@ -23,7 +23,7 @@ defmodule Playcode.Catalogue.PlayEditor do
     |> validate_required([:person_name, :role])
     |> validate_inclusion(
       :role,
-      ~w(editor digital_editor reviewer principal translator researcher)
+      ~w(editor digital_editor reviewer principal translator researcher critical_editor)
     )
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
   end

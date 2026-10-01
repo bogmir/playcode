@@ -38,6 +38,28 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLiveTest do
     assert translators(play) == []
   end
 
+  test "a critical edition's editor added here is credited as edicion_critica",
+       %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/editors")
+    lv |> element("button", t("Add editor")) |> render_click()
+
+    lv
+    |> form("#editor-form",
+      play_editor: %{
+        "person_name" => "Durá Celma, Rosa",
+        "role" => "critical_editor",
+        "organization" => "Grupo DICAT"
+      }
+    )
+    |> render_submit()
+
+    [editor] = Playcode.Catalogue.get_play_with_all!(play.id).editors
+    assert lv |> element("#editor-#{editor.id}") |> render() =~ t("Critical edition editor")
+
+    assert [{%{"role" => "edicion_critica"}, "Durá Celma, Rosa Grupo DICAT"}] =
+             xml_elements(export_tei(play), "editor", within: "titleStmt")
+  end
+
   test "a nameless editor is refused", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/editors")
     lv |> element("button", t("Add editor")) |> render_click()

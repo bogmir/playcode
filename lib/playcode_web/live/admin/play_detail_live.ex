@@ -9,6 +9,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   alias Playcode.Import.WordParser
   alias Playcode.PlayContent
   alias Playcode.Statistics
+  alias PlaycodeWeb.PlayLabels
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -130,14 +131,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   defp error_to_string(:not_accepted), do: gettext("Only .docx files are accepted.")
   defp error_to_string(:too_many_files), do: gettext("Only one file allowed.")
   defp error_to_string(other), do: inspect(other)
-
-  defp role_label("principal"), do: gettext("Principal investigator")
-  defp role_label("translator"), do: gettext("Translator")
-  defp role_label("researcher"), do: gettext("Researcher")
-  defp role_label("editor"), do: gettext("Editor")
-  defp role_label("digital_editor"), do: gettext("Digital editor")
-  defp role_label("reviewer"), do: gettext("Reviewer")
-  defp role_label(role), do: role
 
   @impl true
   def render(assigns) do
@@ -435,7 +428,8 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           <div :for={editor <- @play.editors} class="flex items-center justify-between p-3">
             <span class="font-medium">{editor.person_name}</span>
             <span class="text-sm text-base-content/60">
-              {role_label(editor.role)} {if editor.organization, do: "— #{editor.organization}"}
+              {PlayLabels.editor_role_label(editor.role)} {if editor.organization,
+                do: "— #{editor.organization}"}
             </span>
           </div>
         </div>

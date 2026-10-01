@@ -292,7 +292,9 @@ defmodule PlaycodeWeb.PlayShowLive do
             >
               <span :for={editor <- @play.editors} class="text-xs text-base-content/50">
                 {editor.person_name}
-                <span class="text-base-content/35">({role_label(editor.role)})</span>
+                <span class="text-base-content/35">
+                  ({PlayLabels.editor_role_label(editor.role)})
+                </span>
               </span>
             </div>
 
@@ -506,12 +508,4 @@ defmodule PlaycodeWeb.PlayShowLive do
   defp relationship_type_label("adaptacion"), do: gettext("Adaptation")
   defp relationship_type_label("refundicion"), do: gettext("Reworking")
   defp relationship_type_label(_), do: ""
-
-  defp role_label("principal"), do: gettext("Principal investigator")
-  defp role_label("translator"), do: gettext("Translator")
-  defp role_label("researcher"), do: gettext("Researcher")
-  defp role_label("editor"), do: gettext("Editor")
-  defp role_label("digital_editor"), do: gettext("Digital editor")
-  defp role_label("reviewer"), do: gettext("Reviewer")
-  defp role_label(role), do: role
 end

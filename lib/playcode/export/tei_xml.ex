@@ -92,12 +92,20 @@ defmodule Playcode.Export.TeiXml do
         []
       end
 
-    # Translators as <editor role="translator"><persName>...
+    # Translators and the critical edition's editor as <editor role="…"><persName>…
     translators =
       play.editors
       |> Enum.filter(&(&1.role == "translator"))
       |> Enum.map(fn e ->
         element(:editor, %{role: "translator"}, [element(:persName, e.person_name)])
+      end)
+
+    critical_editors =
+      play.editors
+      |> Enum.filter(&(&1.role == "critical_editor"))
+      |> Enum.map(fn e ->
+        org = if e.organization, do: [element(:orgName, e.organization)], else: []
+        element(:editor, %{role: "edicion_critica"}, [element(:persName, e.person_name) | org])
       end)
 
     # respStmt for digital editors in titleStmt (from titleStmt import)
@@ -142,7 +150,8 @@ defmodule Playcode.Export.TeiXml do
 
     element(
       :titleStmt,
-      titles ++ authors ++ translators ++ sponsor ++ funder ++ resp_stmts ++ principal
+      titles ++
+        authors ++ translators ++ critical_editors ++ sponsor ++ funder ++ resp_stmts ++ principal
     )
   end
 

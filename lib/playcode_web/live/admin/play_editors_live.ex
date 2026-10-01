@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.PlayEditor
   alias Playcode.ActivityLog
+  alias PlaycodeWeb.PlayLabels
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -145,25 +146,6 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
      |> put_flash(:info, gettext("Editor deleted."))}
   end
 
-  defp role_options do
-    [
-      {gettext("Principal investigator"), "principal"},
-      {gettext("Translator"), "translator"},
-      {gettext("Researcher"), "researcher"},
-      {gettext("Editor"), "editor"},
-      {gettext("Digital editor"), "digital_editor"},
-      {gettext("Reviewer"), "reviewer"}
-    ]
-  end
-
-  defp role_label("principal"), do: gettext("Principal investigator")
-  defp role_label("translator"), do: gettext("Translator")
-  defp role_label("researcher"), do: gettext("Researcher")
-  defp role_label("editor"), do: gettext("Editor")
-  defp role_label("digital_editor"), do: gettext("Digital editor")
-  defp role_label("reviewer"), do: gettext("Reviewer")
-  defp role_label(role), do: role
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -214,7 +196,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
               <.input
                 field={@editor_form[:role]}
                 type="select"
-                options={role_options()}
+                options={PlayLabels.editor_role_options()}
                 required
               />
             </div>
@@ -273,7 +255,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
             <div class="flex-1 min-w-0">
               <p class="font-medium text-base-content truncate">{editor.person_name}</p>
               <p class="text-sm text-base-content/60">
-                {role_label(editor.role)}
+                {PlayLabels.editor_role_label(editor.role)}
                 <span :if={editor.organization} class="text-base-content/40">
                   — {editor.organization}
                 </span>

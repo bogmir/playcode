@@ -3692,3 +3692,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Welcome to Playcode!"
 msgstr ""
+
+#: lib/playcode_web/play_labels.ex:64
+#, elixir-autogen, elixir-format
+msgid "Critical edition editor"
+msgstr ""

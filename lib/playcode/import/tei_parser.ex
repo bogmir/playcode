@@ -616,7 +616,8 @@ defmodule Playcode.Import.TeiParser do
         })
       end
 
-      # Translators specified directly in titleStmt as <editor role="translator">
+      # <editor role="…"> in titleStmt: translators, researchers and the editor of the
+      # critical edition the text is based on. Any other role (canon60) is skipped.
       title_editors = find_children(title_stmt_children, "editor")
 
       title_editors
@@ -627,7 +628,9 @@ defmodule Playcode.Import.TeiParser do
         normalized_role =
           case role do
             "translator" -> "translator"
+            "traductor" -> "translator"
             "researcher" -> "researcher"
+            "edicion_critica" -> "critical_editor"
             _ -> nil
           end
 
@@ -643,6 +646,7 @@ defmodule Playcode.Import.TeiParser do
             play_id: play.id,
             person_name: person_name,
             role: normalized_role,
+            organization: safe_text(find_child(ed_children, "orgName")),
             position: idx
           })
         end

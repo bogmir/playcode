@@ -116,6 +116,41 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  describe "an <editor> in the title statement" do
+    defp title_editors(title_stmt),
+      do: xml_elements(roundtrip(tei(title_stmt: title_stmt)), "editor", within: "titleStmt")
+
+    # 7 corpus translations (EMOTHE0050, 0053, 0059…) spell the role in Spanish.
+    test "role=\"traductor\" is a translator" do
+      assert [{%{"role" => "translator"}, "Leandro Fernández de Moratín"}] =
+               title_editors(~s(<editor role="traductor">Leandro Fernández de Moratín</editor>))
+    end
+
+    # The editor of the critical edition the text is based on — the person the
+    # FileMaker index credits as "ed.". 23 corpus files carry one.
+    test "role=\"edicion_critica\" is the critical edition's editor, with their group" do
+      assert [{%{"role" => "edicion_critica"}, "Durá Celma, Rosa Grupo DICAT"}] =
+               title_editors(
+                 ~s(<editor role="edicion_critica"><persName>Durá Celma, Rosa</persName><orgName>Grupo DICAT</orgName></editor>)
+               )
+    end
+
+    test "an empty orgName is no group" do
+      xml =
+        roundtrip(
+          tei(
+            title_stmt:
+              ~s(<editor role="edicion_critica"><persName>Creaser, John</persName><orgName></orgName></editor>)
+          )
+        )
+
+      assert [{%{"role" => "edicion_critica"}, "Creaser, John"}] =
+               xml_elements(xml, "editor", within: "titleStmt")
+
+      assert xml_elements(xml, "orgName", within: "editor") == []
+    end
+  end
+
   test "an all-capitals title is title-cased, a mixed-case one is left alone" do
     for {given, expected} <- [
           {"LOS RAMILLETES DE MADRID", "Los Ramilletes de Madrid"},

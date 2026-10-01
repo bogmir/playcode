@@ -3698,3 +3698,8 @@ msgstr "Bienvenido a Playcode"
 #, elixir-autogen, elixir-format
 msgid "Welcome to Playcode!"
 msgstr "¡Bienvenido a Playcode!"
+
+#: lib/playcode_web/play_labels.ex:64
+#, elixir-autogen, elixir-format
+msgid "Critical edition editor"
+msgstr "Editor de la edición crítica"
