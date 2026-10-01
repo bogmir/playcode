@@ -62,5 +62,14 @@ jobs:
       - name: Compile
         run: mix compile --warnings-as-errors
 
+      # mix_audit has no severity threshold: list every advisory, fail on anything
+      # above low (a missing severity counts as above). Runs after Compile so no
+      # compiler output lands in the JSON.
+      - name: Audit dependencies
+        run: |
+          mix deps.audit --format json > audit.json || true
+          jq -r '.vulnerabilities[] | "\(.advisory.severity)\t\(.dependency.package) \(.dependency.version)\t\(.advisory.url)"' audit.json
+          jq -e '[.vulnerabilities[].advisory | select(.severity != "low")] == []' audit.json
+
       - name: Run tests
         run: mix test
