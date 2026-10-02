@@ -113,4 +113,13 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     assert length(plays) == 2
     assert length(shard["sueño"]) == 6
   end
+
+  test "the search page works only with JavaScript, and says so without it" do
+    dir = generate!([Playcode.TestFixtures.play_fixture(%{"is_complete" => true})])
+    page = html!(dir, "search.html")
+
+    assert page |> LazyHTML.query(~s(form[hidden][role="search"])) |> Enum.count() == 1
+    assert page |> LazyHTML.query("noscript") |> LazyHTML.text() =~ "Search needs JavaScript"
+    assert "assets/search.js" in (page |> LazyHTML.query("script") |> LazyHTML.attribute("src"))
+  end
 end

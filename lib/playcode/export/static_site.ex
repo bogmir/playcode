@@ -231,6 +231,7 @@ defmodule Playcode.Export.StaticSite do
 
     File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
+    File.write!(Path.join(dir, "search.html"), Pages.render(:search, %{site: site}))
     Search.write_index(dir, plays, Enum.map(results, & &1.postings))
   end
 
