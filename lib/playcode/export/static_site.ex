@@ -56,7 +56,13 @@ defmodule Playcode.Export.StaticSite do
           |> Enum.with_index(1)
           |> Enum.map(fn {play, n} ->
             opts[:on_progress].(%{step: :play, current: n, total: total, detail: play.code})
-            play.id |> Edition.load() |> write_play(dir, site)
+            edition = Edition.load(play.id)
+
+            Map.put(
+              write_play(edition, dir, site),
+              :postings,
+              Search.write_play(dir, edition, n - 1)
+            )
           end)
 
         opts[:on_progress].(%{
@@ -110,9 +116,18 @@ defmodule Playcode.Export.StaticSite do
       codes = list_exported_codes(dir)
       plays = Catalogue.list_plays(sort: :title_sort) |> Enum.filter(&(&1.code in codes))
 
+      File.rm_rf!(Path.join(dir, "search"))
       File.mkdir_p!(dir)
       write_assets(dir)
-      write_index_pages(plays, Enum.map(plays, fn _ -> %{} end), dir, opts)
+
+      results =
+        plays
+        |> Enum.with_index()
+        |> Enum.map(fn {play, i} ->
+          %{postings: Search.write_play(dir, Edition.load(play.id), i)}
+        end)
+
+      write_index_pages(plays, results, dir, opts)
     end)
   end
 
@@ -132,7 +147,8 @@ defmodule Playcode.Export.StaticSite do
 
   # Play codes become folder names that are deleted and rewritten; Play does not
   # validate them, so anything but a plain name ("..", "", "a/b") is refused here.
-  defp safe_code!(code) do
+  @doc false
+  def safe_code!(code) do
     if is_binary(code) and Regex.match?(~r/\A[A-Za-z0-9_-]+\z/, code) do
       code
     else
@@ -201,7 +217,7 @@ defmodule Playcode.Export.StaticSite do
     %{}
   end
 
-  defp write_index_pages(plays, _results, dir, opts) do
+  defp write_index_pages(plays, results, dir, opts) do
     site = site(opts, MapSet.new(plays, & &1.code))
 
     assigns = %{
@@ -215,6 +231,7 @@ defmodule Playcode.Export.StaticSite do
 
     File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
+    Search.write_index(dir, plays, Enum.map(results, & &1.postings))
   end
 
   # One entry per work: each published play under the published play at the root of
