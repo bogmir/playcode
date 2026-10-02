@@ -63,6 +63,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert act |> LazyHTML.query("script") |> LazyHTML.attribute("src") == [
              "../../assets/site.js"
            ]
+
+    assert act |> LazyHTML.query("#l3 script") |> Enum.empty?()
+    assert read!(dir, "plays/#{play.code}/act-1.html") =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
   end
 
   test "the second half of a split verse starts where the first half ended" do
