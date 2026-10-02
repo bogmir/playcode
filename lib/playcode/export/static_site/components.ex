@@ -133,13 +133,22 @@ defmodule Playcode.Export.StaticSite.Components do
     ~H"""
     <ul>
       <li><a href="index.html" aria-current={@current == "index" && "page"}>Title page</a></li>
-      <li :for={page <- @edition.pages}>
+      <li :for={page <- Enum.reject(@edition.pages, & &1.scene)}>
         <a href={page.slug <> ".html"} aria-current={@current == page.slug && "page"}>{page.title}</a>
-        <ul :if={(@all_scenes or @current == page.slug) and page.division.children != []}>
+        <ul :if={(@all_scenes or open?(@edition, page, @current)) and page.division.children != []}>
           <li :for={scene <- page.division.children}>
-            <a href={"#{page.slug}.html##{@edition.anchors[scene.id]}"}>
-              {scene.title || "Scene #{scene.position + 1}"}
-            </a>
+            <%= if scene_page = Edition.scene_page(@edition, scene) do %>
+              <a
+                href={scene_page.slug <> ".html"}
+                aria-current={@current == scene_page.slug && "page"}
+              >
+                {Edition.scene_title(scene)}
+              </a>
+            <% else %>
+              <a href={"#{page.slug}.html##{@edition.anchors[scene.id]}"}>
+                {Edition.scene_title(scene)}
+              </a>
+            <% end %>
           </li>
         </ul>
       </li>
@@ -149,6 +158,15 @@ defmodule Playcode.Export.StaticSite.Components do
       </li>
     </ul>
     """
+  end
+
+  # A division's scenes show in the rail on its page and on its scene pages.
+  defp open?(edition, page, current) do
+    current == page.slug or
+      Enum.any?(
+        edition.pages,
+        &(&1.scene != nil and &1.division.id == page.division.id and &1.slug == current)
+      )
   end
 
   attr :play, :map, required: true
@@ -335,6 +353,57 @@ defmodule Playcode.Export.StaticSite.Components do
       <section :for={scene <- @division.children} id={@edition.anchors[scene.id]}>
         <h3 :if={scene.title} class="scene-head">{scene.title}</h3>
         <.el :for={el <- scene.loaded_elements} el={el} edition={@edition} />
+      </section>
+    </section>
+    """
+  end
+
+  attr :edition, :map, required: true
+  attr :page, :map, required: true
+
+  @doc """
+  What one division page shows: the division whole; or, for a division split by scene,
+  its own text and a list of its scene pages; or one scene of it.
+  """
+  def page_text(%{page: %{scene: nil, split: false}} = assigns) do
+    ~H"""
+    <.division_text edition={@edition} division={@page.division} />
+    """
+  end
+
+  def page_text(%{page: %{scene: nil, split: true}} = assigns) do
+    assigns =
+      assign(
+        assigns,
+        :scene_pages,
+        Enum.filter(
+          assigns.edition.pages,
+          &(&1.scene && &1.division.id == assigns.page.division.id)
+        )
+      )
+
+    ~H"""
+    <section class="division" id={@edition.anchors[@page.division.id]}>
+      <h2 :if={@page.division.title} class="act-head">{@page.division.title}</h2>
+      <.el :for={el <- @page.division.loaded_elements} el={el} edition={@edition} />
+      <nav aria-label="Scenes">
+        <ul>
+          <li :for={scene_page <- @scene_pages}>
+            <a href={scene_page.slug <> ".html"}>{Edition.scene_title(scene_page.scene)}</a>
+          </li>
+        </ul>
+      </nav>
+    </section>
+    """
+  end
+
+  def page_text(assigns) do
+    ~H"""
+    <section class="division">
+      <h2 :if={@page.division.title} class="act-head">{@page.division.title}</h2>
+      <section id={@edition.anchors[@page.scene.id]}>
+        <h3 :if={@page.scene.title} class="scene-head">{@page.scene.title}</h3>
+        <.el :for={el <- @page.scene.loaded_elements} el={el} edition={@edition} />
       </section>
     </section>
     """

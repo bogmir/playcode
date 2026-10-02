@@ -12,7 +12,7 @@
     data-cite={Components.cite_prefix(@edition.play, nil)}
   >
     <Components.division_text
-      :for={page <- @edition.pages}
+      :for={page <- Enum.reject(@edition.pages, & &1.scene)}
       edition={@edition}
       division={page.division}
     />

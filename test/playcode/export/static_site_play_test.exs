@@ -34,6 +34,11 @@ defmodule Playcode.Export.StaticSitePlayTest do
   defp page(dir, play, file), do: html!(dir, "plays/#{play.code}/#{file}")
   defp ids(html), do: html |> LazyHTML.query("[id]") |> LazyHTML.attribute("id")
 
+  defp next(html),
+    do: html |> LazyHTML.query(~s(a[rel="next"])) |> LazyHTML.attribute("href") |> Enum.uniq()
+
+  defp links(html), do: html |> LazyHTML.query("main a") |> LazyHTML.attribute("href")
+
   # Regression: WordParser puts a stanza straight under the division when {m} opens
   # with no speaker; its verses used to get no item, no anchor, and the build raised.
   test "a Word-imported stanza with no speaker is published, and counted" do
@@ -206,5 +211,55 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
     assert act |> LazyHTML.query("[data-cite]") |> LazyHTML.attribute("data-cite") ==
              ["Tester, Structured Play, ACT I"]
+  end
+
+  describe "a division too long for one page" do
+    setup do
+      # 72,000 bytes of text per scene: 144,000 in the act, over the 120,000 threshold.
+      words = String.duplicate("palabra ", 9_000)
+
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <stage>Salen todos</stage>
+          <div2 type="escena" n="1"><head>Escena 1</head><sp><speaker>A</speaker><p>#{words}uno</p></sp></div2>
+          <div2 type="escena" n="2"><head>Escena 2</head><sp><speaker>B</speaker><p>#{words}dos</p></sp></div2>
+        </div1>
+        <div1 type="acto" n="2"><head>Acto II</head><sp><speaker>A</speaker><p>fin</p></sp></div1>
+        """)
+
+      %{play: play, dir: dir}
+    end
+
+    test "gets a page per scene, walked in order", %{play: play, dir: dir} do
+      act = page(dir, play, "act-1.html")
+
+      assert LazyHTML.text(act) =~ "Salen todos"
+      refute LazyHTML.text(act) =~ "palabra"
+      assert "act-1-s1.html" in links(act)
+      assert "act-1-s2.html" in links(act)
+
+      assert next(act) == ["act-1-s1.html"]
+      assert next(page(dir, play, "act-1-s1.html")) == ["act-1-s2.html"]
+      assert next(page(dir, play, "act-1-s2.html")) == ["act-2.html"]
+
+      second = LazyHTML.text(page(dir, play, "act-1-s2.html"))
+      assert second =~ "palabra dos"
+      refute second =~ "palabra uno"
+    end
+
+    test "the full text still holds every scene", %{play: play, dir: dir} do
+      text = read!(dir, "plays/#{play.code}/text.html")
+
+      assert text =~ "palabra uno"
+      assert text =~ "palabra dos"
+    end
+
+    test "a search result lands on the scene's page", %{play: play, dir: dir} do
+      {"lines", _, %{"lines" => lines}} = load_js!(dir, "search/lines/#{play.code}/0.js")
+
+      assert ["act-1-s2" | _] =
+               Enum.find(lines, &String.ends_with?(Enum.at(&1, 5), "palabra dos"))
+    end
   end
 end

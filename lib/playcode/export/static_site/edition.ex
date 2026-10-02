@@ -28,7 +28,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   def load(id) do
     divisions = PlayContent.load_play_content(id)
     items = Metrics.items(divisions)
-    pages = pages(divisions)
+    pages = pages(divisions, items)
 
     %__MODULE__{
       play: Catalogue.get_play_with_all!(id),
@@ -57,32 +57,79 @@ defmodule Playcode.Export.StaticSite.Edition do
     |> elem(1)
   end
 
+  # A division with more text than this gets a page per scene too, so that no act page
+  # outgrows its 80 KB (gzipped) budget: on the dev corpus the largest pages that fit hold
+  # 71 KB of text; the three that did not, 200–218 KB.
+  @split_bytes 120_000
+
   # Every top-level division with text gets a page: acts are act-N by their ordinal
   # among all acts, as in the statistics; anything else is named by its type, with
-  # -2, -3 for repeats. The cast list goes on the title page.
-  defp pages(divisions) do
+  # -2, -3 for repeats. The cast list goes on the title page. A division over
+  # @split_bytes with two or more scenes also gets a page per scene, after its own.
+  defp pages(divisions, items) do
+    bytes =
+      Enum.reduce(items, %{}, fn item, acc ->
+        Map.update(acc, item.division.id, text_bytes(item), &(&1 + text_bytes(item)))
+      end)
+
     {pages, _counts} =
       Enum.map_reduce(divisions, %{}, fn division, counts ->
         base = if division.type in Metrics.act_types(), do: "act", else: division.type
         n = Map.get(counts, base, 0) + 1
         slug = if base == "act" or n > 1, do: "#{base}-#{n}", else: base
         title = division.title || String.capitalize(division.type)
-        {%{slug: slug, title: title, division: division}, Map.put(counts, base, n)}
+        page = %{slug: slug, title: title, division: division, scene: nil, split: false}
+        {page, Map.put(counts, base, n)}
       end)
 
-    Enum.reject(pages, &(&1.division.type == "elenco" or empty?(&1.division)))
+    pages
+    |> Enum.reject(&(&1.division.type == "elenco" or empty?(&1.division)))
+    |> Enum.flat_map(fn page ->
+      scenes = Enum.reject(page.division.children, &(&1.loaded_elements == []))
+
+      if Map.get(bytes, page.division.id, 0) > @split_bytes and length(scenes) >= 2 do
+        [%{page | split: true} | Enum.map(scenes, &scene_page_for(page, &1))]
+      else
+        [page]
+      end
+    end)
   end
+
+  defp text_bytes(item), do: byte_size(item.element.content || "")
+
+  defp scene_page_for(page, scene) do
+    %{
+      slug: "#{page.slug}-s#{scene.position + 1}",
+      title: "#{page.title}, #{scene_title(scene)}",
+      division: page.division,
+      scene: scene,
+      split: false
+    }
+  end
+
+  @doc "A scene's heading, or its number when it has none."
+  def scene_title(scene), do: scene.title || "Scene #{scene.position + 1}"
+
+  @doc "The page a scene has to itself, or nil when it shares its division's page."
+  def scene_page(%__MODULE__{pages: pages}, scene),
+    do: Enum.find(pages, &(&1.scene && &1.scene.id == scene.id))
 
   defp empty?(division),
     do:
       division.loaded_elements == [] and Enum.all?(division.children, &(&1.loaded_elements == []))
 
   defp page_of(pages, items) do
-    slug_of = Map.new(pages, &{&1.division.id, &1.slug})
+    slug_of =
+      Map.new(pages, fn
+        %{scene: nil} = page -> {page.division.id, page.slug}
+        page -> {page.scene.id, page.slug}
+      end)
 
-    for item <- items, Map.has_key?(slug_of, item.division.id), into: %{} do
-      {item.element.id, slug_of[item.division.id]}
-    end
+    for item <- items,
+        slug when not is_nil(slug) <-
+          [(item.scene && slug_of[item.scene.id]) || slug_of[item.division.id]],
+        into: %{},
+        do: {item.element.id, slug}
   end
 
   # A verse is `l<number>`. A play that numbers each scene from 1 gets
@@ -110,7 +157,9 @@ defmodule Playcode.Export.StaticSite.Edition do
       end)
 
     divisions =
-      Enum.flat_map(pages, fn page ->
+      pages
+      |> Enum.reject(& &1.scene)
+      |> Enum.flat_map(fn page ->
         scenes = Enum.map(page.division.children, &{&1.id, "#{page.slug}-s#{&1.position + 1}"})
         [{page.division.id, page.slug} | scenes]
       end)
