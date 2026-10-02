@@ -71,7 +71,7 @@
 
   if (!root.document) return;
 
-  var form, results, count, facetsEl, state = null, renders = 0;
+  var form, results, count, facetsEl, state = null, renders = 0, runs = 0;
   var FACETS = [
     ['language', 'Language', function (play) { return play.language_name; }],
     ['author', 'Author', function (play) { return play.author || '—'; }],
@@ -133,7 +133,8 @@
 
   function run() {
     var query = form.elements.q.value, mode = form.elements.mode.value;
-    root.history.replaceState(null, '', '?' + new URLSearchParams({ q: query, mode: mode }).toString());
+    var my = ++runs;
+    try { root.history.replaceState(null, '', '?' + new URLSearchParams({ q: query, mode: mode }).toString()); } catch (e) { /* file:// may refuse */ }
     var parsed = S.parse(query);
     if (!parsed.words.length) { state = null; render(); return; }
     var keys = parsed.words.map(S.shardKey).filter(function (k, i, a) { return a.indexOf(k) === i; });
@@ -149,6 +150,7 @@
         return loadLines(playsOf(hits)).then(function () { return phraseFilter(hits, parsed.phrases, mode); });
       })
       .then(function (hits) {
+        if (my !== runs) return;
         state = { hits: hits, words: parsed.words, mode: mode, open: {}, filters: {}, allPlays: false };
         render();
       });
