@@ -3791,7 +3791,7 @@ msgstr "Automático (%{form})"
 #: lib/playcode_web/live/admin/play_form_live.ex:702
 #, elixir-autogen, elixir-format
 msgid "Automatic follows the text: verse when it has any verse lines."
-msgstr "Automático sigue el texto: verso si tiene algún verso."
+msgstr "Automático: sigue el texto (verso si tiene algún verso)."
 
 #: lib/playcode_web/live/admin/play_form_live.ex:698
 #, elixir-autogen, elixir-format

@@ -70,14 +70,16 @@ verse-type chart. The data is already in the cached JSONB, so this is a componen
 
 ## 5. Two size budgets the full corpus misses
 
-**Problem**: the redesign's size budget (largest act page 80 KB gzipped; a first search,
-meaning the largest shard plus the five largest `search/lines/*.js`, at most 300 KB) holds for
-the three plays published today but not for the full dev corpus (83 plays, `--all`):
+**Problem**, as measured before the follow-ups: the redesign's size budget (largest act page
+80 KB gzipped; a first search, meaning the largest shard plus the five largest lines files, at
+most 300 KB) held for the three plays then published but not for the full dev corpus (83 plays,
+`--all`). The lines files were then in the old format, one flat `.js` file per play directly
+under `search/lines/`.
 
 - Largest act page: 84.7 KB gzipped (EMOTHE0254 act-1, EMOTHE0084 act-1) against 80 KB.
-  Today's published plays: 31.4 KB.
+  The three published plays: 31.4 KB.
 - First search: about 2.4 MB raw, 0.75 MB gzipped, against 300 KB; the largest shard, "de",
-  is 626,640 B. Today's published plays: about 877 KB raw, 280 KB gzipped.
+  was 626,640 B. The three published plays: about 877 KB raw, 280 KB gzipped.
 
 Neither is asserted by a test; the build only reports them (`generate/1`'s return, the mix
 task's printed line), so nothing fails when they are exceeded.
