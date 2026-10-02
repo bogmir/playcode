@@ -122,6 +122,7 @@ lib/
 │       ├── pdf.ex                    # PDF via ChromicPDF (headless Chrome)
 │       ├── epub.ex                   # EPUB 3 generation via BUPE
 │       ├── compare_html.ex           # Standalone comparison HTML with sync scroll
+│       ├── site_builder.ex           # The one process that writes and ships the admin's site
 │       └── static_site.ex            # Static site orchestrator
 │           ├── edition.ex            # One play prepared: pages, anchors, refs, split-verse ghosts
 │           ├── pages.ex              # embed_templates "pages/*" → HTML strings
@@ -287,6 +288,7 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 - `Playcode.Statistics.Metrics` — metrical passages, characters, presence, divisions; cached by `Playcode.Statistics` (bump `@version` when what it stores changes)
 - `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
 - `StaticSite.Deployer` — pushes `_site/` to a GitHub Pages branch
+- `Playcode.Export.SiteBuilder` — the one process that writes and ships the admin's site (`StaticSite.output_dir/0`): generate, add a play, remove one, deploy. It runs one job at a time under `SiteBuilder.Tasks` and refuses another while it runs (`{:error, :busy}`), because two builds at once drop a play from the incremental index and a deploy during a build pushes half a site. It broadcasts `:started`, `:progress`, `:done` and `:failed` on `"static_site"`, so every admin's export page shows the same build. `mix playcode.export.site` runs in its own VM and calls `StaticSite.generate/1` directly, unserialised: its default `_site` is also the admin page's directory in dev, so pass `-o` while a server is building
 
 `generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three. Size budgets: `style.css` 25 KB, `site.js` and `search.js` 15 KB each, and the fonts 300 KB are asserted in `static_site_test.exs`; an act page at most 80 KB gzipped and a first search at most 300 KB gzipped are only reported by the build (`generate/1`'s return and the mix task's printed line), not asserted. On the full dev corpus (83 plays, `--all`) the largest act page is 43.1 KB gzipped (EMOTHE0084, 0254 and 0648 are split into scene pages). A first single-word search costs at most ~166 KB gzipped (*sueño* 148 KB, *honneur* 166 KB, *de* 137 KB), under the 300 KB budget; a phrase over common words does not (*"vida es"* 954 KB, *"la vida es"* 691 KB), because the postings hold no word positions and every candidate line's chunk must load (`docs/static-site-improvements.md`, item 5). Builds, measured on the 83 plays at `9b37335`: 45.2 s sequential, 17.0 s parallel; removing one play 2.8 s, adding one 4.3 s.
 

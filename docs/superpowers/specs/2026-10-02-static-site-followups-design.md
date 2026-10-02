@@ -65,7 +65,8 @@ tried (*sueño*, *amor*, *de*, *y*, *honneur*, *que*, *"vida es"*) costs 33–16
 3. **Work-family pages follow.** Adding or removing a play re-renders the title pages of its
    published original and translations, so no title page links a play that is gone.
 4. **The admin page stays responsive.** Switching a play off runs in a task, like switching
-   one on; one build at a time, as now.
+   one on. `SiteBuilder` owns the site directory and refuses a second job while one runs, on
+   every admin's page.
 
 ## Part C — very long divisions
 
