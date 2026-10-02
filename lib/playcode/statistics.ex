@@ -8,10 +8,14 @@ defmodule Playcode.Statistics do
   alias Playcode.Statistics.PlayStatistic
   alias Playcode.PlayContent.{Division, Element, ElementCharacter}
 
+  # Bump when compute/1 changes what it stores: a cached row with another version is
+  # recomputed on its next read, so no migration or manual recompute is needed.
+  @version 2
+
   def get_statistics(play_id) do
     case Repo.get_by(PlayStatistic, play_id: play_id) do
-      nil -> compute_and_store(play_id)
-      stat -> stat
+      %PlayStatistic{data: %{"version" => @version}} = stat -> stat
+      _missing_or_stale -> compute_and_store(play_id)
     end
   end
 
@@ -53,6 +57,7 @@ defmodule Playcode.Statistics do
     division_to_act = build_division_to_act_map(play_id, acts)
 
     %{
+      "version" => @version,
       "act_label" => act_label(acts),
       "num_acts" => length(acts),
       "scenes" => compute_scenes(play_id, acts),

@@ -36,6 +36,18 @@ defmodule Playcode.StatisticsTest do
     assert [%{"name" => "ALFA", "speeches" => 1}] = stat.data["character_appearances"]
   end
 
+  test "a row cached by an older version is recomputed on read" do
+    %{play: play} = TestFixtures.play_with_structure_fixture()
+    stat = Statistics.get_statistics(play.id)
+
+    # No public function writes a stale row, by design, so the test ages it directly.
+    alias Playcode.Repo
+    stale = stat.data |> Map.delete("version") |> Map.put("total_verses", 999)
+    stat |> Ecto.Changeset.change(data: stale) |> Repo.update!()
+
+    assert Statistics.get_statistics(play.id).data["total_verses"] == 1
+  end
+
   test "recompute/1 refreshes cached statistics after content changes" do
     %{play: play, line_group: line_group, scene: scene} =
       TestFixtures.play_with_structure_fixture()
