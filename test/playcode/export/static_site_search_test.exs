@@ -165,6 +165,16 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     )
   end
 
+  defp rewrite_verse!(play, text) do
+    [line] =
+      for d <- Playcode.PlayContent.load_play_content(play.id),
+          el <- d.loaded_elements,
+          %{type: "verse_line"} = l <- el.children,
+          do: l
+
+    {:ok, _} = Playcode.PlayContent.update_element(line, %{content: text})
+  end
+
   describe "updating a generated site" do
     setup do
       # Distinct titles fix the catalogue order: "Alfa" (second) sorts before "Zeta"
@@ -204,13 +214,7 @@ defmodule Playcode.Export.StaticSiteSearchTest do
 
       # Change the first play after the site was built: adding the second must not
       # reload it, so its entries still say "primero".
-      [line] =
-        for d <- Playcode.PlayContent.load_play_content(first.id),
-            el <- d.loaded_elements,
-            %{type: "verse_line"} = l <- el.children,
-            do: l
-
-      {:ok, _} = Playcode.PlayContent.update_element(line, %{content: "nada"})
+      rewrite_verse!(first, "nada")
 
       :ok = Playcode.Export.StaticSite.generate_single_play(second.id, output_dir: dir)
 
@@ -221,6 +225,19 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       # Added play first, so the carried one moved from index 0 to 1.
       assert first_index == 1
       assert [1, 1, _] = shard["primero"]
+      refute File.exists?(Path.join([dir, "search", "index", "na.js"]))
+    end
+
+    test "a published play with no text does not switch the incremental index off",
+         %{first: first, second: second} do
+      empty = Playcode.TestFixtures.play_fixture(%{"is_complete" => true})
+      dir = generate!([first, empty], all: true)
+      rewrite_verse!(first, "nada")
+
+      :ok = Playcode.Export.StaticSite.generate_single_play(second.id, output_dir: dir)
+
+      {"index", "pr", shard} = load_js!(dir, "search/index/pr.js")
+      assert Map.has_key?(shard, "primero")
       refute File.exists?(Path.join([dir, "search", "index", "na.js"]))
     end
 

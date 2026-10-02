@@ -73,6 +73,8 @@ defmodule Playcode.Export.StaticSite.Search do
     code = StaticSite.safe_code!(edition.play.code)
     play_dir = Path.join([dir, "search", "lines", code])
     File.rm_rf!(play_dir)
+    # Kept even with no lines: indexed_codes/1 reads a missing folder as an old index.
+    File.mkdir_p!(play_dir)
 
     entries =
       for item <- edition.items, Map.has_key?(edition.page_of, item.element.id) do
