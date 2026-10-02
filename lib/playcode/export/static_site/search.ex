@@ -150,11 +150,14 @@ defmodule Playcode.Export.StaticSite.Search do
 
   @doc """
   Codes of the plays the site's current index holds, in index order. Empty when the index
-  predates chunked lines (some play has no `search/lines/<CODE>/` folder): its shards are
-  in another format and must not be carried over.
+  predates chunked lines (an old flat `search/lines/<CODE>.js` remains, or some play has
+  no `search/lines/<CODE>/` folder): its shards are in another format and must not be
+  carried over. The flat files go only once the new index is written, so a run that
+  crashed half way is still read as old.
   """
   def indexed_codes(dir) do
-    with {:ok, plays} <- read_js(Path.join([dir, "search", "plays.js"])),
+    with [] <- Path.wildcard(Path.join([dir, "search", "lines", "*.js"])),
+         {:ok, plays} <- read_js(Path.join([dir, "search", "plays.js"])),
          codes = Enum.map(plays, & &1["code"]),
          true <- Enum.all?(codes, &File.dir?(Path.join([dir, "search", "lines", &1]))) do
       codes

@@ -227,9 +227,16 @@ defmodule Playcode.Export.StaticSiteSearchTest do
          %{first: first, second: second} do
       dir = generate!([first], all: true)
 
-      # What a build before chunked lines left: a lines file, not a folder.
+      # What a build before chunked lines left: a lines file, not a folder, and shards of
+      # [play, line, flag] triples. Read as [play, n, deltas…], a word once on line 0
+      # leaves a stray element.
       File.rm_rf!(Path.join([dir, "search", "lines", first.code]))
       File.write!(Path.join([dir, "search", "lines", "#{first.code}.js"]), "old")
+
+      File.write!(
+        Path.join([dir, "search", "index", "su.js"]),
+        ~s|EMOTHE.search.load("index","su",{"sueño":[0,0,0]});\n|
+      )
 
       :ok = Playcode.Export.StaticSite.generate_single_play(second.id, output_dir: dir)
 
