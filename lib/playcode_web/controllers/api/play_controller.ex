@@ -2,6 +2,7 @@ defmodule PlaycodeWeb.API.PlayController do
   use PlaycodeWeb, :controller
 
   alias Playcode.{Catalogue, PlayContent, Statistics}
+  alias Playcode.Catalogue.Play
 
   # GET /api/v1/plays
   def index(conn, params) do
@@ -71,7 +72,8 @@ defmodule PlaycodeWeb.API.PlayController do
       title: play.title,
       author: play.author_name,
       verse_count: play.verse_count,
-      is_verse: play.is_verse
+      is_verse: play.is_verse,
+      form: Play.form(play)
     }
   end
 
@@ -84,6 +86,7 @@ defmodule PlaycodeWeb.API.PlayController do
       author: play.author_name,
       verse_count: play.verse_count,
       is_verse: play.is_verse,
+      form: Play.form(play),
       pub_place: play.pub_place,
       publication_date: play.publication_date,
       publisher: play.publisher,

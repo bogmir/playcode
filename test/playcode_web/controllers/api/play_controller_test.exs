@@ -59,6 +59,16 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
     assert [%{"title" => "Primera parte"}] = body["sources"]
   end
 
+  test "a play's form is the curator's, served beside is_verse", %{conn: conn, play: play} do
+    {:ok, _} = Playcode.Catalogue.update_play(play, %{form: "prose"})
+
+    assert %{"form" => "prose", "is_verse" => true} =
+             json_response(get(conn, ~p"/api/v1/plays/API0001"), 200)
+
+    assert %{"data" => [%{"form" => "prose", "is_verse" => true}]} =
+             json_response(get(conn, ~p"/api/v1/plays?search=Lope"), 200)
+  end
+
   test "a play's characters", %{conn: conn} do
     assert %{"data" => [%{"xml_id" => "REY", "name" => "EL REY", "description" => "de Castilla"}]} =
              json_response(get(conn, ~p"/api/v1/plays/API0001/characters"), 200)
