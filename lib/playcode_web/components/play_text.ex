@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   Styled to match the production EMOTHE/Artelope color scheme and fonts.
   """
   use Phoenix.Component
+  alias Playcode.PlayContent.InlineMarkup
 
   attr :divisions, :list, required: true
   attr :characters, :list, default: []
@@ -281,7 +282,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :text, :string, required: true
 
   defp inline_content(assigns) do
-    parts = split_inline_markup(assigns.text || "")
+    parts = InlineMarkup.parts(assigns.text)
     assigns = assign(assigns, :parts, parts)
 
     ~H"""
@@ -292,22 +293,5 @@ defmodule PlaycodeWeb.Components.PlayText do
       <% end %>
     <% end %>
     """
-  end
-
-  defp split_inline_markup(text) do
-    # Handle both literal << >> and HTML-entity &lt;&lt; &gt;&gt; forms
-    text
-    |> String.replace("&lt;&lt;", "<<")
-    |> String.replace("&gt;&gt;", ">>")
-    |> then(fn t ->
-      Regex.split(~r/<<(.*?)>>/, t, include_captures: true)
-      |> Enum.map(fn part ->
-        case Regex.run(~r/^<<(.*)>>$/, part) do
-          [_, inner] -> %{text: inner, italic: true}
-          nil -> %{text: part, italic: false}
-        end
-      end)
-      |> Enum.reject(&(&1.text == ""))
-    end)
   end
 end

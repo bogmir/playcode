@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
   """
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext
+  alias PlaycodeWeb.PlayLabels
 
   attr :statistic, :map, required: true
   attr :play, :map, required: true
@@ -17,7 +18,11 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
     <div :if={@data != %{}} class="space-y-6">
       <%!-- Summary cards --%>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <.stat_card label={act_label_plural(@raw_label)} value={@data["num_acts"]} icon="📜" />
+        <.stat_card
+          label={PlayLabels.act_label_plural(@raw_label)}
+          value={@data["num_acts"]}
+          icon="📜"
+        />
         <.stat_card label={gettext("Scenes")} value={get_in(@data, ["scenes", "total"])} icon="🎭" />
         <.stat_card label={gettext("Verses")} value={@data["total_verses"]} icon="✍️" />
         <.stat_card
@@ -30,11 +35,11 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
       <%!-- Scenes per act --%>
       <.bar_chart
         :if={(get_in(@data, ["scenes", "total"]) || 0) > 0}
-        title={"#{gettext("Scenes per")} #{act_label_singular(@raw_label)}"}
+        title={"#{gettext("Scenes per")} #{PlayLabels.act_label(@raw_label)}"}
         items={get_in(@data, ["scenes", "per_act"]) || []}
         label_key="act"
         value_key="count"
-        label_prefix={"#{act_label_singular(@raw_label)} "}
+        label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
         color="bg-amber-500"
       />
 
@@ -44,7 +49,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
         items={@data["verse_distribution"] || []}
         label_key="act"
         value_key="count"
-        label_prefix={"#{act_label_singular(@raw_label)} "}
+        label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
         color="bg-indigo-500"
       />
 
@@ -55,7 +60,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
         items={@data["prose_fragments"] || []}
         label_key="act"
         value_key="count"
-        label_prefix={"#{act_label_singular(@raw_label)} "}
+        label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
         color="bg-emerald-500"
       />
 
@@ -78,9 +83,9 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
           <div :for={vt <- @data["verse_type_distribution"]} class="flex items-center gap-3">
             <span
               class="w-36 text-sm text-base-content/70 truncate shrink-0"
-              title={verse_type_label(vt["verse_type"])}
+              title={PlayLabels.verse_form_label(vt["verse_type"])}
             >
-              {verse_type_label(vt["verse_type"])}
+              {PlayLabels.verse_form_label(vt["verse_type"])}
             </span>
             <div class="flex-1 bg-base-200 rounded-full h-6 overflow-hidden">
               <div
@@ -171,39 +176,6 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
     </div>
     """
   end
-
-  # Handles both new raw types ("acto", "jornada") and legacy cached values ("Act", "Jornada")
-  defp act_label_singular("acto"), do: gettext("Acto")
-  defp act_label_singular("jornada"), do: gettext("Jornada")
-  defp act_label_singular("act"), do: gettext("Act")
-  defp act_label_singular("acte"), do: gettext("Acte")
-  defp act_label_singular("play"), do: gettext("Play")
-  defp act_label_singular("Jornada"), do: gettext("Jornada")
-  defp act_label_singular("Act"), do: gettext("Act")
-  defp act_label_singular(other), do: other
-
-  defp act_label_plural("acto"), do: gettext("Actos")
-  defp act_label_plural("jornada"), do: gettext("Jornadas")
-  defp act_label_plural("act"), do: gettext("Acts")
-  defp act_label_plural("acte"), do: gettext("Actes")
-  defp act_label_plural("play"), do: gettext("Plays")
-  defp act_label_plural("Jornada"), do: gettext("Jornadas")
-  defp act_label_plural("Act"), do: gettext("Acts")
-  defp act_label_plural(other), do: other <> "s"
-
-  defp verse_type_label("redondilla"), do: gettext("Redondilla")
-  defp verse_type_label("romance"), do: gettext("Romance")
-  defp verse_type_label("romance_tirada"), do: gettext("Romance (tirada)")
-  defp verse_type_label("octava_real"), do: gettext("Octava real")
-  defp verse_type_label("soneto"), do: gettext("Soneto")
-  defp verse_type_label("decima"), do: gettext("Décima")
-  defp verse_type_label("terceto"), do: gettext("Terceto")
-  defp verse_type_label("silva"), do: gettext("Silva")
-  defp verse_type_label("quintilla"), do: gettext("Quintilla")
-  defp verse_type_label("lira"), do: gettext("Lira")
-  defp verse_type_label("cancion"), do: gettext("Canción")
-  defp verse_type_label("otro"), do: gettext("Otro")
-  defp verse_type_label(other), do: other
 
   defp max_verse_type([]), do: 1
   defp max_verse_type(items), do: items |> Enum.map(&(&1["count"] || 0)) |> Enum.max(fn -> 1 end)

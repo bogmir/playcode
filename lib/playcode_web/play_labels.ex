@@ -69,4 +69,62 @@ defmodule PlaycodeWeb.PlayLabels do
   def editor_role_label(role), do: role
 
   def editor_role_options, do: Enum.map(@editor_roles, &{editor_role_label(&1), &1})
+
+  @doc """
+  The name of a verse form as stored on `play_elements.verse_type`, or `"unmarked"`
+  for a passage with no form; an unknown slug as stored. A `_tirada` (a run with no
+  stanzas) is named by its form alone, as metrical synopses do.
+  """
+  def verse_form_label("redondilla"), do: gettext("Redondilla")
+  def verse_form_label("quintilla"), do: gettext("Quintilla")
+  def verse_form_label("decima"), do: gettext("Décima")
+  def verse_form_label("romance"), do: gettext("Romance")
+  def verse_form_label("romance_tirada"), do: gettext("Romance")
+  def verse_form_label("romancillo_o_endecha"), do: gettext("Romancillo o endecha")
+  def verse_form_label("octava_real"), do: gettext("Octava real")
+  def verse_form_label("soneto"), do: gettext("Soneto")
+  def verse_form_label("terceto"), do: gettext("Terceto")
+  def verse_form_label("silva"), do: gettext("Silva")
+  def verse_form_label("silva_tirada"), do: gettext("Silva")
+  def verse_form_label("lira"), do: gettext("Lira")
+  def verse_form_label("sexteto_lira"), do: gettext("Sexteto-lira")
+  def verse_form_label("cancion"), do: gettext("Canción")
+  def verse_form_label("cancion_canzone"), do: gettext("Canción")
+  def verse_form_label("endecasilabos_sueltos_tirada"), do: gettext("Endecasílabos sueltos")
+  def verse_form_label("verso_suelto"), do: gettext("Verso suelto")
+  def verse_form_label("pareados"), do: gettext("Pareados")
+  def verse_form_label("pareados_endecasilabos"), do: gettext("Pareados endecasílabos")
+  def verse_form_label("pareado_hexasilabo"), do: gettext("Pareado hexasílabo")
+  def verse_form_label("cuarteto"), do: gettext("Cuarteto")
+  def verse_form_label("copla_arte_mayor"), do: gettext("Copla de arte mayor")
+  def verse_form_label("copla_estructura_abierta"), do: gettext("Copla de estructura abierta")
+  def verse_form_label("otro"), do: gettext("Otro")
+  def verse_form_label("unmarked"), do: gettext("Unmarked")
+  def verse_form_label(other), do: other
+
+  @doc "The name of a metrical family from `Playcode.Statistics.Metrics.family/1`."
+  def verse_family_label("romance"), do: gettext("Romance")
+  def verse_family_label("spanish"), do: gettext("Spanish stanzas")
+  def verse_family_label("italianate"), do: gettext("Italianate")
+  def verse_family_label(_other), do: gettext("Other")
+
+  @doc "The singular name of an act division type; an unknown one as stored."
+  def act_label("acto"), do: gettext("Acto")
+  def act_label("jornada"), do: gettext("Jornada")
+  def act_label("act"), do: gettext("Act")
+  def act_label("acte"), do: gettext("Acte")
+  def act_label("play"), do: gettext("Play")
+  def act_label("Jornada"), do: gettext("Jornada")
+  def act_label("Act"), do: gettext("Act")
+  def act_label(other), do: other
+
+  @doc "The plural name of an act division type."
+  def act_label_plural("acto"), do: gettext("Actos")
+  def act_label_plural("jornada"), do: gettext("Jornadas")
+  def act_label_plural("act"), do: gettext("Acts")
+  def act_label_plural("acte"), do: gettext("Actes")
+  def act_label_plural("play"), do: gettext("Plays")
+  def act_label_plural("Jornada"), do: gettext("Jornadas")
+  def act_label_plural("Act"), do: gettext("Acts")
+  def act_label_plural(other), do: other <> "s"
 end

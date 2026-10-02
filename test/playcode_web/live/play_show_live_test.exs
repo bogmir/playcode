@@ -2,8 +2,31 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   use PlaycodeWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Playcode.ImportHelpers
 
   alias Playcode.TestFixtures
+
+  test "italics in the text render as emphasis, without the storage markers", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>ANA</speaker><lg><l n="1">Dulce <emph>sueño</emph> mío</l></lg></sp>
+          </div1>
+          """
+        )
+      )
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert "sueño" in (html
+                       |> LazyHTML.from_fragment()
+                       |> LazyHTML.query("em")
+                       |> Enum.map(&LazyHTML.text/1))
+
+    refute html =~ "&lt;&lt;"
+  end
 
   test "renders navigation panel with metadata and play section links", %{conn: conn} do
     %{play: play, act: act, scene: scene} = TestFixtures.play_with_structure_fixture()
