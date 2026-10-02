@@ -77,7 +77,29 @@ the three plays published today but not for the full dev corpus (83 plays, `--al
 Neither is asserted by a test; the build only reports them (`generate/1`'s return, the mix
 task's printed line), so nothing fails when they are exceeded.
 
-**Directions** (to schedule, not decided): split the lines files per act (or per page) so a
-search loads only the lines it shows. Delta-encoding the postings would not help, because the
-lines files dominate. For the act page, trim per-line markup. Decide whether the budgets
-should become assertions once the corpus is published.
+**Being fixed**: `docs/superpowers/specs/2026-10-02-static-site-followups-design.md`, parts A
+(lines files in 100-line chunks, delta-encoded postings, ten plays on the first screen) and C
+(a page per scene for a division over 120,000 bytes of text). The act-page overruns turned out
+to be content, not markup: the three pages hold 200–218 KB of text each.
+
+## Awaiting the project
+
+Questions only the project can answer. Nothing here is built; each stays as it is until
+someone with the authority decides.
+
+### Adaptations are labelled "translation"
+
+`StaticSite.Components.kind/1` calls every play with a `relationship_type` a translation, in
+the catalogue's Kind facet, its "translation" tag and the search page's Originals/Translations
+facet. The schema also allows `adaptacion` and `refundicion` (`Play.changeset/2`). Should an
+adaptation or a *refundición* be labelled as such, counted as a translation, or as an
+original? **Needs**: the stakeholders' answer; then a label per type and a facet value each.
+
+### The grouping of verse forms into families
+
+The metrical synopsis colours passages by family: romance, Spanish stanzas, Italianate,
+other (`Playcode.Statistics.Metrics`, `@families`). The grouping is the design's, not a
+philologist's. In particular: where do `cuarteto`, `verso_suelto`, `copla_arte_mayor` and
+`pareados` belong? **Needs**: the project's philologists to confirm or correct the table in
+the redesign spec ("Statistics › Families"); then edit `@families` and bump
+`Playcode.Statistics` `@version` so cached statistics recompute.
