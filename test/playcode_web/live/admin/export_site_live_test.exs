@@ -20,7 +20,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     %{conn: log_in_user(conn, admin_fixture()), a: a, b: b}
   end
 
-  defp box(a), do: "#play-#{a.id} input[type=checkbox]"
+  defp switch(play), do: "#play-#{play.id} input[role=switch]"
+
+  defp build_site(codes),
+    do: {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: codes)
+
+  defp preview(conn, path), do: get(conn, "/admin/export/preview/" <> path)
 
   # Generate runs in a task; the result card appears when it finishes.
   defp generate(lv) do
@@ -36,60 +41,60 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     end
   end
 
-  test "lists the complete plays, all ticked while no site exists", %{conn: conn, a: a, b: b} do
+  test "lists the complete plays, each switched off while no site exists",
+       %{conn: conn, a: a, b: b} do
     {:ok, lv, html} = live(conn, ~p"/admin/export")
 
-    assert has_element?(lv, "#{box(a)}[checked]")
-    assert has_element?(lv, "#{box(b)}[checked]")
+    assert has_element?(lv, switch(a))
+    refute has_element?(lv, "#{switch(a)}[checked]")
+    refute has_element?(lv, "#{switch(b)}[checked]")
     refute html =~ "Gamma Draft"
-    assert html =~ t("%{selected} of %{total} plays selected", selected: 2, total: 2)
   end
 
-  test "the header checkbox ticks or clears every play", %{conn: conn, a: a, b: b} do
+  test "switching a play on puts it in the site straight away; off takes it out",
+       %{conn: conn, a: a} do
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
 
-    lv |> element("input[aria-label='#{t("Select all plays")}']") |> render_click()
-    refute has_element?(lv, "#{box(a)}[checked]")
-    refute has_element?(lv, "#{box(b)}[checked]")
-    assert has_element?(lv, "button[type=submit][disabled]", t("Generate Static Site"))
+    lv |> element(switch(a)) |> render_click()
+    wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
 
-    lv |> element("input[aria-label='#{t("Select all plays")}']") |> render_click()
-    assert has_element?(lv, "#{box(a)}[checked]")
-    assert has_element?(lv, "#{box(b)}[checked]")
+    assert has_element?(lv, "#{switch(a)}[checked]")
+    assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Tragedy"
+    assert html_response(preview(conn, "index.html"), 200) =~ "Alpha Tragedy"
+
+    assert lv |> element(switch(a)) |> render_click() =~
+             t("Removed %{code} from static site.", code: a.code)
+
+    refute has_element?(lv, "#{switch(a)}[checked]")
+    assert response(preview(conn, "plays/#{a.code}/index.html"), 404)
+    refute html_response(preview(conn, "index.html"), 200) =~ "Alpha Tragedy"
   end
 
-  test "Generate builds exactly the ticked plays, which the preview then serves",
-       %{conn: conn, a: a, b: b} do
+  test "with no site yet, Generate builds every complete play", %{conn: conn, a: a, b: b} do
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
-    lv |> element(box(b)) |> render_click()
     generate(lv)
 
-    page = get(conn, ~p"/admin/export/preview/plays/#{a.code}/index.html")
-    assert html_response(page, 200) =~ "Alpha Tragedy"
-    assert response(get(conn, ~p"/admin/export/preview/plays/#{b.code}/index.html"), 404)
-
-    catalogue = get(conn, ~p"/admin/export/preview/index.html")
-    assert html_response(catalogue, 200) =~ "Alpha Tragedy"
-    refute html_response(catalogue, 200) =~ "Beta Comedy"
+    assert response(preview(conn, "plays/#{a.code}/index.html"), 200)
+    assert response(preview(conn, "plays/#{b.code}/index.html"), 200)
   end
 
-  test "plays already in the site start ticked, the others do not", %{conn: conn, a: a, b: b} do
-    {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
-
+  # Regression: Generate rebuilt every complete play, so a play switched off came back.
+  test "Generate rebuilds only the plays in the site, so a removed play stays out",
+       %{conn: conn, a: a, b: b} do
+    build_site([a.code])
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    generate(lv)
 
-    assert has_element?(lv, "#play-#{a.id}", t("In site"))
-    assert has_element?(lv, "#{box(a)}[checked]")
-    assert has_element?(lv, "#play-#{b.id}", t("Not built"))
-    refute has_element?(lv, "#{box(b)}[checked]")
+    assert response(preview(conn, "plays/#{a.code}/index.html"), 200)
+    assert response(preview(conn, "plays/#{b.code}/index.html"), 404)
   end
 
   test "an existing site can be previewed and downloaded without generating again",
        %{conn: conn, a: a} do
-    {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
-
+    build_site([a.code])
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
 
+    assert has_element?(lv, "#{switch(a)}[checked]")
     assert has_element?(lv, "a[href='/admin/export/preview/index.html']", t("Open preview"))
     assert has_element?(lv, "button", t("Download .zip"))
   end
@@ -105,8 +110,16 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
   describe "the preview" do
     setup %{a: a} do
-      {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
+      build_site([a.code])
       :ok
+    end
+
+    # Each file of the site is its own request; none of them is a page to return to.
+    test "is not remembered as the last page visited", %{conn: conn} do
+      conn = get(conn, ~p"/admin/export")
+      conn = preview(conn, "assets/style.css")
+
+      assert get_session(conn, :last_path) == "/admin/export"
     end
 
     test "serves the site's own files with their types", %{conn: conn} do

@@ -10,12 +10,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   def mount(_params, _session, socket) do
     plays = Playcode.Catalogue.list_plays(sort: :title_sort, complete: true)
     exported_codes = StaticSite.list_exported_codes(StaticSite.output_dir())
-    # A site that exists decides what starts ticked; with none, everything does.
-    selected =
-      case Enum.filter(plays, &(&1.code in exported_codes)) do
-        [] -> plays
-        built -> built
-      end
 
     {:ok,
      socket
@@ -25,7 +19,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      |> assign(:github_repo, "")
      |> assign(:plays, plays)
      |> assign(:exported_codes, MapSet.new(exported_codes))
-     |> assign(:selected, MapSet.new(selected, & &1.code))
+     |> assign(:exporting_play, nil)
      |> assign(:complete_count, length(plays))
      |> assign(:total_count, Playcode.Catalogue.count_plays())
      |> assign(:generating, false)
@@ -58,7 +52,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       output_dir: StaticSite.output_dir(),
       version: socket.assigns.version,
       base_url: socket.assigns.base_url,
-      play_codes: MapSet.to_list(socket.assigns.selected),
+      play_codes: rebuild_codes(socket.assigns.exported_codes),
       on_progress: on_progress
     ]
 
@@ -104,22 +98,35 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     end
   end
 
-  def handle_event("toggle_play", %{"code" => code}, socket) do
-    selected = socket.assigns.selected
+  # One build at a time: a single-play export rewrites the shared catalogue and index.
+  def handle_event("toggle_play", _params, socket)
+      when socket.assigns.generating or not is_nil(socket.assigns.exporting_play),
+      do: {:noreply, socket}
 
-    selected =
-      if MapSet.member?(selected, code),
-        do: MapSet.delete(selected, code),
-        else: MapSet.put(selected, code)
+  def handle_event("toggle_play", %{"id" => id, "code" => code}, socket) do
+    opts = [
+      output_dir: StaticSite.output_dir(),
+      version: socket.assigns.version,
+      base_url: socket.assigns.base_url
+    ]
 
-    {:noreply, assign(socket, :selected, selected)}
-  end
+    if MapSet.member?(socket.assigns.exported_codes, code) do
+      StaticSite.remove_single_play(code, opts)
 
-  def handle_event("toggle_all", _params, socket) do
-    all = MapSet.new(socket.assigns.plays, & &1.code)
-    selected = if MapSet.equal?(socket.assigns.selected, all), do: MapSet.new(), else: all
+      {:noreply,
+       socket
+       |> assign(:exported_codes, MapSet.delete(socket.assigns.exported_codes, code))
+       |> put_flash(:info, gettext("Removed %{code} from static site.", code: code))}
+    else
+      lv = self()
 
-    {:noreply, assign(socket, :selected, selected)}
+      Task.start(fn ->
+        StaticSite.generate_single_play(id, opts)
+        send(lv, {:play_exported, id})
+      end)
+
+      {:noreply, assign(socket, :exporting_play, id)}
+    end
   end
 
   def handle_event("download_zip", _params, socket) do
@@ -160,6 +167,17 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
          size: format_size(result.size)
        )
      )}
+  end
+
+  def handle_info({:play_exported, _id}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :exported_codes,
+       MapSet.new(StaticSite.list_exported_codes(StaticSite.output_dir()))
+     )
+     |> assign(:exporting_play, nil)
+     |> put_flash(:info, gettext("Play exported to static site."))}
   end
 
   def handle_info({:gen_done, {:error, reason}}, socket) do
@@ -259,7 +277,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               <button
                 type="submit"
                 class="btn btn-primary"
-                disabled={@generating || @deploying || MapSet.size(@selected) == 0}
+                disabled={@generating || @deploying || @exporting_play}
               >
                 <span :if={@generating} class="loading loading-spinner loading-sm"></span>
                 {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
@@ -271,6 +289,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 )}
               </span>
             </div>
+            <p class="text-xs text-base-content/50">
+              {if MapSet.size(@exported_codes) == 0,
+                do: gettext("Builds every complete play."),
+                else:
+                  gettext("Rebuilds the %{count} plays in the site.",
+                    count: MapSet.size(@exported_codes)
+                  )}
+            </p>
           </form>
         </div>
       </div>
@@ -284,52 +310,40 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             {gettext("No plays marked as complete.")}
           </div>
 
-          <div :if={@plays != []}>
-            <label class="flex items-center gap-3 border-b border-base-300 pb-2 text-sm text-base-content/70">
+          <p :if={@plays != []} class="text-sm text-base-content/60 mb-3">
+            {gettext("%{exported} of %{total} complete plays exported",
+              exported: MapSet.size(@exported_codes),
+              total: length(@plays)
+            )}
+          </p>
+
+          <div :if={@plays != []} class="divide-y divide-base-200">
+            <label
+              :for={play <- @plays}
+              id={"play-#{play.id}"}
+              class="flex cursor-pointer items-center gap-3 py-2"
+            >
+              <span class="min-w-0 flex-1">
+                <span class="font-mono text-xs text-base-content/50">{play.code}</span>
+                <span class="font-medium ml-2 truncate">{play.title}</span>
+              </span>
+              <span
+                :if={@exporting_play == play.id}
+                class="loading loading-spinner loading-xs text-base-content/50"
+              />
+              <%!-- On means in the site; flipping it adds or removes the play at once. --%>
               <input
                 type="checkbox"
-                class="checkbox checkbox-sm"
-                aria-label={gettext("Select all plays")}
-                checked={MapSet.size(@selected) == length(@plays)}
-                phx-click="toggle_all"
+                role="switch"
+                class="toggle toggle-success toggle-sm"
+                aria-label={gettext("In the site: %{title}", title: play.title)}
+                checked={MapSet.member?(@exported_codes, play.code) or @exporting_play == play.id}
+                disabled={@generating || @exporting_play}
+                phx-click="toggle_play"
+                phx-value-id={play.id}
+                phx-value-code={play.code}
               />
-              {gettext("%{selected} of %{total} plays selected",
-                selected: MapSet.size(@selected),
-                total: length(@plays)
-              )}
             </label>
-
-            <div class="divide-y divide-base-200">
-              <label
-                :for={play <- @plays}
-                id={"play-#{play.id}"}
-                class="flex cursor-pointer items-center gap-3 py-2"
-              >
-                <input
-                  type="checkbox"
-                  class="checkbox checkbox-sm"
-                  checked={MapSet.member?(@selected, play.code)}
-                  phx-click="toggle_play"
-                  phx-value-code={play.code}
-                />
-                <span class="min-w-0 flex-1">
-                  <span class="font-mono text-xs text-base-content/50">{play.code}</span>
-                  <span class="font-medium ml-2 truncate">{play.title}</span>
-                </span>
-                <span
-                  :if={MapSet.member?(@exported_codes, play.code)}
-                  class="badge badge-success badge-sm"
-                >
-                  {gettext("In site")}
-                </span>
-                <span
-                  :if={!MapSet.member?(@exported_codes, play.code)}
-                  class="badge badge-ghost badge-sm"
-                >
-                  {gettext("Not built")}
-                </span>
-              </label>
-            </div>
           </div>
         </div>
       </div>
@@ -465,6 +479,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       </div>
     </div>
     """
+  end
+
+  # An existing site is rebuilt as it stands; with none, every complete play goes in.
+  defp rebuild_codes(exported_codes) do
+    case MapSet.to_list(exported_codes) do
+      [] -> nil
+      codes -> codes
+    end
   end
 
   defp app_version do
