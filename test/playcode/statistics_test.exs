@@ -230,6 +230,36 @@ defmodule Playcode.StatisticsTest do
              ] = data["divisions"]
     end
 
+    test "text outside any scene still gets a column when other divisions have scenes" do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="prologo" n="1"><head>Loa</head>
+              <div2 type="escena" n="1"><head>Escena unica</head>
+                <sp><speaker>A</speaker><l n="1">uno</l></sp>
+              </div2>
+            </div1>
+            <div1 type="acto" n="1"><head>Acto I</head>
+              <sp><speaker>B</speaker><l n="2">dos</l></sp>
+              <stage>Sale A.</stage>
+            </div1>
+            """
+          )
+        )
+
+      data = Statistics.get_statistics(play.id).data
+
+      assert %{
+               "basis" => "scene",
+               "columns" => [%{"label" => "Escena unica"}, %{"label" => "Acto I", "act" => 1}]
+             } =
+               data["presence"]
+
+      assert %{"A" => [[0, 1]], "B" => [[1, 1]]} =
+               Map.new(data["characters"], &{&1["name"], &1["columns"]})
+    end
+
     test "with no scenes, columns are the metrical passages" do
       play =
         import_tei!(

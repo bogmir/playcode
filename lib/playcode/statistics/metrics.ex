@@ -202,18 +202,17 @@ defmodule Playcode.Statistics.Metrics do
   def columns(items, passages) do
     cond do
       Enum.any?(items, & &1.scene) ->
-        scenes = items |> Enum.filter(& &1.scene) |> Enum.uniq_by(& &1.scene.id)
-        index = scenes |> Enum.with_index() |> Map.new(fn {item, i} -> {item.scene.id, i} end)
+        # One column per {division, scene or nil} holding spoken text: a division's own
+        # scene-less text (a prologue's, an act without scenes) is a column of its own.
+        units =
+          items
+          |> Enum.filter(&(&1.kind in [:verse, :prose] and &1.speech != nil))
+          |> Enum.uniq_by(&unit_key/1)
 
-        columns =
-          Enum.map(scenes, fn item ->
-            %{
-              "act" => item.act,
-              "label" => item.scene.title || "#{item.act}.#{item.scene.position + 1}"
-            }
-          end)
+        index = units |> Enum.with_index() |> Map.new(fn {item, i} -> {unit_key(item), i} end)
+        columns = Enum.map(units, &%{"act" => &1.act, "label" => unit_label(&1)})
 
-        {"scene", columns, fn item -> item.scene && index[item.scene.id] end}
+        {"scene", columns, fn item -> index[unit_key(item)] end}
 
       passages != [] ->
         index =
@@ -244,6 +243,19 @@ defmodule Playcode.Statistics.Metrics do
         columns = Enum.map(divisions, &%{"act" => &1.act, "label" => &1.division.title})
         {"division", columns, fn item -> index[item.division.id] end}
     end
+  end
+
+  defp unit_key(item), do: {item.division.id, item.scene && item.scene.id}
+
+  defp unit_label(%{scene: nil, division: division}),
+    do: division.title || String.capitalize(division.type)
+
+  defp unit_label(%{scene: scene, act: act}) do
+    scene.title ||
+      if(act,
+        do: "#{act}.#{scene.position + 1}",
+        else: "#{String.capitalize(scene.type)} #{scene.position + 1}"
+      )
   end
 
   @doc "Per-character figures, most lines first, then most words."
