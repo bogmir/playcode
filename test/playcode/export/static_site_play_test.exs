@@ -145,6 +145,14 @@ defmodule Playcode.Export.StaticSitePlayTest do
   end
 
   describe "the statistics page" do
+    test "a verse play its curator calls prose measures its characters in words" do
+      play = import_tei!(tei(body: @two_acts))
+      {:ok, play} = Playcode.Catalogue.update_play(play, %{form: "prose"})
+      dir = generate!([play], all: true)
+
+      assert LazyHTML.text(page(dir, play, "statistics.html")) =~ "most words"
+    end
+
     test "shows the metrical synopsis, the characters and who shares the stage" do
       {play, dir} = publish!(@two_acts)
       stats = page(dir, play, "statistics.html")

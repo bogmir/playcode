@@ -17,7 +17,7 @@
       <dt>Language</dt>
       <dd>{Play.language_name(@edition.play.language)}</dd>
       <dt>Form</dt>
-      <dd>{Components.form_summary(@edition.stats)}</dd>
+      <dd>{Components.form_summary(@edition.play, @edition.stats)}</dd>
       <Components.study play={@edition.play} />
     </dl>
     <Components.family play={@edition.play} published={@site.published} />

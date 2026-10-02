@@ -14,11 +14,9 @@
   />
   <Components.character_table
     characters={@edition.stats["characters"] || []}
-    unit={if (@edition.stats["verses"] || 0) > 0, do: "lines", else: "words"}
+    unit={if words_unit?(@edition), do: "words", else: "lines"}
     total={
-      if (@edition.stats["verses"] || 0) > 0,
-        do: @edition.stats["verses"],
-        else: @edition.stats["words"] || 0
+      if words_unit?(@edition), do: @edition.stats["words"] || 0, else: @edition.stats["verses"]
     }
   />
   <Components.presence stats={@edition.stats} />

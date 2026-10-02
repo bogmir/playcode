@@ -60,6 +60,25 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert "ARTELOPE 1" in labels
   end
 
+  test "the Form facet follows a curator's choice over the automatic one" do
+    verse = play_fixture(%{"is_complete" => true})
+    prose = play_fixture(%{"is_complete" => true, "form" => "prose"})
+    mixed = play_fixture(%{"is_complete" => true, "form" => "mixed"})
+
+    index = html!(generate!([verse, prose, mixed]), "index.html")
+    labels = texts(index, "[data-facets] label")
+
+    assert "Verse 1" in labels
+    assert "Prose 1" in labels
+    assert "Verse and prose 1" in labels
+
+    assert index
+           |> LazyHTML.query("[data-play]")
+           |> LazyHTML.attribute("data-form")
+           |> Enum.sort() ==
+             ["mixed", "prose", "verse"]
+  end
+
   test "each entry carries what the filter and facets match on" do
     play = play_fixture(%{"is_complete" => true, "title" => "La Vida es Sueño"})
     entry = html!(generate!([play]), "index.html") |> LazyHTML.query("[data-play]")

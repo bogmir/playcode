@@ -5,6 +5,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   import PlaycodeWeb.Components.StatisticsPanel
 
   alias Playcode.Catalogue
+  alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
   alias Playcode.Places
   alias Playcode.Places.Authority
@@ -299,13 +300,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             </div>
 
             <p class="mt-2 text-xs text-base-content/50">
-              {Playcode.Catalogue.Play.language_name(@play.language)}{if @play.verse_count do
-                " · " <>
-                  if(@play.is_verse,
-                    do: "#{@play.verse_count} #{gettext("verses")}",
-                    else: gettext("Prose")
-                  )
-              end}
+              {Play.language_name(@play.language)}{" · " <> form_line(@play)}
             </p>
             <p
               :if={@play.licence_url || @play.licence_text}
@@ -508,4 +503,17 @@ defmodule PlaycodeWeb.PlayShowLive do
   defp relationship_type_label("adaptacion"), do: gettext("Adaptation")
   defp relationship_type_label("refundicion"), do: gettext("Reworking")
   defp relationship_type_label(_), do: ""
+
+  defp form_line(play) do
+    case {Play.form(play), play.verse_count} do
+      {"prose", _} ->
+        PlayLabels.form_label("prose")
+
+      {form, n} when is_integer(n) and n > 0 ->
+        "#{PlayLabels.form_label(form)} · #{n} #{gettext("verses")}"
+
+      {form, _} ->
+        PlayLabels.form_label(form)
+    end
+  end
 end

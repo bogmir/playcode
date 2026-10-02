@@ -274,4 +274,20 @@ defmodule Playcode.Export.StaticSiteTest do
 
     assert page > 0 and index > 0 and shard > 0
   end
+
+  test "the title page names the curator's form" do
+    prose = complete_play(%{"form" => "prose"})
+    mixed = complete_play(%{"form" => "mixed"})
+    bare_verse = complete_play(%{"form" => "verse"})
+    dir = generate!([prose, mixed, bare_verse])
+
+    form = fn play ->
+      title_page(dir, play) |> LazyHTML.query("dd") |> Enum.map(&squish(LazyHTML.text(&1)))
+    end
+
+    assert "Prose" in form.(prose)
+    assert Enum.any?(form.(mixed), &String.starts_with?(&1, "Verse and prose"))
+    # A fixture play has no verse lines: no "· 0 verses".
+    assert "Verse" in form.(bare_verse)
+  end
 end

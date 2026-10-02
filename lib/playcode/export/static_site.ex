@@ -350,9 +350,10 @@ defmodule Playcode.Export.StaticSite do
        |> Enum.sort_by(&(-elem(&1, 1)))
        |> Enum.map(fn {code, n} -> {code, Play.language_name(code), n} end)},
       {"form", "Form",
-       options(plays, &if(&1.is_verse, do: "verse", else: "prose"), %{
+       options(plays, &Play.form/1, %{
          "verse" => "Verse",
-         "prose" => "Prose"
+         "prose" => "Prose",
+         "mixed" => "Verse and prose"
        })},
       {"kind", "Kind",
        options(plays, &Components.kind/1, %{

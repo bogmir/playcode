@@ -28,6 +28,21 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "&lt;&lt;"
   end
 
+  test "the play's form is the curator's when one is set", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">un verso</l></sp></div1>)
+        )
+      )
+
+    {:ok, _} = Playcode.Catalogue.update_play(play, %{form: "mixed"})
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert html =~ t("Verse and prose")
+  end
+
   test "renders navigation panel with metadata and play section links", %{conn: conn} do
     %{play: play, act: act, scene: scene} = TestFixtures.play_with_structure_fixture()
 

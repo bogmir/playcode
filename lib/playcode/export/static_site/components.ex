@@ -253,11 +253,18 @@ defmodule Playcode.Export.StaticSite.Components do
   @doc "The cast as published: every character not marked hidden."
   def cast(characters), do: Enum.reject(characters, & &1.is_hidden)
 
-  @doc "What the title page says about the play's form, from the computed verse count."
-  def form_summary(%{"verses" => n}) when is_integer(n) and n > 0,
-    do: "Verse · #{number(n)} verses"
+  @doc "What the title page says about the play's form."
+  def form_summary(play, stats) do
+    verses = stats["verses"] || 0
 
-  def form_summary(_stats), do: "Prose"
+    case {Play.form(play), verses} do
+      {"prose", _} -> "Prose"
+      {"verse", n} when n > 0 -> "Verse · #{number(n)} verses"
+      {"verse", _} -> "Verse"
+      {"mixed", n} when n > 0 -> "Verse and prose · #{number(n)} verses"
+      {"mixed", _} -> "Verse and prose"
+    end
+  end
 
   @doc "An integer with its thousands separated by commas."
   def number(nil), do: "0"
@@ -770,7 +777,7 @@ defmodule Playcode.Export.StaticSite.Components do
       class="entry"
       data-play
       data-lang={@play.language}
-      data-form={if @play.is_verse, do: "verse", else: "prose"}
+      data-form={Play.form(@play)}
       data-kind={kind(@play)}
       data-coll={collection(@play)}
       data-text={
@@ -792,11 +799,21 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   defp entry_meta(play) do
-    [
-      composition_years(play),
-      if(play.is_verse and play.verse_count, do: "#{number(play.verse_count)} vv.", else: "Prose")
-    ]
-    |> Enum.reject(&is_nil/1)
-    |> Enum.join(" · ")
+    form =
+      case Play.form(play) do
+        "prose" ->
+          "Prose"
+
+        "mixed" ->
+          "Verse and prose"
+
+        "verse" when is_integer(play.verse_count) and play.verse_count > 0 ->
+          "#{number(play.verse_count)} vv."
+
+        "verse" ->
+          "Verse"
+      end
+
+    [composition_years(play), form] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
   end
 end
