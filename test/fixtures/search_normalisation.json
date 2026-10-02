@@ -17,5 +17,6 @@
     {"word": "y", "key": "y", "file": "y"},
     {"word": "œdipe", "key": "œd", "file": "u0153d"},
     {"word": "1236", "key": "12", "file": "12"}
-  ]
+  ],
+  "lines_per_chunk": 100
 }

@@ -26,6 +26,10 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     end
   end
 
+  test "lines are chunked in the size the browser expects" do
+    assert Search.lines_per_chunk() == cases()["lines_per_chunk"]
+  end
+
   describe "the index files" do
     setup do
       play =
@@ -47,18 +51,20 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       %{play: play, dir: generate!([play], all: true)}
     end
 
-    test "a word's shard points at its line, and the lines file holds the line as printed", %{
+    test "a word's shard points at its line, and the line's chunk holds it as printed", %{
       play: play,
       dir: dir
     } do
       {"index", "su", shard} = load_js!(dir, "search/index/su.js")
 
-      {"lines", code, %{"speakers" => speakers, "lines" => lines}} =
-        load_js!(dir, "search/lines/#{play.code}.js")
+      {"lines", key, %{"speakers" => speakers, "lines" => lines}} =
+        load_js!(dir, "search/lines/#{play.code}/0.js")
 
-      assert code == play.code
+      assert key == "#{play.code}/0"
       line = Enum.find_index(lines, &(Enum.at(&1, 1) == "l12"))
-      assert shard["sueño"] == [0, line, 0]
+
+      # Play 0, one line, delta line * 2 + flag 0.
+      assert shard["sueño"] == [0, 1, line * 2]
 
       assert ["act-2", "l12", "II, 12", speaker, "v", "Decir que sueño es engaño"] =
                Enum.at(lines, line)
@@ -69,7 +75,8 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     test "a stage direction is marked as one", %{dir: dir} do
       {"index", "va", shard} = load_js!(dir, "search/index/va.js")
 
-      assert [0, _line, 1] = shard["vase"]
+      assert [0, 1, delta] = shard["vase"]
+      assert rem(delta, 2) == 1
     end
 
     test "a word that starts with ñ lives in a shard named by its code point", %{dir: dir} do
@@ -85,6 +92,38 @@ defmodule Playcode.Export.StaticSiteSearchTest do
 
       assert code == play.code
     end
+  end
+
+  test "a long play's lines are written in chunks of 100, each naming its own speakers" do
+    verses = fn speaker, from, to ->
+      lines = Enum.map_join(from..to, "", &~s(<l n="#{&1}">verso #{&1}</l>))
+      "<sp><speaker>#{speaker}</speaker>#{lines}</sp>"
+    end
+
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            #{verses.("ANA", 1, 100)}#{verses.("JUAN", 101, 150)}
+          </div1>
+          """
+        )
+      )
+
+    dir = generate!([play], all: true)
+
+    {"lines", _, first} = load_js!(dir, "search/lines/#{play.code}/0.js")
+    {"lines", _, second} = load_js!(dir, "search/lines/#{play.code}/1.js")
+    refute File.exists?(Path.join([dir, "search", "lines", play.code, "2.js"]))
+
+    assert {length(first["lines"]), first["speakers"]} == {100, ["ANA"]}
+    assert {length(second["lines"]), second["speakers"]} == {50, ["JUAN"]}
+    assert Enum.at(second["lines"], 0) |> Enum.at(1) == "l101"
+
+    # "120" occurs only in verse 120, the 120th line (index 119): delta 119 * 2.
+    {"index", "12", shard} = load_js!(dir, "search/index/12.js")
+    assert shard["120"] == [0, 1, 238]
   end
 
   test "adding a play to a generated site adds it to the index" do
@@ -111,7 +150,8 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     {"plays", "all", plays} = load_js!(dir, "search/plays.js")
     {"index", "su", shard} = load_js!(dir, "search/index/su.js")
     assert length(plays) == 2
-    assert length(shard["sueño"]) == 6
+    # One line in play 0 and one in play 1.
+    assert [0, 1, _, 1, 1, _] = shard["sueño"]
   end
 
   test "the search page works only with JavaScript, and says so without it" do

@@ -61,11 +61,9 @@ defmodule Playcode.Export.StaticSite do
             opts[:on_progress].(%{step: :play, current: n, total: total, detail: play.code})
             edition = Edition.load(play.id)
 
-            Map.put(
-              write_play(edition, dir, site),
-              :postings,
-              Search.write_play(dir, edition, n - 1)
-            )
+            edition
+            |> write_play(dir, site)
+            |> Map.merge(%{code: play.code, postings: Search.write_play(dir, edition)})
           end)
 
         opts[:on_progress].(%{
@@ -75,7 +73,7 @@ defmodule Playcode.Export.StaticSite do
           detail: "Generating catalogue..."
         })
 
-        report = write_index_pages(plays, results, dir, opts)
+        report = write_index_pages(plays, Map.new(results, &{&1.code, &1.postings}), dir, opts)
 
         {:ok,
          Map.merge(report, %{
@@ -129,14 +127,8 @@ defmodule Playcode.Export.StaticSite do
       File.mkdir_p!(dir)
       write_assets(dir)
 
-      results =
-        plays
-        |> Enum.with_index()
-        |> Enum.map(fn {play, i} ->
-          %{postings: Search.write_play(dir, Edition.load(play.id), i)}
-        end)
-
-      write_index_pages(plays, results, dir, opts)
+      postings = Map.new(plays, &{&1.code, Search.write_play(dir, Edition.load(&1.id))})
+      write_index_pages(plays, postings, dir, opts)
     end)
   end
 
@@ -231,7 +223,7 @@ defmodule Playcode.Export.StaticSite do
     %{largest_page_gzip: largest}
   end
 
-  defp write_index_pages(plays, results, dir, opts) do
+  defp write_index_pages(plays, postings, dir, opts) do
     site = site(opts, MapSet.new(plays, & &1.code))
 
     assigns = %{
@@ -246,7 +238,7 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
     File.write!(Path.join(dir, "search.html"), Pages.render(:search, %{site: site}))
-    Search.write_index(dir, plays, Enum.map(results, & &1.postings))
+    Search.write_index(dir, plays, postings)
   end
 
   # One entry per work: each published play under the published play at the root of
