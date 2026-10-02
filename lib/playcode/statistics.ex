@@ -60,6 +60,8 @@ defmodule Playcode.Statistics do
 
     items = play_id |> PlayContent.load_play_content() |> Metrics.items()
     passages = Metrics.passages(items)
+    {basis, columns, column_of} = Metrics.columns(items, passages)
+    spoken = Enum.filter(items, &(&1.kind in [:verse, :prose]))
 
     %{
       "version" => @version,
@@ -76,7 +78,13 @@ defmodule Playcode.Statistics do
       "aside_verses" => count_aside_verses(all_elements),
       "character_appearances" => character_appearances(all_elements),
       "verse_type_distribution" => verse_type_distribution(all_elements),
-      "metrical_passages" => Enum.map(passages, &passage_data/1)
+      "metrical_passages" => Enum.map(passages, &passage_data/1),
+      "verses" => Enum.count(items, &Metrics.whole_verse?/1),
+      "speeches" => count_by_type(all_elements, "speech"),
+      "words" => spoken |> Enum.map(&Metrics.words(&1.element.content)) |> Enum.sum(),
+      "characters" => Metrics.characters(items, passages, column_of),
+      "presence" => %{"basis" => basis, "columns" => columns},
+      "divisions" => Metrics.divisions(items)
     }
   end
 

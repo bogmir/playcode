@@ -193,4 +193,124 @@ defmodule Playcode.Statistics.Metrics do
   @doc "Number of words in element content; the `<<`/`>>` markers are not words."
   def words(nil), do: 0
   def words(text), do: length(Regex.scan(~r/[\p{L}\p{N}]+/u, text))
+
+  @doc """
+  Presence columns: the play's scenes if it has any, else its metrical passages, else
+  its top-level divisions. Returns `{basis, columns, column_of}`, where `column_of`
+  maps an item to its column index, or nil.
+  """
+  def columns(items, passages) do
+    cond do
+      Enum.any?(items, & &1.scene) ->
+        scenes = items |> Enum.filter(& &1.scene) |> Enum.uniq_by(& &1.scene.id)
+        index = scenes |> Enum.with_index() |> Map.new(fn {item, i} -> {item.scene.id, i} end)
+
+        columns =
+          Enum.map(scenes, fn item ->
+            %{
+              "act" => item.act,
+              "label" => item.scene.title || "#{item.act}.#{item.scene.position + 1}"
+            }
+          end)
+
+        {"scene", columns, fn item -> item.scene && index[item.scene.id] end}
+
+      passages != [] ->
+        index =
+          passages
+          |> Enum.with_index()
+          |> Enum.flat_map(fn {passage, i} -> Enum.map(passage.element_ids, &{&1, i}) end)
+          |> Map.new()
+
+        columns =
+          Enum.map(passages, fn p ->
+            %{
+              "act" => p.act,
+              "form" => p.form,
+              "family" => family(p.form),
+              "from" => p.from,
+              "to" => p.to
+            }
+          end)
+
+        {"passage", columns, fn item -> index[item.element.id] end}
+
+      true ->
+        divisions = Enum.uniq_by(items, & &1.division.id)
+
+        index =
+          divisions |> Enum.with_index() |> Map.new(fn {item, i} -> {item.division.id, i} end)
+
+        columns = Enum.map(divisions, &%{"act" => &1.act, "label" => &1.division.title})
+        {"division", columns, fn item -> index[item.division.id] end}
+    end
+  end
+
+  @doc "Per-character figures, most lines first, then most words."
+  def characters(items, passages, column_of) do
+    form_of =
+      passages
+      |> Enum.flat_map(fn passage -> Enum.map(passage.element_ids, &{&1, passage.form}) end)
+      |> Map.new()
+
+    items
+    |> Enum.filter(&(&1.kind in [:verse, :prose] and &1.speech != nil))
+    |> Enum.flat_map(fn item -> Enum.map(item.speakers, &{&1, item}) end)
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Enum.map(fn {{key, name}, spoken} -> character(key, name, spoken, form_of, column_of) end)
+    |> Enum.sort_by(&{-&1["lines"], -&1["words"], &1["name"]})
+  end
+
+  defp character(key, name, spoken, form_of, column_of) do
+    verses = Enum.filter(spoken, &(&1.kind == :verse))
+    speeches = spoken |> Enum.group_by(& &1.speech.id) |> Map.values()
+    first = hd(spoken)
+
+    %{
+      "key" => key,
+      "name" => name,
+      "speeches" => length(speeches),
+      "lines" => length(verses),
+      "words" => sum_words(spoken),
+      "first" => %{"act" => first.act, "line" => first.number},
+      "aside_verses" => Enum.count(verses, & &1.element.is_aside),
+      "longest_speech" => %{
+        "lines" =>
+          speeches |> Enum.map(&Enum.count(&1, fn item -> item.kind == :verse end)) |> Enum.max(),
+        "words" => speeches |> Enum.map(&sum_words/1) |> Enum.max()
+      },
+      "forms" =>
+        verses
+        |> Enum.map(&form_of[&1.element.id])
+        |> Enum.reject(&is_nil/1)
+        |> Enum.frequencies(),
+      "columns" =>
+        spoken
+        |> Enum.map(column_of)
+        |> Enum.reject(&is_nil/1)
+        |> Enum.frequencies()
+        |> Enum.sort()
+        |> Enum.map(&Tuple.to_list/1)
+    }
+  end
+
+  defp sum_words(items), do: items |> Enum.map(&words(&1.element.content)) |> Enum.sum()
+
+  @doc "Verses, speeches and speakers per top-level division and per scene, in order."
+  def divisions(items) do
+    items
+    |> Enum.chunk_by(&{&1.division.id, &1.scene && &1.scene.id})
+    |> Enum.map(fn [first | _] = chunk ->
+      spoken = Enum.filter(chunk, &(&1.kind in [:verse, :prose] and &1.speech != nil))
+
+      %{
+        "act" => first.act,
+        "division" => first.division.title,
+        "scene" => first.scene && first.scene.title,
+        "verses" => Enum.count(chunk, &whole_verse?/1),
+        "speeches" => spoken |> Enum.uniq_by(& &1.speech.id) |> length(),
+        "speakers" => spoken |> Enum.flat_map(& &1.speakers) |> Enum.uniq() |> length()
+      }
+    end)
+  end
 end
