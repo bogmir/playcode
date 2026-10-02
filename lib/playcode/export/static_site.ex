@@ -56,14 +56,14 @@ defmodule Playcode.Export.StaticSite do
 
         results =
           plays
+          |> Task.async_stream(&build_play(&1.id, dir, site),
+            max_concurrency: concurrency(),
+            timeout: :infinity
+          )
           |> Enum.with_index(1)
-          |> Enum.map(fn {play, n} ->
-            opts[:on_progress].(%{step: :play, current: n, total: total, detail: play.code})
-            edition = Edition.load(play.id)
-
-            edition
-            |> write_play(dir, site)
-            |> Map.merge(%{code: play.code, postings: Search.write_play(dir, edition)})
+          |> Enum.map(fn {{:ok, result}, n} ->
+            opts[:on_progress].(%{step: :play, current: n, total: total, detail: result.code})
+            result
           end)
 
         opts[:on_progress].(%{
@@ -94,41 +94,64 @@ defmodule Playcode.Export.StaticSite do
       File.mkdir_p!(Path.join(dir, "plays"))
 
       edition = Edition.load(play_id)
-      published = MapSet.new([edition.play.code | list_exported_codes(dir)])
-      write_play(edition, dir, site(opts, published))
-      rebuild_index(opts)
+      site = site(opts, MapSet.new([edition.play.code | list_exported_codes(dir)]))
+      write_play(edition, dir, site)
+      refresh_family(edition.play, dir, site)
+      rebuild_index(opts, %{edition.play.code => Search.write_play(dir, edition)})
       :ok
     end)
   end
 
   @doc "Removes one play from an existing site, then rebuilds the catalogue and index."
   def remove_single_play(code, opts \\ []) do
-    dir = Keyword.get(opts, :output_dir, "_site")
+    in_english(fn ->
+      opts = defaults(opts)
+      dir = opts[:output_dir]
 
-    if code in list_exported_codes(dir) do
-      safe_code!(code)
-      File.rm_rf!(Path.join([dir, "plays", code]))
-      File.rm(Path.join([dir, "plays", "#{code}.html"]))
-    end
+      if code in list_exported_codes(dir) do
+        safe_code!(code)
+        File.rm_rf!(Path.join([dir, "plays", code]))
+        File.rm(Path.join([dir, "plays", "#{code}.html"]))
 
-    rebuild_index(opts)
-    :ok
+        with %Play{} = play <-
+               Enum.find(Catalogue.list_plays(include_deleted: true), &(&1.code == code)) do
+          refresh_family(play, dir, site(opts, MapSet.new(list_exported_codes(dir))))
+        end
+      end
+
+      rebuild_index(opts)
+      :ok
+    end)
   end
 
-  @doc "Rebuilds the catalogue, about, search pages and search index from the plays on disk."
-  def rebuild_index(opts \\ []) do
+  @doc """
+  Rewrites the catalogue, about and search pages and the search index for the plays on
+  disk. `postings` holds freshly computed postings by code; every other play keeps what
+  the current index holds for it, and a play the index lacks is loaded and indexed.
+  """
+  def rebuild_index(opts \\ [], postings \\ %{}) do
     in_english(fn ->
       opts = defaults(opts)
       dir = opts[:output_dir]
       codes = list_exported_codes(dir)
       plays = Catalogue.list_plays(sort: :title_sort) |> Enum.filter(&(&1.code in codes))
+      indexed = MapSet.new(Search.indexed_codes(dir))
 
-      File.rm_rf!(Path.join(dir, "search"))
+      missing =
+        plays
+        |> Enum.reject(&(Map.has_key?(postings, &1.code) or MapSet.member?(indexed, &1.code)))
+        |> Task.async_stream(
+          fn play ->
+            in_english(fn -> {play.code, Search.write_play(dir, Edition.load(play.id))} end)
+          end,
+          max_concurrency: concurrency(),
+          timeout: :infinity
+        )
+        |> Map.new(fn {:ok, pair} -> pair end)
+
       File.mkdir_p!(dir)
       write_assets(dir)
-
-      postings = Map.new(plays, &{&1.code, Search.write_play(dir, Edition.load(&1.id))})
-      write_index_pages(plays, postings, dir, opts)
+      write_index_pages(plays, Map.merge(postings, missing), dir, opts)
     end)
   end
 
@@ -191,6 +214,43 @@ defmodule Playcode.Export.StaticSite do
     File.cp_r!(Application.app_dir(:playcode, "priv/static_site"), assets)
   end
 
+  # Prepares, writes and indexes one play; generate/1 runs several at once. The locale
+  # lives in the process dictionary, so each worker sets English itself.
+  defp build_play(play_id, dir, site) do
+    in_english(fn ->
+      edition = Edition.load(play_id)
+
+      edition
+      |> write_play(dir, site)
+      |> Map.merge(%{code: edition.play.code, postings: Search.write_play(dir, edition)})
+    end)
+  end
+
+  # Each play holds a database connection while it loads; two stay free for the app.
+  defp concurrency do
+    pool = Playcode.Repo.config()[:pool_size] || 10
+    max(1, min(System.schedulers_online(), pool - 2))
+  end
+
+  # A title page links the play's published original and translations, so theirs change
+  # when one of them is added or removed.
+  defp refresh_family(play, dir, site) do
+    exported = MapSet.new(list_exported_codes(dir))
+
+    Catalogue.list_plays()
+    |> Enum.filter(fn member ->
+      (member.id == play.parent_play_id or member.parent_play_id == play.id) and
+        MapSet.member?(exported, member.code)
+    end)
+    |> Enum.each(&(&1.id |> Edition.load() |> write_title_page(dir, site)))
+  end
+
+  defp write_title_page(%Edition{play: play} = edition, dir, site) do
+    code = safe_code!(play.code)
+    html = Pages.render(:title, %{edition: edition, site: site})
+    File.write!(Path.join([dir, "plays", code, "index.html"]), html)
+  end
+
   # Writes one play's pages and TEI; returns what the index pages need from it.
   defp write_play(%Edition{play: play} = edition, dir, site) do
     code = safe_code!(play.code)
@@ -199,7 +259,7 @@ defmodule Playcode.Export.StaticSite do
     File.mkdir_p!(play_dir)
     assigns = %{edition: edition, site: site}
 
-    File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
+    write_title_page(edition, dir, site)
     File.write!(Path.join(play_dir, "#{code}.xml"), TeiXml.generate(play))
 
     largest =

@@ -98,6 +98,18 @@ defmodule Playcode.Export.StaticSiteTest do
     refute "../#{unpublished.code}/index.html" in hrefs(page)
   end
 
+  test "adding or removing a translation updates its original's title page" do
+    %{original: original, translation: translation} = translation_family_fixture()
+    dir = generate!([original])
+    link = "../#{translation.code}/index.html"
+
+    :ok = StaticSite.generate_single_play(translation.id, output_dir: dir)
+    assert link in hrefs(title_page(dir, original))
+
+    :ok = StaticSite.remove_single_play(translation.code, output_dir: dir)
+    refute link in hrefs(title_page(dir, original))
+  end
+
   test "a play page carries its places and its historical time, in English whatever the locale" do
     play = complete_play(%{"historical_time" => "siglo_xvii"})
     play_place_fixture(play, place_fixture(%{"name" => "Roma"}))

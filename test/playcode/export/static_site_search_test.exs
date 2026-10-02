@@ -154,6 +154,86 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     assert [0, 1, _, 1, 1, _] = shard["sueño"]
   end
 
+  describe "updating a generated site" do
+    setup do
+      play = fn word ->
+        import_tei!(
+          tei(
+            body:
+              ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">sueño #{word}</l></sp></div1>)
+          )
+        )
+      end
+
+      %{first: play.("primero"), second: play.("segundo")}
+    end
+
+    test "adding a play leaves the others' search entries as they were last generated",
+         %{first: first, second: second} do
+      dir = generate!([first], all: true)
+
+      # Change the first play after the site was built: adding the second must not
+      # reload it, so its entries still say "primero".
+      [line] =
+        for d <- Playcode.PlayContent.load_play_content(first.id),
+            el <- d.loaded_elements,
+            %{type: "verse_line"} = l <- el.children,
+            do: l
+
+      {:ok, _} = Playcode.PlayContent.update_element(line, %{content: "nada"})
+
+      :ok = Playcode.Export.StaticSite.generate_single_play(second.id, output_dir: dir)
+
+      {"index", "pr", shard} = load_js!(dir, "search/index/pr.js")
+      {"plays", "all", plays} = load_js!(dir, "search/plays.js")
+      first_index = Enum.find_index(plays, &(&1["code"] == first.code))
+
+      assert [^first_index, 1, _] = shard["primero"]
+      refute File.exists?(Path.join([dir, "search", "index", "na.js"]))
+    end
+
+    test "removing a play takes its lines and its words out of the index",
+         %{first: first, second: second} do
+      dir = generate!([first, second], all: true)
+
+      :ok = Playcode.Export.StaticSite.remove_single_play(second.code, output_dir: dir)
+
+      {"plays", "all", plays} = load_js!(dir, "search/plays.js")
+      {"index", "su", shard} = load_js!(dir, "search/index/su.js")
+
+      assert Enum.map(plays, & &1["code"]) == [first.code]
+      assert shard["sueño"] == [0, 1, 0]
+      refute File.exists?(Path.join([dir, "search", "index", "se.js"]))
+      refute File.exists?(Path.join([dir, "search", "lines", second.code]))
+    end
+
+    test "removing the last play leaves an empty site that still builds", %{first: first} do
+      dir = generate!([first], all: true)
+
+      :ok = Playcode.Export.StaticSite.remove_single_play(first.code, output_dir: dir)
+
+      assert {"plays", "all", []} = load_js!(dir, "search/plays.js")
+      assert Path.wildcard(Path.join([dir, "search", "index", "*.js"])) == []
+      assert read!(dir, "index.html") =~ "0 plays"
+    end
+
+    test "a site whose index predates chunked lines is re-indexed in full",
+         %{first: first, second: second} do
+      dir = generate!([first], all: true)
+
+      # What a build before chunked lines left: a lines file, not a folder.
+      File.rm_rf!(Path.join([dir, "search", "lines", first.code]))
+      File.write!(Path.join([dir, "search", "lines", "#{first.code}.js"]), "old")
+
+      :ok = Playcode.Export.StaticSite.generate_single_play(second.id, output_dir: dir)
+
+      {"index", "su", shard} = load_js!(dir, "search/index/su.js")
+      assert [0, 1, 0, 1, 1, 0] = shard["sueño"]
+      assert File.exists?(Path.join([dir, "search", "lines", first.code, "0.js"]))
+      refute File.exists?(Path.join([dir, "search", "lines", "#{first.code}.js"]))
+    end
+  end
+
   test "the search page works only with JavaScript, and says so without it" do
     dir = generate!([Playcode.TestFixtures.play_fixture(%{"is_complete" => true})])
     page = html!(dir, "search.html")

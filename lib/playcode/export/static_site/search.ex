@@ -116,10 +116,18 @@ defmodule Playcode.Export.StaticSite.Search do
 
   @doc """
   Writes `search/plays.js` and every shard for `plays`, in that order. `postings` maps a
-  play's code to what `write_play/2` returned for it. Removes the lines files of plays
-  that are no longer in `plays`. Returns the total and the largest shard size.
+  play's code to what `write_play/2` returned for it; a play in `plays` that `postings`
+  lacks keeps the postings the site's current shards hold for it, under its new index, so
+  adding or removing one play reloads no other. Removes the lines files of plays no longer
+  in `plays`. Returns the total and the largest shard size.
   """
   def write_index(dir, plays, postings) do
+    index_dir = Path.join([dir, "search", "index"])
+    order = plays |> Enum.with_index() |> Map.new(fn {play, p} -> {play.code, p} end)
+
+    # Read before plays.js is rewritten: it maps the old shards' play numbers to codes.
+    carried = carried_groups(dir, index_dir, order, postings)
+
     write_js!(
       Path.join([dir, "search", "plays.js"]),
       "plays",
@@ -130,13 +138,71 @@ defmodule Playcode.Export.StaticSite.Search do
     prune_lines(dir, plays)
 
     groups =
-      for {play, p} <- Enum.with_index(plays),
-          {word, lines} <- Map.get(postings, play.code, %{}),
-          reduce: %{} do
+      for {code, by_word} <- postings,
+          p when not is_nil(p) <- [order[code]],
+          {word, lines} <- by_word,
+          reduce: carried do
         acc -> Map.update(acc, word, [{p, deltas(lines)}], &[{p, deltas(lines)} | &1])
       end
 
-    write_shards(Path.join([dir, "search", "index"]), groups)
+    write_shards(index_dir, groups)
+  end
+
+  @doc """
+  Codes of the plays the site's current index holds, in index order. Empty when the index
+  predates chunked lines (some play has no `search/lines/<CODE>/` folder): its shards are
+  in another format and must not be carried over.
+  """
+  def indexed_codes(dir) do
+    with {:ok, plays} <- read_js(Path.join([dir, "search", "plays.js"])),
+         codes = Enum.map(plays, & &1["code"]),
+         true <- Enum.all?(codes, &File.dir?(Path.join([dir, "search", "lines", &1]))) do
+      codes
+    else
+      _ -> []
+    end
+  end
+
+  # Every word's postings in the current shards as `{new play index, deltas}`: a play's
+  # deltas do not change when its index does. Plays that left the site, and plays whose
+  # postings were just recomputed, are dropped.
+  defp carried_groups(dir, index_dir, order, postings) do
+    remap =
+      dir
+      |> indexed_codes()
+      |> Enum.with_index()
+      |> Map.new(fn {code, old} ->
+        {old, if(Map.has_key?(postings, code), do: nil, else: order[code])}
+      end)
+
+    if remap == %{} do
+      %{}
+    else
+      for path <- Path.wildcard(Path.join(index_dir, "*.js")),
+          {:ok, shard} <- [read_js(path)],
+          {word, list} <- shard,
+          {old, deltas} <- play_groups(list),
+          new when not is_nil(new) <- [remap[old]],
+          reduce: %{} do
+        acc -> Map.update(acc, word, [{new, deltas}], &[{new, deltas} | &1])
+      end
+    end
+  end
+
+  defp play_groups([]), do: []
+
+  defp play_groups([play, n | rest]) do
+    {deltas, rest} = Enum.split(rest, n)
+    [{play, deltas} | play_groups(rest)]
+  end
+
+  defp read_js(path) do
+    with {:ok, js} <- File.read(path),
+         [_, json] <- Regex.run(~r/\AEMOTHE\.search\.load\(".*?",".*?",(.*)\);\n\z/s, js) do
+      {:ok, Jason.decode!(json)}
+    else
+      _ -> :error
+    end
   end
 
   # `groups` maps a word to its `{play, deltas}` per play, in any order.
