@@ -66,7 +66,7 @@ defmodule Playcode.Import.TeiPreviewTest do
   test "an existing play reports what is replaced and what is kept", %{path: path} do
     {:ok, play} = TeiParser.import_file(path)
     {:ok, _} = Catalogue.create_play_source(%{play_id: play.id, title: "Typed by hand"})
-    {:ok, _} = Catalogue.update_play(play, %{language: "en"})
+    {:ok, _} = Catalogue.update_play(play, %{language: "en", form: "mixed"})
 
     assert {:ok, preview} = TeiParser.preview_import(path)
 
@@ -77,6 +77,7 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert preview.replaces.characters == 1
     assert preview.preserves.sources == 1
     assert :language in preview.preserves_fields
+    assert :form in preview.preserves_fields
   end
 
   test "a hand-linked place counts as kept, a TEI one as replaced", %{path: path} do

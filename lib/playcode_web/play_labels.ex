@@ -30,6 +30,21 @@ defmodule PlaycodeWeb.PlayLabels do
     [{"", nil} | Enum.map(Play.historical_times(), &{historical_time_label(&1), &1})]
   end
 
+  @doc "The name of a play's form, as `Play.form/1` gives it."
+  def form_label("verse"), do: gettext("Verse")
+  def form_label("prose"), do: gettext("Prose")
+  def form_label("mixed"), do: gettext("Verse and prose")
+
+  @doc "The form select's options: automatic first, saying what it currently gives."
+  def form_options(%Play{} = play) do
+    automatic = Play.form(%{play | form: nil})
+
+    [
+      {gettext("Automatic (%{form})", form: form_label(automatic)), nil}
+      | Enum.map(Play.forms(), &{form_label(&1), &1})
+    ]
+  end
+
   @doc "The Spanish-or-English name of a place type slug."
   def place_type_label("continent"), do: gettext("Continent")
   def place_type_label("country"), do: gettext("Country")

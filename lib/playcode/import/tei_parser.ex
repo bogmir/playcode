@@ -30,7 +30,8 @@ defmodule Playcode.Import.TeiParser do
     :historical_time_note,
     :composition_date_from,
     :composition_date_to,
-    :composition_date_note
+    :composition_date_note,
+    :form
   ]
 
   @title_small_words MapSet.new([

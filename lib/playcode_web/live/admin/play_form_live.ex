@@ -658,11 +658,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
         <div class="flex gap-4">
           <div class="rounded-box bg-base-200 px-3 py-2">
             <label class="flex items-center gap-2 text-sm text-base-content/85">
-              <.input field={@form[:is_verse]} type="checkbox" /> {gettext("Verse play")}
-            </label>
-          </div>
-          <div class="rounded-box bg-base-200 px-3 py-2">
-            <label class="flex items-center gap-2 text-sm text-base-content/85">
               <.input field={@form[:is_complete]} type="checkbox" /> {gettext("Complete")}
             </label>
           </div>
@@ -698,6 +693,15 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
             {gettext("Research Metadata")}
           </h3>
+          <div>
+            <label class="label">
+              <span class="label-text font-medium">{gettext("Form")}</span>
+            </label>
+            <.input field={@form[:form]} type="select" options={PlayLabels.form_options(@play)} />
+            <p class="mt-1 text-xs text-base-content/60">
+              {gettext("Automatic follows the text: verse when it has any verse lines.")}
+            </p>
+          </div>
           <div>
             <label class="label">
               <span class="label-text font-medium">{gettext("Historical Time")}</span>

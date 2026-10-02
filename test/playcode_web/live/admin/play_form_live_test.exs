@@ -7,6 +7,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
   import Playcode.TestFixtures
 
   alias Playcode.Catalogue
+  alias Playcode.Catalogue.Play
 
   setup %{conn: conn} do
     %{conn: log_in_user(conn, user_fixture(role: :researcher))}
@@ -44,6 +45,40 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
     assert_redirect(view, ~p"/admin/plays/#{play.id}")
     assert Catalogue.get_play!(play.id).title == "Updated Title"
+  end
+
+  test "a play's form can be set by hand, and later edits to its text keep it",
+       %{conn: conn} do
+    %{play: play, line_group: line_group, scene: scene} = play_with_structure_fixture()
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+    save(view, %{"form" => "prose"})
+    assert play.id |> Catalogue.get_play!() |> Play.form() == "prose"
+
+    # A content edit recomputes is_verse from the verse lines; the curator's choice stands.
+    {:ok, _} =
+      Playcode.PlayContent.create_element(%{
+        play_id: play.id,
+        division_id: scene.id,
+        parent_id: line_group.id,
+        type: "verse_line",
+        content: "otro verso",
+        line_number: 99,
+        position: 99
+      })
+
+    assert play.id |> Catalogue.get_play!() |> Play.form() == "prose"
+  end
+
+  test "left automatic, the form follows the text", %{conn: conn} do
+    %{play: play} = play_with_structure_fixture()
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+    save(view, %{"form" => ""})
+
+    saved = Catalogue.get_play!(play.id)
+    assert saved.form == nil
+    assert Play.form(saved) == if(saved.is_verse, do: "verse", else: "prose")
   end
 
   test "the research metadata is saved: historical time and composition date",

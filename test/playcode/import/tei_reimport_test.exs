@@ -57,6 +57,7 @@ defmodule Playcode.Import.TeiReimportTest do
 
     curated = %{
       language: "en",
+      form: "mixed",
       relationship_type: "traduccion",
       historical_time: "edad_media",
       historical_time_note: "Reinado de Juan I de Portugal (1385-1433)",

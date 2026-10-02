@@ -16,6 +16,7 @@ defmodule Playcode.Catalogue.Play do
     field :publication_date, :string
     field :verse_count, :integer
     field :is_verse, :boolean, default: true
+    field :form, :string
     field :publisher, :string
     field :pub_place, :string
     field :availability_note, :string
@@ -84,6 +85,20 @@ defmodule Playcode.Catalogue.Play do
 
   def historical_times, do: @historical_times
 
+  @forms ~w(verse prose mixed)
+
+  def forms, do: @forms
+
+  @doc """
+  The play's form as every page names it: the curator's choice when set, else "verse"
+  when the text has any verse and "prose" otherwise. `is_verse` is recomputed from the
+  verse lines on every import and content edit, so the automatic value follows the text;
+  only a curator says "mixed".
+  """
+  def form(%__MODULE__{form: form}) when is_binary(form), do: form
+  def form(%__MODULE__{is_verse: true}), do: "verse"
+  def form(%__MODULE__{}), do: "prose"
+
   # The bounds on each composition year, deliberately wide — the corpus is 16th–17th
   # century, but the column is a year and a curator fixing a typo should not fight the
   # validator. Public so the TEI importer can reject an out-of-range attribute before
@@ -105,6 +120,7 @@ defmodule Playcode.Catalogue.Play do
       :publication_date,
       :verse_count,
       :is_verse,
+      :form,
       :publisher,
       :pub_place,
       :availability_note,
@@ -131,6 +147,7 @@ defmodule Playcode.Catalogue.Play do
     |> validate_inclusion(:language, @valid_languages)
     |> validate_number(:verse_count, greater_than_or_equal_to: 0)
     |> validate_inclusion(:relationship_type, ~w(traduccion adaptacion refundicion))
+    |> validate_inclusion(:form, @forms)
     |> validate_inclusion(:historical_time, @historical_times)
     |> validate_number(:composition_date_from,
       greater_than_or_equal_to: @composition_year_range.first,
