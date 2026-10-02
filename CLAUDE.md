@@ -165,7 +165,7 @@ All tables use UUID primary keys. Key relationships:
 
 - `users` - email/password auth with role (`:admin`, `:researcher`), `confirmed_at`, `deactivated_at`; `hashed_password` is nullable because an invited account has no password yet
 - `users_tokens` - session tokens (with `ip_address`/`user_agent`), invite and password-reset tokens. There is no self-service email change, so no `change:` context
-- `plays` has_many `play_editors`, `play_sources`, `play_editorial_notes`, `characters`, `play_divisions`, `play_elements`; `composition_date_from`, `composition_date_to`, `composition_date_note` hold when the play was written, as a year range plus the competing datings verbatim
+- `plays` has_many `play_editors`, `play_sources`, `play_editorial_notes`, `characters`, `play_divisions`, `play_elements`; `composition_date_from`, `composition_date_to`, `composition_date_note` hold when the play was written, as a year range plus the competing datings verbatim; `form` is nil (automatic, from `is_verse`) or a curator's `verse`/`prose`/`mixed`, read only through `Play.form/1`
 - `play_divisions` self-references via `parent_id` (acts contain scenes)
 - `play_elements` self-references via `parent_id` (speeches contain line_groups contain verse_lines)
 - `element_characters` join table links `play_elements` to `characters` (many-to-many, supports multi-speaker speeches like `who="#ALB #COR"`)
@@ -179,7 +179,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 
 - `plays.deleted_at` — archiving, not deletion. `Catalogue.delete_play/1` sets it, `restore_play/1` clears it, `purge_play/1` is the destructive path (wired to no button). Every Catalogue read hides archived plays; pass `include_deleted: true` for both or `archived: true` for only the archived ones. The unique index on `plays.code` is deliberately global, so an archived play keeps its code reserved.
 - `play_editors.origin`, `play_sources.origin`, `play_editorial_notes.origin` — `"tei" | "manual" | "filemaker"`, default `"manual"`. A TEI re-import deletes only its own `"tei"` rows, so hand-entered records survive.
-- **Re-importing a TEI file whose code exists updates that play in place** (same `id`, same history, un-archived). It does *not* write `language`, `relationship_type`, `parent_play_id`, `is_complete`, `historical_time`, `historical_time_note`, `composition_date_from`, `composition_date_to` or `composition_date_note` — those are `@platform_owned` in `lib/playcode/import/tei_parser.ex`. Any new curated column must be added to that list: for a column the TEI parser emits, the list is what stops the re-import overwriting it; for one it does not emit, the list is what makes the import preview report it as preserved.
+- **Re-importing a TEI file whose code exists updates that play in place** (same `id`, same history, un-archived). It does *not* write `language`, `relationship_type`, `parent_play_id`, `is_complete`, `historical_time`, `historical_time_note`, `composition_date_from`, `composition_date_to`, `composition_date_note` or `form` — those are `@platform_owned` in `lib/playcode/import/tei_parser.ex`. Any new curated column must be added to that list: for a column the TEI parser emits, the list is what stops the re-import overwriting it; for one it does not emit, the list is what makes the import preview report it as preserved.
 - `TeiParser.preview_import/1` reports what an import would replace and keep, without writing. Used by the admin import page and `mix playcode.import.tei --dry-run`.
 
 ### Access control
@@ -281,13 +281,14 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 
 - `Playcode.Export.StaticSite` — orchestrator: loads plays, writes pages, copies `priv/static_site/` to `assets/`, builds the search index. Every path built from a play code goes through `StaticSite.safe_code!/1` (an allow-list `[A-Za-z0-9_-]+`), because `remove_single_play/2` takes a code from a socket event and play codes have no format validation
 - `StaticSite.Edition` — one play prepared once: pages (`act-N`, or the division type), line anchors (`#l<n>`; `#l<act>-<scene>-<n>` when numbering restarts per scene; `#p<n>` otherwise), citation refs, split-verse ghost text, passage starts
+- A division with more than 120,000 bytes of text and two or more scenes also gets a page per scene (`act-1-s3.html`); `generate/1` builds plays concurrently (`Task.async_stream`, at most the number of cores or the pool size minus two, whichever is smaller)
 - `StaticSite.Pages` (`pages/*.html.heex`) and `StaticSite.Components` — HEEx rendered to strings with `Phoenix.HTML.Safe.to_iodata/1`; dev's HEEx annotations are stripped
-- `StaticSite.Search` — the normaliser (must agree with `EMOTHE.normalise` in `site.js`: `test/fixtures/search_normalisation.json` runs against both) and the index: `search/index/<shard>.js`, `search/lines/<CODE>.js`, `search/plays.js`, all calling `EMOTHE.search.load`
+- `StaticSite.Search` — the normaliser (must agree with `EMOTHE.normalise` in `site.js`: `test/fixtures/search_normalisation.json` runs against both) and the index: `search/plays.js`, `search/index/<shard>.js` (per play `[play, n, deltas…]`, `delta = (line − previous) × 2 + stage flag`) and `search/lines/<CODE>/<k>.js` (100 lines each), all calling `EMOTHE.search.load`. `write_index/3` carries every play's postings over from the shards on disk, so adding or removing a play reloads no other; an index older than chunked lines is rebuilt in full
 - `Playcode.Statistics.Metrics` — metrical passages, characters, presence, divisions; cached by `Playcode.Statistics` (bump `@version` when what it stores changes)
 - `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
 - `StaticSite.Deployer` — pushes `_site/` to a GitHub Pages branch
 
-`generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three; the size budget (`style.css` 25 KB, `site.js` and `search.js` 15 KB, fonts 300 KB, act page 80 KB gzipped) `style.css`, `site.js`, `search.js` and the fonts are asserted in `static_site_test.exs`; the act-page and first-search budgets are only reported by the build (`generate/1`'s return and the mix task's printed line), not asserted.
+`generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three; the size budget (`style.css` 25 KB, `site.js` and `search.js` 15 KB, fonts 300 KB, act page 80 KB gzipped) `style.css`, `site.js`, `search.js` and the fonts are asserted in `static_site_test.exs`; the act-page and first-search budgets are only reported by the build (`generate/1`'s return and the mix task's printed line), not asserted. On the full dev corpus (83 plays, `--all`) the largest act page is 43.1 KB gzipped (EMOTHE0084, 0254 and 0648 are split into scene pages). A first single-word search costs at most ~166 KB gzipped (*sueño* 148 KB, *honneur* 166 KB, *de* 137 KB), under the 300 KB budget; a phrase over common words does not (*"vida es"* 954 KB, *"la vida es"* 691 KB), because the postings hold no word positions and every candidate line's chunk must load (`docs/static-site-improvements.md`, item 5). Builds: 45.2 s sequential, 17.0 s parallel; removing one play 2.8 s, adding one 4.3 s (follow-ups spec, "What was measured").
 
 ### Output structure
 
@@ -295,12 +296,12 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 _site/
 ├── index.html  search.html  about.html
 ├── assets/                    style.css, site.js, search.js, fonts/
-├── search/                    plays.js, index/<shard>.js, lines/<CODE>.js
+├── search/                    plays.js, index/<shard>.js, lines/<CODE>/<k>.js
 └── plays/
     ├── <CODE>.html            redirect stub to the old address
     └── <CODE>/
         ├── index.html         title page
-        ├── act-1.html …       one per act; prologue.html etc. for other divisions
+        ├── act-1.html …       one per act (act-1-s3.html … per scene for a very long act); prologue.html etc.
         ├── text.html          full text
         ├── statistics.html
         └── <CODE>.xml         TEI-XML

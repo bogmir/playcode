@@ -47,6 +47,11 @@ proof), and any `#{}` without `escape/1` writes raw HTML.
 `Phoenix.HTML.Safe.to_iodata/1`, CSS as real files, labels and inline markup from the shared
 module. One exporter per change; the output must stay byte-comparable where tests pin it.
 
+**Also**: `render_verse_info/1` in `export/html.ex` and `export/epub.ex` prints "N verses" or
+"Prose" from `is_verse`, so a curator's `plays.form` override (verse, prose or mixed) does not
+reach the HTML, PDF and EPUB downloads. Read `Play.form/1` instead, when each exporter moves
+onto the shared helpers.
+
 ## 4. Show the new statistics on the live play page
 
 **Problem**: the redesign adds a metrical synopsis, a per-act/scene table, a configuration
@@ -77,10 +82,29 @@ the three plays published today but not for the full dev corpus (83 plays, `--al
 Neither is asserted by a test; the build only reports them (`generate/1`'s return, the mix
 task's printed line), so nothing fails when they are exceeded.
 
-**Being fixed**: `docs/superpowers/specs/2026-10-02-static-site-followups-design.md`, parts A
-(lines files in 100-line chunks, delta-encoded postings, ten plays on the first screen) and C
-(a page per scene for a division over 120,000 bytes of text). The act-page overruns turned out
-to be content, not markup: the three pages hold 200–218 KB of text each.
+**Done**: `docs/superpowers/specs/2026-10-02-static-site-followups-design.md`, parts A and C.
+Search lines are written in 100-line chunks and postings are delta-encoded (`cace368`); the
+search page loads only the chunks it shows, ten plays first (`26cacfe`); a division over
+120,000 bytes of text with two or more scenes gets a page per scene (`cc9af09`). The act-page
+overruns turned out to be content, not markup: the three pages held 200–218 KB of text each.
+Measured on the 83-play dev corpus, `--all`:
+
+- Largest act page: 43.1 KB gzipped, against 80 KB. EMOTHE0084 (38 scene pages), EMOTHE0254
+  (18) and EMOTHE0648 (27) are the plays that split.
+- First search, gzipped sum of `plays.js`, the shards and the line chunks loaded: *sueño*
+  (prefix) 148 KB in 30 chunks, *amor* 66 KB in 17, *de* 137 KB in 10, *que* 90 KB in 10,
+  *y* 52 KB in 10, *honneur* 166 KB in 29. A single-word search is at most ~166 KB, under the
+  300 KB budget.
+- Builds (83 plays): 45.2 s sequential, 17.0 s parallel; removing one play 2.8 s, adding one
+  4.3 s (`9b37335`).
+
+**Still over budget: a phrase over common words.** *"vida es"* costs 954 KB gzipped (232
+chunks), *"la vida es"* 691 KB (119). The postings say which lines hold a word, not where in
+the line it sits, so a phrase is checked against the line text and the search page must load
+the chunk of every candidate line before it can show anything. Single-word searches are
+unaffected. **Fix**: word positions in the postings, so a phrase is checked from the shards
+alone. That is a format change and the shards grow; do it when phrase search over common
+words is wanted, not before.
 
 ## Awaiting the project
 
