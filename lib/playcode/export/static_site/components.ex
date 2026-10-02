@@ -16,6 +16,7 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :title, :string, required: true
   attr :site, :map, required: true
   attr :current, :atom, default: nil
+  attr :play, :map, default: nil, doc: "the play shown, whose licence the footer states"
   attr :rail_label, :string, default: "Contents & tools"
   slot :rail
   slot :inner_block, required: true
@@ -58,6 +59,9 @@ defmodule Playcode.Export.StaticSite.Components do
           <main id="main">{render_slot(@inner_block)}</main>
         </div>
         <footer class="foot">
+          <p :if={@play && licence?(@play)}>
+            <.licence play={@play} />
+          </p>
           <p>EMOTHE · version {@site.version} · built {@site.build_date}</p>
           <p>
             A static edition following the <a href="https://endings.uvic.ca/principles.html">Endings principles</a>; every play's TEI-XML source is published beside it.
@@ -67,6 +71,24 @@ defmodule Playcode.Export.StaticSite.Components do
     </html>
     """
   end
+
+  attr :play, :map, required: true
+
+  @doc "The play's licence: its text, linked to its URL when that is a web address."
+  def licence(assigns) do
+    ~H"""
+    {@play.licence_text}
+    <%= if web_url?(@play.licence_url) do %>
+      <a href={@play.licence_url}>{@play.licence_url}</a>
+    <% else %>
+      {@play.licence_url}
+    <% end %>
+    """
+  end
+
+  def licence?(play), do: play.licence_text not in [nil, ""] or play.licence_url not in [nil, ""]
+
+  defp web_url?(url), do: is_binary(url) and String.starts_with?(url, ["http://", "https://"])
 
   attr :edition, :map, required: true
   attr :current, :string, required: true
@@ -165,8 +187,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2>Places</h2>
       <ul>
         <li :for={{name, mentioned?, note} <- @links}>
-          {name}<span :if={mentioned?} class="role"> (mentioned)</span><span :if={note}>
-             —  {note}
+          {name}<span :if={mentioned?} class="role"> (mentioned)</span>
+          <span :if={note}>
+            — {note}
           </span>
         </li>
       </ul>

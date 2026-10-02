@@ -35,6 +35,7 @@ defmodule Playcode.Export.StaticSite do
       if plays == [] do
         {:error, "no plays to export (none marked as complete)"}
       else
+        Enum.each(plays, &safe_code!(&1.code))
         dir = opts[:output_dir]
         File.rm_rf!(dir)
         File.mkdir_p!(Path.join(dir, "plays"))
@@ -89,8 +90,13 @@ defmodule Playcode.Export.StaticSite do
   @doc "Removes one play from an existing site, then rebuilds the catalogue and index."
   def remove_single_play(code, opts \\ []) do
     dir = Keyword.get(opts, :output_dir, "_site")
-    File.rm_rf!(Path.join([dir, "plays", code]))
-    File.rm(Path.join([dir, "plays", "#{code}.html"]))
+
+    if code in list_exported_codes(dir) do
+      safe_code!(code)
+      File.rm_rf!(Path.join([dir, "plays", code]))
+      File.rm(Path.join([dir, "plays", "#{code}.html"]))
+    end
+
     rebuild_index(opts)
     :ok
   end
@@ -120,6 +126,16 @@ defmodule Playcode.Export.StaticSite do
       |> Enum.sort()
     else
       []
+    end
+  end
+
+  # Play codes become folder names that are deleted and rewritten; Play does not
+  # validate them, so anything but a plain name ("..", "", "a/b") is refused here.
+  defp safe_code!(code) do
+    if is_binary(code) and Regex.match?(~r/\A[A-Za-z0-9_-]+\z/, code) do
+      code
+    else
+      raise ArgumentError, "play code #{inspect(code)} cannot be used as a folder name"
     end
   end
 
@@ -159,17 +175,18 @@ defmodule Playcode.Export.StaticSite do
 
   # Writes one play's pages and TEI; returns what the index pages need from it.
   defp write_play(%Edition{play: play} = edition, dir, site) do
-    play_dir = Path.join([dir, "plays", play.code])
+    code = safe_code!(play.code)
+    play_dir = Path.join([dir, "plays", code])
     File.rm_rf!(play_dir)
     File.mkdir_p!(play_dir)
     assigns = %{edition: edition, site: site}
 
     File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
-    File.write!(Path.join(play_dir, "#{play.code}.xml"), TeiXml.generate(play))
+    File.write!(Path.join(play_dir, "#{code}.xml"), TeiXml.generate(play))
 
     File.write!(
-      Path.join([dir, "plays", "#{play.code}.html"]),
-      Pages.render(:redirect, %{code: play.code, title: play.title})
+      Path.join([dir, "plays", "#{code}.html"]),
+      Pages.render(:redirect, %{code: code, title: play.title})
     )
 
     %{}

@@ -1,4 +1,9 @@
-<Components.shell root="../../" title={"#{@edition.play.title} — EMOTHE"} site={@site}>
+<Components.shell
+  root="../../"
+  title={"#{@edition.play.title} — EMOTHE"}
+  site={@site}
+  play={@edition.play}
+>
   <:rail><Components.play_rail edition={@edition} current="index" /></:rail>
   <article class="title-page">
     <p class="author">{@edition.play.author_name}</p>
@@ -53,11 +58,8 @@
       <h2>Cite this edition</h2>
       <p data-citation>{Components.citation(@edition.play, @site)}</p>
     </section>
-    <p :if={@edition.play.licence_text || @edition.play.licence_url} class="lede">
-      {@edition.play.licence_text}
-      <a :if={@edition.play.licence_url} href={@edition.play.licence_url}>
-        {@edition.play.licence_url}
-      </a>
+    <p :if={Components.licence?(@edition.play)} class="lede">
+      <Components.licence play={@edition.play} />
     </p>
     <p><a href={"#{@edition.play.code}.xml"} download>Download the TEI-XML source</a></p>
   </article>

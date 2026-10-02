@@ -152,6 +152,51 @@ defmodule Playcode.Export.StaticSiteTest do
     refute read!(dir, "index.html") =~ "Primera"
   end
 
+  test "removing a play only ever touches that play's own folder" do
+    play = complete_play()
+    dir = generate!([play])
+
+    for bad <- ["..", "", ".", "../..", "no-such-play"] do
+      assert :ok = StaticSite.remove_single_play(bad, output_dir: dir)
+    end
+
+    assert StaticSite.list_exported_codes(dir) == [play.code]
+    assert File.exists?(Path.join([dir, "plays", play.code, "index.html"]))
+  end
+
+  test "a play code that is not a plain name is refused before anything is deleted" do
+    dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")
+    sentinel = Path.join(Path.dirname(dir), "sentinel-#{System.unique_integer([:positive])}")
+    File.mkdir_p!(sentinel)
+    File.write!(Path.join(sentinel, "keep.txt"), "keep")
+    on_exit(fn -> File.rm_rf(sentinel) end)
+
+    evil = complete_play(%{"code" => "../../#{Path.basename(sentinel)}"})
+
+    assert_raise ArgumentError, fn ->
+      StaticSite.generate(output_dir: dir, play_codes: [evil.code])
+    end
+
+    assert File.read!(Path.join(sentinel, "keep.txt")) == "keep"
+    File.rm_rf(dir)
+  end
+
+  test "the footer carries the play's licence, linked only when it is a web address" do
+    web =
+      complete_play(%{"licence_url" => "https://example.org/licence", "licence_text" => "CC BY"})
+
+    evil = complete_play(%{"licence_url" => "javascript:alert(1)"})
+
+    dir = generate!([web, evil])
+    footer = fn play -> dir |> title_page(play) |> LazyHTML.query("footer") end
+
+    assert "https://example.org/licence" in hrefs(footer.(web))
+    assert LazyHTML.text(footer.(web)) =~ "CC BY"
+
+    assert LazyHTML.text(footer.(evil)) =~ "javascript:alert(1)"
+    refute Enum.any?(hrefs(title_page(dir, evil)), &String.starts_with?(&1, "javascript:"))
+  end
+
   test "the HEEx annotations dev compiles in never reach the archive" do
     # config/dev.exs turns them on; the test env cannot, so the function is tested directly.
     html =
