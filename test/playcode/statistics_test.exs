@@ -1,6 +1,8 @@
 defmodule Playcode.StatisticsTest do
   use Playcode.DataCase, async: true
 
+  import Playcode.ImportHelpers
+
   alias Playcode.PlayContent
   alias Playcode.Statistics
   alias Playcode.TestFixtures
@@ -46,6 +48,87 @@ defmodule Playcode.StatisticsTest do
     stat |> Ecto.Changeset.change(data: stale) |> Repo.update!()
 
     assert Statistics.get_statistics(play.id).data["total_verses"] == 1
+  end
+
+  describe "metrical passages" do
+    test "fragments inherit the open passage's form, a new act closes it, same forms merge" do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="jornada" n="1"><head>Jornada I</head>
+              <sp><speaker>A</speaker>
+                <lg type="redondilla"><l n="1">uno</l><l n="2">dos</l><l n="3">tres</l><l n="4">cuatro</l></lg>
+                <lg type="redondilla" part="I"><l n="5">cinco</l><l n="6" part="I">seis</l></lg>
+              </sp>
+              <sp><speaker>B</speaker>
+                <lg type="free" part="M"><l part="F">y medio</l><l n="7">siete</l></lg>
+              </sp>
+              <sp><speaker>A</speaker>
+                <lg type="free" part="F"><l n="8">ocho</l></lg>
+                <lg type="romance_tirada"><l n="9">nueve</l><l n="10">diez</l></lg>
+              </sp>
+            </div1>
+            <div1 type="jornada" n="2"><head>Jornada II</head>
+              <sp><speaker>B</speaker>
+                <lg type="romance_tirada"><l n="11">once</l></lg>
+                <lg type="nil"><l n="12">doce</l></lg>
+              </sp>
+            </div1>
+            """
+          )
+        )
+
+      assert Statistics.get_statistics(play.id).data["metrical_passages"] == [
+               %{
+                 "act" => 1,
+                 "form" => "redondilla",
+                 "family" => "spanish",
+                 "from" => 1,
+                 "to" => 8,
+                 "verses" => 8
+               },
+               %{
+                 "act" => 1,
+                 "form" => "romance_tirada",
+                 "family" => "romance",
+                 "from" => 9,
+                 "to" => 10,
+                 "verses" => 2
+               },
+               %{
+                 "act" => 2,
+                 "form" => "romance_tirada",
+                 "family" => "romance",
+                 "from" => 11,
+                 "to" => 11,
+                 "verses" => 1
+               },
+               %{
+                 "act" => 2,
+                 "form" => "unmarked",
+                 "family" => "other",
+                 "from" => 12,
+                 "to" => 12,
+                 "verses" => 1
+               }
+             ]
+    end
+
+    test "a play whose verse carries no form has no synopsis" do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acte" n="1"><head>Acte I</head>
+              <sp><speaker>A</speaker><lg type="free"><l n="1">un</l></lg><lg><l n="2">deux</l></lg></sp>
+            </div1>
+            """
+          )
+        )
+
+      assert Statistics.get_statistics(play.id).data["metrical_passages"] == []
+    end
   end
 
   test "recompute/1 refreshes cached statistics after content changes" do

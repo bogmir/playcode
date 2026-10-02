@@ -6,7 +6,9 @@ defmodule Playcode.Statistics do
   import Ecto.Query
   alias Playcode.Repo
   alias Playcode.Statistics.PlayStatistic
+  alias Playcode.PlayContent
   alias Playcode.PlayContent.{Division, Element, ElementCharacter}
+  alias Playcode.Statistics.Metrics
 
   # Bump when compute/1 changes what it stores: a cached row with another version is
   # recomputed on its next read, so no migration or manual recompute is needed.
@@ -56,6 +58,9 @@ defmodule Playcode.Statistics do
     # Map division_id -> act number for elements
     division_to_act = build_division_to_act_map(play_id, acts)
 
+    items = play_id |> PlayContent.load_play_content() |> Metrics.items()
+    passages = Metrics.passages(items)
+
     %{
       "version" => @version,
       "act_label" => act_label(acts),
@@ -70,7 +75,19 @@ defmodule Playcode.Statistics do
       "total_asides" => count_asides(all_elements),
       "aside_verses" => count_aside_verses(all_elements),
       "character_appearances" => character_appearances(all_elements),
-      "verse_type_distribution" => verse_type_distribution(all_elements)
+      "verse_type_distribution" => verse_type_distribution(all_elements),
+      "metrical_passages" => Enum.map(passages, &passage_data/1)
+    }
+  end
+
+  defp passage_data(passage) do
+    %{
+      "act" => passage.act,
+      "form" => passage.form,
+      "family" => Metrics.family(passage.form),
+      "from" => passage.from,
+      "to" => passage.to,
+      "verses" => passage.verses
     }
   end
 
