@@ -244,6 +244,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 - `GET /admin/users` - Invite, deactivate, reactivate, force logout, change role (`:manage_users`)
 - `GET /admin/export` - Static site generation UI (`:deploy_site`)
 - `GET /admin/export/download-zip` - Download generated static site as .zip (`:deploy_site`)
+- `GET /admin/export/preview/*path` - Browse the built `_site/` before downloading or deploying; redirects to `/admin/export` when nothing is built (`:deploy_site`)
 - `GET /admin/dashboard` - LiveDashboard (`:view_dashboard`)
 - `GET /admin/filemaker` - Sync the FileMaker export: upload, preview the diff, apply (`:import_filemaker`)
 - `GET /admin/places` - Corpus-global gazetteer: places, their names, hierarchy and authority links (`:manage_places`)
@@ -494,7 +495,7 @@ Each is pinned by a test as it behaves today, not endorsed.
 - [ ] **Inline `<stage>` is flattened** - a plain `<stage>` inside a verse line or prose paragraph (~2,500 in the corpus) becomes part of the line's text on import; the corpus sweep does not count these
 - [ ] **In-text `<note>` is pasted into the line** - `text_content/1` takes a note's text (every `<p>`) into the `<l>` or `<stage>` it sits in; 333 body notes in 13 tracked fixtures. Same root cause as the inline `<stage>` gap above. Next project after the static site redesign: `docs/static-site-improvements.md`
 - [x] **Activity-log order was unstable within one second** - `activity_logs.inserted_at` is now microsecond precision (migration `20260926120000`), so a burst of entries lists newest first; the `to:` date filter ends at `23:59:59.999999`
-- [ ] **`ExportSiteLive` hardcodes `_site`** and a shared temporary zip path, so its generate button cannot be tested; `StaticSite.generate/1` is tested instead
+- [x] **`ExportSiteLive` hardcoded `_site`** and a shared temporary zip path - the output directory now comes from `StaticSite.output_dir/0` (`:static_site_dir`, a temporary directory under test), so `export_site_live_test.exs` drives Generate. The zip still goes to one shared temporary path, so that test file is `async: false`
 - [x] **Custom changeset messages had no Spanish translation** - all 15, not just "must be given together with the end year". `gettext.extract` cannot see a plain string in `add_error`/`message:`, so they are hand-added to `errors.pot` and the PO files; `test/playcode_web/error_translations_test.exs` finds them in `lib/` and fails on any without Spanish
 - [x] **`mix playcode.import.filemaker` included archived plays** (and crashed applying to one: `Catalogue.get_play!/1` hides them); `/admin/filemaker` excluded them. Both now skip archived plays, through `FilemakerSync.all_plays/0`
 - [x] **`Places.Authority.Stub` shipped in `lib/`** - now `test/support/place_authority_stub.ex`, compiled only in test

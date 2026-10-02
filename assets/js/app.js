@@ -198,11 +198,23 @@ const ShiftClick = {
   }
 }
 
+// AutoDismiss hook: clears an info flash after a short delay, like clicking it.
+// updated() restarts the timer so a replacement message gets its full time.
+const AutoDismiss = {
+  mounted() { this.arm() },
+  updated() { this.arm() },
+  destroyed() { clearTimeout(this.timer) },
+  arm() {
+    clearTimeout(this.timer)
+    this.timer = setTimeout(() => this.pushEvent("lv:clear-flash", {key: this.el.dataset.kind}), 2500)
+  }
+}
+
 const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick},
+  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss},
 })
 
 // Show progress bar on live navigation and form submits

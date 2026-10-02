@@ -120,6 +120,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     end
   end
 
+  defp status_label(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: nil
+  defp status_label(%{is_complete: true}), do: gettext("Complete")
+  defp status_label(_play), do: gettext("Draft")
+
   defp page_params("", page), do: [page: page]
   defp page_params(search, page), do: [search: search, page: page]
 
@@ -187,13 +191,18 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           </thead>
           <tbody>
             <tr :for={play <- @plays} id={"play-#{play.id}"} class="hover">
-              <td class="font-mono text-xs text-base-content/60">
+              <%!-- The left border is the status bar. Archived plays have no status. --%>
+              <td
+                title={status_label(play)}
+                class={[
+                  "font-mono text-xs text-base-content/60 border-l-4",
+                  is_nil(play.deleted_at) && play.is_complete && "border-success",
+                  is_nil(play.deleted_at) && !play.is_complete && "border-base-300",
+                  play.deleted_at && "border-transparent"
+                ]}
+              >
+                <span :if={status_label(play)} class="sr-only">{status_label(play)}</span>
                 {play.code}
-                <.icon
-                  :if={play.is_complete}
-                  name="hero-check-circle-mini"
-                  class="size-4 text-success ml-1 inline"
-                />
               </td>
               <td>
                 <%!-- Archived plays are hidden from every Catalogue reader, so

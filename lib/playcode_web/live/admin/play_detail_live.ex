@@ -93,9 +93,10 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
     end
   end
 
-  def handle_event("toggle_complete", _, socket) do
+  def handle_event("set_status", %{"status" => status}, socket)
+      when status in ~w(complete draft) do
     play = socket.assigns.play
-    new_value = !play.is_complete
+    new_value = status == "complete"
 
     case Catalogue.update_play_from_form(play, %{"is_complete" => to_string(new_value)}) do
       {:ok, updated_play} ->
@@ -234,16 +235,26 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
       <section class="mb-8">
         <div class="flex items-center gap-3">
           <span class="text-sm font-medium text-base-content/70">{gettext("Status")}</span>
-          <button
-            phx-click="toggle_complete"
-            class={"btn btn-sm gap-1.5 #{if @play.is_complete, do: "btn-success", else: "btn-error btn-outline"}"}
-          >
-            <.icon
-              name={if @play.is_complete, do: "hero-check-circle-mini", else: "hero-pencil-mini"}
-              class="size-4"
-            />
-            {if @play.is_complete, do: gettext("Complete"), else: gettext("Draft")}
-          </button>
+          <div class="join" role="group" aria-label={gettext("Status")}>
+            <button
+              phx-click="set_status"
+              phx-value-status="draft"
+              aria-pressed={to_string(!@play.is_complete)}
+              class={"btn btn-sm join-item gap-1.5 #{if !@play.is_complete, do: "btn-warning", else: "btn-ghost border-base-300"}"}
+            >
+              <.icon name="hero-pencil-mini" class="size-4" />
+              {gettext("Draft")}
+            </button>
+            <button
+              phx-click="set_status"
+              phx-value-status="complete"
+              aria-pressed={to_string(@play.is_complete)}
+              class={"btn btn-sm join-item gap-1.5 #{if @play.is_complete, do: "btn-success", else: "btn-ghost border-base-300"}"}
+            >
+              <.icon name="hero-check-circle-mini" class="size-4" />
+              {gettext("Complete")}
+            </button>
+          </div>
         </div>
       </section>
 

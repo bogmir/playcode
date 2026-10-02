@@ -26,6 +26,33 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     refute html =~ beta.title
   end
 
+  test "each row says whether the play is a draft or complete, and follows a status change",
+       %{conn: conn} do
+    play = play_fixture()
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+    # The status is a coloured bar on the row; its text is what a screen reader and the
+    # tooltip say, which is what these assertions read.
+    assert has_element?(view, "#play-#{play.id} td", t("Draft"))
+    refute has_element?(view, "#play-#{play.id} td", t("Complete"))
+
+    {:ok, _} = Catalogue.update_play_from_form(play, %{"is_complete" => "true"})
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+    assert has_element?(view, "#play-#{play.id} td", t("Complete"))
+    refute has_element?(view, "#play-#{play.id} td", t("Draft"))
+  end
+
+  test "an archived play shows no status, which no longer applies to it", %{conn: conn} do
+    play = play_fixture()
+    {:ok, _} = Catalogue.delete_play(play)
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays?archived=1")
+
+    refute has_element?(view, "#play-#{play.id} td", t("Draft"))
+    refute has_element?(view, "#play-#{play.id} td", t("Complete"))
+  end
+
   test "an archived play leaves the list, waits under the archived filter, and can be restored",
        %{conn: conn} do
     play = play_fixture(%{"title" => "Archive Me"})

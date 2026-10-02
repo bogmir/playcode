@@ -13,7 +13,7 @@
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import, folded into S7's cross-check |
 | S3, S5–S8 | scoped below, each gets its own plan when it comes up |
-| S4 — bibliography | **researched 2026-09-25**, waiting on questions — `../specs/2026-09-25-s4-bibliography-research.md` |
+| S4 — bibliography | **researched**; **all data in hand** from FileMaker (2026-10-01/02): criticism, translations, adaptations and modern editions — `../specs/2026-09-25-s4-bibliography-research.md` |
 | S9 — places | **Phase 1 done** (the app, no FileMaker code) — `CLAUDE.md` |
 | S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; after the ~300 import |
 
@@ -65,6 +65,46 @@ python3 docs/build_import_analysis.py
 An earlier CSV export of the same data is at `doc/emothe_export.csv`. **Do not use it** — FileMaker
 flattened every repeating related record into one space-joined cell. The JSON keeps the
 publication HTML (`<ul><li>` per related record), which is what makes slices S3–S5 possible at all.
+
+**Second source, 2026-10-01: the master tables.** The NDJSON is the *web* database, `w3emothe`,
+and its `pub_*` fields are a rendered snapshot that has gone stale. The structured records live in
+the master database, `ctce_dades.fmp12`. Its bibliography tables were exported as FileMaker XML
+(`FMPXMLRESULT`) into `doc/ctce_dades/`, which is git-ignored, and they now replace
+`pub_BibSelecta*` as S4's source; see S4. The edition-credits tables (`T07.51*`) followed the same
+day (see S7), then the city, publisher and information-source tables (`T13*`; see S4 and S5).
+**The same request is worth making for S3 and S5**:
+witnesses and performances are probably structured tables there too, and the dump would beat
+parsing their rendered HTML in the same way.
+
+### The master database, mapped *(2026-10-02)*
+
+Five screenshots of `ctce_dades`'s relationship graph (Manage Database → Relaciones) are kept in
+`doc/ctce_dades/relaciones/`. They show which tables hold what, so each slice can ask for exact
+tables instead of describing data. Table purposes are **read from names and links, not
+confirmed**.
+
+Every play-level table hangs off the version id, `_k_IdObraTitulo` = `T01._IdTituloEmothe`. The
+graph also has whole groups that assemble TEI (`Montaje del texto TEI completo`, `Cálculo de
+códigos TEI-XML…`), which means **our TEI fixtures are FileMaker output** built from these tables.
+
+| Slice | Tables | State |
+|---|---|---|
+| S2a historical time | `T09` (version ↔ `_k_IdTiempoHistorico`), `T09.1` (vocabulary) | done from the web export; not needed |
+| S2c dating | `T06` (`_k_IdIntervaloFechaA` / `_Z`) → `T06.1` (date intervals) | done from the web export; `T06` would give structured intervals if wanted |
+| S3 witnesses | not visible in the five screenshots | **ask** where the testimonios live |
+| S4 bibliography | `T12` (links), `T12.1` (records), `T12.11` type, `T12.12` category, `T12.13` language, `T13.1` city, `T13.2` publisher | **received, complete** — `T12.1` with all 41 fields since 2026-10-02 |
+| S4 modern editions | `T04` (version ↔ `_k_IdEdicionModerna`, with the play's volume and pages), `T04.1` (editions: city, publisher, language, type, siglum), `T04.11` types, `T04.12` languages | **received, complete** 2026-10-02 |
+| S5 performances | `T11` (performance: company, `_k_IdCirEscenica`, information source, place, version), `T11.1` cast (actor, role), `T11.11` actor names, `T11.12` actor sex, `T11.22` actor roles, `T11.2` stage circumstance, `T11.3` company names, `T13` sources | `T13` (+`T13.3`) **received**; **ask** for the other seven. `T11.2` is probably the value list behind `bus_repCircunstancia` |
+| S6 characters | `T07.31` (`_kp_IdPersonajeObra`, the speaker codes), `T07.311` (group ↔ member) | optional: would replace parsing `bus_personaje` for the completeness check; TEI stays the source |
+| S7 credits | `T07.5`, `T07.51`, `T07.511`–`.514` | **received**; see S7 |
+| S7 authors | `T02` (version ↔ author, with `_k_IdAutorFiabilidad`, `_k_IdAutorRol`), `T02.1` authors, `T02.2` attribution reliability, `T02.3` author roles | **ask** if attribution reliability is wanted; TEI carries `author_attribution` already |
+| S8 genre | `T01.42_GeneroHier…` (name cut off at the screenshot's edge) | **ask**: the genre table replaces the request for the `bus_genero` value lists |
+| S9b places | `T10` (version ↔ city, continent, vague location, country, region), `T10.11_Ciudad` / `_Continente` / `_Vaga` / `_Pais` / `_Region`, `T10.3_Region` (with ISO code and a language selector) | **ask**: replaces the request for a language-tagged `bus_lugAccion` |
+| Text, licence, paratexts | `T07.x` (text rows, divisions, variants, speakers, stage-direction and metre types), `T07.3` paratexts, `T07.52`–`.54` notes, sources, licence | not needed: TEI stays the source of truth for the text |
+
+**How to ask.** FileMaker's XML export writes only the fields chosen in the export dialog. Ask
+for *Export Records → Move All* on each table, or failing that for a screenshot of the table's
+*Campos* tab, which lists every field.
 
 ## The point of the exercise
 
@@ -352,45 +392,60 @@ Two findings from that check that outlive S2f:
   `<li>` count on 75 of 105 rows across the whole export — use them to validate the parse, not as
   the source
 - **Done when:** witnesses appear in the existing sources admin page and on the public page
+- **FileMaker:** the witnesses' master table is not in the five relationship screenshots. Ask
+  where the testimonios live before building, because a structured table would beat parsing
+  `pub_testimonio`, as it did for S4. See "The master database, mapped"
 
-### S4 — Bibliography *(researched 2026-09-25, waiting on questions)*
+### S4 — Bibliography *(researched; all FileMaker data in hand — ready for a design spec)*
 
-**Research: `../specs/2026-09-25-s4-bibliography-research.md`** — measurements, loss list, parse
-traps, TEI mapping and the proposed table. Headlines:
+**Research: `../specs/2026-09-25-s4-bibliography-research.md`** — the dump's fields, what it still
+lacks, the proposed table, TEI mapping. Headlines:
 
-- **From:** `T01.pub_EdModernas`, `pub_BibSelectaCritica`, `pub_BibSelectaTraduccion` (nested: the
-  outer `<li>` is a language header `ES:` / `FR:` / `IT:` / `DE:` / `EN:` — the flat `@list_item`
-  regex swallows the header into the first item), `pub_BibSelectaAdaptacion`
-- **The strings are template output, and the export gives us only the strings.** FileMaker renders
-  each citation from a structured record; `{Falta nombre editorial}` (318) and
-  `{Falta nombre ciudad}` (254) are its empty-field markers, on 14% of items. Lost:
-  - field boundaries, publication type, per-record language and record identity
-  - **~690 criticism records linked in FileMaker but never rendered**: 40 versions have
-    years in `bus_criticaAnyo` and an empty `pub_BibSelectaCritica`
+- **From:** the FileMaker master tables, dumped from `ctce_dades.fmp12` on 2026-10-01 and kept
+  git-ignored in `doc/ctce_dades/`. `T12.1_BibliografiaSelecta` holds 2,640 structured
+  records, and `T12_ObraBibliografiaSelecta` holds 2,658 links to versions. The join is
+  `_k_IdObraTitulo` = `T01._IdTituloEmothe`, and it reproduces the published criticism exactly on
+  101 of 106 versions. `T01.pub_*` (the web export) is fully superseded.
+- **Structured, in two levels:** `Autor`/`Titulo` (article, chapter) and `Autor2`/`Titulo2` (book,
+  journal), plus year, volume, pages, URL, note, and codes for category, type (10) and language
+  (`5` is Portuguese).
+- **Complete for three kinds** since 2026-10-02. The first export had carried 26 of `T12.1`'s 41
+  fields. The full export adds editors and translators at both levels (`Editor`/`Editor2`,
+  `Traductor`/`Traductor2`), the issue (`Ejemplar`), the original title, the edition and the
+  volume count. With `T13.1_Ciudad` and `T13.2_Editorial`, every piece of every printed citation is
+  in a column: 519/519 `Ed.`, 229/229 `Tra.`, 512/514 issues.
+- **Modern editions complete too** (`T04*`, 2026-10-02):
+  - 985 editions and 968 links, reproducing the website's list exactly on 118 of 120 versions.
+  - Each link carries the play's own volume and pages within the edition. Editions carry a
+    siglum (`ARD3Q2`, `RSC`), the code an apparatus cites them by.
+  - 23 editions are shared, up to 11 ways (complete works, anthologies). Per-play rows are
+    still proposed; promote to shared entries if corrections to them prove common.
+- **The earlier "~690 never-rendered records" was a stale search index** (`bus_criticaAnyo`).
+  The real unpublished set is 118 records newer than the web export, plus 86 with no category.
+- **Order is computed** — year descending, 99 of 102 published lists. No `position`, no reorder
+  UI.
+- **Into (proposed):** `play_bibliography`, one row per (play, record):
+  - `kind`, `pub_type`, `language`
+  - the two levels as `analytic_*` / `monogr_*`
+  - volume, issue, pages, place, publisher, `year_text`, plus `year` for sorting
+  - `filemaker_id`, `origin`
 
-  Asking for the bibliography table itself is the one request that changes the design
-  (question 4).
-- **Order is computed, not curated** — year descending on 135 of 139 rows. `position` and the
-  reorder UI are dropped from the proposal.
-- **Into (proposed):** `play_bibliography` with these columns:
-  - `kind` (`modern_edition`, `criticism`, `translation`, `adaptation`)
-  - `citation` (verbatim; `<i>` is the only markup kept)
-  - `year` (for sorting), `language`, `url`, `origin`
-
-  Structured columns are an additive migration if the table export arrives. The sync is
-  fill-only **per play and kind**, because matching rows on citation text re-adds every
-  citation a curator corrects or deletes.
+  The sync is keyed on `(play_id, filemaker_id)` and fill-only at the row level. Citations are
+  printed from the columns, with FileMaker's own rendering (2,633 records) as the renderer's test oracle;
+  kept for display.
 - **TEI:** none of the 96 fixtures has a secondary bibliography. Its home is
-  `text/back/div[@type="bibliografia"]/listBibl`, **not** `sourceDesc`: the parser already reads
-  `sourceDesc/listBibl/bibl` into `play_sources`. The parser ignores `<back>` today, which also
-  silently drops the two fixtures' `epilogo` divs.
-- **Scale:** 7 plays, 318 citations **today; ~120 plays and 3063 citations** once the ~300 land —
-  criticism alone goes 198 → 2003. **This is the largest remaining slice**, and the admin page
-  needs a filter: Hamlet alone has 62 criticism items. Build it after that import (question 5)
+  `text/back/div[@type="bibliografia"]/listBibl/biblStruct`, **not** `sourceDesc`: the parser
+  already reads `sourceDesc/listBibl/bibl` into `play_sources`. The parser ignores `<back>` today,
+  which also silently drops the two fixtures' `epilogo` divs.
+- **Scale:** 325 records on 14 plays **today** (232 crítica, 36 traducción, 7 adaptación,
+  50 uncategorised). Five of those plays, EMOTHE0659/0670/0749/0777/0779, are not in the web
+  export, so only the dump reaches them. **2,565 linked records on 142 versions** at full corpus,
+  plus the 823 modern editions. This is still the largest remaining slice. Build it after the
+  ~300-play import (question 5)
 - **Done when:** a bibliography section renders per play grouped by kind, **and** admins can add,
-  edit and delete citations without an import
+  edit and delete entries without an import
 - **S0b:** the table carries `origin`. A TEI re-import replaces only that play's `tei` rows, and
-  skips a bibl whose citation already exists under another origin — S9's leave-alone rule
+  skips an entry that already exists under another origin — S9's leave-alone rule
 
 ### S5 — Historical performances
 
@@ -402,11 +457,27 @@ traps, TEI mapping and the proposed table. Headlines:
   plus their cast rows. Build it after that import (question 5)
 - **Sources:** CATCOM and Wiggins, *British Drama 1533-1642* — keep the attribution text, it is
   a licensing requirement of CATCOM
+- **The source table has arrived** (2026-10-01, `doc/ctce_dades/T13_FuenteInformacion.xml`).
+  - **Shape:** 378 records shaped like S4's bibliography (`Autor`/`Titulo`, `Autor2`/`Titulo2`,
+    year, volume, pages, URL, note) with its own type list (`T13.3_FuenteInfoTipo`, 9 types),
+    sharing the `Ciudad`/`Editorial` lookups. 17 records are empty.
+  - **Match:** its short rendering (`_tc_FueInf_ComposicionBreve`) equals the published
+    `Information source` exactly on 219 of the 242 entries in `pub_RepAntiguas` — Wiggins,
+    Chambers, Child's *Stage-History of Hamlet*, CATCOM.
+  - **Model:** so the performance's source becomes a reference to a source record, not a
+    string.
+  - **Still needed:** the performances table itself, with its link to `FuenteInformacion` and
+    its cast, which has not been exported yet. Ask for it in the same message as S4's
+    remaining tables
 - **Done when:** performances render per play with their source attribution, **and** admins can add
   a performance and its cast by hand — the 12 rows FileMaker holds are a seed, not the ceiling
 - **S0b:** both new tables stay outside the importer's reach
 
 ### S6 — Character reconciliation
+
+**FileMaker:** the master database has a characters table, `T07.31` (`_kp_IdPersonajeObra`,
+which feeds the TEI speaker codes), plus `T07.311` for grouped speakers. It is optional: it would
+replace parsing `bus_personaje` for the check below. See "The master database, mapped".
 
 Not an import: TEI stays the source of truth for characters. `T01.bus_personaje` (one name per
 line, 18 of our 22 plays) is a completeness check — flag characters present in FileMaker but
@@ -430,11 +501,56 @@ Cross-check `play_editors` against the credits printed in the index (`Tronch, Je
 a difference is a question for a curator, not a write. Two known hits already: EMOTHE0254 and
 EMOTHE0341, see S2f.
 
+**The master credits tables arrived 2026-10-01** (`doc/ctce_dades/T07.51*`, measured the same day).
+They are the source FileMaker generated each TEI header's `<respStmt>` from:
+
+- `Persona` (55 people), `Rol` (4 roles: Edición digital, Revisión y edición, Revisión técnica,
+  Traducción) and `Grupo` (12 research groups: Artelope, Prolope, Griso, Dicat…).
+- `PersonaRol` holds one credit each, with a person, role and group, plus `TeiPerRol_Xml`, the
+  rendered `<respStmt>`. 462 rows.
+- `Responsables` links credits to versions through `Tei_Metadatos_T01::_kp_IdObraTitulo`, which
+  is the same EMOTHE id as `T01._IdTituloEmothe`.
+- **458 credits on 409 versions**, at most 2 per version, 453 of them *Edición digital*.
+  Integrity: 1 credit has no `Responsables`, 3 sit on a `Responsables` with no version, and 7
+  point at a missing or blank person.
+- **Redundant with TEI for what we hold.** On 60 of our 63 EMOTHE plays, every credit already
+  appears in the TEI header once accents and spaces are normalised (`Jesús` vs `Jesus`). Two of
+  the other three carry a blank person in FileMaker. The research group is in TEI too: all 82
+  fixtures carry `<orgName>`, which the parser imports as `organization`.
+- **No route to Artelope.** `AL####` numbers are not these ids: on the 9 `AL` plays where the
+  number collides with a credited id, the names never match the TEI.
+
+So for S7 these tables replace parsing the index's `ed.`/`tra.` credits. A cross-check report is
+the whole job, unless the plays arriving with the ~300-play import turn out to have TEI headers
+that are thinner than FileMaker's. `Persona` is also the clean, accented form of each name, which
+is worth having if `play_editors` is ever normalised into a people table.
+
+These are **not** the people S4 needs. The translators and editors of *cited* works are a
+different relation, still unrequested on the FileMaker side.
+
 ### S8 — Genre *(blocked)*
+
+**FileMaker (2026-10-02):** ask for the genre table itself, `T01.42_GeneroHier…` in
+`ctce_dades` (its name is cut off in the screenshot), instead of the value lists below. Artelope
+has its own, see the end of this section.
 
 `bus_genero` and `bus_generoAnnals` are bare numeric codes with **no text counterpart anywhere in
 either table**. Send the value lists for `bus_genero`, `bus_generoAnnals` and
 `bus_repCircunstancia`. Everything else the CSV was missing, the JSON supplied.
+
+**Artelope has its own FileMaker database, `al_dades` (Artelope FMS)**, seen 2026-10-02 in three
+screenshots kept in `doc/al_dades/`:
+
+- Its genre is a six-level hierarchy, layout `t14.1_GENERO` with fields
+  `ArgGenero1`…`ArgGenero6` and `ArgGeneroNota`, for example *Drama > historial > profano >
+  hechos particulares > honra villana*.
+- The vocabulary has 44 combinations (`t14.1_GENERO_LISTA`), set on 591 records keyed by
+  `IdFicha`.
+- This changes the roadmap's standing assumption that `AL####` plays "get nothing, ever, from
+  FileMaker": a second database exists, and it is reachable.
+- Not yet checked: whether `IdFicha` is the number in `AL####`. The two fichas shown, 561 and
+  640, are not plays we hold. Worth a separate scoping pass: genre is the obvious first field,
+  and `al_dades` may well hold the Artelope equivalents of S2–S9.
 
 Exactly which codes need a label, measured 2026-08-05 — the value lists can be checked against this,
 and anything outside it is a code we never see:
@@ -461,6 +577,13 @@ import** — at 82 plays with a genre the value lists stop being a convenience a
 difference between an import and a fortnight of data entry.
 
 #### The `bus_lugAccion` request *(added 2026-08-04, ask in the same message as the value lists)*
+
+**Superseded 2026-10-02.** The relationship graph shows places as structured tables: `T10`
+(version ↔ city, continent, vague location, country, region), `T10.11_Ciudad` / `_Continente` /
+`_Vaga` / `_Pais` / `_Region`, and `T10.3_Region` with an ISO code and a language selector. Ask
+for those instead. They should give the containment chain and the per-language names that the
+request below was trying to recover, without the positional guessing. See "The master database,
+mapped". The analysis below stays as the reason the tables are worth having.
 
 Grouped with S8 only because it is the **second** thing we need from the FileMaker side and one
 message should carry both. It has nothing to do with genre. It **gates tier 2 of S9b** — the
@@ -670,11 +793,20 @@ Ordered by what is actually blocking work.
 3. ~~**Place of action requirements** — S9.~~ **Closed 2026-08-04** by building it: S9 Phase 1
    shipped the gazetteer. The import is S9b, scoped and buildable — 6 plays, 9 links — and waits on
    the `bus_lugAccion` request in (4) so it can load the historical polities in one pass.
-4. **Genre value lists, a language-tagged `bus_lugAccion`, and the bibliography table** — S8,
-   S9b tier 2 and S4. The only outstanding requests to the FileMaker side; one message should carry
-   all three. The S4 part is four questions: the table itself with record IDs, what decides
-   whether a record is rendered, the language code `5`, and the record-type value list — see the
-   S4 research doc.
+4. **The remaining FileMaker tables** — S3, S4, S5, S8, S9b. Since 2026-10-02 these can be named
+   exactly; see "The master database, mapped". One message should carry all of it:
+   - ~~**S4:** `T12.1` with every field~~ — received 2026-10-02, all 41
+   - ~~**S4 modern editions:** `T04`, `T04.1`, `T04.11`, `T04.12`~~ — received 2026-10-02
+   - **S5:** `T11`, `T11.1`, `T11.11`, `T11.12`, `T11.2`, `T11.22`, `T11.3`
+   - **S8:** the genre table (`T01.42_GeneroHier…`), instead of the value lists
+   - **S9b:** `T10`, `T10.11_*`, `T10.3_Region`, instead of a language-tagged `bus_lugAccion`
+   - **S3:** where the testimonios live; not in the screenshots
+   - **S6 (optional):** `T07.31`, `T07.311`
+   - **When asking, name the fields or say *Mover todo*:** the export dialog reuses the previous
+     field selection, which is how `T12.1` first arrived with 26 of its 41 fields
+   - **S4 questions** for the project, not the export: what the 86 uncategorised records are,
+     whether the 118 records newer than the web export are ready to publish, whether the
+     broken links can go. See the S4 research doc.
 5. **Importing the other ~300 plays.** *Intended as of 2026-08-05 — a "when", not an "if", and now
    the sequencing constraint for most of what is left.* The index gives a download path for every
    published play (`textosXML/<code>_<Name>.xml`). Still needs permission and a fetch rate from the

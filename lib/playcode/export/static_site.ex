@@ -20,6 +20,9 @@ defmodule Playcode.Export.StaticSite do
           detail: String.t()
         }
 
+  @doc "Where the admin export page builds the site. Tests point it at a temporary directory."
+  def output_dir, do: Application.get_env(:playcode, :static_site_dir, "_site")
+
   @doc """
   Generates the site.
 

@@ -171,6 +171,7 @@ defmodule PlaycodeWeb.Router do
     pipe_through [:browser, :require_authenticated_user, :require_deploy]
 
     get "/export/download-zip", ExportController, :download_zip
+    get "/export/preview/*path", ExportController, :preview
   end
 
   # LiveDashboard, behind :view_dashboard (all environments)

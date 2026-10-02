@@ -58,3 +58,6 @@ config :phoenix,
 
 # Pin ADMIN_EMAILS empty so a stray environment variable cannot alter tests
 config :playcode, admin_emails: []
+
+# The export page builds here, never into the developer's own _site/
+config :playcode, :static_site_dir, Path.join(System.tmp_dir!(), "playcode-test-site")

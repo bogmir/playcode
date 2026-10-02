@@ -109,6 +109,14 @@ defmodule PlaycodeWeb.Layouts do
     ~H"""
     <div class="border-b border-base-300 bg-base-100/80 backdrop-blur-sm">
       <div class="mx-auto max-w-7xl px-4 flex items-center justify-between gap-4 py-2">
+        <.link
+          navigate={~p"/admin/plays"}
+          class="btn btn-ghost btn-sm btn-square flex-shrink-0 text-base-content/70 hover:text-base-content"
+          aria-label={gettext("Back to plays")}
+          title={gettext("Back to plays")}
+        >
+          <.icon name="hero-arrow-left-mini" class="size-5" />
+        </.link>
         <div class="min-w-0 flex-1">
           <h2 class="text-sm font-semibold text-base-content truncate">{@play.title}</h2>
           <p class="text-xs text-base-content/60 truncate">

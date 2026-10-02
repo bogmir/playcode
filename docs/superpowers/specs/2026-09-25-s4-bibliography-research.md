@@ -1,341 +1,450 @@
 # S4 — Bibliography: research
 
-**Status:** research, 2026-09-25. **Not a design yet**: the shape at the end is a proposal, and
-the questions under "Open questions" decide whether it holds. Slice S4 of
-`../plans/2026-08-01-filemaker-import-slices.md`.
+**Status:** research, 2026-09-25, **revised 2026-10-01** when the FileMaker bibliography
+tables arrived, and **2026-10-02** when the full 41-field export of the records and the
+modern-editions tables completed them. **All S4 data is now in hand.** **Not a design yet**: the shape at the end is a proposal, and the open
+questions decide whether it holds. Slice S4 of `../plans/2026-08-01-filemaker-import-slices.md`.
 
-Measured across all 439 `T01_tituloEM` rows of `doc/w3emothe_T01_tituloEM.ndjson`, not only
-the 22 that match plays we hold. S4 is sequenced after the ~300-play import (roadmap
-question 5), so the full export is what it will actually run against. The "today" column is
-the roadmap's own `Filemaker.load_versions/1` measurement.
+Two sources, measured in full:
+
+- **The dump** (2026-10-01/02): tables exported straight from FileMaker's master database
+  `ctce_dades.fmp12` (FileMaker Pro 16), kept git-ignored in `doc/ctce_dades/`. It is the
+  source of record for all four kinds: `T12*` for criticism, translations and adaptations,
+  `T04*` for modern editions, and `T13.1`/`T13.2` for cities and publishers.
+- **The web export** (2026-09-25): the four rendered `pub_*` fields of the 439 `T01_tituloEM`
+  rows in `doc/w3emothe_T01_tituloEM.ndjson`. Fully superseded. It remains useful only as a
+  cross-check of what the website showed.
 
 ## Summary
 
-- Four fields, **3063 citations on ~120 versions** across the export. 318 of them fall on
-  plays we hold today.
-- **Every citation is FileMaker template output over a structured record.** FileMaker keeps
-  the structure; all the export gives us is the rendered string.
-- **What the string gives back:** the kind, the citation text, a sort year, a URL, and the
-  language of translations.
-- **What it does not give back:** reliable field boundaries, publication type, per-record
-  language, record identity — and **~690 criticism records** that are linked in FileMaker
-  but never rendered at all.
-- **Order is computed, not curated:** year descending. There is no position to preserve.
-- **TEI has nothing to import.** No fixture carries a secondary bibliography. The place for
-  one is `text/back`, not `sourceDesc`.
-- **Proposal:** one table, holding the citation verbatim plus sort and filter columns.
-  Structured columns wait on question 1.
+- **The records are structured, and we now have them.** 2,640 bibliography records and
+  2,658 links to versions. They split into an analytic level (`Autor`/`Titulo`: article or
+  chapter) and a monograph level (`Autor2`/`Titulo2`: book or journal), with year, volume,
+  pages, URL, note, and codes for category, language and type. That is a direct fit for
+  TEI `<biblStruct>`.
+- **The join is exact.** `T12._k_IdObraTitulo` = `T01._IdTituloEmothe`. On 101 of the 106
+  versions with published criticism, the dump reproduces the published list text for text.
+- **Criticism, translations and adaptations are complete.** The full export of `T12.1`
+  (41 fields, 2026-10-02) accounts for every piece of every printed citation:
+  - editors: 519 of 519 `Ed.` segments come from `Editor`/`Editor2`
+  - translators: 229 of 229 `Tra.` segments come from `Traductor`/`Traductor2`
+  - issue: 512 of 514 come from `Ejemplar`; the other 2 have the issue typed into the volume
+  - original title 47/47, edition 15/15, number of volumes 20/20
+  - city and publisher names, from `T13.1_Ciudad` and `T13.2_Editorial`
+- **Modern editions are complete too** (`T04*`, received 2026-10-02). 985 editions and 968 links
+  reproduce the website's list exactly on 118 of 120 versions. Each link carries the play's own
+  volume and pages within the edition. See "Modern editions".
+- **The "~690 hidden records" finding was wrong.** It came from `bus_criticaAnyo`, a stale
+  search index: 33 of those 40 versions have no linked record at all. The real unpublished
+  set is **118 records on 10 versions, newer than the web export**, plus 86 records with no
+  category.
+- **Order is computed:** year descending, confirmed against the dump on 99 of 102 published
+  lists. There is no position to keep.
+- **On the 82 plays we hold:** 325 records on 14 plays. Five of those plays (EMOTHE0659,
+  0670, 0749, 0777, 0779) are not in the web export at all, so the dump is their only source.
+- **TEI has nothing to import.** No fixture carries a secondary bibliography. Its home is
+  `text/back`, written as `<biblStruct>`.
 
-## The fields
+## The dump
 
-| Field | What it is | Versions | Citations | Today |
-|---|---|---|---|---|
-| `pub_EdModernas` | modern editions | 120 | 823 | 84 |
-| `pub_BibSelectaCritica` | criticism | 106 | 2003 | 198 |
-| `pub_BibSelectaTraduccion` | translations, grouped by language | 61 | 187 | 29 |
-| `pub_BibSelectaAdaptacion` | adaptations | 17 | 50 | 7 |
+| File | Table | Rows | What it is |
+|---|---|---|---|
+| `T12.1_BibliografiaSelecta.xml` | `BibliografiaSelecta` | 2,640 | the records, all 41 fields (the full export of 2026-10-02; the first export's 26 fields were a strict subset, value for value) |
+| `T12_ObraBibliografiaSelecta.xml` | `ObraBibliografiaSelecta` | 2,658 | links: record ↔ version, with a note |
+| `T12.11_BiblioSelTipo.xml` | `BiblioSelTipo` | 10 | publication types |
+| `T12.12_BiblioSelCategoria.xml` | `BiblioSelCategoria` | 3 | categories |
+| `T12.13_BiblioSelIdioma.tab` | `BiblioSelIdioma` | 6 | languages (tab-separated, CR line ends) |
+| `T13.1_Ciudad.xml` | `Ciudad` | 256 | city, plus a country on 92 |
+| `T13.2_Editorial.xml` | `Editorial` | 743 | publisher name |
 
-The translation headers are ES 44, FR 56, IT 30, DE 41 and EN 16.
+The `T13` lookups are shared with `FuenteInformacion`, the information-source table of roadmap
+slice S5, which arrived in the same batch. All 14 tables sit together in `doc/ctce_dades/`.
 
-Four search-index siblings sit next to these fields. They are useful for validating a
-parse, but they cannot be the source:
+The XML files are `FMPXMLRESULT`: `METADATA/FIELD` gives the column names, then each
+`RESULTSET/ROW/COL/DATA` holds a value in that order. An empty column is `<COL></COL>` or
+`<COL/>`. The parse is a dozen lines of `Regex` or Saxy; nothing needs a new dependency.
 
-| Field | Rows | What it holds |
+### Fields of a record
+
+| FileMaker field | Filled | Meaning |
 |---|---|---|
-| `bus_criticaAnyo` | 146 | the year of each criticism record, **digits only**, in display order: `1996/7` → `19967`, `1957-75` → `195775`. 2689 entries against 2003 published citations |
-| `bus_tradAnyo` | 107 | the same for translations: `1859-79` → `185979`, `[1873-4]` → `18734` |
-| `bus_tradIdioma` | 120 | a language code for every linked bibliography record, of every kind. See "Language codes" |
-| `bus_tradTraductor` | 95 | translator names, one per line; blank lines and misspellings (`Strachey` / `Stratchey`) included |
+| `_kp_IdBiblioSelecta` | 2,640 | record id |
+| `_k_IdBiblioSelCategoria` | 2,554 | 1 Bibliografía crítica (2,258), 2 Traducción (236), 3 Adaptación/versión (60); **86 blank** |
+| `_k_IdBiblioSelTipo` | 2,633 | publication type, table below |
+| `_k_IdBiblioSelIdioma` | 1,394 | 1 castellano, 2 francés, 3 inglés, 4 italiano, **5 portugués** (never used), 6 alemán |
+| `BibSel_Autor`, `BibSel_Titulo` | 1,974 / 2,036 | **analytic**: author and title of the article, chapter or section |
+| `BibSel_Autor2`, `BibSel_Titulo2` | 654 / 2,581 | **monograph**: author and title of the book, or the journal title. For a book (type 4) only this level is filled |
+| `BibSel_NumVolTomo` | 1,417 | volume (`29`, sometimes `57, 2`) |
+| `BibSel_Pag` | 1,846 | pages |
+| `BibSel_Ano` | 2,598 | year, as text despite the NUMBER type. 40 are not a plain year: `2009-2010`, `1973 ?`, `[s.a.]`, `letra del s. XIX`, and page ranges typed into the wrong field (`121-123`, `308-322`) |
+| `_k_IdCiudad`, `_k_IdEditorial` | 981 / 889 | foreign keys into `Ciudad` and `Editorial`. All 177 city ids resolve. 385 of 386 publisher ids resolve; the other is a name typed into the key field (`B.R. Grüner Publishing Company`, on 2 records) |
+| `BibSel_Editor`, `BibSel_Editor2` | 33 / 488 | **editors**, analytic and monograph level: the editor of the chapter or edited text, and the editor of the book. Printed as `Ed. …`. Both filled on 2 records |
+| `BibSel_Traductor`, `BibSel_Traductor2` | 67 / 165 | **translators**, same two levels: the translator of a play inside an anthology section, and of the whole book. Printed as `Tra. …` |
+| `BibSel_Ejemplar` | 519 | journal issue. FileMaker prints it as `vol. 4` before the bare volume number (`2005, vol. 4, 29`), which is why the order looked reversed |
+| `BibSel_TituloOriginal` | 47 | original title of a translation, printed `(Orig: …)` |
+| `BibSel_Edicion` | 15 | edition; mostly a year (`2021`, `2010`) |
+| `BibSel_VolTomoTotal` | 20 | number of volumes, printed `N vols.` |
+| `BibSel_URL_FechaAcceso` | 1 | URL access date. Its one value is a page range (`853-960`), typed into the wrong field |
+| `BibSel_URL` | 14 | URL |
+| `BibSel_Nota` | 178 | free note, **printed on only 3**. Mostly internal: `Sobre: <<Adonis y Venus>>…`, `Toma ejemplos de…`, plus misplaced data (a URL, a publisher, a university) |
+| `_tc_BibSel_ComposicionExtensa` | 2,633 | the full rendered citation, `{Falta …}` placeholders included (505 records) |
+| `_tc_BibSel_ComposicionBreve` | 2,633 | a short form: author, titles, year |
+| `_tc_BibSel_ComposicionExtensaAlt` | 2,633 | the extensa without the author, starting from the title |
+| `w3_BiblioSelecta` | 2,640 | the extensa as HTML, with `<<…>>` turned into `<i>…</i>` |
+| `w3_BibSelAnyo_*`, `w3_BibSelIdioma_*` | 2,236 / 362, 1,063 / 331 | year and language per category: the sources of the web export's `bus_criticaAnyo`, `bus_tradAnyo` and `bus_tradIdioma` |
+| `w3_BiblioSelecta*` | — | the extensa wrapped in `<li>`, one column per category and per translation language. **This is what the web export's `pub_*` fields concatenate** |
 
-## What a citation looks like
+Types, with how many records use each:
 
-**Modern edition.** The editor comes first, then the title in italics, then the author:
+| Id | Tipo | Records |
+|---|---|---|
+| 1 | artículo revista | 1,368 |
+| 4 | libro / sitio internet | 617 |
+| 2 | sección libro / página internet | 580 |
+| 5 | acta | 36 |
+| 9 | tesis de doctorado | 18 |
+| 3 | edición estudioso | 8 |
+| 8 | pub. electrónica | 6 |
+| 6, 7, 10 | prólogo, homenaje, colección | 0 |
+| — | none | 7 |
 
-```
-Fassò, L., ed. <i>Il pastor Fido</i>. Guarini, Giovanni Battista. Torino: Einaudi, 1976.
-Thompson, Ann; Taylor, Neil, ed. <i>Hamlet</i>. Shakespeare,  William.  In:  <i>Hamlet: The Texts of 1603 and 1623</i>. London: Thomson Learning, 2006, The Arden Shakespeare.
-```
+### Links
 
-**Criticism.** The three shapes are article, chapter and book. There are **no italics**:
+`ObraBibliografiaSelecta` has `_k_IdBiblioSelecta`, `_k_IdObraTitulo` and `ObrBibSel_Nota`.
+`ObrBibSel_Signatura` exists but is empty everywhere.
 
-```
-Long, Zackariah C. "The Spanish Tragedy and Hamlet: Infernal Memory in English Renaissance Revenge Tragedy". English Literary Renaissance. 2014, vol. 2, 44, p. 153-192.
-Greenblatt, Stephenn. "[Introduction to] Hamlet".  Ed. Stephen Greenblatt. The Norton Shakespeare, Based on the Oxford Edition. 2nd ed ed. New York: W. W. Norton, 2008, p. 103-115.
-Litvin, Margaret. Hamlet's Arab Journey. Princeton and Oxford: Princeton University Press, 2011.
-```
+- `_k_IdObraTitulo` is `T01._IdTituloEmothe`. That is the same id `version_code/1` falls back
+  on (`"EMOTHE" <> zero-padded id`), which agrees with the web edition's href on 275 of 276
+  rows.
+- **2,565 valid links over 142 versions.** Of the rest, 74 links have no record id and 19
+  point at a record that no longer exists. 102 records are linked to nothing.
+- **Sharing is rare.** 30 records sit on 2 or 3 versions; everything else belongs to one.
+- `ObrBibSel_Nota` holds a DOI or ProQuest URL on 17 links. It belongs to the link, not the
+  record.
+- **16 linked versions are absent from the web export's `T01`** (ids 83, 436, 576, 659, 660,
+  664, 670, 671, 697–699, 714, 749, 777, 779, 784), with 164 records between them.
 
-**Translation.** Items are nested under an outer `<li>` that carries the language header:
+### Against the web export
 
-```
-<ul><li>ES:<ul><li>Shakespeare, William. Hamlet.  Tra. Pujante, Angel-Luis. Madrid: Espasa-Calpe, 1994. </li>
-…</ul></li><li>FR:<ul><li>Shakespeare, William. Hamlet.  Tra. Déprats, Jean-Michel. Paris: Granit, 1986. </li>…</ul></li></ul>
-```
+- Criticism: the dump's rendered text equals the published list exactly on **101 of 106**
+  versions. The other 5 differ by one to three records, added or removed since the export.
+- **118 records on 10 versions are linked but were never published.** Their ids run from
+  2528 to 2799, while every published record is at most 2544. They are newer than the web
+  export, not deselected. Examples: *La place Royale* 22, *El desdén con el desdén* 18,
+  *Le menteur* 15.
+- **`bus_criticaAnyo` is stale.** It listed 698 criticism years on 40 versions with an empty
+  published list, which is where this doc's earlier "~690 hidden records" came from. In the
+  dump, 33 of those 40 versions have no linked record at all.
+- **There is no "selected" flag.** "Selecta" names the whole bibliography, not a subset.
+- Uncategorised records (86) never reach any published list, because the web columns are
+  split by category. 76 of them are linked, 50 to plays we hold, 35 of those to EMOTHE0659
+  alone. 20 records have neither author nor title, and one (2652) is a blank template.
 
-34 translations end in `(Orig: <original title>)`.
+### On the plays we hold
 
-**Adaptation.** Book-shaped, and sometimes credited with a translator:
+Codes matched against the 82 fixture files:
 
-```
-Coello, Carlos. El príncipe Hamlet, drama trágico-fantástico en tres Actos y en verso, inspirado por el Hamlet de Shakespeare. Madrid: Imprenta de José Rodríguez, T. Fortanet, 1872.
-```
+| Play | Crítica | Traducción | Adaptación | No category |
+|---|---|---|---|---|
+| EMOTHE0010 *Hamlet* | 62 | 22 | 7 | 1 |
+| EMOTHE0337 *The Tragedy of Mariam* | 60 | | | |
+| EMOTHE0346 *Bartholomew Fair* | 37 | 5 | | |
+| EMOTHE0341 *Eastward Ho!* | 23 | 1 | | |
+| EMOTHE0038 *Antony and Cleopatra* | 14 | 1 | | 1 |
+| EMOTHE0777 | 10 | | | |
+| EMOTHE0779 | 9 | | | 1 |
+| EMOTHE0749 | 8 | | | 2 |
+| EMOTHE0659 | 2 | | | 35 |
+| EMOTHE0670 | 3 | 2 | | 10 |
+| EMOTHE0281, 0008, 0211, 0502 | 4 | 5 | | |
+| **Total, 14 plays** | **232** | **36** | **7** | **50** |
 
-### The template gives the record away
+The web export gave 234 citations in these three kinds. Plays 0659, 0670, 0749, 0777 and 0779
+are not in `T01`, so they reach us only through the dump.
 
-When a field is empty, FileMaker writes a placeholder in its place. The placeholders name
-the fields:
+## What was missing, and where it was
 
-| Placeholder | Items |
-|---|---|
-| `{Falta nombre editorial}` | 318 |
-| `{Falta nombre ciudad}` | 254 |
-| `{Falta título libro}` | 31 |
-| `{Falta autor libro}` | 16 |
-| `{Falta autor capítulo libro}` | 11 |
-| `{Falta año pub}` | 10 |
-| `{Falta nombre Universidad}` | 9 |
-| `{Falta páginas capítulo}`, `{Falta título revista}` | 6 each |
-| `{Falta título editado}`, `{Falta autor artículo revista}` | 3 each |
-| `{Falta título artículo revista}` | 2 |
-| `{Falta URL pub. electrónica}` | 1 |
+**Nothing is missing any more.** The modern editions arrived as well; see "Modern editions".
 
-**429 of 3063 items (14%) carry at least one placeholder.**
+Everything a printed bibliography citation shows is now in a column:
 
-Those placeholders, together with the rendered shapes, imply roughly this record in
-FileMaker. It is **inferred, not seen**:
+| Printed as | Field | Checked |
+|---|---|---|
+| `Ed. Cottegnies, Line; …` | `BibSel_Editor`, `BibSel_Editor2` | 519 of 519 segments |
+| `Tra. Martínez Sierra, María` | `BibSel_Traductor`, `BibSel_Traductor2` | 229 of 229 segments |
+| the `4` in `2005, vol. 4, 29` | `BibSel_Ejemplar` | 512 of 514; the other 2 have the issue in `NumVolTomo` (`vol. LXIX, núm. 137`) |
+| `(Orig: Antony and Cleopatra)` | `BibSel_TituloOriginal` | 47 of 47 |
+| edition | `BibSel_Edicion` | 15 of 15 |
+| `10 vols.` | `BibSel_VolTomoTotal` | 20 of 20 |
+| `Paris: Gallimard` | `_k_IdCiudad`, `_k_IdEditorial` → `T13.1`, `T13.2` | every city id; 385 of 386 publisher ids |
+| a thesis's university | the publisher id, on 8 of 18 theses | the other 10 print `{Falta nombre Universidad}`; the name sometimes sits in `Nota` |
 
-- **People:** author, editors, translators.
-- **Titles:** title, plus a container title (book, edited volume or journal).
-- **Imprint:** city, publisher, year (stored as text), edition.
-- **Location in the publication:** volume and total volumes, series, pages, journal volume
-  and issue.
-- **Type-specific:** university (for theses), URL (for electronic publications), original
-  title (for translations).
-- **Other:** a free note (`Reimp. Espasa-Calpe, … 1945`, `Based on Joost Daalder…`), a
-  language code, and some flag that decides whether the record is published. See loss 7.
+**The lookups need cleaning before use.**
 
-## What the export loses
+- Both carry test rows (`ciudad_prueba`, `ciudad_test 2`, `Editorial_Prueba`, `edi_test 2`)
+  and blanks (6 cities, 14 publishers). No bibliography record points at either.
+- Country names mix languages (`Francia` and `France`, `USA` and `Estados Unidos de
+  América`), so normalise them before using them for anything but display.
 
-1. **Field boundaries.** Fields are separated by `. `, but titles and initials contain it
-   too:
-   - `Ara, J..` has a doubled period on 212 criticism items.
-   - `Hamlet.Tragedia de Guillermo Shakespeare. Traducida é ilustrada…` runs two fields
-     together.
+**How it was found**, so nobody repeats the search (all 2026-10-02):
 
-   The journal-article shape (`Author. "Title". Journal. Year, …, p. N-M.`) matches about
-   1100 of the 2003 criticism items. Splitting everything else into fields is heuristic.
-2. **Publication type.** The type is only implied by the template: quotes, `Ed.`, `, ed.`.
-   It is never stated. Theses and electronic publications cannot be told apart from books
-   reliably.
-3. **Italics.** Only modern editions keep `<i>`. In criticism, translations and adaptations,
-   a book title is plain text, so it reads the same as a journal name.
-4. **Volume and issue.** `English Literary Renaissance. 2014, vol. 2, 44` is volume 44,
-   issue 2, so the order is reversed. Many items carry one bare number, which could be
-   either.
-5. **Per-record language.** FileMaker has it (`bus_tradIdioma`), but as an unaligned union:
-   its count matches the published items on **5 of 159** versions. Only translations keep a
-   usable language, through their group header.
-6. **Record identity.** One FileMaker record linked to several versions arrives as repeated
-   text with no ID. 37 edition texts and 22 criticism texts appear on more than one
-   version. There are also 8 exact duplicates inside a single version.
-7. **Records that are never rendered.** On 40 versions, `bus_criticaAnyo` lists **698**
-   criticism years while `pub_BibSelectaCritica` is empty. In total `bus_criticaAnyo` has
-   2689 entries against 2003 published citations. `bus_tradIdioma` also exceeds the
-   published count on 32 versions. `bus_publicada` does not explain the gap. This data
-   **cannot be recovered from this file at all**. The field name *Bib**Selecta*** suggests
-   a "selected" flag on each record.
-8. **Years are text.** About 30 year values are ranges or conjectures (`1957-75`,
-   `[1873-4]`, `1996/7`). A handful are `0`, and at least 4 lost a digit in the rendered
-   citation (`Ricciardi, 956`, `Atenore, 985`).
-
-Not a loss of information, but a trap for the parser:
-
-- **`<<Hamlet>>`** marks a title inside a title (33 items).
-- **`<https://…>`** is a URL in angle brackets (19 editions). Translations use
-  `URL: https://…` on its own line (6 items).
-
-  An HTML parser, or rendering the raw string as HTML, reads both as tags and drops them.
-- **The translation nesting defeats the flat `@list_item` regex** in
-  `lib/playcode/import/filemaker.ex`. Matched non-greedily from the outer `<li>`, it runs to
-  the first inner `</li>`, so the first translation of every language absorbs the header
-  and the opening `<ul>`. Match the groups first, with
-  `<li>\s*([A-Z]{2})\s*:\s*<ul>(.*?)</ul>\s*</li>`, then the items inside each group.
-- **Dirty source data** gets imported as it is:
-  - typos: `Atenore`, `Golderbg`, `Stephenn`
-  - template leftovers: `2nd ed ed.`, `Oxford2007.`
-  - the placeholders
+- **Not another table.** The first export carried 26 of `T12.1`'s 41 fields.
+  - The relationship graph (`doc/ctce_dades/relaciones/5-calculos-descripcion.png`) builds the
+    citation from `T12.1`, `T12.11`, `T13.1` and `T13.2` only.
+  - The *Campos* tab (`6-campos-T12.1.png`) shows the formula reading `BibSel_Editor`,
+    `BibSel_Editor2` and `BibSel_Traductor…` directly.
+  - A plain re-export came out byte-for-byte identical, because FileMaker's export dialog
+    reuses the previous field selection. Name the fields when asking.
+- **Not `T13_FuenteInformacion`.** Only 6 of the 519 `Ed.` segments and 2 of the 229 `Tra.`
+  segments appear anywhere in it. It keeps its *own* sources' editors in `Autor2` without a
+  role. Scholarly editions here do the same with `Autor` (`Bevington, David, ed.`).
+- **Not `T07.51*`.** Those are the credits of each digital edition, the TEI header's
+  `<respStmt>`, which belong to roadmap slice S7. Only 2 of the 194 cited translators appear
+  among its 55 people.
 
 ## Order is computed, not curated
 
-`bus_criticaAnyo` is in display order and descends numerically on **135 of 139** rows. The
-four exceptions are bad year values (`-18981916`, `0`), not curation. `bus_tradAnyo`
-descends on 56 of 59.
+FileMaker sorts each published list by `BibSel_Ano`, descending, with non-digits stripped.
+So `1957-75` sorts as 195775, above 2014, and a range year opens 17 criticism lists. Checked
+against the dump: 99 of 102 published lists follow it exactly. `year desc nulls last` gives the intended
+order, and there is no curated position to import.
 
-So FileMaker sorts on the year field with its non-digits stripped. That is why `1957-75`
-(sorting as 195775) heads 17 criticism lists, above citations from 2014. The quirk is not worth
-reproducing: `year desc` gives the intended order. **There is no curated position to
-import, and nothing in the data asks for a reorder UI.**
+## Modern editions *(received 2026-10-02)*
 
-## Language codes
+Four tables, in `doc/ctce_dades/`:
 
-These are the codes in `bus_tradIdioma`, decoded against the translation headers and each
-play's language. They are the same codes as `bus_idioma`:
-
-| Code | Language | Entries |
+| File | Rows | What it is |
 |---|---|---|
-| 1 | ES | 306 |
-| 2 | FR | 109 |
-| 3 | EN | 939 |
-| 4 | IT | 66 |
-| 6 | DE | 61 |
+| `T04.1_EdModerna.xml` | 985 | the editions, 29 fields |
+| `T04_ObraModernaRecomendada.xml` | 968 | links: edition ↔ version, plus **where the play sits in that edition** (`ObraEdMod_Volumen`, `ObraEdMod_Paginas`) and the printed citation for that link (`w3pub_EdModernaItem`) |
+| `T04.11_EdModTipo.tab` | 2 | 1 Libro, 2 Capítulo de libro (tab-separated) |
+| `T04.12_EdModIdioma.xml` | 6 | the same six languages as the bibliography |
 
-`5` never occurs. It is probably PT, which is the only one of S1's five index languages
-without a code here.
+**It is complete.**
 
-## Links into our own corpus
+- The links reproduce the website's modern-editions list exactly on **118 of 120** versions.
+  The other 2 differ by one record each.
+- 935 of the 938 printed citations are fully explained by edition, link, city and publisher
+  fields. The remaining 3 only fail the check's own handling of `<<…>>` and `Vol. V`.
+- 10 versions carry 78 links that are not on the website yet, the same staleness as the
+  bibliography's 118.
 
-26 citations point at an EMOTHE edition by code: 21 modern editions and 5 translations,
-covering 25 distinct `EMOTHE####` codes. For example:
+The fields, read from names and renders:
 
-- `…EMOTHE Digital Library. <https://emothe.uv.es/biblioteca/textosEMOTHE/EMOTHE0170_TheChangeling.php>`
-- `Kyd, Thomas. "La tragedia española". Tra. García García, Luciano. … URL: …EMOTHE0307_…`
+| Field | Filled | Meaning |
+|---|---|---|
+| `EdiMod_Editor` | 766 | the edition's editor, printed first: `Thompson, Ann; Taylor, Neil, ed.` |
+| `EdiMod_Titulo`, `EdiMod_Autor` | 926 / 621 | the play as edited, and its author |
+| `EdiMod_Titulo2`, `EdiMod_Editor2` | 461 / 131 | the containing volume and its editors: `In: Wells, Stanley; Taylor, Gary, ed. William Shakespeare: The Complete Works` |
+| `EdiMod_Titulo3` | 7 | series (`The Arden Shakespeare`, `The RSC Shakespeare`) |
+| `EdiMod_VolTomo`, `EdiMod_Pag` | 25 / 3 | volume and pages at edition level; the link's `ObraEdMod_Volumen` (90) and `ObraEdMod_Paginas` (141) say where *this* play is |
+| `EdiMod_Edicion` | 37 | `2nd`, `4th` |
+| `EdiMod_Siglas` | 62 | **the edition's siglum** (`ARD3Q2`, `ARD3F1`, `RSC`, `TES2`): the short code a critical apparatus cites it by |
+| `EdiMod_Referencia` | 84 | a free-text reference, printed separately (`w3_ReferenciaEdModerna`): `Lope de Vega: Los locos de Valencia, Hélène Tropé (ed.), Madrid, Castalia, 2003.` |
+| `EdiMod_Autor2`, `EdiMod_Traductor`, `EdiMod_Traductor2` | 25 / 8 / 3 | second author, translators |
+| `EdiMod_URL`, `EdiMod_URL_FechaAcceso` | 41 / 7 | URL (stored without angle brackets) and access date |
+| `EdiMod_Nota` | 121 | note |
+| `EdiMod_Ano` | 912 | year as text, with stray spaces (` 1936`) and lost digits (`956`, `192`) |
+| `_k_IdEdicionModernaTipo`, `_k_IdEdicionModernaIdioma` | 898 / 252 | type; language on only a quarter |
+| `_k_IdCiudad`, `_k_IdEditorial` | 889 / 879 | into the shared `T13.1` / `T13.2` |
+| `EdiMod_NumVolTomo`, `EdiMod_TituloNota`, `EdiMod_TituloOriginal` | 0 | unused |
+| `_tc_EdiMod_ComposicionExtensa` | 0 | empty in the export; the printed form lives on the link |
 
-Each of these could become a link to a play we hold. It is optional, and cheap once the URL
-is its own column.
+**Sharing is real here.** 856 editions are linked; 23 of them sit on several versions, up to
+11: the Wells and Taylor *Complete Works*, *Drama of the English Renaissance II*, *English
+Drama 1580-1642*. Each link keeps its own volume and pages.
+
+**Cleaning before import:**
+
+- 38 blank records, one of them under a duplicated id (576)
+- 3 test records, 2 of them linked (`esto es una prueba de una referencia…`, a translator `w`)
+- 129 editions linked to nothing; 3 links without an edition and 4 to a missing one
+
+**On the plays we hold:** 102 links on 10 plays: EMOTHE0010, 0038, 0281, 0337, 0341, 0346,
+0659, 0670, 0749, 0777. The web export gave 84 on 6. 14 linked versions are absent from `T01`,
+as with the bibliography.
 
 ## Proposed shape *(proposal, pending the open questions)*
 
+One table per play, structured like the FileMaker record, keyed back to it for the sync:
+
 ```
 play_bibliography
-  play_id    FK plays, on delete cascade
-  kind       modern_edition | criticism | translation | adaptation
-  citation   text     -- display form; <i> is the only markup kept
-  year       integer  -- first 4-digit year in the citation; sort only; nil when unknown
-  language   string   -- ISO code as plays.language; required for translation, else optional
-  url        string   -- lifted out of <…> or "URL: …"
-  origin     manual | filemaker | tei
+  play_id           FK plays, on delete cascade
+  kind              criticism | translation | adaptation | modern_edition
+  pub_type          article | book_section | scholarly_edition | book | proceedings
+                    | prologue | festschrift | electronic | thesis | collection
+  language          ISO code as plays.language (es fr en it pt de); nil when unknown
+  analytic_author   BibSel_Autor
+  analytic_title    BibSel_Titulo
+  monogr_author     BibSel_Autor2
+  monogr_title      BibSel_Titulo2   -- book or journal
+  analytic_editors      BibSel_Editor      -- editor of the chapter or edited text
+  monogr_editors        BibSel_Editor2     -- editor of the book
+  analytic_translators  BibSel_Traductor   -- translator of a play inside an anthology
+  monogr_translators    BibSel_Traductor2  -- translator of the book
+  original_title    BibSel_TituloOriginal
+  volume            BibSel_NumVolTomo
+  volumes_total     BibSel_VolTomoTotal
+  issue             BibSel_Ejemplar
+  pages             BibSel_Pag
+  edition           BibSel_Edicion
+  url_accessed_on   BibSel_URL_FechaAcceso
+  pub_place, publisher
+  year_text         BibSel_Ano verbatim ("1957-75", "[s.a.]")
+  year              integer, first 4-digit year in year_text; sort only
+  url, doi
+  note              BibSel_Nota; internal, not printed
+  siglum            EdiMod_Siglas      -- modern editions only: ARD3Q2, RSC
+  series            EdiMod_Titulo3     -- modern editions only
+  reference         EdiMod_Referencia  -- modern editions only, free text
+  filemaker_id      _kp_IdBiblioSelecta or _kp_IdEdicionModerna; nil for rows typed in Playcode
+  origin            manual | filemaker | tei
   timestamps
 ```
 
-- **Sort** by `year desc nulls last, citation`. There is no `position` column.
-- **Normalise on import:**
-  - `<<X>>` becomes `«X»`.
-  - The URL moves to `url`.
-  - Collapse whitespace.
-  - Everything else stays verbatim.
-- **Render** by escaping everything, then re-allowing `<i>`/`</i>`.
-- **Fill-only, per play and kind.** This is S2's policy applied to child rows:
-  - The sync writes a play's FileMaker citations of one kind only when that play has
-    **no** rows of that kind yet.
-  - Otherwise it reports the play as a conflict and writes nothing.
+- **Display.** Playcode prints each citation from its columns, with one template per
+  `pub_type`. Empty fields are simply omitted, so `{Falta …}` placeholders cannot appear.
+  Titles inside titles (`<<…>>`) become italics, as `w3_BiblioSelecta` already does.
+- **The renderer has a ready-made test oracle.** FileMaker's own extensa exists for 2,633
+  records. Rendering the same fields and diffing against it, placeholders aside, shows every
+  template difference before a curator sees one.
+- **Sort** by `year desc nulls last`, then `monogr_title`. There is no `position`.
+- **For modern editions,** `volume` and `pages` come from the link (`ObraEdMod_Volumen`,
+  `ObraEdMod_Paginas`) when it has them, because they say where this play sits in the
+  edition. Otherwise they come from the edition.
+- **Sync** is keyed on `(play_id, kind, filemaker_id)`, because the two FileMaker tables
+  number their records independently. A record shared by three versions
+  becomes three rows. It is fill-only, as in S2:
+  - a key not yet present is inserted
+  - a present row that nobody has edited is updated
+  - a row a curator edited is reported as a conflict and left alone
+  - a key that disappeared from the dump is reported, never deleted
 
-  Matching individual rows on citation text is the obvious alternative, and it is wrong.
-  Once a curator corrects a typo, the edited row no longer matches, so the next sync
-  re-adds the original. And a citation a curator deleted comes back. Fill-only avoids
-  both problems without a key column or tombstones, and a second run writes nothing.
-- **Admin:** one page per play, grouped by kind, with add, edit and delete. It needs a
-  filter or search box, since Hamlet alone has 62 criticism items.
+  This replaces the earlier per-play-and-kind rule, which only existed because the web
+  export had no record identity.
+- **Skip on import, and report:** uncategorised records (until question 3 is answered),
+  records with neither author nor title, and links to missing records.
+- **Admin:** one page per play, grouped by kind, with add, edit, delete and a filter box.
+  *Hamlet* has 62 criticism records.
 
 **Rejected for now:**
 
-- **Structured columns now** (author, title, container title, volume, issue, pages…).
-  Filling them by parsing strings would leave about 1000 rows for a person to review. They
-  pay for themselves only if FileMaker delivers structured records (question 1). Adding
-  them later is a purely additive migration, and `citation` stays as the display form.
-- **A corpus-global `bibliography_entries` table** joined to plays, the way the places
-  gazetteer works. 59 repeated texts out of about 2900 do not justify it. Record IDs from
-  FileMaker would. That also belongs to question 1.
+- **A corpus-global `bibliography_entries` table**, joined to plays the way places are.
+  Revisited 2026-10-02 with the modern editions in hand, and still rejected for now:
+  - Sharing is small: 30 of 2,550 bibliography records sit on more than one version, at most
+    three ways; 23 of 856 modern editions, at most 11 ways.
+  - The per-link volume and pages fit a per-play row naturally.
+  - The cost is that correcting a shared anthology means editing up to 11 rows.
+
+  `filemaker_id` keeps the copies findable, so a later "fix every copy" action, or a
+  migration to shared entries, is mechanical. Promote when curators actually hit it (open
+  question 9).
+- **Parsing the web export's strings into fields.** The dump makes it unnecessary for all four
+  kinds.
 
 ## TEI
 
-**There is nothing to import.** I checked all 96 fixture files after UTF-16 decoding:
+**There is nothing to import.** All 96 fixture files, UTF-16 decoded, have zero
+`<listBibl>`, `<biblStruct>` or `<relatedItem>`. `<back>` is empty in 94. The only `<bibl>`
+elements are the `sourceDesc` base-text entries, which are already `play_sources`. The other 2
+files hold a `<div type="epilogo">` in `<back>`, which the parser ignores, so those
+epilogues are silently dropped on import. That is a separate bug, to fix in the same pass
+that teaches the parser `<back>`.
 
-- zero `<listBibl>`, `<biblStruct>` or `<relatedItem>`
-- `<back>` is empty in 94 files
-- the only `<bibl>` elements are the `sourceDesc` base-text entries, which are already
-  `play_sources`
+**Not in `sourceDesc/listBibl`.** The parser already reads `sourceDesc/listBibl/bibl` into
+`play_sources` (`lib/playcode/import/tei_parser.ex:729-733`), and `sourceDesc` describes the
+sources of this edition, which is S3's witnesses. Secondary bibliography is not a source.
 
-So a bibliography in TEI would be ours to add. Its round-trip is export, then import,
-against our own output — the same situation as S2c's `<creation>`.
-
-The other 2 files hold a `<div type="epilogo">` in `<back>`. The parser ignores `<back>`
-entirely, so those epilogues are silently dropped on import. That is a separate bug, found
-here, and a parser change to read `<back>` should fix it in the same pass.
-
-**Do not put it in `sourceDesc/listBibl`.** The parser already reads
-`sourceDesc/listBibl/bibl` into `play_sources` (`lib/playcode/import/tei_parser.ex:729-733`),
-so criticism placed there would come back as base-text sources. It would also be wrong in
-principle: `sourceDesc` describes the sources of this electronic text, which is where S3's
-witnesses belong. Secondary bibliography is not a source.
-
-**Put it in `<back>`.** The `type` values are in Spanish, to match the corpus's
-`acto`/`escena`/`elenco`:
+**In `<back>`, as `<biblStruct>`.** The type values are in Spanish, to match the corpus's
+`acto`/`escena`/`elenco`. The two FileMaker levels map one to one:
 
 ```xml
 <back>
   <div type="bibliografia">
-    <listBibl type="ediciones_modernas">
-      <bibl>Fassò, L., ed. <title>Il pastor Fido</title>. Guarini, Giovanni Battista. Torino: Einaudi, <date when="1976">1976</date>.</bibl>
+    <listBibl type="critica">
+      <biblStruct type="articulo_revista" xml:lang="en">
+        <analytic>
+          <author>Taylor, Miles</author>
+          <title level="a">'Teach Me This Pedlar's French': The Allure of Cant in 'The Roaring Girl'…</title>
+        </analytic>
+        <monogr>
+          <title level="j">Renaissance and Reformation/Renaissance et Réforme</title>
+          <imprint><date when="2005">2005</date></imprint>
+          <biblScope unit="volume">29</biblScope>
+          <biblScope unit="issue">4</biblScope>
+          <biblScope unit="page">107-24</biblScope>
+        </monogr>
+      </biblStruct>
     </listBibl>
-    <listBibl type="critica">…</listBibl>
     <listBibl type="traducciones">
-      <bibl xml:lang="fr">Shakespeare, William. Hamlet. Tra. Déprats, Jean-Michel. Paris: Granit, 1986.</bibl>
+      <biblStruct type="libro" xml:lang="es">
+        <monogr>
+          <author>Jonson, Ben</author>
+          <title level="m">Teatro de Ben Jonson</title>
+          <editor role="translator">Martínez Sierra, María</editor>
+          <imprint><pubPlace>Buenos Aires</pubPlace><publisher>Hachette</publisher><date when="1958">1958</date></imprint>
+        </monogr>
+      </biblStruct>
     </listBibl>
     <listBibl type="adaptaciones">…</listBibl>
+    <listBibl type="ediciones_modernas">…</listBibl>
   </div>
 </back>
 ```
 
-- **Use `<bibl>`, not `<biblStruct>`.** `<biblStruct>` requires `analytic`, `monogr` and
-  `imprint` parts that a string cannot honestly fill. `<bibl>` is mixed content, so the
-  citation goes in as text:
-  - `<i>` becomes `<title>`
-  - `url` becomes `<ptr target>`
-  - `year` becomes `<date when>`
-- **If structured records arrive later** (question 1), they map directly onto
-  `<biblStruct>`, or onto a tagged `<bibl>`: `<author>`, `<editor role="translator">`,
-  `<title level="a|m|j">`, `<pubPlace>`, `<publisher>`,
-  `<biblScope unit="volume|issue|page">`.
+- `title level`: `a` for the analytic title, `j` for a journal (type 1), `m` otherwise.
+- `year_text` goes in the `<date>` text, `year` in `@when`. A note goes in `<note>`, a URL in
+  `<ptr target>`, a DOI in `<idno type="DOI">`.
 - **Round-trip.** The parser reads `back/div[@type="bibliografia"]` and writes rows with
-  `origin: "tei"`. A re-import deletes only that play's `tei` rows, and **skips any bibl
-  whose normalised citation already exists under another origin**. That is S9's
-  leave-alone rule for places. Without it, exporting and re-importing a file duplicates
-  every `manual` and `filemaker` row.
-- **Why bother.** The static site publishes `plays/<CODE>/<CODE>.xml`. With the
-  bibliography in `<back>`, that file is self-contained, which is the Endings argument.
-- **Sequence.** The table, admin page and FileMaker import come first. TEI in both
-  directions is the slice's last task.
+  `origin: "tei"`. A re-import deletes only that play's `tei` rows, and skips a
+  `<biblStruct>` that matches an existing row of another origin. That is S9's leave-alone
+  rule; without it, export then re-import duplicates every `manual` and `filemaker` row.
+- **Why bother.** The static site publishes `plays/<CODE>/<CODE>.xml`, and with the
+  bibliography in `<back>` that file is self-contained.
+- **Sequence.** Table, admin page and import first; TEI in both directions last.
 
 ## Open questions
 
-**For the FileMaker side.** These go in the same message as the genre value lists and
-`bus_lugAccion` (roadmap question 4):
+**Answered by the dump:**
 
-1. **Can you export the bibliography table directly?** That means one row per record with
-   its fields and ID, plus the table linking records to versions. This is the question that
-   changes the design: it removes losses 1–6 and 8, and it turns the structured columns and
-   possibly the shared-entries table from rejected into obvious.
-2. **What decides whether a record appears in `pub_BibSelecta*`?** Is it a "selected" flag?
-   698 criticism records on 40 versions render nothing. Should the new system hold the
-   unselected ones too, perhaps as non-public?
-3. **Is language code `5` Portuguese?** And are 1 ES, 2 FR, 3 EN, 4 IT, 6 DE right?
-4. **What is the value list for record types?** For example libro, capítulo, artículo,
-   tesis, edición electrónica, edición moderna.
+- ~~Can the bibliography table be exported?~~ Yes, and complete for three of the four kinds:
+  all 41 fields of `T12.1`, received 2026-10-02. The modern editions are question 2.
+- ~~What decides whether a record is published?~~ Nothing on the record does. The 118
+  unpublished records are newer than the web export (question 4), and the 698 came from a
+  stale index.
+- ~~Is language code 5 Portuguese?~~ Yes: 1 castellano, 2 francés, 3 inglés, 4 italiano,
+  5 portugués, 6 alemán.
+- ~~What record types exist?~~ Ten, listed under "Fields of a record".
+
+**For the FileMaker side:**
+
+1. ~~Export `T12.1` with the nine fields left out.~~ **Received 2026-10-02**, all 41 fields.
+2. ~~Export the modern editions~~ **Received 2026-10-02**: `T04`, `T04.1`, `T04.11`, `T04.12`.
+3. **What are the 86 uncategorised records?** 76 are linked, 35 of them to EMOTHE0659. Are
+   they criticism that was never categorised, or drafts?
+4. **Are the 118 records newer than the web export ready to publish?**
+5. **Can the broken links go?** 74 have no record and 19 point at deleted records. 102
+   records are linked to nothing.
 
 **For us:**
 
-5. **Per version or per work?** FileMaker attaches bibliography to versions, and 84 of the
-   129 versions carrying any bibliography are English-language versions. Should a translation's
-   page also show its family head's list, through `parent_play_id`?
-6. **Order.** Is it automatic year-descending, as FileMaker does it, or do curators want a
-   hand order? A hand order brings back `position` and a reorder UI for lists that run to
-   62 items.
-7. **Placeholders.** `{Falta …}`: import them verbatim and flag them in the admin list, or
-   also hide them on public pages? Stripping them from the text is fiddly —
-   `{Falta nombre ciudad}: {Falta nombre editorial}, 1991` leaves `: , 1991` behind.
+6. **Per version or per work?** FileMaker attaches bibliography to versions. Should a
+   translation's page also show its family head's list, through `parent_play_id`?
+7. **The `Nota` field.** 178 notes, 3 printed. Keep them as internal notes, show them, or
+   drop them?
+8. **Order.** The data says year descending is automatic. Do curators want a hand order
+   anyway? That would bring back `position` and a reorder UI.
+9. **Shared editions.** 23 modern editions sit under several plays (up to 11). Are corrections
+   to them rare enough that a per-play copy is fine, or should one edit reach every play?
 
 ## Reproducing the numbers
 
-Every count above is per `T01` row and does not depend on matching rows to our plays. So
-the roadmap's `version_code/1` trap (href-only matching finds 13 of 22) does not apply. Any
-count *per play we hold* must go through `Filemaker.load_versions/1`. The only
-non-obvious parse is the translation nesting described under the parser traps.
+- **Dump counts** are per record or per link, across the whole dump.
+- **"Plays we hold"** matches `"EMOTHE" <> zero-padded _k_IdObraTitulo` against the code
+  prefixes of the 82 fixture files.
+- **Web-export counts** are per `T01` row. Any count per play we hold must go through
+  `Filemaker.load_versions/1`, which handles the empty-href fallback.
+- **The translation nesting** in `pub_BibSelectaTraduccion` defeats the flat `@list_item`
+  regex. Match the language groups first, with
+  `<li>\s*([A-Z]{2})\s*:\s*<ul>(.*?)</ul>\s*</li>`, then the items inside each group.

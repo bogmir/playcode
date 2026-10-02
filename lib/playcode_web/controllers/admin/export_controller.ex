@@ -97,6 +97,33 @@ defmodule PlaycodeWeb.Admin.ExportController do
     end
   end
 
+  @doc """
+  Serves the built static site from its output directory, so it can be checked before it
+  is downloaded or deployed. Its links are relative, so it works under this prefix.
+  """
+  def preview(conn, %{"path" => path}) do
+    root = Playcode.Export.StaticSite.output_dir()
+
+    if File.regular?(Path.join(root, "index.html")),
+      do: serve_site_file(conn, root, path),
+      else:
+        conn
+        |> put_flash(:error, gettext("No site built yet. Generate the static site first."))
+        |> redirect(to: ~p"/admin/export")
+  end
+
+  defp serve_site_file(conn, root, path) do
+    with {:ok, relative} <- Path.safe_relative(Enum.join(path, "/")),
+         file = Path.join(root, relative),
+         true <- File.regular?(file) do
+      conn
+      |> put_resp_content_type(MIME.from_path(file))
+      |> send_file(200, file)
+    else
+      _ -> send_resp(conn, 404, "Not found")
+    end
+  end
+
   defp log_export(conn, play, format) do
     user = conn.assigns[:current_user]
 

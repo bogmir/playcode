@@ -57,6 +57,8 @@ defmodule PlaycodeWeb.CoreComponents do
       phx-click={JS.push("lv:clear-flash", value: %{key: @kind}) |> hide("##{@id}")}
       role="alert"
       class="toast toast-top toast-end z-50"
+      phx-hook={@kind == :info && "AutoDismiss"}
+      data-kind={@kind}
       {@rest}
     >
       <div class={[

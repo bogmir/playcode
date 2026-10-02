@@ -6,12 +6,16 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.Deployer
 
-  @output_dir "_site"
-
   @impl true
   def mount(_params, _session, socket) do
     plays = Playcode.Catalogue.list_plays(sort: :title_sort, complete: true)
-    exported_codes = StaticSite.list_exported_codes(@output_dir)
+    exported_codes = StaticSite.list_exported_codes(StaticSite.output_dir())
+    # A site that exists decides what starts ticked; with none, everything does.
+    selected =
+      case Enum.filter(plays, &(&1.code in exported_codes)) do
+        [] -> plays
+        built -> built
+      end
 
     {:ok,
      socket
@@ -21,11 +25,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      |> assign(:github_repo, "")
      |> assign(:plays, plays)
      |> assign(:exported_codes, MapSet.new(exported_codes))
+     |> assign(:selected, MapSet.new(selected, & &1.code))
      |> assign(:complete_count, length(plays))
      |> assign(:total_count, Playcode.Catalogue.count_plays())
      |> assign(:generating, false)
      |> assign(:deploying, false)
-     |> assign(:exporting_play, nil)
      |> assign(:gen_current, 0)
      |> assign(:gen_total, 0)
      |> assign(:gen_detail, "")
@@ -51,9 +55,10 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     end
 
     opts = [
-      output_dir: @output_dir,
+      output_dir: StaticSite.output_dir(),
       version: socket.assigns.version,
       base_url: socket.assigns.base_url,
+      play_codes: MapSet.to_list(socket.assigns.selected),
       on_progress: on_progress
     ]
 
@@ -86,7 +91,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       end
 
       Task.start(fn ->
-        result = Deployer.deploy_to_github_pages(@output_dir, repo, on_progress: on_progress)
+        result =
+          Deployer.deploy_to_github_pages(StaticSite.output_dir(), repo, on_progress: on_progress)
+
         send(lv, {:deploy_done, result})
       end)
 
@@ -97,44 +104,29 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     end
   end
 
-  def handle_event("export_play", %{"id" => id}, socket) do
-    lv = self()
+  def handle_event("toggle_play", %{"code" => code}, socket) do
+    selected = socket.assigns.selected
 
-    opts = [
-      output_dir: @output_dir,
-      version: socket.assigns.version,
-      base_url: socket.assigns.base_url
-    ]
+    selected =
+      if MapSet.member?(selected, code),
+        do: MapSet.delete(selected, code),
+        else: MapSet.put(selected, code)
 
-    Task.start(fn ->
-      StaticSite.generate_single_play(id, opts)
-      send(lv, {:play_exported, id})
-    end)
-
-    {:noreply, assign(socket, :exporting_play, id)}
+    {:noreply, assign(socket, :selected, selected)}
   end
 
-  def handle_event("remove_play", %{"code" => code}, socket) do
-    opts = [
-      output_dir: @output_dir,
-      version: socket.assigns.version,
-      base_url: socket.assigns.base_url
-    ]
+  def handle_event("toggle_all", _params, socket) do
+    all = MapSet.new(socket.assigns.plays, & &1.code)
+    selected = if MapSet.equal?(socket.assigns.selected, all), do: MapSet.new(), else: all
 
-    StaticSite.remove_single_play(code, opts)
-    exported = MapSet.delete(socket.assigns.exported_codes, code)
-
-    {:noreply,
-     socket
-     |> assign(:exported_codes, exported)
-     |> put_flash(:info, gettext("Removed %{code} from static site.", code: code))}
+    {:noreply, assign(socket, :selected, selected)}
   end
 
   def handle_event("download_zip", _params, socket) do
     # Create zip in temp dir and redirect to download
     zip_path = Path.join(System.tmp_dir!(), "emothe-static-site.zip")
 
-    case create_zip(@output_dir, zip_path) do
+    case create_zip(StaticSite.output_dir(), zip_path) do
       :ok ->
         {:noreply, redirect(socket, to: ~p"/admin/export/download-zip")}
 
@@ -157,6 +149,10 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      socket
      |> assign(:generating, false)
      |> assign(:gen_result, result)
+     |> assign(
+       :exported_codes,
+       MapSet.new(StaticSite.list_exported_codes(StaticSite.output_dir()))
+     )
      |> put_flash(
        :info,
        gettext("Static site generated: %{count} plays (%{size})",
@@ -164,16 +160,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
          size: format_size(result.size)
        )
      )}
-  end
-
-  def handle_info({:play_exported, _id}, socket) do
-    exported_codes = StaticSite.list_exported_codes(@output_dir)
-
-    {:noreply,
-     socket
-     |> assign(:exported_codes, MapSet.new(exported_codes))
-     |> assign(:exporting_play, nil)
-     |> put_flash(:info, gettext("Play exported to static site."))}
   end
 
   def handle_info({:gen_done, {:error, reason}}, socket) do
@@ -270,7 +256,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             </label>
 
             <div class="flex items-center gap-4">
-              <button type="submit" class="btn btn-primary" disabled={@generating || @deploying}>
+              <button
+                type="submit"
+                class="btn btn-primary"
+                disabled={@generating || @deploying || MapSet.size(@selected) == 0}
+              >
                 <span :if={@generating} class="loading loading-spinner loading-sm"></span>
                 {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
               </button>
@@ -289,50 +279,56 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       <div class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
         <div class="card-body">
           <h2 class="card-title">{gettext("Plays")}</h2>
-          <p class="text-sm text-base-content/60 mb-3">
-            {gettext("%{exported} of %{total} complete plays exported",
-              exported: MapSet.size(@exported_codes),
-              total: length(@plays)
-            )}
-          </p>
 
           <div :if={@plays == []} class="text-sm text-base-content/50 text-center py-4">
             {gettext("No plays marked as complete.")}
           </div>
 
-          <div :if={@plays != []} class="divide-y divide-base-200">
-            <div :for={play <- @plays} class="flex items-center justify-between py-2">
-              <div class="min-w-0 flex-1">
-                <span class="font-mono text-xs text-base-content/50">{play.code}</span>
-                <span class="font-medium ml-2 truncate">{play.title}</span>
-              </div>
-              <div class="flex items-center gap-2 flex-shrink-0 ml-3">
-                <%= if MapSet.member?(@exported_codes, play.code) do %>
-                  <span class="badge badge-success badge-xs">{gettext("Exported")}</span>
-                  <button
-                    phx-click="remove_play"
-                    phx-value-code={play.code}
-                    class="btn btn-error btn-outline btn-xs"
-                  >
-                    {gettext("Remove")}
-                  </button>
-                <% else %>
-                  <button
-                    phx-click="export_play"
-                    phx-value-id={play.id}
-                    class="btn btn-success btn-xs"
-                    disabled={@exporting_play == play.id}
-                  >
-                    <span
-                      :if={@exporting_play == play.id}
-                      class="loading loading-spinner loading-xs"
-                    />
-                    {if @exporting_play == play.id,
-                      do: gettext("Exporting..."),
-                      else: gettext("Export")}
-                  </button>
-                <% end %>
-              </div>
+          <div :if={@plays != []}>
+            <label class="flex items-center gap-3 border-b border-base-300 pb-2 text-sm text-base-content/70">
+              <input
+                type="checkbox"
+                class="checkbox checkbox-sm"
+                aria-label={gettext("Select all plays")}
+                checked={MapSet.size(@selected) == length(@plays)}
+                phx-click="toggle_all"
+              />
+              {gettext("%{selected} of %{total} plays selected",
+                selected: MapSet.size(@selected),
+                total: length(@plays)
+              )}
+            </label>
+
+            <div class="divide-y divide-base-200">
+              <label
+                :for={play <- @plays}
+                id={"play-#{play.id}"}
+                class="flex cursor-pointer items-center gap-3 py-2"
+              >
+                <input
+                  type="checkbox"
+                  class="checkbox checkbox-sm"
+                  checked={MapSet.member?(@selected, play.code)}
+                  phx-click="toggle_play"
+                  phx-value-code={play.code}
+                />
+                <span class="min-w-0 flex-1">
+                  <span class="font-mono text-xs text-base-content/50">{play.code}</span>
+                  <span class="font-medium ml-2 truncate">{play.title}</span>
+                </span>
+                <span
+                  :if={MapSet.member?(@exported_codes, play.code)}
+                  class="badge badge-success badge-sm"
+                >
+                  {gettext("In site")}
+                </span>
+                <span
+                  :if={!MapSet.member?(@exported_codes, play.code)}
+                  class="badge badge-ghost badge-sm"
+                >
+                  {gettext("Not built")}
+                </span>
+              </label>
             </div>
           </div>
         </div>
@@ -368,12 +364,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
       <%!-- Results --%>
       <div
-        :if={@gen_result && !@generating}
+        :if={(@gen_result || MapSet.size(@exported_codes) > 0) && !@generating}
         class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
       >
         <div class="card-body">
-          <h2 class="card-title text-success">{gettext("Generation Complete")}</h2>
-          <div class="stats stats-horizontal shadow mt-2">
+          <h2 :if={@gen_result} class="card-title text-success">
+            {gettext("Generation Complete")}
+          </h2>
+          <h2 :if={!@gen_result} class="card-title">{gettext("Built site")}</h2>
+          <div :if={@gen_result} class="stats stats-horizontal shadow mt-2">
             <div class="stat">
               <div class="stat-title">{gettext("Plays")}</div>
               <div class="stat-value text-lg">{@gen_result.plays}</div>
@@ -389,6 +388,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
           </div>
 
           <div class="flex gap-3 mt-4">
+            <a
+              href={~p"/admin/export/preview/index.html"}
+              target="_blank"
+              class="btn btn-primary btn-outline"
+            >
+              <.icon name="hero-eye-mini" class="size-4" />
+              {gettext("Open preview")}
+            </a>
             <%!-- Deploy button --%>
             <button
               :if={@github_repo != ""}

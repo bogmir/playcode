@@ -37,6 +37,7 @@ defmodule PlaycodeWeb.AuthorizationTest do
     {"/admin/activity-log", :admin},
     {"/admin/export", :admin},
     {"/admin/export/download-zip", :admin},
+    {"/admin/export/preview/index.html", :admin},
     {"/admin/filemaker", :admin},
     {"/admin/dashboard", :admin}
   ]
