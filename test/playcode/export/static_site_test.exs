@@ -122,6 +122,62 @@ defmodule Playcode.Export.StaticSiteTest do
     refute link in hrefs(title_page(dir, translation))
   end
 
+  describe "a relative edited since it was last exported" do
+    defp add_act(play, n, text) do
+      {:ok, act} =
+        Playcode.PlayContent.create_division(%{
+          play_id: play.id,
+          type: "acto",
+          number: n,
+          title: "ACT #{n}",
+          position: n
+        })
+
+      {:ok, _} =
+        Playcode.PlayContent.create_element(%{
+          play_id: play.id,
+          division_id: act.id,
+          type: "stage_direction",
+          content: text,
+          position: 1
+        })
+    end
+
+    # Every act its title page links is on disk, and `word` finds `text` in its lines.
+    defp assert_published_as_it_stands(dir, play, word, text) do
+      acts = dir |> title_page(play) |> hrefs() |> Enum.filter(&(&1 =~ ~r/^act-/))
+      assert acts != []
+
+      for href <- acts do
+        file = href |> String.split("#") |> hd()
+        assert File.exists?(Path.join([dir, "plays", play.code, file])), "#{href} is dead"
+      end
+
+      {"plays", "all", plays} = load_js!(dir, "search/plays.js")
+      {"index", key, shard} = load_js!(dir, "search/index/#{String.slice(word, 0, 2)}.js")
+      assert key == String.slice(word, 0, 2)
+      [p, 1, delta] = shard[word]
+      assert Enum.at(plays, p)["code"] == play.code
+
+      {"lines", _, %{"lines" => lines}} = load_js!(dir, "search/lines/#{play.code}/0.js")
+      assert lines |> Enum.at(div(delta, 2)) |> Enum.at(5) == text
+    end
+
+    test "is re-exported in full when a play of its family is added or removed" do
+      %{original: original, translation: translation} = translation_family_fixture()
+      add_act(original, 1, "Sale Gaspar")
+      dir = generate!([original])
+
+      add_act(original, 2, "Sale Tisbea")
+      :ok = StaticSite.generate_single_play(translation.id, output_dir: dir)
+      assert_published_as_it_stands(dir, original, "tisbea", "Sale Tisbea")
+
+      add_act(original, 3, "Sale Anfriso")
+      :ok = StaticSite.remove_single_play(translation.code, output_dir: dir)
+      assert_published_as_it_stands(dir, original, "anfriso", "Sale Anfriso")
+    end
+  end
+
   test "a play page carries its places and its historical time, in English whatever the locale" do
     play = complete_play(%{"historical_time" => "siglo_xvii"})
     play_place_fixture(play, place_fixture(%{"name" => "Roma"}))

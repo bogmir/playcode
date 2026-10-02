@@ -102,8 +102,13 @@ defmodule Playcode.Export.StaticSite do
         edition = Edition.load(play_id)
         site = site(opts, MapSet.new([edition.play.code | list_exported_codes(dir)]))
         write_play(edition, dir, site)
-        refresh_family(edition.play, dir, site)
-        do_rebuild_index(opts, %{edition.play.code => Search.write_play(dir, edition)})
+        family = refresh_family(edition.play, dir, site)
+
+        do_rebuild_index(
+          opts,
+          Map.put(family, edition.play.code, Search.write_play(dir, edition))
+        )
+
         :ok
       end)
     end)
@@ -116,18 +121,24 @@ defmodule Playcode.Export.StaticSite do
       dir = opts[:output_dir]
 
       locked(dir, fn ->
-        if code in list_exported_codes(dir) do
-          safe_code!(code)
-          File.rm_rf!(Path.join([dir, "plays", code]))
-          File.rm(Path.join([dir, "plays", "#{code}.html"]))
+        family =
+          if code in list_exported_codes(dir) do
+            safe_code!(code)
+            File.rm_rf!(Path.join([dir, "plays", code]))
+            File.rm(Path.join([dir, "plays", "#{code}.html"]))
 
-          with %Play{} = play <-
-                 Enum.find(Catalogue.list_plays(include_deleted: true), &(&1.code == code)) do
-            refresh_family(play, dir, site(opts, MapSet.new(list_exported_codes(dir))))
+            case Enum.find(Catalogue.list_plays(include_deleted: true), &(&1.code == code)) do
+              %Play{} = play ->
+                refresh_family(play, dir, site(opts, MapSet.new(list_exported_codes(dir))))
+
+              nil ->
+                %{}
+            end
+          else
+            %{}
           end
-        end
 
-        do_rebuild_index(opts, %{})
+        do_rebuild_index(opts, family)
         :ok
       end)
     end)
@@ -254,7 +265,9 @@ defmodule Playcode.Export.StaticSite do
   end
 
   # A title page links the play's published original and translations, so theirs change
-  # when one of them is added or removed.
+  # when one of them is added or removed. Each is re-exported in full: its title page is
+  # rendered from the database, so its pages and search lines must be too, or its
+  # contents could link a division it was last exported without. Returns their postings.
   defp refresh_family(play, dir, site) do
     exported = MapSet.new(list_exported_codes(dir))
 
@@ -263,13 +276,10 @@ defmodule Playcode.Export.StaticSite do
       (member.id == play.parent_play_id or member.parent_play_id == play.id) and
         MapSet.member?(exported, member.code)
     end)
-    |> Enum.each(&(&1.id |> Edition.load() |> write_title_page(dir, site)))
-  end
-
-  defp write_title_page(%Edition{play: play} = edition, dir, site) do
-    code = safe_code!(play.code)
-    html = Pages.render(:title, %{edition: edition, site: site})
-    File.write!(Path.join([dir, "plays", code, "index.html"]), html)
+    |> Map.new(fn member ->
+      result = build_play(member.id, dir, site)
+      {result.code, result.postings}
+    end)
   end
 
   # Writes one play's pages and TEI; returns what the index pages need from it.
@@ -280,7 +290,7 @@ defmodule Playcode.Export.StaticSite do
     File.mkdir_p!(play_dir)
     assigns = %{edition: edition, site: site}
 
-    write_title_page(edition, dir, site)
+    File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
     File.write!(Path.join(play_dir, "#{code}.xml"), TeiXml.generate(play))
 
     largest =
