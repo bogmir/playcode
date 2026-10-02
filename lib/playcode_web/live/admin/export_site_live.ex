@@ -20,6 +20,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      |> assign(:plays, plays)
      |> assign(:exported_codes, MapSet.new(exported_codes))
      |> assign(:exporting_play, nil)
+     |> assign(:removing_play, nil)
      |> assign(:complete_count, length(plays))
      |> assign(:total_count, Playcode.Catalogue.count_plays())
      |> assign(:generating, false)
@@ -98,9 +99,10 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     end
   end
 
-  # One build at a time: a single-play export rewrites the shared catalogue and index.
+  # One build at a time: adding or removing a play rewrites the shared catalogue and index.
   def handle_event("toggle_play", _params, socket)
-      when socket.assigns.generating or not is_nil(socket.assigns.exporting_play),
+      when socket.assigns.generating or not is_nil(socket.assigns.exporting_play) or
+             not is_nil(socket.assigns.removing_play),
       do: {:noreply, socket}
 
   def handle_event("toggle_play", %{"id" => id, "code" => code}, socket) do
@@ -111,12 +113,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     ]
 
     if MapSet.member?(socket.assigns.exported_codes, code) do
-      StaticSite.remove_single_play(code, opts)
+      lv = self()
 
-      {:noreply,
-       socket
-       |> assign(:exported_codes, MapSet.delete(socket.assigns.exported_codes, code))
-       |> put_flash(:info, gettext("Removed %{code} from static site.", code: code))}
+      Task.start(fn ->
+        StaticSite.remove_single_play(code, opts)
+        send(lv, {:play_removed, code})
+      end)
+
+      {:noreply, assign(socket, :removing_play, id)}
     else
       lv = self()
 
@@ -178,6 +182,17 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      )
      |> assign(:exporting_play, nil)
      |> put_flash(:info, gettext("Play exported to static site."))}
+  end
+
+  def handle_info({:play_removed, code}, socket) do
+    {:noreply,
+     socket
+     |> assign(
+       :exported_codes,
+       MapSet.new(StaticSite.list_exported_codes(StaticSite.output_dir()))
+     )
+     |> assign(:removing_play, nil)
+     |> put_flash(:info, gettext("Removed %{code} from static site.", code: code))}
   end
 
   def handle_info({:gen_done, {:error, reason}}, socket) do
@@ -277,7 +292,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               <button
                 type="submit"
                 class="btn btn-primary"
-                disabled={@generating || @deploying || @exporting_play}
+                disabled={@generating || @deploying || @exporting_play || @removing_play}
               >
                 <span :if={@generating} class="loading loading-spinner loading-sm"></span>
                 {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
@@ -328,7 +343,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 <span class="font-medium ml-2 truncate">{play.title}</span>
               </span>
               <span
-                :if={@exporting_play == play.id}
+                :if={play.id in [@exporting_play, @removing_play]}
                 class="loading loading-spinner loading-xs text-base-content/50"
               />
               <%!-- On means in the site; flipping it adds or removes the play at once. --%>
@@ -337,8 +352,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 role="switch"
                 class="toggle toggle-success toggle-sm"
                 aria-label={gettext("In the site: %{title}", title: play.title)}
-                checked={MapSet.member?(@exported_codes, play.code) or @exporting_play == play.id}
-                disabled={@generating || @exporting_play}
+                checked={
+                  (MapSet.member?(@exported_codes, play.code) or @exporting_play == play.id) and
+                    @removing_play != play.id
+                }
+                disabled={@generating || @exporting_play || @removing_play}
                 phx-click="toggle_play"
                 phx-value-id={play.id}
                 phx-value-code={play.code}

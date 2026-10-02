@@ -62,12 +62,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Tragedy"
     assert html_response(preview(conn, "index.html"), 200) =~ "Alpha Tragedy"
 
-    assert lv |> element(switch(a)) |> render_click() =~
-             t("Removed %{code} from static site.", code: a.code)
+    # Removing rebuilds the index, so it runs in a task like adding does.
+    lv |> element(switch(a)) |> render_click()
+    wait_for(fn -> render(lv) =~ t("Removed %{code} from static site.", code: a.code) end)
 
     refute has_element?(lv, "#{switch(a)}[checked]")
     assert response(preview(conn, "plays/#{a.code}/index.html"), 404)
     refute html_response(preview(conn, "index.html"), 200) =~ "Alpha Tragedy"
+    refute has_element?(lv, "#{switch(a)}[disabled]")
   end
 
   test "with no site yet, Generate builds every complete play", %{conn: conn, a: a, b: b} do
