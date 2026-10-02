@@ -190,6 +190,7 @@ defmodule Playcode.Export.StaticSite do
     end
 
     File.write!(Path.join(play_dir, "text.html"), Pages.render(:text, assigns))
+    File.write!(Path.join(play_dir, "statistics.html"), Pages.render(:statistics, assigns))
 
     File.write!(
       Path.join([dir, "plays", "#{code}.html"]),

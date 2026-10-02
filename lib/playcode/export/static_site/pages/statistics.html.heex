@@ -1,0 +1,25 @@
+<Components.shell
+  root="../../"
+  title={"Statistics — #{@edition.play.title} — EMOTHE"}
+  site={@site}
+  play={@edition.play}
+>
+  <:rail><Components.play_rail edition={@edition} current="statistics" /></:rail>
+  <Components.play_header play={@edition.play} />
+  <h2>Statistics</h2>
+  <Components.stat_tiles stats={@edition.stats} />
+  <Components.synopsis
+    :if={(@edition.stats["metrical_passages"] || []) != []}
+    passages={@edition.stats["metrical_passages"]}
+  />
+  <Components.character_table
+    characters={@edition.stats["characters"] || []}
+    unit={if (@edition.stats["verses"] || 0) > 0, do: "lines", else: "words"}
+    total={
+      if (@edition.stats["verses"] || 0) > 0,
+        do: @edition.stats["verses"],
+        else: @edition.stats["words"] || 0
+    }
+  />
+  <Components.presence stats={@edition.stats} />
+</Components.shell>

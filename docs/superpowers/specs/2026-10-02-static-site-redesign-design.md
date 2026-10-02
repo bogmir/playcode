@@ -218,8 +218,8 @@ As approved in the mockup for *La vida es sueño*:
 4. **Who shares the stage**: a character × column matrix; columns are scenes, or metrical
    passages for a play with no scenes, labelled as such.
 
-Charts are server-rendered HTML/CSS; JS adds hover tooltips. Every chart's numbers are also in
-a table.
+Charts are server-rendered HTML/CSS with native `title` tooltips, so they need no JS. Every
+chart's numbers are also in a table.
 
 ### Search page (`search.html`)
 
@@ -260,7 +260,7 @@ List in document order of `%{"act", "form", "from", "to", "verses"}`.
   `from`/`to` are the first and last verse numbers in the passage.
 - A play whose passages are all unmarked (most French and English plays) has no synopsis.
 
-Checked against EMOTHE0020: 16 passages, ending Jornada II with the décimas 2018–2187.
+Checked against EMOTHE0020: 17 passages, ending Jornada II with the décimas 2018–2187.
 
 ### Families
 
@@ -288,8 +288,9 @@ back to `speaker_label` as `character_appearances` does today:
 - verses per form;
 - the presence columns they speak in, with lines per column.
 
-Share of the play is measured in lines for a verse play and in words for a prose play
-(`is_verse`).
+Share of the play is measured in lines when the play has verse and in words when it has none.
+The computed verse count decides, not `is_verse`: that flag comes from `<extent>`
+(`tei_parser.ex:406`), so a file without an extent would read as prose.
 
 ### `presence`
 

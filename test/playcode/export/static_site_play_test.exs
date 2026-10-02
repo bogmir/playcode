@@ -118,4 +118,51 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert File.exists?(Path.join([dir, "plays", play.code, "prologue.html"]))
     refute File.exists?(Path.join([dir, "plays", play.code, "act-1.html"]))
   end
+
+  describe "the statistics page" do
+    test "shows the metrical synopsis, the characters and who shares the stage" do
+      {play, dir} = publish!(@two_acts)
+      stats = page(dir, play, "statistics.html")
+
+      assert rows(stats, "#synopsis tbody tr") == [
+               ["I", "Redondilla", "1–5", "5"],
+               ["I", "Unmarked", "6", "1"]
+             ]
+
+      characters = rows(stats, "#characters tbody tr")
+      assert Enum.map(characters, &hd/1) == ["Segismundo", "Criado 2", "Clarín", "Clotaldo"]
+      assert ["Segismundo", "1", "5" | _] = hd(characters)
+      assert "I, 1" in hd(characters)
+
+      assert texts(stats, "#presence tbody th") == [
+               "Segismundo",
+               "Criado 2",
+               "Clarín",
+               "Clotaldo"
+             ]
+
+      assert stats |> LazyHTML.query("#presence td[title]") |> Enum.count() == 3
+      assert LazyHTML.text(stats) =~ "metrical passages"
+    end
+
+    test "a play in prose has no synopsis and measures its characters in words" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>ANA</speaker><p>Buenos días, señor.</p></sp>
+          <sp><speaker>JUAN</speaker><p>Hola.</p></sp>
+        </div1>
+        """)
+
+      stats = page(dir, play, "statistics.html")
+
+      assert stats |> LazyHTML.query("#synopsis") |> Enum.empty?()
+
+      assert [["ANA", "1", "0", "3" | _], ["JUAN", "1", "0", "1" | _]] =
+               rows(stats, "#characters tbody tr")
+
+      assert LazyHTML.text(stats) =~ "most words"
+      refute "verses" in texts(stats, "#tiles dt")
+    end
+  end
 end
