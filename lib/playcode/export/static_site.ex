@@ -226,7 +226,8 @@ defmodule Playcode.Export.StaticSite do
     end)
   end
 
-  # Each play holds a database connection while it loads; two stay free for the app.
+  # Plays load in parallel, each worker checking connections out per query: bound the
+  # workers by the cores and by the pool, minus two so the app is not starved outright.
   defp concurrency do
     pool = Playcode.Repo.config()[:pool_size] || 10
     max(1, min(System.schedulers_online(), pool - 2))

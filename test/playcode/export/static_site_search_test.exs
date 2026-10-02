@@ -156,16 +156,19 @@ defmodule Playcode.Export.StaticSiteSearchTest do
 
   describe "updating a generated site" do
     setup do
-      play = fn word ->
+      # Distinct titles fix the catalogue order: "Alfa" (second) sorts before "Zeta"
+      # (first), so adding or removing the second renumbers the first.
+      play = fn title, word ->
         import_tei!(
           tei(
+            title: title,
             body:
               ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">sueño #{word}</l></sp></div1>)
           )
         )
       end
 
-      %{first: play.("primero"), second: play.("segundo")}
+      %{first: play.("Zeta", "primero"), second: play.("Alfa", "segundo")}
     end
 
     test "adding a play leaves the others' search entries as they were last generated",
@@ -188,7 +191,9 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       {"plays", "all", plays} = load_js!(dir, "search/plays.js")
       first_index = Enum.find_index(plays, &(&1["code"] == first.code))
 
-      assert [^first_index, 1, _] = shard["primero"]
+      # Added play first, so the carried one moved from index 0 to 1.
+      assert first_index == 1
+      assert [1, 1, _] = shard["primero"]
       refute File.exists?(Path.join([dir, "search", "index", "na.js"]))
     end
 
@@ -201,6 +206,7 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       {"plays", "all", plays} = load_js!(dir, "search/plays.js")
       {"index", "su", shard} = load_js!(dir, "search/index/su.js")
 
+      # The removed play was index 0; the survivor was index 1 and is now 0.
       assert Enum.map(plays, & &1["code"]) == [first.code]
       assert shard["sueño"] == [0, 1, 0]
       refute File.exists?(Path.join([dir, "search", "index", "se.js"]))
