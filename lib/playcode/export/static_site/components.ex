@@ -463,7 +463,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <%= for segment <- @segments do %>
           <span :if={segment.sep} class="sep"></span>
           <span
-            class={["seg", "f-" <> segment.family]}
+            class={["pass", "f-" <> segment.family]}
             style={"flex-grow: #{segment.verses}"}
             title={segment.title}
           >
@@ -613,7 +613,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <table class="matrix">
           <thead>
             <tr>
-              <th></th>
+              <th><span class="sr-only">Character</span></th>
               <th
                 :for={{column, i} <- Enum.with_index(@columns)}
                 scope="col"
@@ -633,6 +633,9 @@ defmodule Playcode.Export.StaticSite.Components do
                 class={["c", cells[i] && "on", act_start(@columns, i)]}
                 title={cells[i] && "#{name} · #{column_title(column)} · #{cells[i]} lines"}
               >
+                <span :if={cells[i]} class="sr-only">
+                  {cells[i]} {if cells[i] == 1, do: "line", else: "lines"}
+                </span>
               </td>
             </tr>
           </tbody>

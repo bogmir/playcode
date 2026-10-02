@@ -143,6 +143,13 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       assert stats |> LazyHTML.query("#presence td[title]") |> Enum.count() == 3
       assert LazyHTML.text(stats) =~ "metrical passages"
+
+      # A filled cell states its line count in text, not only in a tooltip.
+      assert stats
+             |> LazyHTML.query("#presence td[title]")
+             |> Enum.map(&squish(LazyHTML.text(&1)))
+             |> Enum.sort() ==
+               ["1 line", "1 line", "5 lines"]
     end
 
     test "a play in prose has no synopsis and measures its characters in words" do

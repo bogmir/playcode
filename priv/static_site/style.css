@@ -134,8 +134,8 @@ body[data-vf="off"] .l .vf { display: none; }
 .tiles dt { font: .75rem var(--sans); color: var(--muted); }
 .tiles dd { margin: 0; font-size: 1.6rem; font-weight: 600; line-height: 1.1; }
 .band { display: flex; gap: 2px; height: 2.1rem; margin: .5rem 0 .25rem; }
-.band .seg { min-width: 2px; border-radius: 3px; display: flex; align-items: center; padding-left: .35rem; overflow: hidden; }
-.band .seg span { font: 600 .625rem var(--sans); color: #fff; white-space: nowrap; }
+.band .pass { min-width: 2px; border-radius: 3px; display: flex; align-items: center; padding-left: .35rem; overflow: hidden; }
+.band .pass span { font: 600 .625rem var(--sans); color: #fff; white-space: nowrap; }
 .band .sep { flex: none; width: 0; border-left: 1px dashed var(--faint); margin: 0 3px; }
 .f-romance { background: var(--f-romance); }
 .f-spanish { background: var(--f-spanish); }
