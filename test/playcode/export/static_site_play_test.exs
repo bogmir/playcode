@@ -256,11 +256,24 @@ defmodule Playcode.Export.StaticSitePlayTest do
       refute second =~ "palabra uno"
     end
 
-    test "the full text still holds every scene", %{play: play, dir: dir} do
+    test "the full text still holds every scene, once", %{play: play, dir: dir} do
       text = read!(dir, "plays/#{play.code}/text.html")
 
       assert text =~ "palabra uno"
       assert text =~ "palabra dos"
+      # The scene pages are not divisions of their own: walked as such, the act would
+      # be printed three times over, ids and all.
+      anchors = ids(page(dir, play, "text.html"))
+      assert anchors == Enum.uniq(anchors)
+    end
+
+    test "keeps its own anchor on its own page, which the rail links", %{play: play, dir: dir} do
+      assert "act-1" in ids(page(dir, play, "act-1.html"))
+
+      for scene <- ["act-1-s1.html", "act-1-s2.html"] do
+        rail = page(dir, play, scene) |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+        assert "act-1.html" in LazyHTML.attribute(rail, "href")
+      end
     end
 
     test "a search result lands on the scene's page", %{play: play, dir: dir} do
