@@ -184,6 +184,13 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
     File.write!(Path.join(play_dir, "#{code}.xml"), TeiXml.generate(play))
 
+    for {page, prev, next} <- Edition.neighbours(edition.pages) do
+      html = Pages.render(:division, Map.merge(assigns, %{page: page, prev: prev, next: next}))
+      File.write!(Path.join(play_dir, "#{page.slug}.html"), html)
+    end
+
+    File.write!(Path.join(play_dir, "text.html"), Pages.render(:text, assigns))
+
     File.write!(
       Path.join([dir, "plays", "#{code}.html"]),
       Pages.render(:redirect, %{code: code, title: play.title})

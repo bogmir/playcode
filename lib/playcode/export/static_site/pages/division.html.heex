@@ -1,0 +1,18 @@
+<Components.shell
+  root="../../"
+  title={"#{@page.title} — #{@edition.play.title} — EMOTHE"}
+  site={@site}
+  play={@edition.play}
+>
+  <:rail><Components.play_rail edition={@edition} current={@page.slug} /></:rail>
+  <Components.play_header play={@edition.play} />
+  <Components.pager prev={@prev} next={@next} />
+  <div
+    class="text"
+    lang={@edition.play.language}
+    data-cite={Components.cite_prefix(@edition.play, @page)}
+  >
+    <Components.division_text edition={@edition} division={@page.division} />
+  </div>
+  <Components.pager prev={@prev} next={@next} />
+</Components.shell>

@@ -1,0 +1,20 @@
+<Components.shell
+  root="../../"
+  title={"#{@edition.play.title}, full text — EMOTHE"}
+  site={@site}
+  play={@edition.play}
+>
+  <:rail><Components.play_rail edition={@edition} current="text" /></:rail>
+  <Components.play_header play={@edition.play} />
+  <div
+    class="text"
+    lang={@edition.play.language}
+    data-cite={Components.cite_prefix(@edition.play, nil)}
+  >
+    <Components.division_text
+      :for={page <- @edition.pages}
+      edition={@edition}
+      division={page.division}
+    />
+  </div>
+</Components.shell>

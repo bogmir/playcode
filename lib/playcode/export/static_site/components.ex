@@ -7,6 +7,7 @@ defmodule Playcode.Export.StaticSite.Components do
   use Phoenix.Component
 
   alias Playcode.Catalogue.Play
+  alias Playcode.PlayContent.{Element, InlineMarkup}
   alias PlaycodeWeb.PlayLabels
 
   attr :root, :string,
@@ -270,4 +271,129 @@ defmodule Playcode.Export.StaticSite.Components do
 
   def composition_years(%{composition_date_from: from, composition_date_to: to}),
     do: "#{from}–#{to}"
+
+  attr :play, :map, required: true
+
+  def play_header(assigns) do
+    ~H"""
+    <header class="play-head">
+      <p class="author">{@play.author_name}</p>
+      <h1><a href="index.html">{@play.title}</a></h1>
+    </header>
+    """
+  end
+
+  attr :prev, :map, default: nil
+  attr :next, :map, default: nil
+
+  def pager(assigns) do
+    ~H"""
+    <nav :if={@prev || @next} class="pager" aria-label="Acts">
+      <a :if={@prev} href={@prev.slug <> ".html"} rel="prev">← {@prev.title}</a>
+      <a :if={@next} href={@next.slug <> ".html"} rel="next">{@next.title} →</a>
+    </nav>
+    """
+  end
+
+  @doc "What a copied line link is cited as, before its verse number."
+  def cite_prefix(play, page) do
+    [play.author_name, play.title, page && page.title]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(", ")
+  end
+
+  attr :edition, :map, required: true
+  attr :division, :map, required: true
+
+  def division_text(assigns) do
+    ~H"""
+    <section class="division" id={@edition.anchors[@division.id]}>
+      <h2 :if={@division.title} class="act-head">{@division.title}</h2>
+      <.el :for={el <- @division.loaded_elements} el={el} edition={@edition} />
+      <section :for={scene <- @division.children} id={@edition.anchors[scene.id]}>
+        <h3 :if={scene.title} class="scene-head">{scene.title}</h3>
+        <.el :for={el <- scene.loaded_elements} el={el} edition={@edition} />
+      </section>
+    </section>
+    """
+  end
+
+  attr :el, :map, required: true
+  attr :edition, :map, required: true
+
+  defp el(%{el: %{type: "speech"}} = assigns) do
+    assigns = assign(assigns, :who, who(assigns.el))
+
+    ~H"""
+    <div class="sp" data-who={@who}>
+      <p :if={@el.speaker_label} class="spk">{@el.speaker_label}</p>
+      <.el :for={child <- @el.children} el={child} edition={@edition} />
+    </div>
+    """
+  end
+
+  defp el(%{el: %{type: "line_group"}} = assigns) do
+    ~H"""
+    <div class="lg">
+      <.el :for={child <- @el.children} el={child} edition={@edition} />
+    </div>
+    """
+  end
+
+  # One line of markup, kept from the formatter by phx-no-format (which HEEx drops from
+  # the output): a newline between these spans would be a visible space.
+  defp el(%{el: %{type: "verse_line"}} = assigns) do
+    edition = assigns.edition
+
+    assigns =
+      assign(assigns,
+        anchor: edition.anchors[assigns.el.id],
+        ghost: edition.ghosts[assigns.el.id],
+        form: edition.passage_starts[assigns.el.id]
+      )
+
+    ~H"""
+    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true">{@ghost} </span><.inline text={@el.content} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
+    """
+  end
+
+  defp el(%{el: %{type: "stage_direction"}} = assigns) do
+    ~H"""
+    <p class="sd" id={@edition.anchors[@el.id]}><.inline text={@el.content} /></p>
+    """
+  end
+
+  defp el(%{el: %{type: "prose"}} = assigns) do
+    ~H"""
+    <p class="pr" id={@edition.anchors[@el.id]}><.inline text={@el.content} /></p>
+    """
+  end
+
+  defp el(assigns), do: ~H""
+
+  defp who(speech) do
+    case for(character <- Element.characters(speech), character.xml_id, do: character.xml_id) do
+      [] -> nil
+      ids -> Enum.join(ids, " ")
+    end
+  end
+
+  attr :text, :string, default: nil
+
+  def inline(assigns) do
+    assigns = assign(assigns, :parts, InlineMarkup.parts(assigns.text))
+
+    # Built as iodata, not a template: the formatter indents EEx blocks, and the
+    # whitespace it adds between a word and its <em> would be visible.
+    ~H"""
+    {Phoenix.HTML.raw(Enum.map(@parts, &part/1))}
+    """
+  end
+
+  defp part(%{italic: true, text: text}),
+    do: ["<em>", escape(text), "</em>"]
+
+  defp part(%{text: text}), do: escape(text)
+
+  defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 end
