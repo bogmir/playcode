@@ -76,6 +76,14 @@ defmodule Playcode.Statistics.Metrics do
     end)
   end
 
+  # WordParser puts a stanza straight under the division when {m} has no speaker open.
+  defp element_items(%{type: "line_group"} = group, context),
+    do:
+      Enum.flat_map(
+        group.children,
+        &leaf(&1, Map.merge(context, %{speech: nil, speakers: [], line_group: group}))
+      )
+
   defp element_items(element, context),
     do: leaf(element, Map.merge(context, %{speech: nil, speakers: [], line_group: nil}))
 

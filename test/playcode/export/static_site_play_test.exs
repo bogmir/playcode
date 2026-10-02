@@ -34,6 +34,25 @@ defmodule Playcode.Export.StaticSitePlayTest do
   defp page(dir, play, file), do: html!(dir, "plays/#{play.code}/#{file}")
   defp ids(html), do: html |> LazyHTML.query("[id]") |> LazyHTML.attribute("id")
 
+  # Regression: WordParser puts a stanza straight under the division when {m} opens
+  # with no speaker; its verses used to get no item, no anchor, and the build raised.
+  test "a Word-imported stanza with no speaker is published, and counted" do
+    play = play_fixture(%{"is_complete" => true})
+
+    assert {:ok, _} =
+             Playcode.Import.WordParser.import_content(
+               play.id,
+               docx(["{e}Escena 1", "{m}", "{v}uno", "{v}dos"])
+             )
+
+    dir = generate!([play], all: true)
+    act = Path.wildcard(Path.join([dir, "plays", play.code, "act-*.html"])) |> hd()
+    html = LazyHTML.from_document(File.read!(act))
+
+    assert texts(html, "#l1") |> Enum.join() =~ "uno"
+    assert Playcode.Statistics.get_statistics(play.id).data["verses"] == 2
+  end
+
   test "each act has its own page, linked to the acts before and after it" do
     {play, dir} = publish!(@two_acts)
     first = page(dir, play, "act-1.html")
