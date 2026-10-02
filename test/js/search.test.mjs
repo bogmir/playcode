@@ -48,9 +48,22 @@ test('a phrase must occur in order', () => {
 });
 
 test('hits gather every matching word of a shard and keep the stage flag', () => {
-  const shard = { 'sueño': [0, 4, 0], 'sueños': [1, 2, 1], 'suelo': [0, 9, 0] };
+  // sueño: play 0, line 4, spoken; sueños: play 1, line 2, stage; suelo: play 0, line 9.
+  const shard = { 'sueño': [0, 1, 8], 'sueños': [1, 1, 5], 'suelo': [0, 1, 18] };
   assert.deepEqual(plain(S.hits(shard, 'sueño', 'prefix')), { '0:4': 0, '1:2': 1 });
   assert.deepEqual(plain(S.hits(undefined, 'sueño', 'prefix')), {});
   assert.deepEqual(plain(S.intersect([{ '0:4': 0, '1:2': 1 }, { '0:4': 0 }])), { '0:4': 0 });
   assert.deepEqual(plain(S.intersect([])), {});
+});
+
+test('postings decode play by play from line deltas', () => {
+  assert.deepEqual(plain(S.decode([0, 2, 8, 5, 3, 1, 0])), [[0, 4, 0], [0, 6, 1], [3, 0, 0]]);
+  assert.deepEqual(plain(S.decode([])), []);
+});
+
+test('a line is looked up in the chunk the build wrote it to', () => {
+  assert.equal(S.LINES_PER_CHUNK, cases.lines_per_chunk);
+  assert.equal(S.chunkKey('EMOTHE0001', 0), 'EMOTHE0001/0');
+  assert.equal(S.chunkKey('EMOTHE0001', 99), 'EMOTHE0001/0');
+  assert.equal(S.chunkKey('EMOTHE0001', 100), 'EMOTHE0001/1');
 });

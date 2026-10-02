@@ -7,6 +7,9 @@
   var store = { plays: null, index: {}, lines: {} };
   var waiting = {};
 
+  // Must match Playcode.Export.StaticSite.Search.lines_per_chunk/0.
+  S.LINES_PER_CHUNK = 100;
+
   S.load = function (kind, key, value) {
     if (kind === 'plays') store.plays = value; else store[kind][key] = value;
     var id = kind + ':' + key, callbacks = waiting[id] || [];
@@ -20,6 +23,22 @@
     return Array.from(key).map(function (c) {
       return /^[a-z0-9]$/.test(c) ? c : 'u' + c.codePointAt(0).toString(16).padStart(4, '0');
     }).join('');
+  };
+
+  S.chunkKey = function (code, line) { return code + '/' + Math.floor(line / S.LINES_PER_CHUNK); };
+
+  // [play, n, d1 … dn, play, n, …], d = (line - previous line) * 2 + flag  →  [[play, line, flag]]
+  S.decode = function (list) {
+    var out = [];
+    for (var i = 0; i < list.length; i += 2 + list[i + 1]) {
+      var line = 0;
+      for (var j = 0; j < list[i + 1]; j++) {
+        var d = list[i + 2 + j];
+        line += Math.floor(d / 2);
+        out.push([list[i], line, d % 2]);
+      }
+    }
+    return out;
   };
 
   // Words in quotes are a phrase; every word, in a phrase or not, must occur in the line.
@@ -54,8 +73,7 @@
     var hits = {};
     Object.keys(shard || {}).forEach(function (token) {
       if (!S.matches(token, word, mode)) return;
-      var p = shard[token];
-      for (var i = 0; i < p.length; i += 3) hits[p[i] + ':' + p[i + 1]] = p[i + 2];
+      S.decode(shard[token]).forEach(function (h) { hits[h[0] + ':' + h[1]] = h[2]; });
     });
     return hits;
   };
@@ -71,6 +89,7 @@
 
   if (!root.document) return;
 
+  var FIRST_PLAYS = 10, FIRST_LINES = 5;
   var form, results, count, facetsEl, state = null, renders = 0, runs = 0;
   var FACETS = [
     ['language', 'Language', function (play) { return play.language_name; }],
@@ -108,25 +127,33 @@
     });
   }
 
-  function loadLines(playIndexes) {
-    return Promise.all(playIndexes.map(function (p) {
-      var code = store.plays[p].code;
-      return need('lines', code, 'search/lines/' + code + '.js');
+  // Loads the chunks holding the given [play, line] pairs.
+  function loadLines(pairs) {
+    var keys = {};
+    pairs.forEach(function (pl) { keys[S.chunkKey(store.plays[pl[0]].code, pl[1])] = true; });
+    return Promise.all(Object.keys(keys).map(function (key) {
+      return need('lines', key, 'search/lines/' + key + '.js');
     }));
   }
 
-  function playsOf(hits) {
-    var seen = {};
-    Object.keys(hits).forEach(function (k) { seen[k.split(':')[0]] = true; });
-    return Object.keys(seen).map(Number);
+  // A line and its chunk, or null when the chunk could not be loaded.
+  function lineOf(p, l) {
+    var chunk = store.lines[S.chunkKey(store.plays[p].code, l)];
+    var row = chunk && chunk.lines[l % S.LINES_PER_CHUNK];
+    return row ? { row: row, speakers: chunk.speakers } : null;
+  }
+
+  function pairsOf(hits) {
+    return Object.keys(hits).map(function (k) { return k.split(':').map(Number); });
   }
 
   function phraseFilter(hits, phrases, mode) {
     var out = {};
-    Object.keys(hits).forEach(function (k) {
-      var pl = k.split(':').map(Number);
-      var tokens = E.words(store.lines[store.plays[pl[0]].code].lines[pl[1]][5]);
-      if (phrases.every(function (p) { return S.hasPhrase(tokens, p, mode); })) out[k] = hits[k];
+    pairsOf(hits).forEach(function (pl) {
+      var line = lineOf(pl[0], pl[1]);
+      if (line && phrases.every(function (p) { return S.hasPhrase(E.words(line.row[5]), p, mode); })) {
+        out[pl[0] + ':' + pl[1]] = hits[pl[0] + ':' + pl[1]];
+      }
     });
     return out;
   }
@@ -145,9 +172,9 @@
       })
       .then(function () {
         var hits = S.intersect(parsed.words.map(function (w) { return S.hits(store.index[S.shardKey(w)], w, mode); }));
-        // ponytail: a phrase loads the lines of every candidate play; fine for this corpus.
         if (!parsed.phrases.length) return hits;
-        return loadLines(playsOf(hits)).then(function () { return phraseFilter(hits, parsed.phrases, mode); });
+        // A phrase is checked against the text, so its candidate lines' chunks are loaded.
+        return loadLines(pairsOf(hits)).then(function () { return phraseFilter(hits, parsed.phrases, mode); });
       })
       .then(function (hits) {
         if (my !== runs) return;
@@ -181,10 +208,16 @@
     count.textContent = total + (total === 1 ? ' line' : ' lines') + ' in ' + order.length + (order.length === 1 ? ' play' : ' plays');
     renderFacets();
 
-    var shown = state.allPlays ? order : order.slice(0, 20);
-    loadLines(shown).then(function () {
+    var shown = state.allPlays ? order : order.slice(0, FIRST_PLAYS);
+    var visible = {}, pairs = [];
+    shown.forEach(function (p) {
+      var lines = groups[p].sort(function (a, b) { return a - b; });
+      visible[p] = state.open[p] ? lines : lines.slice(0, FIRST_LINES);
+      visible[p].forEach(function (l) { pairs.push([p, l]); });
+    });
+    loadLines(pairs).then(function () {
       if (token !== renders) return;
-      shown.forEach(function (p) { results.appendChild(group(p, groups[p].sort(function (a, b) { return a - b; }))); });
+      shown.forEach(function (p) { results.appendChild(group(p, groups[p].length, visible[p])); });
       if (order.length > shown.length) {
         results.appendChild(button('Show all ' + order.length + ' plays', function () { state.allPlays = true; render(); }));
       }
@@ -218,26 +251,29 @@
     });
   }
 
-  function group(p, lines) {
-    var play = store.plays[p], data = store.lines[play.code];
+  function group(p, total, lines) {
+    var play = store.plays[p];
     var section = el('section', 'group'), heading = el('h2'), link = el('a', null, play.title);
     link.href = 'plays/' + play.code + '/index.html';
     heading.appendChild(link);
     section.appendChild(heading);
-    var meta = [play.author, play.kind === 'translation' ? 'translation' : null, lines.length + (lines.length === 1 ? ' line' : ' lines')];
+    var meta = [play.author, play.kind === 'translation' ? 'translation' : null, total + (total === 1 ? ' line' : ' lines')];
     section.appendChild(el('p', 'group-meta', meta.filter(Boolean).join(' · ')));
-    var list = el('ol', 'hits'), limit = state.open[p] ? lines.length : 5;
-    lines.slice(0, limit).forEach(function (l) { list.appendChild(hit(play, data, data.lines[l])); });
+    var list = el('ol', 'hits');
+    lines.forEach(function (l) {
+      var line = lineOf(p, l);
+      if (line) list.appendChild(hit(play, line));
+    });
     section.appendChild(list);
-    if (lines.length > limit) section.appendChild(button('Show all ' + lines.length, function () { state.open[p] = true; render(); }));
+    if (total > lines.length) section.appendChild(button('Show all ' + total, function () { state.open[p] = true; render(); }));
     return section;
   }
 
-  function hit(play, data, row) {
-    var li = el('li', 'hit'), ref = el('a', 'ref', row[2]);
+  function hit(play, line) {
+    var row = line.row, li = el('li', 'hit'), ref = el('a', 'ref', row[2]);
     ref.href = 'plays/' + play.code + '/' + row[0] + '.html#' + row[1];
     li.appendChild(ref);
-    li.appendChild(el('span', 'spk', row[3] === null ? '' : data.speakers[row[3]]));
+    li.appendChild(el('span', 'spk', row[3] === null ? '' : line.speakers[row[3]]));
     var text = el('span', row[4] === 's' ? 'line stage' : 'line');
     highlight(text, row[5]);
     li.appendChild(text);
