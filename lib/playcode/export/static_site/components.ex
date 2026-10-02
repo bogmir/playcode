@@ -94,13 +94,34 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :edition, :map, required: true
   attr :current, :string, required: true
+  attr :tools, :boolean, default: false
 
   def play_rail(assigns) do
+    assigns = assign(assigns, :cast, Enum.filter(cast(assigns.edition.characters), & &1.xml_id))
+
     ~H"""
     <nav aria-label="Contents">
       <h2>Contents</h2>
       <.play_contents edition={@edition} current={@current} />
     </nav>
+    <div :if={@tools} class="tools" data-tools hidden>
+      <h2>Line numbers</h2>
+      <div class="seg" role="group" aria-label="Line numbers">
+        <button type="button" data-ln-set="all">All</button>
+        <button type="button" data-ln-set="5">5</button>
+        <button type="button" data-ln-set="off">Off</button>
+      </div>
+      <h2>Show</h2>
+      <label><input type="checkbox" data-toggle="sd" checked /> Stage directions</label>
+      <label><input type="checkbox" data-toggle="vf" checked /> Verse forms</label>
+      <%= if @cast != [] do %>
+        <h2>Highlight</h2>
+        <select data-highlight aria-label="Highlight a character">
+          <option value="">No one</option>
+          <option :for={character <- @cast} value={character.xml_id}>{character.name}</option>
+        </select>
+      <% end %>
+    </div>
     """
   end
 

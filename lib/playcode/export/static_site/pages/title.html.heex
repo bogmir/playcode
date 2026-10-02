@@ -57,6 +57,7 @@
     <section class="cite">
       <h2>Cite this edition</h2>
       <p data-citation>{Components.citation(@edition.play, @site)}</p>
+      <button type="button" class="copy" data-copy-citation hidden>Copy citation</button>
     </section>
     <p :if={Components.licence?(@edition.play)} class="lede">
       <Components.licence play={@edition.play} />

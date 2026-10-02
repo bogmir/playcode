@@ -214,6 +214,7 @@ defmodule Playcode.Export.StaticSite do
     }
 
     File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
+    File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
   end
 
   # One entry per work: each published play under the published play at the root of

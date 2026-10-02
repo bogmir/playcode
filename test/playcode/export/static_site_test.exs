@@ -205,4 +205,13 @@ defmodule Playcode.Export.StaticSiteTest do
 
     assert Pages.strip_annotations(html) == "<p>Hi</p>"
   end
+
+  test "the about page says what the archive holds and how to cite it" do
+    dir = generate!([complete_play(), complete_play()], version: "2.1")
+    about = html!(dir, "about.html")
+
+    assert texts(about, "h1") == ["About this edition"]
+    assert LazyHTML.text(about) =~ "2 plays"
+    assert LazyHTML.text(about) =~ "version 2.1"
+  end
 end

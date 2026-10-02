@@ -1,0 +1,26 @@
+<Components.shell root="" title="About — EMOTHE" current={:about} site={@site}>
+  <article class="title-page">
+    <h1>About this edition</h1>
+    <%!-- Text about the project itself comes from the project; add it here, by hand.
+          The build states only what it knows. --%>
+    <p>
+      This archive holds {@site.play_count} {if @site.play_count == 1, do: "play", else: "plays"}, published as version {@site.version} on {@site.build_date}.
+    </p>
+    <h2>Reading</h2>
+    <p>
+      Every play has a title page, one page per act, the full text on one page, and its statistics. Verse is numbered every fifth line; each line has its own address, so a link to it can be shared.
+    </p>
+    <h2>Citing</h2>
+    <p>
+      Each title page gives a citation for the edition. To cite a line, link to it: tapping a verse number copies its address and a citation.
+    </p>
+    <h2>Sources</h2>
+    <p>
+      Each play's TEI-XML source is published beside its pages and can be downloaded from its title page.
+    </p>
+    <h2>Principles</h2>
+    <p>
+      The archive is plain HTML, CSS and JavaScript with no server and nothing loaded from elsewhere, following the <a href="https://endings.uvic.ca/principles.html">Endings principles</a>. It works the same opened from a disk.
+    </p>
+  </article>
+</Components.shell>

@@ -4,6 +4,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
   import Playcode.ImportHelpers
   import Playcode.StaticSiteHelpers
+  import Playcode.TestFixtures
 
   @two_acts """
   <div1 type="jornada" n="1"><head>Jornada I</head>
@@ -171,5 +172,20 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert LazyHTML.text(stats) =~ "most words"
       refute "verses" in texts(stats, "#tiles dt")
     end
+  end
+
+  test "reading tools ship hidden, ready for JS, with the cast to highlight" do
+    %{play: play} = play_with_structure_fixture()
+    act = html!(generate!([play], all: true), "plays/#{play.code}/act-1.html")
+
+    assert act |> LazyHTML.query("[data-tools][hidden]") |> Enum.count() == 1
+
+    assert act |> LazyHTML.query("[data-highlight] option") |> LazyHTML.attribute("value") ==
+             ["", "ALFA"]
+
+    assert act |> LazyHTML.query("body") |> LazyHTML.attribute("data-ln") == ["5"]
+
+    assert act |> LazyHTML.query("[data-cite]") |> LazyHTML.attribute("data-cite") ==
+             ["Tester, Structured Play, ACT I"]
   end
 end

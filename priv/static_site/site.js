@@ -69,6 +69,80 @@
     sort.addEventListener('change', reorder);
   }
 
+  function remembered(key, value) {
+    try {
+      if (value === undefined) return root.localStorage.getItem('reader.' + key);
+      root.localStorage.setItem('reader.' + key, value);
+    } catch (e) { return null; }
+  }
+
+  function initTools() {
+    var tools = document.querySelector('[data-tools]');
+    if (!tools) return;
+    var body = document.body;
+    tools.hidden = false;
+    ['ln', 'sd', 'vf'].forEach(function (key) { var v = remembered(key); if (v) body.setAttribute('data-' + key, v); });
+
+    var buttons = tools.querySelectorAll('[data-ln-set]');
+    buttons.forEach(function (button) {
+      button.setAttribute('aria-pressed', String(button.dataset.lnSet === body.dataset.ln));
+      button.addEventListener('click', function () {
+        body.dataset.ln = button.dataset.lnSet;
+        remembered('ln', button.dataset.lnSet);
+        buttons.forEach(function (b) { b.setAttribute('aria-pressed', String(b === button)); });
+      });
+    });
+
+    tools.querySelectorAll('[data-toggle]').forEach(function (box) {
+      var key = box.dataset.toggle;
+      box.checked = body.getAttribute('data-' + key) !== 'off';
+      box.addEventListener('change', function () {
+        var value = box.checked ? 'on' : 'off';
+        body.setAttribute('data-' + key, value);
+        remembered(key, value);
+      });
+    });
+
+    var select = tools.querySelector('[data-highlight]');
+    if (select) {
+      var style = document.createElement('style');
+      document.head.appendChild(style);
+      select.addEventListener('change', function () {
+        style.textContent = select.value
+          ? '.text .sp:not([data-who~="' + CSS.escape(select.value) + '"]){opacity:.4}' : '';
+      });
+    }
+  }
+
+  function copy(text, button) {
+    if (!root.navigator.clipboard) return;
+    root.navigator.clipboard.writeText(text).then(function () {
+      var label = button.textContent;
+      button.textContent = 'Copied';
+      setTimeout(function () { button.textContent = label; }, 1500);
+    }, function () {});
+  }
+
+  function initLinks() {
+    var text = document.querySelector('[data-cite]');
+    if (text) {
+      text.addEventListener('click', function (event) {
+        var number = event.target.closest('a[href^="#l"]');
+        if (!number) return;
+        var url = root.location.href.split('#')[0] + number.getAttribute('href');
+        copy(text.dataset.cite + ', v. ' + number.textContent.trim() + '. ' + url, number);
+      });
+    }
+    var button = document.querySelector('[data-copy-citation]');
+    var citation = document.querySelector('[data-citation]');
+    if (button && citation) {
+      button.hidden = false;
+      button.addEventListener('click', function () {
+        copy(citation.textContent.trim() + ' ' + root.location.href.split('#')[0], button);
+      });
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     // The rail is open in the markup so it shows without JS; on a narrow screen it
     // starts closed once JS is here to open it.
@@ -76,5 +150,7 @@
       document.querySelectorAll('details.rail').forEach(function (d) { d.open = false; });
     }
     initCatalogue();
+    initTools();
+    initLinks();
   });
 })(typeof window !== 'undefined' ? window : globalThis);
