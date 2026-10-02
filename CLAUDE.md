@@ -98,12 +98,14 @@ lib/
 │   │   ├── character.ex              # Dramatis personae
 │   │   ├── division.ex               # Acts, scenes, prologues (self-referencing tree)
 │   │   ├── element.ex                # Speeches, verse lines, stage directions, prose (self-referencing tree)
-│   │   └── element_character.ex      # Join table: element ↔ character (multi-speaker support)
+│   │   ├── element_character.ex      # Join table: element ↔ character (multi-speaker support)
+│   │   └── inline_markup.ex          # The <<…>> italics markers
 │   ├── statistics.ex                 # Compute & cache play statistics
 │   ├── activity_log.ex                   # Activity log context (log, list, count)
 │   ├── activity_log/
 │   │   └── entry.ex                  # Activity log entry schema
 │   ├── statistics/
+│   │   ├── metrics.ex                # Passages, characters, presence, divisions (pure)
 │   │   └── play_statistic.ex         # Cached JSONB statistics per play
 │   ├── accounts.ex                   # Invitations, login, sessions, deactivation
 │   ├── accounts/
@@ -121,8 +123,10 @@ lib/
 │       ├── epub.ex                   # EPUB 3 generation via BUPE
 │       ├── compare_html.ex           # Standalone comparison HTML with sync scroll
 │       └── static_site.ex            # Static site orchestrator
-│           ├── renderer.ex           # HTML/CSS page templates
-│           ├── search.ex             # Client-side search index + JS
+│           ├── edition.ex            # One play prepared: pages, anchors, refs, split-verse ghosts
+│           ├── pages.ex              # embed_templates "pages/*" → HTML strings
+│           ├── components.ex         # Shell, rail, play text, charts, catalogue entry
+│           ├── search.ex             # Normaliser + full-text index writer
 │           └── deployer.ex           # GitHub Pages deployment
 └── playcode_web/
     ├── router.ex
@@ -270,27 +274,38 @@ TEI fixture files are at `test/fixtures/tei_files/` (UTF-16 encoded, ~37 files c
 
 Generates an Endings Project-compliant static website — pure HTML/CSS/JS, no server required. Only plays marked as **complete** (`is_complete: true`) are included by default.
 
+Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No third-party requests, and everything, search included, works from the unzipped archive opened as `file://`.
+
 ### Architecture
 
-- `Playcode.Export.StaticSite` — orchestrator: loads plays, writes assets, delegates to Renderer/Search
-- `Playcode.Export.StaticSite.Renderer` — generates HTML pages (catalogue index + per-play pages) with embedded CSS
-- `Playcode.Export.StaticSite.Search` — builds a JSON search index and client-side JS for filtering
-- `Playcode.Export.StaticSite.Deployer` — pushes `_site/` to a GitHub Pages `gh-pages` branch
+- `Playcode.Export.StaticSite` — orchestrator: loads plays, writes pages, copies `priv/static_site/` to `assets/`, builds the search index. Every path built from a play code goes through `StaticSite.safe_code!/1` (an allow-list `[A-Za-z0-9_-]+`), because `remove_single_play/2` takes a code from a socket event and play codes have no format validation
+- `StaticSite.Edition` — one play prepared once: pages (`act-N`, or the division type), line anchors (`#l<n>`; `#l<act>-<scene>-<n>` when numbering restarts per scene; `#p<n>` otherwise), citation refs, split-verse ghost text, passage starts
+- `StaticSite.Pages` (`pages/*.html.heex`) and `StaticSite.Components` — HEEx rendered to strings with `Phoenix.HTML.Safe.to_iodata/1`; dev's HEEx annotations are stripped
+- `StaticSite.Search` — the normaliser (must agree with `EMOTHE.normalise` in `site.js`: `test/fixtures/search_normalisation.json` runs against both) and the index: `search/index/<shard>.js`, `search/lines/<CODE>.js`, `search/plays.js`, all calling `EMOTHE.search.load`
+- `Playcode.Statistics.Metrics` — metrical passages, characters, presence, divisions; cached by `Playcode.Statistics` (bump `@version` when what it stores changes)
+- `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
+- `StaticSite.Deployer` — pushes `_site/` to a GitHub Pages branch
+
+`generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three; the size budget (`style.css` 25 KB, `site.js` and `search.js` 15 KB, fonts 300 KB, act page 80 KB gzipped) is pinned in `static_site_test.exs`.
 
 ### Output structure
 
 ```
 _site/
-├── index.html          # Catalogue page with search
-├── style.css           # Shared stylesheet
-├── search.js           # Client-side search
-├── search-index.json   # Play metadata for search
-├── data/               # Reserved for future data files
+├── index.html  search.html  about.html
+├── assets/                    style.css, site.js, search.js, fonts/
+├── search/                    plays.js, index/<shard>.js, lines/<CODE>.js
 └── plays/
+    ├── <CODE>.html            redirect stub to the old address
     └── <CODE>/
-        ├── index.html  # Play page (text, characters, stats tabs)
-        └── <CODE>.xml  # TEI-XML source file
+        ├── index.html         title page
+        ├── act-1.html …       one per act; prologue.html etc. for other divisions
+        ├── text.html          full text
+        ├── statistics.html
+        └── <CODE>.xml         TEI-XML
 ```
+
+`node --test test/js/search.test.mjs` runs the browser half of search; CI runs it after `mix test`.
 
 ### Usage
 
@@ -401,9 +416,7 @@ Then visit:
 - [x] `Playcode.Export.Pdf` - PDF generation via ChromicPDF (reuses HTML export)
 - [x] `Playcode.Export.Epub` - EPUB 3 generation via BUPE (chapters per division, embedded CSS)
 - [x] `Playcode.Export.CompareHtml` - standalone comparison HTML with synchronized scrolling between panels
-- [x] `Playcode.Export.StaticSite` - generates Endings Project-compliant static website from DB (pure HTML/CSS/JS, no server needed)
-- [x] `Playcode.Export.StaticSite.Renderer` - HTML/CSS templates for static site pages
-- [x] `Playcode.Export.StaticSite.Search` - client-side search index (JSON) and JS
+- [x] `Playcode.Export.StaticSite` - static archive on HEEx: title page, one page per act, full text, statistics page (metrical synopsis, characters, who shares the stage), catalogue of works with facets, full-text search that works from `file://`, reading tools. Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`; deferred work: `docs/static-site-improvements.md`
 - [x] `Playcode.Export.StaticSite.Deployer` - GitHub Pages deployment via git push
 - [x] Public catalogue page (`/plays`) with search
 - [x] Public play presentation page (`/plays/:code`) with Text/Characters/Statistics tabs, line number and stage direction toggles

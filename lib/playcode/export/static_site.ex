@@ -72,9 +72,15 @@ defmodule Playcode.Export.StaticSite do
           detail: "Generating catalogue..."
         })
 
-        write_index_pages(plays, results, dir, opts)
+        report = write_index_pages(plays, results, dir, opts)
 
-        {:ok, %{plays: total, size: dir_size(dir), output_dir: dir}}
+        {:ok,
+         Map.merge(report, %{
+           plays: total,
+           size: dir_size(dir),
+           output_dir: dir,
+           largest_page_gzip: results |> Enum.map(& &1.largest_page_gzip) |> Enum.max(fn -> 0 end)
+         })}
       end
     end)
   end
@@ -201,10 +207,15 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
     File.write!(Path.join(play_dir, "#{code}.xml"), TeiXml.generate(play))
 
-    for {page, prev, next} <- Edition.neighbours(edition.pages) do
-      html = Pages.render(:division, Map.merge(assigns, %{page: page, prev: prev, next: next}))
-      File.write!(Path.join(play_dir, "#{page.slug}.html"), html)
-    end
+    largest =
+      edition.pages
+      |> Edition.neighbours()
+      |> Enum.map(fn {page, prev, next} ->
+        html = Pages.render(:division, Map.merge(assigns, %{page: page, prev: prev, next: next}))
+        File.write!(Path.join(play_dir, "#{page.slug}.html"), html)
+        byte_size(:zlib.gzip(html))
+      end)
+      |> Enum.max(fn -> 0 end)
 
     File.write!(Path.join(play_dir, "text.html"), Pages.render(:text, assigns))
     File.write!(Path.join(play_dir, "statistics.html"), Pages.render(:statistics, assigns))
@@ -214,7 +225,7 @@ defmodule Playcode.Export.StaticSite do
       Pages.render(:redirect, %{code: code, title: play.title})
     )
 
-    %{}
+    %{largest_page_gzip: largest}
   end
 
   defp write_index_pages(plays, results, dir, opts) do

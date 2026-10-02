@@ -6,7 +6,7 @@ defmodule Mix.Tasks.Playcode.Export.Site do
 
   ## Usage
 
-      mix playcode.export.site                              # all plays → _site/
+      mix playcode.export.site                              # complete plays → _site/
       mix playcode.export.site -o /tmp/archive              # custom output dir
       mix playcode.export.site --plays AL0001,AL0002        # specific plays only
       mix playcode.export.site --base-url /playcode/ --version 2.0
@@ -62,9 +62,14 @@ defmodule Mix.Tasks.Playcode.Export.Site do
       )
 
     case result do
-      {:ok, %{plays: count, size: size, output_dir: dir}} ->
+      {:ok, %{plays: count, size: size, output_dir: dir} = report} ->
         Mix.shell().info(
           "\n✓ Static site generated: #{count} plays → #{dir}/ (#{format_size(size)})"
+        )
+
+        Mix.shell().info(
+          "  largest act page #{format_size(report.largest_page_gzip)} gzipped (budget 80 KB); " <>
+            "search index #{format_size(report.index_bytes)}, largest shard #{format_size(report.largest_shard_bytes)}"
         )
 
       {:error, reason} ->

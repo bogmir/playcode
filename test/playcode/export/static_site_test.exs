@@ -214,4 +214,40 @@ defmodule Playcode.Export.StaticSiteTest do
     assert LazyHTML.text(about) =~ "2 plays"
     assert LazyHTML.text(about) =~ "version 2.1"
   end
+
+  test "the shared assets stay inside the size budget and nothing loads from another host" do
+    %{play: play} = play_with_structure_fixture()
+    dir = generate!([play], all: true)
+    size = fn file -> File.stat!(Path.join([dir, "assets", file])).size end
+
+    assert size.("style.css") <= 25_000
+    assert size.("site.js") <= 15_000
+    assert size.("search.js") <= 15_000
+
+    fonts =
+      dir
+      |> Path.join("assets/fonts/*.woff2")
+      |> Path.wildcard()
+      |> Enum.map(&File.stat!(&1).size)
+
+    assert Enum.sum(fonts) <= 300_000
+
+    for page <- Path.wildcard(Path.join(dir, "**/*.html")) do
+      refute File.read!(page) =~ ~r/<(?:script|link|img)[^>]+(?:src|href)="https?:/,
+             "#{page} loads from another host"
+    end
+
+    refute File.read!(Path.join([dir, "assets", "style.css"])) =~ ~r/url\(\s*["']?https?:/
+  end
+
+  test "a generated site reports its largest page and its index sizes" do
+    %{play: play} = play_with_structure_fixture()
+    dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm_rf(dir) end)
+
+    assert {:ok, %{largest_page_gzip: page, index_bytes: index, largest_shard_bytes: shard}} =
+             StaticSite.generate(output_dir: dir, play_codes: [play.code], all: true)
+
+    assert page > 0 and index > 0 and shard > 0
+  end
 end
