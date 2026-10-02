@@ -1,0 +1,64 @@
+<Components.shell root="../../" title={"#{@edition.play.title} — EMOTHE"} site={@site}>
+  <:rail><Components.play_rail edition={@edition} current="index" /></:rail>
+  <article class="title-page">
+    <p class="author">{@edition.play.author_name}</p>
+    <h1>{@edition.play.title}</h1>
+    <p :if={@edition.play.original_title not in [nil, @edition.play.title]} class="original-title">
+      {@edition.play.original_title}
+    </p>
+    <dl class="facts">
+      <dt>Code</dt>
+      <dd>{@edition.play.code}</dd>
+      <dt>Language</dt>
+      <dd>{Play.language_name(@edition.play.language)}</dd>
+      <dt>Form</dt>
+      <dd>{Components.form_summary(@edition.stats)}</dd>
+      <Components.study play={@edition.play} />
+    </dl>
+    <Components.family play={@edition.play} published={@site.published} />
+    <Components.places play={@edition.play} />
+    <section :if={@edition.play.editors != []}>
+      <h2>Edition</h2>
+      <ul>
+        <li :for={editor <- @edition.play.editors}>
+          {editor.person_name}
+          <span class="role">{PlayLabels.editor_role_label(editor.role)}</span>
+        </li>
+      </ul>
+    </section>
+    <section :if={@edition.play.sources != []}>
+      <h2>Sources</h2>
+      <ul>
+        <li :for={source <- @edition.play.sources}>{Components.source_text(source)}</li>
+      </ul>
+    </section>
+    <section :for={note <- @edition.play.editorial_notes}>
+      <h2>{note.heading || Components.note_heading(note.section_type)}</h2>
+      <p :for={paragraph <- Components.paragraphs(note.content)}>{paragraph}</p>
+    </section>
+    <section :if={Components.cast(@edition.characters) != []}>
+      <h2>Dramatis personae</h2>
+      <dl class="cast">
+        <%= for character <- Components.cast(@edition.characters) do %>
+          <dt>{character.name}</dt>
+          <dd>{character.description}</dd>
+        <% end %>
+      </dl>
+    </section>
+    <section>
+      <h2>Contents</h2>
+      <Components.play_contents edition={@edition} all_scenes />
+    </section>
+    <section class="cite">
+      <h2>Cite this edition</h2>
+      <p data-citation>{Components.citation(@edition.play, @site)}</p>
+    </section>
+    <p :if={@edition.play.licence_text || @edition.play.licence_url} class="lede">
+      {@edition.play.licence_text}
+      <a :if={@edition.play.licence_url} href={@edition.play.licence_url}>
+        {@edition.play.licence_url}
+      </a>
+    </p>
+    <p><a href={"#{@edition.play.code}.xml"} download>Download the TEI-XML source</a></p>
+  </article>
+</Components.shell>

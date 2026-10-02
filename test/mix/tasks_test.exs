@@ -152,7 +152,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       complete = play_fixture(%{"is_complete" => true})
       draft = play_fixture()
       dir = tmp_dir()
-      page = fn play -> File.exists?(Path.join([dir, "plays", "#{play.code}.html"])) end
+      page = fn play -> File.exists?(Path.join([dir, "plays", play.code, "index.html"])) end
 
       run("playcode.export.site", ["-o", dir])
       assert page.(complete)

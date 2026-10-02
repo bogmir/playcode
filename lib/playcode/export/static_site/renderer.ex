@@ -480,10 +480,10 @@ defmodule Playcode.Export.StaticSite.Renderer do
           <div class="play-entry" data-title="#{escape_attr(String.downcase(play.title || ""))}" data-author="#{escape_attr(String.downcase(author))}" data-code="#{escape_attr(String.downcase(play.code || ""))}">
             <div class="play-entry-row1">
               <span class="play-code">#{escape(play.code)}</span>
-              <a class="play-tei-link" href="plays/#{escape_attr(play.code)}.xml" title="TEI-XML">XML</a>
+              <a class="play-tei-link" href="plays/#{escape_attr(play.code)}/#{escape_attr(play.code)}.xml" title="TEI-XML">XML</a>
             </div>
             <div class="play-entry-row2">
-              #{badge}<a class="play-title-link" href="plays/#{escape_attr(play.code)}.html">#{escape(play.title)}</a>
+              #{badge}<a class="play-title-link" href="plays/#{escape_attr(play.code)}/index.html">#{escape(play.title)}</a>
             </div>
             <div class="play-author">#{escape(author)}</div>
           </div>

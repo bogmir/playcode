@@ -1,16 +1,16 @@
 defmodule Playcode.Export.StaticSite do
   @moduledoc """
-  Generates a complete static website from the EMOTHE database.
-  Produces an Endings Project-compliant archive deployable to any web server.
+  Generates the published EMOTHE archive: HTML, CSS and JS that work from any web host
+  and from the unzipped archive opened as `file://`, following the Endings Project
+  principles. Design: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`.
 
-  No Phoenix/LiveView dependencies — only uses Ecto contexts and export modules.
+  Only plays marked complete are published unless `all: true`. The archive is in
+  English whatever locale the admin generating it uses.
   """
 
   alias Playcode.Catalogue
-  alias Playcode.PlayContent
-  alias Playcode.Statistics
   alias Playcode.Export.TeiXml
-  alias Playcode.Export.StaticSite.{Renderer, Search}
+  alias Playcode.Export.StaticSite.{Edition, Pages, Renderer, Search}
 
   @type progress_info :: %{
           step: :assets | :catalogue | :play,
@@ -20,161 +20,166 @@ defmodule Playcode.Export.StaticSite do
         }
 
   @doc """
-  Generate a static site.
+  Generates the site.
 
-  ## Options
-    * `:output_dir` - output directory (default: `"_site"`)
-    * `:play_codes` - list of play codes to include (default: all)
-    * `:version` - version label (default: `"1.0"`)
-    * `:base_url` - base URL for the site (default: `"/"`)
-    * `:build_date` - ISO date string (default: today)
-    * `:on_progress` - `fun(progress_info) -> :ok` callback for progress reporting
+  Options: `:output_dir` (default `"_site"`), `:play_codes` (default all), `:all`
+  (include incomplete plays), `:version` (default `"1.0"`), `:build_date` (ISO date,
+  default today), `:on_progress` (`fun(progress_info) -> any`).
   """
-  @spec generate(keyword()) ::
-          {:ok, %{plays: integer(), size: term(), output_dir: String.t()}} | {:error, String.t()}
   def generate(opts \\ []) do
-    output_dir = opts[:output_dir] || "_site"
-    build_date = opts[:build_date] || Date.utc_today() |> Date.to_iso8601()
-    on_progress = opts[:on_progress] || fn _ -> :ok end
+    in_english(fn ->
+      opts = defaults(opts)
+      plays = load_plays(opts[:play_codes], opts[:all])
+      total = length(plays)
 
-    opts = Keyword.put(opts, :build_date, build_date)
+      if plays == [] do
+        {:error, "no plays to export (none marked as complete)"}
+      else
+        dir = opts[:output_dir]
+        File.rm_rf!(dir)
+        File.mkdir_p!(Path.join(dir, "plays"))
 
-    # 1. Load plays (only complete plays unless :all option is set)
-    plays = load_plays(opts[:play_codes], opts[:all] || false)
-    total = length(plays)
+        opts[:on_progress].(%{
+          step: :assets,
+          current: 0,
+          total: total,
+          detail: "Writing assets..."
+        })
 
-    if total == 0 do
-      {:error, "no plays to export (none marked as complete)"}
-    else
-      # 2. Prepare output directory
-      File.rm_rf!(output_dir)
-      File.mkdir_p!(output_dir)
-      File.mkdir_p!(Path.join(output_dir, "plays"))
+        write_assets(dir)
+        site = site(opts, MapSet.new(plays, & &1.code))
 
-      # 3. Write shared assets
-      on_progress.(%{step: :assets, current: 0, total: total, detail: "Writing assets..."})
-      File.write!(Path.join(output_dir, "style.css"), Renderer.site_css())
-      File.write!(Path.join(output_dir, "search.js"), Search.search_js())
+        results =
+          plays
+          |> Enum.with_index(1)
+          |> Enum.map(fn {play, n} ->
+            opts[:on_progress].(%{step: :play, current: n, total: total, detail: play.code})
+            play.id |> Edition.load() |> write_play(dir, site)
+          end)
 
-      # 4. Write catalogue index
-      on_progress.(%{
-        step: :catalogue,
-        current: 0,
-        total: total,
-        detail: "Generating catalogue..."
-      })
+        opts[:on_progress].(%{
+          step: :catalogue,
+          current: 0,
+          total: total,
+          detail: "Generating catalogue..."
+        })
 
-      File.write!(Path.join(output_dir, "index.html"), Renderer.catalogue_page(plays, opts))
+        write_index_pages(plays, results, dir, opts)
 
-      # 5. Write search index and data
-      File.write!(Path.join(output_dir, "search-index.json"), Search.build_index(plays))
-
-      # 6. Generate each play
-      plays
-      |> Enum.with_index(1)
-      |> Enum.each(fn {play, idx} ->
-        on_progress.(%{step: :play, current: idx, total: total, detail: play.code})
-        generate_play(play, output_dir, opts)
-      end)
-
-      # 7. Compute output size
-      size = dir_size(output_dir)
-
-      {:ok, %{plays: total, size: size, output_dir: output_dir}}
-    end
+        {:ok, %{plays: total, size: dir_size(dir), output_dir: dir}}
+      end
+    end)
   end
 
-  @doc """
-  Export a single play to the static site, then rebuild the catalogue index.
-  """
+  @doc "Exports one play into an existing site, then rebuilds the catalogue and index."
   def generate_single_play(play_id, opts \\ []) do
-    output_dir = opts[:output_dir] || "_site"
-    build_date = opts[:build_date] || Date.utc_today() |> Date.to_iso8601()
-    opts = Keyword.put(opts, :build_date, build_date)
+    in_english(fn ->
+      opts = defaults(opts)
+      dir = opts[:output_dir]
+      File.mkdir_p!(Path.join(dir, "plays"))
 
-    File.mkdir_p!(Path.join(output_dir, "plays"))
-
-    play = Catalogue.get_play_with_all!(play_id)
-    generate_play(play, output_dir, opts)
-    rebuild_index(opts)
-    :ok
+      edition = Edition.load(play_id)
+      published = MapSet.new([edition.play.code | list_exported_codes(dir)])
+      write_play(edition, dir, site(opts, published))
+      rebuild_index(opts)
+      :ok
+    end)
   end
 
-  @doc """
-  Remove a single play from the static site, then rebuild the catalogue index.
-  """
+  @doc "Removes one play from an existing site, then rebuilds the catalogue and index."
   def remove_single_play(code, opts \\ []) do
-    output_dir = opts[:output_dir] || "_site"
-    plays_dir = Path.join(output_dir, "plays")
-
-    File.rm(Path.join(plays_dir, "#{code}.html"))
-    File.rm(Path.join(plays_dir, "#{code}.xml"))
+    dir = Keyword.get(opts, :output_dir, "_site")
+    File.rm_rf!(Path.join([dir, "plays", code]))
+    File.rm(Path.join([dir, "plays", "#{code}.html"]))
     rebuild_index(opts)
     :ok
   end
 
-  @doc """
-  Rebuild the catalogue index and search index based on which play files exist in _site/plays/.
-  """
+  @doc "Rebuilds the catalogue, about, search pages and search index from the plays on disk."
   def rebuild_index(opts \\ []) do
-    output_dir = opts[:output_dir] || "_site"
-    build_date = opts[:build_date] || Date.utc_today() |> Date.to_iso8601()
-    opts = Keyword.put(opts, :build_date, build_date)
+    in_english(fn ->
+      opts = defaults(opts)
+      dir = opts[:output_dir]
+      codes = list_exported_codes(dir)
+      plays = Catalogue.list_plays(sort: :title_sort) |> Enum.filter(&(&1.code in codes))
 
-    exported_codes = list_exported_codes(output_dir)
-
-    plays =
-      Catalogue.list_plays(sort: :title_sort)
-      |> Enum.filter(&(&1.code in exported_codes))
-
-    File.mkdir_p!(output_dir)
-    File.write!(Path.join(output_dir, "style.css"), Renderer.site_css())
-    File.write!(Path.join(output_dir, "search.js"), Search.search_js())
-    File.write!(Path.join(output_dir, "index.html"), Renderer.catalogue_page(plays, opts))
-    File.write!(Path.join(output_dir, "search-index.json"), Search.build_index(plays))
+      File.mkdir_p!(dir)
+      write_assets(dir)
+      write_index_pages(plays, Enum.map(plays, fn _ -> %{} end), dir, opts)
+    end)
   end
 
-  @doc """
-  List play codes that have been exported (have .html files in plays/ dir).
-  """
+  @doc "Codes of the plays the site holds: folders under `plays/` with an `index.html`."
   def list_exported_codes(output_dir \\ "_site") do
     plays_dir = Path.join(output_dir, "plays")
 
     if File.dir?(plays_dir) do
       plays_dir
       |> File.ls!()
-      |> Enum.filter(&String.ends_with?(&1, ".html"))
-      |> Enum.map(&String.trim_trailing(&1, ".html"))
+      |> Enum.filter(&File.regular?(Path.join([plays_dir, &1, "index.html"])))
+      |> Enum.sort()
     else
       []
     end
   end
 
-  defp load_plays(nil, all?) do
-    Catalogue.list_plays(sort: :title_sort, complete: !all?)
+  defp in_english(fun), do: Gettext.with_locale(PlaycodeWeb.Gettext, "en", fun)
+
+  defp defaults(opts) do
+    defaults = [
+      output_dir: "_site",
+      version: "1.0",
+      build_date: Date.to_iso8601(Date.utc_today()),
+      on_progress: fn _ -> :ok end,
+      all: false
+    ]
+
+    Keyword.merge(defaults, Enum.reject(opts, fn {_key, value} -> is_nil(value) end))
   end
 
-  defp load_plays(codes, all?) when is_list(codes) do
-    Catalogue.list_plays(sort: :title_sort, complete: !all?)
-    |> Enum.filter(&(&1.code in codes))
+  defp site(opts, published) do
+    %{
+      version: opts[:version],
+      build_date: opts[:build_date],
+      published: published,
+      play_count: MapSet.size(published)
+    }
   end
 
-  defp generate_play(play, output_dir, opts) do
-    plays_dir = Path.join(output_dir, "plays")
+  defp load_plays(nil, all?), do: Catalogue.list_plays(sort: :title_sort, complete: !all?)
 
-    # Load full data
-    play_full = Catalogue.get_play_with_all!(play.id)
-    characters = PlayContent.list_characters(play.id)
-    divisions = PlayContent.load_play_content(play.id)
-    statistic = Statistics.get_statistics(play.id)
+  defp load_plays(codes, all?) when is_list(codes),
+    do: load_plays(nil, all?) |> Enum.filter(&(&1.code in codes))
 
-    # Write play HTML as plays/CODE.html
-    html = Renderer.play_page(play_full, characters, divisions, statistic, opts)
-    File.write!(Path.join(plays_dir, "#{play.code}.html"), html)
+  defp write_assets(dir) do
+    assets = Path.join(dir, "assets")
+    File.rm_rf!(assets)
+    File.cp_r!(Application.app_dir(:playcode, "priv/static_site"), assets)
+  end
 
-    # Write TEI-XML as plays/CODE.xml
-    xml = TeiXml.generate(play_full)
-    File.write!(Path.join(plays_dir, "#{play.code}.xml"), xml)
+  # Writes one play's pages and TEI; returns what the index pages need from it.
+  defp write_play(%Edition{play: play} = edition, dir, site) do
+    play_dir = Path.join([dir, "plays", play.code])
+    File.rm_rf!(play_dir)
+    File.mkdir_p!(play_dir)
+    assigns = %{edition: edition, site: site}
+
+    File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
+    File.write!(Path.join(play_dir, "#{play.code}.xml"), TeiXml.generate(play))
+
+    File.write!(
+      Path.join([dir, "plays", "#{play.code}.html"]),
+      Pages.render(:redirect, %{code: play.code, title: play.title})
+    )
+
+    %{}
+  end
+
+  # The catalogue is still the old renderer's until Task 6.
+  defp write_index_pages(plays, _results, dir, opts) do
+    File.write!(Path.join(dir, "index.html"), Renderer.catalogue_page(plays, opts))
+    File.write!(Path.join(dir, "style.css"), Renderer.site_css())
+    File.write!(Path.join(dir, "search.js"), Search.search_js())
   end
 
   defp dir_size(path) do
