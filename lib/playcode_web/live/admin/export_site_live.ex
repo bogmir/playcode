@@ -451,7 +451,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             </li>
             <li>{gettext("Pure HTML/CSS/JS — no server or database required to view.")}</li>
             <li>{gettext("TEI-XML source files included alongside each play.")}</li>
-            <li>{gettext("Client-side search works without JavaScript (full list visible).")}</li>
+            <li>{gettext("Search needs JavaScript; the catalogue list reads without it.")}</li>
             <li>{gettext("Can be deployed to GitHub Pages, any web server, or opened locally.")}</li>
           </ul>
         </div>

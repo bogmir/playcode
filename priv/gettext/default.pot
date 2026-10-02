@@ -2551,11 +2551,6 @@ msgstr ""
 msgid "Can be deployed to GitHub Pages, any web server, or opened locally."
 msgstr ""
 
-#: lib/playcode_web/live/admin/export_site_live.ex:454
-#, elixir-autogen, elixir-format
-msgid "Client-side search works without JavaScript (full list visible)."
-msgstr ""
-
 #: lib/playcode_web/live/admin/play_detail_live.ex:245
 #: lib/playcode_web/live/admin/play_form_live.ex:666
 #, elixir-autogen, elixir-format
@@ -3751,4 +3746,9 @@ msgstr ""
 #: lib/playcode_web/play_labels.ex:94
 #, elixir-autogen, elixir-format
 msgid "Verso suelto"
+msgstr ""
+
+#: lib/playcode_web/live/admin/export_site_live.ex:454
+#, elixir-autogen, elixir-format
+msgid "Search needs JavaScript; the catalogue list reads without it."
 msgstr ""

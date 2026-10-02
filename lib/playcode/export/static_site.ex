@@ -67,7 +67,7 @@ defmodule Playcode.Export.StaticSite do
 
         opts[:on_progress].(%{
           step: :catalogue,
-          current: 0,
+          current: total,
           total: total,
           detail: "Generating catalogue..."
         })

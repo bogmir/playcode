@@ -21,7 +21,11 @@
     </form>
   </:rail>
   <h1>Catalogue</h1>
-  <p class="lede">{@count} plays · {@authors} authors</p>
+  <p class="lede">
+    {@count} {if @count == 1, do: "play", else: "plays"} · {@authors} {if @authors == 1,
+      do: "author",
+      else: "authors"}
+  </p>
   <div class="controls" data-catalogue-controls hidden>
     <input
       type="search"

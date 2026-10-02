@@ -286,7 +286,7 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 - `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
 - `StaticSite.Deployer` — pushes `_site/` to a GitHub Pages branch
 
-`generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three; the size budget (`style.css` 25 KB, `site.js` and `search.js` 15 KB, fonts 300 KB, act page 80 KB gzipped) is pinned in `static_site_test.exs`.
+`generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three; the size budget (`style.css` 25 KB, `site.js` and `search.js` 15 KB, fonts 300 KB, act page 80 KB gzipped) `style.css`, `site.js`, `search.js` and the fonts are asserted in `static_site_test.exs`; the act-page and first-search budgets are only reported by the build (`generate/1`'s return and the mix task's printed line), not asserted.
 
 ### Output structure
 

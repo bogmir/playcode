@@ -7,6 +7,12 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
 
   defp works(index), do: index |> LazyHTML.query("[data-works] > li") |> Enum.to_list()
 
+  test "a one-play site says \"1 play · 1 author\"" do
+    play = play_fixture(%{"is_complete" => true, "author_name" => "Lope de Vega"})
+
+    assert "1 play · 1 author" in texts(html!(generate!([play]), "index.html"), ".lede")
+  end
+
   test "a translation is listed under its original, one entry per work" do
     %{original: original, translation: translation} = translation_family_fixture()
 

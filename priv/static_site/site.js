@@ -109,7 +109,8 @@
       document.head.appendChild(style);
       select.addEventListener('change', function () {
         style.textContent = select.value
-          ? '.text .sp:not([data-who~="' + CSS.escape(select.value) + '"]){opacity:.4}' : '';
+          ? '.text .sp:not([data-who~="' + CSS.escape(select.value) + '"]){opacity:.4}' +
+            '.text .sp[data-who~="' + CSS.escape(select.value) + '"]{border-left:2px solid var(--accent);padding-left:.5rem;margin-left:calc(-.5rem - 2px)}' : '';
       });
     }
   }
