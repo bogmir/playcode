@@ -8,7 +8,8 @@
     {"text": "Garçon, Œdipe", "words": ["garcon", "œdipe"]},
     {"text": "Dulce <<sueño>> mío", "words": ["dulce", "sueño", "mio"]},
     {"text": "v. 1236 — fin.", "words": ["v", "1236", "fin"]},
-    {"text": "¿¡ !?", "words": []}
+    {"text": "¿¡ !?", "words": []},
+    {"text": "ΣΑΣ σοφός", "words": ["σας", "σοφος"]}
   ],
   "shards": [
     {"word": "sueño", "key": "su", "file": "su"},

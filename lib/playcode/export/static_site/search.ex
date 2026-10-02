@@ -16,7 +16,7 @@ defmodule Playcode.Export.StaticSite.Search do
   def normalise(text) do
     text
     |> :unicode.characters_to_nfc_binary()
-    |> String.downcase()
+    |> String.downcase(:greek)
     # U+E000 (private use) holds the ñ's place while the other accents are stripped.
     |> String.replace("ñ", "\u{E000}")
     |> :unicode.characters_to_nfd_binary()

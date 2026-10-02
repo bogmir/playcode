@@ -240,10 +240,19 @@ defmodule Playcode.Export.StaticSite do
     |> Enum.sort_by(&{&1.sort_author, &1.sort_title})
   end
 
-  defp root_id(play, by_id) do
+  # Follows parent_play_id to the root; on a cycle (hand-edited data) the play stands
+  # alone as its own root.
+  defp root_id(play, by_id), do: root_id(play, by_id, MapSet.new([play.id]), play.id)
+
+  defp root_id(play, by_id, seen, start) do
     case by_id[play.parent_play_id] do
-      nil -> play.id
-      parent -> root_id(parent, by_id)
+      nil ->
+        play.id
+
+      parent ->
+        if parent.id in seen,
+          do: start,
+          else: root_id(parent, by_id, MapSet.put(seen, parent.id), start)
     end
   end
 

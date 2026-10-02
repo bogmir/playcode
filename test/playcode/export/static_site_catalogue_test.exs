@@ -69,4 +69,26 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
 
     assert read!(generate!([play]), "index.html") =~ "Tom &amp; &lt;Jerry&gt;"
   end
+
+  @tag timeout: 10_000
+  test "plays that are each other's parent do not hang the build; each stands alone" do
+    a = play_fixture(%{"title" => "Alfa", "is_complete" => true})
+    b = play_fixture(%{"title" => "Beta", "is_complete" => true})
+
+    {:ok, a} =
+      Playcode.Catalogue.update_play(a, %{
+        "parent_play_id" => b.id,
+        "relationship_type" => "traduccion"
+      })
+
+    {:ok, b} =
+      Playcode.Catalogue.update_play(b, %{
+        "parent_play_id" => a.id,
+        "relationship_type" => "traduccion"
+      })
+
+    text = html!(generate!([a, b]), "index.html") |> LazyHTML.text()
+    assert text =~ "Alfa"
+    assert text =~ "Beta"
+  end
 end
