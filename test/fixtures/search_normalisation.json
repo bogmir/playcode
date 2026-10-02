@@ -1,0 +1,20 @@
+{
+  "words": [
+    {"text": "¡Válgame el cielo!, ¿qué veo?", "words": ["valgame", "el", "cielo", "que", "veo"]},
+    {"text": "Sueños, SUEÑOS", "words": ["sueños", "sueños"]},
+    {"text": "año y ano", "words": ["año", "y", "ano"]},
+    {"text": "mañana", "words": ["mañana"]},
+    {"text": "l’onde où je suis", "words": ["l", "onde", "ou", "je", "suis"]},
+    {"text": "Garçon, Œdipe", "words": ["garcon", "œdipe"]},
+    {"text": "Dulce <<sueño>> mío", "words": ["dulce", "sueño", "mio"]},
+    {"text": "v. 1236 — fin.", "words": ["v", "1236", "fin"]},
+    {"text": "¿¡ !?", "words": []}
+  ],
+  "shards": [
+    {"word": "sueño", "key": "su", "file": "su"},
+    {"word": "ñaque", "key": "ña", "file": "u00f1a"},
+    {"word": "y", "key": "y", "file": "y"},
+    {"word": "œdipe", "key": "œd", "file": "u0153d"},
+    {"word": "1236", "key": "12", "file": "12"}
+  ]
+}

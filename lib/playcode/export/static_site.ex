@@ -10,7 +10,8 @@ defmodule Playcode.Export.StaticSite do
 
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
-  alias Playcode.Export.StaticSite.{Edition, Pages, Renderer, Search}
+  alias Playcode.Catalogue.Play
+  alias Playcode.Export.StaticSite.{Components, Edition, Pages, Search}
 
   @type progress_info :: %{
           step: :assets | :catalogue | :play,
@@ -200,11 +201,79 @@ defmodule Playcode.Export.StaticSite do
     %{}
   end
 
-  # The catalogue is still the old renderer's until Task 6.
   defp write_index_pages(plays, _results, dir, opts) do
-    File.write!(Path.join(dir, "index.html"), Renderer.catalogue_page(plays, opts))
-    File.write!(Path.join(dir, "style.css"), Renderer.site_css())
-    File.write!(Path.join(dir, "search.js"), Search.search_js())
+    site = site(opts, MapSet.new(plays, & &1.code))
+
+    assigns = %{
+      site: site,
+      works: works(plays),
+      facets: facets(plays),
+      count: length(plays),
+      authors:
+        plays |> Enum.map(& &1.author_name) |> Enum.reject(&is_nil/1) |> Enum.uniq() |> length()
+    }
+
+    File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
+  end
+
+  # One entry per work: each published play under the published play at the root of
+  # its translation chain.
+  defp works(plays) do
+    by_id = Map.new(plays, &{&1.id, &1})
+
+    plays
+    |> Enum.group_by(&root_id(&1, by_id))
+    |> Enum.map(fn {root, members} ->
+      lead = by_id[root]
+
+      %{
+        play: lead,
+        translations:
+          members
+          |> Enum.reject(&(&1.id == root))
+          |> Enum.sort_by(&Search.normalise(&1.title_sort || &1.title)),
+        sort_author: Search.normalise(lead.author_sort || lead.author_name),
+        sort_title: Search.normalise(lead.title_sort || lead.title),
+        date: lead.composition_date_from
+      }
+    end)
+    |> Enum.sort_by(&{&1.sort_author, &1.sort_title})
+  end
+
+  defp root_id(play, by_id) do
+    case by_id[play.parent_play_id] do
+      nil -> play.id
+      parent -> root_id(parent, by_id)
+    end
+  end
+
+  defp facets(plays) do
+    [
+      {"lang", "Language",
+       plays
+       |> Enum.frequencies_by(& &1.language)
+       |> Enum.sort_by(&(-elem(&1, 1)))
+       |> Enum.map(fn {code, n} -> {code, Play.language_name(code), n} end)},
+      {"form", "Form",
+       options(plays, &if(&1.is_verse, do: "verse", else: "prose"), %{
+         "verse" => "Verse",
+         "prose" => "Prose"
+       })},
+      {"kind", "Kind",
+       options(plays, &Components.kind/1, %{
+         "original" => "Originals",
+         "translation" => "Translations"
+       })},
+      {"coll", "Collection",
+       options(plays, &Components.collection/1, %{"EMOTHE" => "EMOTHE", "ARTELOPE" => "ARTELOPE"})}
+    ]
+  end
+
+  defp options(plays, value_of, labels) do
+    plays
+    |> Enum.frequencies_by(value_of)
+    |> Enum.sort_by(&(-elem(&1, 1)))
+    |> Enum.map(fn {value, n} -> {value, labels[value], n} end)
   end
 
   defp dir_size(path) do

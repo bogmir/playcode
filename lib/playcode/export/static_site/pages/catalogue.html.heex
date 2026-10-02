@@ -1,0 +1,58 @@
+<Components.shell
+  root=""
+  title="EMOTHE — Catalogue"
+  current={:catalogue}
+  site={@site}
+  rail_label="Filters"
+>
+  <:rail>
+    <form class="facets" data-facets hidden>
+      <fieldset :for={{name, legend, options} <- @facets} class="facet">
+        <legend>{legend}</legend>
+        <label>
+          <input type="radio" name={name} value="" checked /> <span>All</span>
+          <span class="count">{@count}</span>
+        </label>
+        <label :for={{value, label, count} <- options}>
+          <input type="radio" name={name} value={value} /> <span>{label}</span>
+          <span class="count">{count}</span>
+        </label>
+      </fieldset>
+    </form>
+  </:rail>
+  <h1>Catalogue</h1>
+  <p class="lede">{@count} plays · {@authors} authors</p>
+  <div class="controls" data-catalogue-controls hidden>
+    <input
+      type="search"
+      data-filter
+      placeholder="Filter by title, author or code"
+      aria-label="Filter the catalogue"
+    />
+    <label>
+      Sort
+      <select data-sort aria-label="Sort the catalogue">
+        <option value="author">Author</option>
+        <option value="title">Title</option>
+        <option value="date">Date</option>
+      </select>
+    </label>
+  </div>
+  <p data-count aria-live="polite" class="lede"></p>
+  <ol class="works" data-works>
+    <li
+      :for={work <- @works}
+      class="work"
+      data-author={work.sort_author}
+      data-title={work.sort_title}
+      data-date={work.date}
+    >
+      <Components.catalogue_entry play={work.play} lead />
+      <ul :if={work.translations != []} class="translations">
+        <li :for={translation <- work.translations}>
+          <Components.catalogue_entry play={translation} />
+        </li>
+      </ul>
+    </li>
+  </ol>
+</Components.shell>

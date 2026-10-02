@@ -1,66 +1,29 @@
 defmodule Playcode.Export.StaticSite.Search do
   @moduledoc """
-  Builds the search index and vanilla JS for the static site catalogue.
+  Full-text search for the static site: the normaliser here, the index files from
+  Task 8 on. Both are read in the browser by `priv/static_site/search.js`.
+
+  `normalise/1` and `words/1` must agree with `EMOTHE.normalise` and `EMOTHE.words` in
+  `site.js`; `test/fixtures/search_normalisation.json` runs against both.
   """
 
-  def build_index(plays) do
-    plays
-    |> Enum.map(fn play ->
-      %{
-        code: play.code,
-        title: play.title,
-        author: play.author_name,
-        language: play.language,
-        verse_count: play.verse_count,
-        url: "plays/#{play.code}.html"
-      }
-    end)
-    |> Jason.encode!(pretty: true)
+  @doc """
+  Lowercase, accents dropped, `ñ` kept (so *año* and *ano* stay apart), NFC first so a
+  decomposed `n` + tilde counts as `ñ`.
+  """
+  def normalise(nil), do: ""
+
+  def normalise(text) do
+    text
+    |> :unicode.characters_to_nfc_binary()
+    |> String.downcase()
+    # U+E000 (private use) holds the ñ's place while the other accents are stripped.
+    |> String.replace("ñ", "\u{E000}")
+    |> :unicode.characters_to_nfd_binary()
+    |> String.replace(~r/\p{Mn}/u, "")
+    |> String.replace("\u{E000}", "ñ")
   end
 
-  def search_js do
-    """
-    (function() {
-      'use strict';
-      var input = document.getElementById('catalogue-search');
-      var list = document.getElementById('catalogue-list');
-      var countEl = document.getElementById('catalogue-count');
-      var noResults = document.getElementById('no-results');
-      if (!input || !list) return;
-
-      var entries = list.querySelectorAll('.play-entry');
-      var total = entries.length;
-
-      input.addEventListener('input', function() {
-        var q = input.value.toLowerCase().trim();
-        var visible = 0;
-
-        for (var i = 0; i < entries.length; i++) {
-          var el = entries[i];
-          if (!q) {
-            el.style.display = '';
-            visible++;
-          } else {
-            var title = el.getAttribute('data-title') || '';
-            var author = el.getAttribute('data-author') || '';
-            var code = el.getAttribute('data-code') || '';
-            if (title.indexOf(q) !== -1 || author.indexOf(q) !== -1 || code.indexOf(q) !== -1) {
-              el.style.display = '';
-              visible++;
-            } else {
-              el.style.display = 'none';
-            }
-          }
-        }
-
-        if (countEl) {
-          countEl.textContent = visible + ' of ' + total + ' plays';
-        }
-        if (noResults) {
-          noResults.style.display = (visible === 0 && q) ? '' : 'none';
-        }
-      });
-    })();
-    """
-  end
+  @doc "The searchable words of `text`: runs of letters and digits, normalised."
+  def words(text), do: ~r/[\p{L}\p{N}]+/u |> Regex.scan(normalise(text)) |> List.flatten()
 end

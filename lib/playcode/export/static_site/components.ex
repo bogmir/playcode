@@ -7,7 +7,7 @@ defmodule Playcode.Export.StaticSite.Components do
   use Phoenix.Component
 
   alias Playcode.Catalogue.Play
-  alias Playcode.Export.StaticSite.Edition
+  alias Playcode.Export.StaticSite.{Edition, Search}
   alias Playcode.PlayContent.{Element, InlineMarkup}
   alias PlaycodeWeb.PlayLabels
 
@@ -664,4 +664,49 @@ defmodule Playcode.Export.StaticSite.Components do
   defp act_start(columns, i),
     do:
       if(i > 0 and Enum.at(columns, i - 1)["act"] != Enum.at(columns, i)["act"], do: "act-start")
+
+  def kind(%{relationship_type: nil}), do: "original"
+  def kind(_play), do: "translation"
+
+  def collection(%{code: "AL" <> _}), do: "ARTELOPE"
+  def collection(_play), do: "EMOTHE"
+
+  attr :play, :map, required: true
+  attr :lead, :boolean, default: false
+
+  def catalogue_entry(assigns) do
+    ~H"""
+    <div
+      class="entry"
+      data-play
+      data-lang={@play.language}
+      data-form={if @play.is_verse, do: "verse", else: "prose"}
+      data-kind={kind(@play)}
+      data-coll={collection(@play)}
+      data-text={
+        Search.normalise(
+          Enum.join([@play.title, @play.original_title, @play.author_name, @play.code], " ")
+        )
+      }
+    >
+      <span class="tag">{@play.language}</span>
+      <a class={["entry-title", @lead && "lead"]} href={"plays/#{@play.code}/index.html"}>
+        {@play.title}
+      </a>
+      <span class="code">{@play.code}</span>
+      <span :if={@lead and kind(@play) == "translation"} class="tag">translation</span>
+      <span class="meta">{entry_meta(@play)}</span>
+      <span :if={@lead} class="author">{@play.author_name}</span>
+    </div>
+    """
+  end
+
+  defp entry_meta(play) do
+    [
+      composition_years(play),
+      if(play.is_verse and play.verse_count, do: "#{number(play.verse_count)} vv.", else: "Prose")
+    ]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
+  end
 end
