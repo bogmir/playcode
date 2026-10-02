@@ -5,12 +5,17 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
   import Phoenix.LiveViewTest
   import Playcode.TestFixtures
+  import Playcode.StaticSiteHelpers, only: [await_idle_builder: 0]
 
   alias Playcode.Export.StaticSite
 
   setup %{conn: conn} do
     File.rm_rf!(StaticSite.output_dir())
-    on_exit(fn -> File.rm_rf!(StaticSite.output_dir()) end)
+
+    on_exit(fn ->
+      await_idle_builder()
+      File.rm_rf!(StaticSite.output_dir())
+    end)
 
     complete = %{"is_complete" => true}
     a = play_fixture(Map.put(complete, "title", "Alpha Tragedy"))

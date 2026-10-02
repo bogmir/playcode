@@ -257,7 +257,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                   (MapSet.member?(@exported_codes, play.code) or @exporting_play == play.id) and
                     @removing_play != play.id
                 }
-                disabled={@generating || @exporting_play || @removing_play}
+                disabled={@generating || @deploying || @exporting_play || @removing_play}
                 phx-click="toggle_play"
                 phx-value-id={play.id}
                 phx-value-code={play.code}

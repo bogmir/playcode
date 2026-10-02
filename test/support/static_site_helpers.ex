@@ -7,7 +7,7 @@ defmodule Playcode.StaticSiteHelpers do
   import ExUnit.Assertions
   import ExUnit.Callbacks, only: [on_exit: 1]
 
-  alias Playcode.Export.StaticSite
+  alias Playcode.Export.{SiteBuilder, StaticSite}
 
   @doc "Generates the site for `plays` (by code) into a fresh temp dir and returns it."
   def generate!(plays, opts \\ []) do
@@ -17,6 +17,19 @@ defmodule Playcode.StaticSiteHelpers do
     opts = Keyword.merge([output_dir: dir, play_codes: Enum.map(plays, & &1.code)], opts)
     assert {:ok, %{output_dir: ^dir}} = StaticSite.generate(opts)
     dir
+  end
+
+  @doc """
+  Waits, at most five seconds, until the site builder has no job. Run on exit by tests
+  that start one, so a test that fails mid-build does not leave its job running into the
+  next test, which would be refused as busy while the job used that test's sandbox.
+  """
+  def await_idle_builder(tries \\ 100) do
+    cond do
+      SiteBuilder.status() == %{job: nil} -> :ok
+      tries == 0 -> flunk("the site builder is still busy")
+      true -> Process.sleep(50) && await_idle_builder(tries - 1)
+    end
   end
 
   def read!(dir, path), do: File.read!(Path.join(dir, path))

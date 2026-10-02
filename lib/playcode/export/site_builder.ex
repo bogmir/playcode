@@ -56,7 +56,7 @@ defmodule Playcode.Export.SiteBuilder do
   end
 
   @impl true
-  def handle_info({ref, result}, %{ref: ref, job: job}) do
+  def handle_info({ref, result}, %{ref: ref, job: job}) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
     broadcast({:site_builder, :done, job, result})
     {:noreply, %{job: nil, ref: nil}}
@@ -67,6 +67,9 @@ defmodule Playcode.Export.SiteBuilder do
     broadcast({:site_builder, :failed, job, reason})
     {:noreply, %{job: nil, ref: nil}}
   end
+
+  # Crashing on a stray message would restart the builder idle while its job ran on.
+  def handle_info(_message, state), do: {:noreply, state}
 
   defp run(:generate, opts),
     do: StaticSite.generate(opts |> in_site() |> Keyword.put(:on_progress, progress(:generate)))
