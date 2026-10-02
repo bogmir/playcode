@@ -55,7 +55,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     save(view, %{"form" => "prose"})
     assert play.id |> Catalogue.get_play!() |> Play.form() == "prose"
 
-    # A content edit recomputes is_verse from the verse lines; the curator's choice stands.
+    # The content editor calls broadcast_content_changed/1 after every edit, which
+    # recomputes is_verse from the verse lines (this play has some, so automatic says
+    # "verse"); the curator's choice stands.
     {:ok, _} =
       Playcode.PlayContent.create_element(%{
         play_id: play.id,
@@ -67,18 +69,28 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
         position: 99
       })
 
-    assert play.id |> Catalogue.get_play!() |> Play.form() == "prose"
+    Playcode.PlayContent.broadcast_content_changed(play.id)
+
+    recomputed = Catalogue.get_play!(play.id)
+    assert recomputed.is_verse
+    assert Play.form(recomputed) == "prose"
   end
 
   test "left automatic, the form follows the text", %{conn: conn} do
     %{play: play} = play_with_structure_fixture()
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
 
+    save(view, %{"form" => "prose"})
+    assert play.id |> Catalogue.get_play!() |> Play.form() == "prose"
+
+    # A save redirects away from the form, so open it again. "" is the select's Automatic
+    # option: it clears the earlier override.
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
     save(view, %{"form" => ""})
 
     saved = Catalogue.get_play!(play.id)
     assert saved.form == nil
-    assert Play.form(saved) == if(saved.is_verse, do: "verse", else: "prose")
+    assert Play.form(saved) == "verse"
   end
 
   test "the research metadata is saved: historical time and composition date",
