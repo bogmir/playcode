@@ -72,6 +72,35 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     refute has_element?(lv, "#{switch(a)}[disabled]")
   end
 
+  test "a second admin's page follows a build started on the first", %{conn: conn, a: a} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    {:ok, other, _html} = live(log_in_user(build_conn(), admin_fixture()), ~p"/admin/export")
+
+    lv |> element(switch(a)) |> render_click()
+
+    # No event goes to the other page: it hears the build from the site builder.
+    wait_for(fn ->
+      has_element?(other, "#{switch(a)}[checked]") and
+        render(other) =~ t("Play exported to static site.")
+    end)
+  end
+
+  test "Download is refused while a build runs", %{conn: conn, a: a, b: b} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    lv |> element(switch(b)) |> render_click()
+
+    # Not a race: adding a play loads it and writes files, milliseconds, while the click
+    # follows within microseconds, and the builder is busy before the switch returns.
+    # The button is disabled once this page has drawn the build, so the event is pushed
+    # as a page that has not caught up would send it: the server must refuse anyway.
+    assert render_click(lv, "download_zip", %{}) =~
+             t("The site is busy with another build. Try again when it finishes.")
+
+    wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
+  end
+
   test "with no site yet, Generate builds every complete play", %{conn: conn, a: a, b: b} do
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
     generate(lv)

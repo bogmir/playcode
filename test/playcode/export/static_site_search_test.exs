@@ -182,32 +182,6 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       %{first: one_verse_play("Zeta", "primero"), second: one_verse_play("Alfa", "segundo")}
     end
 
-    test "two plays added at the same moment both end up in the index",
-         %{first: first, second: second} do
-      third = one_verse_play("Mu", "tercero")
-
-      # Two admins, or two tabs, each adding a play. Unserialised, one build's index
-      # overwrote the other's about half the time; ten rounds catch that reliably.
-      for _round <- 1..10 do
-        dir = generate!([first], all: true)
-
-        [second, third]
-        |> Enum.map(fn play ->
-          Task.async(fn ->
-            Playcode.Export.StaticSite.generate_single_play(play.id, output_dir: dir)
-          end)
-        end)
-        |> Task.await_many(60_000)
-
-        {"plays", "all", plays} = load_js!(dir, "search/plays.js")
-        {"index", "su", shard} = load_js!(dir, "search/index/su.js")
-
-        assert length(plays) == 3
-        # One line in each of plays 0, 1 and 2.
-        assert [0, 1, _, 1, 1, _, 2, 1, _] = shard["sueño"]
-      end
-    end
-
     test "adding a play leaves the others' search entries as they were last generated",
          %{first: first, second: second} do
       dir = generate!([first], all: true)

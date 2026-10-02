@@ -6,6 +6,13 @@ defmodule Playcode.Export.StaticSite do
 
   Only plays marked complete are published unless `all: true`. The archive is in
   English whatever locale the admin generating it uses.
+
+  `generate/1`, `generate_single_play/2`, `remove_single_play/2` and `rebuild_index/2`
+  must not run concurrently on one directory: each rewrites the shared search index, so
+  two at once drop a play from it. The admin page's builds go through
+  `Playcode.Export.SiteBuilder`, which runs one at a time. `mix playcode.export.site`
+  runs in its own VM and calls `generate/1` directly; its default `_site` is also the
+  admin page's directory in dev, so give it `-o` while a server is building.
   """
 
   alias Playcode.Catalogue
@@ -33,61 +40,57 @@ defmodule Playcode.Export.StaticSite do
   def generate(opts \\ []) do
     in_english(fn ->
       opts = defaults(opts)
-      locked(opts[:output_dir], fn -> build(opts) end)
+      plays = load_plays(opts[:play_codes], opts[:all])
+      total = length(plays)
+
+      if plays == [] do
+        {:error, "no plays to export (none marked as complete)"}
+      else
+        Enum.each(plays, &safe_code!(&1.code))
+        dir = opts[:output_dir]
+        File.rm_rf!(dir)
+        File.mkdir_p!(Path.join(dir, "plays"))
+
+        opts[:on_progress].(%{
+          step: :assets,
+          current: 0,
+          total: total,
+          detail: "Writing assets..."
+        })
+
+        write_assets(dir)
+        site = site(opts, MapSet.new(plays, & &1.code))
+
+        results =
+          plays
+          |> Task.async_stream(&build_play(&1.id, dir, site),
+            max_concurrency: concurrency(),
+            timeout: :infinity
+          )
+          |> Enum.with_index(1)
+          |> Enum.map(fn {{:ok, result}, n} ->
+            opts[:on_progress].(%{step: :play, current: n, total: total, detail: result.code})
+            result
+          end)
+
+        opts[:on_progress].(%{
+          step: :catalogue,
+          current: total,
+          total: total,
+          detail: "Generating catalogue..."
+        })
+
+        report = write_index_pages(plays, Map.new(results, &{&1.code, &1.postings}), dir, opts)
+
+        {:ok,
+         Map.merge(report, %{
+           plays: total,
+           size: dir_size(dir),
+           output_dir: dir,
+           largest_page_gzip: results |> Enum.map(& &1.largest_page_gzip) |> Enum.max(fn -> 0 end)
+         })}
+      end
     end)
-  end
-
-  defp build(opts) do
-    plays = load_plays(opts[:play_codes], opts[:all])
-    total = length(plays)
-
-    if plays == [] do
-      {:error, "no plays to export (none marked as complete)"}
-    else
-      Enum.each(plays, &safe_code!(&1.code))
-      dir = opts[:output_dir]
-      File.rm_rf!(dir)
-      File.mkdir_p!(Path.join(dir, "plays"))
-
-      opts[:on_progress].(%{
-        step: :assets,
-        current: 0,
-        total: total,
-        detail: "Writing assets..."
-      })
-
-      write_assets(dir)
-      site = site(opts, MapSet.new(plays, & &1.code))
-
-      results =
-        plays
-        |> Task.async_stream(&build_play(&1.id, dir, site),
-          max_concurrency: concurrency(),
-          timeout: :infinity
-        )
-        |> Enum.with_index(1)
-        |> Enum.map(fn {{:ok, result}, n} ->
-          opts[:on_progress].(%{step: :play, current: n, total: total, detail: result.code})
-          result
-        end)
-
-      opts[:on_progress].(%{
-        step: :catalogue,
-        current: total,
-        total: total,
-        detail: "Generating catalogue..."
-      })
-
-      report = write_index_pages(plays, Map.new(results, &{&1.code, &1.postings}), dir, opts)
-
-      {:ok,
-       Map.merge(report, %{
-         plays: total,
-         size: dir_size(dir),
-         output_dir: dir,
-         largest_page_gzip: results |> Enum.map(& &1.largest_page_gzip) |> Enum.max(fn -> 0 end)
-       })}
-    end
   end
 
   @doc "Exports one play into an existing site, then rebuilds the catalogue and index."
@@ -95,22 +98,14 @@ defmodule Playcode.Export.StaticSite do
     in_english(fn ->
       opts = defaults(opts)
       dir = opts[:output_dir]
+      File.mkdir_p!(Path.join(dir, "plays"))
 
-      locked(dir, fn ->
-        File.mkdir_p!(Path.join(dir, "plays"))
-
-        edition = Edition.load(play_id)
-        site = site(opts, MapSet.new([edition.play.code | list_exported_codes(dir)]))
-        write_play(edition, dir, site)
-        family = refresh_family(edition.play, dir, site)
-
-        do_rebuild_index(
-          opts,
-          Map.put(family, edition.play.code, Search.write_play(dir, edition))
-        )
-
-        :ok
-      end)
+      edition = Edition.load(play_id)
+      site = site(opts, MapSet.new([edition.play.code | list_exported_codes(dir)]))
+      write_play(edition, dir, site)
+      family = refresh_family(edition.play, dir, site)
+      rebuild_index(opts, Map.put(family, edition.play.code, Search.write_play(dir, edition)))
+      :ok
     end)
   end
 
@@ -120,27 +115,25 @@ defmodule Playcode.Export.StaticSite do
       opts = defaults(opts)
       dir = opts[:output_dir]
 
-      locked(dir, fn ->
-        family =
-          if code in list_exported_codes(dir) do
-            safe_code!(code)
-            File.rm_rf!(Path.join([dir, "plays", code]))
-            File.rm(Path.join([dir, "plays", "#{code}.html"]))
+      family =
+        if code in list_exported_codes(dir) do
+          safe_code!(code)
+          File.rm_rf!(Path.join([dir, "plays", code]))
+          File.rm(Path.join([dir, "plays", "#{code}.html"]))
 
-            case Enum.find(Catalogue.list_plays(include_deleted: true), &(&1.code == code)) do
-              %Play{} = play ->
-                refresh_family(play, dir, site(opts, MapSet.new(list_exported_codes(dir))))
+          case Enum.find(Catalogue.list_plays(include_deleted: true), &(&1.code == code)) do
+            %Play{} = play ->
+              refresh_family(play, dir, site(opts, MapSet.new(list_exported_codes(dir))))
 
-              nil ->
-                %{}
-            end
-          else
-            %{}
+            nil ->
+              %{}
           end
+        else
+          %{}
+        end
 
-        do_rebuild_index(opts, family)
-        :ok
-      end)
+      rebuild_index(opts, family)
+      :ok
     end)
   end
 
@@ -152,39 +145,28 @@ defmodule Playcode.Export.StaticSite do
   def rebuild_index(opts \\ [], postings \\ %{}) do
     in_english(fn ->
       opts = defaults(opts)
-      locked(opts[:output_dir], fn -> do_rebuild_index(opts, postings) end)
+      dir = opts[:output_dir]
+      codes = list_exported_codes(dir)
+      plays = Catalogue.list_plays(sort: :title_sort) |> Enum.filter(&(&1.code in codes))
+      indexed = MapSet.new(Search.indexed_codes(dir))
+
+      missing =
+        plays
+        |> Enum.reject(&(Map.has_key?(postings, &1.code) or MapSet.member?(indexed, &1.code)))
+        |> Task.async_stream(
+          fn play ->
+            in_english(fn -> {play.code, Search.write_play(dir, Edition.load(play.id))} end)
+          end,
+          max_concurrency: concurrency(),
+          timeout: :infinity
+        )
+        |> Map.new(fn {:ok, pair} -> pair end)
+
+      File.mkdir_p!(dir)
+      write_assets(dir)
+      write_index_pages(plays, Map.merge(postings, missing), dir, opts)
     end)
   end
-
-  defp do_rebuild_index(opts, postings) do
-    dir = opts[:output_dir]
-    codes = list_exported_codes(dir)
-    plays = Catalogue.list_plays(sort: :title_sort) |> Enum.filter(&(&1.code in codes))
-    indexed = MapSet.new(Search.indexed_codes(dir))
-
-    missing =
-      plays
-      |> Enum.reject(&(Map.has_key?(postings, &1.code) or MapSet.member?(indexed, &1.code)))
-      |> Task.async_stream(
-        fn play ->
-          in_english(fn -> {play.code, Search.write_play(dir, Edition.load(play.id))} end)
-        end,
-        max_concurrency: concurrency(),
-        timeout: :infinity
-      )
-      |> Map.new(fn {:ok, pair} -> pair end)
-
-    File.mkdir_p!(dir)
-    write_assets(dir)
-    write_index_pages(plays, Map.merge(postings, missing), dir, opts)
-  end
-
-  # One build at a time per output directory: two at once overwrite each other's index
-  # and drop plays from it. The requester is self(), so another process waits; the same
-  # process would get straight back in.
-  # ponytail: the lock covers this node only. `mix playcode.export.site` runs in its own
-  # VM, so it is not serialised against the admin page; a lock file in `dir` would be.
-  defp locked(dir, fun), do: :global.trans({{__MODULE__, dir}, self()}, fun, [node()])
 
   @doc "Codes of the plays the site holds: folders under `plays/` with an `index.html`."
   def list_exported_codes(output_dir \\ "_site") do

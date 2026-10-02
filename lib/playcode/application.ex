@@ -37,6 +37,9 @@ defmodule Playcode.Application do
       Playcode.Repo,
       {DNSCluster, query: Application.get_env(:playcode, :dns_cluster_query) || :ignore},
       {Phoenix.PubSub, name: Playcode.PubSub},
+      # The admin's static site: one process writes and ships it, its jobs run as tasks.
+      {Task.Supervisor, name: Playcode.Export.SiteBuilder.Tasks},
+      Playcode.Export.SiteBuilder,
       # Start a worker by calling: Playcode.Worker.start_link(arg)
       # {Playcode.Worker, arg},
       # PDF generation via headless Chrome
