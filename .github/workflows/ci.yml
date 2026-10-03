@@ -44,14 +44,17 @@ jobs:
           otp-version: "28.1"
           elixir-version: "1.19.5"
 
+      # The repository is in the key: compiled deps keep absolute paths (bupe reads its
+      # templates from __DIR__), so a cache built under the old checkout path broke the
+      # EPUB export after the repo was renamed emothe -> playcode.
       - uses: actions/cache@v4
         with:
           path: |
             deps
             _build
-          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          key: ${{ runner.os }}-${{ github.repository }}-mix-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-
+            ${{ runner.os }}-${{ github.repository }}-mix-
 
       - name: Install dependencies
         run: mix deps.get
