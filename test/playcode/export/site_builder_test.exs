@@ -31,59 +31,135 @@ defmodule Playcode.Export.SiteBuilderTest do
     Enum.map(plays, & &1["code"])
   end
 
-  test "a second job is refused while one runs, and the first lands intact" do
-    %{id: a_id} = a = play_fixture()
-    %{id: b_id} = b = play_fixture()
+  # Every broadcast up to and including `last`, in the order they arrived, each as
+  # {kind, job or request}.
+  defp events_until(last, seen \\ []) do
+    event =
+      receive do
+        {:site_builder, kind, job} -> {kind, job}
+        {:site_builder, kind, job, _} -> {kind, job}
+      after
+        10_000 -> flunk("no #{inspect(last)} after #{inspect(Enum.reverse(seen))}")
+      end
 
-    # Not a race: a build loads from the database and writes files, milliseconds, while
-    # the second call follows within microseconds, and the builder marks itself busy
-    # before it replies to the first.
-    assert :ok = SiteBuilder.add(a_id, [])
-    assert {:error, :busy} = SiteBuilder.add(b_id, [])
-    assert_receive {:site_builder, :done, {:add, ^a_id}, :ok}, 5_000
-    assert in_site() == [a.code]
+    if event == last, do: Enum.reverse([event | seen]), else: events_until(last, [event | seen])
+  end
 
-    assert :ok = SiteBuilder.add(b_id, [])
-    assert_receive {:site_builder, :done, {:add, ^b_id}, :ok}, 5_000
+  # Not a race, in every test that queues: a build loads from the database and writes
+  # files, milliseconds, while the next call follows within microseconds, and the
+  # builder marks itself busy before it replies to the first.
+
+  test "a request during a build waits its turn, then lands" do
+    a = play_fixture()
+    b = play_fixture()
+
+    assert :started = SiteBuilder.add(a.id, [])
+    assert :queued = SiteBuilder.add(b.id, [])
+
+    events = events_until({:done, {:batch, [{:add, b.id}]}})
+    assert {:queued, {:add, b.id}} in events
+    assert {:done, {:batch, [{:add, a.id}]}} in events
     assert in_site() == Enum.sort([a.code, b.code])
     assert Enum.sort(in_search()) == Enum.sort([a.code, b.code])
   end
 
+  test "the adds and removes that queue during a build run as one batch" do
+    [a, b, c] = for _ <- 1..3, do: play_fixture()
+
+    assert :started = SiteBuilder.add(a.id, [])
+    assert :queued = SiteBuilder.add(b.id, [])
+    assert :queued = SiteBuilder.add(c.id, [])
+    assert :queued = SiteBuilder.remove(a.code, [])
+
+    batch = {:batch, [{:add, b.id}, {:add, c.id}, {:remove, a.code}]}
+    assert {:started, batch} in events_until({:done, batch})
+    assert in_site() == Enum.sort([b.code, c.code])
+    assert Enum.sort(in_search()) == Enum.sort([b.code, c.code])
+  end
+
+  test "a batch announces its pages before its search index" do
+    a = play_fixture()
+    assert :started = SiteBuilder.add(a.id, [])
+
+    batch = {:batch, [{:add, a.id}]}
+
+    assert events_until({:done, batch}) == [
+             {:started, batch},
+             {:published, batch},
+             {:done, batch}
+           ]
+  end
+
+  test "a generate queued behind an add rebuilds the site as it stands when it runs" do
+    [a, b, _never_published] = for _ <- 1..3, do: play_fixture(%{"is_complete" => true})
+    {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
+
+    assert :started = SiteBuilder.add(b.id, [])
+    # The admin page used to send the plays it showed when clicked, before b landed;
+    # rebuilding from that list would delete b.
+    assert :queued = SiteBuilder.generate(play_codes: [a.code])
+    events_until({:done, :generate})
+
+    assert in_site() == Enum.sort([a.code, b.code])
+  end
+
+  test "a play that no longer exists is skipped and the rest of its batch lands" do
+    a = play_fixture()
+    b = play_fixture()
+    missing = Ecto.UUID.generate()
+
+    assert :started = SiteBuilder.add(a.id, [])
+    assert :queued = SiteBuilder.add(missing, [])
+    assert :queued = SiteBuilder.add(b.id, [])
+
+    batch = {:batch, [{:add, missing}, {:add, b.id}]}
+    assert_receive {:site_builder, :done, ^batch, {:ok, %{skipped: [^missing]}}}, 10_000
+    assert in_site() == Enum.sort([a.code, b.code])
+  end
+
   @tag :capture_log
-  test "a job that crashes is reported, and the builder carries on" do
-    # A play that no longer exists is skipped by StaticSite.apply_changes/2, not a crash,
-    # so the job crashes here through a code that cannot be a folder name.
-    %{id: bad} = play_fixture(%{"code" => "bad/code"})
-    %{id: id} = play = play_fixture()
+  test "a batch that crashes is reported, and the queue carries on" do
+    # Play codes are not validated, and one that is not a plain name cannot be a folder.
+    bad = play_fixture(%{"code" => "bad/code"})
+    good = play_fixture()
 
-    assert :ok = SiteBuilder.add(bad, [])
-    assert_receive {:site_builder, :failed, {:add, ^bad}, _reason}, 5_000
-    assert SiteBuilder.status() == %{job: nil}
+    assert :started = SiteBuilder.add(bad.id, [])
+    assert :queued = SiteBuilder.add(good.id, [])
 
-    assert :ok = SiteBuilder.add(id, [])
-    assert_receive {:site_builder, :done, {:add, ^id}, :ok}, 5_000
-    assert in_site() == [play.code]
+    events = events_until({:done, {:batch, [{:add, good.id}]}})
+    assert {:failed, {:batch, [{:add, bad.id}]}} in events
+    assert in_site() == [good.code]
+    assert SiteBuilder.status() == %{job: nil, queue: []}
   end
 
-  test "status names the running job" do
-    %{id: id} = play_fixture()
+  test "status names the running job and the requests waiting behind it" do
+    a = play_fixture()
+    b = play_fixture()
 
-    assert :ok = SiteBuilder.add(id, [])
-    assert SiteBuilder.status() == %{job: {:add, id}}
-    assert_receive {:site_builder, :done, {:add, ^id}, :ok}, 5_000
-    assert SiteBuilder.status() == %{job: nil}
+    assert :started = SiteBuilder.add(a.id, [])
+    assert :queued = SiteBuilder.add(b.id, [])
+    assert SiteBuilder.status() == %{job: {:batch, [{:add, a.id}]}, queue: [{:add, b.id}]}
+
+    events_until({:done, {:batch, [{:add, b.id}]}})
+    assert SiteBuilder.status() == %{job: nil, queue: []}
   end
 
-  # A deploy pushes the whole directory, so one during a build would publish half a site.
-  # No real deploy runs here: the refusal is the behaviour.
-  test "a deploy is refused while a build runs" do
-    %{id: id} = play_fixture()
+  # A deploy pushes the whole directory, so it waits for the build before it.
+  test "a deploy asked for twice during a build is queued once and runs after it" do
+    a = play_fixture()
+    assert :started = SiteBuilder.add(a.id, [])
 
-    assert :ok = SiteBuilder.add(id, [])
     # Invalid on purpose: Deployer rejects a repository without "/" before it pushes
-    # anything, so a regressed busy rule fails here instead of pushing to GitHub.
-    assert {:error, :busy} = SiteBuilder.deploy("not a repo")
-    assert_receive {:site_builder, :done, {:add, ^id}, :ok}, 5_000
+    # anything, so this test can never reach GitHub.
+    assert :queued = SiteBuilder.deploy("not a repo")
+    assert :queued = SiteBuilder.deploy("not a repo")
+    assert SiteBuilder.status().queue == [:deploy]
+
+    events = events_until({:done, :deploy})
+    assert Enum.count(events, &(&1 == {:started, :deploy})) == 1
+
+    assert Enum.find_index(events, &(&1 == {:done, {:batch, [{:add, a.id}]}})) <
+             Enum.find_index(events, &(&1 == {:started, :deploy}))
   end
 
   # Regression: an unexpected message crashed the builder, which restarted idle while
@@ -95,7 +171,7 @@ defmodule Playcode.Export.SiteBuilderTest do
     send(builder, {nil, :x})
 
     # A call is answered only after the messages sent before it.
-    assert SiteBuilder.status() == %{job: nil}
+    assert SiteBuilder.status() == %{job: nil, queue: []}
     assert Process.whereis(SiteBuilder) == builder
     refute_receive {:site_builder, _, _, _}
   end

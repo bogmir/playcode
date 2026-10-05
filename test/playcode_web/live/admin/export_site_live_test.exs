@@ -106,6 +106,42 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
   end
 
+  test "switches flipped during a build wait their turn and land together",
+       %{conn: conn, a: a, b: b} do
+    c = play_fixture(%{"is_complete" => true, "title" => "Delta Farce"})
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    # Not a race: adding a loads a play and writes files, milliseconds, while the next
+    # clicks follow within microseconds, so they reach a busy builder and queue.
+    lv |> element(switch(a)) |> render_click()
+    lv |> element(switch(b)) |> render_click()
+    lv |> element(switch(c)) |> render_click()
+
+    # On its way in: shown on, and not clickable until it lands.
+    assert has_element?(lv, "#{switch(b)}[checked][disabled]")
+
+    wait_for(fn -> render(lv) =~ t("%{count} changes applied to the static site.", count: 2) end)
+
+    assert has_element?(lv, "#{switch(b)}[checked]")
+    assert has_element?(lv, "#{switch(c)}[checked]")
+    refute has_element?(lv, "#{switch(c)}[disabled]")
+    assert response(preview(conn, "plays/#{c.code}/index.html"), 200)
+  end
+
+  test "Generate pressed while a play is being added keeps that play",
+       %{conn: conn, a: a, b: b} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    lv |> element(switch(b)) |> render_click()
+
+    assert lv |> element("form[phx-submit=generate]") |> render_submit() =~
+             t("Queued: it starts when the current build finishes.")
+
+    wait_for(fn -> render(lv) =~ t("Generation Complete") end)
+    assert response(preview(conn, "plays/#{b.code}/index.html"), 200)
+  end
+
   test "with no site yet, Generate builds every complete play", %{conn: conn, a: a, b: b} do
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
     generate(lv)
