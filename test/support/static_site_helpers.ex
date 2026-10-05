@@ -20,9 +20,10 @@ defmodule Playcode.StaticSiteHelpers do
   end
 
   @doc """
-  Waits, at most five seconds, until the site builder has no job. Run on exit by tests
-  that start one, so a test that fails mid-build does not leave its job running into the
-  next test, which would be refused as busy while the job used that test's sandbox.
+  Waits, at most five seconds, until the site builder is idle: no job and nothing queued.
+  Run on exit by tests that start one, so a test that fails mid-build does not leave its
+  job running, or requests waiting, into the next test, whose requests would queue behind
+  them while they used that test's sandbox.
   """
   def await_idle_builder(tries \\ 100) do
     cond do

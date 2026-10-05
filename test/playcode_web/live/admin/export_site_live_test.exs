@@ -111,8 +111,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     c = play_fixture(%{"is_complete" => true, "title" => "Delta Farce"})
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
 
-    # Not a race: adding a loads a play and writes files, milliseconds, while the next
-    # clicks follow within microseconds, so they reach a busy builder and queue.
+    # Not a race: adding a loads a play and writes files, tens of milliseconds, while the
+    # next clicks each take a round trip of well under that, so they reach a busy builder
+    # and queue.
     lv |> element(switch(a)) |> render_click()
     lv |> element(switch(b)) |> render_click()
     lv |> element(switch(c)) |> render_click()
@@ -140,6 +141,42 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
     wait_for(fn -> render(lv) =~ t("Generation Complete") end)
     assert response(preview(conn, "plays/#{b.code}/index.html"), 200)
+  end
+
+  test "a play deleted since the page drew is skipped and says so", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    render_click(lv, "toggle_play", %{"id" => Ecto.UUID.generate(), "code" => "NOPE"})
+
+    # ConnCase's t/2 is gettext/3, which cannot reach a plural entry: ask for its singular.
+    skipped =
+      Gettext.ngettext(
+        PlaycodeWeb.Gettext,
+        "A play that no longer exists was skipped.",
+        "%{count} plays that no longer exist were skipped.",
+        1
+      )
+
+    wait_for(fn -> render(lv) =~ skipped end)
+  end
+
+  # Broadcasts what the builder would: the window between :published and :done cannot be
+  # hit by clicks deterministically, and the broadcasts are the page's interface to it.
+  test "a change queued while a batch was landing keeps its switch pending",
+       %{conn: conn, a: a} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    assert has_element?(lv, "#{switch(a)}[checked]")
+    refute has_element?(lv, "#{switch(a)}[disabled]")
+
+    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
+    broadcast.({:site_builder, :queued, {:remove, a.code}})
+    broadcast.({:site_builder, :done, {:batch, [{:add, a.id}]}, {:ok, %{skipped: []}}})
+
+    # render/1 is answered after the two broadcasts, which reached the page before it.
+    render(lv)
+    assert has_element?(lv, "#{switch(a)}[disabled]")
+    refute has_element?(lv, "#{switch(a)}[checked]")
   end
 
   test "with no site yet, Generate builds every complete play", %{conn: conn, a: a, b: b} do

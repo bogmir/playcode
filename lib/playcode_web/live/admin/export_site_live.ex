@@ -32,7 +32,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       |> assign(:deploy_status, nil)
       |> assign(:deploy_url, nil)
 
-    # Subscribed before the status is read, so a job that ends in between still arrives.
+    # Subscribed before follow/2 reads the status and the disk, so a job that ends after
+    # that still arrives.
     if connected?(socket) do
       SiteBuilder.subscribe()
       {:ok, follow(socket, SiteBuilder.status())}
@@ -426,8 +427,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   end
 
   # What the builder runs and what waits behind it, as a page opened now sees it.
-  defp follow(socket, %{job: job, queue: queue}),
-    do: Enum.reduce(queue, started(socket, job), &queued(&2, &1))
+  # Runs after subscribing, so the disk is read once nothing can end unheard.
+  defp follow(socket, %{job: job, queue: queue}) do
+    queue
+    |> Enum.reduce(started(socket, job), &queued(&2, &1))
+    |> assign(:exported_codes, on_disk())
+  end
 
   # A change on its way: its switch shows where the play is going until it lands.
   defp queued(socket, {:add, id}), do: pending(socket, id, :add)
@@ -465,13 +470,17 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   end
 
   # A batch's pages are published: its switches settle on what is on disk.
+  # Only the marks the batch fulfilled: a play switched the other way since stays pending.
   defp settle(socket, changes) do
-    ids = Enum.map(changes, &change_id(socket, &1))
+    landed = Map.new(changes, &{change_id(socket, &1), direction(&1)})
 
     socket
-    |> update(:pending, &Map.drop(&1, ids))
+    |> update(:pending, &Map.reject(&1, fn {id, change} -> landed[id] == change end))
     |> assign(:exported_codes, on_disk())
   end
+
+  defp direction({:add, _}), do: :add
+  defp direction({:remove, _}), do: :remove
 
   # A job ended. If requests wait, the builder's next :started marks the page busy again.
   defp finished(socket, {:batch, changes}), do: socket |> settle(changes) |> idle()

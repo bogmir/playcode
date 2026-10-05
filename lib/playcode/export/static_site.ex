@@ -7,9 +7,9 @@ defmodule Playcode.Export.StaticSite do
   Only plays marked complete are published unless `all: true`. The archive is in
   English whatever locale the admin generating it uses.
 
-  `generate/1`, `apply_changes/2` (and its one-change wrappers `generate_single_play/2`
-  and `remove_single_play/2`) and `rebuild_index/2` must not run concurrently on one
-  directory: each rewrites the shared search index, so two at once drop a play from it.
+  `generate/1` and `apply_changes/2` (and its one-change wrappers `generate_single_play/2`
+  and `remove_single_play/2`) must not run concurrently on one directory: each rewrites
+  the shared search index, so two at once drop a play from it.
   The admin page's builds go through `Playcode.Export.SiteBuilder`, which runs one at a
   time and batches the adds and removes that queue meanwhile. `mix playcode.export.site`
   runs in its own VM and calls `generate/1` directly; its default `_site` is also the
@@ -129,6 +129,8 @@ defmodule Playcode.Export.StaticSite do
         end)
 
       adds = for {_code, {:add, play}} <- last, do: play
+      # Before the removes: a batch with an unusable code must leave the site as it was.
+      Enum.each(adds, &safe_code!(&1.code))
       removes = for {code, :remove} <- last, MapSet.member?(on_disk, code), do: code
 
       published =
@@ -167,23 +169,6 @@ defmodule Playcode.Export.StaticSite do
   def remove_single_play(code, opts \\ []) do
     {:ok, _} = apply_changes([{:remove, code}], opts)
     :ok
-  end
-
-  @doc """
-  Rewrites the catalogue, about and search pages and the search index for the plays on
-  disk. `postings` holds freshly computed postings by code; every other play keeps what
-  the current index holds for it, and a play the index lacks is loaded and indexed.
-  """
-  def rebuild_index(opts \\ [], postings \\ %{}) do
-    in_english(fn ->
-      opts = defaults(opts)
-      dir = opts[:output_dir]
-      plays = published_plays(dir)
-      File.mkdir_p!(dir)
-      write_assets(dir)
-      write_catalogue(plays, dir, opts)
-      write_search(plays, postings, dir)
-    end)
   end
 
   @doc "Codes of the plays the site holds: folders under `plays/` with an `index.html`."

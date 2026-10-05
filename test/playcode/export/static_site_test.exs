@@ -366,6 +366,24 @@ defmodule Playcode.Export.StaticSiteTest do
       refute read!(dir, "index.html") =~ "Alfa Batch Tragedy"
     end
 
+    # Regression: the removes ran before safe_code! rejected an added play, so a batch with
+    # one unusable code left the site half-applied.
+    test "a batch with an unusable code raises before it writes anything" do
+      a = complete_play(%{"title" => "Alfa Untouched Tragedy"})
+      b = complete_play()
+      bad = complete_play(%{"code" => "bad/code"})
+      dir = generate!([a])
+
+      assert_raise ArgumentError, fn ->
+        StaticSite.apply_changes([{:remove, a.code}, {:add, bad.id}, {:add, b.id}],
+          output_dir: dir
+        )
+      end
+
+      assert StaticSite.list_exported_codes(dir) == [a.code]
+      assert read!(dir, "index.html") =~ "Alfa Untouched Tragedy"
+    end
+
     test "only a play's last change counts" do
       kept_out = complete_play(%{"title" => "Kept Out"})
       put_back = complete_play(%{"title" => "Put Back"})
