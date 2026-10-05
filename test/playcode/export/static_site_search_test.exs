@@ -219,16 +219,14 @@ defmodule Playcode.Export.StaticSiteSearchTest do
          %{first: first, second: second} do
       dir = generate!([first], all: true)
 
-      # What a batch cut short after its pages leaves behind: the play is on disk, with
-      # its lines, but the index (plays.js and the shards, still consistent with each
-      # other) does not hold it.
-      File.mkdir_p!(Path.join([dir, "plays", second.code]))
-      File.write!(Path.join([dir, "plays", second.code, "index.html"]), "")
-
-      Playcode.Export.StaticSite.Search.write_play(
-        dir,
-        Playcode.Export.StaticSite.Edition.load(second.id)
-      )
+      # What a batch cut short after its pages leaves behind: the play's pages and
+      # search lines are on disk, but the index (plays.js and the shards) lacks it.
+      assert_raise RuntimeError, fn ->
+        Playcode.Export.StaticSite.apply_changes([{:add, second.id}],
+          output_dir: dir,
+          on_published: fn -> raise "cut short" end
+        )
+      end
 
       third = one_verse_play("Mu", "tercero")
 

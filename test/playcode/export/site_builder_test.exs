@@ -51,11 +51,13 @@ defmodule Playcode.Export.SiteBuilderTest do
 
   @tag :capture_log
   test "a job that crashes is reported, and the builder carries on" do
-    missing = Ecto.UUID.generate()
+    # A play that no longer exists is skipped by StaticSite.apply_changes/2, not a crash,
+    # so the job crashes here through a code that cannot be a folder name.
+    %{id: bad} = play_fixture(%{"code" => "bad/code"})
     %{id: id} = play = play_fixture()
 
-    assert :ok = SiteBuilder.add(missing, [])
-    assert_receive {:site_builder, :failed, {:add, ^missing}, _reason}, 5_000
+    assert :ok = SiteBuilder.add(bad, [])
+    assert_receive {:site_builder, :failed, {:add, ^bad}, _reason}, 5_000
     assert SiteBuilder.status() == %{job: nil}
 
     assert :ok = SiteBuilder.add(id, [])
