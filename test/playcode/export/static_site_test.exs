@@ -346,4 +346,98 @@ defmodule Playcode.Export.StaticSiteTest do
     # A fixture play has no verse lines: no "· 0 verses".
     assert "Verse" in form.(bare_verse)
   end
+
+  describe "a batch of changes" do
+    test "adds and removes several plays in one go" do
+      a = complete_play(%{"title" => "Alfa Batch Tragedy"})
+      b = complete_play(%{"title" => "Beta Batch Comedy"})
+      c = complete_play(%{"title" => "Gamma Batch Farce"})
+      dir = generate!([a])
+
+      assert {:ok, %{skipped: []}} =
+               StaticSite.apply_changes([{:add, b.id}, {:remove, a.code}, {:add, c.id}],
+                 output_dir: dir
+               )
+
+      assert StaticSite.list_exported_codes(dir) == Enum.sort([b.code, c.code])
+      {"plays", "all", plays} = load_js!(dir, "search/plays.js")
+      assert Enum.sort(Enum.map(plays, & &1["code"])) == Enum.sort([b.code, c.code])
+      assert read!(dir, "index.html") =~ "Gamma Batch Farce"
+      refute read!(dir, "index.html") =~ "Alfa Batch Tragedy"
+    end
+
+    test "only a play's last change counts" do
+      kept_out = complete_play(%{"title" => "Kept Out"})
+      put_back = complete_play(%{"title" => "Put Back"})
+      dir = generate!([put_back])
+
+      assert {:ok, _} =
+               StaticSite.apply_changes(
+                 [
+                   {:add, kept_out.id},
+                   {:remove, kept_out.code},
+                   {:remove, put_back.code},
+                   {:add, put_back.id}
+                 ],
+                 output_dir: dir
+               )
+
+      assert StaticSite.list_exported_codes(dir) == [put_back.code]
+    end
+
+    # The callback runs in the caller, between the pages and the index, so what the site
+    # holds at that moment can be read without a race.
+    test "pages and the catalogue are in place before the search index is written" do
+      first = complete_play(%{"title" => "Published First"})
+      later = complete_play(%{"title" => "Indexed Later"})
+      dir = generate!([first])
+      test = self()
+
+      at_publish = fn ->
+        {"plays", "all", plays} = load_js!(dir, "search/plays.js")
+
+        send(
+          test,
+          {:published, StaticSite.list_exported_codes(dir), read!(dir, "index.html"),
+           Enum.map(plays, & &1["code"])}
+        )
+      end
+
+      {:ok, _} =
+        StaticSite.apply_changes([{:add, later.id}], output_dir: dir, on_published: at_publish)
+
+      assert_received {:published, on_disk, catalogue, searchable}
+      assert later.code in on_disk
+      assert catalogue =~ "Indexed Later"
+      refute later.code in searchable
+
+      {"plays", "all", plays} = load_js!(dir, "search/plays.js")
+      assert later.code in Enum.map(plays, & &1["code"])
+    end
+
+    test "a play that no longer exists is skipped and the rest lands" do
+      a = complete_play()
+      dir = generate!([a])
+      b = complete_play()
+      missing = Ecto.UUID.generate()
+
+      assert {:ok, %{skipped: [^missing]}} =
+               StaticSite.apply_changes([{:add, missing}, {:add, b.id}], output_dir: dir)
+
+      assert StaticSite.list_exported_codes(dir) == Enum.sort([a.code, b.code])
+    end
+
+    test "a translation and its original added together link each other" do
+      %{original: original, translation: translation} = translation_family_fixture()
+      dir = generate!([complete_play()])
+
+      {:ok, _} =
+        StaticSite.apply_changes([{:add, translation.id}, {:add, original.id}],
+          output_dir: dir
+        )
+
+      assert "../#{translation.code}/index.html" in hrefs(title_page(dir, original))
+      assert "../#{original.code}/index.html" in hrefs(title_page(dir, translation))
+    end
+  end
 end

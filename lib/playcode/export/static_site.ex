@@ -7,10 +7,11 @@ defmodule Playcode.Export.StaticSite do
   Only plays marked complete are published unless `all: true`. The archive is in
   English whatever locale the admin generating it uses.
 
-  `generate/1`, `generate_single_play/2`, `remove_single_play/2` and `rebuild_index/2`
-  must not run concurrently on one directory: each rewrites the shared search index, so
-  two at once drop a play from it. The admin page's builds go through
-  `Playcode.Export.SiteBuilder`, which runs one at a time. `mix playcode.export.site`
+  `generate/1`, `apply_changes/2` (and its one-change wrappers `generate_single_play/2`
+  and `remove_single_play/2`) and `rebuild_index/2` must not run concurrently on one
+  directory: each rewrites the shared search index, so two at once drop a play from it.
+  The admin page's builds go through `Playcode.Export.SiteBuilder`, which runs one at a
+  time and batches the adds and removes that queue meanwhile. `mix playcode.export.site`
   runs in its own VM and calls `generate/1` directly; its default `_site` is also the
   admin page's directory in dev, so give it `-o` while a server is building.
   """
@@ -80,7 +81,8 @@ defmodule Playcode.Export.StaticSite do
           detail: "Generating catalogue..."
         })
 
-        report = write_index_pages(plays, Map.new(results, &{&1.code, &1.postings}), dir, opts)
+        write_catalogue(plays, dir, opts)
+        report = write_search(plays, Map.new(results, &{&1.code, &1.postings}), dir)
 
         {:ok,
          Map.merge(report, %{
@@ -93,48 +95,78 @@ defmodule Playcode.Export.StaticSite do
     end)
   end
 
-  @doc "Exports one play into an existing site, then rebuilds the catalogue and index."
-  def generate_single_play(play_id, opts \\ []) do
+  @doc """
+  Applies a batch of changes to an existing site: `{:add, play_id}` exports a play and
+  `{:remove, code}` takes one out. Only each play's last change counts, so a play added
+  then removed in one batch is never written. Every added play is written knowing the
+  plays published when the batch ends, and the published originals and translations of
+  the plays it touched are re-exported once each. The pages and the catalogue are written
+  first, then `opts[:on_published]` is called, then the search index is rewritten once.
+
+  Added plays that no longer exist (deleted or archived since) are skipped. Options as
+  `generate/1`, plus `:on_published` (`fun() -> any`).
+  """
+  def apply_changes(changes, opts \\ []) do
     in_english(fn ->
       opts = defaults(opts)
       dir = opts[:output_dir]
       File.mkdir_p!(Path.join(dir, "plays"))
 
-      edition = Edition.load(play_id)
-      site = site(opts, MapSet.new([edition.play.code | list_exported_codes(dir)]))
-      write_play(edition, dir, site)
-      family = refresh_family(edition.play, dir, site)
-      rebuild_index(opts, Map.put(family, edition.play.code, Search.write_play(dir, edition)))
-      :ok
+      live = Map.new(Catalogue.list_plays(), &{&1.id, &1})
+      skipped = for {:add, id} <- changes, not Map.has_key?(live, id), uniq: true, do: id
+      on_disk = MapSet.new(list_exported_codes(dir))
+
+      last =
+        Enum.reduce(changes, %{}, fn
+          {:add, id}, acc ->
+            case live[id] do
+              nil -> acc
+              play -> Map.put(acc, play.code, {:add, play})
+            end
+
+          {:remove, code}, acc ->
+            Map.put(acc, code, :remove)
+        end)
+
+      adds = for {_code, {:add, play}} <- last, do: play
+      removes = for {code, :remove} <- last, MapSet.member?(on_disk, code), do: code
+
+      published =
+        on_disk
+        |> MapSet.union(MapSet.new(adds, & &1.code))
+        |> MapSet.difference(MapSet.new(removes))
+
+      site = site(opts, published)
+      Enum.each(removes, &remove_play_files(dir, &1))
+      added = build_plays(Enum.map(adds, & &1.id), dir, site)
+
+      removed = Enum.filter(Catalogue.list_plays(include_deleted: true), &(&1.code in removes))
+
+      refreshed =
+        (adds ++ removed)
+        |> relatives(published, MapSet.new(adds, & &1.code))
+        |> Enum.map(& &1.id)
+        |> build_plays(dir, site)
+
+      plays = published_plays(dir)
+      write_assets(dir)
+      write_catalogue(plays, dir, opts)
+      opts[:on_published].()
+      write_search(plays, Map.new(added ++ refreshed, &{&1.code, &1.postings}), dir)
+      {:ok, %{skipped: skipped}}
     end)
   end
 
-  @doc "Removes one play from an existing site, then rebuilds the catalogue and index."
+  @doc "Exports one play into an existing site: `apply_changes([{:add, play_id}], opts)`."
+  def generate_single_play(play_id, opts \\ []) do
+    {:ok, _} = apply_changes([{:add, play_id}], opts)
+    :ok
+  end
+
+  @doc "Removes one play from an existing site: `apply_changes([{:remove, code}], opts)`."
   def remove_single_play(code, opts \\ []) do
-    in_english(fn ->
-      opts = defaults(opts)
-      dir = opts[:output_dir]
-
-      family =
-        if code in list_exported_codes(dir) do
-          safe_code!(code)
-          File.rm_rf!(Path.join([dir, "plays", code]))
-          File.rm(Path.join([dir, "plays", "#{code}.html"]))
-
-          case Enum.find(Catalogue.list_plays(include_deleted: true), &(&1.code == code)) do
-            %Play{} = play ->
-              refresh_family(play, dir, site(opts, MapSet.new(list_exported_codes(dir))))
-
-            nil ->
-              %{}
-          end
-        else
-          %{}
-        end
-
-      rebuild_index(opts, family)
-      :ok
-    end)
+    {:ok, _} = apply_changes([{:remove, code}], opts)
+    :ok
   end
 
   @doc """
@@ -146,25 +178,11 @@ defmodule Playcode.Export.StaticSite do
     in_english(fn ->
       opts = defaults(opts)
       dir = opts[:output_dir]
-      codes = list_exported_codes(dir)
-      plays = Catalogue.list_plays(sort: :title_sort) |> Enum.filter(&(&1.code in codes))
-      indexed = MapSet.new(Search.indexed_codes(dir))
-
-      missing =
-        plays
-        |> Enum.reject(&(Map.has_key?(postings, &1.code) or MapSet.member?(indexed, &1.code)))
-        |> Task.async_stream(
-          fn play ->
-            in_english(fn -> {play.code, Search.write_play(dir, Edition.load(play.id))} end)
-          end,
-          max_concurrency: concurrency(),
-          timeout: :infinity
-        )
-        |> Map.new(fn {:ok, pair} -> pair end)
-
+      plays = published_plays(dir)
       File.mkdir_p!(dir)
       write_assets(dir)
-      write_index_pages(plays, Map.merge(postings, missing), dir, opts)
+      write_catalogue(plays, dir, opts)
+      write_search(plays, postings, dir)
     end)
   end
 
@@ -201,6 +219,7 @@ defmodule Playcode.Export.StaticSite do
       version: "1.0",
       build_date: Date.to_iso8601(Date.utc_today()),
       on_progress: fn _ -> :ok end,
+      on_published: fn -> :ok end,
       all: false
     ]
 
@@ -246,22 +265,41 @@ defmodule Playcode.Export.StaticSite do
     max(1, min(System.schedulers_online(), pool - 2))
   end
 
-  # A title page links the play's published original and translations, so theirs change
-  # when one of them is added or removed. Each is re-exported in full: its title page is
-  # rendered from the database, so its pages and search lines must be too, or its
-  # contents could link a division it was last exported without. Returns their postings.
-  defp refresh_family(play, dir, site) do
-    exported = MapSet.new(list_exported_codes(dir))
+  # Prepares, writes and indexes several plays at once.
+  defp build_plays(ids, dir, site) do
+    ids
+    |> Task.async_stream(&build_play(&1, dir, site),
+      max_concurrency: concurrency(),
+      timeout: :infinity
+    )
+    |> Enum.map(fn {:ok, result} -> result end)
+  end
 
-    Catalogue.list_plays()
-    |> Enum.filter(fn member ->
-      (member.id == play.parent_play_id or member.parent_play_id == play.id) and
-        MapSet.member?(exported, member.code)
+  # A title page links the play's published original and translations, so theirs change
+  # when the play is added or removed. Each is re-exported in full: its title page is
+  # rendered from the database, so its pages and search lines must be too, or its
+  # contents could link a division it was last exported without. Plays in `fresh` were
+  # just written knowing the final site, and are left alone.
+  defp relatives(plays, published, fresh) do
+    ids = MapSet.new(plays, & &1.id)
+    parents = MapSet.new(plays, & &1.parent_play_id)
+
+    Enum.filter(Catalogue.list_plays(), fn member ->
+      (MapSet.member?(parents, member.id) or MapSet.member?(ids, member.parent_play_id)) and
+        MapSet.member?(published, member.code) and not MapSet.member?(fresh, member.code)
     end)
-    |> Map.new(fn member ->
-      result = build_play(member.id, dir, site)
-      {result.code, result.postings}
-    end)
+  end
+
+  # The site's plays in catalogue order: those with a folder under plays/.
+  defp published_plays(dir) do
+    codes = MapSet.new(list_exported_codes(dir))
+    Enum.filter(Catalogue.list_plays(sort: :title_sort), &MapSet.member?(codes, &1.code))
+  end
+
+  defp remove_play_files(dir, code) do
+    safe_code!(code)
+    File.rm_rf!(Path.join([dir, "plays", code]))
+    File.rm(Path.join([dir, "plays", "#{code}.html"]))
   end
 
   # Writes one play's pages and TEI; returns what the index pages need from it.
@@ -296,7 +334,8 @@ defmodule Playcode.Export.StaticSite do
     %{largest_page_gzip: largest}
   end
 
-  defp write_index_pages(plays, postings, dir, opts) do
+  # The catalogue, about and search pages.
+  defp write_catalogue(plays, dir, opts) do
     site = site(opts, MapSet.new(plays, & &1.code))
 
     assigns = %{
@@ -311,7 +350,28 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
     File.write!(Path.join(dir, "search.html"), Pages.render(:search, %{site: site}))
-    Search.write_index(dir, plays, postings)
+  end
+
+  # The search index. `postings` holds freshly computed postings by code; every other
+  # play keeps what the current index holds for it. A play the index lacks (its pages
+  # written by a batch that stopped before its search) is loaded and indexed: the index's
+  # own list of plays, `search/plays.js`, is what `Search.indexed_codes/1` reads.
+  defp write_search(plays, postings, dir) do
+    indexed = MapSet.new(Search.indexed_codes(dir))
+
+    missing =
+      plays
+      |> Enum.reject(&(Map.has_key?(postings, &1.code) or MapSet.member?(indexed, &1.code)))
+      |> Task.async_stream(
+        fn play ->
+          in_english(fn -> {play.code, Search.write_play(dir, Edition.load(play.id))} end)
+        end,
+        max_concurrency: concurrency(),
+        timeout: :infinity
+      )
+      |> Map.new(fn {:ok, pair} -> pair end)
+
+    Search.write_index(dir, plays, Map.merge(postings, missing))
   end
 
   # One entry per work: each published play under the published play at the root of

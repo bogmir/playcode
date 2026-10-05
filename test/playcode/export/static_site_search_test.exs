@@ -215,6 +215,31 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       refute File.exists?(Path.join([dir, "search", "index", "na.js"]))
     end
 
+    test "a play whose pages a batch wrote, but not its search, is indexed by the next one",
+         %{first: first, second: second} do
+      dir = generate!([first], all: true)
+
+      # What a batch cut short after its pages leaves behind: the play is on disk, with
+      # its lines, but the index (plays.js and the shards, still consistent with each
+      # other) does not hold it.
+      File.mkdir_p!(Path.join([dir, "plays", second.code]))
+      File.write!(Path.join([dir, "plays", second.code, "index.html"]), "")
+
+      Playcode.Export.StaticSite.Search.write_play(
+        dir,
+        Playcode.Export.StaticSite.Edition.load(second.id)
+      )
+
+      third = one_verse_play("Mu", "tercero")
+
+      {:ok, _} =
+        Playcode.Export.StaticSite.apply_changes([{:add, third.id}], output_dir: dir)
+
+      # Title order is Alfa (second), Mu (third), Zeta (first): second is play 0.
+      {"index", "se", shard} = load_js!(dir, "search/index/se.js")
+      assert [0, 1, _] = shard["segundo"]
+    end
+
     test "removing a play takes its lines and its words out of the index",
          %{first: first, second: second} do
       dir = generate!([first, second], all: true)
