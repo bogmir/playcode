@@ -5,7 +5,8 @@ defmodule Playcode.Export.SiteBuilder do
   Adding or removing a play reads the search index on disk and writes it back, and a
   deploy pushes the whole directory, so the builder runs one job at a time. A request
   that arrives while a job runs is queued, not refused: each starter returns `:started`
-  or `:queued`, and a request already waiting is not queued twice. When a job ends, the
+  or `:queued`. A request already waiting is not queued twice: it keeps its place and
+  takes the options of the latest ask. When a job ends, the
   adds and removes at the front of the queue run as one batch, which publishes its pages
   first and rewrites the search index once (`StaticSite.apply_changes/2`); a generate or
   a deploy runs on its own, in its turn. Generate rebuilds the plays on disk when it runs.
@@ -63,7 +64,14 @@ defmodule Playcode.Export.SiteBuilder do
 
   def handle_call({:request, request, args}, _from, state) do
     if Enum.any?(state.queue, fn {queued, _} -> queued == request end) do
-      {:reply, :queued, state}
+      # Latest wins, in place: a corrected repository or version must not be dropped.
+      queue =
+        Enum.map(state.queue, fn
+          {^request, _} -> {request, args}
+          entry -> entry
+        end)
+
+      {:reply, :queued, %{state | queue: queue}}
     else
       broadcast({:site_builder, :queued, request})
       {:reply, :queued, %{state | queue: state.queue ++ [{request, args}]}}

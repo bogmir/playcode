@@ -162,6 +162,21 @@ defmodule Playcode.Export.SiteBuilderTest do
              Enum.find_index(events, &(&1 == {:started, :deploy}))
   end
 
+  # Regression: a deploy to a corrected repository was dropped as a duplicate, so the
+  # first, mistyped, one ran.
+  test "a request asked for again while waiting runs with the options of the latest ask" do
+    a = play_fixture()
+    assert :started = SiteBuilder.add(a.id, [])
+
+    # Both invalid on purpose (no "/"): the error names the repository that ran.
+    assert :queued = SiteBuilder.deploy("old repo")
+    assert :queued = SiteBuilder.deploy("new repo")
+
+    assert_receive {:site_builder, :done, :deploy, {:error, reason}}, 10_000
+    assert reason =~ "new repo"
+    refute reason =~ "old repo"
+  end
+
   # Regression: an unexpected message crashed the builder, which restarted idle while
   # its job ran on. A {nil, _} while idle even matched the task's reply, whose ref is nil
   # then, and crashed it in demonitor(nil).
