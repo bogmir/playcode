@@ -65,6 +65,18 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     |> Enum.map(fn {attrs, text} -> {text, String.to_integer(attrs["n"])} end)
   end
 
+  # Regression: archiving a play notifies its topic, and the editor reloaded it through
+  # a read that hides archived plays, so it crashed.
+  test "an open editor stays up when its play is archived", %{conn: conn, play: play} do
+    lv = open_scene(conn, play)
+
+    {:ok, _} = Playcode.Catalogue.delete_play(play)
+    # What Playcode.Export.PlayChangeListener relays when the archiving commits.
+    Playcode.PlayContent.notify_changed(play.id)
+
+    assert has_element?(lv, "span[title='Segunda línea']")
+  end
+
   test "a verse edited in place is what the public page shows", %{conn: conn, play: play} do
     lv = open_scene(conn, play)
 

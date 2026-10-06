@@ -899,8 +899,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   # --- PubSub handler ---
 
   @impl true
+  # Archiving notifies too, so the play may be archived by now.
   def handle_info({:play_content_changed, _play_id}, socket) do
-    play = Catalogue.get_play!(socket.assigns.play.id)
+    play = Catalogue.get_play!(socket.assigns.play.id, include_deleted: true)
 
     {:noreply,
      socket
