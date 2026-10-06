@@ -11,11 +11,17 @@ defmodule Playcode.StaticSiteHelpers do
 
   @doc "Generates the site for `plays` (by code) into a fresh temp dir and returns it."
   def generate!(plays, opts \\ []) do
-    dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")
-    on_exit(fn -> File.rm_rf(dir) end)
+    dir = site_dir!()
 
     opts = Keyword.merge([output_dir: dir, play_codes: Enum.map(plays, & &1.code)], opts)
     assert {:ok, %{output_dir: ^dir}} = StaticSite.generate(opts)
+    dir
+  end
+
+  @doc "A fresh temp directory for a site, removed when the test exits."
+  def site_dir! do
+    dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm_rf(dir) end)
     dir
   end
 

@@ -14,12 +14,16 @@ defmodule Playcode.Export.StaticSite do
   time and batches the adds and removes that queue meanwhile. `mix playcode.export.site`
   runs in its own VM and calls `generate/1` directly; its default `_site` is also the
   admin page's directory in dev, so give it `-o` while a server is building.
+
+  Every build records itself in `build.json` at the site root: the fingerprint of what
+  built it (`StaticSite.Fingerprint`) and each play's `content_version`. From it
+  `changed_plays/1`, `site_changed?/2` and `outdated/1` say what changed since.
   """
 
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue.Play
-  alias Playcode.Export.StaticSite.{Components, Edition, Pages, Search}
+  alias Playcode.Export.StaticSite.{Components, Edition, Fingerprint, Pages, Search}
 
   @type progress_info :: %{
           step: :assets | :catalogue | :play,
@@ -83,6 +87,8 @@ defmodule Playcode.Export.StaticSite do
 
         write_catalogue(plays, dir, opts)
         report = write_search(plays, Map.new(results, &{&1.code, &1.postings}), dir)
+        # Last: a build cut short leaves no record, so the next Generate rebuilds it all.
+        write_build(dir, Fingerprint.current(opts), Map.new(results, &{&1.code, &1.version}))
 
         {:ok,
          Map.merge(report, %{
@@ -115,6 +121,7 @@ defmodule Playcode.Export.StaticSite do
       live = Map.new(Catalogue.list_plays(), &{&1.id, &1})
       skipped = for {:add, id} <- changes, not Map.has_key?(live, id), uniq: true, do: id
       on_disk = MapSet.new(list_exported_codes(dir))
+      built = read_build(dir)
 
       last =
         Enum.reduce(changes, %{}, fn
@@ -154,7 +161,14 @@ defmodule Playcode.Export.StaticSite do
       write_assets(dir)
       write_catalogue(plays, dir, opts)
       opts[:on_published].()
-      write_search(plays, Map.new(added ++ refreshed, &{&1.code, &1.postings}), dir)
+      written = added ++ refreshed
+      write_search(plays, Map.new(written, &{&1.code, &1.postings}), dir)
+
+      # Last, as in generate/1. A batch that began on an empty site wrote every page
+      # there is, so it records what built them; otherwise the site's record stands.
+      fingerprint = if MapSet.size(on_disk) == 0, do: Fingerprint.current(opts), else: built.site
+      versions = Map.new(written, &{&1.code, &1.version})
+      write_build(dir, fingerprint, built.plays |> Map.drop(removes) |> Map.merge(versions))
       {:ok, %{skipped: skipped}}
     end)
   end
@@ -183,6 +197,39 @@ defmodule Playcode.Export.StaticSite do
     else
       []
     end
+  end
+
+  @doc """
+  Codes of the plays in the site at `dir` that changed since they were written: the
+  published plays whose `content_version` is not the one `build.json` records for them.
+  A play it records nothing for counts as changed. Archived and incomplete plays are
+  `outdated/1`'s to remove.
+  """
+  def changed_plays(dir),
+    do: for(play <- changed(dir, Catalogue.list_plays(complete: true)), do: play.code)
+
+  @doc """
+  Whether the site at `dir` may be out of date as a whole: `build.json` records no
+  fingerprint, or another than `Fingerprint.current/1` gives for `opts` (`:version`).
+  """
+  def site_changed?(dir, opts \\ []),
+    do: read_build(dir).site != Fingerprint.current(defaults(opts))
+
+  @doc """
+  The batch that brings the site at `dir` up to date through `apply_changes/2`: each
+  changed play added again, each play on disk no longer published (archived, deleted or
+  no longer complete) removed.
+  """
+  def outdated(dir) do
+    published = Catalogue.list_plays(complete: true)
+    live = MapSet.new(published, & &1.code)
+
+    adds = for play <- changed(dir, published), do: {:add, play.id}
+
+    removes =
+      for code <- list_exported_codes(dir), not MapSet.member?(live, code), do: {:remove, code}
+
+    adds ++ removes
   end
 
   # Play codes become folder names that are deleted and rewritten; Play does not
@@ -239,7 +286,11 @@ defmodule Playcode.Export.StaticSite do
 
       edition
       |> write_play(dir, site)
-      |> Map.merge(%{code: edition.play.code, postings: Search.write_play(dir, edition)})
+      |> Map.merge(%{
+        code: edition.play.code,
+        version: edition.play.content_version,
+        postings: Search.write_play(dir, edition)
+      })
     end)
   end
 
@@ -279,6 +330,37 @@ defmodule Playcode.Export.StaticSite do
   defp published_plays(dir) do
     codes = MapSet.new(list_exported_codes(dir))
     Enum.filter(Catalogue.list_plays(sort: :title_sort), &MapSet.member?(codes, &1.code))
+  end
+
+  # The `published` plays that are in the site at `dir` with a version other than the
+  # one build.json records for them.
+  defp changed(dir, published) do
+    built = read_build(dir).plays
+    on_disk = MapSet.new(list_exported_codes(dir))
+
+    for play <- published,
+        MapSet.member?(on_disk, play.code),
+        built[play.code] != play.content_version,
+        do: play
+  end
+
+  @build "build.json"
+
+  # What build.json records: the fingerprint the site was built with (nil if unknown)
+  # and each play's content_version. No file, or one that cannot be read, records
+  # nothing, so the site and every play in it count as changed.
+  defp read_build(dir) do
+    with {:ok, json} <- File.read(Path.join(dir, @build)),
+         {:ok, %{"plays" => %{} = plays} = build} <- Jason.decode(json) do
+      %{site: build["site"], plays: plays}
+    else
+      _ -> %{site: nil, plays: %{}}
+    end
+  end
+
+  defp write_build(dir, fingerprint, plays) do
+    json = Jason.encode!(%{site: fingerprint, plays: plays}, pretty: true)
+    File.write!(Path.join(dir, @build), json)
   end
 
   defp remove_play_files(dir, code) do

@@ -26,12 +26,16 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   @doc "Loads play `id` and everything the site derives from it."
   def load(id) do
+    # The play first: its content_version is what build.json records, so content read
+    # after it can only be newer. A play edited mid-load stays flagged as changed, never
+    # published stale and recorded as current.
+    play = Catalogue.get_play_with_all!(id)
     divisions = PlayContent.load_play_content(id)
     items = Metrics.items(divisions)
     pages = pages(divisions, items)
 
     %__MODULE__{
-      play: Catalogue.get_play_with_all!(id),
+      play: play,
       characters: PlayContent.list_characters(id),
       divisions: divisions,
       stats: Statistics.get_statistics(id).data,
