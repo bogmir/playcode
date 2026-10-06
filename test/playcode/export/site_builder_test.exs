@@ -91,15 +91,29 @@ defmodule Playcode.Export.SiteBuilderTest do
            ]
   end
 
-  test "a generate queued behind an add rebuilds the site as it stands when it runs" do
+  # The site is current, so this Generate is incremental and keeps the add because it
+  # writes only what changed; the next test covers the full build.
+  test "an incremental generate queued behind an add keeps the add" do
+    [a, b, _never_published] = for _ <- 1..3, do: play_fixture(%{"is_complete" => true})
+    {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
+
+    assert :started = SiteBuilder.add(b.id, [])
+    assert :queued = SiteBuilder.generate(play_codes: [a.code])
+    events_until({:done, :generate})
+
+    assert in_site() == Enum.sort([a.code, b.code])
+  end
+
+  test "a full generate queued behind an add rebuilds the site as it stands when it runs" do
     [a, b, _never_published] = for _ <- 1..3, do: play_fixture(%{"is_complete" => true})
     {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
 
     assert :started = SiteBuilder.add(b.id, [])
     # The admin page used to send the plays it showed when clicked, before b landed;
-    # rebuilding from that list would delete b.
-    assert :queued = SiteBuilder.generate(play_codes: [a.code])
-    events_until({:done, :generate})
+    # rebuilding from that list would delete b. A new version makes the site changed,
+    # so this Generate rebuilds every play instead of refreshing.
+    assert :queued = SiteBuilder.generate(version: "2.0", play_codes: [a.code])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
 
     assert in_site() == Enum.sort([a.code, b.code])
   end
