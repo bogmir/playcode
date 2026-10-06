@@ -40,6 +40,8 @@ defmodule Playcode.Application do
       # The admin's static site: one process writes and ships it, its jobs run as tasks.
       {Task.Supervisor, name: Playcode.Export.SiteBuilder.Tasks},
       Playcode.Export.SiteBuilder,
+      # Tells the export pages when a play changes, as soon as the edit commits.
+      Playcode.Export.PlayChangeListener,
       # Start a worker by calling: Playcode.Worker.start_link(arg)
       # {Playcode.Worker, arg},
       # PDF generation via headless Chrome

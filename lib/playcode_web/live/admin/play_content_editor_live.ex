@@ -210,7 +210,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   def handle_event("delete_character", %{"id" => id}, socket) do
     character = PlayContent.get_character!(id)
     {:ok, _} = PlayContent.delete_character(character)
-    PlayContent.broadcast_content_changed(socket.assigns.play.id)
+    PlayContent.refresh_derived(socket.assigns.play.id)
 
     log_action(socket, "delete", "character", character.id, %{
       name: character.name,
@@ -304,7 +304,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       PlayContent.set_element_characters(speech_id, character_ids)
     end)
 
-    PlayContent.broadcast_content_changed(socket.assigns.play.id)
+    PlayContent.refresh_derived(socket.assigns.play.id)
 
     log_action(socket, "update", "element", nil, %{
       bulk: true,
@@ -332,7 +332,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       PlayContent.update_element(element, %{speaker_label: label})
     end)
 
-    PlayContent.broadcast_content_changed(socket.assigns.play.id)
+    PlayContent.refresh_derived(socket.assigns.play.id)
 
     {:noreply,
      socket
@@ -348,7 +348,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       PlayContent.update_element(element, %{speaker_label: nil})
     end)
 
-    PlayContent.broadcast_content_changed(socket.assigns.play.id)
+    PlayContent.refresh_derived(socket.assigns.play.id)
 
     {:noreply,
      socket
@@ -453,7 +453,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   def handle_event("delete_division", %{"id" => id}, socket) do
     division = PlayContent.get_division!(id)
     {:ok, _} = PlayContent.delete_division(division)
-    PlayContent.broadcast_content_changed(socket.assigns.play.id)
+    PlayContent.refresh_derived(socket.assigns.play.id)
 
     log_action(socket, "delete", "division", division.id, %{
       type: division.type,
@@ -630,7 +630,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
       case PlayContent.update_element(element, %{"content" => value}) do
         {:ok, _el} ->
-          PlayContent.broadcast_content_changed(socket.assigns.play.id)
+          PlayContent.refresh_derived(socket.assigns.play.id)
           log_action(socket, "update", "element", element.id, %{type: element.type, inline: true})
 
           {:noreply,
@@ -663,7 +663,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       PlayContent.shift_line_numbers_down(play_id, element.line_number)
     end
 
-    PlayContent.broadcast_content_changed(play_id)
+    PlayContent.refresh_derived(play_id)
     log_action(socket, "delete", "element", element.id, %{type: element.type})
 
     {:noreply,
@@ -715,7 +715,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       {:ok, _} = PlayContent.delete_element(element)
     end)
 
-    PlayContent.broadcast_content_changed(play_id)
+    PlayContent.refresh_derived(play_id)
 
     {:noreply,
      socket
@@ -786,7 +786,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     case result do
       {:ok, saved} ->
-        PlayContent.broadcast_content_changed(play.id)
+        PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
 
         log_action(socket, action, "character", saved.id, %{
@@ -825,7 +825,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     case result do
       {:ok, saved} ->
-        PlayContent.broadcast_content_changed(play.id)
+        PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
 
         log_action(socket, action, "division", saved.id, %{type: saved.type, number: saved.number})
@@ -881,7 +881,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           PlayContent.set_element_characters(el.id, character_ids)
         end
 
-        PlayContent.broadcast_content_changed(play.id)
+        PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
         log_action(socket, action, "element", el.id, %{type: el.type})
 

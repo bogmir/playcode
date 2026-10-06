@@ -480,7 +480,7 @@ Then visit:
 - [x] **Pagination** on catalogue pages (25/page public, 50/page admin) with URL-based navigation (`?page=N&search=query`); parent play field is now an autocomplete combobox
 - [x] ~~Install Typst~~ PDF export now uses ChromicPDF (requires Chrome/Chromium on the system)
 - [ ] **Stage direction navigator** (`« N / M »`) - client-side JS hook to scroll between stage directions in play text
-- [x] **Recompute statistics** - stats cache is invalidated automatically on every content change via `broadcast_content_changed/1` (lazy recompute on next access); one-time refresh: `Playcode.Repo.all(Playcode.Catalogue.Play) |> Enum.each(&Playcode.Statistics.recompute(&1.id))`
+- [x] **Recompute statistics** - stats cache is invalidated automatically on every content change via `PlayContent.refresh_derived/1` (lazy recompute on next access); one-time refresh: `Playcode.Repo.all(Playcode.Catalogue.Play) |> Enum.each(&Playcode.Statistics.recompute(&1.id))`
 
 ### Known Roundtrip Gaps
 - [x] **`Play.language` imported** from `<profileDesc><langUsage><language ident="xx-XX">` (e.g. "it-IT" → "it"); exported back as `<profileDesc><langUsage><language ident="...">` with label. Note: `xml:lang` on the root `<TEI>` element is always "es" in EMOTHE files (editorial platform language), NOT the play language — the play language lives in `profileDesc/langUsage`.

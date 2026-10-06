@@ -55,9 +55,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     save(view, %{"form" => "prose"})
     assert play.id |> Catalogue.get_play!() |> Play.form() == "prose"
 
-    # The content editor calls broadcast_content_changed/1 after every edit, which
-    # recomputes is_verse from the verse lines (this play has some, so automatic says
-    # "verse"); the curator's choice stands.
+    # The content editor calls refresh_derived/1 after every edit, which recomputes
+    # is_verse from the verse lines (this play has some, so automatic says "verse");
+    # the curator's choice stands.
     {:ok, _} =
       Playcode.PlayContent.create_element(%{
         play_id: play.id,
@@ -69,7 +69,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
         position: 99
       })
 
-    Playcode.PlayContent.broadcast_content_changed(play.id)
+    Playcode.PlayContent.refresh_derived(play.id)
 
     recomputed = Catalogue.get_play!(play.id)
     assert recomputed.is_verse

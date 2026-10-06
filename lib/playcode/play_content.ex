@@ -3,8 +3,9 @@ defmodule Playcode.PlayContent do
   The PlayContent context manages the structured content of plays:
   characters, divisions (acts/scenes), and elements (speeches, verses, stage directions).
 
-  Broadcasts `{:play_content_changed, play_id}` via PubSub whenever
-  content is mutated, so all subscribed LiveViews can react.
+  Every change to a play reaches `{:play_content_changed, play_id}` on its topic
+  (`subscribe/1`) once it commits, whoever made it: Postgres notifies `play_changed`
+  and `Playcode.Export.PlayChangeListener` calls `notify_changed/1`.
   """
 
   import Ecto.Query
@@ -18,12 +19,22 @@ defmodule Playcode.PlayContent do
     Phoenix.PubSub.subscribe(@pubsub, topic(play_id))
   end
 
-  @doc "Broadcast that a play's content has changed (stats, verse count, etc.)."
-  def broadcast_content_changed(play_id) do
-    # Recompute verse count in the DB before broadcasting
+  @doc """
+  Tells the play's subscribers that it changed. `Playcode.Export.PlayChangeListener`
+  calls it for every `play_changed` notification from Postgres, so every writer reaches
+  them, once its transaction commits.
+  """
+  def notify_changed(play_id) do
+    Phoenix.PubSub.broadcast(@pubsub, topic(play_id), {:play_content_changed, play_id})
+  end
+
+  @doc """
+  Refreshes what is derived from the content: the verse count and the cached statistics.
+  Call it after a content edit. Subscribers hear of the edit from Postgres, on commit.
+  """
+  def refresh_derived(play_id) do
     Playcode.Catalogue.update_verse_count(play_id)
     Playcode.Statistics.delete_statistics(play_id)
-    Phoenix.PubSub.broadcast(@pubsub, topic(play_id), {:play_content_changed, play_id})
   end
 
   defp topic(play_id), do: "play_content:#{play_id}"
