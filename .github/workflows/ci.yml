@@ -46,7 +46,7 @@ jobs:
 
       # The repository is in the key: compiled deps keep absolute paths (bupe reads its
       # templates from __DIR__), so a cache built under the old checkout path broke the
-      # EPUB export after the repo was renamed emothe -> playcode.
+      # EPUB export after the repo was renamed to playcode.
       - uses: actions/cache@v4
         with:
           path: |
