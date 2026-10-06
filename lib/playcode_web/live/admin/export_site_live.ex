@@ -277,15 +277,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
           </p>
 
           <div :if={@plays != []} class="divide-y divide-base-200">
-            <label
-              :for={play <- @plays}
-              id={"play-#{play.id}"}
-              class="flex cursor-pointer items-center gap-3 py-2"
-            >
-              <span class="min-w-0 flex-1">
+            <div :for={play <- @plays} id={"play-#{play.id}"} class="flex items-center gap-3 py-2">
+              <%!-- Only the name labels the switch: a label around Refresh would take it as its control. --%>
+              <label for={"switch-#{play.id}"} class="min-w-0 flex-1 cursor-pointer">
                 <span class="font-mono text-xs text-base-content/50">{play.code}</span>
                 <span class="font-medium ml-2 truncate">{play.title}</span>
-              </span>
+              </label>
               <span :if={stale?(play, @changed, @pending)} class="badge badge-warning badge-sm">
                 {gettext("Changed")}
               </span>
@@ -306,6 +303,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               />
               <%!-- On means in the site; flipping it adds or removes the play at once. --%>
               <input
+                id={"switch-#{play.id}"}
                 type="checkbox"
                 role="switch"
                 class="toggle toggle-success toggle-sm"
@@ -319,7 +317,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 phx-value-id={play.id}
                 phx-value-code={play.code}
               />
-            </label>
+            </div>
           </div>
         </div>
       </div>

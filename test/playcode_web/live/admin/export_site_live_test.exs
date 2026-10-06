@@ -283,6 +283,23 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Revised"
     end
 
+    # Looks at markup because LiveViewTest cannot click a label, and the bug is what the
+    # label's control is: a label with no `for` is tied to its first labelable descendant,
+    # and a button is one. Refresh before the switch took over the row's label, so a click
+    # on the play's title pressed Refresh instead of flipping the switch.
+    test "on a changed row the label targets the switch, and Refresh is outside it",
+         %{conn: conn, a: a} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert has_element?(lv, row(a), t("Changed"))
+
+      assert has_element?(lv, "#{row(a)} label[for='switch-#{a.id}']")
+      assert has_element?(lv, "#switch-#{a.id}")
+      refute has_element?(lv, "#{row(a)} label button")
+    end
+
     test "a change announced while the page is open flags the play at once",
          %{conn: conn, a: a} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
