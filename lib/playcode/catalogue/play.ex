@@ -43,6 +43,10 @@ defmodule Playcode.Catalogue.Play do
     # from every cast list so no form can archive a play.
     field :deleted_at, :utc_datetime
 
+    # Moved by Postgres whenever something this play's static pages show changes
+    # (migration 20261005120000_track_play_content_version). Never written from here.
+    field :content_version, :integer, writable: :never, read_after_writes: true
+
     belongs_to :parent_play, Playcode.Catalogue.Play, define_field: false
     has_many :derived_plays, Playcode.Catalogue.Play, foreign_key: :parent_play_id
 
