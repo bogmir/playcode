@@ -255,7 +255,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               </span>
             </div>
             <p class="text-xs text-base-content/50">
-              {generate_hint(@exported_codes, @site_changed, @changed)}
+              {generate_hint(@exported_codes, @site_changed, @changed, @plays)}
             </p>
           </form>
         </div>
@@ -565,8 +565,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp stale?(play, changed, pending),
     do: MapSet.member?(changed, play.code) and not Map.has_key?(pending, play.id)
 
-  # What Generate will do, under its button.
-  defp generate_hint(exported, site_changed?, changed) do
+  # What Generate will do, under its button. A play in the site but not in `plays`, the
+  # complete ones, is archived or no longer complete, and Generate takes it out.
+  defp generate_hint(exported, site_changed?, changed, plays) do
+    removed = MapSet.size(MapSet.difference(exported, MapSet.new(plays, & &1.code)))
+
     cond do
       MapSet.size(exported) == 0 ->
         gettext("Builds every complete play.")
@@ -574,16 +577,36 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       site_changed? ->
         gettext("Rebuilds the %{count} plays in the site.", count: MapSet.size(exported))
 
-      MapSet.size(changed) == 0 ->
+      MapSet.size(changed) == 0 and removed == 0 ->
         gettext("Every play in the site is up to date.")
 
       true ->
-        ngettext(
-          "One published play has changed. Generate refreshes it.",
-          "%{count} published plays have changed. Generate refreshes them.",
-          MapSet.size(changed)
-        )
+        Enum.join(changed_hint(MapSet.size(changed)) ++ removed_hint(removed), " ")
     end
+  end
+
+  defp changed_hint(0), do: []
+
+  defp changed_hint(count) do
+    [
+      ngettext(
+        "One published play has changed. Generate refreshes it.",
+        "%{count} published plays have changed. Generate refreshes them.",
+        count
+      )
+    ]
+  end
+
+  defp removed_hint(0), do: []
+
+  defp removed_hint(count) do
+    [
+      ngettext(
+        "One play in the site is no longer published. Generate takes it out.",
+        "%{count} plays in the site are no longer published. Generate takes them out.",
+        count
+      )
+    ]
   end
 
   defp done(socket, job, {:ok, %{plays: plays, size: size} = result})

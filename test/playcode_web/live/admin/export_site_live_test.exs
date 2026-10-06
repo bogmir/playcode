@@ -347,6 +347,37 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       refute has_element?(lv, row(a), t("Changed"))
     end
 
+    # Regression: the hint counted only the changed plays, and a play no longer published
+    # is not in the list either, so the page said the site was up to date.
+    test "a play in the site that is no longer published is announced",
+         %{conn: conn, a: a, b: b} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      {:ok, _} = Catalogue.delete_play(b)
+
+      removed =
+        n(
+          "One play in the site is no longer published. Generate takes it out.",
+          "%{count} plays in the site are no longer published. Generate takes them out.",
+          1
+        )
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert render(lv) =~ removed
+      refute render(lv) =~ t("Every play in the site is up to date.")
+
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert render(lv) =~ removed
+
+      assert render(lv) =~
+               n(
+                 "One published play has changed. Generate refreshes it.",
+                 "%{count} published plays have changed. Generate refreshes them.",
+                 1
+               )
+    end
+
     test "Generate with nothing changed says so", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       generate(lv)
