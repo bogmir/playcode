@@ -10,25 +10,22 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    plays = Playcode.Catalogue.list_plays(sort: :title_sort, complete: true)
     exported_codes = StaticSite.list_exported_codes(StaticSite.output_dir())
 
     socket =
       socket
+      |> load_plays()
       |> assign(:page_title, gettext("Export Static Site"))
       # The site's own version, so it is current for the form until someone changes it.
       |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
       |> assign(:base_url, "/")
       |> assign(:github_repo, "")
-      |> assign(:plays, plays)
       |> assign(:exported_codes, MapSet.new(exported_codes))
       |> assign(:pending, %{})
       |> assign(:changed, MapSet.new())
       |> assign(:site_changed, false)
       |> assign(:busy, false)
       |> assign(:indexing, false)
-      |> assign(:complete_count, length(plays))
-      |> assign(:total_count, Playcode.Catalogue.count_plays())
       |> assign(:generating, false)
       |> assign(:deploying, false)
       |> assign(:gen_current, 0)
@@ -79,12 +76,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   end
 
   # A switch with a change on its way is disabled, so this decides by what is on disk.
+  # Any play in the site can be switched off; only a published one can be switched on.
   def handle_event("toggle_play", %{"id" => id, "code" => code}, socket) do
     opts = form_opts(socket)
 
-    if MapSet.member?(socket.assigns.exported_codes, code),
-      do: SiteBuilder.remove(code, opts),
-      else: SiteBuilder.add(id, opts)
+    cond do
+      MapSet.member?(socket.assigns.exported_codes, code) -> SiteBuilder.remove(code, opts)
+      Enum.any?(socket.assigns.plays, &(&1.id == id)) -> SiteBuilder.add(id, opts)
+      true -> :not_published
+    end
 
     {:noreply, socket}
   end
@@ -147,7 +147,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   # Postgres says a play changed (Playcode.Export.PlayChangeListener). Any play: the
   # page reads again which of its plays changed.
-  def handle_info({:play_changed, _play_id}, socket), do: {:noreply, track_changes(socket)}
+  def handle_info({:play_changed, _play_id}, socket),
+    do: {:noreply, socket |> load_plays() |> track_changes()}
 
   @impl true
   def render(assigns) do
@@ -273,12 +274,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
           <p :if={@plays != []} class="text-sm text-base-content/60 mb-3">
             {gettext("%{exported} of %{total} complete plays exported",
-              exported: MapSet.size(@exported_codes),
+              exported: Enum.count(@plays, &MapSet.member?(@exported_codes, &1.code)),
               total: length(@plays)
             )}
           </p>
 
-          <div :if={@plays != []} class="divide-y divide-base-200">
+          <div class="divide-y divide-base-200">
             <div :for={play <- @plays} id={"play-#{play.id}"} class="flex items-center gap-3 py-2">
               <.status_dot status={
                 play_status(play, @exported_codes, @changed, @pending, @site_changed)
@@ -308,20 +309,38 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 class="loading loading-spinner loading-xs text-base-content/50"
               />
               <%!-- On means in the site; flipping it adds or removes the play at once. --%>
-              <input
-                id={"switch-#{play.id}"}
-                type="checkbox"
-                role="switch"
-                class="toggle toggle-success toggle-sm"
-                aria-label={gettext("In the site: %{title}", title: play.title)}
+              <.site_switch
+                play={play}
                 checked={
                   (MapSet.member?(@exported_codes, play.code) and @pending[play.id] != :remove) or
                     @pending[play.id] == :add
                 }
-                disabled={Map.has_key?(@pending, play.id)}
-                phx-click="toggle_play"
-                phx-value-id={play.id}
-                phx-value-code={play.code}
+                pending={Map.has_key?(@pending, play.id)}
+              />
+            </div>
+            <%!-- In the site but a draft or archived now: it stays until switched off or Generate. --%>
+            <div
+              :for={play <- leaving(@exported_codes, @plays, @others)}
+              id={"play-#{play.id || play.code}"}
+              class="flex items-center gap-3 py-2"
+            >
+              <.status_dot status={:leaving} />
+              <label
+                for={"switch-#{play.id || play.code}"}
+                class="min-w-0 flex-1 cursor-pointer text-base-content/50"
+              >
+                <span class="font-mono text-xs">{play.code}</span>
+                <span :if={play.title} class="ml-2 truncate">{play.title}</span>
+              </label>
+              <%!-- A removal is pending under the play's code: it is not among @plays. --%>
+              <span
+                :if={Map.has_key?(@pending, play.code)}
+                class="loading loading-spinner loading-xs text-base-content/50"
+              />
+              <.site_switch
+                play={play}
+                checked={@pending[play.code] != :remove}
+                pending={Map.has_key?(@pending, play.code)}
               />
             </div>
           </div>
@@ -601,8 +620,63 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       >
         <span class="sr-only">{gettext("Published and up to date")}</span>
       </span>
+      <span
+        :if={@status == :leaving}
+        class="block size-2 rounded-full border border-base-content/40"
+        title={gettext("No longer published (a draft or archived); Generate takes it out.")}
+      >
+        <span class="sr-only">
+          {gettext("No longer published (a draft or archived); Generate takes it out.")}
+        </span>
+      </span>
     </span>
     """
+  end
+
+  attr :play, :map, required: true
+  attr :checked, :boolean, required: true
+  attr :pending, :boolean, required: true
+
+  # A play that is gone from the database keeps its row by code until switched off.
+  defp site_switch(assigns) do
+    ~H"""
+    <input
+      id={"switch-#{@play.id || @play.code}"}
+      type="checkbox"
+      role="switch"
+      class="toggle toggle-success toggle-sm"
+      aria-label={gettext("In the site: %{title}", title: @play.title || @play.code)}
+      checked={@checked}
+      disabled={@pending}
+      phx-click="toggle_play"
+      phx-value-id={@play.id}
+      phx-value-code={@play.code}
+    />
+    """
+  end
+
+  # Every play, split: the published ones (complete, not archived) are the list; the
+  # others are kept by code, for the ones still in the site.
+  defp load_plays(socket) do
+    all = Playcode.Catalogue.list_plays(sort: :title_sort, include_deleted: true)
+    {plays, others} = Enum.split_with(all, &(&1.is_complete and is_nil(&1.deleted_at)))
+
+    assign(socket,
+      plays: plays,
+      others: Map.new(others, &{&1.code, &1}),
+      complete_count: length(plays),
+      total_count: Enum.count(all, &is_nil(&1.deleted_at))
+    )
+  end
+
+  # The plays in the site that are not published any more, by code; a purged one has
+  # no row left, only its code.
+  defp leaving(exported, plays, others) do
+    published = MapSet.new(plays, & &1.code)
+
+    for code <- Enum.sort(exported), not MapSet.member?(published, code) do
+      Map.get(others, code, %{id: nil, code: code, title: nil})
+    end
   end
 
   # What Generate will do, under its button. A play in the site but not in `plays`, the

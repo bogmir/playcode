@@ -58,6 +58,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
   # The green dot's screen-reader text: in the site and up to date.
   defp current?(lv, play), do: has_element?(lv, row(play), t("Published and up to date"))
 
+  # The hollow dot's screen-reader text: in the site, but a draft or archived now.
+  defp leaving?(lv, play),
+    do:
+      has_element?(
+        lv,
+        row(play),
+        t("No longer published (a draft or archived); Generate takes it out.")
+      )
+
   # ConnCase's t/2 is gettext/3, which cannot reach a plural entry.
   defp n(singular, plural, count),
     do: Gettext.ngettext(PlaycodeWeb.Gettext, singular, plural, count)
@@ -162,10 +171,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert response(preview(conn, "plays/#{b.code}/index.html"), 200)
   end
 
+  # The play is archived after the page drew it, and before the page heard of it: no
+  # notification commits in the sandbox. This used to push the event for a made-up id,
+  # which the page now refuses, since only a play it shows as published can be added.
   test "a play deleted since the page drew is skipped and says so", %{conn: conn} do
+    gone = play_fixture(%{"title" => "Delta Gone", "is_complete" => true})
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    {:ok, _} = Catalogue.delete_play(gone)
 
-    render_click(lv, "toggle_play", %{"id" => Ecto.UUID.generate(), "code" => "NOPE"})
+    lv |> element(switch(gone)) |> render_click()
 
     # ConnCase's t/2 is gettext/3, which cannot reach a plural entry: ask for its singular.
     skipped =
@@ -499,6 +513,63 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
       broadcast.({:site_builder, :failed, :rebuild, :killed})
       assert render(lv) =~ t("Generation failed: %{reason}", reason: ":killed")
+    end
+  end
+
+  describe "a play in the site that is no longer published" do
+    test "stays in the list, marked, until its switch takes it out", %{conn: conn, a: a, b: b} do
+      build_site([a.code, b.code])
+      {:ok, _} = Catalogue.update_play(b, %{"is_complete" => false})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+      assert leaving?(lv, b)
+      refute current?(lv, b)
+
+      assert render(lv) =~
+               t("%{exported} of %{total} complete plays exported", exported: 1, total: 1)
+
+      lv |> element(switch(b)) |> render_click()
+      wait_for(fn -> render(lv) =~ t("Removed %{code} from static site.", code: b.code) end)
+
+      refute has_element?(lv, row(b))
+      assert StaticSite.list_exported_codes(StaticSite.output_dir()) == [a.code]
+    end
+
+    test "is marked as soon as it is set to draft", %{conn: conn, a: a, b: b} do
+      build_site([a.code, b.code])
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert current?(lv, b)
+
+      {:ok, _} = Catalogue.update_play(b, %{"is_complete" => false})
+      # What Playcode.Export.PlayChangeListener sends when the edit commits.
+      Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, b.id})
+
+      assert leaving?(lv, b)
+      refute current?(lv, b)
+    end
+
+    test "a play marked complete while the page is open joins the list at once",
+         %{conn: conn} do
+      delta = play_fixture(%{"title" => "Delta Draft"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      refute has_element?(lv, row(delta))
+
+      {:ok, _} = Catalogue.update_play(delta, %{"is_complete" => true})
+      Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, delta.id})
+
+      assert has_element?(lv, switch(delta))
+    end
+
+    # The switch's event names any play; the page offers switching on only to
+    # published ones, so a draft must not get in by a hand-made event.
+    test "the switch event cannot put a draft in the site", %{conn: conn} do
+      draft = play_fixture(%{"title" => "Delta Draft"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+      render_hook(lv, "toggle_play", %{"id" => draft.id, "code" => draft.code})
+      await_idle_builder()
+
+      refute draft.code in StaticSite.list_exported_codes(StaticSite.output_dir())
     end
   end
 end

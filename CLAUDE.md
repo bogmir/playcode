@@ -318,7 +318,7 @@ _site/
 
 ### Usage
 
-**Admin UI**: `GET /admin/export` (`PlaycodeWeb.Admin.ExportSiteLive`) — configure version, base URL, GitHub repo; Generate brings the site up to date (only the changed plays, unless the site's code or settings changed), Rebuild everything rebuilds it whole; each changed play shows an amber dot and an icon-only Refresh button, except while the whole site changed, when only the banner shows and Rebuild everything is hidden; download as .zip or deploy to GitHub Pages.
+**Admin UI**: `GET /admin/export` (`PlaycodeWeb.Admin.ExportSiteLive`) — configure version, base URL, GitHub repo; Generate brings the site up to date (only the changed plays, unless the site's code or settings changed), Rebuild everything rebuilds it whole; each play in the site shows a green dot when up to date and an amber dot plus an icon-only Refresh button when changed, except while the whole site changed, when only the banner shows and Rebuild everything is hidden; a play still in the site but now a draft or archived keeps a muted row with a hollow dot until its switch takes it out (or Generate does), and the switch can only add published plays; the list follows `play_changed`, so a play set to draft or marked complete moves at once; download as .zip or deploy to GitHub Pages.
 
 **Mix task**:
 ```bash
