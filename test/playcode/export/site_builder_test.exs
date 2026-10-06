@@ -10,6 +10,7 @@ defmodule Playcode.Export.SiteBuilderTest do
   import Playcode.TestFixtures
   import Playcode.StaticSiteHelpers
 
+  alias Playcode.Catalogue
   alias Playcode.Export.{SiteBuilder, StaticSite}
 
   setup do
@@ -189,5 +190,75 @@ defmodule Playcode.Export.SiteBuilderTest do
     assert SiteBuilder.status() == %{job: nil, queue: []}
     assert Process.whereis(SiteBuilder) == builder
     refute_receive {:site_builder, _, _, _}
+  end
+
+  # Rewriting a play deletes its folder first, so a file planted there says whether the
+  # play was written again. File times have one-second resolution, too coarse here.
+  defp sentinel(play), do: Path.join([StaticSite.output_dir(), "plays", play.code, "sentinel"])
+  defp plant(play), do: File.write!(sentinel(play), "")
+  defp rewritten?(play), do: not File.exists?(sentinel(play))
+
+  defp complete_plays(n), do: for(_ <- 1..n, do: play_fixture(%{"is_complete" => true}))
+
+  test "Generate rewrites only the plays that changed since the last build" do
+    [a, b] = complete_plays(2)
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
+    Enum.each([a, b], &plant/1)
+
+    {:ok, _} = Catalogue.update_play(a, %{"title" => "Revised"})
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 1, skipped: []}}}, 10_000
+
+    assert rewritten?(a)
+    refute rewritten?(b)
+    assert read!(StaticSite.output_dir(), "plays/#{a.code}/index.html") =~ "Revised"
+  end
+
+  test "Generate with nothing changed writes nothing" do
+    [a] = complete_plays(1)
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+    plant(a)
+
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 0, skipped: []}}}, 10_000
+    refute rewritten?(a)
+  end
+
+  test "Generate takes out the plays archived or no longer complete since the last build" do
+    [archived, draft, kept] = complete_plays(3)
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 3}}}, 10_000
+
+    {:ok, _} = Catalogue.delete_play(archived)
+    {:ok, _} = Catalogue.update_play(draft, %{"is_complete" => false})
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 2}}}, 10_000
+
+    assert in_site() == [kept.code]
+    assert in_search() == [kept.code]
+  end
+
+  test "Generate rebuilds every play when the site's settings changed" do
+    [a] = complete_plays(1)
+    assert :started = SiteBuilder.generate(version: "1.0")
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+    plant(a)
+
+    assert :started = SiteBuilder.generate(version: "2.0")
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+    assert rewritten?(a)
+  end
+
+  test "Rebuild rewrites every play though nothing changed" do
+    [a] = complete_plays(1)
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+    plant(a)
+
+    assert :started = SiteBuilder.rebuild([])
+    assert_receive {:site_builder, :done, :rebuild, {:ok, %{plays: 1}}}, 10_000
+    assert rewritten?(a)
   end
 end
