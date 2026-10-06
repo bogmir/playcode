@@ -11,7 +11,40 @@ defmodule Playcode.Export.PlayChangeListenerTest do
 
   alias Ecto.Adapters.SQL.Sandbox
   alias Playcode.{Catalogue, PlayContent}
-  alias Playcode.Export.SiteBuilder
+  alias Playcode.Export.{PlayChangeListener, SiteBuilder}
+
+  # Regression: init/1 waited for LISTEN, which waits for the connect, so a database
+  # that accepts the connection and never answers stopped the app booting after 5 s.
+  # The database is a local socket that accepts and never replies.
+  test "starts at once though the database never answers" do
+    {:ok, server} = :gen_tcp.listen(0, [:binary, active: false, ip: {127, 0, 0, 1}])
+    {:ok, port} = :inet.port(server)
+
+    acceptor =
+      spawn(fn ->
+        _ = :gen_tcp.accept(server)
+        Process.sleep(:infinity)
+      end)
+
+    on_exit(fn ->
+      Process.exit(acceptor, :kill)
+      :gen_tcp.close(server)
+    end)
+
+    {micros, result} =
+      :timer.tc(fn ->
+        PlayChangeListener.start_link(name: nil, hostname: "127.0.0.1", port: port)
+      end)
+
+    assert {:ok, listener} = result
+    assert micros < 1_000_000
+
+    # Past the API, for a quiet cleanup: killing its connection, the other process it is
+    # linked to, takes both down now. Left alone, the connection logs a failed connect.
+    Process.unlink(listener)
+    {:links, links} = Process.info(listener, :links)
+    Enum.each(links -- [self()], &Process.exit(&1, :kill))
+  end
 
   test "a committed edit to a play is announced on the static_site topic" do
     SiteBuilder.subscribe()

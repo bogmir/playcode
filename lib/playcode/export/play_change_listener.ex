@@ -26,20 +26,35 @@ defmodule Playcode.Export.PlayChangeListener do
 
   @window 200
 
-  def start_link(_), do: GenServer.start_link(__MODULE__, nil, name: __MODULE__)
+  @doc """
+  `opts`: `:name` (this module by default, nil for none) and connection options that
+  override the Repo's.
+  """
+  def start_link(opts) do
+    {name, overrides} = Keyword.pop(opts, :name, __MODULE__)
+    GenServer.start_link(__MODULE__, overrides, name: name)
+  end
 
   @impl true
-  def init(nil) do
+  def init(overrides) do
     # Its own connection, outside the pool: LISTEN holds it for good. It connects in the
     # background and reconnects after a drop, so the app starts without the database,
     # as the Repo does.
     {:ok, conn} =
       Playcode.Repo.config()
       |> Keyword.merge(sync_connect: false, auto_reconnect: true)
+      |> Keyword.merge(overrides)
       |> Notifications.start_link()
 
-    {_ok_or_eventually, _ref} = Notifications.listen(conn, "play_changed")
-    {:ok, MapSet.new()}
+    {:ok, MapSet.new(), {:continue, {:listen, conn}}}
+  end
+
+  # LISTEN is answered only once the connect ends, up to Postgrex's 15 s connect timeout
+  # against a database that never replies, so it waits here, after init/1 has returned.
+  @impl true
+  def handle_continue({:listen, conn}, pending) do
+    {_ok_or_eventually, _ref} = Notifications.listen(conn, "play_changed", timeout: :infinity)
+    {:noreply, pending}
   end
 
   # `pending` is the play ids heard since the window opened. The first one opens it.
