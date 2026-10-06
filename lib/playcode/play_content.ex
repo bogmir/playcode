@@ -19,6 +19,9 @@ defmodule Playcode.PlayContent do
     Phoenix.PubSub.subscribe(@pubsub, topic(play_id))
   end
 
+  @doc "Stop the calling process's content-change events for this play."
+  def unsubscribe(play_id), do: Phoenix.PubSub.unsubscribe(@pubsub, topic(play_id))
+
   @doc """
   Tells the play's subscribers that it changed. `Playcode.Export.PlayChangeListener`
   calls it for every `play_changed` notification from Postgres, so every writer reaches
@@ -29,13 +32,11 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Refreshes what is derived from the content: the verse count and the cached statistics.
-  Call it after a content edit. Subscribers hear of the edit from Postgres, on commit.
+  Refreshes what is derived from the content and stored on the play: its verse count.
+  Call it after a content edit. Subscribers hear of the edit from Postgres, on commit;
+  the cached statistics go stale by themselves, with the play's `content_version`.
   """
-  def refresh_derived(play_id) do
-    Playcode.Catalogue.update_verse_count(play_id)
-    Playcode.Statistics.delete_statistics(play_id)
-  end
+  def refresh_derived(play_id), do: Playcode.Catalogue.update_verse_count(play_id)
 
   defp topic(play_id), do: "play_content:#{play_id}"
 

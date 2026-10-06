@@ -26,6 +26,34 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     refute html =~ beta.title
   end
 
+  # Reads PubSub's registry, past the page: how often the list listens to a play does not
+  # show on it, but each extra subscription reloaded the whole list once more per edit,
+  # and every page change or search added one.
+  test "the list listens once to each play it shows, and stops for plays it no longer shows",
+       %{conn: conn} do
+    alpha = play_fixture(%{"title" => "Alpha Tragedy"})
+    beta = play_fixture(%{"title" => "Beta Comedy"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+    search = fn term ->
+      view |> element("form[phx-change=search]") |> render_change(%{"search" => term})
+    end
+
+    subscriptions = fn play ->
+      Playcode.PubSub
+      |> Registry.lookup("play_content:#{play.id}")
+      |> Enum.count(fn {pid, _} -> pid == view.pid end)
+    end
+
+    search.("Alpha")
+    search.("")
+    assert subscriptions.(alpha) == 1
+    assert subscriptions.(beta) == 1
+
+    search.("Alpha")
+    assert subscriptions.(beta) == 0
+  end
+
   test "each row says whether the play is a draft or complete, and follows a status change",
        %{conn: conn} do
     play = play_fixture()

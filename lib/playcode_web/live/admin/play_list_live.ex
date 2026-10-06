@@ -15,7 +15,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
      |> assign(:plays, [])
      |> assign(:search, "")
      |> assign(:page, 1)
-     |> assign(:total_pages, 1)}
+     |> assign(:total_pages, 1)
+     |> assign(:listening, MapSet.new())}
   end
 
   @impl true
@@ -36,9 +37,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         archived: archived
       )
 
-    if connected?(socket) do
-      for play <- plays, do: PlayContent.subscribe(play.id)
-    end
+    socket = if connected?(socket), do: listen_to(socket, plays), else: socket
 
     {:noreply,
      socket
@@ -109,6 +108,19 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   @impl true
   def handle_info({:play_content_changed, _play_id}, socket) do
     {:noreply, reload(socket)}
+  end
+
+  # Listens once to each play shown, and stops for the ones no longer shown. Subscribing
+  # again on every params change stacked subscriptions, and each copy reloaded the list
+  # once more per edit.
+  defp listen_to(socket, plays) do
+    shown = MapSet.new(plays, & &1.id)
+    listening = socket.assigns.listening
+
+    for id <- MapSet.difference(listening, shown), do: PlayContent.unsubscribe(id)
+    for id <- MapSet.difference(shown, listening), do: PlayContent.subscribe(id)
+
+    assign(socket, :listening, shown)
   end
 
   defp parse_page(nil), do: 1

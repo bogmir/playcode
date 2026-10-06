@@ -288,6 +288,36 @@ defmodule Playcode.StatisticsTest do
     end
   end
 
+  # A delete was the only invalidation, so statistics computed from the old text and
+  # stored after an edit committed outlived it, and were published as current. Any edit
+  # moves the play's content_version; a row cached under another version is stale.
+  test "statistics cached before an edit are recomputed after it, with nothing deleted" do
+    %{play: play, line_group: line_group, scene: scene} =
+      TestFixtures.play_with_structure_fixture()
+
+    assert Statistics.get_statistics(play.id).data["total_verses"] == 1
+
+    # Postgres moves a play's version once per transaction, and the sandbox runs the
+    # whole test in one; this stands in for the commit before the edit. It reaches past
+    # the contexts because nothing outside the database can end a transaction here.
+    Playcode.Repo.query!(
+      "UPDATE plays SET content_txid = NULL WHERE content_txid = txid_current()"
+    )
+
+    {:ok, _new_verse} =
+      PlayContent.create_element(%{
+        play_id: play.id,
+        division_id: scene.id,
+        parent_id: line_group.id,
+        type: "verse_line",
+        content: "New line",
+        line_number: 10,
+        position: 10
+      })
+
+    assert Statistics.get_statistics(play.id).data["total_verses"] == 2
+  end
+
   test "recompute/1 refreshes cached statistics after content changes" do
     %{play: play, line_group: line_group, scene: scene} =
       TestFixtures.play_with_structure_fixture()

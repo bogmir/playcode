@@ -238,8 +238,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 <span :if={@generating} class="loading loading-spinner loading-sm"></span>
                 {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
               </button>
+              <%!-- Hidden while the site changed as a whole: Generate rebuilds it all then. --%>
               <button
-                :if={MapSet.size(@exported_codes) > 0}
+                :if={MapSet.size(@exported_codes) > 0 and not @site_changed}
                 type="button"
                 phx-click="rebuild"
                 class="btn btn-outline"
@@ -279,24 +280,28 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
           <div :if={@plays != []} class="divide-y divide-base-200">
             <div :for={play <- @plays} id={"play-#{play.id}"} class="flex items-center gap-3 py-2">
+              <.status_dot status={
+                play_status(play, @exported_codes, @changed, @pending, @site_changed)
+              } />
               <%!-- Only the name labels the switch: a label around Refresh would take it as its control. --%>
               <label for={"switch-#{play.id}"} class="min-w-0 flex-1 cursor-pointer">
                 <span class="font-mono text-xs text-base-content/50">{play.code}</span>
                 <span class="font-medium ml-2 truncate">{play.title}</span>
               </label>
-              <span :if={stale?(play, @changed, @pending)} class="badge badge-warning badge-sm">
-                {gettext("Changed")}
-              </span>
               <button
-                :if={stale?(play, @changed, @pending)}
+                :if={
+                  play_status(play, @exported_codes, @changed, @pending, @site_changed) ==
+                    :changed
+                }
+                id={"refresh-#{play.id}"}
                 type="button"
                 phx-click="refresh_play"
                 phx-value-id={play.id}
-                class="btn btn-ghost btn-xs"
+                class="btn btn-ghost btn-xs btn-square"
+                title={gettext("Publish this play's changes")}
                 aria-label={gettext("Refresh %{title}", title: play.title)}
               >
                 <.icon name="hero-arrow-path-mini" class="size-4" />
-                {gettext("Refresh")}
               </button>
               <span
                 :if={Map.has_key?(@pending, play.id)}
@@ -564,9 +569,41 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     )
   end
 
-  # Flagged while it differs from its pages and no change of it is on its way.
-  defp stale?(play, changed, pending),
-    do: MapSet.member?(changed, play.code) and not Map.has_key?(pending, play.id)
+  # A play in the site is :changed while it differs from its pages, :current otherwise.
+  # Nothing while a change of it is on its way (the spinner shows), and nothing for any
+  # play while the whole site changed: the banner covers them all, and none is current.
+  defp play_status(play, exported, changed, pending, site_changed?) do
+    cond do
+      site_changed? or Map.has_key?(pending, play.id) -> nil
+      MapSet.member?(changed, play.code) -> :changed
+      MapSet.member?(exported, play.code) -> :current
+      true -> nil
+    end
+  end
+
+  attr :status, :atom, required: true
+
+  # A fixed-width slot, so every row's name lines up, dot or not.
+  defp status_dot(assigns) do
+    ~H"""
+    <span class="size-2 shrink-0">
+      <span
+        :if={@status == :changed}
+        class="block size-2 rounded-full bg-warning"
+        title={gettext("Unpublished changes")}
+      >
+        <span class="sr-only">{gettext("Unpublished changes")}</span>
+      </span>
+      <span
+        :if={@status == :current}
+        class="block size-2 rounded-full bg-success"
+        title={gettext("Published and up to date")}
+      >
+        <span class="sr-only">{gettext("Published and up to date")}</span>
+      </span>
+    </span>
+    """
+  end
 
   # What Generate will do, under its button. A play in the site but not in `plays`, the
   # complete ones, is archived or no longer complete, and Generate takes it out.

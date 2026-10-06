@@ -52,6 +52,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
   defp row(play), do: "#play-#{play.id}"
 
+  # The dot's screen-reader text: the row says the play has unpublished changes.
+  defp flagged?(lv, play), do: has_element?(lv, row(play), t("Unpublished changes"))
+
+  # The green dot's screen-reader text: in the site and up to date.
+  defp current?(lv, play), do: has_element?(lv, row(play), t("Published and up to date"))
+
   # ConnCase's t/2 is gettext/3, which cannot reach a plural entry.
   defp n(singular, plural, count),
     do: Gettext.ngettext(PlaycodeWeb.Gettext, singular, plural, count)
@@ -270,13 +276,13 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
          %{conn: conn, a: a, b: b} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       generate(lv)
-      refute has_element?(lv, row(a), t("Changed"))
+      refute flagged?(lv, a)
 
       {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
 
-      assert has_element?(lv, row(a), t("Changed"))
-      refute has_element?(lv, row(b), t("Changed"))
+      assert flagged?(lv, a)
+      refute flagged?(lv, b)
 
       assert render(lv) =~
                n(
@@ -285,10 +291,10 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
                  1
                )
 
-      lv |> element("#{row(a)} button", t("Refresh")) |> render_click()
+      lv |> element("#refresh-#{a.id}") |> render_click()
       wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
 
-      refute has_element?(lv, row(a), t("Changed"))
+      refute flagged?(lv, a)
       assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Revised"
     end
 
@@ -302,11 +308,52 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       generate(lv)
       {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert has_element?(lv, row(a), t("Changed"))
+      assert flagged?(lv, a)
 
       assert has_element?(lv, "#{row(a)} label[for='switch-#{a.id}']")
       assert has_element?(lv, "#switch-#{a.id}")
       refute has_element?(lv, "#{row(a)} label button")
+    end
+
+    test "a play in the site and up to date has a green dot; one outside it has none",
+         %{conn: conn, a: a, b: b} do
+      build_site([a.code])
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+      assert current?(lv, a)
+      refute current?(lv, b)
+      refute flagged?(lv, b)
+    end
+
+    test "a changed play shows a dot and an icon-only Refresh", %{conn: conn, a: a} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+      assert flagged?(lv, a)
+      refute current?(lv, a)
+      assert has_element?(lv, "#refresh-#{a.id}")
+      refute has_element?(lv, "#refresh-#{a.id}", t("Refresh"))
+    end
+
+    # The banner and Generate already say every play will be rebuilt: a dot and a
+    # Refresh on each row, and a Rebuild button that does what Generate does, are noise.
+    test "while the whole site is out of date, no row is flagged on its own",
+         %{conn: conn, a: a, b: b} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert flagged?(lv, a)
+
+      set_version(lv, "9.9")
+
+      assert has_element?(lv, "#site-changed")
+      refute flagged?(lv, a)
+      refute current?(lv, b)
+      refute has_element?(lv, "#refresh-#{a.id}")
+      refute has_element?(lv, "button", t("Rebuild everything"))
     end
 
     test "a change announced while the page is open flags the play at once",
@@ -314,21 +361,21 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       generate(lv)
       {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      refute has_element?(lv, row(a), t("Changed"))
+      refute flagged?(lv, a)
 
       # What Playcode.Export.PlayChangeListener sends when the edit commits.
       Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, a.id})
-      assert has_element?(lv, row(a), t("Changed"))
+      assert flagged?(lv, a)
     end
 
     # Broadcasts what the builder would: between a batch's :published and its :done,
     # build.json still records the play's old version, and clicks cannot stop there.
-    test "a refreshed play loses its Changed badge once its pages are published",
+    test "a refreshed play loses its dot once its pages are published",
          %{conn: conn, a: a} do
       build_site([a.code])
       {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert has_element?(lv, row(a), t("Changed"))
+      assert flagged?(lv, a)
 
       Phoenix.PubSub.broadcast(
         Playcode.PubSub,
@@ -336,7 +383,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
         {:site_builder, :published, {:batch, [{:add, a.id}]}}
       )
 
-      refute has_element?(lv, row(a), t("Changed"))
+      refute flagged?(lv, a)
     end
 
     # Review Focus 5.
@@ -350,7 +397,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
         {:play_changed, Ecto.UUID.generate()}
       )
 
-      refute has_element?(lv, row(a), t("Changed"))
+      refute flagged?(lv, a)
     end
 
     test "Generate refreshes only the changed plays and says how many", %{conn: conn, a: a} do
@@ -362,7 +409,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       wait_for(fn -> render(lv) =~ n("One play refreshed.", "%{count} plays refreshed.", 1) end)
 
       assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Revised"
-      refute has_element?(lv, row(a), t("Changed"))
+      refute flagged?(lv, a)
     end
 
     # Regression: the hint counted only the changed plays, and a play no longer published

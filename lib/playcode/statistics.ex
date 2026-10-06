@@ -5,6 +5,7 @@ defmodule Playcode.Statistics do
 
   import Ecto.Query
   alias Playcode.Repo
+  alias Playcode.Catalogue.Play
   alias Playcode.Statistics.PlayStatistic
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Division, Element, ElementCharacter}
@@ -14,26 +15,34 @@ defmodule Playcode.Statistics do
   # recomputed on its next read, so no migration or manual recompute is needed.
   @version 2
 
+  # A cached row is current only for the play's content_version it was computed at:
+  # Postgres moves that version on every edit to the play's text, so no edit has to
+  # remember to invalidate the cache, and a row a concurrent read stored from the old
+  # text after an edit committed is never served.
   def get_statistics(play_id) do
+    content_version = content_version(play_id)
+
     case Repo.get_by(PlayStatistic, play_id: play_id) do
-      %PlayStatistic{data: %{"version" => @version}} = stat -> stat
-      _missing_or_stale -> compute_and_store(play_id)
+      %PlayStatistic{data: %{"version" => @version, "content_version" => ^content_version}} =
+          stat ->
+        stat
+
+      _missing_or_stale ->
+        compute_and_store(play_id, content_version)
     end
   end
 
   def recompute(play_id) do
-    compute_and_store(play_id)
+    compute_and_store(play_id, content_version(play_id))
   end
 
-  def delete_statistics(play_id) do
-    case Repo.get_by(PlayStatistic, play_id: play_id) do
-      nil -> :ok
-      stat -> Repo.delete(stat)
-    end
-  end
+  defp content_version(play_id),
+    do: Repo.one(from p in Play, where: p.id == ^play_id, select: p.content_version)
 
-  defp compute_and_store(play_id) do
-    data = compute(play_id)
+  # The version is read before the content, so an edit that commits mid-compute leaves
+  # this row older than the play, and the next read computes again.
+  defp compute_and_store(play_id, content_version) do
+    data = play_id |> compute() |> Map.put("content_version", content_version)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
     attrs = %{play_id: play_id, data: data, computed_at: now}
