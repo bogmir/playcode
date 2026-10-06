@@ -234,10 +234,30 @@ defmodule Playcode.Export.SiteBuilderTest do
     assert :started = SiteBuilder.generate([])
     assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
     plant(a)
+    # A batch rewrites the shared assets, whatever it changes.
+    assets = Path.join([StaticSite.output_dir(), "assets", "sentinel"])
+    File.write!(assets, "")
 
     assert :started = SiteBuilder.generate([])
     assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 0, skipped: []}}}, 10_000
     refute rewritten?(a)
+    assert File.exists?(assets)
+  end
+
+  # Regression: the last switch turned off left build.json's fingerprint, so Generate
+  # found the site current and left it empty, under a hint that said it builds every
+  # complete play.
+  test "Generate builds every complete play in a site emptied with the switches" do
+    [a, b] = complete_plays(2)
+    assert :started = SiteBuilder.add(a.id, [])
+    assert_receive {:site_builder, :done, {:batch, [{:add, _}]}, {:ok, _}}, 10_000
+    assert :started = SiteBuilder.remove(a.code, [])
+    assert_receive {:site_builder, :done, {:batch, [{:remove, _}]}, {:ok, _}}, 10_000
+    assert in_site() == []
+
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
+    assert in_site() == Enum.sort([a.code, b.code])
   end
 
   test "Generate takes out the plays archived or no longer complete since the last build" do

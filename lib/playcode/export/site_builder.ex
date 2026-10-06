@@ -39,7 +39,7 @@ defmodule Playcode.Export.SiteBuilder do
 
   @doc """
   Brings the site up to date. When its code or settings changed since it was built
-  (`StaticSite.site_changed?/2`), or there is none, every play in it is rebuilt (every
+  (`StaticSite.site_changed?/2`), or it holds no play, every play in it is rebuilt (every
   complete play if it is empty) and the result is `StaticSite.generate/1`'s. Otherwise
   only the plays that changed are written again and the ones no longer published taken
   out, in one batch, and the result is `{:ok, %{changed: count, skipped: [play_id]}}`.
@@ -130,8 +130,12 @@ defmodule Playcode.Export.SiteBuilder do
   defp change?({:remove, _}), do: true
   defp change?(_request), do: false
 
+  # An empty site gets every complete play, whatever build.json says: the last switch
+  # turned off leaves it the fingerprint of a site that is gone.
   defp run(:generate, opts) do
-    if StaticSite.site_changed?(StaticSite.output_dir(), opts),
+    dir = StaticSite.output_dir()
+
+    if StaticSite.site_changed?(dir, opts) or StaticSite.list_exported_codes(dir) == [],
       do: build_all(:generate, opts),
       else: refresh(opts)
   end
