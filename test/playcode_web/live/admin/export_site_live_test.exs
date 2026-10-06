@@ -321,6 +321,24 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       assert has_element?(lv, row(a), t("Changed"))
     end
 
+    # Broadcasts what the builder would: between a batch's :published and its :done,
+    # build.json still records the play's old version, and clicks cannot stop there.
+    test "a refreshed play loses its Changed badge once its pages are published",
+         %{conn: conn, a: a} do
+      build_site([a.code])
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert has_element?(lv, row(a), t("Changed"))
+
+      Phoenix.PubSub.broadcast(
+        Playcode.PubSub,
+        "static_site",
+        {:site_builder, :published, {:batch, [{:add, a.id}]}}
+      )
+
+      refute has_element?(lv, row(a), t("Changed"))
+    end
+
     # Review Focus 5.
     test "a change to a play that no longer exists flags nothing", %{conn: conn, a: a} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")

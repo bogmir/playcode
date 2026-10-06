@@ -517,11 +517,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   # A batch's pages are published: its switches settle on what is on disk.
   # Only the marks the batch fulfilled: a play switched the other way since stays pending.
+  # The plays it wrote are current, though build.json says so only once it is :done.
   defp settle(socket, changes) do
     landed = Map.new(changes, &{change_id(socket, &1), direction(&1)})
+    written = for play <- socket.assigns.plays, landed[play.id] == :add, do: play.code
 
     socket
     |> update(:pending, &Map.reject(&1, fn {id, change} -> landed[id] == change end))
+    |> update(:changed, &MapSet.difference(&1, MapSet.new(written)))
     |> assign(:exported_codes, on_disk())
   end
 
