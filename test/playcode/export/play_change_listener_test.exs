@@ -44,4 +44,33 @@ defmodule Playcode.Export.PlayChangeListenerTest do
       end
     end)
   end
+
+  # A bulk edit commits one transaction per row, so Postgres sends one notification per
+  # row. Each relay makes the content editor reload five lists; a hundred of them queue
+  # up ahead of the user's next click. The listener sends each play once per window.
+  # No commit needed: the listener is handed the notifications Postgres would send.
+  test "notifications for one play within a window are relayed once, on both topics" do
+    [bulk, other] = [Ecto.UUID.generate(), Ecto.UUID.generate()]
+    SiteBuilder.subscribe()
+    PlayContent.subscribe(bulk)
+    PlayContent.subscribe(other)
+
+    listener = Process.whereis(Playcode.Export.PlayChangeListener)
+
+    for id <- [bulk, bulk, other, bulk] do
+      send(listener, {:notification, self(), make_ref(), "play_changed", id})
+    end
+
+    assert_receive {:play_changed, ^bulk}, 1_000
+    assert_receive {:play_changed, ^other}, 1_000
+    assert_receive {:play_content_changed, ^bulk}, 1_000
+    assert_receive {:play_content_changed, ^other}, 1_000
+
+    # Well past the window: no id arrives a second time. Pinned to ours, because the
+    # purge in another test's cleanup may relay its own play just after that test ends.
+    for id <- [bulk, other] do
+      refute_receive {:play_changed, ^id}, 500
+      refute_receive {:play_content_changed, ^id}, 100
+    end
+  end
 end
