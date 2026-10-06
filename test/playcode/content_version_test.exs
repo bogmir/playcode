@@ -95,6 +95,19 @@ defmodule Playcode.ContentVersionTest do
     assert Enum.zip_with(plays, before, &(version(&1) > &2)) == [true, true, false]
   end
 
+  # The other way round: the original's title page lists its translations.
+  test "a change to a translation's own fields moves its original" do
+    %{original: original, translation: translation} = translation_family_fixture()
+    unrelated = play_fixture()
+    plays = [original, translation, unrelated]
+
+    next_transaction()
+    before = Enum.map(plays, &version/1)
+    {:ok, _} = Catalogue.update_play(translation, %{"title" => "New title"})
+
+    assert Enum.zip_with(plays, before, &(version(&1) > &2)) == [true, true, false]
+  end
+
   # Only a play's own row shows on its relatives' title pages.
   test "an edit to a play's text moves that play and no other" do
     %{original: original, translation: translation} = translation_family_fixture()
