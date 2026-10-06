@@ -123,11 +123,13 @@ lib/
 │       ├── epub.ex                   # EPUB 3 generation via BUPE
 │       ├── compare_html.ex           # Standalone comparison HTML with sync scroll
 │       ├── site_builder.ex           # The one process that writes and ships the admin's site
+│       ├── play_change_listener.ex   # Relays Postgres's play_changed notifications to the export page and the play's topic
 │       └── static_site.ex            # Static site orchestrator
 │           ├── edition.ex            # One play prepared: pages, anchors, refs, split-verse ghosts
 │           ├── pages.ex              # embed_templates "pages/*" → HTML strings
 │           ├── components.ex         # Shell, rail, play text, charts, catalogue entry
 │           ├── search.ex             # Normaliser + full-text index writer
+│           ├── fingerprint.ex        # One hash of the code, assets and settings the pages are built with
 │           └── deployer.ex           # GitHub Pages deployment
 └── playcode_web/
     ├── router.ex
@@ -167,6 +169,7 @@ All tables use UUID primary keys. Key relationships:
 - `users` - email/password auth with role (`:admin`, `:researcher`), `confirmed_at`, `deactivated_at`; `hashed_password` is nullable because an invited account has no password yet
 - `users_tokens` - session tokens (with `ip_address`/`user_agent`), invite and password-reset tokens. There is no self-service email change, so no `change:` context
 - `plays` has_many `play_editors`, `play_sources`, `play_editorial_notes`, `characters`, `play_divisions`, `play_elements`; `composition_date_from`, `composition_date_to`, `composition_date_note` hold when the play was written, as a year range plus the competing datings verbatim; `form` is nil (automatic, from `is_verse`) or a curator's `verse`/`prose`/`mixed`, read only through `Play.form/1`
+- `plays.content_version` - moved by Postgres triggers (migration `20261005120000_track_play_content_version`) whenever anything a play's static pages show changes: its own row, its divisions, elements, speakers, characters, editors, sources, notes and places, the gazetteer entries of those places and their ancestors, and the rows of its original and translations. Once per transaction, with a `pg_notify('play_changed', id)`. Never written by the app (`writable: :never`). **A new table with a `play_id` whose rows appear on a play's pages needs the `play_row_changed()` trigger in its migration** (the migration's moduledoc has the line); `test/playcode/content_version_test.exs` fails until it has it. Adding a column needs nothing. Over-flagging is deliberate: any statement touching a play's rows flags it, even when the values end up the same
 - `play_divisions` self-references via `parent_id` (acts contain scenes)
 - `play_elements` self-references via `parent_id` (speeches contain line_groups contain verse_lines)
 - `element_characters` join table links `play_elements` to `characters` (many-to-many, supports multi-speaker speeches like `who="#ALB #COR"`)
@@ -288,7 +291,8 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 - `Playcode.Statistics.Metrics` — metrical passages, characters, presence, divisions; cached by `Playcode.Statistics` (bump `@version` when what it stores changes)
 - `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
 - `StaticSite.Deployer` — pushes `_site/` to a GitHub Pages branch
-- `Playcode.Export.SiteBuilder` — the one process that writes and ships the admin's site (`StaticSite.output_dir/0`): generate, add a play, remove one, deploy. It runs one job at a time under `SiteBuilder.Tasks`, because two builds at once drop a play from the incremental index and a deploy during a build pushes half a site. A request that arrives meanwhile is queued (`:queued`), not refused. When the job ends, the adds and removes at the front of the queue run as one batch through `StaticSite.apply_changes/2`: pages and catalogue first, then one search-index write. Generate rebuilds the plays on disk when it runs. It broadcasts `:queued`, `:started`, `:progress`, `:published`, `:done` and `:failed` on `"static_site"`, so every admin's export page shows the same state. `mix playcode.export.site` runs in its own VM and calls `StaticSite.generate/1` directly, unserialised: its default `_site` is also the admin page's directory in dev, so pass `-o` while a server is building
+- `Playcode.Export.SiteBuilder` — the one process that writes and ships the admin's site (`StaticSite.output_dir/0`): generate, add a play, remove one, deploy. It runs one job at a time under `SiteBuilder.Tasks`, because two builds at once drop a play from the incremental index and a deploy during a build pushes half a site. A request that arrives meanwhile is queued (`:queued`), not refused. When the job ends, the adds and removes at the front of the queue run as one batch through `StaticSite.apply_changes/2`: pages and catalogue first, then one search-index write. Generate brings the plays on disk up to date when it runs. It broadcasts `:queued`, `:started`, `:progress`, `:published`, `:done` and `:failed` on `"static_site"`, so every admin's export page shows the same state. `mix playcode.export.site` runs in its own VM and calls `StaticSite.generate/1` directly, unserialised: its default `_site` is also the admin page's directory in dev, so pass `-o` while a server is building
+- **Change tracking.** Every build writes `build.json` at the site root: the site fingerprint (`StaticSite.Fingerprint`: the export's code by `module_info(:md5)`, `priv/static_site`, the rendering libraries' versions and the `:version` option) and each published play's `content_version`. `StaticSite.changed_plays/1` lists the published plays whose version moved since, `site_changed?/2` says whether the fingerprint did (or there is no `build.json`), and `outdated/1` is the batch that brings the site up to date. `Playcode.Export.PlayChangeListener` relays Postgres's `play_changed` notifications, coalesced per play over 200 ms, to `"static_site"`, so the export page flags a changed play, with a Refresh button, as soon as the edit commits, and to the play's own topic (`PlayContent.notify_changed/1`), so the content editor and the play list reload whoever made the change. Generate (`SiteBuilder.generate/1`) rebuilds every play only when the site changed; otherwise it writes the changed plays and takes out the archived or incomplete ones in one batch, and writes nothing when nothing changed. Rebuild everything (`SiteBuilder.rebuild/1`) always rebuilds. `test/playcode/export/static_site/fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access
 
 `generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three. Size budgets: `style.css` 25 KB, `site.js` and `search.js` 15 KB each, and the fonts 300 KB are asserted in `static_site_test.exs`; an act page at most 80 KB gzipped and a first search at most 300 KB gzipped are only reported by the build (`generate/1`'s return and the mix task's printed line), not asserted. On the full dev corpus (83 plays, `--all`) the largest act page is 43.1 KB gzipped (EMOTHE0084, 0254 and 0648 are split into scene pages). A first single-word search costs at most ~166 KB gzipped (*sueño* 148 KB, *honneur* 166 KB, *de* 137 KB), under the 300 KB budget; a phrase over common words does not (*"vida es"* 954 KB, *"la vida es"* 691 KB), because the postings hold no word positions and every candidate line's chunk must load (`docs/static-site-improvements.md`, item 5). Builds, measured on the 83 plays at `9b37335`: 45.2 s sequential, 17.0 s parallel; removing one play 2.8 s, adding one 4.3 s.
 
@@ -297,6 +301,7 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 ```
 _site/
 ├── index.html  search.html  about.html
+├── build.json                 the fingerprint it was built with, and each play's content_version
 ├── assets/                    style.css, site.js, search.js, fonts/
 ├── search/                    plays.js, index/<shard>.js, lines/<CODE>/<k>.js
 └── plays/
@@ -313,7 +318,7 @@ _site/
 
 ### Usage
 
-**Admin UI**: `GET /admin/export` (`PlaycodeWeb.Admin.ExportSiteLive`) — configure version, base URL, GitHub repo; generate with progress bar; download as .zip or deploy to GitHub Pages.
+**Admin UI**: `GET /admin/export` (`PlaycodeWeb.Admin.ExportSiteLive`) — configure version, base URL, GitHub repo; Generate brings the site up to date (only the changed plays, unless the site's code or settings changed), Rebuild everything rebuilds it whole; each changed play shows a Refresh button; download as .zip or deploy to GitHub Pages.
 
 **Mix task**:
 ```bash
@@ -529,6 +534,7 @@ Questions only the stakeholders can answer, recorded in `docs/static-site-improv
 - [ ] **HTML email templates** - replace plain-text bodies in `user_notifier.ex` with `html_body/1` using `Phoenix.Swoosh` for branded transactional emails
 - [ ] **Login audit log** - store failed/successful login attempts in a DB table for security review
 - [ ] **Session activity tracking** - add `last_active_at` to users table, update on each request
+- [ ] **Fly volume for the static site (optional)** - production has no volume, so every app deploy wipes `_site/` and its `build.json`, and the first Generate after a deploy rebuilds every play. A 1 GB volume (about $0.15 a month) mounted at `/data`, with `:static_site_dir` pointed there, would keep incremental builds across deploys. The Postgres volume belongs to the separate database app and cannot be shared
 
 ## Key Decisions
 

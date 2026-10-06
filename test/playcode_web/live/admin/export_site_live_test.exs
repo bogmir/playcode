@@ -7,6 +7,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
   import Playcode.TestFixtures
   import Playcode.StaticSiteHelpers, only: [await_idle_builder: 0]
 
+  alias Playcode.Catalogue
   alias Playcode.Export.StaticSite
 
   setup %{conn: conn} do
@@ -45,6 +46,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       true -> Process.sleep(50) && wait_for(fun, tries - 1)
     end
   end
+
+  defp row(play), do: "#play-#{play.id}"
+
+  # ConnCase's t/2 is gettext/3, which cannot reach a plural entry.
+  defp n(singular, plural, count),
+    do: Gettext.ngettext(PlaycodeWeb.Gettext, singular, plural, count)
 
   test "lists the complete plays, each switched off while no site exists",
        %{conn: conn, a: a, b: b} do
@@ -246,6 +253,118 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
       assert response(get(conn, "/admin/export/preview/..%2fplaycode-test-secret.txt"), 404)
       assert response(get(conn, "/admin/export/preview/%2e%2e/playcode-test-secret.txt"), 404)
+    end
+  end
+
+  describe "changes since the last build" do
+    test "a published play edited since is flagged, and Refresh publishes it again",
+         %{conn: conn, a: a, b: b} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      refute has_element?(lv, row(a), t("Changed"))
+
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+      assert has_element?(lv, row(a), t("Changed"))
+      refute has_element?(lv, row(b), t("Changed"))
+
+      assert render(lv) =~
+               n(
+                 "One published play has changed. Generate refreshes it.",
+                 "%{count} published plays have changed. Generate refreshes them.",
+                 1
+               )
+
+      lv |> element("#{row(a)} button", t("Refresh")) |> render_click()
+      wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
+
+      refute has_element?(lv, row(a), t("Changed"))
+      assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Revised"
+    end
+
+    test "a change announced while the page is open flags the play at once",
+         %{conn: conn, a: a} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+      refute has_element?(lv, row(a), t("Changed"))
+
+      # What Playcode.Export.PlayChangeListener sends when the edit commits.
+      Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, a.id})
+      assert has_element?(lv, row(a), t("Changed"))
+    end
+
+    # Review Focus 5.
+    test "a change to a play that no longer exists flags nothing", %{conn: conn, a: a} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      Phoenix.PubSub.broadcast(
+        Playcode.PubSub,
+        "static_site",
+        {:play_changed, Ecto.UUID.generate()}
+      )
+
+      refute has_element?(lv, row(a), t("Changed"))
+    end
+
+    test "Generate refreshes only the changed plays and says how many", %{conn: conn, a: a} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+
+      lv |> element("form[phx-submit=generate]") |> render_submit()
+      wait_for(fn -> render(lv) =~ n("One play refreshed.", "%{count} plays refreshed.", 1) end)
+
+      assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Revised"
+      refute has_element?(lv, row(a), t("Changed"))
+    end
+
+    test "Generate with nothing changed says so", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      assert render(lv) =~ t("Every play in the site is up to date.")
+
+      lv |> element("form[phx-submit=generate]") |> render_submit()
+      wait_for(fn -> render(lv) =~ t("Nothing has changed since the last build.") end)
+    end
+
+    # Review Focus 4: every page's footer shows the version.
+    test "a new version is a change to the whole site: Generate rebuilds every play",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+      refute has_element?(lv, "#site-changed")
+
+      lv |> element("form[phx-submit=generate]") |> render_change(%{"version" => "9.9"})
+      assert has_element?(lv, "#site-changed")
+      assert render(lv) =~ t("Rebuilds the %{count} plays in the site.", count: 2)
+
+      # "Generation Complete" shows only for a full build: starting one hides it first.
+      generate(lv)
+      refute has_element?(lv, "#site-changed")
+    end
+
+    test "Rebuild everything rebuilds the site though nothing changed", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      lv |> element("button", t("Rebuild everything")) |> render_click()
+      wait_for(fn -> render(lv) =~ t("Generation Complete") end)
+    end
+
+    # A build cannot be made to fail by clicks, so these are the broadcasts the builder
+    # would send: its ending with an error, and its task crashing.
+    test "a failed Rebuild everything says why", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
+
+      broadcast.({:site_builder, :done, :rebuild, {:error, :disk_full}})
+      assert render(lv) =~ t("Generation failed: %{reason}", reason: ":disk_full")
+
+      broadcast.({:site_builder, :failed, :rebuild, :killed})
+      assert render(lv) =~ t("Generation failed: %{reason}", reason: ":killed")
     end
   end
 end

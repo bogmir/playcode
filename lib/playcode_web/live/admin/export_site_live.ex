@@ -5,6 +5,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   alias Playcode.Export.{SiteBuilder, StaticSite}
 
+  # The jobs that bring the whole site up to date, as opposed to one play's batch or a deploy.
+  defguardp is_build(job) when job in [:generate, :rebuild]
+
   @impl true
   def mount(_params, _session, socket) do
     plays = Playcode.Catalogue.list_plays(sort: :title_sort, complete: true)
@@ -19,6 +22,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       |> assign(:plays, plays)
       |> assign(:exported_codes, MapSet.new(exported_codes))
       |> assign(:pending, %{})
+      |> assign(:changed, MapSet.new())
+      |> assign(:site_changed, false)
       |> assign(:busy, false)
       |> assign(:indexing, false)
       |> assign(:complete_count, length(plays))
@@ -48,14 +53,19 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      socket
      |> assign(:version, params["version"] || "")
      |> assign(:base_url, params["base_url"] || "/")
-     |> assign(:github_repo, params["github_repo"] || "")}
+     |> assign(:github_repo, params["github_repo"] || "")
+     |> track_changes()}
   end
 
-  def handle_event("generate", _params, socket) do
-    [version: socket.assigns.version, base_url: socket.assigns.base_url]
-    |> SiteBuilder.generate()
-    |> queued_flash(socket)
-  end
+  def handle_event("generate", _params, socket),
+    do: socket |> form_opts() |> SiteBuilder.generate() |> queued_flash(socket)
+
+  def handle_event("rebuild", _params, socket),
+    do: socket |> form_opts() |> SiteBuilder.rebuild() |> queued_flash(socket)
+
+  # A changed play already in the site: written again, in a batch like any add.
+  def handle_event("refresh_play", %{"id" => id}, socket),
+    do: id |> SiteBuilder.add(form_opts(socket)) |> queued_flash(socket)
 
   def handle_event("deploy", _params, socket) do
     repo = String.trim(socket.assigns.github_repo)
@@ -69,7 +79,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   # A switch with a change on its way is disabled, so this decides by what is on disk.
   def handle_event("toggle_play", %{"id" => id, "code" => code}, socket) do
-    opts = [version: socket.assigns.version, base_url: socket.assigns.base_url]
+    opts = form_opts(socket)
 
     if MapSet.member?(socket.assigns.exported_codes, code),
       do: SiteBuilder.remove(code, opts),
@@ -114,7 +124,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   def handle_info({:site_builder, :published, {:batch, changes}}, socket),
     do: {:noreply, socket |> settle(changes) |> assign(:indexing, true)}
 
-  def handle_info({:site_builder, :progress, :generate, info}, socket) do
+  def handle_info({:site_builder, :progress, job, info}, socket)
+      when is_build(job) do
     {:noreply,
      socket
      |> assign(:gen_current, info.current)
@@ -133,6 +144,10 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     {:noreply, socket |> finished(job) |> put_flash(:error, failed(job, crash_reason(reason)))}
   end
 
+  # Postgres says a play changed (Playcode.Export.PlayChangeListener). Any play: the
+  # page reads again which of its plays changed.
+  def handle_info({:play_changed, _play_id}, socket), do: {:noreply, track_changes(socket)}
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -146,6 +161,19 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             "Generate an Endings Project-compliant static website archive of the entire catalogue."
           )}
         </p>
+      </div>
+
+      <div
+        :if={@site_changed and MapSet.size(@exported_codes) > 0}
+        id="site-changed"
+        class="alert alert-warning mb-6"
+      >
+        <.icon name="hero-exclamation-triangle" class="size-5" />
+        <span>
+          {gettext(
+            "The site's design or settings changed since the last build. Generate will rebuild every play."
+          )}
+        </span>
       </div>
 
       <%!-- Configuration form --%>
@@ -209,6 +237,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 <span :if={@generating} class="loading loading-spinner loading-sm"></span>
                 {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
               </button>
+              <button
+                :if={MapSet.size(@exported_codes) > 0}
+                type="button"
+                phx-click="rebuild"
+                class="btn btn-outline"
+                disabled={@generating}
+              >
+                {gettext("Rebuild everything")}
+              </button>
               <span class="text-sm text-base-content/60">
                 {gettext("%{complete} of %{total} plays marked as complete",
                   complete: @complete_count,
@@ -217,12 +254,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               </span>
             </div>
             <p class="text-xs text-base-content/50">
-              {if MapSet.size(@exported_codes) == 0,
-                do: gettext("Builds every complete play."),
-                else:
-                  gettext("Rebuilds the %{count} plays in the site.",
-                    count: MapSet.size(@exported_codes)
-                  )}
+              {generate_hint(@exported_codes, @site_changed, @changed)}
             </p>
           </form>
         </div>
@@ -254,6 +286,20 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 <span class="font-mono text-xs text-base-content/50">{play.code}</span>
                 <span class="font-medium ml-2 truncate">{play.title}</span>
               </span>
+              <span :if={stale?(play, @changed, @pending)} class="badge badge-warning badge-sm">
+                {gettext("Changed")}
+              </span>
+              <button
+                :if={stale?(play, @changed, @pending)}
+                type="button"
+                phx-click="refresh_play"
+                phx-value-id={play.id}
+                class="btn btn-ghost btn-xs"
+                aria-label={gettext("Refresh %{title}", title: play.title)}
+              >
+                <.icon name="hero-arrow-path-mini" class="size-4" />
+                {gettext("Refresh")}
+              </button>
               <span
                 :if={Map.has_key?(@pending, play.id)}
                 class="loading loading-spinner loading-xs text-base-content/50"
@@ -432,6 +478,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     queue
     |> Enum.reduce(started(socket, job), &queued(&2, &1))
     |> assign(:exported_codes, on_disk())
+    |> track_changes()
   end
 
   # A change on its way: its switch shows where the play is going until it lands.
@@ -447,7 +494,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   defp started(socket, nil), do: socket
 
-  defp started(socket, :generate) do
+  defp started(socket, job) when is_build(job) do
     socket
     |> assign(:busy, true)
     |> assign(:generating, true)
@@ -483,8 +530,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp direction({:remove, _}), do: :remove
 
   # A job ended. If requests wait, the builder's next :started marks the page busy again.
-  defp finished(socket, {:batch, changes}), do: socket |> settle(changes) |> idle()
-  defp finished(socket, _job), do: socket |> assign(:exported_codes, on_disk()) |> idle()
+  defp finished(socket, {:batch, changes}),
+    do: socket |> settle(changes) |> idle() |> track_changes()
+
+  defp finished(socket, _job),
+    do: socket |> assign(:exported_codes, on_disk()) |> idle() |> track_changes()
 
   defp idle(socket),
     do: assign(socket, generating: false, deploying: false, indexing: false, busy: false)
@@ -498,16 +548,63 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   defp on_disk, do: MapSet.new(StaticSite.list_exported_codes(StaticSite.output_dir()))
 
-  defp done(socket, :generate, {:ok, result}) do
+  # The form values every build takes.
+  defp form_opts(socket), do: [version: socket.assigns.version, base_url: socket.assigns.base_url]
+
+  # Which published plays changed since they were written, and whether the site as a
+  # whole did, for the version in the form.
+  defp track_changes(socket) do
+    dir = StaticSite.output_dir()
+
+    assign(socket,
+      changed: MapSet.new(StaticSite.changed_plays(dir)),
+      site_changed: StaticSite.site_changed?(dir, version: socket.assigns.version)
+    )
+  end
+
+  # Flagged while it differs from its pages and no change of it is on its way.
+  defp stale?(play, changed, pending),
+    do: MapSet.member?(changed, play.code) and not Map.has_key?(pending, play.id)
+
+  # What Generate will do, under its button.
+  defp generate_hint(exported, site_changed?, changed) do
+    cond do
+      MapSet.size(exported) == 0 ->
+        gettext("Builds every complete play.")
+
+      site_changed? ->
+        gettext("Rebuilds the %{count} plays in the site.", count: MapSet.size(exported))
+
+      MapSet.size(changed) == 0 ->
+        gettext("Every play in the site is up to date.")
+
+      true ->
+        ngettext(
+          "One published play has changed. Generate refreshes it.",
+          "%{count} published plays have changed. Generate refreshes them.",
+          MapSet.size(changed)
+        )
+    end
+  end
+
+  defp done(socket, job, {:ok, %{plays: plays, size: size} = result})
+       when is_build(job) do
     socket
     |> assign(:gen_result, result)
     |> put_flash(
       :info,
       gettext("Static site generated: %{count} plays (%{size})",
-        count: result.plays,
-        size: format_size(result.size)
+        count: plays,
+        size: format_size(size)
       )
     )
+  end
+
+  defp done(socket, :generate, {:ok, %{changed: 0}}),
+    do: put_flash(socket, :info, gettext("Nothing has changed since the last build."))
+
+  defp done(socket, :generate, {:ok, %{changed: count}}) do
+    put_flash(socket, :info, ngettext("One play refreshed.", "%{count} plays refreshed.", count))
   end
 
   defp done(socket, {:batch, [{:add, _}]}, {:ok, %{skipped: []}}),
@@ -542,13 +639,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     |> put_flash(:info, gettext("Deployed to GitHub Pages!"))
   end
 
-  defp done(socket, :generate, {:error, reason}),
-    do: put_flash(socket, :error, failed(:generate, inspect(reason)))
+  defp done(socket, job, {:error, reason}) when is_build(job),
+    do: put_flash(socket, :error, failed(job, inspect(reason)))
 
   defp done(socket, :deploy, {:error, reason}),
     do: put_flash(socket, :error, failed(:deploy, reason))
 
-  defp failed(:generate, reason), do: gettext("Generation failed: %{reason}", reason: reason)
+  defp failed(job, reason) when is_build(job),
+    do: gettext("Generation failed: %{reason}", reason: reason)
+
   defp failed(:deploy, reason), do: gettext("Deploy failed: %{reason}", reason: reason)
 
   defp failed({:batch, [{:add, _}]}, reason),
