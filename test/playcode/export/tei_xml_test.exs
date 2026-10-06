@@ -145,4 +145,21 @@ defmodule Playcode.Export.TeiXmlTest do
 
     assert xml_elements(export_tei(play), "creation") == []
   end
+
+  test "a place's names are exported in their order" do
+    place =
+      place_fixture(%{
+        "names" => [
+          %{"name" => "Valentia", "language" => "la", "position" => 2},
+          %{"name" => "Valencia", "language" => "es", "is_preferred" => "true", "position" => 1}
+        ]
+      })
+
+    play = play_fixture()
+    play_place_fixture(play, place)
+    names = xml_texts(export_tei(play), "placeName")
+
+    assert Enum.find_index(names, &(&1 == "Valencia")) <
+             Enum.find_index(names, &(&1 == "Valentia"))
+  end
 end

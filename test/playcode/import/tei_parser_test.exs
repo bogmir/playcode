@@ -12,6 +12,7 @@ defmodule Playcode.Import.TeiParserTest do
   alias Playcode.Catalogue
   alias Playcode.Import.TeiParser
   alias Playcode.Places
+  alias Playcode.Statistics
 
   describe "a file that cannot become a play" do
     test "a missing file is reported as such" do
@@ -223,5 +224,27 @@ defmodule Playcode.Import.TeiParserTest do
       assert links["roma"] == {"manual", "Hand-entered."}
       assert links["miseno"] == {"tei", "Named, not staged."}
     end
+  end
+
+  # The statistics cache outlived a re-import, so the play's statistics kept the old
+  # text's numbers.
+  test "a re-import replaces the play's statistics" do
+    code = "TSTATS#{System.unique_integer([:positive])}"
+
+    body = fn lines ->
+      ~s(<div1 type="acto" n="1"><head>ACTO</head><div2 type="escena" n="1"><sp><speaker>A</speaker><lg>#{lines}</lg></sp></div2></div1>)
+    end
+
+    {:ok, play} =
+      TeiParser.import_file(write_tmp!(tei(code: code, body: body.(~s(<l n="1">Uno</l>)))))
+
+    assert Statistics.get_statistics(play.id).data["total_verses"] == 1
+
+    {:ok, _} =
+      TeiParser.import_file(
+        write_tmp!(tei(code: code, body: body.(~s(<l n="1">Uno</l><l n="2">Dos</l>))))
+      )
+
+    assert Statistics.get_statistics(play.id).data["total_verses"] == 2
   end
 end

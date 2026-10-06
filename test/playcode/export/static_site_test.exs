@@ -458,4 +458,36 @@ defmodule Playcode.Export.StaticSiteTest do
       assert "../#{original.code}/index.html" in hrefs(title_page(dir, translation))
     end
   end
+
+  test "a title page lists the published translations by title, and its notes in their order" do
+    original = complete_play(%{"title" => "Original"})
+
+    [zeta, alfa] =
+      for title <- ["Zeta", "Alfa"] do
+        complete_play(%{
+          "title" => title,
+          "title_sort" => title,
+          "parent_play_id" => original.id,
+          "relationship_type" => "traduccion"
+        })
+      end
+
+    for {heading, position} <- [{"Second note", 2}, {"First note", 1}] do
+      {:ok, _} =
+        Catalogue.create_play_editorial_note(%{
+          play_id: original.id,
+          section_type: "nota",
+          heading: heading,
+          content: "Text",
+          position: position
+        })
+    end
+
+    page = title_page(generate!([original, zeta, alfa]), original)
+
+    assert texts(page, "li a cite") == ["Alfa", "Zeta"]
+
+    assert Enum.filter(texts(page, "h2"), &(&1 in ["First note", "Second note"])) ==
+             ["First note", "Second note"]
+  end
 end

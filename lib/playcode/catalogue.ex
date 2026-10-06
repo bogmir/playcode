@@ -6,7 +6,7 @@ defmodule Playcode.Catalogue do
   import Ecto.Query
   alias Playcode.Repo
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
-  alias Playcode.Places.PlayPlace
+  alias Playcode.Places.{PlaceName, PlayPlace}
 
   # --- Plays ---
 
@@ -64,30 +64,14 @@ defmodule Playcode.Catalogue do
     Play
     |> scope(opts)
     |> Repo.get!(id)
-    |> Repo.preload([
-      :statistic,
-      :parent_play,
-      :derived_plays,
-      editors: from(e in PlayEditor, order_by: e.position),
-      sources: from(s in PlaySource, order_by: s.position),
-      editorial_notes: from(n in PlayEditorialNote, order_by: n.inserted_at),
-      play_places: {from(pp in PlayPlace, order_by: pp.position), [place: :names]}
-    ])
+    |> with_all()
   end
 
   def get_play_by_code_with_all!(code, opts \\ []) do
     Play
     |> scope(opts)
     |> Repo.get_by!(code: code)
-    |> Repo.preload([
-      :statistic,
-      :parent_play,
-      :derived_plays,
-      editors: from(e in PlayEditor, order_by: e.position),
-      sources: from(s in PlaySource, order_by: s.position),
-      editorial_notes: from(n in PlayEditorialNote, order_by: n.inserted_at),
-      play_places: {from(pp in PlayPlace, order_by: pp.position), [place: :names]}
-    ])
+    |> with_all()
   end
 
   def create_play(attrs \\ %{}) do
@@ -353,6 +337,22 @@ defmodule Playcode.Catalogue do
   end
 
   # --- Private ---
+
+  # Everything a play's pages show, each list in a fixed order, so the same data always
+  # renders the same page.
+  defp with_all(play) do
+    Repo.preload(play, [
+      :statistic,
+      :parent_play,
+      derived_plays: from(d in Play, order_by: [asc: d.title_sort, asc: d.title]),
+      editors: from(e in PlayEditor, order_by: e.position),
+      sources: from(s in PlaySource, order_by: s.position),
+      editorial_notes: from(n in PlayEditorialNote, order_by: n.position),
+      play_places:
+        {from(pp in PlayPlace, order_by: pp.position),
+         [place: [names: from(n in PlaceName, order_by: [asc: n.position, asc: n.id])]]}
+    ])
+  end
 
   # Archived plays are invisible everywhere unless a caller explicitly asks for them:
   # `archived: true` for the archive listing, `include_deleted: true` for both at once.

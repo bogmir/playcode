@@ -276,6 +276,9 @@ defmodule Playcode.Import.TeiParser do
     # Only the links, never the places: the gazetteer is corpus-global authority data,
     # and an orphaned place shows in the admin list with a play count of 0.
     Places.delete_tei_play_places(id)
+
+    # The cached statistics describe the old text.
+    Playcode.Statistics.delete_statistics(id)
   end
 
   # Every editor, source and note the importer creates is stamped `origin: "tei"`, so a
