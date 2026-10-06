@@ -80,6 +80,43 @@ defmodule Playcode.Export.StaticSiteChangesTest do
     assert StaticSite.changed_plays(dir) == []
   end
 
+  # The export page prefills its Version field with it, so the site reads as current.
+  test "a site records the version it was built with, and adding a play keeps it" do
+    [a, b] = [complete_play(), complete_play()]
+    dir = generate!([a], version: "2.0")
+    assert StaticSite.built_version(dir) == "2.0"
+
+    {:ok, _} = StaticSite.apply_changes([{:add, b.id}], output_dir: dir, version: "3.0")
+    assert StaticSite.built_version(dir) == "2.0"
+  end
+
+  test "a site begun by a batch records the batch's version" do
+    dir = site_dir!()
+
+    {:ok, _} =
+      StaticSite.apply_changes([{:add, complete_play().id}], output_dir: dir, version: "3.0")
+
+    assert StaticSite.built_version(dir) == "3.0"
+  end
+
+  test "a build record from before versions were recorded names none, and keeps naming none" do
+    [a, b] = [complete_play(), complete_play()]
+    dir = generate!([a])
+    build = Path.join(dir, "build.json")
+
+    File.write!(
+      build,
+      build |> File.read!() |> Jason.decode!() |> Map.delete("version") |> Jason.encode!()
+    )
+
+    assert StaticSite.built_version(dir) == nil
+    refute StaticSite.site_changed?(dir)
+    assert StaticSite.changed_plays(dir) == []
+
+    {:ok, _} = StaticSite.apply_changes([{:add, b.id}], output_dir: dir, version: "3.0")
+    assert StaticSite.built_version(dir) == nil
+  end
+
   test "outdated adds each changed play and removes each one no longer published" do
     [changed, same, archived, draft] = for _ <- 1..4, do: complete_play()
     dir = generate!([changed, same, archived, draft])

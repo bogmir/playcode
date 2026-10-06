@@ -16,8 +16,9 @@ defmodule Playcode.Export.StaticSite do
   admin page's directory in dev, so give it `-o` while a server is building.
 
   Every build records itself in `build.json` at the site root: the fingerprint of what
-  built it (`StaticSite.Fingerprint`) and each play's `content_version`. From it
-  `changed_plays/1`, `site_changed?/2` and `outdated/1` say what changed since.
+  built it (`StaticSite.Fingerprint`), the `:version` that went into it, and each play's
+  `content_version`. From it `changed_plays/1`, `site_changed?/2` and `outdated/1` say
+  what changed since, and `built_version/1` which version the site was built with.
   """
 
   alias Playcode.Catalogue
@@ -88,7 +89,7 @@ defmodule Playcode.Export.StaticSite do
         write_catalogue(plays, dir, opts)
         report = write_search(plays, Map.new(results, &{&1.code, &1.postings}), dir)
         # Last: a build cut short leaves no record, so the next Generate rebuilds it all.
-        write_build(dir, Fingerprint.current(opts), Map.new(results, &{&1.code, &1.version}))
+        write_build(dir, built_with(opts), Map.new(results, &{&1.code, &1.version}))
 
         {:ok,
          Map.merge(report, %{
@@ -166,9 +167,13 @@ defmodule Playcode.Export.StaticSite do
 
       # Last, as in generate/1. A batch that began on an empty site wrote every page
       # there is, so it records what built them; otherwise the site's record stands.
-      fingerprint = if MapSet.size(on_disk) == 0, do: Fingerprint.current(opts), else: built.site
+      record =
+        if MapSet.size(on_disk) == 0,
+          do: built_with(opts),
+          else: Map.take(built, [:site, :version])
+
       versions = Map.new(written, &{&1.code, &1.version})
-      write_build(dir, fingerprint, built.plays |> Map.drop(removes) |> Map.merge(versions))
+      write_build(dir, record, built.plays |> Map.drop(removes) |> Map.merge(versions))
       {:ok, %{skipped: skipped}}
     end)
   end
@@ -214,6 +219,12 @@ defmodule Playcode.Export.StaticSite do
   """
   def site_changed?(dir, opts \\ []),
     do: read_build(dir).site != Fingerprint.current(defaults(opts))
+
+  @doc """
+  The `:version` the site at `dir` was built with: the one its fingerprint was computed
+  with, which a later batch does not change. Nil when `build.json` does not say.
+  """
+  def built_version(dir), do: read_build(dir).version
 
   @doc """
   The batch that brings the site at `dir` up to date through `apply_changes/2`: each
@@ -346,20 +357,23 @@ defmodule Playcode.Export.StaticSite do
 
   @build "build.json"
 
-  # What build.json records: the fingerprint the site was built with (nil if unknown)
-  # and each play's content_version. No file, or one that cannot be read, records
-  # nothing, so the site and every play in it count as changed.
+  # What build.json records: the fingerprint the site was built with and the version
+  # it was computed with (each nil if unknown), and each play's content_version. No
+  # file, or one that cannot be read, records nothing, so the site and every play in it
+  # count as changed.
   defp read_build(dir) do
     with {:ok, json} <- File.read(Path.join(dir, @build)),
          {:ok, %{"plays" => %{} = plays} = build} <- Jason.decode(json) do
-      %{site: build["site"], plays: plays}
+      %{site: build["site"], version: build["version"], plays: plays}
     else
-      _ -> %{site: nil, plays: %{}}
+      _ -> %{site: nil, version: nil, plays: %{}}
     end
   end
 
-  defp write_build(dir, fingerprint, plays) do
-    json = Jason.encode!(%{site: fingerprint, plays: plays}, pretty: true)
+  defp built_with(opts), do: %{site: Fingerprint.current(opts), version: opts[:version]}
+
+  defp write_build(dir, built_with, plays) do
+    json = built_with |> Map.put(:plays, plays) |> Jason.encode!(pretty: true)
     File.write!(Path.join(dir, @build), json)
   end
 

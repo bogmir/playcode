@@ -33,6 +33,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
   defp preview(conn, path), do: get(conn, "/admin/export/preview/" <> path)
 
+  defp set_version(lv, version),
+    do: lv |> element("form[phx-submit=generate]") |> render_change(%{"version" => version})
+
   # Generate runs in a task; the result card appears when it finishes.
   defp generate(lv) do
     lv |> element("form[phx-submit=generate]") |> render_submit()
@@ -140,6 +143,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
        %{conn: conn, a: a, b: b} do
     build_site([a.code])
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    # The page starts from the site's own version, so the site is current and Generate
+    # would only refresh. A new version takes it down the full build, where b was lost.
+    set_version(lv, "2.0")
 
     lv |> element(switch(b)) |> render_click()
 
@@ -199,6 +205,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
        %{conn: conn, a: a, b: b} do
     build_site([a.code])
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    # The page starts from the site's own version, so the site is current and Generate
+    # would only refresh. A new version takes it down the full build, where b came back.
+    set_version(lv, "2.0")
     generate(lv)
 
     assert response(preview(conn, "plays/#{a.code}/index.html"), 200)
@@ -354,13 +363,25 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       generate(lv)
       refute has_element?(lv, "#site-changed")
 
-      lv |> element("form[phx-submit=generate]") |> render_change(%{"version" => "9.9"})
+      set_version(lv, "9.9")
       assert has_element?(lv, "#site-changed")
       assert render(lv) =~ t("Rebuilds the %{count} plays in the site.", count: 2)
 
       # "Generation Complete" shows only for a full build: starting one hides it first.
       generate(lv)
       refute has_element?(lv, "#site-changed")
+    end
+
+    # Regression: the field always started at the app's version, so a site built under
+    # another said its design had changed on every visit, and Generate rebuilt it all.
+    test "the next visit starts from the version the site was built with", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      set_version(lv, "2.0")
+      generate(lv)
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      refute has_element?(lv, "#site-changed")
+      assert has_element?(lv, "input[name=version][value='2.0']")
     end
 
     test "Rebuild everything rebuilds the site though nothing changed", %{conn: conn} do

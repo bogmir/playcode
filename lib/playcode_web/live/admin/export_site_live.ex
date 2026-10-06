@@ -16,7 +16,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     socket =
       socket
       |> assign(:page_title, gettext("Export Static Site"))
-      |> assign(:version, app_version())
+      # The site's own version, so it is current for the form until someone changes it.
+      |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
       |> assign(:base_url, "/")
       |> assign(:github_repo, "")
       |> assign(:plays, plays)
