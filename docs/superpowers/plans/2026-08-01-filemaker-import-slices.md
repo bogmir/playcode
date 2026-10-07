@@ -13,7 +13,7 @@
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import, folded into S7's cross-check |
 | S3, S5–S8 | scoped below, each gets its own plan when it comes up |
-| S4 — bibliography | **researched**; **all data in hand** from FileMaker (2026-10-01/02): criticism, translations, adaptations and modern editions — `../specs/2026-09-25-s4-bibliography-research.md` |
+| S4 — bibliography | **designed** 2026-10-07, after the project answered the research's questions: shared entries, a one-time import — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
 | S9 — places | **Phase 1 done** (the app, no FileMaker code) — `CLAUDE.md` |
 | S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; after the ~300 import |
 
@@ -395,8 +395,19 @@ Two findings from that check that outlive S2f:
 - **FileMaker:** the witnesses' master table is not in the five relationship screenshots. Ask
   where the testimonios live before building, because a structured table would beat parsing
   `pub_testimonio`, as it did for S4. See "The master database, mapped"
+- **Also check `T04.1.EdiMod_Referencia`** (84 modern editions, found during S4's design,
+  2026-10-07). It reads like the edition a digital text was based on, for example
+  `Lope de Vega: Los locos de Valencia, Hélène Tropé (ed.), Madrid, Castalia, 2003.`, which is
+  `play_sources`' job rather than the bibliography's. Edition 44, the Oxford *Complete Works* on 9
+  versions, holds nothing else, and FileMaker never prints it in the modern-editions list. S4 does
+  not import the field, so read it from `T04.1` when building this slice
 
-### S4 — Bibliography *(researched; all FileMaker data in hand — ready for a design spec)*
+### S4 — Bibliography *(designed 2026-10-07 — `../specs/2026-10-07-s4-bibliography-design.md`)*
+
+**The design supersedes the proposal below** where they differ. On the project's answers, entries
+are corpus-wide and linked to plays, so one correction reaches every play. The import is a one-time
+move, lists are alphabetical, and notes stay internal. The headlines below are the research as it
+stood before those answers.
 
 **Research: `../specs/2026-09-25-s4-bibliography-research.md`** — the dump's fields, what it still
 lacks, the proposed table, TEI mapping. Headlines:

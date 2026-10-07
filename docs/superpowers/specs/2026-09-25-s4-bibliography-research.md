@@ -8,8 +8,10 @@ modern-editions tables completed them. **All S4 data is now in hand.**
 domain lead, kept at `docs/stakeholder/bibliografia-selecta.html`. It is self-contained: open it
 in a browser or attach it to an email. Answers are saved in the reader's browser and come back
 as text through its "Copy answers" button. The same page is published at
-https://claude.ai/artifact/1sMoU3oTkFK2QuuDDQiccp. Change the repo copy first, then republish. **Not a design yet**: the shape at the end is a proposal, and the open
-questions decide whether it holds. Slice S4 of `../plans/2026-08-01-filemaker-import-slices.md`.
+https://claude.ai/artifact/1sMoU3oTkFK2QuuDDQiccp. Change the repo copy first, then republish. **Answered 2026-10-07; the design is
+`2026-10-07-s4-bibliography-design.md`.** Where this document's "Proposed shape" and "TEI"
+differ from it, the design wins. Shared entries replaced per-play copies, and notes stay out of the
+TEI file. Slice S4 of `../plans/2026-08-01-filemaker-import-slices.md`.
 
 Two sources, measured in full:
 
