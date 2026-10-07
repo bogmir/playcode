@@ -379,6 +379,59 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(xml, "p", within: "div1") == Enum.map(types, &"#{&1} text")
     end
 
+    # Gorboduc's dumb shows (EMOTHE0329) and the act summaries of EMOTHE0709 are
+    # paragraphs nobody speaks; they used to be dropped.
+    test "a paragraph outside any speech stays in its division" do
+      xml =
+        roundtrip(
+          tei(body: ~s(<div1 type="dumb_show" n="1"><p>First the music of violins</p></div1>))
+        )
+
+      assert xml_texts(xml, "p", within: "div1") == ["First the music of violins"]
+      assert xml_elements(xml, "sp") == []
+    end
+
+    # EMOTHE0354 and EMOTHE0510 open with a stanza nobody speaks.
+    test "a stanza outside any speech keeps its verse" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="prologue" n="1">
+              <lg type="free"><l n="1">Io, qual vedete</l><l n="2">A questo scettro</l></lg>
+            </div1>
+            """
+          )
+        )
+
+      assert [{%{"type" => "free"}, _}] = xml_elements(xml, "lg", within: "div1")
+      assert xml_texts(xml, "l") == ["Io, qual vedete", "A questo scettro"]
+      assert xml_elements(xml, "sp") == []
+    end
+
+    # 226 trailers in 132 plays ("FIN DEL PRIMER ACTO") used to be dropped. TEI only
+    # allows one at the end of its division, so the act's comes after its scenes.
+    test "a trailer closes its scene and its act" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1">
+              <div2 type="escena" n="1">
+                <sp><speaker>X</speaker><l>Verso.</l></sp>
+                <trailer>FIN</trailer>
+              </div2>
+              <trailer>FIN DEL <emph>PRIMER</emph> ACTO</trailer>
+            </div1>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "trailer", within: "div2") == ["FIN"]
+      assert xml_texts(xml, "trailer") == ["FIN", "FIN DEL PRIMER ACTO"]
+      assert xml_texts(xml, "emph", within: "trailer") == ["PRIMER"]
+    end
+
     test "a speech keeps its speaker, who it is, and its verse" do
       xml =
         roundtrip(

@@ -1176,6 +1176,17 @@ defmodule Playcode.Import.TeiParser do
           import_stage_direction(stage, play, act_div, nil, el_pos)
           {el_pos + 1, scene_pos}
 
+        {"p", _, _} = para, {el_pos, scene_pos} ->
+          import_prose(para, play, act_div, nil, el_pos)
+          {el_pos + 1, scene_pos}
+
+        {"lg", attrs, lg_children}, {el_pos, scene_pos} ->
+          {import_line_group(attrs, lg_children, play, act_div, nil, el_pos), scene_pos}
+
+        {"trailer", _, _} = trailer, {el_pos, scene_pos} ->
+          import_trailer(trailer, play, act_div, el_pos)
+          {el_pos + 1, scene_pos}
+
         _, acc ->
           acc
       end)
@@ -1191,6 +1202,10 @@ defmodule Playcode.Import.TeiParser do
 
       {"stage", _, _} = stage, pos ->
         import_stage_direction(stage, play, scene_div, nil, pos)
+        pos + 1
+
+      {"trailer", _, _} = trailer, pos ->
+        import_trailer(trailer, play, scene_div, pos)
         pos + 1
 
       _, pos ->
@@ -1232,7 +1247,7 @@ defmodule Playcode.Import.TeiParser do
           pos
 
         {"lg", attrs, lg_children}, pos ->
-          import_line_group(attrs, lg_children, play, division, speech, pos)
+          import_line_group(attrs, lg_children, play, division, speech.id, pos)
 
         {"l", _, _} = line, pos ->
           import_verse_line(line, play, division, speech, pos)
@@ -1243,7 +1258,7 @@ defmodule Playcode.Import.TeiParser do
           pos + 1
 
         {"p", _, _} = para, pos ->
-          import_prose(para, play, division, speech, pos)
+          import_prose(para, play, division, speech.id, pos)
           pos + 1
 
         _, pos ->
@@ -1255,7 +1270,7 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Line group ---
 
-  defp import_line_group(attrs, children, play, division, speech, start_pos) do
+  defp import_line_group(attrs, children, play, division, parent_id, start_pos) do
     verse_type = attr_value(attrs, "type")
     part = attr_value(attrs, "part")
 
@@ -1263,7 +1278,7 @@ defmodule Playcode.Import.TeiParser do
       case PlayContent.create_element(%{
              play_id: play.id,
              division_id: division.id,
-             parent_id: speech.id,
+             parent_id: parent_id,
              type: "line_group",
              verse_type: verse_type,
              part: part,
@@ -1401,16 +1416,31 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
+  # --- Trailer ---
+
+  defp import_trailer(trailer, play, division, pos) do
+    case PlayContent.create_element(%{
+           play_id: play.id,
+           division_id: division.id,
+           type: "trailer",
+           content: text_content(trailer),
+           position: pos
+         }) do
+      {:ok, _el} -> :ok
+      {:error, cs} -> Logger.warning("Failed to create trailer: #{inspect(cs)}")
+    end
+  end
+
   # --- Prose ---
 
-  defp import_prose({_name, _attrs, children} = para, play, division, speech, pos) do
+  defp import_prose({_name, _attrs, children} = para, play, division, parent_id, pos) do
     is_aside = aside_in_children?(children)
     content = if is_aside, do: prose_aside_content(children), else: text_content(para)
 
     case PlayContent.create_element(%{
            play_id: play.id,
            division_id: division.id,
-           parent_id: speech.id,
+           parent_id: parent_id,
            type: "prose",
            content: content,
            is_aside: is_aside,

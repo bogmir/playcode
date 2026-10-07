@@ -176,7 +176,7 @@ All tables use UUID primary keys. Key relationships:
 - `play_statistics` stores computed JSONB data per play
 - `activity_logs` tracks admin actions with user_id, play_id, action, resource_type, resource_id, changes (JSONB), metadata (JSONB)
 
-Element types: `speech`, `stage_direction`, `verse_line`, `prose`, `line_group`
+Element types: `speech`, `stage_direction`, `verse_line`, `prose`, `line_group`, `trailer` (a division's closing formula, "FIN DEL PRIMER ACTO"; exported last in its division). A `prose` or `line_group` with no parent is text nobody speaks: a dumb show, a stanza opening a prologue
 Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco`, `front`
 
 ### Archiving and provenance

@@ -61,7 +61,7 @@ defmodule Playcode.PlayContent.Element do
     |> validate_required([:type])
     |> validate_inclusion(
       :type,
-      ~w(speech stage_direction verse_line prose line_group unrecognized)
+      ~w(speech stage_direction verse_line prose line_group trailer unrecognized)
     )
   end
 end

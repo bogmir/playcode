@@ -512,8 +512,11 @@ defmodule Playcode.Export.TeiXml do
 
         children = if div.title, do: [element(:head, div.title)], else: []
 
-        # Add elements from the division
-        elements = Map.get(div, :loaded_elements, [])
+        # Add elements from the division. TEI only allows a trailer at the end, so the
+        # act's trailers follow its scenes.
+        {trailers, elements} =
+          div |> Map.get(:loaded_elements, []) |> Enum.split_with(&(&1.type == "trailer"))
+
         element_xml = Enum.map(elements, &build_element/1) |> Enum.reject(&is_nil/1)
 
         # Add sub-divisions (scenes, etc.)
@@ -537,7 +540,11 @@ defmodule Playcode.Export.TeiXml do
             element(:div2, child_attrs, child_head ++ child_elements)
           end)
 
-        element(:div1, attrs, children ++ element_xml ++ sub_divs)
+        element(
+          :div1,
+          attrs,
+          children ++ element_xml ++ sub_divs ++ Enum.map(trailers, &build_element/1)
+        )
       end)
 
     element(:body, divs)
@@ -615,6 +622,9 @@ defmodule Playcode.Export.TeiXml do
 
     element(:p, content)
   end
+
+  defp build_element(%{type: "trailer"} = el),
+    do: element(:trailer, build_inline_content(el.content))
 
   defp build_element(_), do: nil
 
