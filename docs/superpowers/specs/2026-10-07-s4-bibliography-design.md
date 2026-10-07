@@ -156,6 +156,11 @@ The small code tables are module attributes, not files:
   `FilemakerSync.base_code(play.code)`.
 - Only plays from `FilemakerSync.all_plays/0` count, so archived plays are excluded, as in S1 and
   S2.
+- **A base code held by two plays links both**, as S1 and S2 treat each play on its own. Dev has
+  two such pairs, both with bibliography: `EMOTHE0435_ElBastardoMudarra` and
+  `…_ElBastardoMudarraTragicomedia` (1 modern edition), and `EMOTHE0671_NoPuedeSerGuardarUnaMujer`
+  and `…_NoPuedeSer` (9 records, 7 modern editions). They look like the same version imported
+  twice, which is for the project to resolve, not the import.
 - Versions we do not hold are counted, not listed.
 
 ### Field mapping
@@ -240,14 +245,17 @@ bibliography. It never changes or deletes anything it wrote before:
 
 ### Expected result
 
-On the plays whose codes match the tracked and git-ignored TEI fixtures, measured against the dump
-on 2026-10-07:
+On the dev database's 392 plays (371 EMOTHE base codes, 19 Artelope), measured against the dump on
+2026-10-07:
 
-- **Bibliography:** 323 entries and 323 links on 14 plays. That is 280 criticism (49 of them
-  uncategorised), 36 translations and 7 adaptations. The 2 duplicate links collapse.
-- **Modern editions:** 95 entries and 100 links on 10 plays. 5 entries are shared.
+- **Bibliography:** 2,043 entries and 2,060 links on 102 plays. That is 1,807 criticism (74 of them
+  uncategorised), 184 translations and 52 adaptations. 17 entries are shared, by two plays at most.
+  The 4 duplicate links collapse. 508 links point at versions dev does not hold.
+- **Modern editions:** 680 entries and 752 links on 102 plays. 24 entries are shared, by up to 9
+  plays. The 4 duplicate links collapse. 199 links point at versions dev does not hold.
 
-The dev database may hold a slightly different set of plays. The first dry run there is the check.
+The first dry run on dev should reproduce these numbers. A difference is a bug in either the
+import or this count.
 
 **The report:**
 
@@ -301,7 +309,7 @@ Two deliberate differences from FileMaker:
 - **Within a group, entries are sorted by `plain/2`**, case- and accent-folded (NFD, combining
   marks removed), ignoring leading quotes and punctuation, then by id. A citation starts with the
   first printed name and then the title, so this is "alphabetical by first name printed". It is
-  computed on read; the longest list, *Hamlet*'s criticism, is about 60.
+  computed on read; the longest list, EMOTHE0176's criticism, has 77 entries.
 
 ### Where it shows
 

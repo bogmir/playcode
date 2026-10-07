@@ -448,11 +448,11 @@ lacks, the proposed table, TEI mapping. Headlines:
   `text/back/div[@type="bibliografia"]/listBibl/biblStruct`, **not** `sourceDesc`: the parser
   already reads `sourceDesc/listBibl/bibl` into `play_sources`. The parser ignores `<back>` today,
   which also silently drops the two fixtures' `epilogo` divs.
-- **Scale:** 325 records on 14 plays **today** (232 crítica, 36 traducción, 7 adaptación,
-  50 uncategorised). Five of those plays, EMOTHE0659/0670/0749/0777/0779, are not in the web
-  export, so only the dump reaches them. **2,565 linked records on 142 versions** at full corpus,
-  plus the 823 modern editions. This is still the largest remaining slice. Build it after the
-  ~300-play import (question 5)
+- **Scale:** measured 2026-10-07 on dev's 392 plays, after the ~300-play import (question 5):
+  2,043 records on 102 plays (1,807 criticism with the 74 uncategorised, 184 translations,
+  52 adaptations), plus 680 modern editions on 102 plays. Before that import it was 325 records on
+  14 plays. **2,565 linked records on 142 versions** at full corpus. This is the largest remaining
+  slice
 - **Done when:** a bibliography section renders per play grouped by kind, **and** admins can add,
   edit and delete entries without an import
 - **S0b:** the table carries `origin`. A TEI re-import replaces only that play's `tei` rows, and
