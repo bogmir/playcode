@@ -39,6 +39,11 @@ config :playcode, :static_site_deploy,
   publish_token: System.get_env("STATIC_SITE_PUBLISH_TOKEN")
 
 if config_env() == :prod do
+  # Where the static site is built (StaticSite.output_dir/0). On Fly, a folder on the
+  # playcode_site volume (fly.toml), so the site and its build.json outlive a stopped
+  # machine and a deploy. Unset, it is _site in the release's directory.
+  if dir = System.get_env("STATIC_SITE_DIR"), do: config(:playcode, :static_site_dir, dir)
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

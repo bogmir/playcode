@@ -19,6 +19,13 @@ kill_timeout = '30s'
   PHX_SERVER = 'true'
   POOL_SIZE = '10'
   PORT = '8080'
+  STATIC_SITE_DIR = '/data/site'
+
+# The static site, so it survives a stopped machine and a deploy. One volume, so one
+# machine: a second would build and deploy a site of its own.
+[mounts]
+  source = 'playcode_site'
+  destination = '/data'
 
 [http_service]
   internal_port = 8080
