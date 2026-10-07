@@ -6,9 +6,11 @@ defmodule Playcode.Import.Bibliography do
   `load/1` reads six tables. `plan/2` decides what to write: it reads the database but
   never writes. `apply_plan/2` writes the plan in one transaction.
 
-  A play that already has a `filemaker` link is skipped whole, so a re-run picks up the
-  plays added since without undoing a curator's edits or removals. An entry whose
-  `filemaker_id` already exists is reused, which keeps a shared edition one entry.
+  A play the import has written to before (a `filemaker` link, or its "import" row in the
+  activity log, which outlives the links) is skipped whole, so a re-run picks up the plays
+  added since without undoing a curator's edits or removals. An entry whose `filemaker_id`
+  already exists is reused, which keeps a shared edition one entry, and a link a curator
+  already made to it is skipped as `:already_linked`.
   """
 
   import Ecto.Query
@@ -84,7 +86,8 @@ defmodule Playcode.Import.Bibliography do
 
     context = %{
       by_code: Enum.group_by(plays, &FilemakerSync.base_code(&1.code)),
-      imported: imported_play_ids()
+      imported: imported_play_ids(),
+      linked: linked_refs()
     }
 
     records = Map.new(data.bib_records, &{&1["_kp_IdBiblioSelecta"], &1})
@@ -351,6 +354,10 @@ defmodule Playcode.Import.Bibliography do
             MapSet.member?(context.imported, play.id) ->
               %{acc | already_imported: MapSet.put(acc.already_imported, play.code)}
 
+            # A curator linked it already, from "Add existing" on a play imported later.
+            MapSet.member?(context.linked, {play.id, ref}) ->
+              skip(acc, :already_linked, "#{ref} on #{play.code}")
+
             MapSet.member?(acc.seen, {play.id, ref}) ->
               skip(acc, :duplicate_link, "#{ref} on #{play.code}")
 
@@ -450,11 +457,29 @@ defmodule Playcode.Import.Bibliography do
     end
   end
 
+  # A play is done once the import has written to it. Its filemaker links alone are no
+  # marker: a curator may remove every one of them, and the next run must not bring them
+  # back. The activity-log row apply_plan/2 writes per play survives that.
   defp imported_play_ids do
+    logged =
+      ActivityLog.Entry
+      |> where([a], a.action == "import" and a.resource_type == "play_bibliography")
+      |> select([a], a.play_id)
+
     Link
     |> where([l], l.origin == "filemaker")
-    |> distinct(true)
     |> select([l], l.play_id)
+    |> union(^logged)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  # `{play_id, filemaker_id}` for every link a play already has to an imported entry.
+  defp linked_refs do
+    Link
+    |> join(:inner, [l], e in Entry, on: e.id == l.entry_id)
+    |> where([_l, e], not is_nil(e.filemaker_id))
+    |> select([l, e], {l.play_id, e.filemaker_id})
     |> Repo.all()
     |> MapSet.new()
   end

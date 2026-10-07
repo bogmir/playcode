@@ -235,8 +235,12 @@ every *Libro* prints as a book and never says "In:", even with a `Titulo2` (251 
 The import is re-runnable so that plays imported into Playcode later can pick up their
 bibliography. It never changes or deletes anything it wrote before:
 
-- **A play that already has a `filemaker` link is skipped whole** and reported as "already
-  imported", so a curator's edits and removals are never undone.
+- **A play the import has written to is skipped whole** and reported as "already imported", so
+  a curator's edits and removals are never undone. The marker is the play's `filemaker` links or
+  the per-play "import" row `apply_plan` writes to the activity log, which survives a curator
+  removing every link (found by the final review).
+- **A link a curator already made to an imported entry is skipped** as `already_linked`, so
+  "Add existing" on a play imported later cannot make a re-run fail on the unique link.
 - **An entry whose `filemaker_id` already exists is reused.** That is how a modern edition shared
   with a play imported later stays one entry.
 - **Known edge:** a shared entry a curator deleted comes back if a play imported later links to it.

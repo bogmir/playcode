@@ -245,6 +245,39 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert length(Bibliography.list_links(later.id)) == 5
     end
 
+    # Found by the final review: the "already imported" marker was the play's filemaker
+    # links themselves, so removing all of them made the next run bring them back.
+    test "a re-run keeps a play's removals even when every imported link was removed", %{
+      hamlet: hamlet
+    } do
+      run("playcode.import.bibliography", ["--path", @dump])
+      for link <- Bibliography.list_links(hamlet.id), do: {:ok, _} = Bibliography.unlink(link)
+
+      out = run("playcode.import.bibliography", ["--path", @dump])
+
+      assert out =~ "already imported: 2 plays"
+      assert Bibliography.list_links(hamlet.id) == []
+    end
+
+    # Found by the final review: "Add existing" on a play imported later, then a re-run,
+    # planned a second link to the same entry and rolled the whole import back.
+    test "a re-run skips an entry a curator already linked to a play added later", %{
+      antony: antony
+    } do
+      run("playcode.import.bibliography", ["--path", @dump])
+      later = play_fixture(%{"code" => "EMOTHE0038_AntonioYCleopatra"})
+      [rowe] = for l <- Bibliography.list_links(antony.id), l.entry.volumes_total == "6", do: l
+      {:ok, _} = Bibliography.link_entry(later.id, rowe.entry_id)
+
+      dry = run("playcode.import.bibliography", ["--path", @dump, "--dry-run"])
+      assert dry =~ "skipped, already_linked: 1  T04:52 on EMOTHE0038_AntonioYCleopatra"
+
+      assert run("playcode.import.bibliography", ["--path", @dump]) =~
+               "created 0 entries and 4 links"
+
+      assert length(Bibliography.list_links(later.id)) == 5
+    end
+
     test "an archived play is left out", %{antony: antony} do
       {:ok, _} = Catalogue.delete_play(antony)
       run("playcode.import.bibliography", ["--path", @dump])
