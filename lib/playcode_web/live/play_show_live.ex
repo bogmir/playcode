@@ -4,6 +4,8 @@ defmodule PlaycodeWeb.PlayShowLive do
   import PlaycodeWeb.Components.PlayText
   import PlaycodeWeb.Components.StatisticsPanel
 
+  alias Playcode.Bibliography
+  alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
@@ -18,9 +20,10 @@ defmodule PlaycodeWeb.PlayShowLive do
     divisions = PlayContent.load_play_content(play.id)
     characters = PlayContent.list_characters(play.id)
     statistic = Statistics.get_statistics(play.id)
+    bibliography = Bibliography.list_for_play(play.id)
 
     %{metadata: metadata_sections, play: play_sections} =
-      build_sections_navigation(play, divisions)
+      build_sections_navigation(play, divisions, bibliography)
 
     {:ok,
      socket
@@ -29,6 +32,7 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:divisions, divisions)
      |> assign(:characters, characters)
      |> assign(:statistic, statistic)
+     |> assign(:bibliography, bibliography)
      |> assign(:metadata_sections, metadata_sections)
      |> assign(:play_sections, play_sections)
      |> assign(:gazetteer, Places.gazetteer())
@@ -388,6 +392,44 @@ defmodule PlaycodeWeb.PlayShowLive do
             </dl>
           </section>
 
+          <%!-- Bibliography: laid out like Study and Places, a hanging indent per citation --%>
+          <section
+            :if={@bibliography != []}
+            id="meta-bibliography"
+            class="mb-8 max-w-2xl mx-auto scroll-mt-20 text-sm"
+          >
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">
+              <dt class="text-base-content/50">{gettext("Bibliography")}</dt>
+              <dd class="min-w-0">
+                <div
+                  :for={{kind, subgroups} <- @bibliography}
+                  id={"meta-bibliography-#{kind}"}
+                  class="mb-5 last:mb-0 scroll-mt-20"
+                >
+                  <h3 class="mb-2 font-semibold text-base-content">
+                    {PlayLabels.bibliography_kind_label(kind)}
+                  </h3>
+                  <div :for={{language, links} <- subgroups}>
+                    <h4
+                      :if={kind == "translation"}
+                      class="mb-1 mt-3 text-xs uppercase tracking-wide text-base-content/50"
+                    >
+                      {PlayLabels.bibliography_language_label(language)}
+                    </h4>
+                    <ul class="space-y-2">
+                      <li
+                        :for={link <- links}
+                        class="pl-6 -indent-6 font-serif leading-relaxed [&_a]:link [&_a]:break-all"
+                      >
+                        {Citation.html(link.entry, link)}
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+              </dd>
+            </dl>
+          </section>
+
           <%!-- Editorial notes (text view only) --%>
           <div
             :for={{note, index} <- Enum.with_index(@play.editorial_notes, 1)}
@@ -426,14 +468,14 @@ defmodule PlaycodeWeb.PlayShowLive do
     """
   end
 
-  defp build_sections_navigation(play, divisions) do
-    metadata_sections = build_metadata_sections(play)
+  defp build_sections_navigation(play, divisions, bibliography) do
+    metadata_sections = build_metadata_sections(play, bibliography)
     play_sections = divisions |> Enum.flat_map(&division_navigation_item(&1, 0))
 
     %{metadata: metadata_sections, play: play_sections}
   end
 
-  defp build_metadata_sections(play) do
+  defp build_metadata_sections(play, bibliography) do
     base = [%{id: "meta-overview", label: gettext("Overview")}]
 
     base
@@ -446,6 +488,7 @@ defmodule PlaycodeWeb.PlayShowLive do
     |> maybe_add_section(play.play_places != [], "meta-places", gettext("Places"))
     |> maybe_add_section(play.sources != [], "meta-sources", gettext("Source"))
     |> maybe_add_section(play.editors != [], "meta-editors", gettext("Editors"))
+    |> maybe_add_section(bibliography != [], "meta-bibliography", gettext("Bibliography"))
     |> Kernel.++(build_editorial_note_sections(play.editorial_notes))
   end
 

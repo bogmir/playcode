@@ -259,4 +259,41 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       assert html =~ text
     end
   end
+
+  describe "the bibliography panel" do
+    test "is absent when the play has none", %{conn: conn} do
+      play = Playcode.TestFixtures.play_fixture()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      refute has_element?(view, "#meta-bibliography")
+      refute has_element?(view, ~s(a[href="#meta-bibliography"]))
+    end
+
+    test "lists the citations by kind, with its own sidebar entry, and no researcher's note", %{
+      conn: conn
+    } do
+      play = Playcode.TestFixtures.play_fixture()
+
+      Playcode.TestFixtures.bibliography_fixture(
+        play,
+        %{
+          "monogr_author" => "Oleza, Joan",
+          "monogr_title" => "Teatro y prácticas escénicas",
+          "public_note" => "Reimpreso en 1990",
+          "note" => "Revisar la fecha"
+        },
+        %{"note" => "Préstamo interbibliotecario"}
+      )
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      section = view |> element("#meta-bibliography") |> render()
+
+      assert section =~ t("Criticism")
+      assert section =~ "Oleza, Joan. Teatro y prácticas escénicas."
+      assert section =~ "Reimpreso en 1990."
+      refute section =~ "Revisar la fecha"
+      refute section =~ "Préstamo interbibliotecario"
+      assert has_element?(view, ~s(a[href="#meta-bibliography"]), t("Bibliography"))
+    end
+  end
 end
