@@ -284,15 +284,4 @@ defmodule Playcode.Export.SiteBuilderTest do
     assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
     assert rewritten?(a)
   end
-
-  test "Rebuild rewrites every play though nothing changed" do
-    [a] = complete_plays(1)
-    assert :started = SiteBuilder.generate([])
-    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
-    plant(a)
-
-    assert :started = SiteBuilder.rebuild([])
-    assert_receive {:site_builder, :done, :rebuild, {:ok, %{plays: 1}}}, 10_000
-    assert rewritten?(a)
-  end
 end

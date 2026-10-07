@@ -205,6 +205,23 @@ defmodule Playcode.Export.StaticSite do
   end
 
   @doc """
+  The bytes of the site's files under `dir`; 0 when there is none. Dot entries are
+  left out, as the .zip leaves them: the site writes none, and `.git` is the deploy's.
+  A file a running job removes meanwhile is skipped, not a crash.
+  """
+  def dir_size(dir) do
+    dir
+    |> Path.join("**")
+    |> Path.wildcard()
+    |> Enum.reduce(0, fn path, acc ->
+      case File.stat(path) do
+        {:ok, %{type: :regular, size: size}} -> acc + size
+        _ -> acc
+      end
+    end)
+  end
+
+  @doc """
   Codes of the plays in the site at `dir` that changed since they were written: the
   published plays whose `content_version` is not the one `build.json` records for them.
   A play it records nothing for counts as changed. Archived and incomplete plays are
@@ -523,19 +540,5 @@ defmodule Playcode.Export.StaticSite do
     |> Enum.frequencies_by(value_of)
     |> Enum.sort_by(&(-elem(&1, 1)))
     |> Enum.map(fn {value, n} -> {value, labels[value], n} end)
-  end
-
-  defp dir_size(path) do
-    path
-    |> File.ls!()
-    |> Enum.reduce(0, fn entry, acc ->
-      full = Path.join(path, entry)
-
-      case File.stat(full) do
-        {:ok, %{type: :regular, size: size}} -> acc + size
-        {:ok, %{type: :directory}} -> acc + dir_size(full)
-        _ -> acc
-      end
-    end)
   end
 end

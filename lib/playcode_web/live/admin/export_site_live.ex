@@ -5,21 +5,16 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   alias Playcode.Export.{SiteBuilder, StaticSite}
 
-  # The jobs that bring the whole site up to date, as opposed to one play's batch or a deploy.
-  defguardp is_build(job) when job in [:generate, :rebuild]
-
   @impl true
   def mount(_params, _session, socket) do
-    exported_codes = StaticSite.list_exported_codes(StaticSite.output_dir())
-
     socket =
       socket
       |> load_plays()
+      |> on_disk()
       |> assign(:page_title, gettext("Export Static Site"))
       # The site's own version, so it is current for the form until someone changes it.
       |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
       |> assign(:deploy_to, deploy_target())
-      |> assign(:exported_codes, MapSet.new(exported_codes))
       |> assign(:pending, %{})
       |> assign(:changed, MapSet.new())
       |> assign(:site_changed, false)
@@ -54,9 +49,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   def handle_event("generate", _params, socket),
     do: socket |> form_opts() |> SiteBuilder.generate() |> queued_flash(socket)
-
-  def handle_event("rebuild", _params, socket),
-    do: socket |> form_opts() |> SiteBuilder.rebuild() |> queued_flash(socket)
 
   # A changed play already in the site: written again, in a batch like any add.
   def handle_event("refresh_play", %{"id" => id}, socket),
@@ -118,8 +110,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   def handle_info({:site_builder, :published, {:batch, changes}}, socket),
     do: {:noreply, socket |> settle(changes) |> assign(:indexing, true)}
 
-  def handle_info({:site_builder, :progress, job, info}, socket)
-      when is_build(job) do
+  def handle_info({:site_builder, :progress, :generate, info}, socket) do
     {:noreply,
      socket
      |> assign(:gen_current, info.current)
@@ -200,16 +191,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               >
                 <span :if={@generating} class="loading loading-spinner loading-sm"></span>
                 {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
-              </button>
-              <%!-- Hidden while the site changed as a whole: Generate rebuilds it all then. --%>
-              <button
-                :if={MapSet.size(@exported_codes) > 0 and not @site_changed}
-                type="button"
-                phx-click="rebuild"
-                class="btn btn-outline"
-                disabled={@generating}
-              >
-                {gettext("Rebuild everything")}
               </button>
               <span class="text-sm text-base-content/60">
                 {gettext("%{complete} of %{total} plays marked as complete",
@@ -347,18 +328,19 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             {gettext("Generation Complete")}
           </h2>
           <h2 :if={!@gen_result} class="card-title">{gettext("Built site")}</h2>
-          <div :if={@gen_result} class="stats stats-horizontal shadow mt-2">
+          <%!-- The site on disk, so a switch changes these as much as Generate does. --%>
+          <div class="stats stats-horizontal shadow mt-2">
             <div class="stat">
               <div class="stat-title">{gettext("Plays")}</div>
-              <div class="stat-value text-lg">{@gen_result.plays}</div>
+              <div id="site-plays" class="stat-value text-lg">{MapSet.size(@exported_codes)}</div>
             </div>
             <div class="stat">
               <div class="stat-title">{gettext("Total Size")}</div>
-              <div class="stat-value text-lg">{format_size(@gen_result.size)}</div>
+              <div id="site-size" class="stat-value text-lg">{format_size(@site_size)}</div>
             </div>
             <div class="stat">
               <div class="stat-title">{gettext("Output")}</div>
-              <div class="stat-value text-lg font-mono text-sm">{@gen_result.output_dir}/</div>
+              <div class="stat-value text-lg font-mono text-sm">{StaticSite.output_dir()}/</div>
             </div>
           </div>
 
@@ -463,7 +445,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp follow(socket, %{job: job, queue: queue}) do
     queue
     |> Enum.reduce(started(socket, job), &queued(&2, &1))
-    |> assign(:exported_codes, on_disk())
+    |> on_disk()
     |> track_changes()
   end
 
@@ -480,7 +462,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   defp started(socket, nil), do: socket
 
-  defp started(socket, job) when is_build(job) do
+  defp started(socket, :generate) do
     socket
     |> assign(:busy, true)
     |> assign(:generating, true)
@@ -512,7 +494,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     socket
     |> update(:pending, &Map.reject(&1, fn {id, change} -> landed[id] == change end))
     |> update(:changed, &MapSet.difference(&1, MapSet.new(written)))
-    |> assign(:exported_codes, on_disk())
+    |> on_disk()
   end
 
   defp direction({:add, _}), do: :add
@@ -523,7 +505,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     do: socket |> settle(changes) |> idle() |> track_changes()
 
   defp finished(socket, _job),
-    do: socket |> assign(:exported_codes, on_disk()) |> idle() |> track_changes()
+    do: socket |> on_disk() |> idle() |> track_changes()
 
   defp idle(socket),
     do: assign(socket, generating: false, deploying: false, indexing: false, busy: false)
@@ -535,7 +517,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp play_id(socket, code),
     do: Enum.find_value(socket.assigns.plays, code, &(&1.code == code && &1.id))
 
-  defp on_disk, do: MapSet.new(StaticSite.list_exported_codes(StaticSite.output_dir()))
+  # What the site on disk holds: the plays the switches show, and its size.
+  defp on_disk(socket) do
+    dir = StaticSite.output_dir()
+
+    assign(socket,
+      exported_codes: MapSet.new(StaticSite.list_exported_codes(dir)),
+      site_size: StaticSite.dir_size(dir)
+    )
+  end
 
   # Where Deploy goes, from the server's settings (StaticSite.Deployer): the repository,
   # and the host of the server told to publish, if any. nil when there is no repository.
@@ -709,8 +699,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     ]
   end
 
-  defp done(socket, job, {:ok, %{plays: plays, size: size} = result})
-       when is_build(job) do
+  defp done(socket, :generate, {:ok, %{plays: plays, size: size} = result}) do
     socket
     |> assign(:gen_result, result)
     |> put_flash(
@@ -761,13 +750,13 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     |> put_flash(:info, gettext("Deployed to GitHub Pages!"))
   end
 
-  defp done(socket, job, {:error, reason}) when is_build(job),
-    do: put_flash(socket, :error, failed(job, inspect(reason)))
+  defp done(socket, :generate, {:error, reason}),
+    do: put_flash(socket, :error, failed(:generate, inspect(reason)))
 
   defp done(socket, :deploy, {:error, reason}),
     do: put_flash(socket, :error, failed(:deploy, reason))
 
-  defp failed(job, reason) when is_build(job),
+  defp failed(:generate, reason),
     do: gettext("Generation failed: %{reason}", reason: reason)
 
   defp failed(:deploy, reason), do: gettext("Deploy failed: %{reason}", reason: reason)

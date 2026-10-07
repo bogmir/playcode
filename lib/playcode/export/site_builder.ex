@@ -8,14 +8,13 @@ defmodule Playcode.Export.SiteBuilder do
   or `:queued`. A request already waiting is not queued twice: it keeps its place and
   takes the options of the latest ask. When a job ends, the adds and removes at the front
   of the queue run as one batch, which publishes its pages first and rewrites the search
-  index once (`StaticSite.apply_changes/2`); a generate, a rebuild or a deploy runs on its
-  own, in its turn. Generate brings the site up to date when it runs: every play in it
-  when the site's code or settings changed since it was built, only the changed plays
-  otherwise. Rebuild always rebuilds every play.
+  index once (`StaticSite.apply_changes/2`); a generate or a deploy runs on its own, in
+  its turn. Generate brings the site up to date when it runs: every play in it when the
+  site's code or settings changed since it was built, only the changed plays otherwise.
 
-  Jobs are `:generate`, `:rebuild`, `{:batch, [{:add, play_id} | {:remove, code}]}` and
-  `:deploy`. It broadcasts on `"static_site"`, so every admin page shows the same state:
-  `{:site_builder, :queued, request}` (`:generate`, `:rebuild`, `{:add, id}`,
+  Jobs are `:generate`, `{:batch, [{:add, play_id} | {:remove, code}]}` and `:deploy`.
+  It broadcasts on `"static_site"`, so every admin page shows the same state:
+  `{:site_builder, :queued, request}` (`:generate`, `{:add, id}`,
   `{:remove, code}` or `:deploy`), `{:site_builder, :started, job}`,
   `{:site_builder, :progress, job, info}`, `{:site_builder, :published, job}` (a batch's
   pages are live, its search is next), `{:site_builder, :done, job, result}` and
@@ -46,9 +45,6 @@ defmodule Playcode.Export.SiteBuilder do
   `opts` as `StaticSite.generate/1` takes them, but for the directory and plays.
   """
   def generate(opts), do: request(:generate, opts)
-
-  @doc "Rebuilds every play in the site, whatever changed. Results as `generate/1`'s full build."
-  def rebuild(opts), do: request(:rebuild, opts)
 
   def add(play_id, opts), do: request({:add, play_id}, opts)
   def remove(code, opts), do: request({:remove, code}, opts)
@@ -116,7 +112,7 @@ defmodule Playcode.Export.SiteBuilder do
     %{state | job: job, ref: task.ref, queue: rest}
   end
 
-  defp take([{request, args} | rest]) when request in [:generate, :rebuild, :deploy],
+  defp take([{request, args} | rest]) when request in [:generate, :deploy],
     do: {request, args, rest}
 
   defp take(queue) do
@@ -136,11 +132,9 @@ defmodule Playcode.Export.SiteBuilder do
     dir = StaticSite.output_dir()
 
     if StaticSite.site_changed?(dir, opts) or StaticSite.list_exported_codes(dir) == [],
-      do: build_all(:generate, opts),
+      do: build_all(opts),
       else: refresh(opts)
   end
-
-  defp run(:rebuild, opts), do: build_all(:rebuild, opts)
 
   defp run({:batch, changes} = job, opts) do
     published = fn -> broadcast({:site_builder, :published, job}) end
@@ -154,11 +148,11 @@ defmodule Playcode.Export.SiteBuilder do
 
   # Rebuilds the site as it stands when the job runs, not when it was asked for: an add
   # or remove queued before it keeps its change.
-  defp build_all(job, opts) do
+  defp build_all(opts) do
     opts
     |> in_site()
     |> Keyword.put(:play_codes, codes_in_site())
-    |> Keyword.put(:on_progress, progress(job))
+    |> Keyword.put(:on_progress, progress(:generate))
     |> StaticSite.generate()
   end
 

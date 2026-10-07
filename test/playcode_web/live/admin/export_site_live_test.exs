@@ -251,6 +251,32 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert has_element?(lv, "button", t("Download .zip"))
   end
 
+  # Regression: the figures were the last Generate's, so a switch left them stale.
+  test "the site's figures are the site on disk, and follow its switches",
+       %{conn: conn, a: a, b: b} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    assert has_element?(lv, "#site-plays", "1")
+    size = lv |> element("#site-size") |> render()
+
+    lv |> element(switch(b)) |> render_click()
+    wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
+
+    assert has_element?(lv, "#site-plays", "2")
+    refute lv |> element("#site-size") |> render() == size
+  end
+
+  # Generate already rebuilds every play when the site's code or settings changed, and
+  # only the changed ones otherwise, so a second build button only raised the question
+  # of which to press.
+  test "Generate is the only build button", %{conn: conn, a: a} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert has_element?(lv, "button", t("Generate Static Site"))
+    refute has_element?(lv, "button", t("Rebuild everything"))
+  end
+
   test "previewing before anything is built sends you back to the page", %{conn: conn} do
     conn = get(conn, ~p"/admin/export/preview/index.html")
 
@@ -359,7 +385,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     end
 
     # The banner and Generate already say every play will be rebuilt: a dot and a
-    # Refresh on each row, and a Rebuild button that does what Generate does, are noise.
+    # Refresh on each row are noise.
     test "while the whole site is out of date, no row is flagged on its own",
          %{conn: conn, a: a, b: b} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
@@ -374,7 +400,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       refute flagged?(lv, a)
       refute current?(lv, b)
       refute has_element?(lv, "#refresh-#{a.id}")
-      refute has_element?(lv, "button", t("Rebuild everything"))
     end
 
     test "a change announced while the page is open flags the play at once",
@@ -501,24 +526,17 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       assert has_element?(lv, "input[name=version][value='2.0']")
     end
 
-    test "Rebuild everything rebuilds the site though nothing changed", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-
-      lv |> element("button", t("Rebuild everything")) |> render_click()
-      wait_for(fn -> render(lv) =~ t("Generation Complete") end)
-    end
-
     # A build cannot be made to fail by clicks, so these are the broadcasts the builder
-    # would send: its ending with an error, and its task crashing.
-    test "a failed Rebuild everything says why", %{conn: conn} do
+    # would send: its ending with an error, and its task crashing. It was written for
+    # Rebuild everything, which is gone; Generate fails the same way.
+    test "a failed Generate says why", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
 
-      broadcast.({:site_builder, :done, :rebuild, {:error, :disk_full}})
+      broadcast.({:site_builder, :done, :generate, {:error, :disk_full}})
       assert render(lv) =~ t("Generation failed: %{reason}", reason: ":disk_full")
 
-      broadcast.({:site_builder, :failed, :rebuild, :killed})
+      broadcast.({:site_builder, :failed, :generate, :killed})
       assert render(lv) =~ t("Generation failed: %{reason}", reason: ":killed")
     end
   end
@@ -604,9 +622,13 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       generate(lv)
 
       assert render(lv) =~ t("Pushes the site to %{repo}.", repo: "file://" <> repo)
+      size = lv |> element("#site-size") |> render()
 
       lv |> element("button", t("Deploy")) |> render_click()
       wait_for(fn -> render(lv) =~ t("Deployed!") end)
+
+      # The push leaves a .git in the site directory; it is not part of the site.
+      assert lv |> element("#site-size") |> render() == size
 
       assert {page, 0} =
                System.cmd("git", [
