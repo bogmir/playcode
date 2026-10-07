@@ -162,6 +162,22 @@ defmodule Playcode.Bibliography.CitationTest do
              ~s(Grilli, Giuseppe. "Lope y su fábula de Adonis y Venus". Anuario Lope de Vega. 1998.)
   end
 
+  # Found on the real data: FileMaker marks a title inside an edition's title with <<…>>,
+  # which printed raw once the edition's own title was wrapped in markers too.
+  test "a title inside an italic title is set roman, with no markers left" do
+    tronch =
+      entry(
+        kind: "modern_edition",
+        pub_type: "book",
+        monogr_editors: "Tronch Pérez, Jesús",
+        monogr_title: "Modernized Enfolded <<Hamlet>>",
+        year_text: "2011"
+      )
+
+    assert italics(Citation.parts(tronch)) == ["Modernized Enfolded "]
+    assert Citation.plain(tronch) == "Tronch Pérez, Jesús, ed. Modernized Enfolded Hamlet. 2011."
+  end
+
   test "the web address comes last, with its access date" do
     kyd =
       entry(

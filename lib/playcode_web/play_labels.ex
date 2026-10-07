@@ -10,6 +10,7 @@ defmodule PlaycodeWeb.PlayLabels do
 
   use Gettext, backend: PlaycodeWeb.Gettext
 
+  alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
   alias Playcode.Places.{Place, PlayPlace}
 
@@ -142,4 +143,39 @@ defmodule PlaycodeWeb.PlayLabels do
   def act_label_plural("Jornada"), do: gettext("Jornadas")
   def act_label_plural("Act"), do: gettext("Acts")
   def act_label_plural(other), do: other <> "s"
+
+  @doc "A kind's heading: the plural, as the bibliography groups it."
+  def bibliography_kind_label("modern_edition"), do: gettext("Modern editions")
+  def bibliography_kind_label("criticism"), do: gettext("Criticism")
+  def bibliography_kind_label("translation"), do: gettext("Translations")
+  def bibliography_kind_label("adaptation"), do: gettext("Adaptations")
+  def bibliography_kind_label(_other), do: ""
+
+  @doc "The kinds for a form's select: one entry is one of these."
+  def bibliography_kind_options do
+    [
+      {gettext("Modern edition"), "modern_edition"},
+      {gettext("Criticism"), "criticism"},
+      {gettext("Translation"), "translation"},
+      {gettext("Adaptation"), "adaptation"}
+    ]
+  end
+
+  def pub_type_label("article"), do: gettext("Journal article")
+  def pub_type_label("book_section"), do: gettext("Book chapter")
+  def pub_type_label("scholarly_edition"), do: gettext("Scholarly edition")
+  def pub_type_label("book"), do: gettext("Book")
+  def pub_type_label("proceedings"), do: gettext("Conference proceedings")
+  def pub_type_label("prologue"), do: gettext("Prologue")
+  def pub_type_label("festschrift"), do: gettext("Festschrift")
+  def pub_type_label("electronic"), do: gettext("Electronic publication")
+  def pub_type_label("thesis"), do: gettext("Doctoral thesis")
+  def pub_type_label("collection"), do: gettext("Collection")
+  def pub_type_label(_other), do: ""
+
+  def pub_type_options, do: Enum.map(Entry.pub_types(), &{pub_type_label(&1), &1})
+
+  @doc "A translation group's heading."
+  def bibliography_language_label(nil), do: gettext("Language not stated")
+  def bibliography_language_label(code), do: Play.language_name(code)
 end

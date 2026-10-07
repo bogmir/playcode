@@ -103,12 +103,12 @@ defmodule PlaycodeWeb.Layouts do
   attr :active_tab, :atom,
     default: nil,
     doc:
-      "which tab is active (:overview, :metadata, :editors, :sources, :places, :content, :public)"
+      "which tab is active (:overview, :metadata, :editors, :sources, :bibliography, :places, :content, :public)"
 
   def play_context_bar(assigns) do
     ~H"""
     <div class="border-b border-base-300 bg-base-100/80 backdrop-blur-sm">
-      <div class="mx-auto max-w-7xl px-4 flex items-center justify-between gap-4 py-2">
+      <div class="mx-auto max-w-7xl px-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
         <.link
           navigate={~p"/admin/plays"}
           class="btn btn-ghost btn-sm btn-square flex-shrink-0 text-base-content/70 hover:text-base-content"
@@ -123,7 +123,7 @@ defmodule PlaycodeWeb.Layouts do
             {if @play.author_name, do: "#{@play.author_name} — "}{@play.code}
           </p>
         </div>
-        <nav class="flex gap-1 flex-shrink-0">
+        <nav class="flex max-w-full gap-1 overflow-x-auto">
           <.link
             navigate={~p"/admin/plays/#{@play.id}"}
             class={ctx_tab_class(@active_tab == :overview)}
@@ -147,6 +147,12 @@ defmodule PlaycodeWeb.Layouts do
             class={ctx_tab_class(@active_tab == :sources)}
           >
             {gettext("Sources")}
+          </.link>
+          <.link
+            navigate={~p"/admin/plays/#{@play.id}/bibliography"}
+            class={ctx_tab_class(@active_tab == :bibliography)}
+          >
+            {gettext("Bibliography")}
           </.link>
           <.link
             navigate={~p"/admin/plays/#{@play.id}/places"}

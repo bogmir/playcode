@@ -25,7 +25,7 @@ defmodule Playcode.Authz do
   alias Playcode.Accounts.User
 
   @researcher_actions ~w(view_admin manage_plays edit_content manage_editors
-                         manage_sources manage_places import_tei download_export
+                         manage_sources manage_places manage_bibliography import_tei download_export
                          archive_play)a
 
   @admin_actions @researcher_actions ++

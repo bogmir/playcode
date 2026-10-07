@@ -198,9 +198,19 @@ defmodule Playcode.Bibliography.Citation do
 
   defp sentence(text), do: if(stops?(text), do: text, else: text <> ".")
 
-  # ponytail: a title that itself contains <<…>> nests the markers and the inner pair wins;
-  # FileMaker titles rarely do. Split the title on its markers if a curator hits it.
-  defp italic_sentence(title), do: if(stops?(title), do: "<<#{title}>>", else: "<<#{title}>>.")
+  # A title inside an italic title is set roman, as in print: FileMaker marks it with
+  # <<…>>, so the title's markers are inverted rather than nested (nesting printed them).
+  defp italic_sentence(title) do
+    inverted =
+      title
+      |> InlineMarkup.parts()
+      |> Enum.map_join(fn
+        %{text: text, italic: true} -> text
+        %{text: text} -> "<<#{text}>>"
+      end)
+
+    if stops?(InlineMarkup.plain(title)), do: inverted, else: inverted <> "."
+  end
 
   defp stops?(text), do: String.ends_with?(text, [".", "?", "!"])
 
