@@ -30,6 +30,7 @@ defmodule Playcode.PlayContent.Division do
       act scene prologue epilogue induction
       acte scene prologue epilogue
       play circunstancia_accion introduccion_editor_digital nota_edicion_digital head_title
+      interlude dumb_show auto
     ))
   end
 end

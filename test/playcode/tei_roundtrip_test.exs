@@ -312,6 +312,16 @@ defmodule Playcode.TeiRoundtripTest do
            ]
   end
 
+  # EMOTHE0113 (Tartuffe) heads its second placet with 302 characters.
+  test "a front-matter note keeps a heading longer than 255 characters" do
+    heading = String.duplicate("PLACET PRÉSENTÉ AU ROI ", 14)
+
+    xml =
+      roundtrip(tei(front: ~s(<div type="epistola"><head>#{heading}</head><p>Sire,</p></div>)))
+
+    assert xml_texts(xml, "head", within: "front") == [String.trim(heading)]
+  end
+
   describe "the text" do
     defp scene(content) do
       ~s(<div1 type="acto" n="1"><head>ACTO</head><div2 type="escena" n="1">#{content}</div2></div1>)
@@ -353,8 +363,10 @@ defmodule Playcode.TeiRoundtripTest do
 
     # EMOTHE0346 (Bartholomew Fair) opens with an induction; the export used to drop
     # it, speeches and all, because its type was missing from the body whitelist.
+    # interlude (EMOTHE0343, 0444, 0714), dumb_show (0329) and auto (0383) failed the
+    # import outright.
     test "every kind of top-level division the corpus uses survives, with its content" do
-      types = ~w(acto jornada act prologue induction epilogue play)
+      types = ~w(acto jornada act prologue induction epilogue play interlude dumb_show auto)
 
       body =
         Enum.map_join(types, fn type ->
