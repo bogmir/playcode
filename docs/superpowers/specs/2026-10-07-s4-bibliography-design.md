@@ -1,6 +1,6 @@
 # S4 — Bibliography
 
-**Status:** design, 2026-10-07. Slice S4 of `../plans/2026-08-01-filemaker-import-slices.md`.
+**Status:** implemented, 2026-10-07 (`e82c968..369a077`). Slice S4 of `../plans/2026-08-01-filemaker-import-slices.md`.
 Research, field by field: `2026-09-25-s4-bibliography-research.md`. The project's answers to that
 document's open questions arrived on 2026-10-07 through `docs/stakeholder/bibliografia-selecta.html`,
 and they reverse one of its proposals: entries are now shared between plays, not copied per play.

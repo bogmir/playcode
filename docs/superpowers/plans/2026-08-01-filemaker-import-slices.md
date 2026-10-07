@@ -13,7 +13,7 @@
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import, folded into S7's cross-check |
 | S3, S5–S8 | scoped below, each gets its own plan when it comes up |
-| S4 — bibliography | **designed** 2026-10-07, after the project answered the research's questions: shared entries, a one-time import — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
+| S4 — bibliography | **done** 2026-10-07 (`e82c968..369a077`; designed the same day, after the project answered the research's questions: shared entries, a one-time import) — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
 | S9 — places | **Phase 1 done** (the app, no FileMaker code) — `CLAUDE.md` |
 | S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; after the ~300 import |
 
@@ -402,7 +402,7 @@ Two findings from that check that outlive S2f:
   versions, holds nothing else, and FileMaker never prints it in the modern-editions list. S4 does
   not import the field, so read it from `T04.1` when building this slice
 
-### S4 — Bibliography *(designed 2026-10-07 — `../specs/2026-10-07-s4-bibliography-design.md`)*
+### S4 — Bibliography *(done 2026-10-07, `e82c968..369a077` — `../specs/2026-10-07-s4-bibliography-design.md`)*
 
 **The design supersedes the proposal below** where they differ. On the project's answers, entries
 are corpus-wide and linked to plays, so one correction reaches every play. The import is a one-time
