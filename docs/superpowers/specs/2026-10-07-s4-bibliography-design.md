@@ -67,7 +67,8 @@ bibliography_entries
   url_accessed_on       text, as FileMaker holds it
   series                modern editions
   siglum                modern editions: ARD3Q2, RSC
-  note                  internal
+  public_note           printed at the end of the citation (EdiMod_Nota)
+  note                  internal (BibSel_Nota)
   filemaker_id          "T12:2544" or "T04:576"; unique where not null
   timestamps
 
@@ -101,6 +102,13 @@ does, `Surname, Name; Surname, Name`: nothing in S4 needs individual people.
   - Deleting an entry cascades to its links, and the cascade fires the link trigger.
 - **`origin` lives on the link**, because the link is what the import creates per play.
   `"filemaker"` is also how a re-run of the import recognises a play it has already done.
+
+**Two notes, because FileMaker had two kinds.** `BibSel_Nota` was printed on 3 of 178 records,
+and the project chose to keep it internal (answer 5). `EdiMod_Nota` is different: FileMaker
+prints it at the end of every modern-edition citation that has one, 108 of 108 linked ("Doct.
+dissertation", "First edition in 1964", "Printed by H. Baldwin for J. Rivington and Sons"). Hiding
+it would remove published text, so it goes to `public_note`. Found while writing the plan,
+2026-10-07.
 
 ### Rejected
 
@@ -171,6 +179,7 @@ The small code tables are module attributes, not files:
 |---|---|
 | `BibSel_Autor`, `BibSel_Titulo`, `BibSel_Editor`, `BibSel_Traductor` | `analytic_*` |
 | `BibSel_Autor2`, `BibSel_Titulo2`, `BibSel_Editor2`, `BibSel_Traductor2` | `monogr_*` |
+| `BibSel_Titulo` on a book (type 4) | `series`: FileMaker prints it after the year as a series on 49 of 51 (`… 1967. Das Bühnenspiel.`) |
 | `BibSel_TituloOriginal` | `original_title` |
 | `BibSel_Edicion` | `edition` |
 | `BibSel_NumVolTomo` | `volume` |
@@ -200,9 +209,11 @@ every *Libro* prints as a book and never says "In:", even with a `Titulo2` (251 
     `monogr_*`.
   - `EdiMod_Titulo3` goes to `series`.
 - **Both:**
-  - `EdiMod_Edicion` goes to `edition`, `VolTomo` to `volume`, `Pag` to `pages`, `Ano` to
-    `year_text`, `URL` and `URL_FechaAcceso` to `url` and `url_accessed_on`, `Siglas` to `siglum`
-    and `Nota` to `note`.
+  - `EdiMod_Edicion` goes to `edition`, `Pag` to `pages`, `Ano` to `year_text`, `URL` and
+    `URL_FechaAcceso` to `url` and `url_accessed_on`, `Siglas` to `siglum` and `Nota` to
+    `public_note`.
+  - `EdiMod_VolTomo` goes to `volumes_total`. It is the edition's number of volumes, which
+    FileMaker prints as `6 vols.`. The play's own volume is on the link.
   - City and publisher are looked up as for `T12.1`.
   - The id goes to `filemaker_id` as `"T04:<id>"`.
   - `EdiMod_Referencia` is not imported (see "Rejected").
@@ -279,22 +290,41 @@ import or this count.
 The admin page, `/plays/:code` and the static site all render these segments, so the three cannot
 drift apart.
 
-**Style: FileMaker's printed form.** Curators know it, and FileMaker's own renderings are the test
-oracle. One template per kind and `pub_type`:
+**Style: FileMaker's printed form**, which curators know. FileMaker's formula varies by category
+and type and has its own slips (an issue printed as `vol. 2`, an editor printed twice), so the
+renderer keeps FileMaker's elements and labels in one consistent order per kind:
 
 - **Criticism, translations and adaptations print author first:**
   `Barnett, Timothy Brian. "Lope and Tasso: …". Bulletin of the Comediantes. 2005, 57, 2, p. 238-294.`
 - **Modern editions print the editor first:**
   `Thompson, Ann; Taylor, Neil, ed. <i>Hamlet</i>. Shakespeare, William. In: <i>Hamlet: The Texts of 1603 and 1623</i>. London: Thomson Learning, 2006, The Arden Shakespeare.`
 
-The templates are read off FileMaker's renderings. Its calculation formulas were never exported,
-so the oracle fixture, not this document, is the reference for punctuation.
+In full, the bibliography order is:
 
-Two deliberate differences from FileMaker:
+1. **Lead.** With an analytic level: author (`, ed.` for a *edición estudioso*), `"title"`,
+   `Ed.` and `Tra.` of that level, then the container: its author (not for an article),
+   `Ed.`, title, `Tra.`. Without one: author, title, `Ed.`, `Tra.`.
+2. **Edition.** `2nd ed.`
+3. **Imprint.**
+   - Article: `Year, volume, issue, p. pages.`
+   - Anything else: `Vol. N.` then `Place: Publisher, Year, p. pages, N vols.`
+4. **The rest.** Series, `(Orig: …)`, the public note, then `URL: …` with `(acc. …)`.
+
+Modern editions are the same, with three differences:
+- each level prints editors first as `Editors, ed. <i>Title</i>. Author.`
+- `In:` sits between the two levels
+- pages are `pp.`
+
+The labels (`Ed.`, `Tra.`, `In:`, `Vol.`, `vols.`, `p.`, `pp.`, `Orig:`, `URL:`, `acc.`) are
+FileMaker's and are not translated.
+
+Deliberate differences from FileMaker:
 
 - **An empty field drops out with its punctuation.** That means no `{Falta …}`, no `". ."` (a
   *edición estudioso* prints `". . Hispanic Studies…"` today) and no `In: <i></i>`.
 - **A URL is a link.**
+- **A value that already ends in `.`, `?` or `!` gets no second full stop** (FileMaker printed
+  `Armistead, J M..`).
 
 ### Order and grouping
 
@@ -322,6 +352,17 @@ Two deliberate differences from FileMaker:
 - **Not printed:** `siglum`. FileMaker did not print it either. It is not private, so the TEI
   export carries it as data, `<idno type="siglum">`.
 
+## Its own menu, everywhere
+
+The bibliography is a section of the play's metadata like places and sources, and each surface
+gives it its own entry (the project's request, 2026-10-07):
+
+- **Admin:** a "Bibliography" tab in the play context bar, after Sources.
+- **`/plays/:code`:** a "Bibliography" entry in the metadata sidebar, after Editors and before the
+  editorial notes. That is where its section sits on the page: after Places.
+- **Static site:** a "Bibliography" entry in the play's contents rail, after Statistics, linking to
+  the title page's `#bibliography`.
+
 ## Admin
 
 `/admin/plays/:id/bibliography`, `PlaycodeWeb.Admin.PlayBibliographyLive`:
@@ -345,7 +386,7 @@ Two deliberate differences from FileMaker:
   - `kind` and `pub_type` come first.
   - Then fieldsets: *Article or chapter* (the four `analytic_*`), *Book or journal* (the four
     `monogr_*`), *Publication* (place, publisher, year, edition, volume, number of volumes, issue,
-    pages, URL, accessed on) and *Internal* (note).
+    pages, URL, accessed on) and *Notes* (the printed note, and the internal one).
   - *Modern edition* (series, siglum) shows only for that kind.
   - *In this play* holds the link's volume, pages and note.
   - Under the form, a live preview of the printed citation: `apply_changes/1`, then
@@ -439,6 +480,8 @@ The bibliography goes in `<back>`, which the exporter writes empty today:
 - **`<series><title level="s">`** comes after `<monogr>`, and `<ptr target>` for the URL comes
   last.
 
+- **`public_note`** is written as `<note>`, last in `biblStruct`.
+
 **Never written:** `note`, the link note. The `.xml` file is published with the static site.
 
 **Import of `<back>` is deferred:**
@@ -463,22 +506,23 @@ Through the outermost API, as CLAUDE.md asks:
 | Who may open the page | `test/playcode_web/authorization_test.exs` | one new row |
 | Public rendering, and that `note` and the link note never appear | `play_show_live_test.exs`, `static_site_play_test.exs` | rendered HTML |
 | The `<back>` shape, link volume and pages, no notes, `@when` only for plain years | `test/playcode/export/tei_xml_test.exs`, where export-only data is tested | XPath helpers from `import_helpers.ex` |
-| Export → re-import → export with a bibliography | the fixpoint test, `tei_roundtrip_test.exs:598` | a play given entries before the first export |
+| Re-importing a play's own export keeps its bibliography and exports the same file | `tei_xml_test.exs` | the fixpoint test (`tei_roundtrip_test.exs:598`) re-imports under a new code, so a new play; this one re-imports in place |
 | An export with every `pub_type` validates | `tei_validator_test.exs`, `:slow` | the schema |
 | A link change flags its play; an entry edit flags every linked play | `test/playcode/content_version_test.exs` | as for places |
 
-**The oracle fixture** holds about 40 records:
+**The oracle** asks one question of every record: does every word FileMaker printed appear in
+our citation? Labels and `{Falta …}` placeholders aside, compared as sets of lower-case words,
+with letters split from digits (FileMaker glues `London2010`). It does not compare order or
+punctuation; the hand-written examples in `citation_test.exs` pin those.
 
-- every `pub_type`
-- both modern-edition types
-- a shared edition, with link volume and pages
-- a record with `{Falta …}` and one with `". ."`
-
-Each comes with FileMaker's own text: `_tc_BibSel_ComposicionExtensa` for `T12`,
-`w3pub_EdModernaItem` for `T04`. The comparison normalises whitespace and the three FileMaker
-glitches listed under "Display". A `:slow` sweep runs the same comparison over the whole
-`doc/ctce_dades/` when it is present (it is git-ignored) and asserts that nothing differs beyond
-the documented glitches.
+- **The sample**, `test/fixtures/filemaker/oracle/`, is the six tables cut down to 30 bibliography
+  records and 16 modern-edition links. Together they cover every type and every optional field.
+  `regenerate.exs` beside them rebuilds it from the dump.
+- **A `:slow` sweep** runs the same check over the whole `doc/ctce_dades/` when it is present (it
+  is git-ignored).
+- **Measured on a prototype, 2026-10-07:** 2,624 of 2,625 bibliography records and 938 of 938
+  modern-edition links. The exception is record 2095, a page range typed into the URL access
+  date with no URL.
 
 **The trimmed dump** for the import test is six FMPXMLRESULT files in
 `test/fixtures/filemaker/ctce_dades/`. Its tests:
@@ -494,8 +538,9 @@ the documented glitches.
 
 **Existing guards this slice must satisfy:**
 
-- `fingerprint_test.exs` fails until the static site's fingerprint covers `Citation`, and until
-  `Playcode.Bibliography` is counted as data access.
+- `fingerprint_test.exs` fails until the static site's fingerprint covers `Citation` and
+  `Playcode.Bibliography`. The context decides the grouping and order a page shows, so it is
+  fingerprinted like `Playcode.Places`, not counted as data access.
 - `content_version_test.exs` fails until `play_bibliography` has its trigger.
 
 ## Implementation order
@@ -530,3 +575,4 @@ Then update CLAUDE.md (schema, routes, implemented list) and mark S4 done in the
 - 40 `BibSel_Ano` values are not a plain year, some of them page ranges (`121-123`, `308-322`).
 - Thesis records without a university: FileMaker printed `{Falta nombre Universidad}`; the name is
   sometimes in the note.
+- Record 2095 has a page range (`853-960`) as its URL access date, and no URL.
