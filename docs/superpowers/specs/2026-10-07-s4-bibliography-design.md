@@ -164,11 +164,11 @@ The small code tables are module attributes, not files:
   `FilemakerSync.base_code(play.code)`.
 - Only plays from `FilemakerSync.all_plays/0` count, so archived plays are excluded, as in S1 and
   S2.
-- **A base code held by two plays links both**, as S1 and S2 treat each play on its own. Dev has
-  two such pairs, both with bibliography: `EMOTHE0435_ElBastardoMudarra` and
+- **A base code held by two plays links both**, as S1 and S2 treat each play on its own. Dev had
+  two such pairs when this was designed: `EMOTHE0435_ElBastardoMudarra` and
   `…_ElBastardoMudarraTragicomedia` (1 modern edition), and `EMOTHE0671_NoPuedeSerGuardarUnaMujer`
-  and `…_NoPuedeSer` (9 records, 7 modern editions). They look like the same version imported
-  twice, which is for the project to resolve, not the import.
+  and `…_NoPuedeSer` (9 records, 7 modern editions). The same version imported twice; by the
+  time the import ran, the first play of each pair had been removed from dev.
 - Versions we do not hold are counted, not listed.
 
 ### Field mapping
@@ -256,17 +256,18 @@ bibliography. It never changes or deletes anything it wrote before:
 
 ### Expected result
 
-On the dev database's 392 plays (371 EMOTHE base codes, 19 Artelope), measured against the dump on
-2026-10-07:
+On the dev database's 390 plays (371 EMOTHE base codes, 19 Artelope), as imported on 2026-10-07:
 
-- **Bibliography:** 2,043 entries and 2,060 links on 102 plays. That is 1,807 criticism (74 of them
+- **Bibliography:** 2,043 entries and 2,051 links on 101 plays. That is 1,807 criticism (74 of them
   uncategorised), 184 translations and 52 adaptations. 17 entries are shared, by two plays at most.
   The 4 duplicate links collapse. 508 links point at versions dev does not hold.
-- **Modern editions:** 680 entries and 752 links on 102 plays. 24 entries are shared, by up to 9
+- **Modern editions:** 680 entries and 744 links on 100 plays. 24 entries are shared, by up to 9
   plays. The 4 duplicate links collapse. 199 links point at versions dev does not hold.
 
-The first dry run on dev should reproduce these numbers. A difference is a bug in either the
-import or this count.
+The design counted 392 plays, with 2,060 and 752 links on 102 plays each. The difference is
+exactly the two duplicate plays removed from dev in between (see "Matching"): 9 records and 8
+modern editions. The entry counts did not change. A re-run reports all 114 plays as already
+imported and writes nothing.
 
 **The report:**
 
