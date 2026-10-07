@@ -150,4 +150,54 @@ defmodule Playcode.BibliographyTest do
       assert Bibliography.search_entries("%", play.id) == []
     end
   end
+
+  describe "list_for_play/1" do
+    test "groups by kind in display order, leaving out empty kinds" do
+      play = play_fixture()
+      bibliography_fixture(play, %{"kind" => "adaptation", "monogr_title" => "Adapted"})
+      bibliography_fixture(play, %{"kind" => "criticism", "monogr_title" => "Studied"})
+      bibliography_fixture(play, %{"kind" => "modern_edition", "monogr_title" => "Edited"})
+
+      assert Enum.map(Bibliography.list_for_play(play.id), &elem(&1, 0)) ==
+               ~w(modern_edition criticism adaptation)
+    end
+
+    test "sorts by the first name printed, ignoring case, accents and opening quotes" do
+      play = play_fixture()
+
+      for {author, title} <- [
+            {"Zúñiga, Ana", "Z"},
+            {nil, ~s("Ópera" y teatro)},
+            {"álvarez, Luis", "A"},
+            {"Barnett, Tim", "B"}
+          ] do
+        bibliography_fixture(play, %{"monogr_author" => author, "monogr_title" => title})
+      end
+
+      assert [{"criticism", [{nil, links}]}] = Bibliography.list_for_play(play.id)
+
+      assert Enum.map(links, & &1.entry.monogr_author) ==
+               ["álvarez, Luis", "Barnett, Tim", nil, "Zúñiga, Ana"]
+    end
+
+    test "translations are subgrouped by language, unknown last" do
+      play = play_fixture()
+
+      for {language, title} <- [
+            {nil, "Sin idioma"},
+            {"fr", "Traduction"},
+            {"es", "Traducción"},
+            {"en", "Translation"}
+          ] do
+        bibliography_fixture(play, %{
+          "kind" => "translation",
+          "language" => language,
+          "monogr_title" => title
+        })
+      end
+
+      assert [{"translation", groups}] = Bibliography.list_for_play(play.id)
+      assert Enum.map(groups, &elem(&1, 0)) == ["es", "en", "fr", nil]
+    end
+  end
 end

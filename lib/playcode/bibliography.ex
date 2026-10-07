@@ -10,7 +10,7 @@ defmodule Playcode.Bibliography do
   import Ecto.Query
 
   alias Ecto.Multi
-  alias Playcode.Bibliography.{Entry, Link}
+  alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue.Play
   alias Playcode.Repo
 
@@ -36,6 +36,56 @@ defmodule Playcode.Bibliography do
     |> order_by([l], asc: l.inserted_at, asc: l.id)
     |> preload(:entry)
     |> Repo.all()
+  end
+
+  @language_order ~w(es en fr it pt de)
+
+  @doc """
+  The play's bibliography as every surface shows it: `[{kind, [{language, [link]}]}]`.
+  Kinds come in `Entry.kinds/0` order, only those with entries. Translations are
+  subgrouped by language (`es en fr it pt de`, unknown last); every other kind has one
+  group, `nil`. Within a group, links sort by their printed citation (`sort_key/1`).
+  """
+  def list_for_play(play_id) do
+    by_kind =
+      play_id
+      |> list_links()
+      |> Enum.sort_by(&{sort_key(&1), &1.entry_id})
+      |> Enum.group_by(& &1.entry.kind)
+
+    for kind <- Entry.kinds(), Map.has_key?(by_kind, kind) do
+      {kind, subgroups(kind, by_kind[kind])}
+    end
+  end
+
+  defp subgroups("translation", links) do
+    by_language = Enum.group_by(links, & &1.entry.language)
+
+    for language <- @language_order ++ [nil], Map.has_key?(by_language, language) do
+      {language, by_language[language]}
+    end
+  end
+
+  defp subgroups(_kind, links), do: [{nil, links}]
+
+  @doc """
+  How a link sorts: its printed citation, folded, without leading quotes or punctuation.
+  A citation starts with the first name printed, so this is "alphabetical by author".
+  """
+  def sort_key(%Link{entry: %Entry{} = entry} = link) do
+    entry
+    |> Citation.plain(link)
+    |> fold()
+    |> String.replace(~r/^[^\p{L}\p{N}]+/u, "")
+  end
+
+  @doc "Lower case, accents removed, trimmed: how the bibliography compares text."
+  def fold(text) do
+    text
+    |> :unicode.characters_to_nfd_binary()
+    |> String.replace(~r/\p{Mn}/u, "")
+    |> String.downcase()
+    |> String.trim()
   end
 
   @doc "A new entry and the play's link to it, in one transaction. Returns the link, entry loaded."
