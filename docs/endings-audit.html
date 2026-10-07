@@ -1,0 +1,836 @@
+<!--
+  Source of the "Playcode Endings Audit" artifact: https://claude.ai/artifact/7ZGupRub3hCNbRteh77Edk
+  Assessed 2026-10-07 at commit 2b6dc3d against https://endings.uvic.ca/principles.html (v2.2.1).
+  An artifact fragment: the publisher adds doctype, html and body. It opens in a browser as is.
+  To regenerate: re-check each principle against the code, edit the P (scores, evidence),
+  FIXES (projected lifts) and VERDICTS arrays in the script below, update the date and
+  commit in the hero and colophon, then publish this file with the artifact URL above as
+  `url` so the link stays the same.
+-->
+<title>Playcode Endings Audit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;1,8..60,400;1,8..60,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a critical-edition page. Principle numbers sit in a left gutter like verse numbers,
+   scores in the right margin like the edition's verse-form labels; a sticky planner beside it. */
+:root {
+  --paper: #fbfbf9;
+  --surface: #ffffff;
+  --ink: #1b2330;
+  --muted: #5d6675;
+  --rule: #e3e6ea;
+  --track: #eef0f3;
+  --accent: #1f3a5f;
+  --accent-soft: #e2e9f2;
+  --good: #2f7d5a;
+  --mid: #a8721f;
+  --bad: #b0463c;
+  --serif: "Source Serif 4", "Source Serif Pro", Georgia, "Times New Roman", serif;
+  --sans: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #10141a; --surface: #161b22; --ink: #e4e7ec; --muted: #9aa3b0; --rule: #262d37;
+    --track: #1d232c; --accent: #9dbbe3; --accent-soft: #1c2a3c;
+    --good: #5bb98d; --mid: #d9a74a; --bad: #e07a6e; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #10141a; --surface: #161b22; --ink: #e4e7ec; --muted: #9aa3b0; --rule: #262d37;
+  --track: #1d232c; --accent: #9dbbe3; --accent-soft: #1c2a3c;
+  --good: #5bb98d; --mid: #d9a74a; --bad: #e07a6e; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper); color: var(--ink);
+  font: 17px/1.6 var(--serif);
+  padding-inline: 16px; padding-block: 40px 64px;
+}
+.page { max-width: 1180px; margin: 0 auto; }
+h1, h2, h3 { text-wrap: balance; font-weight: 600; margin: 0; }
+p { margin: 0; }
+code { font: 0.82em/1.4 var(--mono); background: var(--track); padding: 0.05em 0.35em; border-radius: 3px; overflow-wrap: anywhere; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.eyebrow {
+  font: 500 12px/1.4 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+}
+.sc { font-variant: all-small-caps; letter-spacing: 0.04em; }
+
+/* Hero */
+.hero { display: grid; gap: 14px; max-width: 46rem; padding-bottom: 36px; border-bottom: 1px solid var(--rule); }
+.hero h1 { font-size: clamp(30px, 4.6vw, 48px); line-height: 1.12; font-variation-settings: "opsz" 60; letter-spacing: -0.01em; }
+.hero h1 em { color: var(--accent); }
+.hero .lede { color: var(--muted); max-width: 40rem; }
+
+/* Two columns: main and planner */
+.layout { display: grid; gap: 40px; padding-top: 36px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 1000px) {
+  .layout { grid-template-columns: minmax(0, 1fr) 330px; }
+  .panel { grid-column: 2; grid-row: 1; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 20px); align-self: start; max-height: calc(100vh - 40px); overflow: auto; }
+  main { grid-column: 1; grid-row: 1; }
+}
+main { display: grid; gap: 56px; min-width: 0; }
+section > h2 { font-size: 26px; font-variation-settings: "opsz" 40; margin-bottom: 6px; }
+section > .sub { color: var(--muted); margin-bottom: 22px; max-width: 42rem; }
+
+/* Planner panel */
+.panel {
+  background: var(--surface); border: 1px solid var(--rule); border-radius: 6px;
+  padding: 22px; display: grid; gap: 18px; min-width: 0;
+}
+.score-big { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.score-big .n { font: 600 64px/1 var(--serif); font-variation-settings: "opsz" 60; font-variant-numeric: tabular-nums; }
+.score-big .n small { font-size: 0.45em; color: var(--muted); }
+.score-big .to { font: 500 15px/1.3 var(--sans); color: var(--accent); }
+.points { font: 13px/1.4 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+.seg { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--rule); border-radius: 5px; overflow: hidden; }
+.seg button {
+  font: 500 13px/1 var(--sans); padding: 9px 6px; border: 0; background: transparent; color: var(--muted); cursor: pointer;
+}
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--paper); }
+.hint { font: 12.5px/1.45 var(--sans); color: var(--muted); }
+.panel h2 { font: 600 13px/1.3 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; }
+.fixes { display: grid; gap: 4px; list-style: none; padding: 0; margin: 0; }
+.fix label {
+  display: grid; grid-template-columns: 18px 1fr; gap: 10px; padding: 10px 8px; margin-inline: -8px;
+  border-radius: 5px; cursor: pointer;
+}
+.fix label:hover { background: var(--track); }
+.fix input { margin: 3px 0 0; accent-color: var(--accent); width: 16px; height: 16px; }
+.fix .t { font: 500 14px/1.35 var(--sans); }
+.fix .d { font: 12.5px/1.45 var(--sans); color: var(--muted); margin-top: 3px; }
+.fix .meta { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.chip { font: 500 11px/1 var(--mono); padding: 3px 5px; border-radius: 3px; background: var(--track); color: var(--muted); }
+.chip.effort { background: var(--accent-soft); color: var(--accent); }
+.panel-actions { display: flex; gap: 8px; }
+.btn {
+  font: 500 13px/1 var(--sans); padding: 8px 12px; border-radius: 5px; border: 1px solid var(--rule);
+  background: transparent; color: var(--ink); cursor: pointer;
+}
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Band: the 22 principles drawn to scale, like the edition's metrical synopsis */
+.band-wrap { position: relative; padding-left: 30px; padding-top: 8px; overflow-x: auto; }
+.band { display: flex; gap: 14px; min-width: 420px; }
+.group { display: grid; gap: 8px; min-width: 0; }
+.group + .group { border-left: 1px dashed var(--rule); padding-left: 14px; margin-left: -1px; }
+.cols { display: flex; gap: 4px; }
+.col {
+  flex: 1; display: grid; gap: 6px; padding: 0; border: 0; background: none; cursor: pointer; min-width: 0; color: inherit;
+}
+.bar { position: relative; height: 150px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.bar .fill, .bar .proj { position: absolute; left: 0; right: 0; bottom: 0; transition: height 0.45s ease; }
+.bar .proj {
+  background: repeating-linear-gradient(-45deg, var(--accent) 0 2px, transparent 2px 5px);
+  opacity: 0.7;
+}
+.col:hover .bar { outline: 1px solid var(--accent); }
+.tick { font: 11px/1 var(--mono); color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.glabel { font: 500 11px/1.2 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.grid-line { position: absolute; left: 30px; right: 0; border-top: 1px dotted var(--rule); pointer-events: none; }
+.grid-label { position: absolute; left: 0; font: 11px/1 var(--mono); color: var(--muted); transform: translateY(-50%); }
+.legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 16px; font: 13px/1.3 var(--sans); color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.sw.hatch { background: repeating-linear-gradient(-45deg, var(--accent) 0 2px, transparent 2px 5px); border: 1px solid var(--accent); }
+.good { background: var(--good); } .mid { background: var(--mid); } .bad { background: var(--bad); }
+
+/* Section bars */
+.sections { display: grid; gap: 14px; }
+.srow { display: grid; grid-template-columns: 11rem minmax(0, 1fr) 7.5rem; gap: 14px; align-items: center; }
+.srow .name { font: 500 15px/1.3 var(--sans); }
+.srow .name .eyebrow { display: block; margin-bottom: 2px; }
+.strack { position: relative; height: 12px; background: var(--track); border-radius: 2px; overflow: hidden; }
+.strack .fill, .strack .proj { position: absolute; left: 0; top: 0; bottom: 0; transition: width 0.45s ease; }
+.strack .proj { background: repeating-linear-gradient(-45deg, var(--accent) 0 2px, transparent 2px 5px); opacity: 0.7; }
+.srow .pct { font: 500 15px/1.2 var(--mono); font-variant-numeric: tabular-nums; text-align: right; }
+.srow .pct span { display: block; font-size: 12px; color: var(--accent); }
+@media (max-width: 640px) {
+  .srow { grid-template-columns: minmax(0, 1fr) 6rem; }
+  .srow .strack { grid-column: 1 / -1; grid-row: 2; }
+}
+
+/* Principles: gutter number, text, margin score */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 26px; }
+.filters button {
+  font: 500 13px/1 var(--sans); padding: 8px 12px; border-radius: 999px; border: 1px solid var(--rule);
+  background: transparent; color: var(--muted); cursor: pointer;
+}
+.filters button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.sec-head { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 30px 0 10px; border-bottom: 1px solid var(--ink); }
+.sec-head:first-of-type { padding-top: 0; }
+.sec-head h3 { font-size: 21px; font-variation-settings: "opsz" 32; }
+.sec-head .pct { font: 500 14px/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.pr {
+  display: grid; grid-template-columns: 3rem minmax(0, 1fr) 8.5rem; gap: 6px 18px;
+  padding: 22px 0; border-bottom: 1px solid var(--rule); scroll-margin-top: 24px;
+}
+.pr.flash { animation: flash 1.6s ease; }
+@keyframes flash { 0%, 40% { background: var(--accent-soft); } 100% { background: transparent; } }
+.pr .num { font: 500 15px/1.6 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.pr .body { display: grid; gap: 8px; min-width: 0; }
+.pr h4 { font: 600 19px/1.3 var(--serif); margin: 0; }
+.pr .rule { font-style: italic; color: var(--muted); font-size: 15px; line-height: 1.5; max-width: 40rem; }
+.pr .finding { max-width: 40rem; }
+.pr ul { margin: 2px 0 0; padding-left: 1.1em; display: grid; gap: 4px; font-size: 15.5px; line-height: 1.55; max-width: 40rem; }
+.pr ul li::marker { color: var(--muted); }
+.pr li.plus::marker { content: "+  "; color: var(--good); font-family: var(--mono); }
+.pr li.minus::marker { content: "–  "; color: var(--bad); font-family: var(--mono); }
+.margin { display: grid; gap: 6px; align-content: start; justify-items: end; text-align: right; }
+.margin .val { font: 500 22px/1 var(--mono); font-variant-numeric: tabular-nums; }
+.margin .val .next { display: block; font-size: 13px; color: var(--accent); margin-top: 4px; }
+.meter { width: 100%; max-width: 8.5rem; height: 6px; background: var(--track); border-radius: 2px; position: relative; overflow: hidden; }
+.meter .fill, .meter .proj { position: absolute; left: 0; top: 0; bottom: 0; transition: width 0.45s ease; }
+.meter .proj { background: repeating-linear-gradient(-45deg, var(--accent) 0 2px, transparent 2px 5px); opacity: 0.7; }
+.status { font: 500 11px/1 var(--sans); letter-spacing: 0.06em; text-transform: uppercase; padding: 4px 6px; border-radius: 3px; }
+.status.good { color: var(--good); background: color-mix(in srgb, var(--good) 14%, transparent); }
+.status.mid { color: var(--mid); background: color-mix(in srgb, var(--mid) 14%, transparent); }
+.status.bad { color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, transparent); }
+@media (max-width: 640px) {
+  .pr { grid-template-columns: 2.6rem minmax(0, 1fr); }
+  .pr .margin { grid-column: 2; justify-items: start; text-align: left; grid-template-columns: auto auto 1fr; align-items: center; gap: 10px; }
+  .margin .val .next { display: inline; margin: 0 0 0 6px; }
+}
+
+/* Verdicts */
+.verdicts { display: grid; gap: 18px; }
+.vd { border: 1px solid var(--rule); border-radius: 6px; background: var(--surface); padding: 22px; display: grid; gap: 14px; }
+.vd-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.vd h3 { font-size: 20px; font-variation-settings: "opsz" 32; }
+.pill { font: 600 12px/1 var(--sans); padding: 6px 10px; border-radius: 999px; white-space: nowrap; }
+.pill.endings { color: var(--accent); background: var(--accent-soft); }
+.pill.split { color: var(--mid); background: color-mix(in srgb, var(--mid) 15%, transparent); }
+.pill.ours { color: var(--good); background: color-mix(in srgb, var(--good) 15%, transparent); }
+.vs { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--rule); border: 1px solid var(--rule); border-radius: 4px; overflow: hidden; }
+.vs > div { background: var(--surface); padding: 12px 14px; display: grid; gap: 4px; min-width: 0; }
+.vs p { font-size: 15.5px; line-height: 1.5; }
+.vd .why { max-width: 44rem; }
+@media (max-width: 640px) { .vs { grid-template-columns: 1fr; } }
+
+/* Fixes, costed */
+.fix .more { display: inline-block; font: 500 12.5px/1.3 var(--sans); margin: -2px 0 6px 28px; }
+.costed { display: grid; gap: 34px; }
+.fc { border-top: 1px solid var(--ink); padding-top: 16px; display: grid; gap: 14px; scroll-margin-top: 24px; }
+.fc.flash { animation: flash 1.6s ease; }
+.fc-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; }
+.fc h3 { font-size: 20px; font-variation-settings: "opsz" 32; }
+.fc .lifts { font: 13px/1.4 var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+.fc .what { max-width: 44rem; color: var(--muted); }
+.fc-cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 28px; }
+.fc-cols > div { display: grid; gap: 6px; align-content: start; min-width: 0; }
+.fc h4 { font: 600 12px/1.3 var(--sans); letter-spacing: 0.08em; text-transform: uppercase; margin: 0; }
+.fc h4.cost { color: var(--accent); }
+.fc h4.short { color: var(--mid); }
+.fc ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 15.5px; line-height: 1.55; }
+.fc ul li::marker { color: var(--muted); }
+@media (max-width: 760px) { .fc-cols { grid-template-columns: minmax(0, 1fr); } }
+@media (prefers-reduced-motion: reduce) { .fc.flash { animation: none; } }
+
+/* Colophon, in the edition's own manner: version and date on the page */
+.colophon { border-top: 1px solid var(--rule); padding-top: 22px; display: grid; gap: 6px; font: 13px/1.55 var(--sans); color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar .fill, .bar .proj, .strack .fill, .strack .proj, .meter .fill, .meter .proj { transition: none; }
+  .pr.flash { animation: none; background: var(--accent-soft); }
+}
+</style>
+
+<div class="page">
+  <header class="hero">
+    <p class="eyebrow">Endings Principles 2.2.1 · Playcode at 2b6dc3d · 7 October 2026</p>
+    <h1>The edition is built to last. <em>The process behind it is not, yet.</em></h1>
+    <p class="lede">The EMOTHE static export, and the data, build and release work behind it, measured against the 22 Endings principles for digital longevity. Each principle scores from 0 to 1. Tick a fix in the planner to see what it would change.</p>
+  </header>
+
+  <div class="layout">
+    <aside class="panel" aria-label="Score and fix planner">
+      <div>
+        <p class="eyebrow">Adherence</p>
+        <div class="score-big"><span class="n" id="total">60<small>%</small></span><span class="to" id="total-to"></span></div>
+        <p class="points" id="points">13.25 of 22 points</p>
+      </div>
+      <div style="display:grid;gap:8px">
+        <div class="seg" role="group" aria-label="Weighting">
+          <button type="button" id="w-equal" aria-pressed="true">Equal weight</button>
+          <button type="button" id="w-data" aria-pressed="false">Data first</button>
+        </div>
+        <p class="hint" id="w-hint">Every principle counts the same.</p>
+      </div>
+      <div style="display:grid;gap:10px">
+        <h2>Fix planner</h2>
+        <p class="hint">Ordered by durability gained for the effort. Effort: S is a day or two, M about a week, L a project.</p>
+        <ul class="fixes" id="fixes"></ul>
+        <div class="panel-actions">
+          <button type="button" class="btn" id="all">Select all</button>
+          <button type="button" class="btn" id="none">Clear</button>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <section aria-labelledby="band-h">
+        <h2 id="band-h">All 22 principles at a glance</h2>
+        <p class="sub">Each bar is one principle, filled to its score. The site itself (Products) is close to full; the work around it is where the gaps are. Select a bar to read its evidence.</p>
+        <div class="band-wrap">
+          <div class="grid-line" style="top:8px"></div><span class="grid-label" style="top:8px">1</span>
+          <div class="grid-line" style="top:83px"></div><span class="grid-label" style="top:83px">.5</span>
+          <div class="band" id="band"></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw good"></i>Meets (0.85 or more)</span>
+          <span><i class="sw mid"></i>Partly (0.5 to 0.84)</span>
+          <span><i class="sw bad"></i>Falls short (under 0.5)</span>
+          <span><i class="sw hatch"></i>Gain from selected fixes</span>
+        </div>
+      </section>
+
+      <section aria-labelledby="sec-h">
+        <h2 id="sec-h">By section</h2>
+        <p class="sub">Endings treats Data, Documentation and Processing as the foundation the products stand on. Those are the three weakest here.</p>
+        <div class="sections" id="sections"></div>
+      </section>
+
+      <section aria-labelledby="pr-h">
+        <h2 id="pr-h">Principle by principle</h2>
+        <p class="sub">Each principle's text is quoted from Endings, followed by what the code does. File references are to the Playcode repository.</p>
+        <div class="filters" role="group" aria-label="Filter principles">
+          <button type="button" data-filter="all" aria-pressed="true">All</button>
+          <button type="button" data-filter="bad" aria-pressed="false">Falls short</button>
+          <button type="button" data-filter="mid" aria-pressed="false">Partly</button>
+          <button type="button" data-filter="good" aria-pressed="false">Meets</button>
+        </div>
+        <div id="list"></div>
+      </section>
+
+      <section aria-labelledby="vd-h">
+        <h2 id="vd-h">Where we differ, and who is right</h2>
+        <p class="sub">Five places where Playcode takes a different road from Endings. Judged on durability alone.</p>
+        <div class="verdicts" id="verdicts"></div>
+      </section>
+
+      <section aria-labelledby="fc-h">
+        <h2 id="fc-h">The fixes, costed</h2>
+        <p class="sub">What each fix in the planner would take, and where it falls short. Figures marked measured were taken on the dev site (9 published plays) on a 12-core laptop; the rest are estimates.</p>
+        <div class="costed" id="costed"></div>
+      </section>
+
+      <footer class="colophon">
+        <p>Audit version 2, 7 October 2026: adds the cost and shortcomings of each fix. Version 1, the same day: the scores. Assessed against Playcode commit 2b6dc3d and <a href="https://endings.uvic.ca/principles.html">Endings Principles for Digital Longevity 2.2.1</a>.</p>
+        <p>Scores are one reviewer's judgement on a 0 to 1 scale. The projected scores in the planner are estimates of where each principle lands once a fix is built, not measurements.</p>
+      </footer>
+    </main>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var SECTIONS = [
+    { n: 1, name: 'Data' },
+    { n: 2, name: 'Documentation' },
+    { n: 3, name: 'Processing' },
+    { n: 4, name: 'Products' },
+    { n: 5, name: 'Release management' }
+  ];
+
+  var P = [
+    { id: '1.1', s: 1, name: 'Open formats', score: 0.4,
+      rule: 'Data is stored only in formats that conform to open standards and that are amenable to processing (TEI XML, GML, ODF, TXT).',
+      finding: 'Postgres holds the master copy. TEI is an export of it.',
+      ev: [
+        ['minus', 'The TEI published beside each play is regenerated from the database, <code>static_site.ex:412</code>.'],
+        ['minus', 'The importer pastes in-text <code>&lt;note&gt;</code> and inline <code>&lt;stage&gt;</code> into the line they sit in: 333 notes in 13 tracked fixtures. The published TEI carries the same damage.'],
+        ['plus', 'The round-trip suite and the corpus sweep (83 fixtures, 0 failures) keep the export close to the source for everything else.']
+      ] },
+    { id: '1.2', s: 1, name: 'Version control', score: 0.3,
+      rule: 'Data is subject to version control (Subversion, Git).',
+      finding: 'The code is versioned. The data mostly is not.',
+      ev: [
+        ['plus', 'Code and 55 TEI fixtures are in git.'],
+        ['minus', 'The other 41 source files, in <code>test/fixtures/tei_files/</code>, are git-ignored.'],
+        ['minus', 'Edits made in the admin have no history. The activity log records who changed what, not the versions.'],
+        ['minus', 'The published site’s <code>gh-pages</code> history is replaced on every full rebuild (see 5.1).']
+      ] },
+    { id: '1.3', s: 1, name: 'Continual validation', score: 0.5,
+      rule: 'Data is continually subject to validation and diagnostic analysis.',
+      finding: 'Strong tests, but the checks that touch real data rarely run.',
+      ev: [
+        ['plus', 'Round-trip tests, the content-version trigger test and the fingerprint test run on every push.'],
+        ['minus', 'TEI schema validation and the full corpus sweep are tagged <code>:slow</code>. CI runs neither.'],
+        ['minus', 'Validation is against <code>tei_all.rng</code>, not a project schema, so EMOTHE’s own rules (verse forms, <code>part</code> values) are never checked.']
+      ] },
+    { id: '2.1', s: 2, name: 'Documented data model', score: 0.2,
+      rule: 'Data models, including field names, descriptions, and controlled values, should be clearly documented in a static document that is maintained with the data and forms part of the products.',
+      finding: 'The internal documentation is thorough. None of it reaches the site.',
+      ev: [
+        ['minus', 'The site explains none of the encoding: <code>part="I|M|F"</code>, the verse forms, division types, editor roles, or the search index format.'],
+        ['minus', 'The encoding guidelines exist only as a .docx in <code>docs/</code>. There is no ODD.']
+      ] },
+    { id: '2.2', s: 2, name: 'Rights and licences', score: 0.4,
+      rule: 'All rights and intellectual property issues should be clearly documented. Where possible the Data and Products should be released under open licenses.',
+      finding: 'Licences appear play by play, when the TEI carries one.',
+      ev: [
+        ['plus', 'Each play’s licence is shown from its TEI header, and the fonts ship with their OFL files.'],
+        ['minus', 'There is no site-wide licence statement, and a play without one in its TEI shows nothing.'],
+        ['minus', 'The code has no LICENSE file. Statistics and search data carry no terms.']
+      ] },
+    { id: '3.1', s: 3, name: 'Relentless validation', score: 0.15,
+      rule: 'All processing includes validation/linting of all inputs and outputs and all validation errors should exit the process and prevent further execution until the errors are resolved.',
+      finding: 'The build validates almost nothing.',
+      ev: [
+        ['minus', 'The only check that stops a build is <code>safe_code!</code>, which rejects unsafe play codes.'],
+        ['minus', '<code>TeiValidator</code> runs only from a button on the play detail page.'],
+        ['minus', 'No HTML validation, and no check that internal links and <code>#l</code> anchors resolve.']
+      ] },
+    { id: '3.2', s: 3, name: 'Full rebuild on change', score: 0.6,
+      rule: 'Any change to the source data requires an entire rebuild of the site (triggered automatically where possible).',
+      finding: 'Deliberately incremental, and well guarded.',
+      ev: [
+        ['plus', 'Postgres triggers move <code>content_version</code> on every change; Generate rewrites the changed plays and their published originals and translations, and rebuilds everything when the fingerprint moves.'],
+        ['plus', 'Change detection is immediate: the export page flags a play as soon as an edit commits.'],
+        ['minus', 'No test proves an incremental build equals a full one. The rebuild itself is manual.']
+      ] },
+    { id: '3.3', s: 3, name: 'Code is contingent', score: 0.6,
+      rule: 'While code is not expected to have significant longevity, wherever possible, all code should follow Endings principles for data and products.',
+      finding: 'Well kept, but nobody else may reuse it.',
+      ev: [
+        ['plus', 'In git, formatted, compiled with warnings as errors, audited and tested in CI.'],
+        ['plus', 'The heavy stack (Elixir, Phoenix, Postgres) is needed only to build. Reading the site needs none of it.'],
+        ['minus', 'No licence, so by default all rights are reserved.']
+      ] },
+    { id: '4.1', s: 4, name: 'No server-side software', score: 0.95,
+      rule: 'Build a static website with no databases, no PHP, no Python.',
+      finding: 'Fully static. It even works opened from disk.',
+      ev: [
+        ['plus', 'Plain files that work from any host and from the unzipped archive as <code>file://</code>, search included.'],
+        ['minus', 'Publishing depends on a PHP endpoint and GitHub. Reading does not; the .zip is the fallback.']
+      ] },
+    { id: '4.2', s: 4, name: 'No fashionable technologies', score: 0.95,
+      rule: 'Use only standards with support across all platforms, whose long-term viability is assured. Our choices are HTML5, JavaScript, and CSS.',
+      finding: 'HTML, CSS and plain JavaScript with no build step.',
+      ev: [
+        ['plus', '<code>site.js</code> and <code>search.js</code> are small vanilla scripts, 6 KB and 13 KB.'],
+        ['minus', 'Unicode property escapes in regular expressions need a browser from 2018 or later.']
+      ] },
+    { id: '4.3', s: 4, name: 'No external libraries or services', score: 1,
+      rule: 'No JQuery, no AngularJS, no Bootstrap, no Google Search.',
+      finding: 'Nothing is loaded from elsewhere, and a test enforces it.',
+      ev: [
+        ['plus', 'A test fails on any remote <code>src</code> or <code>href</code> in pages and any remote <code>url()</code> in the CSS, <code>static_site_test.exs:316</code>.'],
+        ['plus', 'Source Serif 4 and Inter are self-hosted.']
+      ] },
+    { id: '4.4', s: 4, name: 'No query strings', score: 0.7,
+      rule: 'Every entity in the site has a unique page with a simple URL that will function on any domain or IP address.',
+      finding: 'Plays and acts have clean addresses. Other entities have none.',
+      ev: [
+        ['plus', '<code>plays/EMOTHE0020/act-2.html#l2186</code>: relative, no query string, works on any host.'],
+        ['plus', '<code>search.html?q=</code> carries a search, not an entity.'],
+        ['minus', 'Places (with Wikidata links), characters, authors and editors have no pages of their own.']
+      ] },
+    { id: '4.5', s: 4, name: 'Inclusion of data', score: 0.5,
+      rule: 'Every site should include a documented copy of the source data, so that users of the site can repurpose the work easily.',
+      finding: 'The TEI is there, but undocumented and lossy.',
+      ev: [
+        ['plus', 'Each play’s TEI sits beside its pages and is linked from the title page.'],
+        ['minus', 'It is regenerated and lossy (1.1), and comes with no documentation (2.1).'],
+        ['minus', 'No whole-corpus download. The statistics exist only as HTML tables.']
+      ] },
+    { id: '4.6', s: 4, name: 'Massive redundancy', score: 0.8,
+      rule: 'Every page contains all the components it needs, so that it will function without the rest of the site if necessary.',
+      finding: 'Act pages stand on their own.',
+      ev: [
+        ['plus', 'Every act page carries the title, author, licence, version, build date and the play’s contents.'],
+        ['plus', 'Charts are drawn in HTML and CSS, with their numbers also in tables.'],
+        ['minus', 'The citation appears only on the title page.']
+      ] },
+    { id: '4.7', s: 4, name: 'Graceful failure', score: 0.75,
+      rule: 'Every page should still function effectively even in the absence of JavaScript or CSS support.',
+      finding: 'Fine without JavaScript. Split verses misread without CSS.',
+      ev: [
+        ['plus', 'With JavaScript off everything reads, the tools stay hidden, and the search page says it needs JavaScript.'],
+        ['minus', 'With CSS off, the hidden ghost text that aligns a split verse becomes visible, so the previous speaker’s words print in front of the next speaker’s line. <code>components.ex:454</code>, <code>style.css:126</code>.']
+      ] },
+    { id: '4.8', s: 4, name: 'Enhance only after static', score: 1,
+      rule: 'Once a fully-working static site is achieved, it may be enhanced by the use of other services such as a server-side indexing tool.',
+      finding: 'No server enhancement is needed.',
+      ev: [['plus', 'Full-text search runs from static index files, from disk too.']] },
+    { id: '4.9', s: 4, name: 'Library exceptions', score: 1,
+      rule: 'Any external libraries must be open-source and widely-used, and must not themselves have dependencies.',
+      finding: 'No library is used at all.',
+      ev: [['plus', 'Nothing to vet.']] },
+    { id: '5.1', s: 5, name: 'Planned releases', score: 0.3,
+      rule: 'Releases should be periodical and carefully planned. The “rolling release” model should be avoided.',
+      finding: 'The workflow is a rolling release, and it erases past editions.',
+      ev: [
+        ['minus', 'The export page is built for continuous Refresh and Deploy. Nothing makes you change the version between deploys.'],
+        ['minus', 'A full Generate deletes the output folder, <code>.git</code> included, <code>static_site.ex:57</code>. Deploy then runs <code>git init</code> and <code>push --force</code>, <code>deployer.ex:95</code>. Past editions cannot be recovered.']
+      ] },
+    { id: '5.2', s: 5, name: 'Coherent releases', score: 0.5,
+      rule: 'A release should only be made when the entire product set is coherent, consistent, and complete (passing all validation and diagnostic tests).',
+      finding: 'Coherent by construction, but never validated.',
+      ev: [
+        ['plus', 'Only plays marked complete are published, and SiteBuilder runs one job at a time, so a half-built site never ships.'],
+        ['minus', 'No validation step stands between Generate and Deploy.']
+      ] },
+    { id: '5.3', s: 5, name: 'Version and date on every page', score: 0.7,
+      rule: 'Each release of a web resource should be clearly identified on every page by its build date and some kind of version number.',
+      finding: 'Every footer has both, but they drift apart.',
+      ev: [
+        ['plus', 'The footer reads “EMOTHE · version 1.0 · built 2026-10-07”.'],
+        ['minus', 'An incremental build stamps only the rewritten plays with today’s date, <code>static_site.ex:280</code>, so one version shows several build dates.']
+      ] },
+    { id: '5.4', s: 5, name: 'Citation instructions', score: 0.5,
+      rule: 'Web resources should include detailed instructions for citation, so that end-users can unambiguously cite a specific page from a specific edition.',
+      finding: 'A citation exists, but it cannot pin an edition.',
+      ev: [
+        ['plus', 'The title page cites author, title, editors, version and year. Tapping a line number copies a line citation.'],
+        ['minus', 'Without JavaScript the citation has no URL. Act pages show none.'],
+        ['minus', 'The same version label can name different text (5.1), and older editions are not online.']
+      ] },
+    { id: '5.5', s: 5, name: 'Persistent URLs', score: 0.45,
+      rule: 'URLs for individual resources within a digital publication should persist across editions. Any moved, retired, or deleted resources should be redirected appropriately.',
+      finding: 'The old layout redirects. Removals and splits break links.',
+      ev: [
+        ['plus', 'Redirect stubs keep <code>plays/CODE.html</code> working.'],
+        ['minus', 'A removed play is deleted with its stub, so its URLs return 404, <code>static_site.ex:397</code>.'],
+        ['minus', 'When an act passes 120 KB of text its lines move to scene pages, <code>edition.ex:95</code>, and <code>act-1.html#l500</code> stops resolving.'],
+        ['minus', 'Page names come from act and scene order, so inserting a division renames every page after it.']
+      ] }
+  ];
+
+  var FIXES = [
+    { id: 'validate', name: 'Validate TEI and links before Deploy', effort: 'S',
+      detail: 'After each Generate, check the site’s TEI in one xmllint run and every internal link and anchor, in the background. Deploy stays disabled until both pass.',
+      lifts: { '3.1': 0.8, '5.2': 0.85, '1.3': 0.75 },
+      cost: [
+        'Measured: loading <code>tei_all.rng</code> (1 MB of schema) takes about 11 s every time xmllint runs, and 72 to 78 MB of memory. Each play then adds about 15 ms.',
+        'Measured: the link and anchor check read 118 pages and 34,628 links in 1.1 s, about 120 ms per play. None are broken today.',
+        '<code>TeiValidator</code> as written runs xmllint once per play: 11 s a play, about 15 minutes for 83 plays. One run over the TEI files the build already writes takes about 12 s for the whole corpus.',
+        'Inside Generate, a full build would go from 17 s to 30 to 40 s, and refreshing one play from 4.3 s to about 16 s. In the background with Deploy gated, Generate keeps its speed and a release waits 12 to 22 s once.'
+      ],
+      short: [
+        '<code>tei_all</code> checks that a file is TEI, not that it follows EMOTHE’s rules. All 55 tracked sources already pass it. Catching EMOTHE’s own mistakes needs a project schema (an ODD), which 2.1 asks for anyway, and which should load in seconds; not measured.',
+        'Fly runs one shared CPU and xmllint uses one core, so expect the 11 s to be similar or slower there. Not measured.',
+        'The link check trusts the HTML the build writes. Validating the HTML itself needs a validator such as vnu, which needs Java.',
+        'Validating a play by hand from its admin page stays useful while editing, but nothing makes anyone do it before a release.'
+      ] },
+    { id: 'release', name: 'Release discipline', effort: 'M',
+      detail: 'Keep .git out of what Generate deletes, tag each release, refuse Deploy when content changed but the version did not, and ship releases only from a full build.',
+      lifts: { '5.1': 0.8, '5.3': 1, '3.2': 0.9, '1.2': 0.5, '5.4': 0.65 },
+      cost: [
+        'A full build per release: 17 s for 83 plays now (measured in parallel), about 80 s at 388 plays (extrapolated).',
+        'Code: keep the deploy’s <code>.git</code> outside the site folder, tag on Deploy, record the last deployed version and content in <code>build.json</code>, and block Deploy when the content moved but the version did not. About a week with tests.'
+      ],
+      short: [
+        'Keeping history makes the deploy repository grow with every release. Unchanged files are shared, but the search index is rewritten widely, and a corpus zip (fix 5) adds its whole size each time. Not measured.',
+        'The Fly volume is 1 GB and already holds the site and its <code>.git</code>; 388 plays come to roughly 350 to 700 MB before any history.',
+        'emothe.uv.es still serves only the latest edition. Older editions become recoverable from git tags, not browsable, so citation (5.4) improves only partly.',
+        'A quick correction needs a version bump. That costs nothing to type, but the version is on every page, so each correction is a full rebuild and a full upload.'
+      ] },
+    { id: 'ghost', name: 'Hide ghost text without CSS', effort: 'S',
+      detail: 'Render it through .ghost::before { content: attr(data-ghost); visibility: hidden }, so nothing extra prints without the stylesheet.',
+      lifts: { '4.7': 0.95 },
+      cost: [
+        'One component and one CSS rule in the static site, and the split-verse test changes with them. A few hours.'
+      ],
+      short: [
+        'The ghost text moves into an attribute: still in the page source, no longer in the readable text. Search is unaffected, since its index is built from the database.',
+        'Alignment still depends on the site’s fonts loading. With a fallback font the fragment lines up approximately, as it does today.',
+        'Text generated by CSS cannot be selected or copied. Here that is the point.'
+      ] },
+    { id: 'urls', name: 'Keep old URLs working', effort: 'M',
+      detail: 'Leave a “withdrawn in version X” page for a removed play, redirect line anchors on a split act page, and record each split in build.json so a page never merges back.',
+      lifts: { '5.5': 0.85 },
+      cost: [
+        'A withdrawn-play template, a list of withdrawn codes kept from build to build, a short script on split act pages that maps <code>#l500</code> to its scene page, and the split record. About a week with tests.'
+      ],
+      short: [
+        'A <code>#fragment</code> never reaches the server and a meta refresh cannot carry one, so the anchor redirect needs JavaScript. Without it the reader lands on the act page, which lists its scenes.',
+        'The withdrawn list and the split record must survive a full rebuild, and <code>build.json</code> lives in the folder Generate deletes. Keep them outside it or in the database.',
+        'Page names still follow act and scene order, and anchors follow verse numbers. Inserting a division or renumbering verses still breaks links. Only stable identifiers per division and line would fix that, a far larger change.',
+        'A withdrawn page tells readers the play existed. Right for a rights takedown, perhaps not for a play published by mistake.'
+      ] },
+    { id: 'docs', name: 'Document the data, state the rights', effort: 'M',
+      detail: 'A data page describing the TEI encoding, with tables of the values the published plays use, labelled through PlayLabels; a site-wide licence; a whole-corpus TEI download; and a LICENSE for the code.',
+      lifts: { '2.1': 0.75, '2.2': 0.85, '4.5': 0.75, '3.3': 0.75 },
+      cost: [
+        'Code: a <code>data.html</code> page from a new template, written with the catalogue on every build so it always matches the published plays. About 2 to 3 days with tests.',
+        'Corpus download with Erlang’s <code>:zip</code>, which the export page already uses. Measured: the 9 published plays’ TEI is 3.5 MB, 0.82 MB zipped. About 8 MB for 86 plays and 36 MB for 388 (extrapolated). The deploy script accepts .zip files.',
+        'Writing: an English description of the encoding and of each value. The 2020 guidelines are internal, in Spanish, and describe the FileMaker pre-markup rather than the TEI, and they define no verse forms. Definitions must come from the project’s philologists.',
+        'Decisions, not code: the licences below.'
+      ],
+      short: [
+        'PlayLabels cannot drive the page alone. Verse forms, act types and stage types are label functions, not lists, and the data uses unlabelled values: <code>free</code> (14,653 line groups) and <code>nil</code> (656) verse forms, a stage type <code>delivery_</code> (14), and English division types (scene, act, prologue) beside Spanish ones. Build each table from the values in use and fix the data first, since the page would show these in public.',
+        'Rights: 52 of 86 plays carry CC BY-NC-ND 4.0, 34 carry no licence, and 7 of the 9 plays published today show none. Many are modern translations and the guidelines mention per-edition copyright permissions, so a site-wide licence cannot simply cover the unlicensed plays.',
+        'NoDerivatives sits uneasily with 4.5, which wants readers to be able to repurpose the data. Worth raising with the project.',
+        'The code repository is public on GitHub with no licence, so nobody may legally reuse it. Choosing one is the copyright holder’s call: you or the university, depending on the contract.',
+        'The zip changes whenever any play does, so with history kept (fix 2) every release adds its whole size to the deploy repository. A plain list of the TEI files avoids that, at some cost to convenience.'
+      ] },
+    { id: 'cite', name: 'Cite every page', effort: 'S',
+      detail: 'A visible citation on every act page with version, build date and URL, readable without JavaScript.',
+      lifts: { '5.4': 0.9, '4.6': 0.9 },
+      cost: [
+        'A citation block in the act page template and a setting for the published address. A day or two. A few hundred bytes per page, against a largest act page of 43 KB gzipped and a budget of 80 KB.'
+      ],
+      short: [
+        'The site works on any host and from disk, so the build does not know its own address. The citation needs the published address as a setting (emothe.uv.es/edicion_estatica/), and copies elsewhere will cite the live site. That is arguably right.',
+        'Until releases are disciplined (fix 2), the version the citation names can stand for different text.'
+      ] },
+    { id: 'repo', name: 'Versioned TEI data repository', effort: 'L',
+      detail: 'Commit the whole corpus as lossless TEI at every release, never force-pushed. Blocked until the importer keeps notes and inline stage directions.',
+      lifts: { '1.1': 0.85, '1.2': 0.85, '4.5': 0.95 },
+      cost: [
+        'The blocker is the in-text notes project: a schema for anchored notes, then the importer, the exporter and the rendering (item 1 of <code>docs/static-site-improvements.md</code>). Weeks.',
+        'The repository step itself is small: write every play’s TEI into a separate repository at each release and commit. About 34 MB for 86 plays (extrapolated); TEI is text, so history grows only by what changes.'
+      ],
+      short: [
+        'Two repositories to keep. The data repository is an output: edits made there are overwritten at the next release unless a way back into the database is built. Its README must say so.',
+        'Which plays go in, all or only the published ones? Drafts and unlicensed plays raise the same rights questions as fix 5.'
+      ] }
+  ];
+
+  var VERDICTS = [
+    { title: 'Where the master data lives', kind: 'endings', label: 'Endings is better',
+      endings: 'TEI files under version control are the data. Everything else is built from them.',
+      ours: 'Postgres is the data. TEI is one export among several.',
+      why: 'The database earns its place for editing: several editors, constraints, the FileMaker merges, the places gazetteer. It does not outlive the application. Keep it for the work, and commit a lossless TEI snapshot of the whole corpus to a data repository at every release. That needs the note and stage import fixed first; until then the database is not even faithful to the sources.' },
+    { title: 'Rebuilding the site', kind: 'split', label: 'Split verdict',
+      endings: 'Any change to the data rebuilds the entire site.',
+      ours: 'Only the changed plays and their relatives are rewritten, driven by database triggers and a code fingerprint.',
+      why: 'Incremental is better while editing: one play in 2.8 s instead of the corpus in 17 s, flagged the moment it changes. A full rebuild is better for a release: 17 s now, about 80 s at 388 plays, and it rules out mixed dates, a stale index or a missed relative by construction. Ship releases from a full build and keep incremental for preview.' },
+    { title: 'How releases happen', kind: 'endings', label: 'Endings is better',
+      endings: 'Periodic, planned releases, each one complete and identified.',
+      ours: 'Refresh and deploy whenever a play changes, under the same version.',
+      why: 'A citation names a version. A rolling release with no archived editions breaks every one of them. Quick corrections are still possible within release discipline: bump the version, which costs nothing.' },
+    { title: 'Validation as a gate', kind: 'endings', label: 'Endings is better',
+      endings: 'Every input and output is validated, and any error stops the process.',
+      ours: 'A thorough test suite guards the code. The build itself checks nothing.',
+      why: 'Tests prove the code handles the fixtures; they say nothing about tonight’s data. The pieces already exist (xmllint, tei_all.rng, TeiValidator), so wiring them into Generate is cheap.' },
+    { title: 'Search with no server', kind: 'ours', label: 'Playcode goes further',
+      endings: 'A static site first; a server-side index may be added on top.',
+      ours: 'Index files load by script injection, so search works from the unzipped archive with no web server at all.',
+      why: 'The archive keeps full-text search wherever it is copied. That is stricter than 4.1 asks, and within budget: a first single-word search loads at most about 166 KB gzipped.' }
+  ];
+
+  var byId = {};
+  P.forEach(function (p) { byId[p.id] = p; });
+  var checked = {};
+  var weighting = 'equal';
+  var filter = 'all';
+
+  function load(key) { try { return localStorage.getItem('endings-audit.' + key); } catch (e) { return null; } }
+  function save(key, value) { try { localStorage.setItem('endings-audit.' + key, value); } catch (e) { /* storage off */ } }
+
+  (load('fixes') || '').split(',').forEach(function (id) { if (id) checked[id] = true; });
+  if (load('weighting') === 'data') weighting = 'data';
+
+  function projected(p) {
+    var best = p.score;
+    FIXES.forEach(function (f) { if (checked[f.id] && f.lifts[p.id] > best) best = f.lifts[p.id]; });
+    return best;
+  }
+  function bucket(v) { return v >= 0.85 ? 'good' : v >= 0.5 ? 'mid' : 'bad'; }
+  var STATUS = { good: 'Meets', mid: 'Partly', bad: 'Falls short' };
+  function weight(p) { return weighting === 'data' && p.s <= 3 ? 2 : 1; }
+  function fmt(v) { return v.toFixed(2); }
+  function pct(v) { return Math.round(v * 100); }
+  function anyFix() { return FIXES.some(function (f) { return checked[f.id]; }); }
+
+  function totals(list) {
+    var got = 0, next = 0, max = 0;
+    list.forEach(function (p) { var w = weight(p); got += p.score * w; next += projected(p) * w; max += w; });
+    return { now: got / max, next: next / max, got: got, max: max };
+  }
+
+  /* Static structure, built once */
+  var band = document.getElementById('band');
+  SECTIONS.forEach(function (sec) {
+    var items = P.filter(function (p) { return p.s === sec.n; });
+    var g = document.createElement('div');
+    g.className = 'group';
+    g.style.flex = items.length + ' 1 0';
+    var cols = document.createElement('div');
+    cols.className = 'cols';
+    items.forEach(function (p) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'col';
+      b.dataset.id = p.id;
+      b.innerHTML = '<span class="bar"><span class="proj"></span><span class="fill"></span></span><span class="tick">' + p.id + '</span>';
+      b.addEventListener('click', function () { jump(p.id); });
+      cols.appendChild(b);
+    });
+    g.appendChild(cols);
+    var label = document.createElement('span');
+    label.className = 'glabel';
+    label.textContent = sec.name;
+    g.appendChild(label);
+    band.appendChild(g);
+  });
+
+  var sections = document.getElementById('sections');
+  SECTIONS.forEach(function (sec) {
+    var row = document.createElement('div');
+    row.className = 'srow';
+    row.dataset.s = sec.n;
+    row.innerHTML = '<div class="name"><span class="eyebrow">Section ' + sec.n + '</span>' + sec.name + '</div>' +
+      '<div class="strack"><span class="proj"></span><span class="fill"></span></div><div class="pct"></div>';
+    sections.appendChild(row);
+  });
+
+  var list = document.getElementById('list');
+  SECTIONS.forEach(function (sec) {
+    var head = document.createElement('div');
+    head.className = 'sec-head';
+    head.dataset.s = sec.n;
+    head.innerHTML = '<h3>' + sec.n + ' · ' + sec.name + '</h3><span class="pct"></span>';
+    list.appendChild(head);
+    P.filter(function (p) { return p.s === sec.n; }).forEach(function (p) {
+      var a = document.createElement('article');
+      a.className = 'pr';
+      a.id = 'p-' + p.id.replace('.', '-');
+      a.innerHTML =
+        '<div class="num">' + p.id + '</div>' +
+        '<div class="body"><h4>' + p.name + '</h4>' +
+        '<p class="rule">“' + p.rule + '”</p>' +
+        '<p class="finding">' + p.finding + '</p>' +
+        '<ul>' + p.ev.map(function (e) { return '<li class="' + e[0] + '">' + e[1] + '</li>'; }).join('') + '</ul></div>' +
+        '<div class="margin"><span class="val"></span><span class="meter"><span class="proj"></span><span class="fill"></span></span><span class="status"></span></div>';
+      list.appendChild(a);
+    });
+  });
+
+  var fixesEl = document.getElementById('fixes');
+  FIXES.forEach(function (f) {
+    var li = document.createElement('li');
+    li.className = 'fix';
+    var tags = Object.keys(f.lifts).sort().map(function (id) { return '<span class="chip">' + id + '</span>'; }).join('');
+    li.innerHTML = '<label for="fix-' + f.id + '"><input type="checkbox" id="fix-' + f.id + '"' + (checked[f.id] ? ' checked' : '') + '>' +
+      '<span><span class="t">' + f.name + '</span><span class="d">' + f.detail + '</span>' +
+      '<span class="meta"><span class="chip effort">' + f.effort + '</span>' + tags + '</span></span></label>' +
+      '<a class="more" href="#cost-' + f.id + '">Cost and shortcomings</a>';
+    li.querySelector('input').addEventListener('change', function (ev) {
+      checked[f.id] = ev.target.checked;
+      persist();
+      render();
+    });
+    li.querySelector('.more').addEventListener('click', function (ev) {
+      ev.preventDefault();
+      reveal(document.getElementById('cost-' + f.id));
+    });
+    fixesEl.appendChild(li);
+  });
+
+  var EFFORT = { S: 'a day or two', M: 'about a week', L: 'a project' };
+  var costed = document.getElementById('costed');
+  FIXES.forEach(function (f) {
+    var lifts = Object.keys(f.lifts).sort().map(function (id) { return id + ' to ' + fmt(f.lifts[id]); }).join(', ');
+    var c = document.createElement('article');
+    c.className = 'fc';
+    c.id = 'cost-' + f.id;
+    c.innerHTML = '<div class="fc-head"><h3>' + f.name + '</h3><span class="chip effort">' + f.effort + ' · ' + EFFORT[f.effort] + '</span></div>' +
+      '<p class="what">' + f.detail + '</p>' +
+      '<p class="lifts">Lifts ' + lifts + '</p>' +
+      '<div class="fc-cols"><div><h4 class="cost">Cost</h4><ul>' + f.cost.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div>' +
+      '<div><h4 class="short">Shortcomings</h4><ul>' + f.short.map(function (x) { return '<li>' + x + '</li>'; }).join('') + '</ul></div></div>';
+    costed.appendChild(c);
+  });
+
+  var vEl = document.getElementById('verdicts');
+  VERDICTS.forEach(function (v) {
+    var d = document.createElement('article');
+    d.className = 'vd';
+    d.innerHTML = '<div class="vd-top"><h3>' + v.title + '</h3><span class="pill ' + v.kind + '">' + v.label + '</span></div>' +
+      '<div class="vs"><div><span class="eyebrow">Endings</span><p>' + v.endings + '</p></div>' +
+      '<div><span class="eyebrow">Playcode</span><p>' + v.ours + '</p></div></div>' +
+      '<p class="why">' + v.why + '</p>';
+    vEl.appendChild(d);
+  });
+
+  function persist() {
+    save('fixes', FIXES.filter(function (f) { return checked[f.id]; }).map(function (f) { return f.id; }).join(','));
+  }
+
+  function setBar(el, now, next, color, prop) {
+    var fill = el.querySelector('.fill'), proj = el.querySelector('.proj');
+    fill.style[prop] = (now * 100) + '%';
+    fill.style.background = 'var(--' + color + ')';
+    proj.style[prop] = (next * 100) + '%';
+  }
+
+  function render() {
+    var fixing = anyFix();
+
+    P.forEach(function (p) {
+      var next = projected(p);
+      var col = band.querySelector('[data-id="' + p.id + '"]');
+      setBar(col.querySelector('.bar'), p.score, next, bucket(p.score), 'height');
+      col.setAttribute('aria-label', p.id + ' ' + p.name + ', ' + fmt(p.score) + (next > p.score ? ', ' + fmt(next) + ' with fixes' : ''));
+      col.title = p.id + ' ' + p.name + ': ' + fmt(p.score) + (next > p.score ? ' → ' + fmt(next) : '');
+
+      var art = document.getElementById('p-' + p.id.replace('.', '-'));
+      art.querySelector('.val').innerHTML = fmt(p.score) + (next > p.score ? '<span class="next">→ ' + fmt(next) + '</span>' : '');
+      setBar(art.querySelector('.meter'), p.score, next, bucket(p.score), 'width');
+      var st = art.querySelector('.status');
+      st.className = 'status ' + bucket(p.score);
+      st.textContent = STATUS[bucket(p.score)];
+      art.hidden = filter !== 'all' && bucket(p.score) !== filter;
+    });
+
+    SECTIONS.forEach(function (sec) {
+      var items = P.filter(function (p) { return p.s === sec.n; });
+      var t = totals(items);
+      var row = sections.querySelector('[data-s="' + sec.n + '"]');
+      setBar(row.querySelector('.strack'), t.now, t.next, bucket(t.now), 'width');
+      row.querySelector('.pct').innerHTML = pct(t.now) + '%' + (t.next > t.now ? '<span>→ ' + pct(t.next) + '%</span>' : '');
+      var head = list.querySelector('.sec-head[data-s="' + sec.n + '"]');
+      head.querySelector('.pct').textContent = pct(t.now) + '%' + (t.next > t.now ? ' → ' + pct(t.next) + '%' : '');
+      head.hidden = items.every(function (p) { return filter !== 'all' && bucket(p.score) !== filter; });
+    });
+
+    var all = totals(P);
+    document.getElementById('total').innerHTML = pct(all.now) + '<small>%</small>';
+    document.getElementById('total-to').textContent = fixing ? '→ ' + pct(all.next) + '% with ' + FIXES.filter(function (f) { return checked[f.id]; }).length + ' fixes' : '';
+    document.getElementById('points').textContent =
+      (Math.round(all.got * 100) / 100) + ' of ' + all.max + ' points' + (weighting === 'data' ? ', sections 1 to 3 doubled' : '');
+
+    document.getElementById('w-equal').setAttribute('aria-pressed', String(weighting === 'equal'));
+    document.getElementById('w-data').setAttribute('aria-pressed', String(weighting === 'data'));
+    document.getElementById('w-hint').textContent = weighting === 'equal'
+      ? 'Every principle counts the same.'
+      : 'Data, Documentation and Processing count double, since Endings treats them as the foundation.';
+
+    FIXES.forEach(function (f) { document.getElementById('fix-' + f.id).checked = !!checked[f.id]; });
+    document.querySelectorAll('.filters button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.filter === filter)); });
+  }
+
+  function reveal(el) {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+
+  function jump(id) {
+    var art = document.getElementById('p-' + id.replace('.', '-'));
+    if (art.hidden) { filter = 'all'; render(); }
+    reveal(art);
+  }
+
+  document.getElementById('w-equal').addEventListener('click', function () { weighting = 'equal'; save('weighting', weighting); render(); });
+  document.getElementById('w-data').addEventListener('click', function () { weighting = 'data'; save('weighting', weighting); render(); });
+  document.getElementById('all').addEventListener('click', function () { FIXES.forEach(function (f) { checked[f.id] = true; }); persist(); render(); });
+  document.getElementById('none').addEventListener('click', function () { checked = {}; persist(); render(); });
+  document.querySelectorAll('.filters button').forEach(function (b) {
+    b.addEventListener('click', function () { filter = b.dataset.filter; render(); });
+  });
+
+  render();
+})();
+</script>
