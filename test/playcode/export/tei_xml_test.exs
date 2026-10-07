@@ -1,7 +1,7 @@
 defmodule Playcode.Export.TeiXmlTest do
   @moduledoc """
-  Exports of data no TEI import produces: places curated in the gazetteer, and
-  a dating note with no years. Everything a TEI file can carry is asserted as a
+  Exports of data no TEI import produces: places curated in the gazetteer, a
+  dating note with no years, and the bibliography. Everything a TEI file can carry is asserted as a
   round trip in test/playcode/tei_roundtrip_test.exs.
   """
   use Playcode.DataCase, async: true
@@ -161,5 +161,133 @@ defmodule Playcode.Export.TeiXmlTest do
 
     assert Enum.find_index(names, &(&1 == "Valencia")) <
              Enum.find_index(names, &(&1 == "Valentia"))
+  end
+
+  describe "bibliography" do
+    setup do
+      play = import_tei!(tei([]))
+
+      bibliography_fixture(
+        play,
+        %{
+          "kind" => "criticism",
+          "pub_type" => "article",
+          "language" => "en",
+          "analytic_author" => "Barnett, Timothy Brian",
+          "analytic_title" => "Lope and <<Tasso>>",
+          "monogr_title" => "Bulletin of the Comediantes",
+          "year_text" => "2005",
+          "volume" => "57",
+          "issue" => "2",
+          "pages" => "238-294",
+          "note" => "Revisar"
+        },
+        %{"note" => "doi en la nota"}
+      )
+
+      bibliography_fixture(
+        play,
+        %{
+          "kind" => "modern_edition",
+          "pub_type" => "book_section",
+          "analytic_editors" => "Rowe, Nicholas",
+          "analytic_title" => "Hamlet",
+          "monogr_title" => "The Works",
+          "year_text" => "1957-75",
+          "volumes_total" => "6",
+          "volume" => "1",
+          "siglum" => "ROWE1",
+          "public_note" => "Printed by Tonson",
+          "url" => "https://example.org/rowe"
+        },
+        %{"volume" => "5", "pages" => "2366-2466"}
+      )
+
+      bibliography_fixture(play, %{
+        "kind" => "adaptation",
+        "pub_type" => nil,
+        "monogr_author" => nil,
+        "monogr_title" => "Solo un título",
+        "url" => ". http://emothe.uv.es/x.php"
+      })
+
+      %{play: Playcode.Catalogue.get_play!(play.id), xml: export_tei(play)}
+    end
+
+    test "each kind is a listBibl in back, in display order", %{xml: xml} do
+      assert [{%{"type" => "bibliografia"}, _text}] = xml_elements(xml, "div", within: "back")
+
+      assert xml |> xml_elements("listBibl") |> Enum.map(&elem(&1, 0)) == [
+               %{"type" => "ediciones_modernas"},
+               %{"type" => "critica"},
+               %{"type" => "adaptaciones"}
+             ]
+    end
+
+    test "an article: analytic level, journal title, issue and a dated imprint", %{xml: xml} do
+      assert [
+               %{"type" => "seccion_libro"},
+               %{"type" => "articulo_revista", "xml:lang" => "en"},
+               %{}
+             ] = xml |> xml_elements("biblStruct") |> Enum.map(&elem(&1, 0))
+
+      assert {%{"level" => "a"}, "Lope and Tasso"} in xml_elements(xml, "title",
+               within: "analytic"
+             )
+
+      assert "Tasso" in xml_texts(xml, "emph", within: "analytic")
+
+      assert {%{"level" => "j"}, "Bulletin of the Comediantes"} in xml_elements(xml, "title",
+               within: "monogr"
+             )
+
+      assert {%{"unit" => "issue"}, "2"} in xml_elements(xml, "biblScope")
+      assert {%{"when" => "2005"}, "2005"} in xml_elements(xml, "date", within: "imprint")
+    end
+
+    test "a modern edition: the play's own volume and pages, siglum, volumes, note and URL", %{
+      xml: xml
+    } do
+      scopes = xml_elements(xml, "biblScope")
+      assert {%{"unit" => "volume"}, "5"} in scopes
+      assert {%{"unit" => "page"}, "2366-2466"} in scopes
+      refute {%{"unit" => "volume"}, "1"} in scopes
+
+      assert {%{"type" => "siglum"}, "ROWE1"} in xml_elements(xml, "idno", within: "back")
+      assert xml_texts(xml, "extent", within: "back") == ["6 vols."]
+      assert {%{"target" => "https://example.org/rowe"}, ""} in xml_elements(xml, "ptr")
+      assert xml_texts(xml, "note", within: "back") == ["Printed by Tonson"]
+
+      # A range of years is no single date: the text stays, @when does not.
+      assert {%{}, "1957-75"} in xml_elements(xml, "date", within: "imprint")
+    end
+
+    # Review focus 5.
+    test "an imprint with nothing known is still schema-shaped, and a stray URL gives no ptr", %{
+      xml: xml
+    } do
+      assert {%{}, ""} in xml_elements(xml, "date", within: "imprint")
+
+      refute Enum.any?(xml_elements(xml, "ptr"), fn {attrs, _} ->
+               attrs["target"] =~ "emothe.uv.es"
+             end)
+    end
+
+    test "researchers' notes stay out of the file", %{xml: xml} do
+      refute xml =~ "Revisar"
+      refute xml =~ "doi en la nota"
+    end
+
+    # The fixpoint test in tei_roundtrip_test.exs re-imports under a new code, which makes
+    # a new play. This one re-imports in place, as a curator would.
+    test "re-importing the export in place keeps the bibliography and exports the same file", %{
+      play: play,
+      xml: xml
+    } do
+      reimported = import_tei!(xml)
+
+      assert reimported.id == play.id
+      assert export_tei(reimported) == xml
+    end
   end
 end

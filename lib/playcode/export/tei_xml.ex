@@ -440,6 +440,157 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
+  # --- Back: the bibliography (S4) ---
+
+  @list_types %{
+    "modern_edition" => "ediciones_modernas",
+    "criticism" => "critica",
+    "translation" => "traducciones",
+    "adaptation" => "adaptaciones"
+  }
+
+  # FileMaker's own type names (T12.11), as the corpus spells its other types in Spanish.
+  @bibl_types %{
+    "article" => "articulo_revista",
+    "book_section" => "seccion_libro",
+    "scholarly_edition" => "edicion_estudioso",
+    "book" => "libro",
+    "proceedings" => "acta",
+    "prologue" => "prologo",
+    "festschrift" => "homenaje",
+    "electronic" => "publicacion_electronica",
+    "thesis" => "tesis_doctorado",
+    "collection" => "coleccion"
+  }
+
+  defp build_back([]), do: element(:back)
+
+  defp build_back(groups) do
+    element(:back, [
+      element(
+        :div,
+        %{type: "bibliografia"},
+        Enum.map(groups, fn {kind, subgroups} ->
+          element(
+            :listBibl,
+            %{type: @list_types[kind]},
+            for({_language, links} <- subgroups, link <- links, do: build_bibl_struct(link))
+          )
+        end)
+      )
+    ])
+  end
+
+  # In the order TEI requires. The entry's `note` and the link's are for researchers and
+  # never leave Playcode: this file is published with the static site.
+  defp build_bibl_struct(%{entry: e} = link) do
+    attrs =
+      %{"type" => @bibl_types[e.pub_type], "xml:lang" => e.language}
+      |> Map.reject(fn {_key, value} -> is_nil(value) end)
+
+    element(
+      :biblStruct,
+      attrs,
+      [
+        build_analytic(e),
+        build_monogr(e, link),
+        if(filled?(e.series),
+          do: element(:series, [element(:title, %{level: "s"}, build_inline_content(e.series))])
+        ),
+        if(filled?(e.public_note), do: element(:note, build_inline_content(e.public_note))),
+        # ponytail: only an http(s) address is a valid target; the FileMaker strays
+        # (". http://…") stay in the database for curators to clean.
+        if(filled?(e.url) and String.trim(e.url) =~ ~r{\Ahttps?://\S+\z}i,
+          do: element(:ptr, %{target: String.trim(e.url)})
+        )
+      ]
+      |> List.flatten()
+      |> Enum.reject(&is_nil/1)
+    )
+  end
+
+  defp build_analytic(e) do
+    if Enum.any?(
+         [e.analytic_author, e.analytic_title, e.analytic_editors, e.analytic_translators],
+         &filled?/1
+       ) do
+      element(
+        :analytic,
+        Enum.reject(
+          bibl_people(e.analytic_author, e.analytic_editors, e.analytic_translators) ++
+            [
+              if(filled?(e.analytic_title),
+                do: element(:title, %{level: "a"}, build_inline_content(e.analytic_title))
+              )
+            ],
+          &is_nil/1
+        )
+      )
+    end
+  end
+
+  defp build_monogr(e, link) do
+    volume = if filled?(link.volume), do: link.volume, else: e.volume
+    pages = if filled?(link.pages), do: link.pages, else: e.pages
+    level = if e.pub_type == "article", do: "j", else: "m"
+
+    element(
+      :monogr,
+      Enum.reject(
+        bibl_people(e.monogr_author, e.monogr_editors, e.monogr_translators) ++
+          [
+            element(:title, %{level: level}, build_inline_content(e.monogr_title)),
+            if(filled?(e.original_title),
+              do: element(:title, %{type: "original"}, build_inline_content(e.original_title))
+            ),
+            if(filled?(e.siglum), do: element(:idno, %{type: "siglum"}, e.siglum)),
+            if(filled?(e.edition), do: element(:edition, e.edition)),
+            build_imprint(e),
+            if(filled?(e.volumes_total), do: element(:extent, "#{e.volumes_total} vols.")),
+            bibl_scope("volume", volume),
+            bibl_scope("issue", e.issue),
+            bibl_scope("page", pages)
+          ],
+        &is_nil/1
+      )
+    )
+  end
+
+  defp bibl_people(author, editors, translators) do
+    [
+      if(filled?(author), do: element(:author, build_inline_content(author))),
+      if(filled?(editors), do: element(:editor, editors)),
+      if(filled?(translators), do: element(:editor, %{role: "translator"}, translators))
+    ]
+  end
+
+  defp build_imprint(e) do
+    year = if filled?(e.year_text), do: String.trim(e.year_text)
+
+    children =
+      Enum.reject(
+        [
+          if(filled?(e.pub_place), do: element(:pubPlace, e.pub_place)),
+          if(filled?(e.publisher), do: element(:publisher, e.publisher)),
+          if(year,
+            do: element(:date, if(year =~ ~r/^\d{4}$/, do: %{when: year}, else: %{}), year)
+          ),
+          if(filled?(e.url_accessed_on),
+            do: element(:date, %{type: "access"}, e.url_accessed_on)
+          )
+        ],
+        &is_nil/1
+      )
+
+    # The schema needs something inside an <imprint>.
+    element(:imprint, if(children == [], do: [element(:date)], else: children))
+  end
+
+  defp bibl_scope(unit, value),
+    do: if(filled?(value), do: element(:biblScope, %{unit: unit}, value))
+
+  defp filled?(value), do: is_binary(value) and String.trim(value) != ""
+
   # --- Text ---
 
   defp build_text(play, characters, divisions) do
@@ -448,7 +599,7 @@ defmodule Playcode.Export.TeiXml do
     element(:text, [
       build_front(play, characters),
       build_body(body_divisions),
-      element(:back)
+      build_back(Playcode.Bibliography.list_for_play(play.id))
     ])
   end
 
