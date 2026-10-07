@@ -9,7 +9,7 @@ defmodule Mix.Tasks.Playcode.Export.Site do
       mix playcode.export.site                              # complete plays → _site/
       mix playcode.export.site -o /tmp/archive              # custom output dir
       mix playcode.export.site --plays AL0001,AL0002        # specific plays only
-      mix playcode.export.site --base-url /playcode/ --version 2.0
+      mix playcode.export.site --version 2.0
       mix playcode.export.site --all                          # include incomplete plays
 
   ## Options
@@ -17,7 +17,6 @@ defmodule Mix.Tasks.Playcode.Export.Site do
     * `-o`, `--output` - Output directory (default: `_site`)
     * `--plays` - Comma-separated play codes to export (default: all complete)
     * `--version` - Version label for the site (default: app version)
-    * `--base-url` - Base URL for links (default: `/`)
     * `--all` - Include all plays, not just those marked as complete
   """
 
@@ -27,7 +26,6 @@ defmodule Mix.Tasks.Playcode.Export.Site do
     output: :string,
     plays: :string,
     version: :string,
-    base_url: :string,
     all: :boolean
   ]
 
@@ -56,7 +54,6 @@ defmodule Mix.Tasks.Playcode.Export.Site do
         output_dir: opts[:output] || "_site",
         play_codes: play_codes,
         version: opts[:version] || app_version,
-        base_url: opts[:base_url] || "/",
         all: opts[:all] || false,
         on_progress: &print_progress/1
       )

@@ -1,0 +1,766 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bibliografía Selecta Migration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #F4F6F3;
+    --surface: #FFFFFF;
+    --ink: #1A2130;
+    --muted: #586171;
+    --rule: #D6DBD4;
+    --accent: #27487A;
+    --accent-soft: #E4EBF5;
+    --on-accent: #FFFFFF;
+    --mark-bg: #F7E37C;
+    --mark-ink: #3A2F00;
+    --code-bg: #ECEFEA;
+    --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #12161B;
+      --surface: #1A1F26;
+      --ink: #E4E7EA;
+      --muted: #9AA3AE;
+      --rule: #2C333C;
+      --accent: #9DB9E8;
+      --accent-soft: #1F2B3D;
+      --on-accent: #0F1620;
+      --mark-bg: #5B4C10;
+      --mark-ink: #F8EBB0;
+      --code-bg: #161B21;
+    }
+  }
+
+  [hidden] { display: none !important; }
+  img { max-width: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+  }
+  main {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 3rem 5rem;
+    display: grid;
+    gap: 3.25rem;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  header { display: grid; gap: 1rem; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .lede { font-size: 1.125rem; max-width: 62ch; }
+  .meta { font-size: 0.875rem; color: var(--muted); }
+
+  section { display: grid; gap: 1.1rem; }
+  section > h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  .note { font-size: 0.9375rem; color: var(--muted); }
+  code, .field {
+    font-family: var(--mono);
+    font-size: 0.85em;
+  }
+
+  /* Citations set as a bibliography: hanging indent, period face */
+  .bib {
+    list-style: none;
+    margin: 0;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .bib li {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    line-height: 1.45;
+    padding-left: 2em;
+    text-indent: -2em;
+  }
+  .bib .from {
+    display: block;
+    text-indent: 0;
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+  mark {
+    background: var(--mark-bg);
+    color: var(--mark-ink);
+    font-family: var(--mono);
+    font-size: 0.8em;
+    padding: 0.05em 0.25em;
+    border-radius: 2px;
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td.num, th.num { text-align: right; padding-right: 0; }
+  tfoot td { font-weight: 600; border-bottom: none; }
+
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+  }
+  .fields div { display: grid; gap: 0.1rem; }
+  .fields dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fields dd { margin: 0; }
+
+  .losses { display: grid; gap: 1.5rem; }
+  .loss { display: grid; gap: 0.5rem; }
+  .loss h3 { font-size: 1.0625rem; font-weight: 600; }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.1rem 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .callout h3 { font-size: 1.0625rem; font-weight: 600; }
+  .callout table th, .callout table td { border-bottom-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+  .plan { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.6rem; }
+
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+
+  /* Questions */
+  .group { display: grid; gap: 1rem; }
+  .group > h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .q {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1.25rem 1.25rem 1.1rem;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
+    gap: 0 0.75rem;
+  }
+  .q-num {
+    font-family: var(--serif);
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--accent);
+    font-variant-numeric: lining-nums;
+  }
+  .q-body { display: grid; gap: 0.8rem; min-width: 0; }
+  .q h4 { margin: 0; font-size: 1.125rem; font-weight: 600; line-height: 1.35; text-wrap: balance; }
+  .why { font-size: 0.9375rem; color: var(--muted); }
+  .codes { font-size: 0.9375rem; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 0.5rem; }
+  legend, .label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0;
+    margin-bottom: 0.4rem;
+  }
+  .options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem 0.35rem 0.6rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: var(--paper);
+  }
+  .options input { accent-color: var(--accent); margin: 0; }
+  .options label:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .options label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 5.5rem;
+    resize: vertical;
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.6rem 0.7rem;
+  }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .status { font-size: 0.8125rem; color: var(--muted); min-height: 1.2em; }
+
+  .send {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.25rem;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .send-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--on-accent);
+    background: var(--accent);
+    border: 0;
+    border-radius: 4px;
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .count { font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  #answers-out { min-height: 12rem; font-family: var(--mono); font-size: 0.8125rem; }
+
+  @media (max-width: 480px) {
+    .q { grid-template-columns: 1fr; gap: 0.5rem; }
+    .bib { padding: 0.9rem 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.5rem; }
+  .muted { color: var(--muted); }
+  .plan strong { font-weight: 600; }
+  .record { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+  .record-fields {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    font-size: 0.875rem;
+  }
+  .record-fields div { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.5rem; }
+  .record-fields dt { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); padding-top: 0.1rem; }
+  .record-fields dd { margin: 0; overflow-wrap: anywhere; }
+  .fieldlist { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; }
+  .fieldlist .field { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 3px; padding: 0.1rem 0.4rem; font-size: 0.8rem; }
+  mark.gap { font-family: inherit; font-size: inherit; padding: 0 0.15em; }
+  @media (max-width: 640px) { .record { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Playcode · FileMaker migration · For review</p>
+    <h1>Moving each play’s bibliography out of FileMaker</h1>
+    <p class="lede">Playcode will replace FileMaker as the place where each play’s bibliography is kept. On 1 October we received an export of the bibliography tables themselves, so we can now see the records rather than the printed lines on the website. This page sets out what that export answered, what is still missing, and the questions that remain.</p>
+    <p class="meta">Prepared by Bogdan. First version 25 September 2026, updated 1–2 October 2026 with the exports of the <span class="field">BibliografiaSelecta</span> tables from <span class="field">ctce_dades</span>.</p>
+  </header>
+
+  <section aria-labelledby="h-answered">
+    <h2 id="h-answered">What the new export answered</h2>
+    <ul class="plan">
+      <li><strong>The records are structured.</strong> Each one keeps the article or chapter (author, title) apart from the book or journal it appears in (author, title), with year, volume, pages, a web address, a note, and codes for category, type and language. That fits Playcode and the TEI files directly.</li>
+      <li><strong>It is the same data the website shows.</strong> The export holds 2,640 records and 2,658 links to plays. On 101 of the 106 plays with a published criticism list, it reproduces that list exactly.</li>
+      <li><strong>Language code 5 is Portuguese.</strong> The full list is castellano, francés, inglés, italiano, portugués, alemán.</li>
+      <li><strong>There are ten record types.</strong> Seven are in use; prólogo, homenaje and colección have no records yet.</li>
+      <li><strong>There is no “selected” checkbox.</strong> The 698 unprinted records reported in the first version of this page came from an out-of-date search field, not from real records. What is really unpublished is smaller: 118 records added after the website was last generated, and 86 records with no category.</li>
+      <li><strong>Lists run newest first, by year.</strong> 99 of 102 published lists follow that rule exactly, so there is no hand-made order to preserve.</li>
+      <li><strong>Cities and publishers resolve.</strong> The city and publisher tables sent later on 1 October name every city and all but one publisher used by the bibliography. One record has a publisher name typed where its number should be.</li>
+      <li><strong>Nothing else is linked.</strong> The relationship graph shows that the bibliography depends only on its own tables, cities and publishers.</li>
+      <li><strong>The modern editions arrived too.</strong> 985 editions and 968 links to plays, matching the website’s list exactly on 118 of 120 plays. Each link also records where the play sits inside the edition (volume and pages), and editions carry their siglum, such as ARD3Q2 or RSC. With this, everything the bibliography pages show is in hand.</li>
+      <li><strong>The records are complete.</strong> The full export of the bibliography table (2 October) holds every translator, editor, journal issue and original title the website prints. Thank you.</li>
+      <li><strong>Five plays already in Playcode gain a bibliography</strong> (EMOTHE0659, 0670, 0749, 0777 and 0779). The website export never listed them, but the tables do.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-contains">
+    <h2 id="h-contains">What the export contains</h2>
+    <div class="split">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th class="num">Records</th></tr></thead>
+          <tbody>
+            <tr><td>Bibliografía crítica</td><td class="num">2,258</td></tr>
+            <tr><td>Traducción</td><td class="num">236</td></tr>
+            <tr><td>Adaptación/versión</td><td class="num">60</td></tr>
+            <tr><td>No category</td><td class="num">86</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Type</th><th class="num">Records</th></tr></thead>
+          <tbody>
+            <tr><td>artículo revista</td><td class="num">1,368</td></tr>
+            <tr><td>libro / sitio internet</td><td class="num">617</td></tr>
+            <tr><td>sección libro / página internet</td><td class="num">580</td></tr>
+            <tr><td>acta</td><td class="num">36</td></tr>
+            <tr><td>tesis de doctorado</td><td class="num">18</td></tr>
+            <tr><td>edición estudioso</td><td class="num">8</td></tr>
+            <tr><td>pub. electrónica</td><td class="num">6</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <p class="note">Almost every translation and adaptation has a language (290 of 296). Only 1,063 of the 2,258 criticism records do. On the 82 plays already in Playcode, 325 records fall on 14 plays.</p>
+  </section>
+
+  <section aria-labelledby="h-missing">
+    <h2 id="h-missing">The full export fills every gap</h2>
+    <p>The first export carried 26 of the bibliography table’s 41 fields. The full export of 2 October adds the rest, and with it every part of every printed citation is now in a field. Here is the same translation as before, with the fields the full export added marked.</p>
+    <div class="record">
+      <dl class="record-fields">
+        <div><dt>Autor</dt><dd>Dekker, Thomas</dd></div>
+        <div><dt>Título</dt><dd>Le jour de fête des cordonniers</dd></div>
+        <div><dt>Traductor</dt><dd><mark class="gap">Jones-Davies, Marie-Thérèse</mark></dd></div>
+        <div><dt>Título 2</dt><dd>Théâtre élisabéthain</dd></div>
+        <div><dt>Editor 2</dt><dd><mark class="gap">Cottegnies, Line; Laroque, François; Maguin, Jean-Marie</mark></dd></div>
+        <div><dt>Vol./tomo</dt><dd>1</dd></div>
+        <div><dt>Año</dt><dd>2009</dd></div>
+        <div><dt>Ciudad</dt><dd>5 <span class="muted">→ Paris</span></dd></div>
+        <div><dt>Editorial</dt><dd>136 <span class="muted">→ Gallimard</span></dd></div>
+      </dl>
+      <ul class="bib record-cite">
+        <li>Dekker, Thomas. "Le jour de fête des cordonniers". Tra. Jones-Davies, Marie-Thérèse. Ed. Cottegnies, Line; Laroque, François; Maguin, Jean-Marie. Théâtre élisabéthain. Paris: Gallimard, 2009. Vol. 1.<span class="from">Printed citation · traducción</span></li>
+      </ul>
+    </div>
+    <p>Fields without a number belong to the article, chapter or play; fields ending in 2 belong to the book or journal it appears in. Checked against every printed citation:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Printed as</th><th>Field</th><th class="num">Matches</th></tr></thead>
+        <tbody>
+          <tr><td>Ed. Cottegnies, Line; …</td><td><span class="field">Editor</span>, <span class="field">Editor2</span></td><td class="num">519 of 519</td></tr>
+          <tr><td>Tra. Martínez Sierra, María</td><td><span class="field">Traductor</span>, <span class="field">Traductor2</span></td><td class="num">229 of 229</td></tr>
+          <tr><td>the issue: 2005, vol. 4, 29</td><td><span class="field">Ejemplar</span></td><td class="num">512 of 514</td></tr>
+          <tr><td>(Orig: Antony and Cleopatra)</td><td><span class="field">TituloOriginal</span></td><td class="num">47 of 47</td></tr>
+          <tr><td>edition · 10 vols.</td><td><span class="field">Edicion</span>, <span class="field">VolTomoTotal</span></td><td class="num">35 of 35</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The two issues that do not match were typed into the volume field (“vol. LXIX, núm. 137”). The modern editions are complete as well: every printed edition citation is explained by its fields.</p>
+  </section>
+
+  <section aria-labelledby="h-tidy">
+    <h2 id="h-tidy">Records to tidy up</h2>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          <tr><td>Records with no category, so they never appear on the website</td><td class="num">86</td></tr>
+          <tr><td>…of which linked to EMOTHE0659</td><td class="num">35</td></tr>
+          <tr><td>Records added after the website was last generated</td><td class="num">118</td></tr>
+          <tr><td>…and modern-edition links added since</td><td class="num">78</td></tr>
+          <tr><td>Records with neither author nor title</td><td class="num">20</td></tr>
+          <tr><td>Links with no record</td><td class="num">74</td></tr>
+          <tr><td>Links to a record that no longer exists</td><td class="num">19</td></tr>
+          <tr><td>Records linked to no play</td><td class="num">102</td></tr>
+          <tr><td>Modern editions linked to no play</td><td class="num">129</td></tr>
+          <tr><td>Modern-edition records that are blank or test entries (“esto es una prueba…”)</td><td class="num">41</td></tr>
+          <tr><td>Notes, of which only 3 are printed</td><td class="num">178</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The year field also holds a few things that are not years: page ranges such as “121-123”, “[s.a.]” and “letra del s. XIX”. Playcode keeps the text as typed and sorts on the first four-digit year it finds.</p>
+  </section>
+
+  <section aria-labelledby="h-plan">
+    <h2 id="h-plan">What we plan to do</h2>
+    <ul class="plan">
+      <li>Each play gets a bibliography in four groups: modern editions, criticism, translations and adaptations. Researchers can add, correct and delete entries in Playcode.</li>
+      <li>Modern editions keep their siglum, series and reference, and each play keeps its own volume and pages inside the edition.</li>
+      <li>Entries keep FileMaker’s fields separate and remember the FileMaker record they came from. Re-running the import adds new records and updates untouched ones, but never overwrites an entry someone has edited in Playcode.</li>
+      <li>Once the missing tables arrive, Playcode prints each citation from its fields. Empty fields are left out, so the “{Falta …}” placeholders disappear. Until then, the citation FileMaker prints is kept for display.</li>
+      <li>Lists run newest first. Entries without a year go last.</li>
+      <li>The bibliography is also written into each play’s TEI file, in the back matter, with the article and the book or journal as separate levels. It stays out of <code>&lt;sourceDesc&gt;</code>, which describes the sources of the edition itself.</li>
+    </ul>
+<pre><code>&lt;back&gt;
+  &lt;div type="bibliografia"&gt;
+    &lt;listBibl type="critica"&gt;
+      &lt;biblStruct type="articulo_revista" xml:lang="en"&gt;
+        &lt;analytic&gt;
+          &lt;author&gt;Taylor, Miles&lt;/author&gt;
+          &lt;title level="a"&gt;'Teach Me This Pedlar's French'…&lt;/title&gt;
+        &lt;/analytic&gt;
+        &lt;monogr&gt;
+          &lt;title level="j"&gt;Renaissance and Reformation&lt;/title&gt;
+          &lt;imprint&gt;&lt;date when="2005"&gt;2005&lt;/date&gt;&lt;/imprint&gt;
+          &lt;biblScope unit="volume"&gt;29&lt;/biblScope&gt;
+          &lt;biblScope unit="issue"&gt;4&lt;/biblScope&gt;
+          &lt;biblScope unit="page"&gt;107-24&lt;/biblScope&gt;
+        &lt;/monogr&gt;
+      &lt;/biblStruct&gt;
+    &lt;/listBibl&gt;
+    &lt;listBibl type="traducciones"&gt;…&lt;/listBibl&gt;
+  &lt;/div&gt;
+&lt;/back&gt;</code></pre>
+  </section>
+
+  <section aria-labelledby="h-questions">
+    <h2 id="h-questions">Questions</h2>
+    <p>Questions 1 to 3 are about the FileMaker data and may need whoever exported the tables. Questions 4 to 7 are editorial choices. Your answers are kept in this browser as you type. Send them with the button at the end.</p>
+
+    <div class="group">
+      <h3>About the FileMaker database</h3>
+
+      <div class="q" data-q="q3" data-n="1">
+        <span class="q-num" aria-hidden="true">1</span>
+        <div class="q-body">
+          <h4>What are the 86 records without a category?</h4>
+          <p class="why">76 of them are linked to plays, 35 to EMOTHE0659 alone, but without a category they never reach the website. Some look like ordinary criticism, for example “Smith, Peter, and Nigel Wood. Hamlet: Theory in Practice. Buckingham: Open University Press, 1996.”</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q3-o1"><input type="radio" id="q3-o1" name="q3-choice" value="Criticism that was never categorised">Criticism that was never categorised</label>
+              <label for="q3-o2"><input type="radio" id="q3-o2" name="q3-choice" value="Drafts: leave them out">Drafts: leave them out</label>
+              <label for="q3-o3"><input type="radio" id="q3-o3" name="q3-choice" value="A mix, see my note">A mix, see my note</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q3-text">Notes</label>
+            <textarea id="q3-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="q" data-q="q4" data-n="2">
+        <span class="q-num" aria-hidden="true">2</span>
+        <div class="q-body">
+          <h4>Are the 118 records added since the website was last generated ready to publish?</h4>
+          <p class="why">The same goes for 78 modern-edition links, on 10 plays. The bibliography records sit on 10 plays, for example <i>La place Royale</i> (22), <i>El desdén con el desdén</i> (18) and <i>Le menteur</i> (15). As far as we can tell, they are missing from the website only because it has not been regenerated since they were added.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q4-o1"><input type="radio" id="q4-o1" name="q4-choice" value="Yes, publish them">Yes, publish them</label>
+              <label for="q4-o2"><input type="radio" id="q4-o2" name="q4-choice" value="Import them, but review before publishing">Import them, but review before publishing</label>
+              <label for="q4-o3"><input type="radio" id="q4-o3" name="q4-choice" value="No, leave them out">No, leave them out</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q4-text">Notes</label>
+            <textarea id="q4-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="q" data-q="q5" data-n="3">
+        <span class="q-num" aria-hidden="true">3</span>
+        <div class="q-body">
+          <h4>Can the broken links and unlinked records be dropped?</h4>
+          <p class="why">In the bibliography, 74 links have no record, 19 point to a record that no longer exists, and 102 records are linked to no play. In the modern editions, 7 links are broken and 129 editions are linked to no play. We plan to skip the broken links. The unlinked records could still be useful later.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q5-o1"><input type="radio" id="q5-o1" name="q5-choice" value="Drop all of them">Drop all of them</label>
+              <label for="q5-o2"><input type="radio" id="q5-o2" name="q5-choice" value="Drop the broken links, keep the unlinked records">Drop the broken links, keep the unlinked records</label>
+              <label for="q5-o3"><input type="radio" id="q5-o3" name="q5-choice" value="Not sure">Not sure</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q5-text">Notes</label>
+            <textarea id="q5-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Editorial choices</h3>
+
+      <div class="q" data-q="q6" data-n="4">
+        <span class="q-num" aria-hidden="true">4</span>
+        <div class="q-body">
+          <h4>Should a translation also show the original play’s bibliography?</h4>
+          <p class="why">FileMaker links records to each version separately. 30 records are shared between two or three versions, and the rest belong to one. A reader of a translation would currently see only the records linked to that translation.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q6-o1"><input type="radio" id="q6-o1" name="q6-choice" value="No, each version shows only its own list">No, each version shows only its own list</label>
+              <label for="q6-o2"><input type="radio" id="q6-o2" name="q6-choice" value="Yes, translations also show the original’s list">Yes, translations also show the original’s list</label>
+              <label for="q6-o3"><input type="radio" id="q6-o3" name="q6-choice" value="Something else">Something else</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q6-text">Notes</label>
+            <textarea id="q6-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="q" data-q="q7" data-n="5">
+        <span class="q-num" aria-hidden="true">5</span>
+        <div class="q-body">
+          <h4>What should Playcode do with the notes?</h4>
+          <p class="why">178 records have a note and only 3 are printed. Most are working notes, such as “Sobre: &lt;&lt;Adonis y Venus&gt;&gt;…” or “Toma ejemplos de: &lt;&lt;El sembrar en buena tierra&gt;&gt;…”. A few hold a web address or a publisher typed in the wrong place.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q7-o1"><input type="radio" id="q7-o1" name="q7-choice" value="Keep them for researchers only">Keep them for researchers only</label>
+              <label for="q7-o2"><input type="radio" id="q7-o2" name="q7-choice" value="Show them on the public site">Show them on the public site</label>
+              <label for="q7-o3"><input type="radio" id="q7-o3" name="q7-choice" value="Leave them out">Leave them out</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q7-text">Notes</label>
+            <textarea id="q7-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+
+      <div class="q" data-q="q8" data-n="6">
+        <span class="q-num" aria-hidden="true">6</span>
+        <div class="q-body">
+          <h4>Should lists stay newest first?</h4>
+          <p class="why">That is what FileMaker does today, computed from the year. If curators want their own order instead, Playcode needs a way to rearrange lists that can run to 62 entries, the length of <i>Hamlet</i>’s criticism.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q8-o1"><input type="radio" id="q8-o1" name="q8-choice" value="Yes, newest first">Yes, newest first</label>
+              <label for="q8-o2"><input type="radio" id="q8-o2" name="q8-choice" value="Curators set the order by hand">Curators set the order by hand</label>
+              <label for="q8-o3"><input type="radio" id="q8-o3" name="q8-choice" value="Something else">Something else</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q8-text">Notes</label>
+            <textarea id="q8-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="q" data-q="q9" data-n="7">
+        <span class="q-num" aria-hidden="true">7</span>
+        <div class="q-body">
+          <h4>Should one correction to a shared edition reach every play?</h4>
+          <p class="why">23 modern editions sit under several plays, up to eleven: the Wells and Taylor <i>Complete Works</i>, <i>Drama of the English Renaissance II</i>, <i>English Drama 1580-1642</i>. We plan to keep one copy per play, each with its own volume and pages, and to remember which copies came from the same FileMaker record. If corrections to these editions are common, a single edit should reach all of them.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q9-o1"><input type="radio" id="q9-o1" name="q9-choice" value="Yes, one edit should reach every play">Yes, one edit should reach every play</label>
+              <label for="q9-o2"><input type="radio" id="q9-o2" name="q9-choice" value="No, corrections are rare; per play is fine">No, corrections are rare; per play is fine</label>
+              <label for="q9-o3"><input type="radio" id="q9-o3" name="q9-choice" value="Not sure">Not sure</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q9-text">Notes</label>
+            <textarea id="q9-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-send">
+    <h2 id="h-send">Send your answers</h2>
+    <div class="send">
+      <p>Your answers are kept in this browser only. When you are done, copy them and paste them into your reply to Bogdan.</p>
+      <div class="send-row">
+        <button type="button" id="copy-answers">Copy answers</button>
+        <span class="count" id="answered-count">0 of 7 answered</span>
+      </div>
+      <p class="status" id="copy-status" aria-live="polite"></p>
+      <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
+      <textarea id="answers-out" readonly hidden></textarea>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var KEY = "bibliografia-selecta-answers-v2";
+  var questions = Array.prototype.slice.call(document.querySelectorAll(".q"));
+  var storage = null;
+  try {
+    storage = window.localStorage;
+    storage.getItem(KEY);
+  } catch (e) {
+    storage = null;
+  }
+
+  var answers = {};
+  try {
+    answers = JSON.parse((storage && storage.getItem(KEY)) || "{}") || {};
+  } catch (e) {
+    answers = {};
+  }
+
+  function read(q) {
+    var checked = q.querySelector('input[type="radio"]:checked');
+    return {
+      choice: checked ? checked.value : "",
+      text: q.querySelector("textarea").value
+    };
+  }
+
+  function isAnswered(a) {
+    return !!(a.choice || (a.text && a.text.trim()));
+  }
+
+  function updateCount() {
+    var n = questions.filter(function (q) { return isAnswered(read(q)); }).length;
+    document.getElementById("answered-count").textContent = n + " of " + questions.length + " answered";
+  }
+
+  var timers = {};
+  function save(q) {
+    var id = q.dataset.q;
+    var status = q.querySelector(".status");
+    answers[id] = read(q);
+    var ok = false;
+    if (storage) {
+      try {
+        storage.setItem(KEY, JSON.stringify(answers));
+        ok = true;
+      } catch (e) {
+        ok = false;
+      }
+    }
+    status.textContent = ok
+      ? "Saved in this browser."
+      : "Not saved: this browser blocks local storage. Copy your answers before you close the page.";
+    updateCount();
+  }
+
+  questions.forEach(function (q) {
+    var saved = answers[q.dataset.q] || {};
+    if (saved.choice) {
+      q.querySelectorAll('input[type="radio"]').forEach(function (r) {
+        if (r.value === saved.choice) r.checked = true;
+      });
+    }
+    if (saved.text) q.querySelector("textarea").value = saved.text;
+    function schedule() {
+      clearTimeout(timers[q.dataset.q]);
+      timers[q.dataset.q] = setTimeout(function () { save(q); }, 400);
+    }
+    q.addEventListener("input", schedule);
+    q.addEventListener("change", schedule);
+  });
+  updateCount();
+
+  function compile() {
+    var lines = ["Bibliografía Selecta Migration: answers", ""];
+    questions.forEach(function (q) {
+      var a = read(q);
+      var hasOptions = !!q.querySelector('input[type="radio"]');
+      lines.push(q.dataset.n + ". " + q.querySelector("h4").textContent.trim());
+      if (hasOptions) lines.push("   Answer: " + (a.choice || "(none chosen)"));
+      var text = a.text.trim();
+      if (text) lines.push("   Notes: " + text.replace(/\n/g, "\n          "));
+      else if (!hasOptions) lines.push("   (not answered)");
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+
+  document.getElementById("copy-answers").addEventListener("click", function () {
+    var text = compile();
+    var out = document.getElementById("answers-out");
+    var status = document.getElementById("copy-status");
+    out.value = text;
+    out.hidden = false;
+    document.getElementById("answers-out-label").hidden = false;
+    function fallback() {
+      out.focus();
+      out.select();
+      status.textContent = "Copying was blocked by the browser. The answers are selected in the box below: press Ctrl+C, or ⌘C on a Mac.";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        status.textContent = "Copied. Paste them into your reply to Bogdan. The same text is in the box below.";
+      }, fallback);
+    } catch (e) {
+      fallback();
+    }
+  });
+})();
+</script>
+</body>
+</html>

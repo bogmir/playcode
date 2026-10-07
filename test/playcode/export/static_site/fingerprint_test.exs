@@ -13,9 +13,34 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     assert Fingerprint.current(version: "1.0") != Fingerprint.current(version: "1.1")
   end
 
+  # The site is in English, so only an English translation can change a page. The Spanish
+  # ones are the admin's; editing one made the whole site look changed.
+  test "an English translation changes the fingerprint; a Spanish one does not" do
+    dir = Path.join(System.tmp_dir!(), "fingerprint-#{System.unique_integer([:positive])}")
+    File.cp_r!(Application.app_dir(:playcode, "priv/gettext"), dir)
+    on_exit(fn -> File.rm_rf!(dir) end)
+
+    current = fn -> Fingerprint.current(version: "1.0", gettext_dir: dir) end
+    before = current.()
+
+    translate(dir, "es", "Deploy", "Publicar", "Publicar ya")
+    assert current.() == before
+
+    translate(dir, "en", "Deploy", "", "Ship")
+    assert current.() != before
+  end
+
+  defp translate(dir, locale, msgid, from, to) do
+    path = Path.join([dir, locale, "LC_MESSAGES", "default.po"])
+    old = ~s(msgid "#{msgid}"\nmsgstr "#{from}"\n)
+    po = File.read!(path)
+    assert po =~ old
+    File.write!(path, String.replace(po, old, ~s(msgid "#{msgid}"\nmsgstr "#{to}"\n)))
+  end
+
   # What these return is play data, which plays.content_version tracks. Ecto schemas
-  # count too.
-  @data_access [Playcode.Catalogue, Playcode.PlayContent, Playcode.Repo]
+  # count too. The Gettext backend's English translations are fingerprinted as data.
+  @data_access [Playcode.Catalogue, Playcode.PlayContent, Playcode.Repo, PlaycodeWeb.Gettext]
 
   test "every module the export calls is in the fingerprint, or only reads play data" do
     reached = reach(Fingerprint.modules(), MapSet.new())

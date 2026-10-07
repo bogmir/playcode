@@ -71,6 +71,13 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
   defp n(singular, plural, count),
     do: Gettext.ngettext(PlaycodeWeb.Gettext, singular, plural, count)
 
+  # Nothing in the export reads a base URL: the site links relatively, so it works in any
+  # folder and opened from disk.
+  test "the form asks for no base URL", %{conn: conn} do
+    {:ok, _lv, html} = live(conn, ~p"/admin/export")
+    refute html =~ t("Base URL")
+  end
+
   test "lists the complete plays, each switched off while no site exists",
        %{conn: conn, a: a, b: b} do
     {:ok, lv, html} = live(conn, ~p"/admin/export")
@@ -635,7 +642,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       generate(lv)
 
       refute has_element?(lv, "button", t("Deploy"))
-      assert render(lv) =~ t("To deploy, set STATIC_SITE_REPO on the server.")
+      # It used to say "on the server", which read wrong on a laptop running Playcode.
+      assert render(lv) =~ t("To deploy, set STATIC_SITE_REPO where Playcode runs.")
     end
   end
 end

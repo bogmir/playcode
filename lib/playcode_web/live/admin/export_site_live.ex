@@ -18,7 +18,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       |> assign(:page_title, gettext("Export Static Site"))
       # The site's own version, so it is current for the form until someone changes it.
       |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
-      |> assign(:base_url, "/")
       |> assign(:deploy_to, deploy_target())
       |> assign(:exported_codes, MapSet.new(exported_codes))
       |> assign(:pending, %{})
@@ -50,7 +49,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     {:noreply,
      socket
      |> assign(:version, params["version"] || "")
-     |> assign(:base_url, params["base_url"] || "/")
      |> track_changes()}
   end
 
@@ -190,19 +188,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                   value={@version}
                   class="input input-bordered"
                   placeholder="1.0"
-                />
-              </label>
-
-              <label class="form-control">
-                <div class="label">
-                  <span class="label-text">{gettext("Base URL")}</span>
-                </div>
-                <input
-                  type="text"
-                  name="base_url"
-                  value={@base_url}
-                  class="input input-bordered"
-                  placeholder="/"
                 />
               </label>
             </div>
@@ -566,7 +551,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     end
   end
 
-  defp deploy_hint(nil), do: gettext("To deploy, set STATIC_SITE_REPO on the server.")
+  defp deploy_hint(nil), do: gettext("To deploy, set STATIC_SITE_REPO where Playcode runs.")
 
   defp deploy_hint(%{repo: repo, host: nil}),
     do: gettext("Pushes the site to %{repo}.", repo: repo)
@@ -576,7 +561,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       gettext("Pushes the site to %{repo}, then publishes it on %{host}.", repo: repo, host: host)
 
   # The form values every build takes.
-  defp form_opts(socket), do: [version: socket.assigns.version, base_url: socket.assigns.base_url]
+  defp form_opts(socket), do: [version: socket.assigns.version]
 
   # Which published plays changed since they were written, and whether the site as a
   # whole did, for the version in the form.

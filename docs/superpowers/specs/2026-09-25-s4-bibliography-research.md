@@ -2,7 +2,13 @@
 
 **Status:** research, 2026-09-25, **revised 2026-10-01** when the FileMaker bibliography
 tables arrived, and **2026-10-02** when the full 41-field export of the records and the
-modern-editions tables completed them. **All S4 data is now in hand.** **Not a design yet**: the shape at the end is a proposal, and the open
+modern-editions tables completed them. **All S4 data is now in hand.**
+
+**Stakeholder page:** the questions in "Open questions" also exist as a page for the project's
+domain lead, kept at `docs/stakeholder/bibliografia-selecta.html`. It is self-contained: open it
+in a browser or attach it to an email. Answers are saved in the reader's browser and come back
+as text through its "Copy answers" button. The same page is published at
+https://claude.ai/artifact/1sMoU3oTkFK2QuuDDQiccp. Change the repo copy first, then republish. **Not a design yet**: the shape at the end is a proposal, and the open
 questions decide whether it holds. Slice S4 of `../plans/2026-08-01-filemaker-import-slices.md`.
 
 Two sources, measured in full:
