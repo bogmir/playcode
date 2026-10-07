@@ -61,6 +61,27 @@ defmodule Playcode.Export.DeployTest do
     assert page =~ "Deployed Play"
   end
 
+  # Regression: the site's .git outlives a deploy (on the volume), so a second deploy with
+  # nothing new failed on "nothing to commit", though a retry after a failed push or
+  # publish must still push the site and have it published.
+  test "a deploy with nothing new since the last still pushes and publishes", %{play: play} do
+    settings(publish_url: "https://publish.example/playcode-deploy.php", publish_token: "key")
+    test = self()
+
+    Req.Test.stub(Deployer, fn conn ->
+      send(test, :published)
+      Req.Test.json(conn, %{ok: true, target: "edicion", commit: "abc123"})
+    end)
+
+    repo = bare_repo()
+    assert {:ok, _url} = deploy("file://" <> repo)
+    assert {:ok, _url} = deploy("file://" <> repo)
+
+    assert_received :published
+    assert_received :published
+    assert {_page, 0} = gh_pages(repo, "plays/#{play.code}/index.html")
+  end
+
   test "with a publish URL, the server is told to fetch the site, and its address is the answer" do
     settings(publish_url: "https://publish.example/playcode-deploy.php", publish_token: "key")
     test = self()

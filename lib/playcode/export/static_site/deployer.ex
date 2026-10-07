@@ -86,7 +86,10 @@ defmodule Playcode.Export.StaticSite.Deployer do
          System.cmd("git", ["config", "user.name", "EMOTHE Deploy"], git_opts)
        end},
       {"Staging files...", fn -> System.cmd("git", ["add", "-A"], git_opts) end},
-      {"Creating commit...", fn -> System.cmd("git", ["commit", "-m", message], git_opts) end},
+      # Empty when nothing changed since the last deploy, whose .git the site keeps: a
+      # retry after a failed push or publish must still push and publish.
+      {"Creating commit...",
+       fn -> System.cmd("git", ["commit", "--allow-empty", "-m", message], git_opts) end},
       {"Pushing to #{branch}...",
        fn ->
          System.cmd("git", ["push", "--force", repo_url, "HEAD:#{branch}"], git_opts)
