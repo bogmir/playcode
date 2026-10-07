@@ -791,18 +791,17 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp format_size(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1024, 1)} KB"
   defp format_size(bytes), do: "#{Float.round(bytes / 1_048_576, 1)} MB"
 
+  # Names only, so :zip reads each file from disk as it adds it: the whole site in memory
+  # at once would not fit the machine at a few hundred plays.
   defp create_zip(source_dir, zip_path) do
     files =
       source_dir
       |> Path.join("**/*")
       |> Path.wildcard()
       |> Enum.filter(&File.regular?/1)
-      |> Enum.map(fn path ->
-        relative = Path.relative_to(path, source_dir)
-        {String.to_charlist(relative), File.read!(path)}
-      end)
+      |> Enum.map(&String.to_charlist(Path.relative_to(&1, source_dir)))
 
-    case :zip.create(String.to_charlist(zip_path), files) do
+    case :zip.create(String.to_charlist(zip_path), files, cwd: String.to_charlist(source_dir)) do
       {:ok, _} -> :ok
       {:error, reason} -> {:error, reason}
     end

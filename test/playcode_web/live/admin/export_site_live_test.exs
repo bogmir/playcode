@@ -251,6 +251,23 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert has_element?(lv, "button", t("Download .zip"))
   end
 
+  # The zip is written file by file from disk (a site of 388 plays would not fit in the
+  # machine's memory at once); what it holds is the site, by the same paths.
+  test "Download .zip hands over the site", %{conn: conn, a: a} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert {:error, {:redirect, %{to: to}}} =
+             lv |> element("button", t("Download .zip")) |> render_click()
+
+    {:ok, files} = conn |> get(to) |> response(200) |> :zip.unzip([:memory])
+    files = Map.new(files, fn {name, body} -> {List.to_string(name), body} end)
+
+    assert files["plays/#{a.code}/index.html"] =~ "Alpha Tragedy"
+    assert files["index.html"] =~ "Alpha Tragedy"
+    assert Map.has_key?(files, "assets/style.css")
+  end
+
   # Regression: the figures were the last Generate's, so a switch left them stale.
   test "the site's figures are the site on disk, and follow its switches",
        %{conn: conn, a: a, b: b} do
