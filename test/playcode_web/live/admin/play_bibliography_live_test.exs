@@ -86,9 +86,25 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLiveTest do
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
     view |> button(link, "Edit") |> render_click()
 
-    assert view |> element("#entry-editor [role=alert]") |> render() =~ other.code
+    # One other play is the commonest case, and reads in the singular.
+    assert view |> element("#entry-editor [role=alert]") |> render() =~
+             Gettext.dngettext(
+               PlaycodeWeb.Gettext,
+               "default",
+               "Shared with %{count} other play (%{codes}): changes appear on both.",
+               "Shared with %{count} other plays (%{codes}): changes appear on all of them.",
+               1,
+               codes: other.code
+             )
 
-    view |> form("#entry-form", entry: %{monogr_title: "The Complete Works"}) |> render_submit()
+    view
+    |> form("#entry-form", entry: %{monogr_title: "The Complete Works"}, link: %{pages: "12"})
+    |> render_submit()
+
+    # The edit changed the entry and this play's link: both are logged.
+    for type <- ["bibliography_entry", "play_bibliography"] do
+      assert [_] = Playcode.ActivityLog.list_entries(resource_type: type, action: "update")
+    end
 
     assert [{"criticism", [{nil, [shared]}]}] = Bibliography.list_for_play(other.id)
     assert shared.entry.monogr_title == "The Complete Works"
@@ -130,6 +146,13 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLiveTest do
              t("Entry deleted: no other play used it.")
 
     assert Bibliography.search_entries("Own volume", other.id) == []
+
+    # The last removal took the entry with it, and the log says so.
+    assert [_] =
+             Playcode.ActivityLog.list_entries(
+               resource_type: "bibliography_entry",
+               action: "delete"
+             )
   end
 
   # Review focus 2.
@@ -151,5 +174,20 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLiveTest do
 
     assert view |> form("#bibliography-filter", q: "nadie") |> render_change() =~
              t("Nothing matches the filter.")
+  end
+
+  # Found by the final review: an event names its link by an id that came from the browser.
+  test "an edit or removal pushed for another play's link does nothing", %{
+    conn: conn,
+    play: play
+  } do
+    elsewhere = bibliography_fixture(play_fixture(), %{"monogr_title" => "Not this play's"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+
+    render_click(view, "remove", %{"id" => elsewhere.id})
+    render_click(view, "edit", %{"id" => elsewhere.id})
+
+    assert [_] = Bibliography.list_links(elsewhere.play_id)
+    refute has_element?(view, "#entry-editor")
   end
 end

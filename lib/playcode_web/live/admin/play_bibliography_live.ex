@@ -37,15 +37,21 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   end
 
   def handle_event("edit", %{"id" => id}, socket) do
-    link = Bibliography.get_link!(id)
+    case Bibliography.get_link(socket.assigns.play.id, id) do
+      nil ->
+        {:noreply, socket}
 
-    others =
-      link.entry_id
-      |> Bibliography.plays_for_entry()
-      |> Enum.reject(&(&1.id == link.play_id))
+      link ->
+        others =
+          link.entry_id
+          |> Bibliography.plays_for_entry()
+          |> Enum.reject(&(&1.id == link.play_id))
 
-    params = %{"volume" => link.volume, "pages" => link.pages, "note" => link.note}
-    {:noreply, socket |> assign(:adding, false) |> open_form(link, link.entry, params, others)}
+        params = %{"volume" => link.volume, "pages" => link.pages, "note" => link.note}
+
+        {:noreply,
+         socket |> assign(:adding, false) |> open_form(link, link.entry, params, others)}
+    end
   end
 
   def handle_event("cancel", _params, socket), do: {:noreply, close_form(socket)}
@@ -74,6 +80,9 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
       {:ok, link, action} ->
         log(socket, action, "bibliography_entry", link.entry_id)
 
+        if link_changed?(socket.assigns.editing, link),
+          do: log(socket, action, "play_bibliography", link.id)
+
         message =
           if action == "create", do: gettext("Entry added."), else: gettext("Entry saved.")
 
@@ -88,16 +97,23 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   end
 
   def handle_event("remove", %{"id" => id}, socket) do
-    link = Bibliography.get_link!(id)
-    {:ok, outcome} = Bibliography.unlink(link)
-    log(socket, "delete", "play_bibliography", link.id)
+    # Nil for another play's link, or one a double click already removed.
+    case Bibliography.get_link(socket.assigns.play.id, id) do
+      nil ->
+        {:noreply, load(socket)}
 
-    message =
-      if outcome == :deleted,
-        do: gettext("Entry deleted: no other play used it."),
-        else: gettext("Removed from this play. The other plays keep it.")
+      link ->
+        {:ok, outcome} = Bibliography.unlink(link)
+        log(socket, "delete", "play_bibliography", link.id)
+        if outcome == :deleted, do: log(socket, "delete", "bibliography_entry", link.entry_id)
 
-    {:noreply, socket |> close_form() |> load() |> put_flash(:info, message)}
+        message =
+          if outcome == :deleted,
+            do: gettext("Entry deleted: no other play used it."),
+            else: gettext("Removed from this play. The other plays keep it.")
+
+        {:noreply, socket |> close_form() |> load() |> put_flash(:info, message)}
+    end
   end
 
   def handle_event("open_add", _params, socket) do
@@ -176,6 +192,12 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   defp close_form(socket) do
     assign(socket, editing: nil, form: nil, link_params: %{}, shared_with: [], preview: nil)
   end
+
+  # A new entry's link is new too; an edit changed the link when one of its fields did.
+  defp link_changed?(%Link{} = before, %Link{} = now),
+    do: Map.take(before, [:volume, :pages, :note]) != Map.take(now, [:volume, :pages, :note])
+
+  defp link_changed?(_new, _link), do: false
 
   defp form_entry(%{assigns: %{editing: %Link{entry: entry}}}), do: entry
   defp form_entry(_socket), do: %Entry{}
@@ -359,8 +381,10 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
         <div :if={@shared_with != []} role="alert" class="alert alert-warning rounded-none">
           <.icon name="hero-users-mini" class="size-5" />
           <span>
-            {gettext("Shared with %{count} other plays (%{codes}): changes appear on all of them.",
-              count: length(@shared_with),
+            {ngettext(
+              "Shared with %{count} other play (%{codes}): changes appear on both.",
+              "Shared with %{count} other plays (%{codes}): changes appear on all of them.",
+              length(@shared_with),
               codes: Enum.map_join(@shared_with, ", ", & &1.code)
             )}
           </span>

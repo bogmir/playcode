@@ -413,7 +413,7 @@ gives it its own entry (the project's request, 2026-10-07):
 **The context**, `Playcode.Bibliography`:
 
 - `list_for_play/1`, grouped and sorted
-- `get_entry!/1`, `get_link!/1`
+- `get_entry!/1`, and `get_link/2`, scoped to the play, since the link id arrives from the browser
 - `create_entry_for_play/3`, entry and link in one transaction
 - `update_entry/2`, `update_link/2`
 - `link_entry/3`

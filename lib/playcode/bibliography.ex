@@ -27,7 +27,19 @@ defmodule Playcode.Bibliography do
   def change_link(%Link{} = link, attrs \\ %{}), do: Link.changeset(link, attrs)
 
   def get_entry!(id), do: Repo.get!(Entry, id)
-  def get_link!(id), do: Link |> Repo.get!(id) |> Repo.preload(:entry)
+
+  @doc """
+  The play's link `id`, entry loaded, or nil. Scoped to the play because the id arrives
+  from the browser: a link of another play, or no link at all, is nil.
+  """
+  def get_link(play_id, id) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         %Link{} = link <- Repo.get_by(Link, id: id, play_id: play_id) do
+      Repo.preload(link, :entry)
+    else
+      _ -> nil
+    end
+  end
 
   @doc "The play's links with their entries, in the order they were added."
   def list_links(play_id) do
