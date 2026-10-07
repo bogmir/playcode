@@ -6,6 +6,7 @@ defmodule Playcode.Export.StaticSite.Components do
   """
   use Phoenix.Component
 
+  alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Edition, Search}
   alias Playcode.PlayContent.{Element, InlineMarkup}
@@ -156,6 +157,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <li>
         <a href="statistics.html" aria-current={@current == "statistics" && "page"}>Statistics</a>
       </li>
+      <li :if={@edition.bibliography != []}>
+        <a href="index.html#bibliography">Bibliography</a>
+      </li>
     </ul>
     """
   end
@@ -214,6 +218,25 @@ defmodule Playcode.Export.StaticSite.Components do
           <span class="role">{Play.language_name(translation.language)}</span>
         </li>
       </ul>
+    </section>
+    """
+  end
+
+  attr :groups, :list, required: true
+
+  def bibliography(assigns) do
+    ~H"""
+    <section :if={@groups != []} id="bibliography" class="bibliography">
+      <h2>Bibliography</h2>
+      <%= for {kind, subgroups} <- @groups do %>
+        <h3>{PlayLabels.bibliography_kind_label(kind)}</h3>
+        <%= for {language, links} <- subgroups do %>
+          <h4 :if={kind == "translation"}>{PlayLabels.bibliography_language_label(language)}</h4>
+          <ul>
+            <li :for={link <- links}>{Citation.html(link.entry, link)}</li>
+          </ul>
+        <% end %>
+      <% end %>
     </section>
     """
   end

@@ -283,4 +283,42 @@ defmodule Playcode.Export.StaticSitePlayTest do
                Enum.find(lines, &String.ends_with?(Enum.at(&1, 5), "palabra dos"))
     end
   end
+
+  test "the title page lists the bibliography by kind, linked from the contents, without researchers' notes" do
+    play = import_tei!(tei(body: @two_acts))
+
+    bibliography_fixture(
+      play,
+      %{
+        "kind" => "modern_edition",
+        "monogr_editors" => "Thompson, Ann",
+        "monogr_title" => "Hamlet",
+        "note" => "Revisar"
+      },
+      %{"note" => "Préstamo"}
+    )
+
+    bibliography_fixture(play, %{
+      "kind" => "translation",
+      "language" => "fr",
+      "monogr_title" => "Hamlet, prince de Danemark"
+    })
+
+    dir = generate!([play], all: true)
+    title = page(dir, play, "index.html")
+
+    assert texts(title, "#bibliography h3") == ["Modern editions", "Translations"]
+    assert texts(title, "#bibliography h4") == ["Français"]
+    assert LazyHTML.text(title) =~ "Thompson, Ann, ed. Hamlet."
+    refute LazyHTML.text(title) =~ "Revisar"
+    refute LazyHTML.text(title) =~ "Préstamo"
+
+    rail =
+      dir
+      |> page(play, "act-1.html")
+      |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+      |> LazyHTML.attribute("href")
+
+    assert "index.html#bibliography" in rail
+  end
 end
