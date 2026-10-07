@@ -72,7 +72,8 @@ defmodule Playcode.Catalogue.Play do
     "it" => "Italiano",
     "ca" => "Català",
     "fr" => "Français",
-    "pt" => "Português"
+    "pt" => "Português",
+    "de" => "Deutsch"
   }
 
   def language_name(code), do: Map.get(@language_names, code, code)

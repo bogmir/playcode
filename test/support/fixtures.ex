@@ -263,4 +263,20 @@ defmodule Playcode.TestFixtures do
     {:ok, play_place} = Places.link_place(play.id, place.id, attrs)
     play_place
   end
+
+  def bibliography_fixture(play, entry_attrs \\ %{}, link_attrs \\ %{}) do
+    entry_attrs =
+      Map.merge(
+        %{
+          "kind" => "criticism",
+          "pub_type" => "book",
+          "monogr_author" => "Autor, Ana",
+          "monogr_title" => "Libro #{System.unique_integer([:positive])}"
+        },
+        entry_attrs
+      )
+
+    {:ok, link} = Playcode.Bibliography.create_entry_for_play(play.id, entry_attrs, link_attrs)
+    link
+  end
 end

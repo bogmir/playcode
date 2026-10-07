@@ -145,3 +145,6 @@ msgstr "ya hay otro nombre preferido para esta lengua"
 
 msgid "is already linked to this play"
 msgstr "ya está vinculado a esta obra"
+
+msgid "needs an author, an editor or a title"
+msgstr "necesita un autor, un editor o un título"

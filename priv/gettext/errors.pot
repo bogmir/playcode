@@ -154,3 +154,6 @@ msgstr ""
 
 msgid "is already linked to this play"
 msgstr ""
+
+msgid "needs an author, an editor or a title"
+msgstr ""

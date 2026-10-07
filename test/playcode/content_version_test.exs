@@ -8,7 +8,7 @@ defmodule Playcode.ContentVersionTest do
 
   import Playcode.TestFixtures
 
-  alias Playcode.{Catalogue, PlayContent, Places, Statistics}
+  alias Playcode.{Bibliography, Catalogue, PlayContent, Places, Statistics}
 
   # Postgres moves a play once per transaction, and the sandbox runs the whole test in
   # one. This stands in for the commit between two edits. It reaches past the contexts
@@ -64,6 +64,7 @@ defmodule Playcode.ContentVersionTest do
         })
       end,
       place: fn -> play_place_fixture(play, place) end,
+      bibliography: fn -> bibliography_fixture(play) end,
       deletion: fn -> PlayContent.delete_element(line) end
     ]
 
@@ -151,6 +152,26 @@ defmodule Playcode.ContentVersionTest do
     assert moves?(play, note)
     assert moves?(play, rename)
     refute moves?(elsewhere, note)
+  end
+
+  test "an edit to a bibliography entry moves every play that cites it" do
+    hamlet = play_fixture()
+    antony = play_fixture()
+    elsewhere = play_fixture()
+    link = bibliography_fixture(hamlet, %{"monogr_title" => "Works"})
+    {:ok, _} = Bibliography.link_entry(antony.id, link.entry_id)
+    bibliography_fixture(elsewhere)
+
+    # A new value each time: an update that changes nothing sends no UPDATE at all.
+    edit = fn ->
+      Bibliography.update_entry(Bibliography.get_entry!(link.entry_id), %{
+        "year_text" => "#{System.unique_integer([:positive])}"
+      })
+    end
+
+    assert moves?(hamlet, edit)
+    assert moves?(antony, edit)
+    refute moves?(elsewhere, edit)
   end
 
   test "caching a play's statistics does not move it" do
