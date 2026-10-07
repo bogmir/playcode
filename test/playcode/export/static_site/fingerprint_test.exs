@@ -47,6 +47,24 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     assert Enum.reject(reached, &(&1 in Fingerprint.modules() or data_access?(&1))) == []
   end
 
+  # A schema is play data, but a function on it can decide what a page shows: the order of
+  # a bibliography's sections is Bibliography.Entry.kinds/0. Found by the S4 review.
+  test "a schema the export calls a function of is in the fingerprint" do
+    called =
+      for module <- Fingerprint.modules(),
+          {callee, function, _arity} <- imports(module),
+          callee not in Fingerprint.modules(),
+          callee in Application.spec(:playcode, :modules),
+          Code.ensure_loaded!(callee) && function_exported?(callee, :__schema__, 1),
+          # Struct and schema reflection, and changesets, which only write.
+          not String.starts_with?(Atom.to_string(function), "__"),
+          not String.ends_with?(Atom.to_string(function), "changeset"),
+          uniq: true,
+          do: {callee, function}
+
+    assert called == []
+  end
+
   # Follows the remote calls out of the fingerprinted modules, through every module of
   # this app they reach, stopping at data access.
   defp reach([], seen), do: seen
@@ -72,7 +90,11 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
   # This app's modules that `module` calls, from the imports in its compiled BEAM file.
   defp calls(module) do
     ours = Application.spec(:playcode, :modules)
+    for {callee, _function, _arity} <- imports(module), callee in ours, uniq: true, do: callee
+  end
+
+  defp imports(module) do
     {:ok, {^module, [imports: imports]}} = :beam_lib.chunks(:code.which(module), [:imports])
-    for {callee, _function, _arity} <- imports, callee in ours, uniq: true, do: callee
+    imports
   end
 end

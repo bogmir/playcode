@@ -25,12 +25,15 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.Export.TeiXml,
     Playcode.Bibliography,
     Playcode.Bibliography.Citation,
+    Playcode.Bibliography.Entry,
     Playcode.Statistics,
     Playcode.Statistics.Metrics,
     Playcode.Catalogue.Play,
     Playcode.PlayContent.InlineMarkup,
     Playcode.PlayContent.Element,
     Playcode.Places,
+    Playcode.Places.Place,
+    Playcode.Places.PlayPlace,
     PlaycodeWeb.PlayLabels
   ]
 
