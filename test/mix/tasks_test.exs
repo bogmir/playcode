@@ -12,6 +12,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
   import Playcode.ImportHelpers
 
   alias Playcode.Accounts
+  alias Playcode.Bibliography
   alias Playcode.Catalogue
 
   setup do
@@ -37,6 +38,12 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     File.mkdir_p!(dir)
     on_exit(fn -> File.rm_rf(dir) end)
     dir
+  end
+
+  defp citations(play) do
+    play.id
+    |> Bibliography.list_links()
+    |> Enum.map(&Playcode.Bibliography.Citation.plain(&1.entry, &1))
   end
 
   describe "playcode.invite" do
@@ -162,6 +169,92 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert page.(draft)
 
       assert run("playcode.export.site", ["-o", dir, "--all"]) =~ "largest act page"
+    end
+  end
+
+  describe "playcode.import.bibliography" do
+    @dump "test/fixtures/filemaker/ctce_dades"
+
+    setup do
+      %{
+        hamlet: play_fixture(%{"code" => "EMOTHE0010_Hamlet"}),
+        antony: play_fixture(%{"code" => "EMOTHE0038_AntonyAndCleopatra"})
+      }
+    end
+
+    test "--dry-run prints the plan and writes nothing", %{hamlet: hamlet} do
+      out = run("playcode.import.bibliography", ["--path", @dump, "--dry-run"])
+
+      assert out =~ "EMOTHE0010_Hamlet  5 links"
+      assert out =~ "bibliography: 5 entries (0 already in Playcode), 6 links on 2 plays"
+      assert out =~ "modern editions: 3 entries (0 already in Playcode), 4 links on 2 plays"
+      assert out =~ "skipped, test_record: 1  T04:9"
+      assert out =~ "links to versions not held: 1"
+      assert out =~ "dry run, nothing written"
+      assert Bibliography.list_links(hamlet.id) == []
+    end
+
+    test "writes each entry once, as FileMaker printed it, with each play's own pages", %{
+      hamlet: hamlet,
+      antony: antony
+    } do
+      assert run("playcode.import.bibliography", ["--path", @dump]) =~
+               "created 8 entries and 10 links"
+
+      assert "Rowe, Nicholas, ed. Hamlet. Shakespeare, William. In: The Works of Mr. William Shakespeare. Vol. 5. London: Jacob Tonson, 1709, pp. 2366-2466, 6 vols." in citations(
+               hamlet
+             )
+
+      assert "Rowe, Nicholas, ed. Hamlet. Shakespeare, William. In: The Works of Mr. William Shakespeare. Vol. 7. London: Jacob Tonson, 1709, pp. 100-200, 6 vols." in citations(
+               antony
+             )
+
+      assert "Peele, George. Altweibermär. Tra. Harbecke, Ulrich J. Weinheim: Deutscher Laienspiel-Verlag, 1967. Das Bühnenspiel. (Orig: Old Wife's Tale)" in citations(
+               hamlet
+             )
+
+      assert "Thompson, Ann; Taylor, Neil, ed. Hamlet. Shakespeare, William. London: Thomson Learning, 2006. The Arden Shakespeare. Third series." in citations(
+               hamlet
+             )
+
+      [rowe] = for l <- Bibliography.list_links(hamlet.id), l.entry.volumes_total == "6", do: l
+      assert Bibliography.link_counts([rowe.entry_id]) == %{rowe.entry_id => 2}
+      assert rowe.origin == "filemaker"
+    end
+
+    test "a re-run skips a play already imported, so a removal stays removed", %{hamlet: hamlet} do
+      run("playcode.import.bibliography", ["--path", @dump])
+      [first | _] = Bibliography.list_links(hamlet.id)
+      {:ok, _} = Bibliography.unlink(first)
+
+      out = run("playcode.import.bibliography", ["--path", @dump])
+
+      assert out =~ "already imported: 2 plays"
+      assert out =~ "created 0 entries and 0 links"
+      assert length(Bibliography.list_links(hamlet.id)) == 4
+    end
+
+    test "a play added later shares the entries already imported" do
+      run("playcode.import.bibliography", ["--path", @dump])
+      later = play_fixture(%{"code" => "EMOTHE0038_AntonioYCleopatra"})
+
+      out = run("playcode.import.bibliography", ["--path", @dump])
+
+      assert out =~ "modern editions: 2 entries (2 already in Playcode), 2 links on 1 plays"
+      assert out =~ "created 0 entries and 5 links"
+      assert length(Bibliography.list_links(later.id)) == 5
+    end
+
+    test "an archived play is left out", %{antony: antony} do
+      {:ok, _} = Catalogue.delete_play(antony)
+      run("playcode.import.bibliography", ["--path", @dump])
+      assert Bibliography.list_links(antony.id) == []
+    end
+
+    test "a missing dump is refused" do
+      assert_raise Mix.Error, ~r/cannot read/, fn ->
+        Mix.Task.rerun("playcode.import.bibliography", ["--path", "test/fixtures/filemaker/nope"])
+      end
     end
   end
 end

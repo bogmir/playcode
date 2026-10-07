@@ -13,6 +13,7 @@ defmodule Playcode.Import.Bibliography do
 
   import Ecto.Query
 
+  alias Playcode.ActivityLog
   alias Playcode.Bibliography.{Entry, Link}
   alias Playcode.Import.{FilemakerSync, FilemakerXml}
   alias Playcode.Repo
@@ -129,6 +130,98 @@ defmodule Playcode.Import.Bibliography do
       skipped: Map.new(acc.skipped, fn {reason, refs} -> {reason, Enum.reverse(refs)} end),
       not_held: acc.not_held
     }
+  end
+
+  @doc """
+  Writes the plan in one transaction: the entries not yet in Playcode, then every link,
+  then one activity-log entry per play. Returns `{:ok, %{entries: created, links: n}}`.
+  """
+  def apply_plan(plan, opts \\ []) do
+    Repo.transaction(
+      fn ->
+        existing =
+          Entry
+          |> where([e], e.filemaker_id in ^Map.keys(plan.entries))
+          |> select([e], {e.filemaker_id, e.id})
+          |> Repo.all()
+          |> Map.new()
+
+        created =
+          plan.entries
+          |> Map.drop(Map.keys(existing))
+          |> Map.new(fn {ref, attrs} -> {ref, insert_entry!(ref, attrs)} end)
+
+        ids = Map.merge(existing, created)
+
+        Enum.each(plan.links, fn link ->
+          %Link{
+            play_id: link.play_id,
+            entry_id: Map.fetch!(ids, link.filemaker_id),
+            origin: "filemaker"
+          }
+          |> Link.changeset(Map.take(link, [:volume, :pages, :note]))
+          |> Repo.insert!()
+        end)
+
+        plan.links
+        |> Enum.group_by(& &1.play_id)
+        |> Enum.each(fn {play_id, links} ->
+          ActivityLog.log!(%{
+            user_id: opts[:user_id],
+            play_id: play_id,
+            action: "import",
+            resource_type: "play_bibliography",
+            resource_id: play_id,
+            changes: %{"links" => length(links)},
+            metadata: %{"source" => "filemaker"}
+          })
+        end)
+
+        %{entries: map_size(created), links: length(plan.links)}
+      end,
+      timeout: :infinity
+    )
+  end
+
+  defp insert_entry!(ref, attrs) do
+    %Entry{filemaker_id: ref}
+    |> Entry.changeset(attrs)
+    |> Repo.insert!()
+    |> Map.fetch!(:id)
+  end
+
+  @doc "The plan as lines of text, for the mix task and the release."
+  def report(plan) do
+    per_play =
+      plan.links
+      |> Enum.group_by(& &1.code)
+      |> Enum.sort()
+      |> Enum.map(fn {code, links} -> "#{code}  #{length(links)} links" end)
+
+    totals =
+      for {table, label} <- [{"T12", "bibliography"}, {"T04", "modern editions"}] do
+        refs = plan.entries |> Map.keys() |> Enum.filter(&String.starts_with?(&1, table <> ":"))
+        links = Enum.filter(plan.links, &String.starts_with?(&1.filemaker_id, table <> ":"))
+        plays = links |> Enum.uniq_by(& &1.play_id) |> length()
+        reused = Enum.count(refs, &(&1 in plan.existing))
+
+        "#{label}: #{length(refs)} entries (#{reused} already in Playcode), " <>
+          "#{length(links)} links on #{plays} plays"
+      end
+
+    skipped =
+      for {reason, refs} <- Enum.sort(plan.skipped) do
+        "skipped, #{reason}: #{length(refs)}  #{Enum.join(refs, ", ")}"
+      end
+
+    per_play ++
+      [""] ++
+      totals ++
+      skipped ++
+      [
+        "already imported: #{length(plan.already_imported)} plays #{Enum.join(plan.already_imported, ", ")}",
+        "links to versions not held: #{plan.not_held}"
+      ]
   end
 
   @doc "A `T12.1` record as entry attributes."
