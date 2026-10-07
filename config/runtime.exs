@@ -30,6 +30,14 @@ config :playcode,
     |> String.split(",", trim: true)
     |> Enum.map(&String.trim/1)
 
+# Where Deploy pushes the static site, and the server it then tells to publish it
+# (StaticSite.Deployer). Fly secrets in production; each may be unset.
+config :playcode, :static_site_deploy,
+  repo: System.get_env("STATIC_SITE_REPO"),
+  github_token: System.get_env("GITHUB_DEPLOY_TOKEN"),
+  publish_url: System.get_env("STATIC_SITE_PUBLISH_URL"),
+  publish_token: System.get_env("STATIC_SITE_PUBLISH_TOKEN")
+
 if config_env() == :prod do
   database_url =
     System.get_env("DATABASE_URL") ||

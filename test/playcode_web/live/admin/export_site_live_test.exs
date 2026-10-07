@@ -572,4 +572,70 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       refute draft.code in StaticSite.list_exported_codes(StaticSite.output_dir())
     end
   end
+
+  describe "deploy" do
+    setup do
+      previous = Application.get_env(:playcode, :static_site_deploy)
+      on_exit(fn -> Application.put_env(:playcode, :static_site_deploy, previous) end)
+    end
+
+    defp deploy_settings(settings),
+      do: Application.put_env(:playcode, :static_site_deploy, settings)
+
+    defp bare_repo do
+      dir = Path.join(System.tmp_dir!(), "page-deploy-#{System.unique_integer([:positive])}.git")
+      {_, 0} = System.cmd("git", ["init", "--bare", "--quiet", dir])
+      on_exit(fn -> File.rm_rf!(dir) end)
+      dir
+    end
+
+    # The repository is server config, not typed in: the GitHub token goes only to it.
+    test "goes to the configured repository, which the page names", %{conn: conn, a: a} do
+      repo = bare_repo()
+      deploy_settings(repo: "file://" <> repo)
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      assert render(lv) =~ t("Pushes the site to %{repo}.", repo: "file://" <> repo)
+
+      lv |> element("button", t("Deploy")) |> render_click()
+      wait_for(fn -> render(lv) =~ t("Deployed!") end)
+
+      assert {page, 0} =
+               System.cmd("git", [
+                 "--git-dir",
+                 repo,
+                 "show",
+                 "gh-pages:plays/#{a.code}/index.html"
+               ])
+
+      assert page =~ "Alpha Tragedy"
+    end
+
+    test "names the server it publishes on", %{conn: conn} do
+      deploy_settings(
+        repo: "owner/site",
+        publish_url: "https://publish.example/playcode-deploy.php"
+      )
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      assert render(lv) =~
+               t("Pushes the site to %{repo}, then publishes it on %{host}.",
+                 repo: "owner/site",
+                 host: "publish.example"
+               )
+    end
+
+    test "with no repository configured, offers no Deploy and says what to set",
+         %{conn: conn} do
+      deploy_settings([])
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      refute has_element?(lv, "button", t("Deploy"))
+      assert render(lv) =~ t("To deploy, set STATIC_SITE_REPO on the server.")
+    end
+  end
 end

@@ -19,7 +19,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       # The site's own version, so it is current for the form until someone changes it.
       |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
       |> assign(:base_url, "/")
-      |> assign(:github_repo, "")
+      |> assign(:deploy_to, deploy_target())
       |> assign(:exported_codes, MapSet.new(exported_codes))
       |> assign(:pending, %{})
       |> assign(:changed, MapSet.new())
@@ -51,7 +51,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      socket
      |> assign(:version, params["version"] || "")
      |> assign(:base_url, params["base_url"] || "/")
-     |> assign(:github_repo, params["github_repo"] || "")
      |> track_changes()}
   end
 
@@ -65,15 +64,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   def handle_event("refresh_play", %{"id" => id}, socket),
     do: id |> SiteBuilder.add(form_opts(socket)) |> queued_flash(socket)
 
-  def handle_event("deploy", _params, socket) do
-    repo = String.trim(socket.assigns.github_repo)
+  # The repository is server config, never typed in: the GitHub token goes only to it.
+  def handle_event("deploy", _params, %{assigns: %{deploy_to: %{repo: repo}}} = socket),
+    do: repo |> SiteBuilder.deploy() |> queued_flash(socket)
 
-    if repo == "" do
-      {:noreply, put_flash(socket, :error, gettext("Please enter a GitHub repository."))}
-    else
-      repo |> SiteBuilder.deploy() |> queued_flash(socket)
-    end
-  end
+  def handle_event("deploy", _params, socket), do: {:noreply, socket}
 
   # A switch with a change on its way is disabled, so this decides by what is on disk.
   # Any play in the site can be switched off; only a published one can be switched on.
@@ -211,24 +206,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 />
               </label>
             </div>
-
-            <label class="form-control">
-              <div class="label">
-                <span class="label-text">{gettext("GitHub Repository (for deploy)")}</span>
-              </div>
-              <input
-                type="text"
-                name="github_repo"
-                value={@github_repo}
-                class="input input-bordered"
-                placeholder="owner/repo-name"
-              />
-              <div class="label">
-                <span class="label-text-alt text-base-content/50">
-                  {gettext("e.g. username/emothe-static — leave empty to skip deploy")}
-                </span>
-              </div>
-            </label>
 
             <div class="flex items-center gap-4">
               <button
@@ -415,13 +392,13 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             </span>
             <%!-- Deploy button --%>
             <button
-              :if={@github_repo != ""}
+              :if={@deploy_to}
               phx-click="deploy"
               class="btn btn-secondary"
               disabled={@deploying}
             >
               <span :if={@deploying} class="loading loading-spinner loading-sm"></span>
-              {if @deploying, do: gettext("Deploying..."), else: gettext("Deploy to GitHub Pages")}
+              {if @deploying, do: gettext("Deploying..."), else: gettext("Deploy")}
             </button>
 
             <%!-- Download zip --%>
@@ -433,6 +410,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               {gettext("Download .zip")}
             </button>
           </div>
+          <p class="text-xs text-base-content/50 mt-2">{deploy_hint(@deploy_to)}</p>
         </div>
       </div>
 
@@ -463,7 +441,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               {@deploy_url}
             </a>
           </p>
-          <p class="text-xs text-base-content/50 mt-1">
+          <p :if={!@deploy_to[:host]} class="text-xs text-base-content/50 mt-1">
             {gettext("Note: GitHub Pages may take a few minutes to update.")}
           </p>
         </div>
@@ -573,6 +551,29 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     do: Enum.find_value(socket.assigns.plays, code, &(&1.code == code && &1.id))
 
   defp on_disk, do: MapSet.new(StaticSite.list_exported_codes(StaticSite.output_dir()))
+
+  # Where Deploy goes, from the server's settings (StaticSite.Deployer): the repository,
+  # and the host of the server told to publish, if any. nil when there is no repository.
+  defp deploy_target do
+    settings = Application.get_env(:playcode, :static_site_deploy, [])
+
+    case settings[:repo] do
+      repo when repo in [nil, ""] ->
+        nil
+
+      repo ->
+        %{repo: repo, host: settings[:publish_url] && URI.parse(settings[:publish_url]).host}
+    end
+  end
+
+  defp deploy_hint(nil), do: gettext("To deploy, set STATIC_SITE_REPO on the server.")
+
+  defp deploy_hint(%{repo: repo, host: nil}),
+    do: gettext("Pushes the site to %{repo}.", repo: repo)
+
+  defp deploy_hint(%{repo: repo, host: host}),
+    do:
+      gettext("Pushes the site to %{repo}, then publishes it on %{host}.", repo: repo, host: host)
 
   # The form values every build takes.
   defp form_opts(socket), do: [version: socket.assigns.version, base_url: socket.assigns.base_url]

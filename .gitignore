@@ -43,3 +43,5 @@ npm-debug.log
 
 # Static site export output
 /_site/
+# The live settings of the emothe.uv.es deploy script; copied to the server, not committed
+deploy/playcode-deploy.config.php

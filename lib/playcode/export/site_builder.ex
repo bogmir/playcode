@@ -149,7 +149,7 @@ defmodule Playcode.Export.SiteBuilder do
 
   # The StaticSite entry points set English themselves; Deployer translates nothing.
   defp run(:deploy, repo) do
-    Deployer.deploy_to_github_pages(StaticSite.output_dir(), repo, on_progress: progress(:deploy))
+    Deployer.deploy(StaticSite.output_dir(), repo, on_progress: progress(:deploy))
   end
 
   # Rebuilds the site as it stands when the job runs, not when it was asked for: an add

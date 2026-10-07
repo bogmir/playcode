@@ -61,3 +61,6 @@ config :playcode, admin_emails: []
 
 # The export page builds here, never into the developer's own _site/
 config :playcode, :static_site_dir, Path.join(System.tmp_dir!(), "playcode-test-site")
+
+# The publish server Deploy calls is a Req.Test stub in test.
+config :playcode, :static_site_publish_req, plug: {Req.Test, Playcode.Export.StaticSite.Deployer}

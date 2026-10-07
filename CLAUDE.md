@@ -130,7 +130,7 @@ lib/
 │           ├── components.ex         # Shell, rail, play text, charts, catalogue entry
 │           ├── search.ex             # Normaliser + full-text index writer
 │           ├── fingerprint.ex        # One hash of the code, assets and settings the pages are built with
-│           └── deployer.ex           # GitHub Pages deployment
+│           └── deployer.ex           # Pushes the site to a git branch, then tells the publish server to fetch it
 └── playcode_web/
     ├── router.ex
     ├── user_auth.ex                  # Auth plugs & LiveView on_mount hooks (delegates to Authz)
@@ -290,7 +290,7 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 - `StaticSite.Search` — the normaliser (must agree with `EMOTHE.normalise` in `site.js`: `test/fixtures/search_normalisation.json` runs against both) and the index: `search/plays.js`, `search/index/<shard>.js` (per play `[play, n, deltas…]`, `delta = (line − previous) × 2 + stage flag`) and `search/lines/<CODE>/<k>.js` (100 lines each), all calling `EMOTHE.search.load`. `write_index/3` carries every play's postings over from the shards on disk, so adding or removing a play reloads no other; an index older than chunked lines is rebuilt in full
 - `Playcode.Statistics.Metrics` — metrical passages, characters, presence, divisions; cached by `Playcode.Statistics` (bump `@version` when what it stores changes)
 - `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
-- `StaticSite.Deployer` — pushes `_site/` to a GitHub Pages branch
+- `StaticSite.Deployer` — pushes `_site/` to the `gh-pages` branch of the repository in `:static_site_deploy` (the GitHub token reaches git as an HTTP header for that repository only, through `GIT_CONFIG_*` environment variables, so it is never in a command line or URL, and is scrubbed from errors), then, when a publish URL is set, POSTs to it with the key in `X-Deploy-Token` and answers the published site's address. See *Publishing on emothe.uv.es* below
 - `Playcode.Export.SiteBuilder` — the one process that writes and ships the admin's site (`StaticSite.output_dir/0`): generate, add a play, remove one, deploy. It runs one job at a time under `SiteBuilder.Tasks`, because two builds at once drop a play from the incremental index and a deploy during a build pushes half a site. A request that arrives meanwhile is queued (`:queued`), not refused. When the job ends, the adds and removes at the front of the queue run as one batch through `StaticSite.apply_changes/2`: pages and catalogue first, then one search-index write. Generate brings the plays on disk up to date when it runs. It broadcasts `:queued`, `:started`, `:progress`, `:published`, `:done` and `:failed` on `"static_site"`, so every admin's export page shows the same state. `mix playcode.export.site` runs in its own VM and calls `StaticSite.generate/1` directly, unserialised: its default `_site` is also the admin page's directory in dev, so pass `-o` while a server is building
 - **Change tracking.** Every build writes `build.json` at the site root: the site fingerprint (`StaticSite.Fingerprint`: the export's code by `module_info(:md5)`, `priv/static_site`, the rendering libraries' versions and the `:version` option), the `:version` that went into it, and each published play's `content_version`; the export page prefills its Version field from it (`StaticSite.built_version/1`), so a site is current for the version it was built with. `StaticSite.changed_plays/1` lists the published plays whose version moved since, `site_changed?/2` says whether the fingerprint did (or there is no `build.json`), and `outdated/1` is the batch that brings the site up to date. `Playcode.Export.PlayChangeListener` relays Postgres's `play_changed` notifications, coalesced per play over 200 ms, to `"static_site"`, so the export page flags a changed play (an amber dot, and an icon-only Refresh) as soon as the edit commits, and to the play's own topic (`PlayContent.notify_changed/1`), so the content editor and the play list reload whoever made the change. Generate (`SiteBuilder.generate/1`) rebuilds every play only when the site changed or holds no play; otherwise it writes the changed plays and takes out the archived or incomplete ones in one batch, and writes nothing when nothing changed. Rebuild everything (`SiteBuilder.rebuild/1`) always rebuilds. `test/playcode/export/static_site/fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access
 
@@ -316,9 +316,34 @@ _site/
 
 `node --test test/js/search.test.mjs` runs the browser half of search; CI runs it after `mix test`.
 
+### Publishing on emothe.uv.es
+
+Deploy pushes the site to `bogmir/emothe-static` (branch `gh-pages`), then POSTs to
+`https://emothe.uv.es/playcode-deploy.php`, which downloads that branch from GitHub and
+swaps it into `emothe.uv.es/edicion_estatica/` (https://emothe.uv.es/edicion_estatica/). The script lives in
+`deploy/`: `playcode-deploy.php`, its settings template `playcode-deploy.config.example.php`
+(the live `playcode-deploy.config.php` holds the key's SHA-256 and is git-ignored), and
+`test.sh`, which runs it under PHP 7.2, the server's version, against a mock of the site's
+folder (docker and python3; `PHP_IMAGE=wordpress:cli-php7.4 deploy/test.sh` for another).
+
+- **It never touches WordPress or the older sections** in the same folder: it writes only
+  into its target folder, refuses to replace a folder without its `.playcode-site` marker,
+  and refuses a download holding PHP, `.htaccess` or a path leaving the folder.
+- **`POST …/playcode-deploy.php?check=1`** with the key reports PHP, zip, curl, write access
+  and whether GitHub is reachable, and changes nothing.
+- **Updating the script** needs the UV VPN (eduVPN) and the SMB share
+  `smb://entresiglosvm.uv.es/html/emothe.uv.es/`; the server itself needs neither, since
+  Playcode reaches it over HTTPS.
+- **The four Fly secrets**: `STATIC_SITE_REPO` (`bogmir/emothe-static`),
+  `GITHUB_DEPLOY_TOKEN` (fine-grained, that repository only, Contents read and write),
+  `STATIC_SITE_PUBLISH_URL` (`https://emothe.uv.es/playcode-deploy.php`) and
+  `STATIC_SITE_PUBLISH_TOKEN` (the key whose hash the server's config holds). In dev, the
+  same environment variables apply; without `GITHUB_DEPLOY_TOKEN`, git pushes with your own
+  login.
+
 ### Usage
 
-**Admin UI**: `GET /admin/export` (`PlaycodeWeb.Admin.ExportSiteLive`) — configure version, base URL, GitHub repo; Generate brings the site up to date (only the changed plays, unless the site's code or settings changed), Rebuild everything rebuilds it whole; each play in the site shows a green dot when up to date and an amber dot plus an icon-only Refresh button when changed, except while the whole site changed, when only the banner shows and Rebuild everything is hidden; a play still in the site but now a draft or archived keeps a muted row with a hollow dot until its switch takes it out (or Generate does), and the switch can only add published plays; the list follows `play_changed`, so a play set to draft or marked complete moves at once; download as .zip or deploy to GitHub Pages.
+**Admin UI**: `GET /admin/export` (`PlaycodeWeb.Admin.ExportSiteLive`) — configure version and base URL; Generate brings the site up to date (only the changed plays, unless the site's code or settings changed), Rebuild everything rebuilds it whole; each play in the site shows a green dot when up to date and an amber dot plus an icon-only Refresh button when changed, except while the whole site changed, when only the banner shows and Rebuild everything is hidden; a play still in the site but now a draft or archived keeps a muted row with a hollow dot until its switch takes it out (or Generate does), and the switch can only add published plays; the list follows `play_changed`, so a play set to draft or marked complete moves at once; download as .zip, or Deploy: the target is server config (`STATIC_SITE_REPO`), named under the button, never typed in, because the GitHub token goes to it; with no repository configured there is no Deploy button.
 
 **Mix task**:
 ```bash
@@ -426,7 +451,7 @@ Then visit:
 - [x] `Playcode.Export.Epub` - EPUB 3 generation via BUPE (chapters per division, embedded CSS)
 - [x] `Playcode.Export.CompareHtml` - standalone comparison HTML with synchronized scrolling between panels
 - [x] `Playcode.Export.StaticSite` - static archive on HEEx: title page, one page per act, full text, statistics page (metrical synopsis, characters, who shares the stage), catalogue of works with facets, full-text search that works from `file://`, reading tools. Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`; deferred work: `docs/static-site-improvements.md`
-- [x] `Playcode.Export.StaticSite.Deployer` - GitHub Pages deployment via git push
+- [x] `Playcode.Export.StaticSite.Deployer` - pushes the site to a git branch with a GitHub token, then has emothe.uv.es publish it (`deploy/playcode-deploy.php`)
 - [x] Public catalogue page (`/plays`) with search
 - [x] Public play presentation page (`/plays/:code`) with Text/Characters/Statistics tabs, line number and stage direction toggles
 - [x] Statistics panel with modern cards and CSS bar charts
@@ -472,7 +497,7 @@ Then visit:
 
 ### High Priority
 - [x] **Create initial admin user** - set `ADMIN_EMAILS` (comma-separated); `Playcode.Accounts.AdminBootstrap` reconciles it at boot and mails each address an invitation. Break-glass with SMTP down: `mix playcode.invite EMAIL --admin --print-url`
-- [x] **Fly.io deployment** — live. `fly.toml` deploys the `playcode` app (`playcode.fly.dev`) and `.github/workflows/deploy-fly.yml` deploys it on every green CI run on `main`. The pre-rename app survives as `fly.emothe.toml` (`emothe.fly.dev`), hand-deployed only (`fly deploy --config fly.emothe.toml`) and switched off with `fly scale count 0 -a emothe`. Both configs run `/app/bin/playcode` — the release binary follows the code, not the app name. Secrets required per app: `DATABASE_URL`, `SECRET_KEY_BASE`, `ADMIN_EMAILS` (**unset means zero admins**), `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`. With `SMTP_HOST` unset the mailer falls back to the Local adapter and **every invitation is silently dropped** — use `bin/playcode rpc 'Playcode.Release.invite_url("...")'` to get the link instead. Fly secrets cannot be read back: `fly secrets list` shows names only. `Playcode.Export.PlayChangeListener` holds one extra Postgres connection for LISTEN, so `DATABASE_URL` must be a direct or session-mode connection — a transaction-mode pooler silently drops the notifications (pages then update only on reload)
+- [x] **Fly.io deployment** — live. `fly.toml` deploys the `playcode` app (`playcode.fly.dev`) and `.github/workflows/deploy-fly.yml` deploys it on every green CI run on `main`. The pre-rename app survives as `fly.emothe.toml` (`emothe.fly.dev`), hand-deployed only (`fly deploy --config fly.emothe.toml`) and switched off with `fly scale count 0 -a emothe`. Both configs run `/app/bin/playcode` — the release binary follows the code, not the app name. Secrets required per app: `DATABASE_URL`, `SECRET_KEY_BASE`, `ADMIN_EMAILS` (**unset means zero admins**), `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`. With `SMTP_HOST` unset the mailer falls back to the Local adapter and **every invitation is silently dropped** — use `bin/playcode rpc 'Playcode.Release.invite_url("...")'` to get the link instead. Fly secrets cannot be read back: `fly secrets list` shows names only. Deploy needs four more, `STATIC_SITE_REPO`, `GITHUB_DEPLOY_TOKEN`, `STATIC_SITE_PUBLISH_URL` and `STATIC_SITE_PUBLISH_TOKEN` (see *Publishing on emothe.uv.es*); the runtime image carries `git` for it. `Playcode.Export.PlayChangeListener` holds one extra Postgres connection for LISTEN, so `DATABASE_URL` must be a direct or session-mode connection — a transaction-mode pooler silently drops the notifications (pages then update only on reload)
 - [ ] **Render** — `render.yaml` and `Dockerfile.render` exist but the blueprint has never been applied
 - [x] **Email delivery** - SMTP adapter via `gen_smtp`; configure `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD` (+ optional `SMTP_PORT`, `MAIL_FROM`) as Fly.io secrets
 - [x] **Account state enforced** - `require_authenticated_user`, `require_permission` and the `{:ensure_can, action}` LiveView hook all require `Accounts.active?/1` (confirmed and not deactivated); an inactive session is destroyed with an explanatory flash rather than looping

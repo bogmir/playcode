@@ -29,7 +29,9 @@ RUN mix release
 
 FROM debian:bookworm-slim AS app
 
+# git: Deploy pushes the static site (StaticSite.Deployer).
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
+  git \
   libstdc++6 \
   openssl \
   libncurses6 \
