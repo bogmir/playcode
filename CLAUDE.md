@@ -101,6 +101,11 @@ lib/
 │   │   ├── element_character.ex      # Join table: element ↔ character (multi-speaker support)
 │   │   └── inline_markup.ex          # The <<…>> italics markers
 │   ├── statistics.ex                 # Compute & cache play statistics
+│   ├── bibliography.ex               # Corpus-wide bibliography: entries, links, grouping and order
+│   ├── bibliography/
+│   │   ├── entry.ex                  # One work cited, shared by every play that cites it
+│   │   ├── link.ex                   # A play's link to an entry (its volume, pages, note)
+│   │   └── citation.ex               # The one renderer: segments, plain text, safe HTML
 │   ├── activity_log.ex                   # Activity log context (log, list, count)
 │   ├── activity_log/
 │   │   └── entry.ex                  # Activity log entry schema
@@ -115,7 +120,9 @@ lib/
 │   │   └── user_notifier.ex          # Email notification templates
 │   ├── authz.ex                      # The only place that answers "may this user do that?"
 │   ├── import/
-│   │   └── tei_parser.ex             # TEI-XML importer (handles UTF-16 files)
+│   │   ├── tei_parser.ex             # TEI-XML importer (handles UTF-16 files)
+│   │   ├── filemaker_xml.ex          # FMPXMLRESULT reader (one FileMaker table)
+│   │   └── bibliography.ex           # S4's one-time FileMaker bibliography import
 │   └── export/
 │       ├── tei_xml.ex                # Generate TEI-XML from DB
 │       ├── html.ex                   # Standalone HTML document export
@@ -152,6 +159,7 @@ lib/
     │       ├── activity_log_live.ex  # Admin: /admin/activity-log - activity audit log
     │       ├── export_site_live.ex   # Admin: /admin/export - static site generation UI
     │       ├── play_compare_live.ex  # Admin: /admin/plays/:id/compare - side-by-side comparison
+    │       ├── play_bibliography_live.ex # Admin: /admin/plays/:id/bibliography - a play's bibliography
     │       └── user_list_live.ex     # Admin: /admin/users - user management
     ├── controllers/
     │   ├── user_session_controller.ex # Login/logout session handling
@@ -169,11 +177,13 @@ All tables use UUID primary keys. Key relationships:
 - `users` - email/password auth with role (`:admin`, `:researcher`), `confirmed_at`, `deactivated_at`; `hashed_password` is nullable because an invited account has no password yet
 - `users_tokens` - session tokens (with `ip_address`/`user_agent`), invite and password-reset tokens. There is no self-service email change, so no `change:` context
 - `plays` has_many `play_editors`, `play_sources`, `play_editorial_notes`, `characters`, `play_divisions`, `play_elements`; `composition_date_from`, `composition_date_to`, `composition_date_note` hold when the play was written, as a year range plus the competing datings verbatim; `form` is nil (automatic, from `is_verse`) or a curator's `verse`/`prose`/`mixed`, read only through `Play.form/1`
-- `plays.content_version` - moved by Postgres triggers (migration `20261005120000_track_play_content_version`) whenever anything a play's static pages show changes: its own row, its divisions, elements, speakers, characters, editors, sources, notes and places, the gazetteer entries of those places and their ancestors, and the rows of its original and translations. Once per transaction, with a `pg_notify('play_changed', id)`. Never written by the app (`writable: :never`). **A new table with a `play_id` whose rows appear on a play's pages needs the `play_row_changed()` trigger in its migration** (the migration's moduledoc has the line); `test/playcode/content_version_test.exs` fails until it has it. Adding a column needs nothing. Over-flagging is deliberate: any statement touching a play's rows flags it, even when the values end up the same
+- `plays.content_version` - moved by Postgres triggers (migration `20261005120000_track_play_content_version`) whenever anything a play's static pages show changes: its own row, its divisions, elements, speakers, characters, editors, sources, notes, places and bibliography links, the gazetteer entries of those places and their ancestors, the bibliography entries it links to, and the rows of its original and translations. Once per transaction, with a `pg_notify('play_changed', id)`. Never written by the app (`writable: :never`). **A new table with a `play_id` whose rows appear on a play's pages needs the `play_row_changed()` trigger in its migration** (the migration's moduledoc has the line); `test/playcode/content_version_test.exs` fails until it has it. Adding a column needs nothing. Over-flagging is deliberate: any statement touching a play's rows flags it, even when the values end up the same
 - `play_divisions` self-references via `parent_id` (acts contain scenes)
 - `play_elements` self-references via `parent_id` (speeches contain line_groups contain verse_lines)
 - `element_characters` join table links `play_elements` to `characters` (many-to-many, supports multi-speaker speeches like `who="#ALB #COR"`)
 - `play_statistics` stores computed JSONB data per play
+- `bibliography_entries` - corpus-wide, one row per work cited, shared by every play that cites it, so one correction reaches them all (S4). Two levels, `analytic_*` (article, chapter) and `monogr_*` (book, journal); `kind` (`modern_edition`/`criticism`/`translation`/`adaptation`), `pub_type`, `language`, imprint text columns, `filemaker_id` (`"T12:<id>"`/`"T04:<id>"`, unique). `public_note` is printed with the citation; `note` is for researchers only and never leaves the admin pages, not even into the TEI file. An update moves every linked play's `content_version` (`bibliography_entry_changed()`)
+- `play_bibliography` - a play's link to an entry: `volume` and `pages` (where the play sits in a modern edition; they win over the entry's when printed), an internal `note`, `origin` (`manual`/`filemaker`). Unique per play and entry. `Bibliography.unlink/1` deletes the entry with its last link, so there are no orphan entries
 - `activity_logs` tracks admin actions with user_id, play_id, action, resource_type, resource_id, changes (JSONB), metadata (JSONB)
 
 Element types: `speech`, `stage_direction`, `verse_line`, `prose`, `line_group`, `trailer` (a division's closing formula, "FIN DEL PRIMER ACTO"; exported last in its division). A `prose` or `line_group` with no parent is text nobody speaks: a dumb show, a stanza opening a prologue
@@ -253,6 +263,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 - `GET /admin/filemaker` - Sync the FileMaker export: upload, preview the diff, apply (`:import_filemaker`)
 - `GET /admin/places` - Corpus-global gazetteer: places, their names, hierarchy and authority links (`:manage_places`)
 - `GET /admin/plays/:id/places` - The play's place index: role, order, notes (`:manage_places`)
+- `GET /admin/plays/:id/bibliography` - A play's bibliography: new, edit (with a warning on a shared entry), add an existing entry, remove, filter (`:manage_bibliography`)
 - `GET /admin/plays/compare/export/html` - Comparison HTML export
 - `GET /admin/plays/:id/export/tei` - Download TEI-XML
 - `GET /admin/plays/:id/export/html` - Download HTML
@@ -426,6 +437,15 @@ the index is authoritative. The curated fields (`historical_time`, `historical_t
 fill-only: written when blank, reported as a conflict when they differ, overwritten only under
 `--force`.
 
+Bring FileMaker's bibliography into the plays we hold, once (S4; the six tables of the
+`ctce_dades` dump under `doc/ctce_dades/`, git-ignored). A re-run skips plays already imported,
+so a curator's edits stay; on Fly, `Playcode.Release.import_bibliography/2`:
+
+```bash
+mix playcode.import.bibliography --dry-run   # the plan, per play and per skip reason
+mix playcode.import.bibliography             # write it
+```
+
 The TEI header is not authoritative for language — every EMOTHE file carries `xml:lang="es"` for
 the editorial platform. The index's `[EN]`/`[FR]` tag is.
 
@@ -545,7 +565,8 @@ Questions only the stakeholders can answer, recorded in `docs/static-site-improv
 - [ ] **FileMaker version metadata (S2)** — taken one field at a time, each its own migration + import + admin control + row in the public panel. **S2a `historical_time` and S2c `composition_date` are done** (see below). One sub-slice is left, **blocked on a question to the project**: S2d `collection` (needs to know whether the field is still wanted and what separates its codes `1` and `3`). S2b `place_of_action` was split out as **S9** — it is a toponym gazetteer, not a text column; Phase 1 is done, see `Playcode.Places` above. S2e `legacy_url` and S2f `original_title`/`title_sort` are **dropped**: the first is derivable from code + filename, and the second is already imported from TEI on 82/82 plays. Anything drawing on `T01` is capped at the 22 plays with such a record; S2c is the exception, since its from/to come from the published index instead. The admin sync page at `/admin/filemaker` renders whatever `sets` and `conflicts` contain, so each of these slices needs no change to it
 - [x] **FileMaker historical time (S2a)** — `plays.historical_time` (nine-term vocabulary, `Play.historical_times/0`) and `plays.historical_time_note`. `Filemaker.load_versions/1` reads the `T01_tituloEM` layout keyed by the code in the `pub_edicionWeb` href; `FilemakerSync` writes curated fields **fill-only** — blank columns filled, disagreements reported under `:conflicts` and left alone, overwritten only with `mix playcode.import.filemaker --force` or, per conflict, from `/admin/filemaker`. Edited in the admin form's Research Metadata fieldset, shown in the `#meta-study` section on `/plays/:code`. Labels live in `PlaycodeWeb.PlayLabels`. Applied to `playcode_dev`: 11 plays, 4 with a note. Archived plan: `docs/superpowers/plans/archive/README.md`
 - [x] **FileMaker composition date (S2c)** — `plays.composition_date_from`/`_to`/`_note`. From/to come from `T00_indiceEM`'s index header (the *accepted* dating), the note from `pub_datacion`'s competing datings joined with `"; "`, falling back to the header verbatim when blank. Written only to the family head (`relationship_type` nil) — a translation does not inherit the original's composition date. Round-trips through TEI's `<profileDesc><creation><date>` (`when` or `notBefore`/`notAfter`), fill-only sync, same Research Metadata fieldset and `#meta-study` section as S2a. Spec: `docs/superpowers/specs/2026-08-05-s2c-composition-date-design.md`. Applied to `playcode_dev`: `updated 7, failed 0` — EMOTHE0010, 0038, 0281, 0337, 0346, 0777 from the index plus EMOTHE0341 note-only (no index entry, so from/to stayed nil); zero conflicts; a second run reports `0 to change`.
-- [ ] **FileMaker import (S3-S8)** — witnesses, bibliography, historical performances, character reconciliation, credits, genre. Roadmap: `docs/superpowers/plans/2026-08-01-filemaker-import-slices.md`. Governing rule: the export is a bootstrap, not a dependency — every field it carries gets a permanent column *and* an admin form. As with S2, `/admin/filemaker` needs no change for these — it already renders whatever `sets` and `conflicts` contain
+- [x] **FileMaker bibliography (S4)** — `Playcode.Bibliography`: corpus-wide entries linked to plays, grouped by kind (modern editions, criticism, translations by language, adaptations) and sorted alphabetically by the printed citation. One renderer, `Bibliography.Citation`, prints FileMaker's form on the admin tab (`/admin/plays/:id/bibliography`, live preview, shared-entry warning, accent-blind filter), on `/plays/:code` (`#meta-bibliography`), on the static site's title page (with a rail entry) and in TEI `<back><div type="bibliografia">`. Imported once by `mix playcode.import.bibliography`: on `playcode_dev`, 2,723 entries and 2,795 links on 114 plays. `test/playcode/bibliography/oracle_test.exs` checks every word FileMaker printed is in ours (a committed sample; the whole dump under `--include slow`). Spec: `docs/superpowers/specs/2026-10-07-s4-bibliography-design.md`
+- [ ] **FileMaker import (S3, S5-S8)** — witnesses, historical performances, character reconciliation, credits, genre. Roadmap: `docs/superpowers/plans/2026-08-01-filemaker-import-slices.md`. Governing rule: the export is a bootstrap, not a dependency — every field it carries gets a permanent column *and* an admin form. As with S2, `/admin/filemaker` needs no change for these — it already renders whatever `sets` and `conflicts` contain
 - [x] **FileMaker work families and language (S1)** — `Playcode.Import.Filemaker` parses the published index out of the NDJSON export; `Playcode.Import.FilemakerSync` diffs it against the database and writes `language`, `relationship_type` and `parent_play_id`. `mix playcode.import.filemaker [--dry-run] [--path ...]`. Creates nothing; codes absent from the index (every `AL####`) are reported, not failed. Applied to `playcode_dev`: 15 plays corrected, 11 work families linked. Archived plan: `docs/superpowers/plans/archive/README.md`
 - [ ] **TEI import improvements** - handle more TEI variants, better error reporting
 - [ ] **Full-text search** with PostgreSQL tsvector
