@@ -203,4 +203,44 @@ defmodule Playcode.PlayContentTest do
       assert bodies.() == ["Segunda", "Tercera", "Cuarta", "Primera, corregida"]
     end
   end
+
+  describe "a stage marker in an element's text" do
+    setup do
+      %{play: play, scene: scene, line_group: line_group} =
+        TestFixtures.play_with_structure_fixture()
+
+      attrs = fn content ->
+        %{
+          play_id: play.id,
+          division_id: scene.id,
+          parent_id: line_group.id,
+          type: "verse_line",
+          content: content,
+          position: 9
+        }
+      end
+
+      %{attrs: attrs}
+    end
+
+    test "is accepted when it is closed and flat", %{attrs: attrs} do
+      assert {:ok, %{content: "<stage>(Vase)</stage> Allez"}} =
+               PlayContent.create_element(attrs.("<stage>(Vase)</stage> Allez"))
+    end
+
+    test "is refused when it is not, on create and on update", %{attrs: attrs} do
+      message = "has a stage marker that is not well formed"
+
+      assert {:error, changeset} = PlayContent.create_element(attrs.("<stage>sin cerrar"))
+      assert %{content: [^message]} = errors_on(changeset)
+
+      {:ok, element} = PlayContent.create_element(attrs.("Allez"))
+
+      assert {:error, changeset} =
+               PlayContent.update_element(element, %{"content" => "a</stage>"})
+
+      assert %{content: [^message]} = errors_on(changeset)
+      assert PlayContent.get_element!(element.id).content == "Allez"
+    end
+  end
 end

@@ -131,6 +131,9 @@ msgstr ""
 msgid "must not be before the start year"
 msgstr ""
 
+msgid "has a stage marker that is not well formed"
+msgstr ""
+
 msgid "at least one name is required"
 msgstr ""
 

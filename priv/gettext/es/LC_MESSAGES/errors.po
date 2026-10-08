@@ -122,6 +122,9 @@ msgstr "debe indicarse junto con el año inicial"
 msgid "must not be before the start year"
 msgstr "no puede ser anterior al año inicial"
 
+msgid "has a stage marker that is not well formed"
+msgstr "tiene una marca de acotación que no está bien formada"
+
 msgid "at least one name is required"
 msgstr "se necesita al menos un nombre"
 
