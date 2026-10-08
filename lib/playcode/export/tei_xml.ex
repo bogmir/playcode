@@ -10,7 +10,12 @@ defmodule Playcode.Export.TeiXml do
   @body_types ~w(acto jornada prologo argumento act acte play prologue induction epilogue
                  interlude dumb_show auto)
 
-  def generate(play) do
+  @doc """
+  The play's TEI document. `opts` may hand in `:divisions` (as
+  `PlayContent.load_play_content/1` returns them) and `:characters` already loaded, as
+  the static site does for every play; otherwise they are loaded here.
+  """
+  def generate(play, opts \\ []) do
     play =
       Playcode.Repo.preload(play, [
         :editors,
@@ -19,8 +24,11 @@ defmodule Playcode.Export.TeiXml do
         play_places: [place: :names]
       ])
 
-    characters = PlayContent.list_characters(play.id)
-    divisions = PlayContent.load_play_content(play.id)
+    characters =
+      Keyword.get_lazy(opts, :characters, fn -> PlayContent.list_characters(play.id) end)
+
+    divisions =
+      Keyword.get_lazy(opts, :divisions, fn -> PlayContent.load_play_content(play.id) end)
 
     tei =
       element(

@@ -58,6 +58,16 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert Playcode.Statistics.get_statistics(play.id).data["verses"] == 2
   end
 
+  # The site writes the TEI from the text it already loaded for the pages, not a second
+  # load: the file must still be the one the TEI download gives.
+  test "a play's TEI file in the site is its TEI export" do
+    play = import_tei!(tei(body: @two_acts))
+    dir = generate!([play], all: true)
+
+    assert read!(dir, "plays/#{play.code}/#{play.code}.xml") ==
+             Playcode.Export.TeiXml.generate(Playcode.Catalogue.get_play!(play.id))
+  end
+
   test "each act has its own page, linked to the acts before and after it" do
     {play, dir} = publish!(@two_acts)
     first = page(dir, play, "act-1.html")

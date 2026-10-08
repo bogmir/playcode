@@ -440,7 +440,11 @@ defmodule Playcode.Export.StaticSite do
     assigns = %{edition: edition, site: site}
 
     File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
-    File.write!(Path.join(play_dir, "#{code}.xml"), TeiXml.generate(play))
+
+    File.write!(
+      Path.join(play_dir, "#{code}.xml"),
+      TeiXml.generate(play, divisions: edition.divisions, characters: edition.characters)
+    )
 
     largest =
       edition.pages
