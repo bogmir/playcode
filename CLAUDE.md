@@ -568,6 +568,15 @@ Each is pinned by a test as it behaves today, not endorsed.
 - [x] **`mix playcode.import.filemaker` included archived plays** (and crashed applying to one: `Catalogue.get_play!/1` hides them); `/admin/filemaker` excluded them. Both now skip archived plays, through `FilemakerSync.all_plays/0`
 - [x] **`Places.Authority.Stub` shipped in `lib/`** - now `test/support/place_authority_stub.ex`, compiled only in test
 
+### Found by the Groxio audit (2026-10-08)
+The code read against Bruce Tate's Groxio articles (functional core, boundaries, explicit over implicit, automatic correction). Already done from it: dead public functions deleted, the TEI importer aborting on any failed element insert, moduledocs on the four core schemas, drafts made private, and the admin tabs acting only on the play's own rows (see *Access control*).
+- [ ] **Word import mangles accented character ids** - `WordParser` derives a character's `xml_id` by replacing everything outside `[a-z0-9]` with `_`, so "ABSALÓN" becomes `absal_n` and "Alcibíades" `alcib_ades`, in the cast list and in every exported `who`; a label with no ASCII letter derives `""` and its `{:ok, char} =` match crashes the upload
+- [ ] **FileMaker upload rescues every exception** - `FilemakerSyncLive` wraps reading and planning in `rescue e -> {:error, e}`: a non-numeric `_IdTituloEmothe` (`String.to_integer` in `Filemaker.version_code/1`) shows the admin an inspected `ArgumentError`, and a bug in `FilemakerSync.plan/3` is reported as an unreadable file and never logged
+- [ ] **The authorization table is kept by hand** - `authorization_test.exs` covers every gated route today (PDF left out on purpose, as it needs Chrome), but nothing fails when a new route has no row; a test reading `PlaycodeWeb.Router.__routes__()` would, matching route patterns against the table's concrete paths
+- [ ] **The slow suite never runs in CI** - TEI schema validation, the corpus round trip and the bibliography oracle are `:slow`, and CI installs `xmllint` for a test nothing runs. A weekly job, once the slow tests skip cleanly without the git-ignored files
+- [ ] **`Catalogue` and `PlayContent` are mostly undocumented** - most of their public functions have no `@doc`, and over 40 modules have no moduledoc; every LiveView calls these two
+- [ ] **Anonymous PDF requests start Chrome** - `/export/:id/pdf` renders through ChromicPDF for any visitor, on a 1 GB machine that already needed swap for site builds. Options: cache the PDF per `content_version`, rate-limit it through `PlaycodeWeb.RateLimit`, or publish PDFs with the static site
+
 ### Awaiting the project (static site)
 Questions only the stakeholders can answer, recorded in `docs/static-site-improvements.md`, "Awaiting the project":
 - [ ] **Adaptations are labelled "translation"** - `Components.kind/1` calls every `relationship_type` a translation, `adaptacion` and `refundicion` included
