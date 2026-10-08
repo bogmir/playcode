@@ -41,7 +41,8 @@ defmodule Playcode.Export.SiteBuilder do
   (`StaticSite.site_changed?/2`), or it holds no play, every play in it is rebuilt (every
   complete play if it is empty) and the result is `StaticSite.generate/1`'s. Otherwise
   only the plays that changed are written again and the ones no longer published taken
-  out, in one batch, and the result is `{:ok, %{changed: count, skipped: [play_id]}}`.
+  out, in one batch, and the result is `{:ok, %{changed: count, skipped: [play_id]}}`,
+  plus `assets: true` when only the styles and scripts were copied.
   `opts` as `StaticSite.generate/1` takes them, but for the directory and plays.
   """
   def generate(opts), do: request(:generate, opts)
@@ -163,8 +164,12 @@ defmodule Playcode.Export.SiteBuilder do
 
     case StaticSite.outdated(dir) do
       [] ->
-        if StaticSite.assets_changed?(dir), do: StaticSite.update_assets(dir)
-        {:ok, %{changed: 0, skipped: []}}
+        if StaticSite.assets_changed?(dir) do
+          StaticSite.update_assets(dir)
+          {:ok, %{changed: 0, skipped: [], assets: true}}
+        else
+          {:ok, %{changed: 0, skipped: []}}
+        end
 
       changes ->
         {:ok, %{skipped: skipped}} = StaticSite.apply_changes(changes, in_site(opts))

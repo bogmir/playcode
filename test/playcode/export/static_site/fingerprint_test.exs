@@ -13,6 +13,24 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     assert Fingerprint.current(version: "1.0") != Fingerprint.current(version: "1.1")
   end
 
+  # No page embeds anything of priv/static_site but its fixed paths, so a change there
+  # alone must not make every play look changed: assets have a hash of their own.
+  test "the asset files change the assets' hash, not the site fingerprint" do
+    [a, b] =
+      for css <- ["body {}", "body { color: red }"] do
+        dir = Path.join(System.tmp_dir!(), "assets-#{System.unique_integer([:positive])}")
+        File.cp_r!(Application.app_dir(:playcode, "priv/static_site"), dir)
+        File.write!(Path.join(dir, "style.css"), css)
+        on_exit(fn -> File.rm_rf!(dir) end)
+        dir
+      end
+
+    assert Fingerprint.assets(assets_dir: a) != Fingerprint.assets(assets_dir: b)
+
+    assert Fingerprint.current(version: "1.0", assets_dir: a) ==
+             Fingerprint.current(version: "1.0", assets_dir: b)
+  end
+
   # The site is in English, so only an English translation can change a page. The Spanish
   # ones are the admin's; editing one made the whole site look changed.
   test "an English translation changes the fingerprint; a Spanish one does not" do

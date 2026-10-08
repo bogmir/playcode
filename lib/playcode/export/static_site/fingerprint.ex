@@ -4,12 +4,12 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   `build.json` records the one a site was built with; when the current one differs, any
   page may be out of date, and Generate rebuilds every play.
 
-  It covers the code (`module_info(:md5)` of `modules/0`), the English translations, the versions of the libraries that render
-  and encode the pages, and the `:version` option. Not the files under `priv/static_site`
-  (styles, scripts, fonts): no page embeds anything of them, only their fixed paths, so
-  they have their own hash, `assets/0`, and a change to them alone is copied, not
-  rebuilt. Not `build_date`: a page's footer says
-  when that page was written. The play data is `plays.content_version`'s.
+  It covers the code (`module_info(:md5)` of `modules/0`), the English translations, the
+  versions of the libraries that render and encode the pages, and the `:version` option.
+  Not the files under `priv/static_site` (styles, scripts, fonts): no page embeds anything
+  of them but their fixed paths, so they have their own hash, `assets/1`, and a change to
+  them alone is copied, not rebuilt. Not `build_date`: a page's footer says when that page
+  was written. The play data is `plays.content_version`'s.
 
   Not `PlaycodeWeb.Gettext`'s code: it is compiled from every locale's translations, so a
   Spanish edit in the admin pages changed it, and the site is in English. Its English
@@ -69,9 +69,12 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     hash({code, english(gettext_dir), libraries, opts[:version]})
   end
 
-  @doc "A hex SHA-256 of the files under `priv/static_site`, by path and contents."
-  def assets do
-    dir = Application.app_dir(:playcode, "priv/static_site")
+  @doc """
+  A hex SHA-256 of the files under `priv/static_site`, by path and contents.
+  `:assets_dir` reads them from another directory.
+  """
+  def assets(opts \\ []) do
+    dir = opts[:assets_dir] || Application.app_dir(:playcode, "priv/static_site")
 
     dir
     |> Path.join("**")

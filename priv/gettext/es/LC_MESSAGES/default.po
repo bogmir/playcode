@@ -4370,3 +4370,8 @@ msgstr "nota"
 #, elixir-autogen, elixir-format
 msgid "The site's styles and scripts have changed. Generate updates them."
 msgstr "Los estilos y scripts del sitio han cambiado. Generar los actualiza."
+
+#: lib/playcode_web/live/admin/export_site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's styles and scripts are updated."
+msgstr "Los estilos y scripts del sitio están actualizados."
