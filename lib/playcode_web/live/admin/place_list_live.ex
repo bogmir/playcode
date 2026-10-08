@@ -37,7 +37,7 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
   end
 
   def handle_event("edit", %{"id" => id}, socket) do
-    {:noreply, assign(socket, :editing, Places.get_place!(id))}
+    with_place(socket, id, &assign(socket, :editing, &1))
   end
 
   def handle_event("cancel_edit", _params, socket) do
@@ -45,16 +45,24 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
   end
 
   def handle_event("delete", %{"id" => id}, socket) do
-    place = Places.get_place!(id)
+    with_place(socket, id, fn place ->
+      case Places.delete_place(place) do
+        {:ok, _} ->
+          LiveHelpers.log_activity(socket, "delete", "place", place.id, %{slug: place.slug})
+          socket |> load_places() |> put_flash(:info, gettext("Place deleted."))
 
-    case Places.delete_place(place) do
-      {:ok, _} ->
-        LiveHelpers.log_activity(socket, "delete", "place", place.id, %{slug: place.slug})
+        {:error, changeset} ->
+          put_flash(socket, :error, delete_error(changeset))
+      end
+    end)
+  end
 
-        {:noreply, socket |> load_places() |> put_flash(:info, gettext("Place deleted."))}
-
-      {:error, changeset} ->
-        {:noreply, put_flash(socket, :error, delete_error(changeset))}
+  # Runs `fun` on the place `id`. One another tab deleted, or a malformed id, changes
+  # nothing: the list reloads and says so.
+  defp with_place(socket, id, fun) do
+    case Places.get_place(id) do
+      nil -> {:noreply, socket |> load_places() |> LiveHelpers.put_gone_flash()}
+      place -> {:noreply, fun.(place)}
     end
   end
 

@@ -232,7 +232,8 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   Each returns nil for another play's row, a deleted one or a malformed id; the tab then
   reloads its list and calls `PlaycodeWeb.Admin.LiveHelpers.put_gone_flash/1`. A selection
   or a list of character ids from the browser is filtered to the play's own rows before a
-  bulk action. This is what keeps per-play scoping below a one-clause change.
+  bulk action. This is what keeps per-play scoping below a one-clause change. The
+  gazetteer and the place picker resolve a place the same way, with `Places.get_place/1`.
 - **Per-play scoping is a planned extension**, not a rewrite: `can?/3` already takes the
   resource, so restricting researchers to assigned plays is one new clause plus a
   `play_assignments` table. See the `@moduledoc` in `lib/playcode/authz.ex`.

@@ -95,6 +95,27 @@ defmodule PlaycodeWeb.Admin.PlaceListLiveTest do
     assert Places.list_places() == []
   end
 
+  # An event names its place by an id from the browser: one another tab already deleted,
+  # or not an id at all. Neither may crash the page.
+  test "a place that is gone is neither edited nor deleted, and the list says so",
+       %{conn: conn} do
+    place = TestFixtures.place_fixture(%{"name" => "Roma"})
+    {:ok, view, _html} = live(log_in_researcher(conn), ~p"/admin/places")
+    {:ok, _} = Places.delete_place(place)
+
+    html =
+      view |> element("button[phx-value-id='#{place.id}'][phx-click=edit]") |> render_click()
+
+    assert html =~ t("That item no longer exists. The list has been refreshed.")
+    refute has_element?(view, "button[phx-value-id='#{place.id}']")
+
+    for event <- ~w(edit delete), id <- [place.id, "not-an-id"] do
+      assert render_click(view, event, %{"id" => id}) =~
+               t("That item no longer exists. The list has been refreshed."),
+             "#{event} #{id}"
+    end
+  end
+
   test "a name that already exists warns instead of silently suffixing", %{conn: conn} do
     TestFixtures.place_fixture(%{"name" => "Woods"})
 
