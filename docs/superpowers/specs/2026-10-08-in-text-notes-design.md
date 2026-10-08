@@ -1,8 +1,8 @@
 # In-text notes
 
-**Status:** design approved 2026-10-08; not yet implemented. Item 1 of
-`../../static-site-improvements.md`, and the open "In-text `<note>` is pasted into the line" gap
-in `CLAUDE.md`.
+**Status:** implemented, 2026-10-08 (commits `9266b06` to `b5954cf` of the `in-text-notes` branch).
+Item 1 of `../../static-site-improvements.md`, and the "In-text `<note>` is pasted into the line"
+gap in `CLAUDE.md`, both now closed.
 
 A `<note>` inside the play text is the editor's or translator's gloss on one word. Today the
 importer pastes it into the line it sits in, so the database, the TEI export, the live page,
@@ -118,7 +118,10 @@ and the front matter keep today's `text_content/1`.
 - Notes are inserted right after their element or division, in the import's transaction. A
   failed insert rolls the import back, as a failed element insert does
   (`{:note_create_failed, cs}`).
-- `position` counts notes at the same offset in source order.
+- `position` counts notes at the same offset in source order. The importer does not pass it:
+  `PlayContent.create_note/1` sets it to one past the highest at that offset on the same anchor,
+  and `update_note/2` sets it again when the offset changes, so inserting in document order gives
+  document order and no caller computes it.
 
 ## TEI export
 
@@ -129,9 +132,13 @@ each one back at its offset:
 <note n="6089" type="editor"><term>voyent</term><p>On maintient…</p></note>
 ```
 
-`n`, `type` and `<term>` only when set. A note whose offset falls inside an italic run splits
-it: `<emph>a</emph><note/><emph>b</emph>`, the same text. `<speaker>` and `<head>` get the same
-treatment.
+`n`, `type` and `<term>` only when set. A note whose offset falls inside an italic run goes
+inside it: `<emph>sueño<note/> breve</emph>`, the same text. Splitting the run
+(`<emph>sueño</emph><note/><emph> breve</emph>`) re-imports as "sueñobreve", because the importer
+trims the whitespace inside the second `<emph>`, and so breaks the export → import → export
+fixpoint. `InlineMarkup.parts/2` still splits the run for the HTML renderers, where that is
+harmless; the TEI export joins the pieces of one run back before it writes them. `<speaker>` and
+`<head>` get the same treatment.
 
 An element whose text holds other elements (`<emph>`, `<note>`) is written on one line,
 unindented (`{:iodata, …}` in XmlBuilder): `format: :indent` puts line breaks inside mixed
@@ -236,7 +243,9 @@ Context functions in `Playcode.PlayContent`: `list_notes/1` (by element or divis
 `create_note/1`, `change_note/2`, `update_note/2`, `delete_note/1`, `anchor_text/1`. Schema
 `Playcode.PlayContent.Note`. The component looks a note id from the browser up among its
 anchor's notes only, so it never acts on another line's or play's row (the rule of
-`0575c3b`), and it sets the anchor's ids itself, never from the form's params.
+`0575c3b`), and it sets the anchor's ids itself, never from the form's params. An id it does not
+find sends `:note_gone` to the editor LiveView, which shows `LiveHelpers.put_gone_flash/1`: a
+LiveComponent's own flash is not rendered without a redirect.
 
 ## Keeping offsets right after an edit
 
@@ -262,11 +271,13 @@ Red first, through the outermost API (`CLAUDE.md`, *How To Work In This Repo*).
   `xml_texts/3` that each line's text has no note text and no stray space, and with
   `xml_elements/3` that each `<note>` sits after the right word with its `n`, `type`, `<term>`
   and paragraphs.
-- **`RoundtripTest`** (real fixtures): a `notes` count, and a line-text check: each `<l>` and
-  `<p>` in the body, its notes removed, has the same text in the source and the export. That is
-  the check whose absence let this bug through. EMOTHE0705 (17 notes, on lines and speakers)
-  joins EMOTHE0746 and 0776 in the default run; `--include slow` sweeps the corpus, with
-  Hamlet and EMOTHE0752 as the heavy cases.
+- **`RoundtripTest`** (real fixtures): a `notes` count, where each note sits (its element, the
+  last characters before it, its `n` and `type`, the same in the source and the export), and that
+  no note's text is pasted into the text around it. That is the check whose absence let this bug
+  through. EMOTHE0705 (17 notes, on lines and speakers) joins EMOTHE0746 and 0776 in the default
+  run; `--include slow` sweeps the corpus, with Hamlet and EMOTHE0752 as the heavy cases. Hamlet's
+  16 notes nested inside another note's `<p>` are still pasted into the outer note's body, and
+  these checks do not see them.
 - **`content_version_test.exs`**: passes once the trigger is in the migration.
 - **Static site**: generate a play with notes; on the act page, the marker follows the right
   word and the endnote carries label, term and paragraphs; `text.html` lists every note.

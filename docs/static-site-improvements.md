@@ -5,7 +5,9 @@ Found while scoping the static site redesign (2026-10-02). The redesign itself r
 inline-markup and label helpers) and adds full-text corpus search. Everything below was
 deliberately left out of it.
 
-## 1. In-text editorial notes (next project)
+## 1. In-text editorial notes
+
+**Done** (2026-10-08), see `superpowers/specs/2026-10-08-in-text-notes-design.md`.
 
 **Problem**: `<note>` inside the play body is not modelled. `text_content/1`
 (`lib/playcode/import/tei_parser.ex`) collects the text of every child element, a
@@ -26,9 +28,13 @@ never compares a line's text against the source.
   so the static site only needs a template change. The live page needs its own.
 
 **Same root cause**: the "Inline `<stage>` is flattened" gap in CLAUDE.md is `text_content/1`
-flattening a child too. Fix both in this project.
+flattening a child too. The project fixed the notes only; the inline `<stage>` is its follow-up
+(the spec's *Out of scope*).
 
 ## 2. Italics show as literal `<<word>>` in the other exporters
+
+Done for `Export.Html`, `Export.Pdf` and `Export.Epub` with the notes (`Export.NoteMarkup`);
+`Export.CompareHtml` still prints `<<…>>`.
 
 **Problem**: the importer stores `<emph>` / `<hi rend="italic">` as `<<…>>` inside the text.
 Only the live page (`PlaycodeWeb.Components.PlayText`, private `split_inline_markup/1`) turns it back into `<em>`.
