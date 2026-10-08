@@ -53,4 +53,44 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert attachment(conn) ==
              ~s(attachment; filename="compare_#{play.code}_vs_#{other.code}.html")
   end
+
+  # The page is opened from disk, so its sync script must carry the matcher inline and
+  # its speeches the act keys the matcher reads, as on the live compare page.
+  test "a downloaded comparison keys speeches by act, and its sync script runs alone",
+       %{conn: conn} do
+    %{original: original, translation: translation} = differently_numbered_editions()
+
+    conn =
+      get(
+        conn,
+        ~p"/admin/plays/compare/export/html?#{[plays: "#{original.id},#{translation.id}"]}"
+      )
+
+    page = conn |> response(200) |> LazyHTML.from_document()
+
+    for panel <- ["panel-0", "panel-1"] do
+      keys = fn attribute ->
+        page
+        |> LazyHTML.query("[data-panel='#{panel}'] [#{attribute}]")
+        |> LazyHTML.attribute(attribute)
+      end
+
+      assert {panel, keys.("data-sync-div"), keys.("data-sync-act")} ==
+               {panel, ["act-0", "act-1", "act-1/scene-0"], ["act-0", "act-1", "act-1"]}
+    end
+
+    script = page |> LazyHTML.query("script") |> LazyHTML.text()
+
+    # A classic script, as a browser runs it: Node would otherwise accept `export`.
+    {out, 0} =
+      System.cmd("node", [
+        "--input-type=commonjs",
+        "-e",
+        "globalThis.document = {addEventListener() {}};\n" <>
+          script <>
+          ~s|\nconsole.log(matchSpeech(["act-0", "act-1", "act-1"], ["act-0", "act-1"], 2))|
+      ])
+
+    assert String.trim(out) == "1"
+  end
 end

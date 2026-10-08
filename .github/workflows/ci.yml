@@ -79,4 +79,4 @@ jobs:
 
       # The browser half of the static site's search; Node is preinstalled on the runner.
       - name: Run JS tests
-        run: node --test test/js/search.test.mjs
+        run: node --test test/js/*.test.mjs

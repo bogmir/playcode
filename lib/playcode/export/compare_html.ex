@@ -6,6 +6,13 @@ defmodule Playcode.Export.CompareHtml do
   """
 
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.Division
+
+  # The live compare page's sync module, inlined without its `export` keywords: the
+  # downloaded page is opened from disk, with nothing to import.
+  @sync_scroll_path Path.expand("../../../assets/js/sync_scroll.mjs", __DIR__)
+  @external_resource @sync_scroll_path
+  @sync_scroll @sync_scroll_path |> File.read!() |> String.replace(~r/^export /m, "")
 
   def generate(plays) when is_list(plays) do
     panels =
@@ -245,66 +252,11 @@ defmodule Playcode.Export.CompareHtml do
   end
 
   defp sync_scroll_js do
-    ~s"""
+    """
     <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      var container = document.getElementById("sync-scroll");
-      var panels = Array.from(container.querySelectorAll("[data-panel]"));
-      if (panels.length < 2) return;
-
-      var activePanel = null;
-
-      function findTopAnchor(panel) {
-        var anchors = panel.querySelectorAll("[data-speech-key], [data-sync-div]");
-        var panelTop = panel.getBoundingClientRect().top;
-        var best = null, bestDist = Infinity, bestAttr = null;
-        for (var i = 0; i < anchors.length; i++) {
-          var el = anchors[i];
-          var top = el.getBoundingClientRect().top - panelTop;
-          if (top >= -50 && top < bestDist) {
-            bestDist = top;
-            best = el;
-            bestAttr = el.hasAttribute("data-speech-key") ? "data-speech-key" : "data-sync-div";
-          }
-        }
-        return best ? { el: best, attr: bestAttr, key: best.getAttribute(bestAttr) } : null;
-      }
-
-      function syncTo(source, target) {
-        var anchor = findTopAnchor(source);
-        if (!anchor) return;
-        var match = target.querySelector("[" + anchor.attr + '="' + anchor.key + '"]');
-        if (match) {
-          var sourceOffset = anchor.el.getBoundingClientRect().top - source.getBoundingClientRect().top;
-          var matchOffset = match.getBoundingClientRect().top - target.getBoundingClientRect().top;
-          target.scrollTop += (matchOffset - sourceOffset);
-        }
-      }
-
-      var rafId = null;
-      function throttledSync(source, targets) {
-        if (rafId) return;
-        rafId = requestAnimationFrame(function() {
-          rafId = null;
-          targets.forEach(function(t) { syncTo(source, t); });
-        });
-      }
-
-      panels.forEach(function(panel, i) {
-        panel.addEventListener("pointerenter", function() { activePanel = i; });
-        panel.addEventListener("pointerleave", function() { if (activePanel === i) activePanel = null; });
-        panel.addEventListener("scroll", function() {
-          if (activePanel === i) {
-            var others = panels.filter(function(_, j) { return j !== i; });
-            throttledSync(panel, others);
-          }
-        }, { passive: true });
-      });
-
-      // Initial alignment
-      requestAnimationFrame(function() {
-        panels.slice(1).forEach(function(t) { syncTo(panels[0], t); });
-      });
+    #{@sync_scroll}
+    document.addEventListener("DOMContentLoaded", function () {
+      syncPanels(document.getElementById("sync-scroll"));
     });
     </script>
     """
@@ -332,9 +284,12 @@ defmodule Playcode.Export.CompareHtml do
 
   @act_types ~w(acto act acte jornada)
 
+  # A speech carries its act's key (`data-sync-act`) whatever scene it is in; headings
+  # carry their own (`data-sync-div`). See `Division.sync_keys/1`.
   defp render_divisions(divisions, characters) do
-    Enum.map(divisions, fn div ->
-      div_key = div_key(div)
+    divisions
+    |> Enum.zip(Division.sync_keys(divisions))
+    |> Enum.map(fn {div, div_key} ->
       heading = division_heading(div, div_key)
 
       cast =
@@ -344,12 +299,14 @@ defmodule Playcode.Export.CompareHtml do
 
       elements = render_elements(Map.get(div, :loaded_elements, []), div_key)
 
+      children = Map.get(div, :children, [])
+
       children =
-        Map.get(div, :children, [])
-        |> Enum.map(fn child ->
-          child_key = "#{div_key}/#{div_key(child)}"
-          ch = child_heading(child, child_key)
-          ce = render_elements(Map.get(child, :loaded_elements, []), child_key)
+        children
+        |> Enum.zip(Division.sync_keys(children))
+        |> Enum.map(fn {child, child_key} ->
+          ch = child_heading(child, "#{div_key}/#{child_key}")
+          ce = render_elements(Map.get(child, :loaded_elements, []), div_key)
           "      <div class=\"child-division\">\n#{ch}#{ce}      </div>"
         end)
         |> Enum.join("\n")
@@ -357,10 +314,6 @@ defmodule Playcode.Export.CompareHtml do
       "    <div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n    </div>"
     end)
     |> Enum.join("\n")
-  end
-
-  defp div_key(div) do
-    "#{div.type}-#{div.number || div.position}"
   end
 
   defp division_heading(%{title: nil}, _key), do: ""
@@ -404,23 +357,13 @@ defmodule Playcode.Export.CompareHtml do
     """
   end
 
-  defp render_elements(elements, div_key) do
-    {rendered, _ordinal} =
-      Enum.map_reduce(elements, 0, fn el, ordinal ->
-        if el.type == "speech" do
-          speech_key = "#{div_key}/speech-#{ordinal}"
-          {render_element(el, speech_key), ordinal + 1}
-        else
-          {render_element(el, nil), ordinal}
-        end
-      end)
-
-    Enum.join(rendered)
+  defp render_elements(elements, act_key) do
+    Enum.map_join(elements, &render_element(&1, act_key))
   end
 
-  defp render_element(%{type: "speech"} = el, speech_key) do
+  defp render_element(%{type: "speech"} = el, act_key) do
     aside_class = if el.is_aside, do: " aside", else: ""
-    key_attr = if speech_key, do: " data-speech-key=\"#{speech_key}\"", else: ""
+    key_attr = " data-sync-act=\"#{act_key}\""
 
     speaker =
       if el.speaker_label,

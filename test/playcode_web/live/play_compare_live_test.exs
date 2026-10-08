@@ -2,6 +2,7 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
   use PlaycodeWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Playcode.ImportHelpers
 
   alias Playcode.TestFixtures
 
@@ -123,5 +124,34 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
       refute has_element?(view, "[data-panel='panel-1']")
       refute html =~ draft.title
     end
+  end
+
+  describe "scroll sync" do
+    # The data-sync-* attributes are the contract with assets/js/sync_scroll.mjs, which
+    # pairs each speech with the one the same way through the same act in the other panel.
+    test "speeches and headings are keyed by act, however each edition numbers its divisions",
+         %{conn: conn} do
+      %{original: original, translation: translation} = differently_numbered_editions()
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{original.code}/compare")
+
+      view
+      |> element("form[phx-change='add_play']")
+      |> render_change(%{"id" => translation.id})
+
+      page = view |> render() |> LazyHTML.from_fragment()
+
+      for panel <- ["panel-0", "panel-1"] do
+        assert {panel, sync_keys(page, panel, "data-sync-div"),
+                sync_keys(page, panel, "data-sync-act")} ==
+                 {panel, ["act-0", "act-1", "act-1/scene-0"], ["act-0", "act-1", "act-1"]}
+      end
+    end
+  end
+
+  defp sync_keys(page, panel, attribute) do
+    page
+    |> LazyHTML.query("[data-panel='#{panel}'] [#{attribute}]")
+    |> LazyHTML.attribute(attribute)
   end
 end

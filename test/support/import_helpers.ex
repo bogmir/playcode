@@ -99,6 +99,59 @@ defmodule Playcode.ImportHelpers do
     Catalogue.get_play_with_all!(play.id)
   end
 
+  @doc """
+  An original and its translation that number and name their divisions differently, as
+  real editions do: `acto`/`escena` with `n` against `act`/`scene`, a scene with no `n`,
+  and a prologue numbered like the first act. Both complete, so a visitor can compare
+  them. Returns `%{original: play, translation: play}`.
+  """
+  def differently_numbered_editions do
+    original =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="0"><head>PRÓLOGO</head>
+            <sp><speaker>PRÓLOGO</speaker><l n="1">uno</l></sp>
+          </div1>
+          <div1 type="acto" n="1"><head>ACTO I</head>
+            <div2 type="escena" n="1"><head>ESCENA I</head>
+              <sp><speaker>ANA</speaker><l n="2">dos</l></sp>
+              <sp><speaker>BLAS</speaker><l n="3">tres</l></sp>
+            </div2>
+          </div1>
+          """
+        )
+      )
+
+    translation =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="act" n="1"><head>PROLOGUE</head>
+            <sp><speaker>PROLOGUE</speaker><l n="1">one</l></sp>
+          </div1>
+          <div1 type="act" n="1"><head>ACT I</head>
+            <div2 type="scene"><head>SCENE I</head>
+              <sp><speaker>ANNE</speaker><l n="2">two</l></sp>
+              <sp><speaker>BLAISE</speaker><l n="3">three</l></sp>
+            </div2>
+          </div1>
+          """
+        )
+      )
+
+    {:ok, original} = Catalogue.update_play(original, %{is_complete: true})
+
+    {:ok, translation} =
+      Catalogue.update_play(translation, %{
+        is_complete: true,
+        parent_play_id: original.id,
+        relationship_type: "traduccion"
+      })
+
+    %{original: original, translation: translation}
+  end
+
   @doc "The TEI the platform exports for a play."
   def export_tei(play), do: TeiXml.generate(Catalogue.get_play_with_all!(play.id))
 

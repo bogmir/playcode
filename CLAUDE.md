@@ -330,7 +330,9 @@ _site/
         └── <CODE>.xml         TEI-XML
 ```
 
-`node --test test/js/search.test.mjs` runs the browser half of search; CI runs it after `mix test`.
+`node --test test/js/*.test.mjs` runs the browser halves of search and of the comparison's scroll sync; CI runs it after `mix test`.
+
+**Comparison scroll sync.** `assets/js/sync_scroll.mjs` is the one implementation: the compare pages' `SyncScroll` hook imports it and `Export.CompareHtml` inlines it at compile time with its `export` keywords stripped (the downloaded page opens from disk). Speeches carry `data-sync-act`, their act's key from `Division.sync_keys/1` (kind and place among siblings, so `acto n="1"` and `act` with no `n` pair up); a speech pairs with the one as far through the same act in the other panel, or through the whole play when the other edition has no such act. Keys from each file's own `type`/`number` left 40 of the 152 original/translation pairs with no speech in common.
 
 ### Publishing on emothe.uv.es
 

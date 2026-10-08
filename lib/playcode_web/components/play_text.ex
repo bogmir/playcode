@@ -4,7 +4,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   Styled to match the production EMOTHE/Artelope color scheme and fonts.
   """
   use Phoenix.Component
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{Division, InlineMarkup}
 
   attr :divisions, :list, required: true
   attr :characters, :list, default: []
@@ -18,8 +18,11 @@ defmodule PlaycodeWeb.Components.PlayText do
   def play_body(assigns) do
     ~H"""
     <div class="play-text">
-      <div :for={division <- @divisions} class="mb-8 scroll-mt-16" id={"div-#{division.id}"}>
-        <% div_key = if @sync_keys, do: div_key_for(division), else: nil %>
+      <div
+        :for={{division, div_key} <- sync_keyed(@divisions, @sync_keys)}
+        class="mb-8 scroll-mt-16"
+        id={"div-#{division.id}"}
+      >
         <.division_heading division={division} sync_key={div_key} />
 
         <%!-- Render inline cast list for elenco divisions --%>
@@ -33,17 +36,16 @@ defmodule PlaycodeWeb.Components.PlayText do
             show_asides={@show_asides}
             show_split_verses={@show_split_verses}
             show_verse_type={@show_verse_type}
-            div_key={div_key}
+            act_key={div_key}
           />
         </div>
 
         <div
-          :for={child <- Map.get(division, :children, [])}
+          :for={{child, child_key} <- sync_keyed(Map.get(division, :children, []), @sync_keys)}
           class="mb-6 scroll-mt-16"
           id={"div-#{child.id}"}
         >
-          <% child_key = if @sync_keys, do: "#{div_key}/#{div_key_for(child)}", else: nil %>
-          <.division_heading division={child} sync_key={child_key} />
+          <.division_heading division={child} sync_key={child_key && "#{div_key}/#{child_key}"} />
           <div :if={Map.has_key?(child, :loaded_elements)}>
             <.element_list
               elements={Map.get(child, :loaded_elements, [])}
@@ -52,7 +54,7 @@ defmodule PlaycodeWeb.Components.PlayText do
               show_asides={@show_asides}
               show_split_verses={@show_split_verses}
               show_verse_type={@show_verse_type}
-              div_key={child_key}
+              act_key={div_key}
             />
           </div>
         </div>
@@ -61,9 +63,11 @@ defmodule PlaycodeWeb.Components.PlayText do
     """
   end
 
-  defp div_key_for(division) do
-    "#{division.type}-#{division.number || division.position}"
-  end
+  # Each division with its comparison key (see `Division.sync_keys/1`), or with nil when
+  # the page does not sync. A speech carries its act's key, whatever scene it is in:
+  # editions often split an act into scenes differently.
+  defp sync_keyed(divisions, true), do: Enum.zip(divisions, Division.sync_keys(divisions))
+  defp sync_keyed(divisions, false), do: Enum.map(divisions, &{&1, nil})
 
   @act_types ~w(acto act acte jornada play)
 
@@ -77,14 +81,14 @@ defmodule PlaycodeWeb.Components.PlayText do
     <h2
       :if={@division.title && @is_act}
       class="font-bold text-center my-6 text-lg uppercase tracking-wide play-act-title"
-      {if @sync_key, do: %{"data-sync-div" => @sync_key}, else: %{}}
+      data-sync-div={@sync_key}
     >
       {@division.title}
     </h2>
     <h3
       :if={@division.title && !@is_act}
       class="font-semibold text-center my-4 text-xs uppercase tracking-widest play-scene-title"
-      {if @sync_key, do: %{"data-sync-div" => @sync_key}, else: %{}}
+      data-sync-div={@sync_key}
     >
       {@division.title}
     </h3>
@@ -122,24 +126,9 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
   attr :show_verse_type, :boolean, default: false
-  attr :div_key, :string, default: nil
+  attr :act_key, :string, default: nil
 
   defp element_list(assigns) do
-    # Assign speech-only ordinals for stable sync keys across translations
-    assigns =
-      if assigns.div_key do
-        {elements_with_idx, _} =
-          Enum.map_reduce(assigns.elements, 0, fn el, idx ->
-            if el.type == "speech",
-              do: {Map.put(el, :speech_ordinal, idx), idx + 1},
-              else: {el, idx}
-          end)
-
-        assign(assigns, :elements, elements_with_idx)
-      else
-        assigns
-      end
-
     ~H"""
     <div>
       <div :for={element <- @elements}>
@@ -150,7 +139,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           show_asides={@show_asides}
           show_split_verses={@show_split_verses}
           show_verse_type={@show_verse_type}
-          div_key={@div_key}
+          act_key={@act_key}
         />
       </div>
     </div>
@@ -163,24 +152,14 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
   attr :show_verse_type, :boolean, default: false
-  attr :div_key, :string, default: nil
+  attr :act_key, :string, default: nil
 
   defp render_element(%{element: %{type: "speech"}} = assigns) do
-    assigns =
-      assign(
-        assigns,
-        :speech_key,
-        if assigns.div_key do
-          ordinal = Map.get(assigns.element, :speech_ordinal, assigns.element.position)
-          "#{assigns.div_key}/speech-#{ordinal}"
-        end
-      )
-
     ~H"""
     <div
       :if={!@element.is_aside || @show_asides}
       class={["speech mt-3 mb-5", @element.is_aside && "pl-6 aside-border"]}
-      {if @speech_key, do: %{"data-speech-key" => @speech_key}, else: %{}}
+      data-sync-act={@act_key}
     >
       <div :if={@element.speaker_label} class="speaker mb-1">
         {@element.speaker_label}
@@ -193,7 +172,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           show_asides={@show_asides}
           show_split_verses={@show_split_verses}
           show_verse_type={@show_verse_type}
-          div_key={@div_key}
+          act_key={@act_key}
         />
       </div>
     </div>
@@ -220,7 +199,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           show_asides={@show_asides}
           show_split_verses={@show_split_verses}
           show_verse_type={@show_verse_type}
-          div_key={@div_key}
+          act_key={@act_key}
         />
       </div>
     </div>

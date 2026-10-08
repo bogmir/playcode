@@ -24,6 +24,7 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/playcode"
 import topbar from "../vendor/topbar"
+import {syncPanels} from "./sync_scroll.mjs"
 
 // ScrollSpy hook: highlights the sidebar link matching the currently visible section
 const ScrollSpy = {
@@ -88,100 +89,12 @@ const ScrollSpy = {
   }
 }
 
-// SyncScroll hook: synchronizes scroll position between N comparison panels.
-// Tracks which panel the user is hovering over to avoid feedback loops.
+// SyncScroll hook: keeps the comparison panels at the same place (sync_scroll.mjs).
+// A LiveView patch can replace the panels, so updated() starts over.
 const SyncScroll = {
-  mounted() { this._setup() },
-  updated() { this._setup() },
-  destroyed() { this._cleanup() },
-  _cleanup() {
-    if (this._handlers) {
-      this._panels.forEach((panel, i) => {
-        panel.removeEventListener("scroll", this._handlers[i])
-        panel.removeEventListener("pointerenter", this._enters[i])
-        panel.removeEventListener("pointerleave", this._leaves[i])
-      })
-    }
-    this._panels = []
-    this._handlers = []
-    this._enters = []
-    this._leaves = []
-  },
-  _setup() {
-    this._cleanup()
-
-    this._panels = Array.from(this.el.querySelectorAll("[data-panel]"))
-    if (this._panels.length < 2) return
-
-    this._activePanel = null
-    this._handlers = []
-    this._enters = []
-    this._leaves = []
-
-    // Find the topmost visible anchor (speech or division heading) in a panel
-    const findTopAnchor = (panel) => {
-      const anchors = panel.querySelectorAll("[data-speech-key], [data-sync-div]")
-      const panelTop = panel.getBoundingClientRect().top
-      let best = null
-      let bestDist = Infinity
-      let bestAttr = null
-      for (const el of anchors) {
-        const top = el.getBoundingClientRect().top - panelTop
-        if (top >= -50 && top < bestDist) {
-          bestDist = top
-          best = el
-          bestAttr = el.hasAttribute("data-speech-key") ? "data-speech-key" : "data-sync-div"
-        }
-      }
-      return best ? { el: best, attr: bestAttr, key: best.getAttribute(bestAttr) } : null
-    }
-
-    const syncTo = (source, target) => {
-      const anchor = findTopAnchor(source)
-      if (!anchor) return
-      const match = target.querySelector(`[${anchor.attr}="${anchor.key}"]`)
-      if (match) {
-        const sourceOffset = anchor.el.getBoundingClientRect().top - source.getBoundingClientRect().top
-        const matchOffset = match.getBoundingClientRect().top - target.getBoundingClientRect().top
-        target.scrollTop += (matchOffset - sourceOffset)
-      }
-    }
-
-    // Throttle sync to one rAF per scroll burst
-    let rafId = null
-    const throttledSync = (source, targets) => {
-      if (rafId) return
-      rafId = requestAnimationFrame(() => {
-        rafId = null
-        targets.forEach(t => syncTo(source, t))
-      })
-    }
-
-    this._panels.forEach((panel, i) => {
-      const enter = () => { this._activePanel = i }
-      const leave = () => { if (this._activePanel === i) this._activePanel = null }
-      const handler = () => {
-        if (this._activePanel === i) {
-          const others = this._panels.filter((_, j) => j !== i)
-          throttledSync(panel, others)
-        }
-      }
-
-      this._enters.push(enter)
-      this._leaves.push(leave)
-      this._handlers.push(handler)
-
-      panel.addEventListener("pointerenter", enter)
-      panel.addEventListener("pointerleave", leave)
-      panel.addEventListener("scroll", handler, { passive: true })
-    })
-
-    // Initial alignment: sync all panels to the first one
-    requestAnimationFrame(() => {
-      const others = this._panels.slice(1)
-      others.forEach(t => syncTo(this._panels[0], t))
-    })
-  }
+  mounted() { this.stop = syncPanels(this.el) },
+  updated() { this.stop(); this.stop = syncPanels(this.el) },
+  destroyed() { this.stop() },
 }
 
 // ShiftClick hook: captures shiftKey on click and pushes el_toggle_element with shift flag

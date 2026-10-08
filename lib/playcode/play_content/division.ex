@@ -33,6 +33,29 @@ defmodule Playcode.PlayContent.Division do
     timestamps(type: :utc_datetime)
   end
 
+  @doc """
+  Keys pairing each of `siblings` with its counterpart in another edition, for the
+  side-by-side comparison: its kind and its place among the siblings of that kind
+  (`act-0`, `act-1`, `scene-0`). Editions spell and number divisions differently
+  (`acto` against `act`, a scene with `n="1"` against one with none, a prologue numbered
+  like the first act), so `type` and `number` do not pair them.
+  """
+  def sync_keys(siblings) do
+    {keys, _seen} =
+      Enum.map_reduce(siblings, %{}, fn division, seen ->
+        kind = kind(division.type)
+        place = Map.get(seen, kind, 0)
+        {"#{kind}-#{place}", Map.put(seen, kind, place + 1)}
+      end)
+
+    keys
+  end
+
+  defp kind(type) when type in ~w(acto act acte jornada play), do: "act"
+  defp kind(type) when type in ~w(escena scene), do: "scene"
+  defp kind(type) when type in ~w(prologo prologue), do: "prologue"
+  defp kind(type), do: type
+
   def changeset(division, attrs) do
     division
     |> cast(attrs, [:type, :number, :title, :position, :play_id, :parent_id])
