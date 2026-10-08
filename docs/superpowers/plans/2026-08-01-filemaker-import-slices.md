@@ -8,14 +8,14 @@
 | S0b — soft delete, re-importable plays | **done** — `archive/README.md` |
 | S1 — work families and language | **done** — `archive/README.md` |
 | Admin sync page (`/admin/filemaker`) | **done** — see below |
-| S2 — version metadata | **in progress**, one field at a time; S2a, S2c done — `archive/README.md`, `../specs/2026-08-05-s2c-composition-date-design.md` |
-| S2d | scoped below, **waiting on a question to the project** |
+| S2 — version metadata | **done** 2026-10-08: S2a and S2c shipped, S2d dropped — `archive/README.md`, `../specs/2026-08-05-s2c-composition-date-design.md` |
+| S2d — collection | **dropped** 2026-10-08: not a category in use; the code prefix already says EMOTHE, ARTELOPE or HIE — see below |
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import, folded into S7's cross-check |
 | S3, S5–S8 | scoped below, each gets its own plan when it comes up |
 | S4 — bibliography | **done** 2026-10-07 (`e82c968..369a077`; designed the same day, after the project answered the research's questions: shared entries, a one-time import) — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
 | S9 — places | **Phase 1 done** (the app, no FileMaker code) — `CLAUDE.md` |
-| S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; after the ~300 import |
+| S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; unblocked: the rest of EMOTHE is in (371 plays on dev, 2026-10-08) |
 
 Completed plans live in `archive/`, with exactly what shipped, the commit list, and what each
 slice learned that its plan did not say. Read that before starting a new slice.
@@ -213,7 +213,7 @@ plays no `T01` row mentions.
 |---|---|---|---|---|
 | **S2a** | `historical_time` + `historical_time_note` | `bus_tiemHistorico` + `pub_TiemHistorico` | 11 coded, 4 with a note (of 22) | **done** — `archive/README.md` |
 | **S2c** | `composition_date_from/_to` + note | index header + `pub_datacion` | 7 of 82 today; 64 dated headers corpus-wide, 60 with a family head | **done** — `../specs/2026-08-05-s2c-composition-date-design.md` |
-| S2d | `collection` | `bus_coleccion` | 22 | labels decoded below, **blocked** on whether the field is still wanted |
+| ~~S2d~~ | `collection` | `bus_coleccion` | 22 | **dropped** 2026-10-08 — not a category in use, see below |
 | ~~S2b~~ | `place_of_action` | `pub_LugAccion` | 6 | **split out** — toponym-based, now **S9**; the import is **S9b** |
 | ~~S2e~~ | `legacy_url` | `pub_edicionWeb` href | 13 | **dropped** — derivable, see below |
 | ~~S2f~~ | `original_title`, `title_sort` | `pub_TituloObra`, `T00.pub_tituloOrden` | 22 | **dropped as an import** — nothing left to import, see below |
@@ -236,9 +236,8 @@ code against the rendered label across all 439 rows: 1 Tiempo indeterminado, 2 A
 10 Antigüedad clásica, 11 Tiempo alegórico. Codes 3 and 4 do not occur.
 
 - **Done when:** S2d has landed or been dropped — the panel renders on `/plays/:code` for
-  the plays that have data, and admins can edit every field it shows. As of 2026-08-05 S2a and S2c
-  have landed, S2b is now S9, S2e and S2f are dropped, so S2d is all that is left of S2 and it is
-  waiting on an answer from the project.
+  the plays that have data, and admins can edit every field it shows. Met on 2026-10-08: S2a and S2c
+  landed, S2b became S9, and S2d, S2e and S2f were dropped.
 
 #### S2c — composition date *(done, 2026-08-05 — see below for what shipped differently)*
 
@@ -300,7 +299,13 @@ Applied to `playcode_dev`: `updated 7, failed 0` (EMOTHE0010, 0038, 0281, 0337, 
 index, plus EMOTHE0341 note-only), zero conflicts, idempotent on a second run. Answered without
 waiting on the attribution question below — see open question 2.
 
-#### S2d — collection *(blocked on a question to the project)*
+#### S2d — collection *(dropped 2026-10-08)*
+
+**The project's answer:** the collection is not a category in use. The collections that matter
+are EMOTHE, ARTELOPE (`AL`) and HIE (*Hieronimo*), and a play's code prefix already says which;
+what code `3` separates from `1` is unknown on their side too. If a collection facet is ever
+wanted, derive it from the prefix rather than import `bus_coleccion`. What the export showed is
+kept below.
 
 22 of 22, and a bare numeric code with no text counterpart anywhere in either table. Unlike S8's
 `bus_genero`, **no value list is needed from FileMaker** — the mapping is unambiguous once the code
@@ -794,8 +799,8 @@ Fixed once here so every slice looks the same:
 
 Ordered by what is actually blocking work.
 
-1. **Is `collection` still wanted, and what separates code `1` from `3`?** Blocks S2d, and the
-   answer may delete it. See S2d for the decoded label table and the one suspect row.
+1. ~~**Is `collection` still wanted, and what separates code `1` from `3`?**~~ **Closed
+   2026-10-08:** not a category in use, so S2d is dropped. See S2d.
 2. **Do competing datings need per-dating attribution?** Closed for S2c, open for whatever comes
    next. S2c shipped as three columns without answering it: the export attributes none of its 97
    `pub_datacion` rows, so there is nothing to attribute yet, and `play_datings(from, to, note,
@@ -818,23 +823,20 @@ Ordered by what is actually blocking work.
    - **S4 questions** for the project, not the export: what the 86 uncategorised records are,
      whether the 118 records newer than the web export are ready to publish, whether the
      broken links can go. See the S4 research doc.
-5. **Importing the other ~300 plays.** *Intended as of 2026-08-05 — a "when", not an "if", and now
-   the sequencing constraint for most of what is left.* The index gives a download path for every
-   published play (`textosXML/<code>_<Name>.xml`). Still needs permission and a fetch rate from the
-   project, but the roadmap should now assume it happens.
-
-   **It should land before S3, S4, S5, S6 and S9b.** Each of those writes child rows per play, so
-   running one against 82 plays writes a tenth of its rows and then has to run again over a corpus
-   ten times larger — with the second run's dedupe and conflict reporting untested at that scale.
-   The scale table under "Scope decision" has the multipliers. S2c, S2d and S8 write a column on the
-   play and are indifferent to the ordering.
-
-   Two things to check when it happens, both cheap now and expensive later: whether the 21 unlinked
-   translations (question 9) close once their originals exist, and whether `AL####` stays at 19 or
-   the Artelope files also grow.
+5. ~~**Importing the other ~300 plays.**~~ **Closed: done.** Dev holds 371 EMOTHE plays and 19
+   ARTELOPE ones (2026-10-08), so S3, S5, S6 and S9b can run against the full corpus. Of FileMaker's
+   413 EMOTHE version records, 279 match a play we hold. Ten of the rest are marked as having a web
+   edition (`bus_edicionWeb: 1`) and are not in the corpus: EMOTHE0202, 0203, 0288, 0355, 0391,
+   0428, 0448, 0514, 0515, 0551. Worth asking whether they were withdrawn or their files missed
+   the import; the other 124 have no web edition. Of the two checks this item set: unlinked
+   derived plays are now 28 (question 9), and `AL####` stayed at 19.
 6. **`bus_publicada` vs `is_complete`.** 61 rows are flagged published, but 301 have a real
    web-edition href. Our `is_complete` gates the static-site export, so nothing should write to it
-   automatically.
+   automatically. **Answered 2026-10-08, for now: not in use, not imported.** Against the 279
+   versions we hold, 49 are flagged published and 222 have a web edition, and the two flags
+   disagree as often as they agree (21 published with no web edition, 194 the other way round), so
+   `bus_publicada` means neither "on the web" nor anything else anyone could name. Draft / Complete
+   is the publish switch: see CLAUDE.md, *Access control*.
 7. **Character re-import identity.** A TEI re-import still replaces the whole cast list, so a
    manual `xml_id` fix on a character is lost. Protecting those needs per-character identity
    matching — bigger than S0b, not scoped anywhere. Blocks nothing in S2–S5; blocks S6.
@@ -842,7 +844,7 @@ Ordered by what is actually blocking work.
    carry two historical periods. S2c shipped as three columns, not a child table, so this stays
    open on its own; revisit if a future dating source forces `play_datings` into existence (see
    question 2).
-9. **21 unlinked translations.** They carry an `original_title` but no `parent_play_id`, and none of
+9. **21 unlinked translations** (28 derived plays with no parent at 371 plays, 2026-10-08). They carry an `original_title` but no `parent_play_id`, and none of
    their originals is a play we hold, so neither FileMaker nor our own data can close the family.
    Either those originals get imported (see question 5) or work families stay partial and the UI has
    to say so. Found while dropping S2f.
