@@ -823,6 +823,22 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
+  # A stage direction: its pieces, the notes among them included, go inside one <stage>.
+  # Its italics and notes nest as they would anywhere, so the pieces are read again with
+  # the stage taken off.
+  defp inline_nodes([%{stage: %{run: run} = stage} | _] = parts) do
+    {inside, rest} = Enum.split_while(parts, &match?(%{stage: %{run: ^run}}, &1))
+    attrs = if stage.type, do: %{type: stage.type}, else: %{}
+
+    content =
+      case inside |> Enum.map(&%{&1 | stage: nil}) |> inline_nodes() do
+        [text] when is_binary(text) -> text
+        nodes -> nodes
+      end
+
+    [element(:stage, attrs, content) | inline_nodes(rest)]
+  end
+
   # A note inside an italic run, which InlineMarkup.parts/2 splits there, goes back inside
   # its <emph>, as the source had it: split, the space after the note would open the
   # second <emph>, and the importer, which trims italics, would glue the words together.
@@ -845,7 +861,7 @@ defmodule Playcode.Export.TeiXml do
   # adjacent italic runs (`<<a>><<b>>`, or one a note split) merge into a single <emph>.
   defp italic_run([piece | rest]) do
     case Enum.split_while(rest, &is_map_key(&1, :note)) do
-      {notes, [%{italic: true} | _] = more} ->
+      {notes, [%{italic: true, stage: nil} | _] = more} ->
         {run, rest} = italic_run(more)
         {[piece | notes] ++ run, rest}
 

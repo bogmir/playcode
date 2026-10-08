@@ -739,6 +739,144 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  describe "inline stage directions" do
+    @staged """
+    <div1 type="acto" n="1"><head>ACTO I</head>
+      <div2 type="escena" n="1"><head>ESCENA I</head>
+        <sp><speaker>CHIMÈNE</speaker>
+          <l n="1"><stage xml:id="st1">(A Léonor.)</stage>Allez l'entretenir en cette galerie.</l>
+          <l n="2">Je vous suis,<stage type="exit">(Vase.)</stage> adieu.</l>
+          <l n="3">Il parle <stage type="business">(se lève)</stage>puis <stage>(sort)</stage></l>
+          <p><stage>Entra</stage>El rey dijo<stage type="delivery_">(bajo)</stage> y salió.</p>
+        </sp>
+      </div2>
+    </div1>
+    """
+
+    test "a stage comes back inside its line, where it was, with its type" do
+      xml = roundtrip(tei(body: @staged))
+
+      assert Enum.map(xml_inline_stages(xml), &{&1.in, &1.type, &1.text, &1.before, &1.after}) ==
+               [
+                 {"l", nil, "(A Léonor.)", "", "Allez l'entretenir en cette galerie."},
+                 {"l", "exit", "(Vase.)", "Je vous suis,", "adieu."},
+                 {"l", "business", "(se lève)", "Il parle", "puis (sort)"},
+                 {"l", nil, "(sort)", "Il parle (se lève) puis", ""},
+                 {"p", nil, "Entra", "", "El rey dijo (bajo) y salió."},
+                 {"p", "delivery_", "(bajo)", "Entra El rey dijo", "y salió."}
+               ]
+
+      # The words are the ones the line had when the stage was plain text of it.
+      assert reading_texts(xml, "l") == [
+               "(A Léonor.) Allez l'entretenir en cette galerie.",
+               "Je vous suis, (Vase.) adieu.",
+               "Il parle (se lève) puis (sort)"
+             ]
+    end
+
+    test "a stage is written out escaped" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              ~s|<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno <stage>(Tom &amp; Jerry &lt;bajo&gt;)</stage> dos</l></sp></div1>|
+          )
+        )
+
+      assert [%{text: "(Tom & Jerry <bajo>)"}] = xml_inline_stages(xml)
+      assert xml =~ "(Tom &amp; Jerry &lt;bajo&gt;)"
+    end
+
+    test "a stage type that is not a plain word is dropped, and the import goes on" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              ~s|<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno <stage type="a b">(x)</stage> dos</l></sp></div1>|
+          )
+        )
+
+      assert [%{type: nil, text: "(x)"}] = xml_inline_stages(xml)
+    end
+
+    test "a note inside a stage stays inside it, and one at its end comes out after it" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><sp><speaker>A</speaker>
+              <l n="1">Dijo <stage>(en voz <note n="1" type="editor"><p>Dentro.</p></note>baja)</stage> y calló.</l>
+              <l n="2"><stage>(Vase)<note n="2" type="editor"><p>Fuera.</p></note></stage> Adiós</l>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert [{%{"n" => "1"}, "Dentro."}] = xml_elements(xml, "note", within: "stage")
+      assert [%{n: "2", after: "(Vase)"}] = xml_notes(xml) |> Enum.filter(&(&1.n == "2"))
+      assert length(xml_elements(xml, "note")) == 2
+    end
+
+    test "a stage that opens in italics stays a stage, even right after an italic piece" do
+      # The note between them takes away the space the importer puts between pieces, so
+      # "uno" and the stage's italic "dos" touch: the export must not merge them into one
+      # <emph>, which would lose the stage.
+      xml =
+        roundtrip(
+          tei(
+            body:
+              ~s|<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1"><emph>uno</emph><note n="1" type="editor"><p>Glosa.</p></note><stage><emph>dos</emph></stage></l></sp></div1>|
+          )
+        )
+
+      assert [%{in: "l", text: "dos", after: ""}] = xml_inline_stages(xml)
+      assert xml_texts(xml, "emph") == ["uno", "dos"]
+    end
+
+    test "a stage in an aside line is dropped with the aside's delivery, as before" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              ~s|<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1"><stage type="delivery">Aparte</stage><seg type="aside">qué haré</seg></l></sp></div1>|
+          )
+        )
+
+      assert xml_inline_stages(xml) == []
+      assert xml_texts(xml, "seg") == ["qué haré"]
+    end
+
+    test "importing a file again replaces its stages, never doubles them" do
+      path =
+        tei(
+          body:
+            ~s|<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno <stage>(x)</stage> dos</l></sp></div1>|
+        )
+        |> write_tmp!()
+
+      {:ok, _} = Playcode.Import.TeiParser.import_file(path)
+      {:ok, play} = Playcode.Import.TeiParser.import_file(path)
+
+      assert [%{text: "(x)"}] = play |> export_tei() |> xml_inline_stages()
+    end
+
+    test "exporting, re-importing and exporting again changes nothing" do
+      body = """
+      #{@staged}
+      <div1 type="acto" n="2"><sp><speaker>A</speaker>
+        <l n="9">Dijo <stage>(en voz <note n="1" type="editor"><p>Dentro.</p></note>baja)</stage> y calló.</l>
+        <l n="10"><stage>(Vase)<note n="2" type="editor"><p>Fuera.</p></note></stage> Adiós</l>
+        <p>Prosa <stage>(con <emph>énfasis</emph>)</stage> final.</p>
+      </sp></div1>
+      """
+
+      first = tei(code: "STG1", body: body) |> roundtrip()
+      second = first |> String.replace("STG1", "STG2") |> roundtrip()
+
+      assert String.replace(second, "STG2", "STG1") == first
+    end
+  end
+
   # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
   # re-importing that copy made a second editor: one more per round trip.
   test "exporting, re-importing and exporting again changes nothing" do

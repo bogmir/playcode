@@ -304,6 +304,43 @@ defmodule Playcode.ImportHelpers do
 
   defp outside_notes(_text, _tag), do: []
 
+  @doc """
+  Every `<stage>` that is a direct child of an `<l>` or `<p>` in the body, in document
+  order, as a map: `in`, that line's tag; `type`; `text`; and `before` and `after`, the
+  rest of the line's text on either side of it, whitespace collapsed.
+  """
+  def xml_inline_stages(xml) do
+    xml
+    |> parse()
+    |> descendants("body")
+    |> Enum.flat_map(&inline_stages/1)
+  end
+
+  defp inline_stages({name, _, children}) when name in ~w(l p) do
+    children
+    |> Enum.with_index()
+    |> Enum.flat_map(fn
+      {{"stage", attrs, _} = stage, i} ->
+        {before, [_stage | rest]} = Enum.split(children, i)
+
+        [
+          %{
+            in: name,
+            type: Map.new(attrs)["type"],
+            text: text(stage),
+            before: text({name, [], before}),
+            after: text({name, [], rest})
+          }
+        ]
+
+      _other ->
+        []
+    end)
+  end
+
+  defp inline_stages({_name, _, children}), do: Enum.flat_map(children, &inline_stages/1)
+  defp inline_stages(_text), do: []
+
   defp collect({name, attrs, children}, tag, ancestors) do
     inner = Enum.flat_map(children, &collect(&1, tag, [name | ancestors]))
 
