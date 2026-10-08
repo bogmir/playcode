@@ -23,9 +23,9 @@ where it was, and statistics and search count it as a stage direction.
 |---|---|
 | How is the stage kept apart from the line's words? | A marker in `content`, next to `<<italics>>`: `<stage type="delivery">…</stage>`. No table, no migration, no offsets to carry |
 | Why not a table of spans, like notes? | A span needs two offsets that survive edits inside it, and splitting around both notes and italics, for one attribute (`type`). Not worth it |
-| Why not separate `stage_direction` elements? | A mid-paragraph stage (964 in the prose) would shatter the paragraph, a mid-verse one (10) the line |
+| Why not separate `stage_direction` elements? | A mid-paragraph stage (867 in the prose) would shatter the paragraph, a mid-verse one (7) the line |
 | What do readers get? | Italic, hidden by the toggle, on the static site, `/plays/:code` and the downloads; written back by the TEI export; counted in statistics and search; editable in the content editor |
-| Asides (`<stage type="delivery">Aparte</stage>`)? | Unchanged. The importer drops the stage and flags the line `is_aside`; the TEI export writes `<seg type="aside">`, not the stage. Logged as a known gap |
+| Asides (`<stage type="delivery">Aparte</stage>`)? | Unchanged. An aside line (a delivery stage naming an aside, or a `<seg type="aside">`) or aside paragraph (a `<seg type="aside">`) drops every stage it holds and is flagged `is_aside`; the TEI export writes `<seg type="aside">`, not the stage. Logged as a known gap |
 | FileMaker? | Not a slice. The stage directions are in the TEI files |
 
 ## The corpus
@@ -34,14 +34,16 @@ Every fixture, tracked and `tei_files/`, one file per play code (82 plays), surv
 2026-10-09. A stage that is a direct child of `sp`, `lg` or a division already becomes its own
 `stage_direction` element and is not counted here.
 
-- **3,148 inline stages in 59 plays**: 2,884 plain, in 52 plays, and 264 asides, in 22.
-- **Where (plain):** in `<p>` 1,803 (839 at the start of the paragraph, 964 in the middle, all in
-  Italian and Spanish prose), in `<l>` 1,081 (1,071 at the start of the line, mostly French
-  verse; 10 in the middle).
-- **242 lines hold more than one stage.**
-- **Attributes:** `xml:id` on every one, `type` on 737: `delivery` 580, `delivery_` 62 (a
-  spelling variant, kept as written), `business` 50, `exit` 26, `entrance` 15, `mixed` 4. The
-  other 2,147 have none.
+- **3,148 inline stages in 59 plays.** 2,232, in 49 plays, are kept as markers. The other 916,
+  in 49 plays, sit in aside lines and aside paragraphs, which drop every stage they hold
+  (almost all are the `(Aparte)` delivery stage itself); they are the known gap below.
+- **Where (the 2,232):** in `<p>` 1,478 (611 at the start of the paragraph, 867 in the middle,
+  all in Italian and Spanish prose), in `<l>` 754 (747 at the start of the line, mostly French
+  verse; 7 in the middle).
+- **187 lines and paragraphs hold more than one.**
+- **Attributes:** `xml:id` on every one, `type` on 156: `delivery_` 62 (a spelling variant,
+  kept as written), `business` 49, `exit` 26, `entrance` 15, `mixed` 4. The other 2,076 have
+  none.
 - **Contents:** text; one holds a `<note>`; a few hold a `<code>` element, read as text.
   None holds a stage, none sits inside `<emph>`, `<hi>` or `<seg>`, none is empty.
 
@@ -90,8 +92,8 @@ wrap goes on children, never on the element being read, so a standalone `<stage>
 - `plain_length/1`, which gives a note its offset, counts a stage's tags as markers one at a
   time, as it counts `<<` and `>>`. A note inside a stage is read while the stage is still open
   (`<stage>foo`), so `InlineMarkup.plain/1` cannot do it.
-- An aside line still drops its delivery stage (`verse_line_content/2`), including a second
-  stage on the same line (2 lines in the corpus).
+- An aside line or paragraph still drops every stage it holds (`verse_line_content/2`,
+  `aside_content/1`).
 
 ## TEI export
 
@@ -161,8 +163,8 @@ Each is run and seen failing before the code it covers. Through the outermost AP
   paragraph; typed and untyped; two in one line, touching and apart; a note inside one; an
   export → import → export fixpoint.
 - **`RoundtripTest`:** a new count field, the `<stage>` children of `<l>` and `<p>`, equal in
-  source and export. A fixture with inline stages joins the default set, as `EMOTHE0705` did
-  for notes; the slow sweep covers all.
+  source and export. `EMOTHE0746` (54 in `<l>`, 17 in aside lines) and `EMOTHE0776` (1 in
+  `<p>`) already run by default, so no fixture joins the set; the slow sweep covers all.
 - **`InlineMarkup`:** parts, `plain/1` and the note placement around a stage; the changeset's
   refusals.
 - **Renderers:** `static_site_play_test.exs` (marker, toggle hook), `play_show_live_test.exs`
@@ -184,8 +186,7 @@ Each is run and seen failing before the code it covers. Through the outermost AP
 
 ## Out of scope, and known limits
 
-- **Aside stages.** The stage text of the 264 aside stages is not kept or exported, and a second
-  stage on an aside line is dropped with it.
+- **Aside stages.** The 916 stages in aside lines and paragraphs are not kept or exported.
 - **`xml:id`** of an inline stage is not kept, as for standalone stage directions.
 - **A note at the end of a stage** exports after it.
 - **A hidden stage with a note** leaves a gap in the visible numbers.
