@@ -75,7 +75,9 @@ New table `play_notes`, UUID primary key:
 | `body` | text, required | paragraphs separated by a blank line, `<<…>>` for italics |
 
 A check constraint requires exactly one of `element_id` and `division_id`. Index on
-`(element_id, offset, position)` and `(division_id, offset, position)`.
+`(element_id, offset, position)` and `(division_id, offset, position)`. `type` is not
+validated: TEI is the source of truth, so the importer keeps whatever a file says, and the
+admin form offers the five types.
 
 **The anchor text** is the field the offset counts into:
 
@@ -108,7 +110,8 @@ and the front matter keep today's `text_content/1`.
   `Iliria .`; `voyent<note>…</note> dans` gives `voyent dans`, with the note at the end of
   "voyent". Trailing whitespace before `</l>` is trimmed as now.
 - A note inside `<emph>` gets its offset inside the italic run. A note inside an aside `<seg>`
-  keeps its offset in the aside text that becomes the line.
+  keeps its offset in the aside text that becomes the line; one beside the `<seg>` (AL0644,
+  once) goes at the end of the line.
 - Inside the note: `<term>` → `term`; each `<p>` → one paragraph of `body`, with `<emph>` and
   `<hi rend="italic">` as `<<…>>`. Anything else in the note keeps its text.
 - A note with no text is dropped (two, in the `EMOTHE0010_…_test` fixture).
@@ -126,8 +129,13 @@ each one back at its offset:
 <note n="6089" type="editor"><term>voyent</term><p>On maintient…</p></note>
 ```
 
-`n`, `type` and `<term>` only when set. A note whose offset falls inside an italic run is nested
-in its `<emph>`. `<speaker>` and `<head>` get the same treatment.
+`n`, `type` and `<term>` only when set. A note whose offset falls inside an italic run splits
+it: `<emph>a</emph><note/><emph>b</emph>`, the same text. `<speaker>` and `<head>` get the same
+treatment.
+
+An element whose text holds other elements (`<emph>`, `<note>`) is written on one line,
+unindented (`{:iodata, …}` in XmlBuilder): `format: :indent` puts line breaks inside mixed
+content, and a break before a `<note>` would read back as a space after the glossed word.
 
 ## One shared step for every renderer
 
@@ -136,9 +144,12 @@ offset, splitting an italic piece when the note falls inside it. `parts/1` stays
 `plain/1` never sees notes, so search, the split-verse ghost text and anything else reading
 clean text is unaffected.
 
-`PlayContent.note_numbers(content)` walks the loaded content tree once and returns
-`%{note_id => number}`, numbering 1, 2, 3… in reading order. Every renderer uses it, so note 57
-is note 57 on the act page, on `text.html`, on `/plays/:code` and in the downloads.
+`Note.reading_order(divisions)` lists the notes of a loaded content tree in reading order
+(a division's heading, its own text, its scenes; a speech's speaker before its lines), and
+`PlayContent.load_play_content/1` sets each note's virtual `number` from it, 1, 2, 3…. Every
+renderer reads `note.number`, so note 57 is note 57 on the act page, on `text.html`, on
+`/plays/:code` and in the downloads. `Note` joins the static site's fingerprint, because its
+code decides what a page shows.
 
 Labels, in `PlaycodeWeb.PlayLabels`:
 
@@ -178,9 +189,11 @@ Native `popover`, no JavaScript:
 - **Static site:** `StaticSite.Components` (`el/1` for each element, the speaker, the heading),
   English labels, works from `file://`. `site.js` is not touched. `style.css` stays under its
   25 KB budget.
-- **Live page:** `PlaycodeWeb.Components.PlayText`, Spanish labels through gettext. The content
-  editor renders lines with `PlayText`, so it shows the markers too.
-- The search index does not include notes. The compare page shows none.
+- **Live page:** `PlaycodeWeb.Components.PlayText`, Spanish labels through gettext. The compare
+  pages and the content editor's preview tab draw through `PlayText` too, so they show the
+  notes; ids are `note-<uuid>`, unique on a page that shows two plays. The editor's own line
+  list does not show markers; a line's modal lists its notes.
+- The search index does not include notes.
 
 ## Downloads
 
@@ -204,23 +217,26 @@ A LiveComponent, `PlaycodeWeb.Admin.NotesComponent`, in its own file, placed in 
 (verse line, prose, stage direction, trailer, speech) and the division modal of
 `/admin/plays/:id/content`.
 
-- A **Notas** fieldset lists the anchor's notes: number, type label, term, the body's first
-  words, Edit and Delete.
+- A **Notas** section, after the modal's own form (forms cannot nest), lists the anchor's
+  notes: type label, term, the body's first words, Edit and Delete.
 - **Añadir nota** and Edit open a small form:
-  - *Tipo*: the five types;
-  - *Después de*: the anchor's words, "Buscad", "por", …, a repeated word numbered ("partes (2)"),
-    and "al final" (offset 0 when the anchor text is empty). Each option's value is the offset
-    at the end of its word;
-  - *Término*: prefilled with the chosen word, editable;
+  - *Tipo*: an untyped note, then the five types;
+  - *Después de*: the anchor's words, "Buscad", "por", …, a repeated word numbered ("partes (2)").
+    Each option's value is the offset at the end of its word (letters and digits; punctuation
+    is not a word). An imported note that is not after a word (`tiene,<note/>`) adds a
+    "Donde está ahora" option, selected, so saving its text alone does not move it. An empty
+    anchor text offers "Al final". A new note starts after the last word;
+  - *Término*: optional, the glossed word as the reader should see it;
   - *Texto*: a textarea; a blank line starts a paragraph, `<<…>>` marks italics.
 - Create, update and delete go to the activity log, `resource_type: "note"`.
 - No new route, so no new row in `authorization_test.exs`. Notes are content: whoever may edit
   the play's lines may edit its notes.
 
 Context functions in `Playcode.PlayContent`: `list_notes/1` (by element or division),
-`get_note(play_id, id)` (scoped to the play, as editors, sources and places are since
-`0575c3b`), `create_note/1`, `update_note/2`, `delete_note/1`. Schema
-`Playcode.PlayContent.Note`.
+`create_note/1`, `change_note/2`, `update_note/2`, `delete_note/1`, `anchor_text/1`. Schema
+`Playcode.PlayContent.Note`. The component looks a note id from the browser up among its
+anchor's notes only, so it never acts on another line's or play's row (the rule of
+`0575c3b`), and it sets the anchor's ids itself, never from the form's params.
 
 ## Keeping offsets right after an edit
 
@@ -248,8 +264,9 @@ Red first, through the outermost API (`CLAUDE.md`, *How To Work In This Repo*).
   and paragraphs.
 - **`RoundtripTest`** (real fixtures): a `notes` count, and a line-text check: each `<l>` and
   `<p>` in the body, its notes removed, has the same text in the source and the export. That is
-  the check whose absence let this bug through. EMOTHE0746 and 0776 run by default;
-  `--include slow` sweeps the corpus, with Hamlet and EMOTHE0752 as the heavy cases.
+  the check whose absence let this bug through. EMOTHE0705 (17 notes, on lines and speakers)
+  joins EMOTHE0746 and 0776 in the default run; `--include slow` sweeps the corpus, with
+  Hamlet and EMOTHE0752 as the heavy cases.
 - **`content_version_test.exs`**: passes once the trigger is in the migration.
 - **Static site**: generate a play with notes; on the act page, the marker follows the right
   word and the endnote carries label, term and paragraphs; `text.html` lists every note.
@@ -282,5 +299,5 @@ Afterwards: `CLAUDE.md` (schema list, the open gap marked done) and
 
 - Inline `<stage>` inside lines: the follow-up project.
 - Front-matter notes (cast list, dedication, editorial introduction).
-- Notes in search, notes on the compare page and in `Export.CompareHtml`.
+- Notes in search and in `Export.CompareHtml` (the downloaded comparison).
 - Placing the pop-up beside the word.
