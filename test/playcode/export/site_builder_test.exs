@@ -212,6 +212,19 @@ defmodule Playcode.Export.SiteBuilderTest do
   defp plant(play), do: File.write!(sentinel(play), "")
   defp rewritten?(play), do: not File.exists?(sentinel(play))
 
+  # The site as a build with other assets left it: its record says so, and a file is gone.
+  defp stale_assets! do
+    dir = StaticSite.output_dir()
+    path = Path.join(dir, "build.json")
+
+    File.write!(
+      path,
+      path |> File.read!() |> Jason.decode!() |> Map.put("assets", "older") |> Jason.encode!()
+    )
+
+    File.rm!(Path.join([dir, "assets", "style.css"]))
+  end
+
   defp complete_plays(n), do: for(_ <- 1..n, do: play_fixture(%{"is_complete" => true}))
 
   test "Generate rewrites only the plays that changed since the last build" do
@@ -272,6 +285,22 @@ defmodule Playcode.Export.SiteBuilderTest do
 
     assert in_site() == [kept.code]
     assert in_search() == [kept.code]
+  end
+
+  # A deploy that changed only priv/static_site (styles, scripts, fonts) made the next
+  # Generate rebuild every play, minutes of CPU, for files no page embeds anything of.
+  test "Generate updates the assets alone when only they changed" do
+    [a] = complete_plays(1)
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+    plant(a)
+    stale_assets!()
+
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 0}}}, 10_000
+    refute rewritten?(a)
+    assert File.exists?(Path.join([StaticSite.output_dir(), "assets", "style.css"]))
+    refute StaticSite.assets_changed?(StaticSite.output_dir())
   end
 
   test "Generate rebuilds every play when the site's settings changed" do

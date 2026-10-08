@@ -156,10 +156,14 @@ defmodule Playcode.Export.SiteBuilder do
     |> StaticSite.generate()
   end
 
-  # Only what changed since the last build; with nothing to do, nothing is written.
+  # Only what changed since the last build; with nothing to do, nothing is written but
+  # the assets, when they alone changed. A batch writes them anyway.
   defp refresh(opts) do
-    case StaticSite.outdated(StaticSite.output_dir()) do
+    dir = StaticSite.output_dir()
+
+    case StaticSite.outdated(dir) do
       [] ->
+        if StaticSite.assets_changed?(dir), do: StaticSite.update_assets(dir)
         {:ok, %{changed: 0, skipped: []}}
 
       changes ->

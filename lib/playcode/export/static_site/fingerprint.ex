@@ -4,9 +4,11 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   `build.json` records the one a site was built with; when the current one differs, any
   page may be out of date, and Generate rebuilds every play.
 
-  It covers the code (`module_info(:md5)` of `modules/0`), the files under
-  `priv/static_site`, the English translations, the versions of the libraries that render
-  and encode the pages, and the `:version` option. Not `build_date`: a page's footer says
+  It covers the code (`module_info(:md5)` of `modules/0`), the English translations, the versions of the libraries that render
+  and encode the pages, and the `:version` option. Not the files under `priv/static_site`
+  (styles, scripts, fonts): no page embeds anything of them, only their fixed paths, so
+  they have their own hash, `assets/0`, and a change to them alone is copied, not
+  rebuilt. Not `build_date`: a page's footer says
   when that page was written. The play data is `plays.content_version`'s.
 
   Not `PlaycodeWeb.Gettext`'s code: it is compiled from every locale's translations, so a
@@ -64,14 +66,11 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     libraries = Enum.map(@libraries, &{&1, Application.spec(&1, :vsn)})
     gettext_dir = opts[:gettext_dir] || Application.app_dir(:playcode, "priv/gettext")
 
-    {code, assets(), english(gettext_dir), libraries, opts[:version]}
-    |> :erlang.term_to_binary([:deterministic])
-    |> then(&:crypto.hash(:sha256, &1))
-    |> Base.encode16(case: :lower)
+    hash({code, english(gettext_dir), libraries, opts[:version]})
   end
 
-  # Each file under priv/static_site, by its path there, with its contents.
-  defp assets do
+  @doc "A hex SHA-256 of the files under `priv/static_site`, by path and contents."
+  def assets do
     dir = Application.app_dir(:playcode, "priv/static_site")
 
     dir
@@ -80,6 +79,14 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     |> Enum.filter(&File.regular?/1)
     |> Enum.sort()
     |> Enum.map(&{Path.relative_to(&1, dir), File.read!(&1)})
+    |> hash()
+  end
+
+  defp hash(term) do
+    term
+    |> :erlang.term_to_binary([:deterministic])
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
   end
 
   # The English translations that say something, by message: not the files, whose

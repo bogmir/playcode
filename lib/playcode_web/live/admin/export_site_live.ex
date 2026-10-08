@@ -24,6 +24,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       |> assign(:pending, %{})
       |> assign(:changed, MapSet.new())
       |> assign(:site_changed, false)
+      |> assign(:assets_changed, false)
       |> assign(:busy, false)
       |> assign(:indexing, false)
       |> assign(:generating, false)
@@ -206,7 +207,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               </span>
             </div>
             <p class="text-xs text-base-content/50">
-              {generate_hint(@exported_codes, @site_changed, @changed, @plays)}
+              {generate_hint(@exported_codes, @site_changed, @assets_changed, @changed, @plays)}
             </p>
           </form>
         </div>
@@ -566,7 +567,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
     assign(socket,
       changed: MapSet.new(StaticSite.changed_plays(dir)),
-      site_changed: StaticSite.site_changed?(dir, version: socket.assigns.version)
+      site_changed: StaticSite.site_changed?(dir, version: socket.assigns.version),
+      assets_changed: StaticSite.assets_changed?(dir)
     )
   end
 
@@ -663,7 +665,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   # What Generate will do, under its button. A play in the site but not in `plays`, the
   # complete ones, is archived or no longer complete, and Generate takes it out.
-  defp generate_hint(exported, site_changed?, changed, plays) do
+  defp generate_hint(exported, site_changed?, assets_changed?, changed, plays) do
     removed = MapSet.size(MapSet.difference(exported, MapSet.new(plays, & &1.code)))
 
     cond do
@@ -673,13 +675,22 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       site_changed? ->
         gettext("Rebuilds the %{count} plays in the site.", count: MapSet.size(exported))
 
-      MapSet.size(changed) == 0 and removed == 0 ->
+      MapSet.size(changed) == 0 and removed == 0 and not assets_changed? ->
         gettext("Every play in the site is up to date.")
 
       true ->
-        Enum.join(changed_hint(MapSet.size(changed)) ++ removed_hint(removed), " ")
+        Enum.join(
+          assets_hint(assets_changed?) ++
+            changed_hint(MapSet.size(changed)) ++ removed_hint(removed),
+          " "
+        )
     end
   end
+
+  defp assets_hint(false), do: []
+
+  defp assets_hint(true),
+    do: [gettext("The site's styles and scripts have changed. Generate updates them.")]
 
   defp changed_hint(0), do: []
 

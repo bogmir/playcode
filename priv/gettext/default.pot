@@ -4359,3 +4359,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "note"
 msgstr ""
+
+#: lib/playcode_web/live/admin/export_site_live.ex
+#, elixir-autogen, elixir-format
+msgid "The site's styles and scripts have changed. Generate updates them."
+msgstr ""

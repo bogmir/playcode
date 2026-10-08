@@ -506,6 +506,19 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
                )
     end
 
+    test "assets changed since the build are announced, not as a full rebuild", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      path = Path.join(StaticSite.output_dir(), "build.json")
+      json = path |> File.read!() |> Jason.decode!() |> Map.put("assets", "older")
+      File.write!(path, Jason.encode!(json))
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert render(lv) =~ t("The site's styles and scripts have changed. Generate updates them.")
+      refute render(lv) =~ t("Every play in the site is up to date.")
+    end
+
     test "Generate with nothing changed says so", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       generate(lv)

@@ -201,7 +201,7 @@ defmodule Playcode.Export.StaticSite do
       record =
         if MapSet.size(on_disk) == 0,
           do: built_with(opts),
-          else: Map.take(built, [:site, :version])
+          else: built |> Map.take([:site, :version]) |> Map.put(:assets, Fingerprint.assets())
 
       versions = Map.new(written, &{&1.code, &1.version})
       write_build(dir, record, built.plays |> Map.drop(removes) |> Map.merge(versions))
@@ -267,6 +267,27 @@ defmodule Playcode.Export.StaticSite do
   """
   def site_changed?(dir, opts \\ []),
     do: read_build(dir).site != Fingerprint.current(defaults(opts))
+
+  @doc """
+  Whether the site at `dir` holds other styles, scripts or fonts than `priv/static_site`:
+  `build.json` records another `Fingerprint.assets/0`, or none.
+  """
+  def assets_changed?(dir), do: read_build(dir).assets != Fingerprint.assets()
+
+  @doc """
+  Copies `priv/static_site` into the site at `dir` and records it in `build.json`; no
+  page is written, since none embeds anything of those files but their paths.
+  """
+  def update_assets(dir) do
+    built = read_build(dir)
+    write_assets(dir)
+
+    write_build(
+      dir,
+      built |> Map.take([:site, :version]) |> Map.put(:assets, Fingerprint.assets()),
+      built.plays
+    )
+  end
 
   @doc """
   The `:version` the site at `dir` was built with: the one its fingerprint was computed
@@ -412,13 +433,14 @@ defmodule Playcode.Export.StaticSite do
   defp read_build(dir) do
     with {:ok, json} <- File.read(Path.join(dir, @build)),
          {:ok, %{"plays" => %{} = plays} = build} <- Jason.decode(json) do
-      %{site: build["site"], version: build["version"], plays: plays}
+      %{site: build["site"], version: build["version"], assets: build["assets"], plays: plays}
     else
-      _ -> %{site: nil, version: nil, plays: %{}}
+      _ -> %{site: nil, version: nil, assets: nil, plays: %{}}
     end
   end
 
-  defp built_with(opts), do: %{site: Fingerprint.current(opts), version: opts[:version]}
+  defp built_with(opts),
+    do: %{site: Fingerprint.current(opts), version: opts[:version], assets: Fingerprint.assets()}
 
   defp write_build(dir, built_with, plays) do
     json = built_with |> Map.put(:plays, plays) |> Jason.encode!(pretty: true)
