@@ -306,6 +306,63 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  describe "notes when their text is edited" do
+    setup %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO<note n="2" type="editor"><p>Glosa del título.</p></note></head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg>
+                  <l n="1">Buscad por todas partes<note n="1" type="traductor"><p>Glosa.</p></note> ya</l>
+                </lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: play}
+    end
+
+    defp note_after(play, tag) do
+      for %{in: ^tag, after: text} <- xml_notes(export_tei(play)), do: text
+    end
+
+    test "a line's note follows its word through edits, and stays in the line when the word goes",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      edit = fn from, to ->
+        lv |> element("span[title='#{from}']") |> render_click()
+        lv |> element("form[id^='inline-edit-']") |> render_submit(%{"value" => to})
+      end
+
+      edit.("Buscad por todas partes ya", "Ya buscad por todas partes ya")
+      assert note_after(play, "l") == ["Ya buscad por todas partes"]
+
+      edit.("Ya buscad por todas partes ya", "Ya buscad por todas ya")
+      assert note_after(play, "l") == ["Ya buscad por todas"]
+      assert reading_texts(export_tei(play), "l") == ["Ya buscad por todas ya"]
+    end
+
+    test "a heading's note follows its word when the heading is renamed",
+         %{conn: conn, play: play} do
+      lv = open_structure(conn, play)
+
+      [act] =
+        Regex.run(~r/id="(division-[^"]+)"[^>]*>(?:(?!id="division-).)*ACTO PRIMERO/s, render(lv),
+          capture: :all_but_first
+        )
+
+      lv |> element("##{act} button[aria-label='#{t("Edit metadata")}']") |> render_click()
+      lv |> form("#division-form", division: %{"title" => "EL ACTO PRIMERO"}) |> render_submit()
+
+      assert note_after(play, "head") == ["EL ACTO PRIMERO"]
+    end
+  end
+
   defp gone, do: t("That item no longer exists. The list has been refreshed.")
 
   defp speakers(play) do

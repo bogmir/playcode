@@ -1,7 +1,9 @@
 defmodule Playcode.PlayContent do
   @moduledoc """
   The PlayContent context manages the structured content of plays:
-  characters, divisions (acts/scenes), and elements (speeches, verses, stage directions).
+  characters, divisions (acts/scenes), elements (speeches, verses, stage directions) and
+  their notes. A note sits at a grapheme offset into its anchor's text (`anchor_text/1`);
+  editing that text moves the note with its word.
 
   Every change to a play reaches `{:play_content_changed, play_id}` on its topic
   (`subscribe/1`) once it commits, whoever made it: Postgres notifies `play_changed`
@@ -10,7 +12,7 @@ defmodule Playcode.PlayContent do
 
   import Ecto.Query
   alias Playcode.Repo
-  alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, Note}
+  alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, InlineMarkup, Note}
 
   @pubsub Playcode.PubSub
 
@@ -223,11 +225,10 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Updates a division.
+  Updates a division. Its notes keep their place in its title (`carry_notes/3`).
   """
-  def update_division(%Division{} = division, attrs) do
-    division |> Division.changeset(attrs) |> Repo.update()
-  end
+  def update_division(%Division{} = division, attrs),
+    do: division |> Division.changeset(attrs) |> update_anchor(division_id: division.id)
 
   @doc """
   Deletes a division with its scenes and every element in them.
@@ -351,11 +352,10 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Updates an element.
+  Updates an element. Its notes keep their place in its text (`carry_notes/3`).
   """
-  def update_element(%Element{} = element, attrs) do
-    element |> Element.changeset(attrs) |> Repo.update()
-  end
+  def update_element(%Element{} = element, attrs),
+    do: element |> Element.changeset(attrs) |> update_anchor(element_id: element.id)
 
   @doc """
   Deletes an element and the elements under it.
@@ -383,6 +383,73 @@ defmodule Playcode.PlayContent do
 
   @doc "Deletes a note."
   def delete_note(%Note{} = note), do: Repo.delete(note)
+
+  @doc """
+  The text a note on `anchor` counts its offset in: a division's title, a speech's
+  speaker label, any other element's content.
+  """
+  def anchor_text(%Division{title: title}), do: title
+  def anchor_text(%Element{type: "speech", speaker_label: label}), do: label
+  def anchor_text(%Element{content: content}), do: content
+
+  # Saves an element's or a division's changeset and, in the same transaction, moves its
+  # notes through the change to its text.
+  defp update_anchor(changeset, where) do
+    Repo.transaction(fn ->
+      case Repo.update(changeset) do
+        {:ok, updated} ->
+          carry_notes(where, anchor_text(changeset.data), anchor_text(updated))
+          updated
+
+        {:error, changeset} ->
+          Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  defp carry_notes(_where, same, same), do: :ok
+
+  defp carry_notes(where, old, new) do
+    diff = String.myers_difference(InlineMarkup.plain(old), InlineMarkup.plain(new))
+
+    Note
+    |> where(^where)
+    |> Repo.all()
+    |> Enum.each(fn note ->
+      case carry(note.offset, diff) do
+        offset when offset == note.offset -> :ok
+        offset -> note |> Ecto.Changeset.change(offset: offset) |> Repo.update!()
+      end
+    end)
+  end
+
+  # Where offset `k` of the old text lands in the new one, through
+  # String.myers_difference/2's script: a kept run carries it along (a note at the end of
+  # a run stays after it), an insertion before it pushes it right, and a deletion holding
+  # it leaves it where the deletion was.
+  defp carry(k, diff) do
+    {_old, new, landed} =
+      Enum.reduce(diff, {0, 0, nil}, fn
+        _step, {_old, _new, landed} = done when landed != nil ->
+          done
+
+        {:eq, run}, {old, new, nil} ->
+          length = String.length(run)
+
+          if k <= old + length,
+            do: {old, new, new + k - old},
+            else: {old + length, new + length, nil}
+
+        {:ins, run}, {old, new, nil} ->
+          {old, new + String.length(run), nil}
+
+        {:del, run}, {old, new, nil} ->
+          length = String.length(run)
+          if k < old + length, do: {old, new, new}, else: {old + length, new, nil}
+      end)
+
+    landed || new
+  end
 
   @doc """
   Shifts positions of elements at or after `from_position` up by 1,
