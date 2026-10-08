@@ -228,10 +228,10 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       {play, dir} =
         publish!("""
-        <div1 type="acto" n="1"><head>Acto I</head>
-          <stage>Salen todos<note n="1" type="editor"><p>Del acto.</p></note></stage>
-          <div2 type="escena" n="1"><head>Escena<note n="2" type="traductor"><p>Del título.</p></note> 1</head><sp><speaker>A</speaker><p>#{words}uno<note n="3" type="editor"><p>De la escena uno.</p></note></p></sp></div2>
-          <div2 type="escena" n="2"><head>Escena 2</head><sp><speaker>B</speaker><p>#{words}dos<note n="4" type="editor"><p>De la escena dos.</p></note></p></sp></div2>
+        <div1 type="acto" n="1"><head>Acto I<note n="1" type="autor"><p>Del encabezado.</p></note></head>
+          <stage>Salen todos<note n="2" type="editor"><p>Del acto.</p></note></stage>
+          <div2 type="escena" n="1"><head>Escena<note n="3" type="traductor"><p>Del título.</p></note> 1</head><sp><speaker>A<note n="4" type="editor_critico"><p>Del hablante.</p></note></speaker><p>#{words}uno<note n="5" type="editor_digital"><p>De la escena uno.</p></note></p></sp></div2>
+          <div2 type="escena" n="2"><head>Escena 2</head><sp><speaker>B</speaker><p>#{words}dos<note n="6" type="editor"><p>De la escena dos.</p></note></p></sp></div2>
         </div1>
         <div1 type="acto" n="2"><head>Acto II</head><sp><speaker>A</speaker><p>fin</p></sp></div1>
         """)
@@ -264,11 +264,48 @@ defmodule Playcode.Export.StaticSitePlayTest do
         page(dir, play, file) |> LazyHTML.query("li[popover]") |> LazyHTML.attribute("id")
       end
 
-      assert listed.("act-1.html") == ["note-1"]
-      assert listed.("act-1-s1.html") == ["note-2", "note-3"]
-      assert listed.("act-1-s2.html") == ["note-4"]
+      # The act's own page lists its heading's and its stage direction's; a scene's page
+      # lists the act heading it prints again, then its own, the speaker's before the lines'.
+      assert listed.("act-1.html") == ["note-1", "note-2"]
+      assert listed.("act-1-s1.html") == ["note-1", "note-3", "note-4", "note-5"]
+      assert listed.("act-1-s2.html") == ["note-1", "note-6"]
       assert listed.("act-2.html") == []
-      assert listed.("text.html") == ["note-1", "note-2", "note-3", "note-4"]
+      assert listed.("text.html") == Enum.map(1..6, &"note-#{&1}")
+    end
+
+    test "puts each note's number where its text is: heading, stage direction, speaker, line",
+         %{play: play, dir: dir} do
+      # The note a button opens, by the button's label, and the tag it sits in.
+      opens = fn page, label, within ->
+        page
+        |> LazyHTML.query(~s(#{within} button[aria-label="#{label}"]))
+        |> LazyHTML.attribute("popovertarget")
+      end
+
+      split = page(dir, play, "act-1.html")
+      assert opens.(split, "Author's note 1", "h2") == ["note-1"]
+      assert opens.(split, "Editor's note 2", "main") == ["note-2"]
+      assert squish(LazyHTML.text(split)) =~ "Salen todos2"
+
+      for file <- ["act-1-s1.html", "act-1-s2.html", "text.html"] do
+        scene = page(dir, play, file)
+        assert opens.(scene, "Author's note 1", "h2") == ["note-1"], file
+      end
+
+      for file <- ["act-1-s1.html", "text.html"] do
+        scene = page(dir, play, file)
+        assert opens.(scene, "Translator's note 3", "h3") == ["note-3"], file
+        assert opens.(scene, "Critical editor's note 4", "main") == ["note-4"], file
+        assert opens.(scene, "Digital editor's note 5", "main") == ["note-5"], file
+        assert squish(LazyHTML.text(scene)) =~ "Escena3 1"
+        assert squish(LazyHTML.text(scene)) =~ "A4 palabra"
+      end
+
+      for file <- ["act-1-s2.html", "text.html"] do
+        scene = page(dir, play, file)
+        assert opens.(scene, "Editor's note 6", "main") == ["note-6"], file
+        assert squish(LazyHTML.text(scene)) =~ "palabra dos6"
+      end
     end
 
     test "the full text still holds every scene, once", %{play: play, dir: dir} do
