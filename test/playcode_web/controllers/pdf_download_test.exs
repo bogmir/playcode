@@ -124,5 +124,9 @@ defmodule PlaycodeWeb.PdfDownloadTest do
     assert_received {:rendering, _code, _first}
     assert_received {:rendering, _code, renderer}
     send(renderer, :release)
+
+    # Waits for the render: left running, it ends during the next test, holding the one
+    # render PdfCache allows and writing into the folder that test's setup empties.
+    assert response(get(conn, ~p"/admin/plays/#{other.id}/export/pdf"), 200) =~ "%PDF"
   end
 end
