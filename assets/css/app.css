@@ -196,6 +196,7 @@
 
 .play-notes [popover] {
   max-width: min(32rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - 2rem);
   padding: 1rem 1.25rem;
   border: 1px solid var(--color-base-300);
   border-radius: var(--radius-box);
