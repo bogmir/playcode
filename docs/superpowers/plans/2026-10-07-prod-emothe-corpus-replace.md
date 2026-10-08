@@ -21,6 +21,7 @@
 ## Review Focus
 
 - **The machine stops mid-import.** `fly.toml` has `auto_stop_machines = 'stop'` and `min_machines_running = 0`, and an ssh session is not traffic. Task 2 turns autostop off; if the machine restarts anyway (OOM), `/data` keeps the files and re-running `import` resumes.
+- **The shared CPU throttles.** A shared vCPU runs at 6.25% of a core once its 500 s burst balance is spent; a large play's import then holds its database connection past the 60 s timeout and rolls back (2026-10-07: half the plays after the first 19). Run the import on `performance-1x` (`flyctl scale vm performance-1x -a playcode`, $0.052/hour in cdg; it restarts the machine) and scale back afterwards (`flyctl scale vm shared-cpu-1x --vm-memory 1024 -a playcode`). Any `fly deploy` meanwhile resets the size and autostop from `fly.toml` and restarts the machine, so push nothing to `main` during the run.
 - **The ssh session drops.** `import.exs` runs in an unlinked `Task` with its own group leader, and progress goes to `flyctl logs`, not to the session.
 - **Production holds hand-made data the local database did not.** The wipe deletes hand-entered editors, sources, notes, play places and curated `form` values on EMOTHE plays, and every EMOTHE play that is not in the folder. Task 3's inventory prints all of these and is a stop point.
 - **A stray file gets imported.** Task 4 asserts 370 files and zero repeated codes before anything is uploaded.
@@ -336,6 +337,31 @@ Expected: about 250 plays to change (locally, 248 on the first pass), **0 confli
 Apply. Upload the same file again.
 Expected: `0 to change`.
 
+### Task 7b: Link the FileMaker bibliography (S4)
+
+The release (from `88383aa` on) carries `Playcode.Release.import_bibliography/2`. It reads six tables of the `ctce_dades` dump and writes in one transaction with `timeout: :infinity`; a play that already has FileMaker links is skipped whole, so re-running is safe.
+
+- [ ] **Step 1: Upload the six tables**
+
+```bash
+D=~/playcode-prod-replace/ctce_dades; mkdir -p $D
+cp doc/ctce_dades/{T12_ObraBibliografiaSelecta,T12.1_BibliografiaSelecta,T04_ObraModernaRecomendada,T04.1_EdModerna,T13.1_Ciudad,T13.2_Editorial}.xml $D/
+tar czf ~/playcode-prod-replace/ctce_dades.tgz -C ~/playcode-prod-replace ctce_dades
+flyctl ssh sftp put ~/playcode-prod-replace/ctce_dades.tgz /data/replace/ctce_dades.tgz -a playcode
+flyctl ssh console -a playcode -C "tar xzf /data/replace/ctce_dades.tgz -C /data/replace"
+```
+
+and two scripts, `scripts/biblio_dry.exs` (`Playcode.Release.import_bibliography("/data/replace/ctce_dades", dry_run: true)`) and `scripts/biblio.exs` (the same without `dry_run`), uploaded with `flyctl ssh sftp put` to `/data/replace/scripts/`.
+
+- [ ] **Step 2: Dry run, then write**
+
+```bash
+flyctl ssh console -a playcode -C "sh /data/replace/run.sh biblio_dry"
+flyctl ssh console -a playcode -C "sh /data/replace/run.sh biblio"
+```
+
+Expected: about 2,700 entries and 2,800 links on about 114 plays (the local database, with the same corpus less EMOTHE0277 and without 0784/0785: 2,723 entries, 2,795 links, 114 plays), then `created N entries and M links`.
+
 ### Task 8: Mark every EMOTHE play complete
 
 - [ ] **Step 1: Mark**
@@ -354,6 +380,8 @@ Expected: `EMOTHE complete: 372`.
 
 Open https://playcode.fly.dev/admin/export, press Generate, and keep the page open.
 Expected: the play count above Preview reads 372, plus the AL play if it is complete; the size is about 465 MB.
+
+- [ ] **What happened on 2026-10-08:** the first Generate rebuilt only the 15 plays already in `/data/site` (a changed site rebuilds the plays *in* it; only an empty site gets every complete play), so `/data/site` was emptied and Generate run again. That build was OOM-killed at 2 GB while writing the search index; at 4 GB it finished: 372 plays, 496 MB, 665 shards. Measured locally: a full build peaks at 2.2 GB, one play's switch at 0.9 GB, so `fly.toml` got `swap_size_mb = 2048` to keep the 1 GB machine from being killed.
 
 - [ ] **Step 2: If the build dies**
 
@@ -383,6 +411,7 @@ Press Deploy on `/admin/export` and wait for the published address.
 flyctl ssh console -a playcode -C "rm -rf /data/replace /data/replace.tgz"
 flyctl ssh console -a emothe-db-1g -C "rm /tmp/emothe-before-replace.dump"
 flyctl machine update 7847063c04e7e8 --autostop=stop -a playcode --yes
+flyctl scale vm shared-cpu-1x --vm-memory 1024 -a playcode   # if Task 6 scaled it up
 ```
 
 Keep `~/playcode-prod-replace/emothe-before-replace.dump` until the new corpus has been in use for a while. If Task 9 scaled memory to 2 GB, decide whether to keep it (Generate needs it again) or `flyctl scale memory 1024 -a playcode`.
