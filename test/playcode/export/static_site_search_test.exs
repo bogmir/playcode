@@ -126,6 +126,48 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     assert shard["120"] == [0, 1, 238]
   end
 
+  # The build holds every play's postings until it writes the index. As lists of
+  # {line, flag} tuples, 40 bytes each, the 6.3 million of 371 plays took 455 MB, and the
+  # index written from them peaked at 1.7 GB on a 1 GB machine (2026-10-08).
+  test "the build holds a play's postings compactly until it writes the index" do
+    lines = Enum.map_join(1..2000, "", &~s(<l n="#{&1}">sueño vida honra amor muerte</l>))
+
+    play =
+      import_tei!(
+        tei(body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{lines}</sp></div1>))
+      )
+
+    dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm_rf(dir) end)
+    test = self()
+
+    # What survives a full collection of the process running the build: exact, not the
+    # heap's rounded-up size.
+    live = fn ->
+      :erlang.garbage_collect()
+      {:garbage_collection_info, info} = Process.info(self(), :garbage_collection_info)
+      info[:recent_size] * :erlang.system_info(:wordsize)
+    end
+
+    on_progress = fn
+      %{step: :assets} -> Process.put(:live_before_plays, live.())
+      %{step: :catalogue} -> send(test, {:held, live.() - Process.get(:live_before_plays)})
+      _ -> :ok
+    end
+
+    assert {:ok, _} =
+             Playcode.Export.StaticSite.generate(
+               output_dir: dir,
+               play_codes: [play.code],
+               all: true,
+               on_progress: on_progress
+             )
+
+    # 10,000 postings: 400 KB as tuples.
+    assert_received {:held, held}
+    assert held < 100_000
+  end
+
   test "adding a play to a generated site adds it to the index" do
     first =
       import_tei!(
@@ -200,6 +242,29 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       assert first_index == 1
       assert [1, 1, _] = shard["primero"]
       refute File.exists?(Path.join([dir, "search", "index", "na.js"]))
+    end
+
+    test "a word on several lines keeps every line when it is carried over",
+         %{second: second} do
+      lines = Enum.map_join(1..3, "", &~s(<l n="#{&1}">sueño #{&1}</l>))
+
+      three =
+        import_tei!(
+          tei(
+            title: "Zeta",
+            body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{lines}</sp></div1>)
+          )
+        )
+
+      dir = generate!([three], all: true)
+      {"index", "su", before} = load_js!(dir, "search/index/su.js")
+      assert before["sueño"] == [0, 3, 0, 2, 2]
+
+      :ok = Playcode.Export.StaticSite.generate_single_play(second.id, output_dir: dir)
+
+      # "Alfa" (second) is play 0 now; Zeta's three lines follow, as they were.
+      {"index", "su", shard} = load_js!(dir, "search/index/su.js")
+      assert shard["sueño"] == [0, 1, 0, 1, 3, 0, 2, 2]
     end
 
     test "a published play with no text does not switch the incremental index off",

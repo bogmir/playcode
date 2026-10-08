@@ -8,9 +8,9 @@ primary_region = 'cdg'
 kill_signal = 'SIGTERM'
 kill_timeout = '30s'
 
-# With 372 plays the static site outgrows 1 GB: one play's switch peaks near 0.9 GB and a
-# full Generate near 2.2 GB (measured 2026-10-08; it was OOM-killed at 2 GB). Swap lets
-# those finish, slower, instead of killing the app.
+# A safety net. With 372 plays a full Generate once peaked near 2.2 GB and was OOM-killed
+# at 2 GB (2026-10-08); since the search index is written shard by shard it peaks near
+# 220 MB, and one play's switch near 150 MB (dev corpus, one scheduler).
 swap_size_mb = 2048
 
 [build]
