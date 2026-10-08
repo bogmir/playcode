@@ -42,6 +42,9 @@ defmodule Playcode.Export.StaticSite do
   Options: `:output_dir` (default `"_site"`), `:play_codes` (default all), `:all`
   (include incomplete plays), `:version` (default `"1.0"`), `:build_date` (ISO date,
   default today), `:on_progress` (`fun(progress_info) -> any`).
+
+  Writes into `<output_dir>.new` and renames it over `output_dir` once finished, so a
+  build that fails or is killed leaves the previous site untouched.
   """
   def generate(opts \\ []) do
     in_english(fn ->
@@ -53,8 +56,10 @@ defmodule Playcode.Export.StaticSite do
         {:error, "no plays to export (none marked as complete)"}
       else
         Enum.each(plays, &safe_code!(&1.code))
-        dir = opts[:output_dir]
-        File.rm_rf!(dir)
+        # Built beside the site and swapped in at the end: a build cut short (out of
+        # memory, a restart) leaves the site it was replacing as it was.
+        site_dir = opts[:output_dir]
+        dir = clear_beside(site_dir)
         File.mkdir_p!(Path.join(dir, "plays"))
 
         opts[:on_progress].(%{
@@ -94,18 +99,38 @@ defmodule Playcode.Export.StaticSite do
         # results is not used past here, so the index can let go of postings as it goes:
         # 58 MB less at the peak of a 371-play build.
         report = write_search(plays, Map.new(results, &{&1.code, &1.postings}), dir)
-        # Last: a build cut short leaves no record, so the next Generate rebuilds it all.
         write_build(dir, built_with(opts), versions)
+        swap_in(dir, site_dir)
 
         {:ok,
          Map.merge(report, %{
            plays: total,
-           size: dir_size(dir),
-           output_dir: dir,
+           size: dir_size(site_dir),
+           output_dir: site_dir,
            largest_page_gzip: largest
          })}
       end
     end)
+  end
+
+  # The folder a build writes into, beside `site_dir`, emptied of what a build cut short
+  # left: its own unfinished site, and the old one a swap died before deleting (put back
+  # if the site itself is missing).
+  defp clear_beside(site_dir) do
+    old = site_dir <> ".old"
+    if File.dir?(old) and not File.dir?(site_dir), do: File.rename!(old, site_dir)
+    File.rm_rf!(old)
+    File.rm_rf!(site_dir <> ".new")
+    site_dir <> ".new"
+  end
+
+  # Puts the finished build in place of the site. The second rename follows the first
+  # at once; a fully atomic swap would need a symlink.
+  defp swap_in(built, site_dir) do
+    old = site_dir <> ".old"
+    if File.exists?(site_dir), do: File.rename!(site_dir, old)
+    File.rename!(built, site_dir)
+    File.rm_rf!(old)
   end
 
   @doc """

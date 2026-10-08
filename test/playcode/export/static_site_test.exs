@@ -332,6 +332,53 @@ defmodule Playcode.Export.StaticSiteTest do
     assert page > 0 and index > 0 and shard > 0
   end
 
+  # A Generate cut short (out of memory, a restart) used to leave whatever it had written
+  # after deleting the site: some plays, no catalogue, no search, no build.json.
+  test "a build cut short leaves the site it was replacing as it was" do
+    play = complete_play()
+    dir = generate!([play])
+
+    before =
+      for path <- Path.wildcard(Path.join(dir, "**")),
+          into: %{},
+          do: {path, File.stat!(path).size}
+
+    assert_raise RuntimeError, fn ->
+      StaticSite.generate(
+        output_dir: dir,
+        play_codes: [play.code],
+        on_progress: fn
+          %{step: :play} -> raise "cut short"
+          _ -> :ok
+        end
+      )
+    end
+
+    after_ =
+      for path <- Path.wildcard(Path.join(dir, "**")),
+          into: %{},
+          do: {path, File.stat!(path).size}
+
+    assert after_ == before
+  end
+
+  test "the next build clears what a cut-short one left beside the site" do
+    play = complete_play()
+    dir = generate!([play])
+
+    for leftover <- [dir <> ".new", dir <> ".old"] do
+      File.mkdir_p!(leftover)
+      File.write!(Path.join(leftover, "stray.html"), "")
+    end
+
+    assert {:ok, _} = StaticSite.generate(output_dir: dir, play_codes: [play.code])
+
+    assert File.exists?(Path.join(dir, "build.json"))
+    refute File.exists?(Path.join(dir, "stray.html"))
+    refute File.exists?(dir <> ".new")
+    refute File.exists?(dir <> ".old")
+  end
+
   # The export page's progress bar moves on these. Reported only once the last play was
   # built, it sat at "Writing assets..." for the whole of a 372-play Generate.
   test "each play is reported as it is built, while the plays after it wait" do
