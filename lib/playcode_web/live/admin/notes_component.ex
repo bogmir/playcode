@@ -40,6 +40,10 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
   def handle_event("cancel_note", _params, socket),
     do: {:noreply, assign(socket, editing: nil, form: nil)}
 
+  # A second submit (a double click, a second tab) of a form that has closed.
+  def handle_event("save_note", _params, %{assigns: %{editing: nil}} = socket),
+    do: {:noreply, socket}
+
   def handle_event("save_note", %{"note" => params}, socket) do
     %{editing: note, anchor: anchor, play_id: play_id} = socket.assigns
     params = Map.take(params, ~w(offset type term body))
@@ -56,7 +60,9 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
         {:noreply, assign(socket, editing: nil, form: nil, notes: PlayContent.list_notes(anchor))}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset))}
+        if gone?(changeset),
+          do: {:noreply, socket |> gone() |> assign(editing: nil, form: nil)},
+          else: {:noreply, assign(socket, form: to_form(changeset))}
     end
   end
 
@@ -66,14 +72,29 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
         {:noreply, gone(socket)}
 
       note ->
-        {:ok, _} = PlayContent.delete_note(note)
-        log(socket, "delete", note)
-        {:noreply, assign(socket, notes: PlayContent.list_notes(socket.assigns.anchor))}
+        case PlayContent.delete_note(note) do
+          {:ok, _} ->
+            log(socket, "delete", note)
+            {:noreply, assign(socket, notes: PlayContent.list_notes(socket.assigns.anchor))}
+
+          {:error, _stale} ->
+            {:noreply, gone(socket)}
+        end
     end
   end
 
-  # One of this anchor's notes: the id comes from the browser.
-  defp own_note(socket, id), do: Enum.find(socket.assigns.notes, &(&1.id == id))
+  # One of this anchor's notes: the id comes from the browser, and the list in the socket
+  # may be stale, so it is read afresh.
+  defp own_note(socket, id),
+    do: socket.assigns.anchor |> PlayContent.list_notes() |> Enum.find(&(&1.id == id))
+
+  # The note, or the line it hangs on, was deleted meanwhile (another tab, another
+  # curator): Repo.update/delete's stale error, or the insert's foreign key.
+  defp gone?(changeset) do
+    Enum.any?(changeset.errors, fn {_field, {_message, opts}} ->
+      opts[:stale] == true or opts[:constraint] == :foreign
+    end)
+  end
 
   # The note the event named is not this anchor's: the list reloads, and the editor says so
   # (LiveHelpers.put_gone_flash/1; a component's own flash would never be shown).

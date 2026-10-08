@@ -106,5 +106,7 @@ defmodule Playcode.PlayContent.Note do
     |> validate_required([:offset, :body, :play_id])
     |> validate_number(:offset, greater_than_or_equal_to: 0)
     |> check_constraint(:element_id, name: :one_anchor)
+    |> foreign_key_constraint(:element_id)
+    |> foreign_key_constraint(:division_id)
   end
 end

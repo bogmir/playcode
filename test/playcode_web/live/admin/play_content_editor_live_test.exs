@@ -582,6 +582,93 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  describe "the note editor, when what it shows was deleted elsewhere" do
+    # A play with one noted line, the note editor open on it. Returns the line too.
+    defp open_noted_line(conn) do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg>
+                  <l n="1">Una línea<note n="1" type="editor"><p>Glosa.</p></note></l>
+                </lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      line = row(play, &(Map.get(&1, :content) == "Una línea"))
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Una línea")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      {lv, play, line}
+    end
+
+    # Another tab, or another curator, deletes the line's notes.
+    defp delete_notes_behind_its_back(line) do
+      for note <- Playcode.PlayContent.list_notes(line),
+          do: {:ok, _} = Playcode.PlayContent.delete_note(note)
+    end
+
+    test "deleting a note that is already gone reloads the list and says so",
+         %{conn: conn} do
+      {lv, _play, line} = open_noted_line(conn)
+      delete_notes_behind_its_back(line)
+
+      lv |> element("#{notes_section()} button", t("Delete")) |> render_click()
+
+      assert render(lv) =~ gone()
+      refute has_element?(lv, "#{notes_section()} button", t("Delete"))
+    end
+
+    test "changing a note that is already gone reloads the list and says so",
+         %{conn: conn} do
+      {lv, _play, line} = open_noted_line(conn)
+
+      lv |> element("#{notes_section()} button", t("Edit")) |> render_click()
+      delete_notes_behind_its_back(line)
+
+      lv |> form("#note-form", note: %{"body" => "Glosa nueva."}) |> render_submit()
+
+      assert render(lv) =~ gone()
+      refute has_element?(lv, "#{notes_section()} button", t("Edit"))
+    end
+
+    test "adding a note to a line that is already gone says so", %{conn: conn} do
+      {lv, play, line} = open_noted_line(conn)
+
+      lv |> element("#{notes_section()} button", t("Add note")) |> render_click()
+      {:ok, _} = Playcode.PlayContent.delete_element(line)
+
+      lv |> form("#note-form", note: %{"body" => "Glosa."}) |> render_submit()
+
+      assert render(lv) =~ gone()
+      assert xml_notes(export_tei(play)) == []
+    end
+
+    test "a second submit of a form already saved changes nothing", %{conn: conn} do
+      {lv, play, _line} = open_noted_line(conn)
+
+      lv |> element("#{notes_section()} button", t("Add note")) |> render_click()
+      lv |> form("#note-form", note: %{"body" => "Nueva."}) |> render_submit()
+      saved = xml_notes(export_tei(play))
+      assert length(saved) == 2
+
+      # What a double click, or a second tab, sends once the form has closed.
+      lv
+      |> with_target(notes_section())
+      |> render_hook("save_note", %{"note" => %{"body" => "Otra vez."}})
+
+      assert xml_notes(export_tei(play)) == saved
+    end
+  end
+
   defp gone, do: t("That item no longer exists. The list has been refreshed.")
 
   defp speakers(play) do

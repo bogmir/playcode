@@ -384,7 +384,8 @@ defmodule Playcode.PlayContent do
 
   @doc """
   Updates a note. One moved to another offset goes after the notes already there; any
-  other change leaves it where it is among them.
+  other change leaves it where it is among them. A note deleted meanwhile comes back as
+  `{:error, changeset}` with a stale error on `:id`.
   """
   def update_note(%Note{} = note, attrs) do
     changeset = Note.changeset(note, attrs)
@@ -394,11 +395,11 @@ defmodule Playcode.PlayContent do
         do: put_next_position(changeset),
         else: changeset
 
-    Repo.update(changeset)
+    Repo.update(changeset, stale_error_field: :id)
   end
 
-  @doc "Deletes a note."
-  def delete_note(%Note{} = note), do: Repo.delete(note)
+  @doc "Deletes a note; one already deleted comes back as `{:error, changeset}`, not a raise."
+  def delete_note(%Note{} = note), do: Repo.delete(note, stale_error_field: :id)
 
   # `position` orders the notes at one offset of one anchor, and the public numbering, the
   # pop-ups and the TEI export follow it, so a note must not tie with another.
