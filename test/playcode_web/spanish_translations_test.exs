@@ -1,12 +1,23 @@
 defmodule PlaycodeWeb.SpanishTranslationsTest do
   @moduledoc """
-  Gettext ignores a fuzzy entry, so the page shows the English msgid instead.
-  `mix gettext.extract --merge` marks a new message fuzzy when it resembles an old one
-  and copies that one's translation, often wrongly: "Add the first editor" became
-  "Añadir la primera fuente". Review each one, translate it, and remove the flag.
+  Guards the Spanish translations against `fuzzy` entries.
 
-  The English files are left alone: an English fuzzy entry has an empty msgstr and falls
-  back to its msgid, which is the English text.
+  A PO entry pairs a msgid, the English text in the code, with a msgstr, its Spanish.
+  When `mix gettext.extract --merge` meets a new msgid that looks like an old one, it
+  copies the old msgstr and flags the entry fuzzy, meaning "a guess, check me":
+
+      #, elixir-autogen, elixir-format, fuzzy
+      msgid "Add the first editor"
+      msgstr "Añadir la primera fuente"
+
+  Gettext never uses a fuzzy msgstr, so the page shows the English msgid, and the guess
+  is often wrong anyway: this one says "source". 29 had piled up unnoticed.
+
+  When this test fails, open `priv/gettext/es/LC_MESSAGES/default.po`, find each msgid it
+  lists, write the right Spanish and delete `, fuzzy` from the line above it.
+
+  The English files are left alone: an English msgstr is empty, so it falls back to the
+  msgid, which is already the English text.
   """
   use ExUnit.Case, async: true
 
