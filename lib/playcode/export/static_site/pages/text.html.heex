@@ -16,5 +16,8 @@
       edition={@edition}
       division={page.division}
     />
+    <Components.endnotes notes={
+      @edition.pages |> Enum.reject(& &1.scene) |> Enum.map(& &1.division) |> Note.reading_order()
+    } />
   </div>
 </Components.shell>

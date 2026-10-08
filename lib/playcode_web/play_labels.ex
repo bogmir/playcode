@@ -12,6 +12,7 @@ defmodule PlaycodeWeb.PlayLabels do
 
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
+  alias Playcode.PlayContent.Note
   alias Playcode.Places.{Place, PlayPlace}
 
   @doc "The Spanish-or-English name of a historical period slug."
@@ -30,6 +31,18 @@ defmodule PlaycodeWeb.PlayLabels do
   def historical_time_options do
     [{"", nil} | Enum.map(Play.historical_times(), &{historical_time_label(&1), &1})]
   end
+
+  @doc "The heading of a note of TEI `type`, as readers see it."
+  def note_type_label("traductor"), do: gettext("Translator's note")
+  def note_type_label("editor"), do: gettext("Editor's note")
+  def note_type_label("editor_critico"), do: gettext("Critical editor's note")
+  def note_type_label("editor_digital"), do: gettext("Digital editor's note")
+  def note_type_label("autor"), do: gettext("Author's note")
+  def note_type_label(_other), do: gettext("Note")
+
+  @doc "`{label, type}` pairs for a select: an untyped note first, then the corpus's types."
+  def note_type_options,
+    do: [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]
 
   @doc "The name of a play's form, as `Play.form/1` gives it."
   def form_label("verse"), do: gettext("Verse")

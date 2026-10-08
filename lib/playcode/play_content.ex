@@ -551,7 +551,7 @@ defmodule Playcode.PlayContent do
 
     elements_by_division = Enum.group_by(elements, & &1.division_id)
 
-    attach_elements(divisions, elements_by_division)
+    divisions |> attach_elements(elements_by_division) |> number_notes()
   end
 
   # --- Element-Character associations ---
@@ -604,4 +604,36 @@ defmodule Playcode.PlayContent do
       %{div | children: children, loaded_elements: elements}
     end)
   end
+
+  # Gives each note its `number`: its place in Note.reading_order/1, from 1.
+  defp number_notes(divisions) do
+    numbers =
+      divisions
+      |> Note.reading_order()
+      |> Enum.with_index(1)
+      |> Map.new(fn {note, number} -> {note.id, number} end)
+
+    Enum.map(divisions, &number_division(&1, numbers))
+  end
+
+  defp number_division(division, numbers) do
+    %{
+      division
+      | notes: number(division.notes, numbers),
+        loaded_elements: Enum.map(division.loaded_elements, &number_element(&1, numbers)),
+        children: Enum.map(division.children, &number_division(&1, numbers))
+    }
+  end
+
+  defp number_element(element, numbers) do
+    children =
+      case element.children do
+        %Ecto.Association.NotLoaded{} = not_loaded -> not_loaded
+        children -> Enum.map(children, &number_element(&1, numbers))
+      end
+
+    %{element | notes: number(element.notes, numbers), children: children}
+  end
+
+  defp number(notes, numbers), do: Enum.map(notes, &%{&1 | number: numbers[&1.id]})
 end

@@ -202,6 +202,14 @@ main td { padding: .3rem .5rem; border-bottom: 1px solid var(--hair-2); }
 .hit .stage { font-style: italic; color: var(--ink-2); }
 mark { background: var(--mark); color: var(--accent); font-weight: 600; padding: 0 .1em; border-radius: 2px; }
 
+/* In-text notes: the number after a glossed word opens its note, a popover. In print,
+   and where popover is unsupported, the notes are the page's endnotes. */
+.nref { font: 600 .62em/0 var(--sans); vertical-align: super; padding: 0 .12em; border: 0; background: none; color: var(--accent); cursor: pointer; }
+.notes ol { margin: 0; padding: 0; }
+.notes [popover] { max-width: min(34rem, calc(100vw - 2rem)); padding: 1rem 1.25rem; border: 1px solid var(--hair); border-radius: 6px; background: var(--raised); color: var(--ink); font: .875rem/1.55 var(--sans); }
+.notes [popover] > button { float: right; margin: -.4rem -.5rem 0 .5rem; border: 0; background: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; }
+.notes [popover] p { margin: .5em 0 0; }
+
 @media (max-width: 600px) {
   :root { --gutter: 2.4rem; --margin: 0rem; }
   .l .margin { display: none; }
@@ -219,4 +227,7 @@ mark { background: var(--mark); color: var(--accent); font-weight: 600; padding:
   .division + .division { break-before: page; }
   .l { break-inside: avoid; }
   a { color: inherit; text-decoration: none; }
+  .nref { color: inherit; }
+  .notes [popover] { display: list-item; position: static; inset: auto; width: auto; height: auto; overflow: visible; margin: 0 0 .6em 1.5em; padding: 0; border: 0; max-width: none; background: none; }
+  .notes [popover] > button { display: none; }
 }

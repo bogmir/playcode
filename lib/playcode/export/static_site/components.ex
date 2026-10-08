@@ -9,7 +9,7 @@ defmodule Playcode.Export.StaticSite.Components do
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Edition, Search}
-  alias Playcode.PlayContent.{Element, InlineMarkup}
+  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
   attr :root, :string,
@@ -378,10 +378,14 @@ defmodule Playcode.Export.StaticSite.Components do
   def division_text(assigns) do
     ~H"""
     <section class="division" id={@edition.anchors[@division.id]}>
-      <h2 :if={@division.title} class="act-head">{@division.title}</h2>
+      <h2 :if={@division.title} class="act-head">
+        <.inline text={@division.title} notes={@division.notes} />
+      </h2>
       <.el :for={el <- @division.loaded_elements} el={el} edition={@edition} />
       <section :for={scene <- @division.children} id={@edition.anchors[scene.id]}>
-        <h3 :if={scene.title} class="scene-head">{scene.title}</h3>
+        <h3 :if={scene.title} class="scene-head">
+          <.inline text={scene.title} notes={scene.notes} />
+        </h3>
         <.el :for={el <- scene.loaded_elements} el={el} edition={@edition} />
       </section>
     </section>
@@ -414,7 +418,9 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <section class="division" id={@edition.anchors[@page.division.id]}>
-      <h2 :if={@page.division.title} class="act-head">{@page.division.title}</h2>
+      <h2 :if={@page.division.title} class="act-head">
+        <.inline text={@page.division.title} notes={@page.division.notes} />
+      </h2>
       <.el :for={el <- @page.division.loaded_elements} el={el} edition={@edition} />
       <nav aria-label="Scenes">
         <ul>
@@ -430,9 +436,13 @@ defmodule Playcode.Export.StaticSite.Components do
   def page_text(assigns) do
     ~H"""
     <section class="division">
-      <h2 :if={@page.division.title} class="act-head">{@page.division.title}</h2>
+      <h2 :if={@page.division.title} class="act-head">
+        <.inline text={@page.division.title} notes={@page.division.notes} />
+      </h2>
       <section id={@edition.anchors[@page.scene.id]}>
-        <h3 :if={@page.scene.title} class="scene-head">{@page.scene.title}</h3>
+        <h3 :if={@page.scene.title} class="scene-head">
+          <.inline text={@page.scene.title} notes={@page.scene.notes} />
+        </h3>
         <.el :for={el <- @page.scene.loaded_elements} el={el} edition={@edition} />
       </section>
     </section>
@@ -447,7 +457,9 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <div class="sp" data-who={@who}>
-      <p :if={@el.speaker_label} class="spk">{@el.speaker_label}</p>
+      <p :if={@el.speaker_label} class="spk">
+        <.inline text={@el.speaker_label} notes={@el.notes} />
+      </p>
       <.el :for={child <- @el.children} el={child} edition={@edition} />
     </div>
     """
@@ -474,19 +486,19 @@ defmodule Playcode.Export.StaticSite.Components do
       )
 
     ~H"""
-    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true">{@ghost} </span><.inline text={@el.content} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
+    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true">{@ghost} </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
     """
   end
 
   defp el(%{el: %{type: "stage_direction"}} = assigns) do
     ~H"""
-    <p class="sd" id={@edition.anchors[@el.id]}><.inline text={@el.content} /></p>
+    <p class="sd" id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
     """
   end
 
   defp el(%{el: %{type: "prose"}} = assigns) do
     ~H"""
-    <p class="pr" id={@edition.anchors[@el.id]}><.inline text={@el.content} /></p>
+    <p class="pr" id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
     """
   end
 
@@ -500,9 +512,10 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   attr :text, :string, default: nil
+  attr :notes, :list, default: []
 
   def inline(assigns) do
-    assigns = assign(assigns, :parts, InlineMarkup.parts(assigns.text))
+    assigns = assign(assigns, :parts, InlineMarkup.parts(assigns.text, assigns.notes))
 
     # Built as iodata, not a template: the formatter indents EEx blocks, and the
     # whitespace it adds between a word and its <em> would be visible.
@@ -511,12 +524,56 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
+  # A note's marker: its number, a button that opens the note (endnotes/1) as a popover.
+  defp part(%{note: note}) do
+    number = Integer.to_string(note.number)
+    label = escape("#{PlayLabels.note_type_label(note.type)} #{number}")
+
+    [
+      ~s(<button type="button" class="nref" popovertarget="note-),
+      number,
+      ~s(" aria-label="),
+      label,
+      ~s(">),
+      number,
+      "</button>"
+    ]
+  end
+
   defp part(%{italic: true, text: text}),
     do: ["<em>", escape(text), "</em>"]
 
   defp part(%{text: text}), do: escape(text)
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
+
+  attr :notes, :list, required: true
+
+  @doc """
+  A page's notes. Each is a popover its marker opens (`part/1`); in print, and in a
+  browser without popover, they are the page's endnotes.
+  """
+  def endnotes(assigns) do
+    ~H"""
+    <section :if={@notes != []} class="notes" role="doc-endnotes" aria-label="Notes">
+      <ol>
+        <li :for={note <- @notes} id={"note-#{note.number}"} popover value={note.number}>
+          <button
+            type="button"
+            popovertarget={"note-#{note.number}"}
+            popovertargetaction="hide"
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <b>{PlayLabels.note_type_label(note.type)}</b>
+          <i :if={note.term}><.inline text={note.term} /></i>
+          <p :for={paragraph <- Note.paragraphs(note)}><.inline text={paragraph} /></p>
+        </li>
+      </ol>
+    </section>
+    """
+  end
 
   attr :stats, :map, required: true
 

@@ -7,6 +7,7 @@ defmodule Playcode.Export.StaticSiteTest do
   use Playcode.DataCase, async: true
 
   import Playcode.TestFixtures
+  import Playcode.ImportHelpers
   import Playcode.StaticSiteHelpers
 
   alias Playcode.Catalogue
@@ -489,5 +490,60 @@ defmodule Playcode.Export.StaticSiteTest do
 
     assert Enum.filter(texts(page, "h2"), &(&1 in ["First note", "Second note"])) ==
              ["First note", "Second note"]
+  end
+
+  describe "in-text notes" do
+    defp noted_play do
+      tei(
+        body: """
+        <div1 type="acto" n="1"><head>ACTO I</head>
+          <sp><speaker>ANA</speaker>
+            <l n="1">Nous voyent<note n="6089" type="editor"><term>voyent</term><p>Forme archaïque.</p><p>Deux syllabes.</p></note> dans la ville</l>
+            <l n="2">sin nota</l>
+          </sp>
+        </div1>
+        <div1 type="acto" n="2"><head>ACTO II</head>
+          <sp><speaker>BLAS</speaker><p>Buscad por todas partes …<note n="121" type="traductor"><p><emph>"partes …"</emph></p><p>(14) De aquí en adelante.</p></note></p></sp>
+        </div1>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+    end
+
+    defp marker_target(page, label) do
+      page
+      |> LazyHTML.query(~s(button[aria-label="#{label}"]))
+      |> LazyHTML.attribute("popovertarget")
+    end
+
+    test "a note is a number after its word, opening the note, listed on its own page" do
+      play = noted_play()
+      dir = generate!([play])
+      act1 = html!(dir, "plays/#{play.code}/act-1.html")
+      act2 = html!(dir, "plays/#{play.code}/act-2.html")
+
+      assert squish(LazyHTML.text(act1)) =~ "Nous voyent1 dans la ville"
+      assert marker_target(act1, "Editor's note 1") == ["note-1"]
+      assert act1 |> LazyHTML.query("#note-1") |> LazyHTML.attribute("popover") == [""]
+      assert texts(act1, "#note-1 b") == ["Editor's note"]
+      assert texts(act1, "#note-1 i") == ["voyent"]
+      assert texts(act1, "#note-1 p") == ["Forme archaïque.", "Deux syllabes."]
+      assert act1 |> LazyHTML.query("#note-2") |> Enum.count() == 0
+
+      assert squish(LazyHTML.text(act2)) =~ "Buscad por todas partes …2"
+      assert marker_target(act2, "Translator's note 2") == ["note-2"]
+      assert texts(act2, "#note-2 p") == ["\"partes …\"", "(14) De aquí en adelante."]
+      assert act2 |> LazyHTML.text() |> String.split("(14) De aquí") |> length() == 2
+    end
+
+    test "the full text lists every note, numbered through the play" do
+      play = noted_play()
+      text_page = html!(generate!([play]), "plays/#{play.code}/text.html")
+
+      assert marker_target(text_page, "Editor's note 1") == ["note-1"]
+      assert marker_target(text_page, "Translator's note 2") == ["note-2"]
+      assert text_page |> LazyHTML.query("li[popover]") |> Enum.count() == 2
+    end
   end
 end

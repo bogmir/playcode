@@ -15,6 +15,8 @@ defmodule Playcode.PlayContent.Note do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Playcode.PlayContent.{Division, Element}
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -46,6 +48,26 @@ defmodule Playcode.PlayContent.Note do
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
   end
+
+  @doc """
+  The notes in `divisions` (as `PlayContent.load_play_content/1` gives them) in reading
+  order: a division's heading, its own text, then its scenes; an element's own notes (a
+  speech's, on its speaker), then its children's. Note numbers follow this order.
+  """
+  def reading_order(divisions) when is_list(divisions),
+    do: Enum.flat_map(divisions, &reading_order/1)
+
+  def reading_order(%Division{} = division) do
+    division.notes ++
+      Enum.flat_map(division.loaded_elements, &element_notes/1) ++
+      reading_order(loaded(division.children))
+  end
+
+  defp element_notes(%Element{} = element),
+    do: element.notes ++ Enum.flat_map(loaded(element.children), &element_notes/1)
+
+  defp loaded(%Ecto.Association.NotLoaded{}), do: []
+  defp loaded(list), do: list
 
   def changeset(note, attrs) do
     note

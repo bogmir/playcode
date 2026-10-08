@@ -7,7 +7,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   """
 
   alias Playcode.{Bibliography, Catalogue, PlayContent, Statistics}
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{InlineMarkup, Note}
   alias Playcode.Statistics.Metrics
 
   defstruct [
@@ -115,6 +115,16 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   @doc "A scene's heading, or its number when it has none."
   def scene_title(scene), do: scene.title || "Scene #{scene.position + 1}"
+
+  @doc "The notes in a page's text, in reading order: the endnotes it lists."
+  def page_notes(%{scene: nil, split: false, division: division}),
+    do: Note.reading_order(division)
+
+  def page_notes(%{scene: nil, split: true, division: division}),
+    do: Note.reading_order(%{division | children: []})
+
+  def page_notes(%{scene: scene, division: division}),
+    do: division.notes ++ Note.reading_order(scene)
 
   @doc "The page a scene has to itself, or nil when it shares its division's page."
   def scene_page(%__MODULE__{pages: pages}, scene),

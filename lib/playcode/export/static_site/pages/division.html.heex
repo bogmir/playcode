@@ -13,6 +13,7 @@
     data-cite={Components.cite_prefix(@edition.play, @page)}
   >
     <Components.page_text edition={@edition} page={@page} />
+    <Components.endnotes notes={Edition.page_notes(@page)} />
   </div>
   <Components.pager prev={@prev} next={@next} />
 </Components.shell>

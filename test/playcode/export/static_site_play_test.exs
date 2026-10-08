@@ -229,9 +229,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
       {play, dir} =
         publish!("""
         <div1 type="acto" n="1"><head>Acto I</head>
-          <stage>Salen todos</stage>
-          <div2 type="escena" n="1"><head>Escena 1</head><sp><speaker>A</speaker><p>#{words}uno</p></sp></div2>
-          <div2 type="escena" n="2"><head>Escena 2</head><sp><speaker>B</speaker><p>#{words}dos</p></sp></div2>
+          <stage>Salen todos<note n="1" type="editor"><p>Del acto.</p></note></stage>
+          <div2 type="escena" n="1"><head>Escena<note n="2" type="traductor"><p>Del título.</p></note> 1</head><sp><speaker>A</speaker><p>#{words}uno<note n="3" type="editor"><p>De la escena uno.</p></note></p></sp></div2>
+          <div2 type="escena" n="2"><head>Escena 2</head><sp><speaker>B</speaker><p>#{words}dos<note n="4" type="editor"><p>De la escena dos.</p></note></p></sp></div2>
         </div1>
         <div1 type="acto" n="2"><head>Acto II</head><sp><speaker>A</speaker><p>fin</p></sp></div1>
         """)
@@ -254,6 +254,21 @@ defmodule Playcode.Export.StaticSitePlayTest do
       second = LazyHTML.text(page(dir, play, "act-1-s2.html"))
       assert second =~ "palabra dos"
       refute second =~ "palabra uno"
+    end
+
+    test "lists on each page the notes that page shows, numbered through the play", %{
+      play: play,
+      dir: dir
+    } do
+      listed = fn file ->
+        page(dir, play, file) |> LazyHTML.query("li[popover]") |> LazyHTML.attribute("id")
+      end
+
+      assert listed.("act-1.html") == ["note-1"]
+      assert listed.("act-1-s1.html") == ["note-2", "note-3"]
+      assert listed.("act-1-s2.html") == ["note-4"]
+      assert listed.("act-2.html") == []
+      assert listed.("text.html") == ["note-1", "note-2", "note-3", "note-4"]
     end
 
     test "the full text still holds every scene, once", %{play: play, dir: dir} do
