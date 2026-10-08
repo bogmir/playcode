@@ -177,17 +177,24 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLiveTest do
   end
 
   # Found by the final review: an event names its link by an id that came from the browser.
-  test "an edit or removal pushed for another play's link does nothing", %{
+  # It used to do nothing silently; like every play tab, it now says the item is gone and
+  # refreshes the list, which is what a stale tab needs.
+  test "an edit or removal pushed for a link not in this play does nothing, and says so", %{
     conn: conn,
     play: play
   } do
     elsewhere = bibliography_fixture(play_fixture(), %{"monogr_title" => "Not this play's"})
-    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
 
-    render_click(view, "remove", %{"id" => elsewhere.id})
-    render_click(view, "edit", %{"id" => elsewhere.id})
+    for event <- ["remove", "edit"], id <- [elsewhere.id, Ecto.UUID.generate(), "not-an-id"] do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+
+      assert render_click(view, event, %{"id" => id}) =~
+               t("That item no longer exists. The list has been refreshed."),
+             "#{event} #{id}"
+
+      refute has_element?(view, "#entry-editor")
+    end
 
     assert [_] = Bibliography.list_links(elsewhere.play_id)
-    refute has_element?(view, "#entry-editor")
   end
 end

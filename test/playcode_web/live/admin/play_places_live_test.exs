@@ -188,4 +188,31 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLiveTest do
     assert [link] = Places.list_play_places(play.id)
     assert Places.display_name(link.place, "es") == "Alexandría"
   end
+
+  # An event names its link by an id from the browser: another play's, one already
+  # removed, or not an id at all. None may change anything or crash the page.
+  test "a link that is not this play's is neither changed, moved nor removed", %{conn: conn} do
+    {conn, play} = setup_play(conn)
+    other = TestFixtures.play_fixture()
+
+    theirs =
+      TestFixtures.play_place_fixture(other, TestFixtures.place_fixture(), %{"note" => "suya"})
+
+    events = [
+      {"update_link", fn id -> %{"link_id" => id, "play_place" => %{"note" => "cambiada"}} end},
+      {"move_up", &%{"id" => &1}},
+      {"move_down", &%{"id" => &1}},
+      {"unlink", &%{"id" => &1}}
+    ]
+
+    for {event, params} <- events, id <- [theirs.id, Ecto.UUID.generate(), "not-an-id"] do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/places")
+
+      assert render_click(lv, event, params.(id)) =~
+               t("That item no longer exists. The list has been refreshed."),
+             "#{event} #{id}"
+    end
+
+    assert [%{note: "suya"}] = Places.list_play_places(other.id)
+  end
 end

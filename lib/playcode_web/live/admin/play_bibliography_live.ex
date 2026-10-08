@@ -12,6 +12,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   on_mount {PlaycodeWeb.UserAuth, {:ensure_can, :manage_bibliography}}
@@ -39,7 +40,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   def handle_event("edit", %{"id" => id}, socket) do
     case Bibliography.get_link(socket.assigns.play.id, id) do
       nil ->
-        {:noreply, socket}
+        {:noreply, socket |> load() |> LiveHelpers.put_gone_flash()}
 
       link ->
         others =
@@ -100,7 +101,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
     # Nil for another play's link, or one a double click already removed.
     case Bibliography.get_link(socket.assigns.play.id, id) do
       nil ->
-        {:noreply, load(socket)}
+        {:noreply, socket |> load() |> LiveHelpers.put_gone_flash()}
 
       link ->
         {:ok, outcome} = Bibliography.unlink(link)

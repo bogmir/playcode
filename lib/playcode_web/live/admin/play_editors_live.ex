@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.PlayEditor
   alias Playcode.ActivityLog
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -36,13 +37,16 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   end
 
   def handle_event("edit_editor", %{"id" => id}, socket) do
-    editor = Catalogue.get_play_editor!(id)
-    changeset = Catalogue.change_play_editor(editor)
+    case Catalogue.get_play_editor(socket.assigns.play.id, id) do
+      nil ->
+        {:noreply, gone(socket)}
 
-    {:noreply,
-     socket
-     |> assign(:editing_editor, editor)
-     |> assign(:editor_form, to_form(changeset))}
+      editor ->
+        {:noreply,
+         socket
+         |> assign(:editing_editor, editor)
+         |> assign(:editor_form, to_form(Catalogue.change_play_editor(editor)))}
+    end
   end
 
   def handle_event("cancel_edit", _, socket) do
@@ -126,7 +130,13 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   end
 
   def handle_event("delete_editor", %{"id" => id}, socket) do
-    editor = Catalogue.get_play_editor!(id)
+    case Catalogue.get_play_editor(socket.assigns.play.id, id) do
+      nil -> {:noreply, gone(socket)}
+      editor -> {:noreply, delete_editor(socket, editor)}
+    end
+  end
+
+  defp delete_editor(socket, editor) do
     {:ok, _} = Catalogue.delete_play_editor(editor)
 
     ActivityLog.log!(%{
@@ -138,12 +148,16 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
       metadata: %{person_name: editor.person_name, role: editor.role}
     })
 
-    editors = Catalogue.list_play_editors(socket.assigns.play.id)
+    socket
+    |> assign(:editors, Catalogue.list_play_editors(socket.assigns.play.id))
+    |> put_flash(:info, gettext("Editor deleted."))
+  end
 
-    {:noreply,
-     socket
-     |> assign(:editors, editors)
-     |> put_flash(:info, gettext("Editor deleted."))}
+  # The editor the event named is not this play's: see LiveHelpers.put_gone_flash/1.
+  defp gone(socket) do
+    socket
+    |> assign(:editors, Catalogue.list_play_editors(socket.assigns.play.id))
+    |> LiveHelpers.put_gone_flash()
   end
 
   @impl true

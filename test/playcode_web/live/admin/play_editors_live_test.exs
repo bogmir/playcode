@@ -72,4 +72,30 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLiveTest do
     assert html =~ Gettext.dgettext(PlaycodeWeb.Gettext, "errors", "can't be blank")
     assert Playcode.Catalogue.get_play_with_all!(play.id).editors == []
   end
+
+  # An event names its editor by an id from the browser: another play's, one already
+  # deleted, or not an id at all. None may change anything or crash the page; each says
+  # so and refreshes the list.
+  test "an editor that is not this play's is neither edited nor deleted",
+       %{conn: conn, play: play} do
+    {:ok, theirs} =
+      Playcode.Catalogue.create_play_editor(%{
+        "play_id" => play_fixture().id,
+        "person_name" => "Ajeno, A.",
+        "role" => "translator"
+      })
+
+    for event <- ["edit_editor", "delete_editor"],
+        id <- [theirs.id, Ecto.UUID.generate(), "not-an-id"] do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/editors")
+
+      assert render_click(lv, event, %{"id" => id}) =~
+               t("That item no longer exists. The list has been refreshed."),
+             "#{event} #{id}"
+
+      refute has_element?(lv, "#editor-form")
+    end
+
+    assert [%{person_name: "Ajeno, A."}] = Playcode.Catalogue.list_play_editors(theirs.play_id)
+  end
 end

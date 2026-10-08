@@ -169,7 +169,12 @@ defmodule Playcode.Catalogue do
     |> Repo.all()
   end
 
-  def get_play_editor!(id), do: Repo.get!(PlayEditor, id)
+  @doc """
+  The play's editor `id`, or nil. Scoped to the play because the id arrives from the
+  browser: another play's editor, a deleted one or a malformed id is nil. The same holds
+  for `get_play_source/2` and `get_play_editorial_note/2`.
+  """
+  def get_play_editor(play_id, id), do: get_play_row(PlayEditor, play_id, id)
 
   def create_play_editor(attrs) do
     %PlayEditor{}
@@ -200,7 +205,7 @@ defmodule Playcode.Catalogue do
     |> Repo.all()
   end
 
-  def get_play_source!(id), do: Repo.get!(PlaySource, id)
+  def get_play_source(play_id, id), do: get_play_row(PlaySource, play_id, id)
 
   def create_play_source(attrs) do
     %PlaySource{}
@@ -230,6 +235,8 @@ defmodule Playcode.Catalogue do
     |> order_by(:position)
     |> Repo.all()
   end
+
+  def get_play_editorial_note(play_id, id), do: get_play_row(PlayEditorialNote, play_id, id)
 
   def get_play_editorial_note!(id), do: Repo.get!(PlayEditorialNote, id)
 
@@ -327,6 +334,13 @@ defmodule Playcode.Catalogue do
   end
 
   # --- Private ---
+
+  defp get_play_row(schema, play_id, id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} -> Repo.get_by(schema, id: id, play_id: play_id)
+      :error -> nil
+    end
+  end
 
   # Everything a play's pages show, each list in a fixed order, so the same data always
   # renders the same page. Related plays follow the same `opts` as the play itself, so a

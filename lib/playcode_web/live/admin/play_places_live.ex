@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Places.Place
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -52,33 +53,38 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
   end
 
   def handle_event("update_link", %{"link_id" => id, "play_place" => params}, socket) do
-    link = Places.get_play_place!(id)
+    with_link(socket, id, fn link ->
+      case Places.update_play_place(link, params) do
+        {:ok, updated} ->
+          log(socket, "update", updated)
+          socket |> load_links() |> put_flash(:info, gettext("Place updated."))
 
-    case Places.update_play_place(link, params) do
-      {:ok, updated} ->
-        log(socket, "update", updated)
-        {:noreply, socket |> load_links() |> put_flash(:info, gettext("Place updated."))}
-
-      {:error, _changeset} ->
-        {:noreply, put_flash(socket, :error, gettext("That change could not be saved."))}
-    end
+        {:error, _changeset} ->
+          put_flash(socket, :error, gettext("That change could not be saved."))
+      end
+    end)
   end
 
   def handle_event("move_up", %{"id" => id}, socket) do
-    :ok = id |> Places.get_play_place!() |> Places.move_play_place(:up)
-    {:noreply, load_links(socket)}
+    with_link(socket, id, fn link ->
+      :ok = Places.move_play_place(link, :up)
+      load_links(socket)
+    end)
   end
 
   def handle_event("move_down", %{"id" => id}, socket) do
-    :ok = id |> Places.get_play_place!() |> Places.move_play_place(:down)
-    {:noreply, load_links(socket)}
+    with_link(socket, id, fn link ->
+      :ok = Places.move_play_place(link, :down)
+      load_links(socket)
+    end)
   end
 
   def handle_event("unlink", %{"id" => id}, socket) do
-    link = Places.get_play_place!(id)
-    {:ok, _} = Places.unlink_place(link)
-    log(socket, "delete", link)
-    {:noreply, socket |> load_links() |> put_flash(:info, gettext("Place removed."))}
+    with_link(socket, id, fn link ->
+      {:ok, _} = Places.unlink_place(link)
+      log(socket, "delete", link)
+      socket |> load_links() |> put_flash(:info, gettext("Place removed."))
+    end)
   end
 
   # The gazetteer is corpus-global, so listing every place in a <select> stops being
@@ -163,6 +169,15 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
       resource_id: link.id,
       metadata: %{place_id: link.place_id, role: link.role}
     })
+  end
+
+  # Runs `fun` on the play's link `id`. Another play's link, a removed one or a malformed id
+  # changes nothing: the list reloads and says so (LiveHelpers.put_gone_flash/1).
+  defp with_link(socket, id, fun) do
+    case Places.get_play_place(socket.assigns.play.id, id) do
+      nil -> {:noreply, socket |> load_links() |> LiveHelpers.put_gone_flash()}
+      link -> {:noreply, fun.(link)}
+    end
   end
 
   defp load_links(socket) do

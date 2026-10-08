@@ -294,10 +294,18 @@ defmodule Playcode.Places do
     |> Repo.preload(place: [names: from(n in PlaceName, order_by: ^@name_order)])
   end
 
-  def get_play_place!(id) do
-    PlayPlace
-    |> Repo.get!(id)
-    |> Repo.preload(place: [names: from(n in PlaceName, order_by: ^@name_order)])
+  @doc """
+  The play's place link `id`, place and names loaded, or nil. Scoped to the play because
+  the id arrives from the browser: another play's link, a removed one or a malformed id
+  is nil.
+  """
+  def get_play_place(play_id, id) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         %PlayPlace{} = link <- Repo.get_by(PlayPlace, id: id, play_id: play_id) do
+      Repo.preload(link, place: [names: from(n in PlaceName, order_by: ^@name_order)])
+    else
+      _ -> nil
+    end
   end
 
   # A count would collide after an unlink: unlink leaves a gap instead of renumbering

@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.PlaySource
   alias Playcode.ActivityLog
+  alias PlaycodeWeb.Admin.LiveHelpers
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -35,13 +36,16 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
   end
 
   def handle_event("edit_source", %{"id" => id}, socket) do
-    source = Catalogue.get_play_source!(id)
-    changeset = Catalogue.change_play_source(source)
+    case Catalogue.get_play_source(socket.assigns.play.id, id) do
+      nil ->
+        {:noreply, gone(socket)}
 
-    {:noreply,
-     socket
-     |> assign(:editing_source, source)
-     |> assign(:source_form, to_form(changeset))}
+      source ->
+        {:noreply,
+         socket
+         |> assign(:editing_source, source)
+         |> assign(:source_form, to_form(Catalogue.change_play_source(source)))}
+    end
   end
 
   def handle_event("cancel_edit", _, socket) do
@@ -125,7 +129,13 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
   end
 
   def handle_event("delete_source", %{"id" => id}, socket) do
-    source = Catalogue.get_play_source!(id)
+    case Catalogue.get_play_source(socket.assigns.play.id, id) do
+      nil -> {:noreply, gone(socket)}
+      source -> {:noreply, delete_source(socket, source)}
+    end
+  end
+
+  defp delete_source(socket, source) do
     {:ok, _} = Catalogue.delete_play_source(source)
 
     ActivityLog.log!(%{
@@ -137,12 +147,16 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
       metadata: %{title: source.title}
     })
 
-    sources = Catalogue.list_play_sources(socket.assigns.play.id)
+    socket
+    |> assign(:sources, Catalogue.list_play_sources(socket.assigns.play.id))
+    |> put_flash(:info, gettext("Source deleted."))
+  end
 
-    {:noreply,
-     socket
-     |> assign(:sources, sources)
-     |> put_flash(:info, gettext("Source deleted."))}
+  # The source the event named is not this play's: see LiveHelpers.put_gone_flash/1.
+  defp gone(socket) do
+    socket
+    |> assign(:sources, Catalogue.list_play_sources(socket.assigns.play.id))
+    |> LiveHelpers.put_gone_flash()
   end
 
   @impl true
