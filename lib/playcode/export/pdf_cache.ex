@@ -138,9 +138,16 @@ defmodule Playcode.Export.PdfCache do
     Path.join(dir(), "#{play.id}-#{play.content_version}-#{code_version()}.pdf")
   end
 
-  # What the PDF is rendered with: the HTML export and the PDF export around it.
+  # What the PDF is rendered with: the HTML export and the PDF export around it, and the
+  # modules that draw the text and the notes in it.
   defp code_version do
-    [Playcode.Export.Html, Playcode.Export.Pdf]
+    [
+      Playcode.Export.Html,
+      Playcode.Export.Pdf,
+      Playcode.Export.NoteMarkup,
+      Playcode.PlayContent.InlineMarkup,
+      Playcode.PlayContent.Note
+    ]
     |> Enum.map(& &1.module_info(:md5))
     |> then(&:crypto.hash(:sha256, &1))
     |> Base.encode16(case: :lower)
