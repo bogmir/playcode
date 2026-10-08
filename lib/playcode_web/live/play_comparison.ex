@@ -53,11 +53,15 @@ defmodule PlaycodeWeb.PlayComparison do
   @doc """
   Builds a flat list of all plays in the same translation family as `play`
   (root original + its derived plays), excluding `play` itself.
+
+  `opts` are the `Catalogue` read options `play` was loaded with, so the family
+  holds only plays its reader may open. The root is the preloaded `parent_play`,
+  which is nil when the reader may not see it.
   """
-  def build_family(play) do
+  def build_family(play, opts \\ []) do
     root =
-      if play.parent_play_id do
-        Catalogue.get_play_with_all!(play.parent_play_id)
+      if play.parent_play do
+        Catalogue.get_play_with_all!(play.parent_play.id, opts)
       else
         play
       end
@@ -73,15 +77,17 @@ defmodule PlaycodeWeb.PlayComparison do
   end
 
   @doc """
-  Appends a panel for `play_id`. Returns `{:ok, panels}` or `{:error, :max_reached}`
-  when the panel limit is hit.
+  Appends a panel for `play_id`, which must be one of the `family` plays not yet
+  shown: the id arrives from the browser. Returns `{:ok, panels}`,
+  `{:error, :max_reached}` when the panel limit is hit, or `{:error, :not_offered}`.
   """
-  def add_panel(panels, play_id) do
-    if length(panels) >= @max_panels do
-      {:error, :max_reached}
-    else
-      panel = build_panel(Catalogue.get_play_with_all!(play_id))
-      {:ok, panels ++ [panel]}
+  def add_panel(panels, play_id, family) do
+    offered = Enum.find(available_plays(family, panels), &(&1.id == play_id))
+
+    cond do
+      length(panels) >= @max_panels -> {:error, :max_reached}
+      offered -> {:ok, panels ++ [build_panel(Catalogue.get_play_with_all!(offered.id))]}
+      true -> {:error, :not_offered}
     end
   end
 

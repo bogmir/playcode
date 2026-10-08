@@ -18,6 +18,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         )
       )
 
+    TestFixtures.mark_complete!(play)
+
     {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
 
     assert "sueño" in (html
@@ -38,6 +40,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       )
 
     {:ok, _} = Playcode.Catalogue.update_play(play, %{form: "mixed"})
+    TestFixtures.mark_complete!(play)
     {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
 
     assert html =~ t("Verse and prose")
@@ -45,6 +48,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
   test "renders navigation panel with metadata and play section links", %{conn: conn} do
     %{play: play, act: act, scene: scene} = TestFixtures.play_with_structure_fixture()
+
+    TestFixtures.mark_complete!(play)
 
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
@@ -56,6 +61,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
   test "tab navigation switches between text and statistics", %{conn: conn} do
     %{play: play} = TestFixtures.play_with_structure_fixture()
+
+    TestFixtures.mark_complete!(play)
 
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
@@ -80,6 +87,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   test "metadata links appear when metadata exists", %{conn: conn} do
     play = TestFixtures.play_with_metadata_fixture()
 
+    TestFixtures.mark_complete!(play)
+
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
     assert has_element?(view, "#scroll-spy-nav a[href='#meta-sources']")
@@ -94,6 +103,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         "historical_time_note" => "First century BC."
       })
 
+    TestFixtures.mark_complete!(play)
+
     {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
 
     assert has_element?(view, "#meta-study")
@@ -105,6 +116,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
   test "omits the research metadata panel when there is no historical time", %{conn: conn} do
     play = TestFixtures.play_fixture()
+
+    TestFixtures.mark_complete!(play)
 
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
@@ -120,6 +133,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         "composition_date_to" => 1607,
         "composition_date_note" => "1606; 1607"
       })
+
+    TestFixtures.mark_complete!(play)
 
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
@@ -138,6 +153,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         "composition_date_to" => 1614
       })
 
+    TestFixtures.mark_complete!(play)
+
     {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
 
     assert html =~ "1614"
@@ -151,6 +168,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         "composition_date_from" => 1614,
         "composition_date_to" => 1614
       })
+
+    TestFixtures.mark_complete!(play)
 
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
@@ -167,6 +186,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         "composition_date_note" => "¿1694? y ¿1605?"
       })
 
+    TestFixtures.mark_complete!(play)
+
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
     assert has_element?(view, "#scroll-spy-nav a[href='#meta-study']")
@@ -178,6 +199,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   describe "the places panel" do
     test "is absent when the play has no places", %{conn: conn} do
       play = Playcode.TestFixtures.play_fixture()
+      TestFixtures.mark_complete!(play)
       {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
       refute has_element?(view, "#meta-places")
@@ -200,6 +222,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       })
 
       Playcode.TestFixtures.play_place_fixture(play, roma, %{"role" => "setting"})
+
+      TestFixtures.mark_complete!(play)
 
       {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
@@ -224,6 +248,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
       Playcode.TestFixtures.play_place_fixture(play, atlantis)
 
+      TestFixtures.mark_complete!(play)
+
       {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
       assert html =~ t("Fictional")
     end
@@ -245,6 +271,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         )
       )
 
+    TestFixtures.mark_complete!(play)
+
     {:ok, _lv, html} = live(conn, ~p"/plays/#{play.code}")
 
     for text <- [
@@ -263,6 +291,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   describe "the bibliography panel" do
     test "is absent when the play has none", %{conn: conn} do
       play = Playcode.TestFixtures.play_fixture()
+      TestFixtures.mark_complete!(play)
       {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
       refute has_element?(view, "#meta-bibliography")
@@ -285,6 +314,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         %{"note" => "Préstamo interbibliotecario"}
       )
 
+      TestFixtures.mark_complete!(play)
+
       {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
       section = view |> element("#meta-bibliography") |> render()
 
@@ -294,6 +325,48 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       refute section =~ "Revisar la fecha"
       refute section =~ "Préstamo interbibliotecario"
       assert has_element?(view, ~s(a[href="#meta-bibliography"]), t("Bibliography"))
+    end
+  end
+
+  describe "related plays" do
+    test "a draft translation is not linked from its original, except for staff", %{
+      conn: conn
+    } do
+      original =
+        TestFixtures.play_fixture(%{"title" => "Original publicado", "is_complete" => true})
+
+      draft =
+        TestFixtures.play_fixture(%{
+          "title" => "Traducción en curso",
+          "parent_play_id" => original.id,
+          "relationship_type" => "traduccion"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{original.code}")
+      refute has_element?(view, ~s(a[href="/plays/#{draft.code}"]))
+
+      staff = log_in_user(conn, TestFixtures.user_fixture())
+      {:ok, view, _html} = live(staff, ~p"/plays/#{original.code}")
+      assert has_element?(view, ~s(a[href="/plays/#{draft.code}"]), draft.title)
+    end
+
+    test "a draft original is not linked from its translation, except for staff", %{conn: conn} do
+      draft = TestFixtures.play_fixture(%{"title" => "Original en curso"})
+
+      translation =
+        TestFixtures.play_fixture(%{
+          "title" => "Traducción publicada",
+          "parent_play_id" => draft.id,
+          "relationship_type" => "traduccion",
+          "is_complete" => true
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{translation.code}")
+      refute has_element?(view, ~s(a[href="/plays/#{draft.code}"]))
+
+      staff = log_in_user(conn, TestFixtures.user_fixture())
+      {:ok, view, _html} = live(staff, ~p"/plays/#{translation.code}")
+      assert has_element?(view, ~s(a[href="/plays/#{draft.code}"]), draft.title)
     end
   end
 end

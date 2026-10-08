@@ -218,6 +218,11 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 - **Researchers** get every content action (plays, content, editors, sources, import, export
   download, archive). **Admins** additionally get purge, user management, activity log, site
   deploy, the dashboard and the FileMaker sync (`:import_filemaker`).
+- **A draft (`is_complete: false`) is for staff only.** `/plays/:code`, its compare page and
+  `/export/:id/*` pass `complete: not can?(user, :view_drafts)` to the Catalogue read, so a
+  visitor gets a 404 and staff keep the preview the admin pages link to. Related plays
+  (`parent_play`, `derived_plays`) are preloaded under the same option, so no page links
+  to a relative its reader cannot open. `/api/v1` has no session and reads `complete: true`.
 - **Per-play scoping is a planned extension**, not a rewrite: `can?/3` already takes the
   resource, so restricting researchers to assigned plays is one new clause plus a
   `play_assignments` table. See the `@moduledoc` in `lib/playcode/authz.ex`.
@@ -237,7 +242,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 ### Public
 - `GET /` - Home page
 - `GET /plays` - Public play catalogue with search
-- `GET /plays/:code` - Public play presentation (text, characters, statistics tabs)
+- `GET /plays/:code` - Public play presentation (text, characters, statistics tabs); a draft is a 404 except for staff
 
 ### Authentication
 - `GET /users/accept-invite/:token` - Set a password on an invited account, then log in
@@ -544,7 +549,7 @@ Then visit:
 ### Found by the test rework (2026-09-26)
 Each is pinned by a test as it behaves today, not endorsed.
 - [x] **`ImportLive` `import_directory`** - any researcher's socket could push it and make the server import every `.xml` under any path. Handler deleted; `import_live_test.exs` asserts the pushed event imports nothing
-- [ ] **Drafts are public** - an incomplete play is hidden from `/plays` but served by `/plays/:code`, `/api/v1` and `/export/:id/*` (sequential ids); pinned in `play_catalogue_live_test.exs`
+- [x] **Drafts are public** - an incomplete play was hidden from `/plays` but served by `/plays/:code`, `/api/v1` (whose index listed every draft) and `/export/:id/*`. Now a 404 for visitors and visible to staff (`:view_drafts`); see *Access control*. The comparison page also stopped adding a panel for any id the browser sent: only the family it offers
 - [ ] **Inline `<stage>` is flattened** - a plain `<stage>` inside a verse line or prose paragraph (~2,500 in the corpus) becomes part of the line's text on import; the corpus sweep does not count these
 - [ ] **In-text `<note>` is pasted into the line** - `text_content/1` takes a note's text (every `<p>`) into the `<l>` or `<stage>` it sits in; 333 body notes in 13 tracked fixtures. Same root cause as the inline `<stage>` gap above. Next project after the static site redesign: `docs/static-site-improvements.md`
 - [x] **Activity-log order was unstable within one second** - `activity_logs.inserted_at` is now microsecond precision (migration `20260926120000`), so a burst of entries lists newest first; the `to:` date filter ends at `23:59:59.999999`

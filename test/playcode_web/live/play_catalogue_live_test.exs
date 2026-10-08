@@ -50,16 +50,19 @@ defmodule PlaycodeWeb.PlayCatalogueLiveTest do
     refute html =~ "Obra 01"
   end
 
-  # Pinned as it is today, not endorsed: an incomplete play is left out of the list
-  # above but served to anyone who has its code, here and through /api/v1 and
-  # /export/:id. Listed as a follow-up.
-  test "a draft is not listed, but its page is public", %{conn: conn} do
+  # This test used to pin the opposite: a draft was left out of the list but served to
+  # anyone who had its code. A draft is now for staff only, here and through
+  # /plays/:code/compare, /export/:id and /api/v1. Staff keep it because the admin
+  # pages link here as a preview, and a freshly imported play is a draft.
+  test "a draft is not listed, and its page is for staff only", %{conn: conn} do
     draft = play_fixture(%{"title" => "Borrador sin terminar"})
 
     {:ok, _lv, list} = live(conn, ~p"/plays")
     refute list =~ draft.title
 
-    {:ok, _lv, page} = live(conn, ~p"/plays/#{draft.code}")
+    assert_error_sent 404, fn -> get(conn, ~p"/plays/#{draft.code}") end
+
+    {:ok, _lv, page} = conn |> log_in_user(user_fixture()) |> live(~p"/plays/#{draft.code}")
     assert page =~ draft.title
   end
 end

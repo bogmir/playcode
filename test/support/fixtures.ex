@@ -24,6 +24,15 @@ defmodule Playcode.TestFixtures do
     play
   end
 
+  @doc """
+  Marks `play` complete. A fixture or an import makes a draft, and a visitor who is not
+  logged in gets a 404 for a draft's public pages, API and downloads.
+  """
+  def mark_complete!(play) do
+    {:ok, play} = Catalogue.update_play(play, %{is_complete: true})
+    play
+  end
+
   def play_with_metadata_fixture do
     play = play_fixture()
 

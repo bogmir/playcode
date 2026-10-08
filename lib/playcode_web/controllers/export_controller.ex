@@ -1,11 +1,11 @@
 defmodule PlaycodeWeb.ExportController do
   use PlaycodeWeb, :controller
 
-  alias Playcode.Catalogue
+  alias Playcode.{Authz, Catalogue}
   alias Playcode.Export
 
   def tei(conn, %{"id" => id}) do
-    play = Catalogue.get_play_with_all!(id)
+    play = visible_play!(conn, id)
     xml = Export.TeiXml.generate(play)
 
     conn
@@ -15,7 +15,7 @@ defmodule PlaycodeWeb.ExportController do
   end
 
   def html(conn, %{"id" => id}) do
-    play = Catalogue.get_play_with_all!(id)
+    play = visible_play!(conn, id)
     html = Export.Html.generate(play)
 
     conn
@@ -25,7 +25,7 @@ defmodule PlaycodeWeb.ExportController do
   end
 
   def pdf(conn, %{"id" => id}) do
-    play = Catalogue.get_play_with_all!(id)
+    play = visible_play!(conn, id)
 
     case Export.Pdf.generate(play) do
       {:ok, pdf_binary} ->
@@ -42,7 +42,7 @@ defmodule PlaycodeWeb.ExportController do
   end
 
   def epub(conn, %{"id" => id}) do
-    play = Catalogue.get_play_with_all!(id)
+    play = visible_play!(conn, id)
 
     case Export.Epub.generate(play) do
       {:ok, epub_binary} ->
@@ -56,5 +56,12 @@ defmodule PlaycodeWeb.ExportController do
         |> put_resp_content_type("text/plain")
         |> send_resp(500, "EPUB generation failed")
     end
+  end
+
+  # A draft is for staff only; anyone else gets the 404 an unknown id gets.
+  defp visible_play!(conn, id) do
+    Catalogue.get_play_with_all!(id,
+      complete: not Authz.can?(conn.assigns.current_user, :view_drafts)
+    )
   end
 end

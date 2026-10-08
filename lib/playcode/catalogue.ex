@@ -26,7 +26,6 @@ defmodule Playcode.Catalogue do
     query =
       Play
       |> scope(opts)
-      |> apply_complete(opts[:complete])
       |> apply_search(opts[:search])
       |> apply_sort(opts[:sort] || :title_sort)
 
@@ -64,14 +63,14 @@ defmodule Playcode.Catalogue do
     Play
     |> scope(opts)
     |> Repo.get!(id)
-    |> with_all()
+    |> with_all(opts)
   end
 
   def get_play_by_code_with_all!(code, opts \\ []) do
     Play
     |> scope(opts)
     |> Repo.get_by!(code: code)
-    |> with_all()
+    |> with_all(opts)
   end
 
   def create_play(attrs \\ %{}) do
@@ -330,12 +329,13 @@ defmodule Playcode.Catalogue do
   # --- Private ---
 
   # Everything a play's pages show, each list in a fixed order, so the same data always
-  # renders the same page.
-  defp with_all(play) do
+  # renders the same page. Related plays follow the same `opts` as the play itself, so a
+  # page never links to a relative its reader could not open.
+  defp with_all(play, opts) do
     Repo.preload(play, [
       :statistic,
-      :parent_play,
-      derived_plays: from(d in Play, order_by: [asc: d.title_sort, asc: d.title]),
+      parent_play: scope(Play, opts),
+      derived_plays: Play |> scope(opts) |> order_by([d], asc: d.title_sort, asc: d.title),
       editors: from(e in PlayEditor, order_by: e.position),
       sources: from(s in PlaySource, order_by: s.position),
       editorial_notes: from(n in PlayEditorialNote, order_by: n.position),
@@ -347,12 +347,16 @@ defmodule Playcode.Catalogue do
 
   # Archived plays are invisible everywhere unless a caller explicitly asks for them:
   # `archived: true` for the archive listing, `include_deleted: true` for both at once.
+  # `complete: true` hides drafts too, for readers who may not see them.
   defp scope(query, opts) do
-    cond do
-      opts[:archived] -> where(query, [p], not is_nil(p.deleted_at))
-      opts[:include_deleted] -> query
-      true -> where(query, [p], is_nil(p.deleted_at))
-    end
+    query =
+      cond do
+        opts[:archived] -> where(query, [p], not is_nil(p.deleted_at))
+        opts[:include_deleted] -> query
+        true -> where(query, [p], is_nil(p.deleted_at))
+      end
+
+    apply_complete(query, opts[:complete])
   end
 
   defp apply_complete(query, true), do: where(query, [p], p.is_complete == true)

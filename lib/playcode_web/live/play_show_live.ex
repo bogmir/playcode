@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   import PlaycodeWeb.Components.PlayText
   import PlaycodeWeb.Components.StatisticsPanel
 
+  alias Playcode.Authz
   alias Playcode.Bibliography
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue
@@ -16,7 +17,11 @@ defmodule PlaycodeWeb.PlayShowLive do
 
   @impl true
   def mount(%{"code" => code}, _session, socket) do
-    play = Catalogue.get_play_by_code_with_all!(code)
+    play =
+      Catalogue.get_play_by_code_with_all!(code,
+        complete: not Authz.can?(socket.assigns.current_user, :view_drafts)
+      )
+
     divisions = PlayContent.load_play_content(play.id)
     characters = PlayContent.list_characters(play.id)
     statistic = Statistics.get_statistics(play.id)

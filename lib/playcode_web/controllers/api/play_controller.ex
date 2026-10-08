@@ -4,10 +4,12 @@ defmodule PlaycodeWeb.API.PlayController do
   alias Playcode.{Catalogue, PlayContent, Statistics}
   alias Playcode.Catalogue.Play
 
+  # The API has no session, so every reader is anonymous: complete plays only.
+
   # GET /api/v1/plays
   def index(conn, params) do
     sort = sort_atom(params["sort"])
-    plays = Catalogue.list_plays(search: params["search"], sort: sort)
+    plays = Catalogue.list_plays(search: params["search"], sort: sort, complete: true)
 
     json(conn, %{
       data: Enum.map(plays, &play_summary/1),
@@ -17,7 +19,7 @@ defmodule PlaycodeWeb.API.PlayController do
 
   # GET /api/v1/plays/:code
   def show(conn, %{"code" => code}) do
-    play = Catalogue.get_play_by_code_with_all!(code)
+    play = Catalogue.get_play_by_code_with_all!(code, complete: true)
     json(conn, play_detail(play))
   rescue
     Ecto.NoResultsError -> not_found(conn)
@@ -25,7 +27,7 @@ defmodule PlaycodeWeb.API.PlayController do
 
   # GET /api/v1/plays/:code/characters
   def characters(conn, %{"code" => code}) do
-    play = Catalogue.get_play_by_code!(code)
+    play = Catalogue.get_play_by_code!(code, complete: true)
     characters = PlayContent.list_characters(play.id)
 
     json(conn, %{
@@ -37,7 +39,7 @@ defmodule PlaycodeWeb.API.PlayController do
 
   # GET /api/v1/plays/:code/text
   def text(conn, %{"code" => code}) do
-    play = Catalogue.get_play_by_code!(code)
+    play = Catalogue.get_play_by_code!(code, complete: true)
     divisions = PlayContent.load_play_content(play.id)
 
     json(conn, %{
@@ -51,7 +53,7 @@ defmodule PlaycodeWeb.API.PlayController do
 
   # GET /api/v1/plays/:code/statistics
   def statistics(conn, %{"code" => code}) do
-    play = Catalogue.get_play_by_code!(code)
+    play = Catalogue.get_play_by_code!(code, complete: true)
     statistic = Statistics.get_statistics(play.id)
 
     if statistic do

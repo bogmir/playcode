@@ -31,6 +31,9 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
       tei(code: "API0002", title: "Anterior obra", title_stmt: "<author>Calderón</author>")
     )
 
+    # Imports are drafts, and the API serves complete plays only.
+    Enum.each(Playcode.Catalogue.list_plays(), &Playcode.TestFixtures.mark_complete!/1)
+
     %{play: play}
   end
 
@@ -106,6 +109,20 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
                "error" => "not found"
              },
              "#{code}#{suffix}"
+    end
+  end
+
+  test "a draft is neither listed nor served", %{conn: conn} do
+    Playcode.TestFixtures.play_fixture(%{"code" => "API0003", "title" => "Borrador de la API"})
+
+    %{"data" => plays} = json_response(get(conn, ~p"/api/v1/plays"), 200)
+    refute "API0003" in Enum.map(plays, & &1["code"])
+
+    for suffix <- ["", "/characters", "/text", "/statistics"] do
+      assert json_response(get(conn, "/api/v1/plays/API0003#{suffix}"), 404) == %{
+               "error" => "not found"
+             },
+             suffix
     end
   end
 end

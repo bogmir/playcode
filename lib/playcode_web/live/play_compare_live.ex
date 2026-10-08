@@ -3,13 +3,14 @@ defmodule PlaycodeWeb.PlayCompareLive do
 
   import PlaycodeWeb.Components.PlayText
 
-  alias Playcode.Catalogue
+  alias Playcode.{Authz, Catalogue}
   alias PlaycodeWeb.PlayComparison
 
   @impl true
   def mount(%{"code" => code}, _session, socket) do
-    play = Catalogue.get_play_by_code_with_all!(code)
-    family = PlayComparison.build_family(play)
+    opts = [complete: not Authz.can?(socket.assigns.current_user, :view_drafts)]
+    play = Catalogue.get_play_by_code_with_all!(code, opts)
+    family = PlayComparison.build_family(play, opts)
     panels = PlayComparison.build_initial_panels(play, family)
 
     {:ok,
@@ -30,9 +31,12 @@ defmodule PlaycodeWeb.PlayCompareLive do
   def handle_event("add_play", %{"id" => ""}, socket), do: {:noreply, socket}
 
   def handle_event("add_play", %{"id" => play_id}, socket) do
-    case PlayComparison.add_panel(socket.assigns.panels, play_id) do
+    case PlayComparison.add_panel(socket.assigns.panels, play_id, socket.assigns.family) do
       {:ok, panels} ->
         {:noreply, assign(socket, :panels, panels)}
+
+      {:error, :not_offered} ->
+        {:noreply, socket}
 
       {:error, :max_reached} ->
         {:noreply,

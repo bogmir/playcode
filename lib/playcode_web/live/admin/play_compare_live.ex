@@ -26,9 +26,12 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   def handle_event("add_play", %{"id" => ""}, socket), do: {:noreply, socket}
 
   def handle_event("add_play", %{"id" => play_id}, socket) do
-    case PlayComparison.add_panel(socket.assigns.panels, play_id) do
+    case PlayComparison.add_panel(socket.assigns.panels, play_id, socket.assigns.family) do
       {:ok, panels} ->
         {:noreply, assign(socket, :panels, panels)}
+
+      {:error, :not_offered} ->
+        {:noreply, socket}
 
       {:error, :max_reached} ->
         {:noreply,
