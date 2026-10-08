@@ -1334,7 +1334,7 @@ defmodule Playcode.Import.TeiParser do
            position: pos
          }) do
       {:ok, _el} -> :ok
-      {:error, cs} -> Logger.warning("Failed to create verse_line: #{inspect(cs)}")
+      {:error, cs} -> Repo.rollback({:element_create_failed, :verse_line, cs})
     end
   end
 
@@ -1412,7 +1412,7 @@ defmodule Playcode.Import.TeiParser do
            position: pos
          }) do
       {:ok, _el} -> :ok
-      {:error, cs} -> Logger.warning("Failed to create stage_direction: #{inspect(cs)}")
+      {:error, cs} -> Repo.rollback({:element_create_failed, :stage_direction, cs})
     end
   end
 
@@ -1427,7 +1427,7 @@ defmodule Playcode.Import.TeiParser do
            position: pos
          }) do
       {:ok, _el} -> :ok
-      {:error, cs} -> Logger.warning("Failed to create trailer: #{inspect(cs)}")
+      {:error, cs} -> Repo.rollback({:element_create_failed, :trailer, cs})
     end
   end
 
@@ -1447,7 +1447,7 @@ defmodule Playcode.Import.TeiParser do
            position: pos
          }) do
       {:ok, _el} -> :ok
-      {:error, cs} -> Logger.warning("Failed to create prose element: #{inspect(cs)}")
+      {:error, cs} -> Repo.rollback({:element_create_failed, :prose, cs})
     end
   end
 
