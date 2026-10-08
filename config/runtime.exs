@@ -44,6 +44,9 @@ if config_env() == :prod do
   # machine and a deploy. Unset, it is _site in the release's directory.
   if dir = System.get_env("STATIC_SITE_DIR"), do: config(:playcode, :static_site_dir, dir)
 
+  # Export.PdfCache's PDFs, on the same volume, so a render survives a restart.
+  if dir = System.get_env("PDF_CACHE_DIR"), do: config(:playcode, :pdf_cache_dir, dir)
+
   database_url =
     System.get_env("DATABASE_URL") ||
       raise """

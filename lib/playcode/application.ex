@@ -46,6 +46,9 @@ defmodule Playcode.Application do
       # {Playcode.Worker, arg},
       # PDF generation via headless Chrome
       {ChromicPDF, Application.get_env(:playcode, ChromicPDF, [])},
+      # Each play's PDF, rendered once per version; renders run as tasks.
+      {Task.Supervisor, name: Playcode.Export.PdfCache.Tasks},
+      Playcode.Export.PdfCache,
       # Start to serve requests, typically the last entry
       PlaycodeWeb.Endpoint,
       Playcode.Accounts.AdminBootstrap

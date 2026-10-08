@@ -16,6 +16,9 @@ defmodule PlaycodeWeb.SpanishTranslationsTest do
   When this test fails, open `priv/gettext/es/LC_MESSAGES/default.po`, find each msgid it
   lists, write the right Spanish and delete `, fuzzy` from the line above it.
 
+  An empty msgstr shows English the same way, so a new message must be translated too:
+  `gettext.extract --merge` adds it empty.
+
   The English files are left alone: an English msgstr is empty, so it falls back to the
   msgid, which is already the English text.
   """
@@ -30,4 +33,21 @@ defmodule PlaycodeWeb.SpanishTranslationsTest do
 
     assert fuzzy == []
   end
+
+  test "every Spanish message is translated" do
+    empty =
+      for path <- Path.wildcard("priv/gettext/es/LC_MESSAGES/*.po"),
+          message <- Expo.PO.parse_file!(path).messages,
+          untranslated?(message),
+          do: "#{Path.basename(path)}: #{IO.iodata_to_binary(message.msgid)}"
+
+    assert empty == []
+  end
+
+  defp untranslated?(%Expo.Message.Singular{msgstr: msgstr}), do: blank?(msgstr)
+
+  defp untranslated?(%Expo.Message.Plural{msgstr: forms}),
+    do: Enum.any?(forms, fn {_form, msgstr} -> blank?(msgstr) end)
+
+  defp blank?(msgstr), do: IO.iodata_to_binary(msgstr) == ""
 end

@@ -59,6 +59,12 @@ config :phoenix,
 # Pin ADMIN_EMAILS empty so a stray environment variable cannot alter tests
 config :playcode, admin_emails: []
 
+# No Chrome in test: PDFs come from a stub, are kept apart from the developer's, and a
+# render counts as long once it has taken half a second.
+config :playcode, :pdf_renderer, Playcode.PdfRendererStub
+config :playcode, :pdf_cache_dir, Path.join(System.tmp_dir!(), "playcode-test-pdf")
+config :playcode, :pdf_wait, 500
+
 # The export page builds here, never into the developer's own _site/
 config :playcode, :static_site_dir, Path.join(System.tmp_dir!(), "playcode-test-site")
 

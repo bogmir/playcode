@@ -3,3 +3,8 @@
 # To ban all spiders from the entire site uncomment the next two lines:
 # User-agent: *
 # Disallow: /
+
+# The downloads are rendered on demand, the PDF through the one headless Chrome: a crawler
+# following them would keep it busy.
+User-agent: *
+Disallow: /export/

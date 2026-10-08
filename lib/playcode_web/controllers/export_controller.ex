@@ -8,6 +8,7 @@ defmodule PlaycodeWeb.ExportController do
 
   alias Playcode.{Authz, Catalogue}
   alias Playcode.Export
+  alias Playcode.Export.PdfCache
 
   def tei(conn, %{"id" => id}) do
     play = visible_play!(conn, id)
@@ -32,19 +33,27 @@ defmodule PlaycodeWeb.ExportController do
   def pdf(conn, %{"id" => id}) do
     play = visible_play!(conn, id)
 
-    case Export.Pdf.generate(play) do
-      {:ok, pdf_binary} ->
+    case PdfCache.fetch(play) do
+      {:ok, path} ->
         conn
-        |> put_resp_content_type("application/pdf")
+        |> put_resp_content_type("application/pdf", nil)
         |> put_resp_header("content-disposition", ~s(attachment; filename="#{play.code}.pdf"))
-        |> send_resp(200, pdf_binary)
+        |> send_file(200, path)
 
-      {:error, _reason} ->
+      {:error, reason} ->
         conn
+        |> put_resp_header("retry-after", "60")
         |> put_resp_content_type("text/plain")
-        |> send_resp(500, "PDF generation failed")
+        |> send_resp(503, pdf_unavailable(reason))
     end
   end
+
+  @doc "What a reader is told when `PdfCache.fetch/1` has no PDF for them yet."
+  def pdf_unavailable(:pending),
+    do: gettext("The PDF is being prepared. A long play takes a while: try again in a minute.")
+
+  def pdf_unavailable(:busy), do: gettext("Other PDFs are being prepared. Try again in a minute.")
+  def pdf_unavailable(_reason), do: gettext("The PDF could not be made. Try again later.")
 
   def epub(conn, %{"id" => id}) do
     play = visible_play!(conn, id)

@@ -167,6 +167,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
     <div class="flex items-center border-l border-base-200 pl-2 ml-1 gap-0.5">
       <a
         href={~p"/export/#{@play.id}/tei"}
+        rel="nofollow"
         class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
         data-tip="TEI-XML"
       >
@@ -174,6 +175,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
       </a>
       <a
         href={~p"/export/#{@play.id}/html"}
+        rel="nofollow"
         class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
         data-tip="HTML"
       >
@@ -181,6 +183,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
       </a>
       <a
         href={~p"/export/#{@play.id}/pdf"}
+        rel="nofollow"
         class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
         data-tip="PDF"
       >
@@ -188,6 +191,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
       </a>
       <a
         href={~p"/export/#{@play.id}/epub"}
+        rel="nofollow"
         class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
         data-tip="EPUB"
       >

@@ -14,8 +14,6 @@ defmodule PlaycodeWeb.AuthorizationTest do
   import Playcode.TestFixtures
 
   # `:active` = any active researcher or admin; `:admin` = admins only.
-  # PDF export sits in the same scope as the TEI export and needs headless Chrome
-  # to render, so it is left out.
   @routes [
     {"/users/settings", :active},
     {"/admin/plays", :active},
@@ -33,6 +31,7 @@ defmodule PlaycodeWeb.AuthorizationTest do
     {"/admin/plays/:id/export/tei", :active},
     {"/admin/plays/:id/export/html", :active},
     {"/admin/plays/:id/export/epub", :active},
+    {"/admin/plays/:id/export/pdf", :active},
     {"/admin/plays/compare/export/html?plays=:id", :active},
     {"/admin/users", :admin},
     {"/admin/activity-log", :admin},

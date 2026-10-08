@@ -53,17 +53,16 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert_error_sent 404, fn -> get(conn, ~p"/export/#{play.id}/tei") end
   end
 
-  # PDF is left out: it needs headless Chrome to render.
   test "a draft is for staff only", %{conn: conn, play: play} do
     {:ok, draft} = Playcode.Catalogue.update_play(play, %{is_complete: false})
 
-    for format <- ~w(tei html epub) do
+    for format <- ~w(tei html epub pdf) do
       assert_error_sent 404, fn -> get(conn, "/export/#{draft.id}/#{format}") end
     end
 
     staff = log_in_user(conn, Playcode.TestFixtures.user_fixture())
 
-    for format <- ~w(tei html epub) do
+    for format <- ~w(tei html epub pdf) do
       assert response(get(staff, "/export/#{draft.id}/#{format}"), 200), format
     end
   end

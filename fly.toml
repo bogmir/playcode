@@ -25,6 +25,7 @@ swap_size_mb = 2048
   POOL_SIZE = '10'
   PORT = '8080'
   STATIC_SITE_DIR = '/data/site'
+  PDF_CACHE_DIR = '/data/pdf'
 
 # The static site, so it survives a stopped machine and a deploy. One volume, so one
 # machine: a second would build and deploy a site of its own.

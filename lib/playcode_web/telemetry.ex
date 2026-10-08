@@ -24,6 +24,8 @@ defmodule PlaycodeWeb.Telemetry do
   def metrics do
     [
       # Phoenix Metrics
+      # Each PDF Chrome printed (Export.PdfCache): the evidence for more compute.
+      summary("chromic_pdf.print_to_pdf.stop.duration", unit: {:native, :second}),
       summary("phoenix.endpoint.start.system_time",
         unit: {:native, :millisecond}
       ),

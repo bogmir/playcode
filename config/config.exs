@@ -42,6 +42,12 @@ config :playcode, PlaycodeWeb.Endpoint,
 # at the `config/runtime.exs`.
 config :playcode, Playcode.Mailer, adapter: Swoosh.Adapters.Local
 
+# A long play takes over a minute to print on one shared CPU, and with one Chrome session
+# the next PDF waits its turn. The defaults (5 seconds each) failed the median play.
+# Export.PdfCache bounds how many renders wait.
+config :playcode, ChromicPDF,
+  session_pool: [timeout: :timer.minutes(5), checkout_timeout: :timer.minutes(10)]
+
 config :playcode, :place_authority, Playcode.Places.Authority.Wikidata
 
 # Configure esbuild (the version is required)

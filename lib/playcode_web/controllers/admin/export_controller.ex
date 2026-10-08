@@ -9,6 +9,7 @@ defmodule PlaycodeWeb.Admin.ExportController do
 
   alias Playcode.Catalogue
   alias Playcode.Export
+  alias Playcode.Export.PdfCache
   alias Playcode.ActivityLog
 
   def compare_html(conn, %{"plays" => play_ids_str}) do
@@ -50,18 +51,20 @@ defmodule PlaycodeWeb.Admin.ExportController do
   def pdf(conn, %{"id" => id}) do
     play = Catalogue.get_play_with_all!(id)
 
-    case Export.Pdf.generate(play) do
-      {:ok, pdf_binary} ->
+    case PdfCache.fetch(play) do
+      {:ok, path} ->
         log_export(conn, play, "pdf")
 
         conn
-        |> put_resp_content_type("application/pdf")
+        |> put_resp_content_type("application/pdf", nil)
         |> put_resp_header("content-disposition", ~s(attachment; filename="#{play.code}.pdf"))
-        |> send_resp(200, pdf_binary)
+        |> send_file(200, path)
 
       {:error, reason} ->
+        kind = if reason == :pending, do: :info, else: :error
+
         conn
-        |> put_flash(:error, gettext("PDF generation failed: %{reason}", reason: inspect(reason)))
+        |> put_flash(kind, PlaycodeWeb.ExportController.pdf_unavailable(reason))
         |> redirect(to: ~p"/admin/plays/#{id}")
     end
   end
