@@ -60,9 +60,22 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
   # count too. The Gettext backend's English translations are fingerprinted as data.
   @data_access [Playcode.Catalogue, Playcode.PlayContent, Playcode.Repo, PlaycodeWeb.Gettext]
 
+  # Pushing the site and hashing it shape no page, but their names put them among the
+  # StaticSite modules: a change to the deploy rebuilt all 371 plays.
+  test "the deploy and the fingerprint itself are left out of it" do
+    for module <- [Playcode.Export.StaticSite.Deployer, Fingerprint] do
+      refute module in Fingerprint.modules()
+      assert module in Fingerprint.left_out()
+    end
+  end
+
   test "every module the export calls is in the fingerprint, or only reads play data" do
     reached = reach(Fingerprint.modules(), MapSet.new())
-    assert Enum.reject(reached, &(&1 in Fingerprint.modules() or data_access?(&1))) == []
+
+    assert Enum.reject(
+             reached,
+             &(&1 in Fingerprint.modules() or &1 in Fingerprint.left_out() or data_access?(&1))
+           ) == []
   end
 
   # A schema is play data, but a function on it can decide what a page shows: the order of

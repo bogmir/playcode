@@ -40,22 +40,29 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     PlaycodeWeb.PlayLabels
   ]
 
+  # StaticSite modules that shape no page: pushing the site, and this hash itself.
+  @left_out [Playcode.Export.StaticSite.Deployer, __MODULE__]
+
   @libraries [:phoenix_live_view, :phoenix_html, :jason, :xml_builder]
 
   @doc """
-  Every `Playcode.Export.StaticSite*` module and the modules listed above. Read from the
-  application's module list, not the loaded modules: in dev a module loads on first use,
-  so a list of loaded ones would differ before and after the first build.
+  Every `Playcode.Export.StaticSite*` module but `left_out/0`, and the modules listed
+  above. Read from the application's module list, not the loaded modules: in dev a module
+  loads on first use, so a list of loaded ones would differ before and after the first
+  build.
   """
   def modules do
     exported =
       Enum.filter(
         Application.spec(:playcode, :modules),
-        &String.starts_with?(Atom.to_string(&1), @prefix)
+        &(String.starts_with?(Atom.to_string(&1), @prefix) and &1 not in @left_out)
       )
 
     Enum.sort(exported ++ @modules)
   end
+
+  @doc "The StaticSite modules left out of `modules/0` because they shape no page."
+  def left_out, do: @left_out
 
   @doc """
   A hex SHA-256 of what the pages are built with, for `opts[:version]`. `:gettext_dir`
