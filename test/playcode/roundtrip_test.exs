@@ -1,6 +1,8 @@
 defmodule Playcode.RoundtripTest do
   use Playcode.DataCase, async: true
 
+  alias Playcode.ImportHelpers
+
   @moduledoc """
   Roundtrip tests using real-world TEI fixture files from the EMOTHE corpus.
   Verifies that import → export preserves structural integrity:
@@ -13,7 +15,7 @@ defmodule Playcode.RoundtripTest do
   @tracked_dir Path.expand("../fixtures", __DIR__)
   @corpus_dir Path.expand("../fixtures/tei_files", __DIR__)
   @fields ~w(acts scenes characters speeches verses line_groups stage_dirs asides
-             split_parts verse_type_attrs hidden_chars heads front_notes speaker_refs)a
+             split_parts verse_type_attrs hidden_chars heads front_notes speaker_refs notes)a
 
   # Read a possibly UTF-16 file and return UTF-8 string
   defp read_original(path) do
@@ -201,7 +203,8 @@ defmodule Playcode.RoundtripTest do
       verse_type_attrs: count_verse_type_attrs(body),
       hidden_chars: count_hidden_chars(front),
       heads: count_heads_in_body(body),
-      front_notes: count_front_note_divs(front)
+      front_notes: count_front_note_divs(front),
+      notes: count_notes(xml)
     }
   end
 
@@ -231,6 +234,51 @@ defmodule Playcode.RoundtripTest do
         acc
     end)
   end
+
+  # The body as a document of its own, for the ImportHelpers readers.
+  defp body_doc(xml), do: "<body>" <> extract_body(xml) <> "</body>"
+
+  # Notes with text: an empty <note/> (EMOTHE0010's test file) carries nothing and is
+  # rightly not imported.
+  defp count_notes(xml),
+    do: xml |> body_doc() |> ImportHelpers.xml_notes() |> Enum.count(&(&1.text != ""))
+
+  # Each note as {the element it sits in, the last 12 non-blank characters before it there,
+  # n, type}. Blanks are ignored because the importer joins a line's pieces with spaces
+  # where an element splits them (a<emph>b</emph> reads "a b"). Only the last characters,
+  # because an aside line's delivery <stage> is not exported, so its text no longer
+  # precedes the notes after it.
+  defp note_anchors(xml) do
+    xml
+    |> body_doc()
+    |> ImportHelpers.xml_notes()
+    |> Enum.reject(&(&1.text == ""))
+    |> Enum.map(fn note ->
+      tail = note.after |> String.replace(~r/\s+/u, "") |> String.slice(-12..-1//1)
+      {note.in, tail, note.n, note.type}
+    end)
+  end
+
+  # No note's text is left in the text it glosses, the bug these checks came with
+  # (Hamlet, act 5: a translator's note pasted after "partes …"). Notes under 30
+  # characters are skipped: a short gloss may repeat words of the play.
+  defp assert_no_pasted_notes(code, original_xml, exported_xml) do
+    exported = body_doc(exported_xml)
+
+    text =
+      ~w(l p stage speaker head trailer)
+      |> Enum.flat_map(&ImportHelpers.reading_texts(exported, &1))
+      |> Enum.join()
+      |> squash()
+
+    for note <- ImportHelpers.xml_notes(body_doc(original_xml)),
+        String.length(note.text) >= 30 do
+      refute String.contains?(text, squash(note.text)),
+             "#{code}: note #{note.n} is pasted into the text"
+    end
+  end
+
+  defp squash(text), do: String.replace(text, ~r/\s+/u, "")
 
   defp xml_escape(text) when is_binary(text) do
     text
@@ -474,14 +522,16 @@ defmodule Playcode.RoundtripTest do
     end
   end
 
-  # Two tracked fixtures run on every `mix test`, so CI exercises real corpus
+  # Three tracked fixtures run on every `mix test`, so CI exercises real corpus
   # files end to end: one verse play with scenes, heads, asides, split lines and
-  # verse types, one prose play. The rest of the tracked fixtures, plus the git-ignored
+  # verse types, one prose play, and one with in-text notes (17: on lines and
+  # speakers). The rest of the tracked fixtures, plus the git-ignored
   # corpus under test/fixtures/tei_files/ when present, run with
   # `mix test --include slow`.
   @default_fixtures ~w(
     EMOTHE0746_LesOccasionsPerdues.xml
     EMOTHE0776_LosRivales.xml
+    EMOTHE0705_LaVirginie.xml
   )
 
   @fixture_paths (Path.wildcard(Path.join(@tracked_dir, "*.xml")) ++
@@ -522,6 +572,15 @@ defmodule Playcode.RoundtripTest do
                "\n\noriginal=#{inspect(orig_counts)}\nexported=#{inspect(export_counts)}"
 
       assert_metadata_roundtrip(@code, play_full, exported_xml)
+
+      assert_order_preserved(
+        @code,
+        "notes (where each sits)",
+        note_anchors(original_xml),
+        note_anchors(exported_xml)
+      )
+
+      assert_no_pasted_notes(@code, original_xml, exported_xml)
 
       assert_order_preserved(
         @code,
