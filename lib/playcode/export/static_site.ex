@@ -73,7 +73,9 @@ defmodule Playcode.Export.StaticSite do
             max_concurrency: concurrency(),
             timeout: :infinity
           )
-          |> Enum.with_index(1)
+          # Stream, not Enum: Enum.with_index/2 would build every play before the first
+          # was reported, leaving the progress bar still until the end.
+          |> Stream.with_index(1)
           |> Enum.map(fn {{:ok, result}, n} ->
             opts[:on_progress].(%{step: :play, current: n, total: total, detail: result.code})
             result
