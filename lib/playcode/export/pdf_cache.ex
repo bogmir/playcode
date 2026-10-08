@@ -11,9 +11,10 @@ defmodule Playcode.Export.PdfCache do
 
   `fetch/1` waits for a render at most `:pdf_wait` (50 seconds, inside Fly's 60-second
   idle cut) and then answers `{:error, :pending}`: the render goes on, and a later request
-  gets the file. Requests for a play being rendered wait on that one render. At most
-  `:pdf_max_renders` plays render or wait for Chrome at once; past that, a new play gets
-  `{:error, :busy}` rather than a place in a queue of hours.
+  gets the file. Requests for a play being rendered wait on that one render. Each render
+  starts a Chrome of its own (ChromicPDF's `on_demand`), so at most `:pdf_max_renders`
+  plays render at once, one by default: two Chromes do not fit the 1 GB machine. Past
+  that, a new play gets `{:error, :busy}` rather than a place in a queue of hours.
 
   Every render is logged with its duration and outcome, apart from the cache hits: they
   are the numbers to argue for more compute with.
@@ -25,7 +26,7 @@ defmodule Playcode.Export.PdfCache do
   alias Playcode.Catalogue.Play
 
   @default_wait 50_000
-  @default_max_renders 3
+  @default_max_renders 1
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 

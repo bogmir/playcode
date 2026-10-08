@@ -76,9 +76,10 @@ defmodule PlaycodeWeb.PdfDownloadTest do
     refute_received {:rendering, _code, _renderer}
   end
 
-  test "past the renders Chrome can queue, another play's PDF answers busy",
+  # Each render starts a Chrome of its own, so by default only one runs: two at once
+  # would not fit the 1 GB machine.
+  test "while one play's PDF renders, another play's answers busy",
        %{conn: conn, play: play} do
-    Application.put_env(:playcode, :pdf_max_renders, 1)
     stub(mode: :block)
 
     assert response(download(conn, play), 503) =~ preparing()
