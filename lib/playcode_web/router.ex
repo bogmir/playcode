@@ -1,4 +1,6 @@
 defmodule PlaycodeWeb.Router do
+  @moduledoc false
+
   use PlaycodeWeb, :router
 
   import PlaycodeWeb.UserAuth

@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.ImportLive do
+  @moduledoc """
+  /admin/plays/import: upload TEI files. A file whose code already exists is previewed
+  first (`TeiParser.preview_import/1`): what the re-import replaces and what it keeps.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Import.TeiParser

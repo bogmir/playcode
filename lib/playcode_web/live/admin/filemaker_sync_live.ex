@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.FilemakerSyncLive do
+  @moduledoc """
+  /admin/filemaker: upload the FileMaker export, preview what `FilemakerSync.plan/3` would
+  change, tick the conflicts to overwrite, and apply. Admins only.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Import.Filemaker

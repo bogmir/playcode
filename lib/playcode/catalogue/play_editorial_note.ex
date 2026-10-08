@@ -1,4 +1,10 @@
 defmodule Playcode.Catalogue.PlayEditorialNote do
+  @moduledoc """
+  A front-matter text by `section_type`: an editor's introduction, a dedication, an
+  argument, a prologue or a note, with an optional `heading`. `origin` works as for
+  `PlayEditor`.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

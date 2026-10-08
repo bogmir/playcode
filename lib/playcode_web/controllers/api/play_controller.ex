@@ -1,4 +1,10 @@
 defmodule PlaycodeWeb.API.PlayController do
+  @moduledoc """
+  The public JSON API under /api/v1: the catalogue, and a play's metadata, characters,
+  text and statistics by code. It has no session, so it serves complete plays only;
+  anything else is a JSON 404.
+  """
+
   use PlaycodeWeb, :controller
 
   alias Playcode.{Catalogue, PlayContent, Statistics}

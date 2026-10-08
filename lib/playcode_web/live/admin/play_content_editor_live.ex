@@ -1,4 +1,11 @@
 defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
+  @moduledoc """
+  /admin/plays/:id/content: a play's text: editorial notes, characters, divisions and
+  elements, a preview, and the character review that assigns speakers in bulk. Every id an
+  event carries is resolved through a getter scoped to the play, and a miss reloads the
+  lists with `LiveHelpers.put_gone_flash/1` (see *Access control* in CLAUDE.md).
+  """
+
   use PlaycodeWeb, :live_view
 
   import PlaycodeWeb.Components.PlayText

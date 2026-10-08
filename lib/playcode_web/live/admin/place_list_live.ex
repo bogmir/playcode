@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.PlaceListLive do
+  @moduledoc """
+  /admin/places: the corpus-wide gazetteer: places, their names, what contains them and
+  their authority links.
+  """
+
   use PlaycodeWeb, :live_view
 
   # Stricter than the live_session's :view_admin, declared here so admin

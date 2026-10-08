@@ -1,4 +1,6 @@
 defmodule PlaycodeWeb.UserForgotPasswordLive do
+  @moduledoc false
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Accounts

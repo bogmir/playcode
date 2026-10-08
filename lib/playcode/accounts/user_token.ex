@@ -1,4 +1,11 @@
 defmodule Playcode.Accounts.UserToken do
+  @moduledoc """
+  A token, by `context`: `"session"` (30 days, with the browser's IP and user agent, listed
+  and revocable at /users/settings), `"invite"` (7 days) or `"reset_password"` (1 day). The
+  mailed ones are stored as their SHA-256, so a database leak does not hand out working
+  links; a session token is stored as it is.
+  """
+
   use Ecto.Schema
   import Ecto.Query
 

@@ -1,4 +1,10 @@
 defmodule PlaycodeWeb.Admin.PlayDetailLive do
+  @moduledoc """
+  /admin/plays/:id: a play's overview: its structure and statistics, its downloads, the
+  completeness switch that decides whether it is published, TEI validation, and the Word
+  import that replaces its text.
+  """
+
   use PlaycodeWeb, :live_view
 
   import PlaycodeWeb.Components.StatisticsPanel

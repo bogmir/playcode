@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.UserAcceptInviteLive do
+  @moduledoc """
+  /users/accept-invite/:token: the invited user sets a password, which also confirms the
+  account, since following the mailed link proves the mailbox, and is logged in.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Accounts

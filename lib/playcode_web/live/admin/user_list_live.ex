@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.UserListLive do
+  @moduledoc """
+  /admin/users: invite, resend an invitation, deactivate, reactivate, force logout and
+  change a role. The accounts in `ADMIN_EMAILS` are protected from all of it. Admins only.
+  """
+
   use PlaycodeWeb, :live_view
 
   # Stricter than the live_session's :view_admin, declared here so admin

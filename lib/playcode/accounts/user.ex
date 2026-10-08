@@ -1,4 +1,12 @@
 defmodule Playcode.Accounts.User do
+  @moduledoc """
+  An account. There is no registration: `Accounts.invite_user/3` creates the row with no
+  password, and accepting the invitation, or a password reset, sets `hashed_password` and
+  `confirmed_at`. `role` is `:admin` or `:researcher`; what each may do is
+  `Playcode.Authz`'s business. A deactivated account is kept, because the activity log
+  points at it, but no gate lets it in.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

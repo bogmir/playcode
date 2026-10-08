@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.ExportController do
+  @moduledoc """
+  The public downloads under /export/:id: a play's TEI, HTML, PDF and EPUB. A draft is a
+  404 except for staff. The PDF renders through headless Chrome on every request.
+  """
+
   use PlaycodeWeb, :controller
 
   alias Playcode.{Authz, Catalogue}

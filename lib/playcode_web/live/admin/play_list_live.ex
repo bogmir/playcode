@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.PlayListLive do
+  @moduledoc """
+  /admin/plays: every play, searchable, 50 to a page, with archiving, and the archived
+  plays behind a filter, restorable.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Catalogue

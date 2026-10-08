@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.PlayCompareLive do
+  @moduledoc """
+  /admin/plays/:id/compare: the public comparison inside the play's admin tabs, drafts
+  included.
+  """
+
   use PlaycodeWeb, :live_view
 
   import PlaycodeWeb.Components.PlayText

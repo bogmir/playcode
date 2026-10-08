@@ -1,4 +1,6 @@
 defmodule PlaycodeWeb.UserLoginLive do
+  @moduledoc false
+
   use PlaycodeWeb, :live_view
 
   def render(assigns) do

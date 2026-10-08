@@ -1,4 +1,6 @@
 defmodule PlaycodeWeb.UserSessionController do
+  @moduledoc false
+
   use PlaycodeWeb, :controller
 
   alias Playcode.Accounts

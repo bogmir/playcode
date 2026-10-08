@@ -1,4 +1,10 @@
 defmodule Playcode.Catalogue.PlaySource do
+  @moduledoc """
+  A printed source the digital edition was made from, TEI's `<sourceDesc><bibl>`. Most
+  corpus files carry the citation as free text in `note`; the structured fields are
+  optional. `origin` works as for `PlayEditor`.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

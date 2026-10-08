@@ -1,4 +1,10 @@
 defmodule Playcode.Accounts.UserNotifier do
+  @moduledoc """
+  The account emails, in plain text: the invitation and the password reset. With
+  `SMTP_HOST` unset the mailer falls back to the Local adapter and nothing leaves the
+  server; `mix playcode.invite --print-url` gives the link instead.
+  """
+
   import Swoosh.Email
 
   require Logger

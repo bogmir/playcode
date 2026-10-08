@@ -1,4 +1,10 @@
 defmodule PlaycodeWeb.UserResetPasswordLive do
+  @moduledoc """
+  /users/reset-password/:token: sets a new password. Following the mailed link proves the
+  mailbox, so it also confirms an unconfirmed account; it never reactivates a deactivated
+  one.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Accounts

@@ -1,4 +1,8 @@
 defmodule PlaycodeWeb.Admin.PlaySourcesLive do
+  @moduledoc """
+  /admin/plays/:id/sources: the printed sources the edition was made from.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Catalogue

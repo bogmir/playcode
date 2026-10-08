@@ -1,4 +1,10 @@
 defmodule Playcode.Catalogue.PlayEditor do
+  @moduledoc """
+  A person credited on the edition, by `role` (translator, editor, reviewer…), in display
+  order. `origin` says who wrote the row: a TEI re-import replaces only its own (`"tei"`)
+  and keeps what a researcher typed.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

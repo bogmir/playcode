@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.PlayFormLive do
+  @moduledoc """
+  /admin/plays/new and /admin/plays/:id/edit: a play's metadata, including the curated
+  research fields a TEI re-import never overwrites.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Catalogue

@@ -1,4 +1,9 @@
 defmodule Playcode.PlayContent.ElementCharacter do
+  @moduledoc """
+  Who speaks a speech: one row per character, in the order of TEI's `<sp who="#A #B">`.
+  Deleting the speech or the character deletes the row.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

@@ -1,4 +1,8 @@
 defmodule PlaycodeWeb.Admin.PlayEditorsLive do
+  @moduledoc """
+  /admin/plays/:id/editors: the play's credited editors and translators.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Catalogue

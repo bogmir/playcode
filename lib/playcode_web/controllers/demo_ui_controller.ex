@@ -1,4 +1,6 @@
 defmodule PlaycodeWeb.DemoUIController do
+  @moduledoc false
+
   use PlaycodeWeb, :controller
 
   alias PlaycodeWeb.Demo.UIDemoData

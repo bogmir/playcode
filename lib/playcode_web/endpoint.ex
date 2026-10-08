@@ -1,4 +1,6 @@
 defmodule PlaycodeWeb.Endpoint do
+  @moduledoc false
+
   use Phoenix.Endpoint, otp_app: :playcode
 
   # The session will be stored in the cookie and signed,

@@ -1,4 +1,11 @@
 defmodule Playcode.ActivityLog.Entry do
+  @moduledoc """
+  One audited action: who (`user_id`), on which play, what (`action`: create, update,
+  delete, import, export, role_change) on what (`resource_type`, `resource_id`), with the
+  changed fields in `changes` and anything else in `metadata`. `inserted_at` keeps
+  microseconds, so a burst of entries lists in order.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

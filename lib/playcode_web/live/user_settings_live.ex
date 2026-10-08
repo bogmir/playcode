@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.UserSettingsLive do
+  @moduledoc """
+  /users/settings: change the password, and see or revoke active sessions. The email
+  address is read-only: only an admin changes it.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Accounts

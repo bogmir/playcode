@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.PlayPlacesLive do
+  @moduledoc """
+  /admin/plays/:id/places: the play's place index: which gazetteer places, in what role and
+  order, with a note each.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.ActivityLog

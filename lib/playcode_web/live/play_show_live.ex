@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.PlayShowLive do
+  @moduledoc """
+  /plays/:code: a play's text, characters and statistics, with its metadata, places and
+  bibliography. A draft is a 404 except for staff, who reach it from the admin pages.
+  """
+
   use PlaycodeWeb, :live_view
 
   import PlaycodeWeb.Components.PlayText

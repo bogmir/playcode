@@ -1,4 +1,10 @@
 defmodule Playcode.Statistics.PlayStatistic do
+  @moduledoc """
+  A play's computed statistics, cached as JSON. `data` records the play's
+  `content_version` it was computed at, so `Statistics.get_statistics/1` recomputes once
+  the play has changed since.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

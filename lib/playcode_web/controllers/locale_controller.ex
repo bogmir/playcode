@@ -1,4 +1,6 @@
 defmodule PlaycodeWeb.LocaleController do
+  @moduledoc false
+
   use PlaycodeWeb, :controller
 
   def update(conn, %{"locale" => locale} = params) when locale in ~w(es en) do

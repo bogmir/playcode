@@ -1,4 +1,10 @@
 defmodule PlaycodeWeb.Admin.ExportSiteLive do
+  @moduledoc """
+  /admin/export: the static site. Generate brings it up to date, a play's switch adds or
+  removes that play, Deploy publishes it on emothe.uv.es. Every admin sees the same state:
+  the work runs in `Playcode.Export.SiteBuilder`, which broadcasts it. Admins only.
+  """
+
   use PlaycodeWeb, :live_view
 
   on_mount {PlaycodeWeb.UserAuth, {:ensure_can, :deploy_site}}

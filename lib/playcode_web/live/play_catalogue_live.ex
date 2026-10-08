@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.PlayCatalogueLive do
+  @moduledoc """
+  /plays: the published plays, each original with its translations beneath, searchable,
+  25 to a page. Drafts are left out.
+  """
+
   use PlaycodeWeb, :live_view
 
   alias Playcode.Catalogue

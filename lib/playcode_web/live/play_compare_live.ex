@@ -1,4 +1,10 @@
 defmodule PlaycodeWeb.PlayCompareLive do
+  @moduledoc """
+  /plays/:code/compare: a play beside the other plays of its family, scrolling together
+  (`assets/js/sync_scroll.mjs`). A visitor sees published plays only. The logic is shared
+  with the admin page through `PlaycodeWeb.PlayComparison`.
+  """
+
   use PlaycodeWeb, :live_view
 
   import PlaycodeWeb.Components.PlayText

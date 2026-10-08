@@ -1,4 +1,9 @@
 defmodule PlaycodeWeb.Admin.ActivityLogLive do
+  @moduledoc """
+  /admin/activity-log: the audit log, newest first, filtered by action, resource, user and
+  date, 50 to a page. Admins only.
+  """
+
   use PlaycodeWeb, :live_view
 
   on_mount {PlaycodeWeb.UserAuth, {:ensure_can, :view_activity_log}}
