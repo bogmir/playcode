@@ -28,12 +28,12 @@ defmodule Mix.Tasks.Playcode.Import.Filemaker do
 
     path = opts[:path] || Filemaker.default_path()
 
-    case Filemaker.load_index(path) do
-      {:ok, index} ->
-        # load_versions/1 cannot fail here — load_index/1 already read the same file.
-        # If it ever does, crash loudly rather than sync half the data.
-        {:ok, versions} = Filemaker.load_versions(path)
-        sync(index, versions, path, opts)
+    with {:ok, index} <- Filemaker.load_index(path),
+         {:ok, versions} <- Filemaker.load_versions(path) do
+      sync(index, versions, path, opts)
+    else
+      {:error, {:malformed_record, record}} ->
+        Mix.raise("cannot read #{path}: record #{record} is malformed")
 
       {:error, reason} ->
         Mix.raise("cannot read #{path}: #{inspect(reason)}")

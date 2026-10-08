@@ -144,6 +144,17 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert Catalogue.get_play!(play.id, include_deleted: true).language == "es"
     end
 
+    test "a malformed record refuses the export, naming the record" do
+      for {fixture, record} <- [{"malformed_version", "1"}, {"malformed_fields", "7"}] do
+        assert_raise Mix.Error, ~r/record #{record} is malformed/, fn ->
+          Mix.Task.rerun("playcode.import.filemaker", [
+            "--path",
+            "test/fixtures/filemaker/#{fixture}.ndjson"
+          ])
+        end
+      end
+    end
+
     test "a missing export is refused" do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.filemaker", [

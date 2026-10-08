@@ -54,16 +54,13 @@ defmodule Playcode.Import.Filemaker do
   def default_path, do: @default_path
 
   @doc """
-  Returns `{:ok, %{code => version}}` for every published version in the index.
+  Returns `{:ok, %{code => version}}` for every published version in the index, or
+  `{:error, reason}`: the file's, or `{:malformed_record, record_id}` for a record that
+  cannot be read, which refuses the whole export rather than sync part of it.
   """
   def load_index(path \\ @default_path) do
-    with {:ok, body} <- File.read(path) do
-      index =
-        body
-        |> String.split("\n", trim: true)
-        |> Enum.reduce({nil, %{}}, &read_line/2)
-        |> elem(1)
-
+    with {:ok, body} <- File.read(path),
+         {:ok, {_layout, index}} <- read_records(body, &read_line/2) do
       {:ok, index}
     end
   end
@@ -75,15 +72,23 @@ defmodule Playcode.Import.Filemaker do
   fields S2a needs are read; later slices add to the map this returns.
   """
   def load_versions(path \\ @default_path) do
-    with {:ok, body} <- File.read(path) do
-      versions =
-        body
-        |> String.split("\n", trim: true)
-        |> Enum.reduce({nil, %{}}, &read_version_line/2)
-        |> elem(1)
-
+    with {:ok, body} <- File.read(path),
+         {:ok, {_layout, versions}} <- read_records(body, &read_version_line/2) do
       {:ok, versions}
     end
+  end
+
+  # Folds `fun` over the file's lines from `{layout, %{}}`. `fun` returns the next
+  # accumulator, or an error that stops the fold.
+  defp read_records(body, fun) do
+    body
+    |> String.split("\n", trim: true)
+    |> Enum.reduce_while({:ok, {nil, %{}}}, fn line, {:ok, acc} ->
+      case fun.(line, acc) do
+        {:error, _reason} = error -> {:halt, error}
+        acc -> {:cont, {:ok, acc}}
+      end
+    end)
   end
 
   defp read_version_line(line, {layout, versions}) do
@@ -91,18 +96,23 @@ defmodule Playcode.Import.Filemaker do
       {:ok, %{"_meta" => meta}} ->
         {meta["layout"], versions}
 
-      {:ok, %{"fields" => fields}} when layout == @versions_layout ->
-        version = build_version(fields)
-        {layout, Map.put(versions, version.code, version)}
+      {:ok, %{"fields" => fields} = record} when layout == @versions_layout ->
+        case is_map(fields) && version_code(fields) do
+          code when is_binary(code) ->
+            {layout, Map.put(versions, code, build_version(fields, code))}
+
+          _ ->
+            {:error, {:malformed_record, record["record_id"]}}
+        end
 
       _ ->
         {layout, versions}
     end
   end
 
-  defp build_version(fields) do
+  defp build_version(fields, code) do
     %{
-      code: version_code(fields),
+      code: code,
       historical_time: historical_time(fields),
       historical_time_note: historical_time_note(fields),
       composition_date_note: composition_date_note(fields)
@@ -110,14 +120,14 @@ defmodule Playcode.Import.Filemaker do
   end
 
   # The href is the only place the HIE#### codes appear; the numeric id is the fallback.
+  # Nil when the record has neither.
   defp version_code(fields) do
-    case Regex.run(@web_edition, field(fields, "pub_edicionWeb")) do
-      [_all, code] ->
-        code
-
-      _ ->
-        id = fields |> field("_IdTituloEmothe") |> String.to_integer()
-        "EMOTHE" <> String.pad_leading(Integer.to_string(id), 4, "0")
+    with nil <- Regex.run(@web_edition, field(fields, "pub_edicionWeb")),
+         {id, ""} <- Integer.parse(field(fields, "_IdTituloEmothe")) do
+      "EMOTHE" <> String.pad_leading(Integer.to_string(id), 4, "0")
+    else
+      [_all, code] -> code
+      _no_id -> nil
     end
   end
 
@@ -161,8 +171,11 @@ defmodule Playcode.Import.Filemaker do
       {:ok, %{"_meta" => meta}} ->
         {meta["layout"], index}
 
-      {:ok, %{"fields" => fields}} when layout == @index_layout ->
+      {:ok, %{"fields" => fields}} when layout == @index_layout and is_map(fields) ->
         {layout, add_work(index, fields)}
+
+      {:ok, %{"fields" => _not_a_record} = record} when layout == @index_layout ->
+        {:error, {:malformed_record, record["record_id"]}}
 
       _ ->
         {layout, index}

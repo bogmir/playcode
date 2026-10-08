@@ -252,16 +252,24 @@ defmodule PlaycodeWeb.Admin.FilemakerSyncLiveTest do
       assert has_element?(lv, "#upload-form")
     end
 
-    test "given a malformed record then the page reports it and stays on the upload form",
+    # A record the loader cannot read refuses the whole export, and the page names it. It
+    # used to raise inside a blanket rescue, which showed the admin the inspected
+    # exception and hid any real bug behind "Cannot read the file".
+    test "given a malformed record then the page names it and stays on the upload form",
          %{conn: conn} do
       corpus()
-      {:ok, lv, _html} = live(log_in_user(conn, admin_fixture()), ~p"/admin/filemaker")
 
-      html = upload_and_preview(lv, "test/fixtures/filemaker/malformed_version.ndjson")
+      for {fixture, record} <- [{"malformed_version", "1"}, {"malformed_fields", "7"}] do
+        {:ok, lv, _html} = live(log_in_user(conn, admin_fixture()), ~p"/admin/filemaker")
 
-      assert html =~ t("Cannot read the file")
-      refute has_element?(lv, "#changes")
-      assert has_element?(lv, "#upload-form")
+        html = upload_and_preview(lv, "test/fixtures/filemaker/#{fixture}.ndjson")
+
+        assert html =~ t("Cannot read the file: record %{record} is malformed.", record: record),
+               fixture
+
+        refute has_element?(lv, "#changes")
+        assert has_element?(lv, "#upload-form")
+      end
     end
   end
 

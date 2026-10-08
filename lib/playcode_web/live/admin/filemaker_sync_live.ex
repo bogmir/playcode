@@ -336,12 +336,14 @@ defmodule PlaycodeWeb.Admin.FilemakerSyncLive do
       false -> {:error, :no_records}
       {:error, reason} -> {:error, reason}
     end
-  rescue
-    e -> {:error, e}
   end
 
   defp error_message(:no_records) do
     gettext("No FileMaker records found in that file. Is it the right export?")
+  end
+
+  defp error_message({:malformed_record, record}) do
+    gettext("Cannot read the file: record %{record} is malformed.", record: record)
   end
 
   defp error_message(reason) do
