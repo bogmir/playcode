@@ -49,6 +49,9 @@ defmodule Playcode.PlayContent do
 
   # --- Characters ---
 
+  @doc """
+  The play's cast, in cast-list order.
+  """
   def list_characters(play_id) do
     Character
     |> where(play_id: ^play_id)
@@ -58,11 +61,13 @@ defmodule Playcode.PlayContent do
 
   @doc """
   The play's character `id`, or nil. Scoped to the play because the id arrives from the
-  browser: another play's character, a deleted one or a malformed id is nil. The same
-  holds for `get_division/2` and `get_element/2`.
+  browser: another play's character, a deleted one or a malformed id is nil.
   """
   def get_character(play_id, id), do: get_play_row(Character, play_id, id)
 
+  @doc """
+  Creates a character; `attrs` carry its `play_id`. Its `xml_id` must be unique in the play.
+  """
   def create_character(attrs) do
     %Character{}
     |> Character.changeset(attrs)
@@ -102,18 +107,30 @@ defmodule Playcode.PlayContent do
     end
   end
 
+  @doc """
+  The play's character with this `xml_id`, the id `<sp who>` cites, or nil.
+  """
   def find_character_by_xml_id(play_id, xml_id) do
     Repo.get_by(Character, play_id: play_id, xml_id: xml_id)
   end
 
+  @doc """
+  A character's changeset, for a form.
+  """
   def change_character(%Character{} = character, attrs \\ %{}) do
     Character.changeset(character, attrs)
   end
 
+  @doc """
+  Updates a character.
+  """
   def update_character(%Character{} = character, attrs) do
     character |> Character.changeset(attrs) |> Repo.update()
   end
 
+  @doc """
+  Deletes a character, and with it every speech's assignment to it.
+  """
   def delete_character(%Character{} = character) do
     Repo.delete(character)
   end
@@ -172,6 +189,9 @@ defmodule Playcode.PlayContent do
 
   # --- Divisions ---
 
+  @doc """
+  The play's top-level divisions in order, each with its children in order.
+  """
   def list_top_divisions(play_id) do
     Division
     |> where(play_id: ^play_id)
@@ -181,26 +201,44 @@ defmodule Playcode.PlayContent do
     |> Repo.preload(children: from(d in Division, order_by: d.position))
   end
 
+  @doc """
+  As `get_character/2`, for a division.
+  """
   def get_division(play_id, id), do: get_play_row(Division, play_id, id)
 
+  @doc """
+  Creates a division; `attrs` carry its `play_id`, and its `parent_id` for a scene.
+  """
   def create_division(attrs) do
     %Division{}
     |> Division.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  A division's changeset, for a form.
+  """
   def change_division(%Division{} = division, attrs \\ %{}) do
     Division.changeset(division, attrs)
   end
 
+  @doc """
+  Updates a division.
+  """
   def update_division(%Division{} = division, attrs) do
     division |> Division.changeset(attrs) |> Repo.update()
   end
 
+  @doc """
+  Deletes a division with its scenes and every element in them.
+  """
   def delete_division(%Division{} = division) do
     Repo.delete(division)
   end
 
+  @doc """
+  The position after the last division under `parent_id`, or at the top level when nil.
+  """
   def next_division_position(play_id, parent_id \\ nil) do
     query = Division |> where(play_id: ^play_id)
 
@@ -214,6 +252,10 @@ defmodule Playcode.PlayContent do
 
   # --- Elements ---
 
+  @doc """
+  The division's top-level elements in order, three levels deep (speech, line group,
+  verse), each with its speakers in order.
+  """
   def list_elements_for_division(division_id) do
     ec_preload = from(ec in ElementCharacter, order_by: ec.position, preload: :character)
 
@@ -246,6 +288,10 @@ defmodule Playcode.PlayContent do
     )
   end
 
+  @doc """
+  Up to 50 of the play's elements whose text or speaker label contains `query`,
+  case-insensitively, with their division. A query shorter than two bytes finds nothing.
+  """
   def search_elements(play_id, query) when is_binary(query) and byte_size(query) >= 2 do
     pattern = "%#{query}%"
 
@@ -262,6 +308,9 @@ defmodule Playcode.PlayContent do
 
   def search_elements(_play_id, _query), do: []
 
+  @doc """
+  The element `id` with its speakers in order. Raises when there is none.
+  """
   def get_element!(id) do
     Repo.get!(Element, id)
     |> Repo.preload(
@@ -269,6 +318,9 @@ defmodule Playcode.PlayContent do
     )
   end
 
+  @doc """
+  As `get_character/2`, for an element, with its speakers in order.
+  """
   def get_element(play_id, id) do
     case get_play_row(Element, play_id, id) do
       nil ->
@@ -282,20 +334,32 @@ defmodule Playcode.PlayContent do
     end
   end
 
+  @doc """
+  Creates an element; `attrs` carry its `play_id`, `division_id` and `parent_id`.
+  """
   def create_element(attrs) do
     %Element{}
     |> Element.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  An element's changeset, for a form.
+  """
   def change_element(%Element{} = element, attrs \\ %{}) do
     Element.changeset(element, attrs)
   end
 
+  @doc """
+  Updates an element.
+  """
   def update_element(%Element{} = element, attrs) do
     element |> Element.changeset(attrs) |> Repo.update()
   end
 
+  @doc """
+  Deletes an element and the elements under it.
+  """
   def delete_element(%Element{} = element) do
     Repo.delete(element)
   end
@@ -406,6 +470,9 @@ defmodule Playcode.PlayContent do
     |> Repo.one() || 0
   end
 
+  @doc """
+  The position after the last element under `parent_id` in the division, or at its top level when nil.
+  """
   def next_element_position(division_id, parent_id \\ nil) do
     query = Element |> where(division_id: ^division_id)
 

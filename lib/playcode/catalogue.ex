@@ -1,6 +1,13 @@
 defmodule Playcode.Catalogue do
   @moduledoc """
-  The Catalogue context manages plays and their metadata.
+  Plays and their metadata: the play row, its editors, sources and editorial notes.
+  The text lives in `Playcode.PlayContent`.
+
+  Every play read takes the same options. Archived plays are hidden unless the caller
+  passes `archived: true` (only them) or `include_deleted: true` (both), and
+  `complete: true` hides drafts too, for a reader who may not see them. The `*_with_all!`
+  reads also preload what a play's pages show, each list in a fixed order, with the
+  parent and derived plays under the same options.
   """
 
   import Ecto.Query
@@ -22,6 +29,11 @@ defmodule Playcode.Catalogue do
   """
   def origins, do: @origins
 
+  @doc """
+  The plays under the read options, sorted by `:sort`: `:title_sort` (the default),
+  `:author_sort` or `:code`. `:search` matches title, author or code, case-insensitively;
+  `:page` returns that page of `:per_page` plays (25 by default).
+  """
   def list_plays(opts \\ []) do
     query =
       Play
@@ -44,6 +56,9 @@ defmodule Playcode.Catalogue do
     end
   end
 
+  @doc """
+  How many plays `list_plays/1` finds for the same options, all pages together.
+  """
   def count_plays(opts \\ []) do
     Play
     |> scope(opts)
@@ -51,14 +66,24 @@ defmodule Playcode.Catalogue do
     |> Repo.aggregate(:count, :id)
   end
 
+  @doc """
+  The play `id` under the read options. Raises `Ecto.NoResultsError`, which a page or a
+  controller answers with a 404, when there is none.
+  """
   def get_play!(id, opts \\ []) do
     Play |> scope(opts) |> Repo.get!(id)
   end
 
+  @doc """
+  As `get_play!/2`, by code.
+  """
   def get_play_by_code!(code, opts \\ []) do
     Play |> scope(opts) |> Repo.get_by!(code: code)
   end
 
+  @doc """
+  As `get_play!/2`, with what the play's pages show preloaded.
+  """
   def get_play_with_all!(id, opts \\ []) do
     Play
     |> scope(opts)
@@ -66,6 +91,9 @@ defmodule Playcode.Catalogue do
     |> with_all(opts)
   end
 
+  @doc """
+  As `get_play_with_all!/2`, by code.
+  """
   def get_play_by_code_with_all!(code, opts \\ []) do
     Play
     |> scope(opts)
@@ -73,12 +101,20 @@ defmodule Playcode.Catalogue do
     |> with_all(opts)
   end
 
+  @doc """
+  Creates a play from every metadata column `Play.changeset/2` casts. The TEI importer
+  uses it; the admin form uses `create_play_from_form/1`.
+  """
   def create_play(attrs \\ %{}) do
     %Play{}
     |> Play.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates a play's metadata. `deleted_at` and `content_version` are not cast: archiving
+  goes through `delete_play/1`, and Postgres moves the version.
+  """
   def update_play(%Play{} = play, attrs) do
     play
     |> Play.changeset(attrs)
@@ -96,6 +132,9 @@ defmodule Playcode.Catalogue do
     |> Repo.update()
   end
 
+  @doc """
+  Undoes `delete_play/1`: every read shows the play again.
+  """
   def restore_play(%Play{} = play) do
     play |> Ecto.Changeset.change(deleted_at: nil) |> Repo.update()
   end
@@ -123,26 +162,35 @@ defmodule Playcode.Catalogue do
     |> Repo.update()
   end
 
-  def change_play(%Play{} = play, attrs \\ %{}) do
-    Play.changeset(play, attrs)
-  end
-
+  @doc """
+  The admin form's changeset (`Play.form_changeset/2`).
+  """
   def change_play_form(%Play{} = play, attrs \\ %{}) do
     Play.form_changeset(play, attrs)
   end
 
+  @doc """
+  Creates a play from the admin form.
+  """
   def create_play_from_form(attrs) do
     %Play{}
     |> Play.form_changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates a play from the admin form.
+  """
   def update_play_from_form(%Play{} = play, attrs) do
     play
     |> Play.form_changeset(attrs)
     |> Repo.update()
   end
 
+  @doc """
+  The code the new-play form offers: `EMOTHE` and one more than the highest number any
+  `EMOTHE`, `CTCE` or `AL` code carries, archived plays included, padded to four digits.
+  """
   def next_play_code do
     max_number =
       Play
@@ -162,6 +210,9 @@ defmodule Playcode.Catalogue do
 
   # --- Editors ---
 
+  @doc """
+  The play's editors, in their order.
+  """
   def list_play_editors(play_id) do
     PlayEditor
     |> where(play_id: ^play_id)
@@ -171,33 +222,47 @@ defmodule Playcode.Catalogue do
 
   @doc """
   The play's editor `id`, or nil. Scoped to the play because the id arrives from the
-  browser: another play's editor, a deleted one or a malformed id is nil. The same holds
-  for `get_play_source/2` and `get_play_editorial_note/2`.
+  browser: another play's editor, a deleted one or a malformed id is nil.
   """
   def get_play_editor(play_id, id), do: get_play_row(PlayEditor, play_id, id)
 
+  @doc """
+  Creates an editor; `attrs` carry its `play_id`.
+  """
   def create_play_editor(attrs) do
     %PlayEditor{}
     |> PlayEditor.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates an editor.
+  """
   def update_play_editor(%PlayEditor{} = editor, attrs) do
     editor
     |> PlayEditor.changeset(attrs)
     |> Repo.update()
   end
 
+  @doc """
+  Deletes an editor.
+  """
   def delete_play_editor(%PlayEditor{} = editor) do
     Repo.delete(editor)
   end
 
+  @doc """
+  An editor's changeset, for a form.
+  """
   def change_play_editor(%PlayEditor{} = editor, attrs \\ %{}) do
     PlayEditor.changeset(editor, attrs)
   end
 
   # --- Sources ---
 
+  @doc """
+  The play's bibliographic sources, in their order.
+  """
   def list_play_sources(play_id) do
     PlaySource
     |> where(play_id: ^play_id)
@@ -205,30 +270,48 @@ defmodule Playcode.Catalogue do
     |> Repo.all()
   end
 
+  @doc """
+  As `get_play_editor/2`, for a source.
+  """
   def get_play_source(play_id, id), do: get_play_row(PlaySource, play_id, id)
 
+  @doc """
+  Creates a source; `attrs` carry its `play_id`.
+  """
   def create_play_source(attrs) do
     %PlaySource{}
     |> PlaySource.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates a source.
+  """
   def update_play_source(%PlaySource{} = source, attrs) do
     source
     |> PlaySource.changeset(attrs)
     |> Repo.update()
   end
 
+  @doc """
+  Deletes a source.
+  """
   def delete_play_source(%PlaySource{} = source) do
     Repo.delete(source)
   end
 
+  @doc """
+  A source's changeset, for a form.
+  """
   def change_play_source(%PlaySource{} = source, attrs \\ %{}) do
     PlaySource.changeset(source, attrs)
   end
 
   # --- Editorial Notes ---
 
+  @doc """
+  The play's front-matter notes, in their order.
+  """
   def list_play_editorial_notes(play_id) do
     PlayEditorialNote
     |> where(play_id: ^play_id)
@@ -236,24 +319,39 @@ defmodule Playcode.Catalogue do
     |> Repo.all()
   end
 
+  @doc """
+  As `get_play_editor/2`, for an editorial note.
+  """
   def get_play_editorial_note(play_id, id), do: get_play_row(PlayEditorialNote, play_id, id)
 
+  @doc """
+  Creates an editorial note; `attrs` carry its `play_id`.
+  """
   def create_play_editorial_note(attrs) do
     %PlayEditorialNote{}
     |> PlayEditorialNote.changeset(attrs)
     |> Repo.insert()
   end
 
+  @doc """
+  Updates an editorial note.
+  """
   def update_play_editorial_note(%PlayEditorialNote{} = note, attrs) do
     note
     |> PlayEditorialNote.changeset(attrs)
     |> Repo.update()
   end
 
+  @doc """
+  Deletes an editorial note.
+  """
   def delete_play_editorial_note(%PlayEditorialNote{} = note) do
     Repo.delete(note)
   end
 
+  @doc """
+  An editorial note's changeset, for a form.
+  """
   def change_play_editorial_note(%PlayEditorialNote{} = note, attrs \\ %{}) do
     PlayEditorialNote.changeset(note, attrs)
   end
@@ -296,6 +394,9 @@ defmodule Playcode.Catalogue do
     )
   end
 
+  @doc """
+  How many groups `list_plays_grouped/1` finds for the same options, all pages together.
+  """
   def count_plays_grouped(opts \\ []) do
     Play
     |> scope(opts)
