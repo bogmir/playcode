@@ -24,7 +24,6 @@ defmodule Playcode.Bibliography do
   ]
 
   def change_entry(%Entry{} = entry, attrs \\ %{}), do: Entry.changeset(entry, attrs)
-  def change_link(%Link{} = link, attrs \\ %{}), do: Link.changeset(link, attrs)
 
   def get_entry!(id), do: Repo.get!(Entry, id)
 

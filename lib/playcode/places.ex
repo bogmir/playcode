@@ -300,10 +300,6 @@ defmodule Playcode.Places do
     |> Repo.preload(place: [names: from(n in PlaceName, order_by: ^@name_order)])
   end
 
-  def change_play_place(%PlayPlace{} = play_place, attrs \\ %{}) do
-    PlayPlace.changeset(play_place, attrs)
-  end
-
   # A count would collide after an unlink: unlink leaves a gap instead of renumbering
   # (deliberately — see `renumber/1`), so a play with links at 0 and 2 has a count of 2,
   # and a naive count-based next position would tie the surviving 2. max + 1 always

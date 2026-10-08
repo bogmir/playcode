@@ -327,15 +327,6 @@ defmodule Playcode.Catalogue do
           p.id in subquery(derived_match)
   end
 
-  def list_plays_for_select do
-    Play
-    |> scope([])
-    |> order_by([p], asc: p.title_sort, asc: p.title)
-    |> select([p], {p.title, p.code, p.id})
-    |> Repo.all()
-    |> Enum.map(fn {title, code, id} -> {"#{title} (#{code})", id} end)
-  end
-
   # --- Private ---
 
   # Everything a play's pages show, each list in a fixed order, so the same data always

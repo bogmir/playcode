@@ -1,7 +1,6 @@
 defmodule PlaycodeWeb.Admin.ImportLive do
   use PlaycodeWeb, :live_view
 
-  # alias Playcode.Export.TeiValidator
   alias Playcode.Import.TeiParser
   alias Playcode.ActivityLog
 
@@ -159,20 +158,6 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     send(self(), {:import_next, rest})
     {:noreply, update(socket, :import_done, &(&1 + 1))}
   end
-
-  # defp validate_source_file(path) do
-  #   case File.read(path) do
-  #     {:ok, xml} ->
-  #       case TeiValidator.validate(xml) do
-  #         {:ok, :valid} -> []
-  #         {:error, errors} when is_list(errors) -> errors
-  #         {:error, _atom} -> []
-  #       end
-  #
-  #     {:error, _} ->
-  #       []
-  #   end
-  # end
 
   defp format_error(reason) when is_atom(reason), do: to_string(reason)
   defp format_error({:xml_parse_error, detail}), do: "XML parse error: #{inspect(detail)}"

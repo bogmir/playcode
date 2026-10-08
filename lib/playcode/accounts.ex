@@ -353,12 +353,6 @@ defmodule Playcode.Accounts do
   ## Role management
 
   @doc """
-  Checks if a user has the admin role.
-  """
-  def admin?(%User{role: :admin}), do: true
-  def admin?(_), do: false
-
-  @doc """
   True when this user's email is listed in `ADMIN_EMAILS`.
 
   Protected admins cannot be demoted, deactivated or deleted from the UI.

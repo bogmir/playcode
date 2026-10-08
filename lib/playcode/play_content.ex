@@ -106,13 +106,6 @@ defmodule Playcode.PlayContent do
     Repo.delete(character)
   end
 
-  def next_character_position(play_id) do
-    Character
-    |> where(play_id: ^play_id)
-    |> select([c], coalesce(max(c.position), -1) + 1)
-    |> Repo.one()
-  end
-
   @doc """
   Shifts all character positions up by 1 to make room at position 0.
   """
@@ -256,13 +249,6 @@ defmodule Playcode.PlayContent do
   end
 
   def search_elements(_play_id, _query), do: []
-
-  def list_all_elements(play_id) do
-    Element
-    |> where(play_id: ^play_id)
-    |> order_by(:position)
-    |> Repo.all()
-  end
 
   def get_element!(id) do
     Repo.get!(Element, id)
@@ -479,17 +465,6 @@ defmodule Playcode.PlayContent do
 
       :ok
     end)
-  end
-
-  @doc """
-  Returns ordered character_ids for an element.
-  """
-  def get_element_character_ids(element_id) do
-    ElementCharacter
-    |> where(element_id: ^element_id)
-    |> order_by(:position)
-    |> select([ec], ec.character_id)
-    |> Repo.all()
   end
 
   defp collect_division_ids(divisions) do
