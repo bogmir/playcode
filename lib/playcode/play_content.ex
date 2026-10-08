@@ -40,6 +40,13 @@ defmodule Playcode.PlayContent do
 
   defp topic(play_id), do: "play_content:#{play_id}"
 
+  defp get_play_row(schema, play_id, id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} -> Repo.get_by(schema, id: id, play_id: play_id)
+      :error -> nil
+    end
+  end
+
   # --- Characters ---
 
   def list_characters(play_id) do
@@ -49,7 +56,12 @@ defmodule Playcode.PlayContent do
     |> Repo.all()
   end
 
-  def get_character!(id), do: Repo.get!(Character, id)
+  @doc """
+  The play's character `id`, or nil. Scoped to the play because the id arrives from the
+  browser: another play's character, a deleted one or a malformed id is nil. The same
+  holds for `get_division/2` and `get_element/2`.
+  """
+  def get_character(play_id, id), do: get_play_row(Character, play_id, id)
 
   def create_character(attrs) do
     %Character{}
@@ -169,7 +181,7 @@ defmodule Playcode.PlayContent do
     |> Repo.preload(children: from(d in Division, order_by: d.position))
   end
 
-  def get_division!(id), do: Repo.get!(Division, id)
+  def get_division(play_id, id), do: get_play_row(Division, play_id, id)
 
   def create_division(attrs) do
     %Division{}
@@ -255,6 +267,19 @@ defmodule Playcode.PlayContent do
     |> Repo.preload(
       element_characters: from(ec in ElementCharacter, order_by: ec.position, preload: :character)
     )
+  end
+
+  def get_element(play_id, id) do
+    case get_play_row(Element, play_id, id) do
+      nil ->
+        nil
+
+      element ->
+        Repo.preload(element,
+          element_characters:
+            from(ec in ElementCharacter, order_by: ec.position, preload: :character)
+        )
+    end
   end
 
   def create_element(attrs) do

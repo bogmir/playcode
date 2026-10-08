@@ -11,6 +11,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
   import Playcode.TestFixtures
   import Playcode.ImportHelpers
 
+  alias Playcode.PlayContent.Division
+
   setup %{conn: conn} do
     cast =
       ~w(ANA DON)
@@ -182,5 +184,153 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       assert [{_, "ACTO PRIMERO", []}] = outline(xml)
       assert xml_elements(xml, "l") == []
     end
+  end
+
+  describe "events naming rows that are not this play's" do
+    # Every id in an event comes from the browser: another play's row, one already gone, or
+    # not an id at all. None may change either play, crash the page or open a form on it,
+    # and each says so. The other play's exported TEI is the evidence it did not change.
+    setup do
+      other =
+        import_tei!(
+          tei(
+            front: """
+            <div type="elenco"><castList>
+              <castItem><role xml:id="OTRO">OTRO</role></castItem>
+            </castList></div>
+            <div type="dedicatoria"><p>Dedicatoria ajena</p></div>
+            """,
+            body: """
+            <div1 type="acto" n="1"><head>ACTO AJENO</head>
+              <sp who="#OTRO"><speaker>OTRO</speaker><lg><l n="1">Verso ajeno</l></lg></sp>
+            </div1>
+            """
+          )
+        )
+
+      %{other: other}
+    end
+
+    test "editing, deleting or opening one changes nothing and says so",
+         %{conn: conn, play: play, other: other} do
+      before = export_tei(other)
+      [note] = Playcode.Catalogue.list_play_editorial_notes(other.id)
+      [character] = Playcode.PlayContent.list_characters(other.id)
+      act = row(other, &match?(%Division{type: "acto"}, &1))
+      verse = row(other, &(&1.type == "verse_line"))
+
+      events = [
+        {"edit_editorial_note", note.id},
+        {"delete_editorial_note", note.id},
+        {"edit_character", character.id},
+        {"delete_character", character.id},
+        {"edit_division", act.id},
+        {"delete_division", act.id},
+        {"select_division", act.id},
+        {"select_division_auto", act.id},
+        {"edit_element", verse.id},
+        {"delete_element", verse.id}
+      ]
+
+      for {event, theirs} <- events, id <- [theirs, Ecto.UUID.generate(), "not-an-id"] do
+        {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+        assert render_click(lv, event, %{"id" => id}) =~ gone(), "#{event} #{id}"
+        refute has_element?(lv, "#content-modal"), "#{event} #{id}"
+      end
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+      render_click(lv, "inline_edit", %{"id" => verse.id})
+
+      assert render_click(lv, "inline_save", %{"element_id" => verse.id, "value" => "Cambiado"}) =~
+               gone()
+
+      search_hit = %{"division-id" => act.id, "parent-id" => "", "id" => verse.id}
+      assert render_click(lv, "content_search_go", search_hit) =~ gone()
+
+      assert export_tei(other) == before
+    end
+
+    test "a selection holding one acts on this play's rows only",
+         %{conn: conn, play: play, other: other} do
+      before = export_tei(other)
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+
+      render_click(lv, "el_toggle_element", %{"id" => row(other, &(&1.type == "verse_line")).id})
+      render_click(lv, "el_delete_selected", %{})
+      render_click(lv, "cr_toggle_speech", %{"id" => row(other, &(&1.type == "speech")).id})
+      render_click(lv, "cr_set_label", %{"speaker_label" => "CAMBIADO"})
+      render_click(lv, "cr_clear_label", %{})
+      render_click(lv, "cr_assign_characters", %{})
+
+      assert export_tei(other) == before
+    end
+
+    test "a speech here is never given another play's character",
+         %{conn: conn, play: play, other: other} do
+      [theirs] = Playcode.PlayContent.list_characters(other.id)
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+
+      render_click(lv, "cr_toggle_speech", %{"id" => row(play, &(&1.type == "speech")).id})
+      assert render_click(lv, "cr_add_character", %{"character_id" => theirs.id}) =~ gone()
+      render_click(lv, "cr_assign_characters", %{})
+      assert speakers(play) == ["#ANA"]
+
+      lv = open_scene(conn, play)
+      lv |> element("span", "ANA") |> render_click()
+
+      assert lv
+             |> element("#el-char-select")
+             |> render_hook("el_add_character", %{"character_id" => theirs.id}) =~ gone()
+
+      # A hand-made save naming the character anyway.
+      lv |> form("#element-form") |> render_submit(%{"character_ids" => [theirs.id]})
+      assert speakers(play) == [nil]
+    end
+
+    test "a new row is never hung under one, nor placed at no position",
+         %{conn: conn, play: play, other: other} do
+      lv = open_scene(conn, play)
+
+      events = [
+        {"new_division", %{"parent-id" => row(other, &match?(%Division{type: "acto"}, &1)).id}},
+        {"new_element",
+         %{"parent-id" => row(other, &(&1.type == "speech")).id, "type" => "verse_line"}},
+        {"new_element_before",
+         %{"parent-id" => "", "type" => "stage_direction", "position" => "primero"}}
+      ]
+
+      for {event, params} <- events do
+        assert render_click(lv, event, params) =~ gone(), event
+        refute has_element?(lv, "#content-modal"), event
+      end
+    end
+  end
+
+  defp gone, do: t("That item no longer exists. The list has been refreshed.")
+
+  defp speakers(play) do
+    play |> export_tei() |> xml_elements("sp") |> Enum.map(fn {attrs, _} -> attrs["who"] end)
+  end
+
+  defp loaded(item, key) do
+    case Map.get(item, key) do
+      list when is_list(list) -> list
+      _not_loaded -> []
+    end
+  end
+
+  # The first division or element of `play`, depth first, for which `fun` is true.
+  defp row(play, fun) do
+    walk = fn walk, items ->
+      Enum.flat_map(items, fn item ->
+        nested = Enum.flat_map([:children, :loaded_elements], &List.wrap(loaded(item, &1)))
+        [item | walk.(walk, nested)]
+      end)
+    end
+
+    play.id
+    |> Playcode.PlayContent.load_play_content()
+    |> then(&walk.(walk, &1))
+    |> Enum.find(fun)
   end
 end

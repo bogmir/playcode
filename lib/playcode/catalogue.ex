@@ -238,8 +238,6 @@ defmodule Playcode.Catalogue do
 
   def get_play_editorial_note(play_id, id), do: get_play_row(PlayEditorialNote, play_id, id)
 
-  def get_play_editorial_note!(id), do: Repo.get!(PlayEditorialNote, id)
-
   def create_play_editorial_note(attrs) do
     %PlayEditorialNote{}
     |> PlayEditorialNote.changeset(attrs)

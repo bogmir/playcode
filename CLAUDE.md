@@ -223,6 +223,14 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   visitor gets a 404 and staff keep the preview the admin pages link to. Related plays
   (`parent_play`, `derived_plays`) are preloaded under the same option, so no page links
   to a relative its reader cannot open. `/api/v1` has no session and reads `complete: true`.
+- **An id in a LiveView event came from the browser.** On a play's tabs, resolve it with a
+  getter scoped to the play (`Catalogue.get_play_editor/2`, `get_play_source/2`,
+  `get_play_editorial_note/2`, `Places.get_play_place/2`, `Bibliography.get_link/2`,
+  `PlayContent.get_character/2`, `get_division/2`, `get_element/2`), never `Repo.get!(id)`.
+  Each returns nil for another play's row, a deleted one or a malformed id; the tab then
+  reloads its list and calls `PlaycodeWeb.Admin.LiveHelpers.put_gone_flash/1`. A selection
+  or a list of character ids from the browser is filtered to the play's own rows before a
+  bulk action. This is what keeps per-play scoping below a one-clause change.
 - **Per-play scoping is a planned extension**, not a rewrite: `can?/3` already takes the
   resource, so restricting researchers to assigned plays is one new clause plus a
   `play_assignments` table. See the `@moduledoc` in `lib/playcode/authz.ex`.

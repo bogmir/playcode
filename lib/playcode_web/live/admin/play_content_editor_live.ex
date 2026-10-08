@@ -8,6 +8,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element}
   alias Playcode.ActivityLog
+  alias PlaycodeWeb.Admin.LiveHelpers
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -155,27 +156,24 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("edit_editorial_note", %{"id" => id}, socket) do
-    note = Catalogue.get_play_editorial_note!(id)
-    changeset = Catalogue.change_play_editorial_note(note)
-
-    {:noreply,
-     assign(socket,
-       modal: :editorial_note,
-       editing: note,
-       form: to_form(changeset, as: :editorial_note)
-     )}
+    with_row(socket, Catalogue.get_play_editorial_note(socket.assigns.play.id, id), fn note ->
+      assign(socket,
+        modal: :editorial_note,
+        editing: note,
+        form: to_form(Catalogue.change_play_editorial_note(note), as: :editorial_note)
+      )
+    end)
   end
 
   def handle_event("delete_editorial_note", %{"id" => id}, socket) do
-    note = Catalogue.get_play_editorial_note!(id)
-    {:ok, _} = Catalogue.delete_play_editorial_note(note)
+    with_row(socket, Catalogue.get_play_editorial_note(socket.assigns.play.id, id), fn note ->
+      {:ok, _} = Catalogue.delete_play_editorial_note(note)
+      log_action(socket, "delete", "editorial_note", note.id, %{section_type: note.section_type})
 
-    log_action(socket, "delete", "editorial_note", note.id, %{section_type: note.section_type})
-
-    {:noreply,
-     socket
-     |> put_flash(:info, gettext("Editorial note deleted."))
-     |> reload_editorial_notes()}
+      socket
+      |> put_flash(:info, gettext("Editorial note deleted."))
+      |> reload_editorial_notes()
+    end)
   end
 
   def handle_event("new_character", _, socket) do
@@ -196,31 +194,29 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("edit_character", %{"id" => id}, socket) do
-    character = PlayContent.get_character!(id)
-    changeset = PlayContent.change_character(character)
-
-    {:noreply,
-     assign(socket,
-       modal: :character,
-       editing: character,
-       form: to_form(changeset)
-     )}
+    with_row(socket, PlayContent.get_character(socket.assigns.play.id, id), fn character ->
+      assign(socket,
+        modal: :character,
+        editing: character,
+        form: to_form(PlayContent.change_character(character))
+      )
+    end)
   end
 
   def handle_event("delete_character", %{"id" => id}, socket) do
-    character = PlayContent.get_character!(id)
-    {:ok, _} = PlayContent.delete_character(character)
-    PlayContent.refresh_derived(socket.assigns.play.id)
+    with_row(socket, PlayContent.get_character(socket.assigns.play.id, id), fn character ->
+      {:ok, _} = PlayContent.delete_character(character)
+      PlayContent.refresh_derived(socket.assigns.play.id)
 
-    log_action(socket, "delete", "character", character.id, %{
-      name: character.name,
-      xml_id: character.xml_id
-    })
+      log_action(socket, "delete", "character", character.id, %{
+        name: character.name,
+        xml_id: character.xml_id
+      })
 
-    {:noreply,
-     socket
-     |> put_flash(:info, gettext("Character deleted."))
-     |> reload_characters()}
+      socket
+      |> put_flash(:info, gettext("Character deleted."))
+      |> reload_characters()
+    end)
   end
 
   def handle_event("reorder_characters", %{"ids" => ids}, socket) do
@@ -284,10 +280,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   def handle_event("cr_add_character", %{"character_id" => id}, socket) do
     current = socket.assigns.cr_selected_character_ids
 
-    if id in current do
-      {:noreply, socket}
-    else
-      {:noreply, assign(socket, cr_selected_character_ids: current ++ [id])}
+    cond do
+      own_character_ids(socket, [id]) == [] -> {:noreply, gone(socket)}
+      id in current -> {:noreply, socket}
+      true -> {:noreply, assign(socket, cr_selected_character_ids: current ++ [id])}
     end
   end
 
@@ -297,12 +293,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("cr_assign_characters", _params, socket) do
-    character_ids = socket.assigns.cr_selected_character_ids
+    character_ids = own_character_ids(socket, socket.assigns.cr_selected_character_ids)
 
-    socket.assigns.selected_speeches
-    |> Enum.each(fn speech_id ->
-      PlayContent.set_element_characters(speech_id, character_ids)
-    end)
+    socket
+    |> own_elements(socket.assigns.selected_speeches)
+    |> Enum.each(&PlayContent.set_element_characters(&1.id, character_ids))
 
     PlayContent.refresh_derived(socket.assigns.play.id)
 
@@ -326,11 +321,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         val -> val
       end
 
-    socket.assigns.selected_speeches
-    |> Enum.each(fn speech_id ->
-      element = PlayContent.get_element!(speech_id)
-      PlayContent.update_element(element, %{speaker_label: label})
-    end)
+    socket
+    |> own_elements(socket.assigns.selected_speeches)
+    |> Enum.each(&PlayContent.update_element(&1, %{speaker_label: label}))
 
     PlayContent.refresh_derived(socket.assigns.play.id)
 
@@ -342,11 +335,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("cr_clear_label", _params, socket) do
-    socket.assigns.selected_speeches
-    |> Enum.each(fn speech_id ->
-      element = PlayContent.get_element!(speech_id)
-      PlayContent.update_element(element, %{speaker_label: nil})
-    end)
+    socket
+    |> own_elements(socket.assigns.selected_speeches)
+    |> Enum.each(&PlayContent.update_element(&1, %{speaker_label: nil}))
 
     PlayContent.refresh_derived(socket.assigns.play.id)
 
@@ -400,93 +391,77 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     # Navigate to root element: if child (verse_line), select the parent speech
     target_id = if parent_id && parent_id != "", do: parent_id, else: id
 
-    {:noreply,
-     socket
-     |> assign(
-       selected_division_id: div_id,
-       editor_tab: :content,
-       content_search: "",
-       content_search_results: [],
-       selected_elements: MapSet.new([target_id]),
-       last_toggled_element: nil
-     )
-     |> reload_elements()
-     |> push_event("scroll-to-element", %{id: "element-#{target_id}"})}
+    with_row(socket, PlayContent.get_division(socket.assigns.play.id, div_id), fn _division ->
+      socket
+      |> assign(
+        selected_division_id: div_id,
+        editor_tab: :content,
+        content_search: "",
+        content_search_results: [],
+        selected_elements: MapSet.new([target_id]),
+        last_toggled_element: nil
+      )
+      |> reload_elements()
+      |> push_event("scroll-to-element", %{id: "element-#{target_id}"})
+    end)
   end
 
   def handle_event("new_division", params, socket) do
-    play = socket.assigns.play
-    parent_id = params["parent-id"]
-    pos = PlayContent.next_division_position(play.id, parent_id)
+    case params["parent-id"] do
+      blank when blank in [nil, ""] ->
+        {:noreply, open_new_division(socket, nil)}
 
-    default_type = if parent_id, do: "escena", else: "acto"
-
-    changeset =
-      PlayContent.change_division(%Division{}, %{
-        play_id: play.id,
-        parent_id: parent_id,
-        position: pos,
-        type: default_type
-      })
-
-    {:noreply,
-     assign(socket,
-       modal: :division,
-       editing: nil,
-       modal_parent_id: parent_id,
-       form: to_form(changeset)
-     )}
+      parent_id ->
+        with_row(socket, PlayContent.get_division(socket.assigns.play.id, parent_id), fn _ ->
+          open_new_division(socket, parent_id)
+        end)
+    end
   end
 
   def handle_event("edit_division", %{"id" => id}, socket) do
-    division = PlayContent.get_division!(id)
-    changeset = PlayContent.change_division(division)
-
-    {:noreply,
-     assign(socket,
-       modal: :division,
-       editing: division,
-       form: to_form(changeset)
-     )}
+    with_row(socket, PlayContent.get_division(socket.assigns.play.id, id), fn division ->
+      assign(socket,
+        modal: :division,
+        editing: division,
+        form: to_form(PlayContent.change_division(division))
+      )
+    end)
   end
 
   def handle_event("delete_division", %{"id" => id}, socket) do
-    division = PlayContent.get_division!(id)
-    {:ok, _} = PlayContent.delete_division(division)
-    PlayContent.refresh_derived(socket.assigns.play.id)
+    with_row(socket, PlayContent.get_division(socket.assigns.play.id, id), fn division ->
+      {:ok, _} = PlayContent.delete_division(division)
+      PlayContent.refresh_derived(socket.assigns.play.id)
 
-    log_action(socket, "delete", "division", division.id, %{
-      type: division.type,
-      number: division.number
-    })
+      log_action(socket, "delete", "division", division.id, %{
+        type: division.type,
+        number: division.number
+      })
 
-    selected =
-      if socket.assigns.selected_division_id == id,
-        do: nil,
-        else: socket.assigns.selected_division_id
+      selected =
+        if socket.assigns.selected_division_id == id,
+          do: nil,
+          else: socket.assigns.selected_division_id
 
-    {:noreply,
-     socket
-     |> put_flash(:info, gettext("Division deleted."))
-     |> assign(selected_division_id: selected)
-     |> reload_divisions()
-     |> reload_elements()}
+      socket
+      |> put_flash(:info, gettext("Division deleted."))
+      |> assign(selected_division_id: selected)
+      |> reload_divisions()
+      |> reload_elements()
+    end)
   end
 
   def handle_event("select_division", %{"id" => id}, socket) do
-    {:noreply,
-     socket
-     |> assign(
-       selected_division_id: id,
-       editor_tab: :content,
-       selected_elements: MapSet.new(),
-       last_toggled_element: nil
-     )
-     |> reload_elements()}
+    with_row(socket, PlayContent.get_division(socket.assigns.play.id, id), fn _division ->
+      show_division(socket, id)
+    end)
   end
 
   def handle_event("select_division_auto", %{"id" => id}, socket) do
     case find_division(socket.assigns.divisions, id) do
+      nil ->
+        {:noreply, gone(socket)}
+
       %{type: "elenco"} ->
         {:noreply,
          assign(socket,
@@ -497,119 +472,73 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
          )}
 
       %{children: [first_child | _]} ->
-        {:noreply,
-         socket
-         |> assign(
-           selected_division_id: first_child.id,
-           editor_tab: :content,
-           selected_elements: MapSet.new(),
-           last_toggled_element: nil
-         )
-         |> reload_elements()}
+        {:noreply, show_division(socket, first_child.id)}
 
-      _ ->
-        {:noreply,
-         socket
-         |> assign(
-           selected_division_id: id,
-           editor_tab: :content,
-           selected_elements: MapSet.new(),
-           last_toggled_element: nil
-         )
-         |> reload_elements()}
+      _division ->
+        {:noreply, show_division(socket, id)}
     end
   end
 
   def handle_event("new_element", params, socket) do
-    play = socket.assigns.play
-    div_id = socket.assigns.selected_division_id
-    parent_id = params["parent-id"]
-    element_type = params["type"]
-    pos = PlayContent.next_element_position(div_id, parent_id)
+    with_parent(socket, params["parent-id"], fn parent_id ->
+      play = socket.assigns.play
+      div_id = socket.assigns.selected_division_id
+      element_type = params["type"]
+      pos = PlayContent.next_element_position(div_id, parent_id)
 
-    attrs = %{
-      play_id: play.id,
-      division_id: div_id,
-      parent_id: parent_id,
-      type: element_type,
-      position: pos
-    }
+      attrs = %{
+        play_id: play.id,
+        division_id: div_id,
+        parent_id: parent_id,
+        type: element_type,
+        position: pos
+      }
 
-    attrs = maybe_add_line_number(attrs, element_type, play.id)
-    changeset = PlayContent.change_element(%Element{}, attrs)
+      attrs = maybe_add_line_number(attrs, element_type, play.id)
 
-    {:noreply,
-     assign(socket,
-       modal: :element,
-       editing: nil,
-       modal_element_type: element_type,
-       editing_character_ids: [],
-       form: to_form(changeset)
-     )}
+      assign(socket,
+        modal: :element,
+        editing: nil,
+        modal_element_type: element_type,
+        editing_character_ids: [],
+        form: to_form(PlayContent.change_element(%Element{}, attrs))
+      )
+    end)
   end
 
   def handle_event("new_element_before", params, socket) do
-    play = socket.assigns.play
-    div_id = socket.assigns.selected_division_id
+    case Integer.parse(params["position"] || "") do
+      {before_pos, ""} ->
+        with_parent(socket, params["parent-id"], fn parent_id ->
+          new_element_before(socket, parent_id, params["type"], before_pos)
+        end)
 
-    parent_id =
-      case params["parent-id"] do
-        "" -> nil
-        id -> id
-      end
-
-    element_type = params["type"]
-    before_pos = String.to_integer(params["position"])
-
-    PlayContent.shift_element_positions(div_id, parent_id, before_pos)
-
-    attrs = %{
-      play_id: play.id,
-      division_id: div_id,
-      parent_id: parent_id,
-      type: element_type,
-      position: before_pos
-    }
-
-    attrs = maybe_add_line_number(attrs, element_type, play.id)
-    changeset = PlayContent.change_element(%Element{}, attrs)
-
-    {:noreply,
-     socket
-     |> reload_elements()
-     |> assign(
-       modal: :element,
-       editing: nil,
-       modal_element_type: element_type,
-       editing_character_ids: [],
-       form: to_form(changeset)
-     )}
+      _malformed ->
+        {:noreply, gone(socket)}
+    end
   end
 
   def handle_event("edit_element", %{"id" => id}, socket) do
-    element = PlayContent.get_element!(id)
-    changeset = PlayContent.change_element(element)
-    editing_character_ids = element.element_characters |> Enum.map(& &1.character_id)
-
-    {:noreply,
-     assign(socket,
-       modal: :element,
-       editing: element,
-       modal_element_type: element.type,
-       editing_character_ids: editing_character_ids,
-       form: to_form(changeset)
-     )}
+    with_row(socket, PlayContent.get_element(socket.assigns.play.id, id), fn element ->
+      assign(socket,
+        modal: :element,
+        editing: element,
+        modal_element_type: element.type,
+        editing_character_ids: Enum.map(element.element_characters, & &1.character_id),
+        form: to_form(PlayContent.change_element(element))
+      )
+    end)
   end
 
   def handle_event("el_add_character", params, socket) do
     id = params["character_id"] || params["el_add_char"]
+    current = socket.assigns.editing_character_ids
 
-    if id && id != "" do
-      current = socket.assigns.editing_character_ids
-      updated = if id in current, do: current, else: current ++ [id]
-      {:noreply, assign(socket, editing_character_ids: updated)}
-    else
-      {:noreply, socket}
+    cond do
+      id in [nil, ""] -> {:noreply, socket}
+      own_character_ids(socket, [id]) == [] -> {:noreply, gone(socket)}
+      id in current -> {:noreply, socket}
+      true -> {:noreply, assign(socket, editing_character_ids: current ++ [id])}
     end
   end
 
@@ -626,21 +555,24 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     if socket.assigns.inline_editing_id == nil do
       {:noreply, socket}
     else
-      element = PlayContent.get_element!(id)
+      with_row(socket, PlayContent.get_element(socket.assigns.play.id, id), fn element ->
+        case PlayContent.update_element(element, %{"content" => value}) do
+          {:ok, _el} ->
+            PlayContent.refresh_derived(socket.assigns.play.id)
 
-      case PlayContent.update_element(element, %{"content" => value}) do
-        {:ok, _el} ->
-          PlayContent.refresh_derived(socket.assigns.play.id)
-          log_action(socket, "update", "element", element.id, %{type: element.type, inline: true})
+            log_action(socket, "update", "element", element.id, %{
+              type: element.type,
+              inline: true
+            })
 
-          {:noreply,
-           socket
-           |> assign(inline_editing_id: nil)
-           |> reload_elements()}
+            socket
+            |> assign(inline_editing_id: nil)
+            |> reload_elements()
 
-        {:error, _changeset} ->
-          {:noreply, put_flash(socket, :error, gettext("Could not save element."))}
-      end
+          {:error, _changeset} ->
+            put_flash(socket, :error, gettext("Could not save element."))
+        end
+      end)
     end
   end
 
@@ -649,27 +581,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("delete_element", %{"id" => id}, socket) do
-    element = PlayContent.get_element!(id)
-    play_id = socket.assigns.play.id
-
-    should_shift_down =
-      element.type == "verse_line" &&
-        element.line_number != nil &&
-        !PlayContent.split_verse?(play_id, element.id, element.line_number)
-
-    {:ok, _} = PlayContent.delete_element(element)
-
-    if should_shift_down do
-      PlayContent.shift_line_numbers_down(play_id, element.line_number)
-    end
-
-    PlayContent.refresh_derived(play_id)
-    log_action(socket, "delete", "element", element.id, %{type: element.type})
-
-    {:noreply,
-     socket
-     |> put_flash(:info, gettext("Element deleted."))
-     |> reload_elements()}
+    with_row(socket, PlayContent.get_element(socket.assigns.play.id, id), fn element ->
+      delete_element(socket, element)
+    end)
   end
 
   def handle_event("el_toggle_element", %{"id" => id, "shift" => true}, socket) do
@@ -707,13 +621,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   def handle_event("el_delete_selected", _params, socket) do
     play_id = socket.assigns.play.id
-    selected = socket.assigns.selected_elements
-    count = MapSet.size(selected)
+    elements = own_elements(socket, socket.assigns.selected_elements)
+    count = length(elements)
 
-    Enum.each(selected, fn id ->
-      element = PlayContent.get_element!(id)
-      {:ok, _} = PlayContent.delete_element(element)
-    end)
+    Enum.each(elements, fn element -> {:ok, _} = PlayContent.delete_element(element) end)
 
     PlayContent.refresh_derived(play_id)
 
@@ -722,6 +633,133 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
      |> put_flash(:info, gettext("%{count} elements deleted.", count: count))
      |> assign(selected_elements: MapSet.new())
      |> reload_elements()}
+  end
+
+  # --- Division helpers ---
+
+  defp open_new_division(socket, parent_id) do
+    play = socket.assigns.play
+    pos = PlayContent.next_division_position(play.id, parent_id)
+    default_type = if parent_id, do: "escena", else: "acto"
+
+    changeset =
+      PlayContent.change_division(%Division{}, %{
+        play_id: play.id,
+        parent_id: parent_id,
+        position: pos,
+        type: default_type
+      })
+
+    assign(socket,
+      modal: :division,
+      editing: nil,
+      modal_parent_id: parent_id,
+      form: to_form(changeset)
+    )
+  end
+
+  defp new_element_before(socket, parent_id, element_type, before_pos) do
+    play = socket.assigns.play
+    div_id = socket.assigns.selected_division_id
+
+    PlayContent.shift_element_positions(div_id, parent_id, before_pos)
+
+    attrs = %{
+      play_id: play.id,
+      division_id: div_id,
+      parent_id: parent_id,
+      type: element_type,
+      position: before_pos
+    }
+
+    attrs = maybe_add_line_number(attrs, element_type, play.id)
+
+    socket
+    |> reload_elements()
+    |> assign(
+      modal: :element,
+      editing: nil,
+      modal_element_type: element_type,
+      editing_character_ids: [],
+      form: to_form(PlayContent.change_element(%Element{}, attrs))
+    )
+  end
+
+  defp delete_element(socket, element) do
+    play_id = socket.assigns.play.id
+
+    should_shift_down =
+      element.type == "verse_line" &&
+        element.line_number != nil &&
+        !PlayContent.split_verse?(play_id, element.id, element.line_number)
+
+    {:ok, _} = PlayContent.delete_element(element)
+
+    if should_shift_down do
+      PlayContent.shift_line_numbers_down(play_id, element.line_number)
+    end
+
+    PlayContent.refresh_derived(play_id)
+    log_action(socket, "delete", "element", element.id, %{type: element.type})
+
+    socket
+    |> put_flash(:info, gettext("Element deleted."))
+    |> reload_elements()
+  end
+
+  defp show_division(socket, id) do
+    socket
+    |> assign(
+      selected_division_id: id,
+      editor_tab: :content,
+      selected_elements: MapSet.new(),
+      last_toggled_element: nil
+    )
+    |> reload_elements()
+  end
+
+  # --- Ids from the browser ---
+  #
+  # Every id an event carries came from the browser: another play's row, one a double
+  # click or another tab already deleted, or no id at all. Each is looked up through a
+  # getter scoped to this play, and nil changes nothing.
+
+  # Runs `fun` on `row` (from a scoped getter) and replies with the socket it returns;
+  # nil reloads the lists and says the item is gone.
+  defp with_row(socket, nil, _fun), do: {:noreply, gone(socket)}
+  defp with_row(_socket, row, fun), do: {:noreply, fun.(row)}
+
+  # As `with_row/3` for an optional parent element: blank means none.
+  defp with_parent(_socket, blank, fun) when blank in [nil, ""], do: {:noreply, fun.(nil)}
+
+  defp with_parent(socket, parent_id, fun) do
+    with_row(socket, PlayContent.get_element(socket.assigns.play.id, parent_id), fn _ ->
+      fun.(parent_id)
+    end)
+  end
+
+  defp gone(socket) do
+    socket
+    |> assign(inline_editing_id: nil)
+    |> reload_editorial_notes()
+    |> reload_characters()
+    |> reload_divisions()
+    |> reload_elements()
+    |> reload_speeches()
+    |> LiveHelpers.put_gone_flash()
+  end
+
+  # The play's own elements among `ids`; the rest are dropped.
+  defp own_elements(socket, ids) do
+    Enum.flat_map(ids, fn id ->
+      List.wrap(PlayContent.get_element(socket.assigns.play.id, id))
+    end)
+  end
+
+  # The play's own characters among `ids`, in the order given.
+  defp own_character_ids(socket, ids) do
+    own = socket.assigns.play.id |> PlayContent.list_characters() |> MapSet.new(& &1.id)
+    Enum.filter(ids, &MapSet.member?(own, &1))
   end
 
   # --- Element selection helpers ---
@@ -843,7 +881,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp save_element(socket, params) do
     el_params = params["element"] || %{}
-    character_ids = List.wrap(params["character_ids"] || []) |> Enum.reject(&(&1 == ""))
+
+    character_ids =
+      own_character_ids(socket, List.wrap(params["character_ids"] || []))
+
     play = socket.assigns.play
 
     result =
