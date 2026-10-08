@@ -13,7 +13,7 @@ defmodule Playcode.ActivityLog.Entry do
   @foreign_key_type :binary_id
 
   @actions ~w(create update delete import export role_change)
-  @resource_types ~w(play character division element editor source editorial_note user place play_place bibliography_entry play_bibliography)
+  @resource_types ~w(play character division element note editor source editorial_note user place play_place bibliography_entry play_bibliography)
 
   schema "activity_logs" do
     field :action, :string

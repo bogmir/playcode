@@ -363,6 +363,184 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  describe "the note editor" do
+    defp notes_section, do: "section[aria-label='#{t("Notes")}']"
+
+    test "a note is added to a verse, changed and deleted, each logged",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      lv |> element("button", t("Add note")) |> render_click()
+
+      lv
+      |> form("#note-form",
+        note: %{
+          "type" => "traductor",
+          "offset" => "7",
+          "term" => "Segunda",
+          "body" => "Primera glosa.\n\nSegundo párrafo."
+        }
+      )
+      |> render_submit()
+
+      assert [
+               %{
+                 in: "l",
+                 after: "Segunda",
+                 type: "traductor",
+                 term: "Segunda",
+                 paragraphs: ["Primera glosa.", "Segundo párrafo."]
+               }
+             ] = xml_notes(export_tei(play))
+
+      lv |> element("#{notes_section()} button", t("Edit")) |> render_click()
+
+      lv
+      |> form("#note-form", note: %{"offset" => "13", "body" => "Glosa corregida."})
+      |> render_submit()
+
+      assert [%{after: "Segunda línea", paragraphs: ["Glosa corregida."]}] =
+               xml_notes(export_tei(play))
+
+      lv |> element("#{notes_section()} button", t("Delete")) |> render_click()
+      assert xml_notes(export_tei(play)) == []
+
+      actions =
+        [resource_type: "note", play_id: play.id]
+        |> Playcode.ActivityLog.list_entries()
+        |> Enum.map(& &1.action)
+        |> Enum.sort()
+
+      assert actions == ["create", "delete", "update"]
+    end
+
+    test "changing only an imported note's text leaves it where it was", %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg>
+                  <l n="1">con dos caras que tiene,<note n="5" type="editor"><p>Glosa.</p></note> ya</l>
+                </lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "con dos caras que tiene, ya")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      lv |> element("#{notes_section()} button", t("Edit")) |> render_click()
+      lv |> form("#note-form", note: %{"body" => "Glosa nueva."}) |> render_submit()
+
+      assert [%{after: "con dos caras que tiene,", paragraphs: ["Glosa nueva."]}] =
+               xml_notes(export_tei(play))
+    end
+
+    test "a speaker label and a heading take notes too", %{conn: conn, play: play} do
+      lv = open_structure(conn, play)
+
+      [act] =
+        Regex.run(~r/id="(division-[^"]+)"[^>]*>(?:(?!id="division-).)*ACTO PRIMERO/s, render(lv),
+          capture: :all_but_first
+        )
+
+      lv |> element("##{act} button[aria-label='#{t("Edit metadata")}']") |> render_click()
+      lv |> element("button", t("Add note")) |> render_click()
+      lv |> form("#note-form", note: %{"body" => "Del título."}) |> render_submit()
+      lv |> element("button", t("Cancel")) |> render_click()
+
+      lv |> element("button", "ESCENA I") |> render_click()
+      speech = row(play, &(Map.get(&1, :speaker_label) == "ANA"))
+
+      lv
+      |> element("#element-#{speech.id} > div:first-child button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      lv |> element("button", t("Add note")) |> render_click()
+      lv |> form("#note-form", note: %{"body" => "Del hablante."}) |> render_submit()
+
+      assert [
+               %{in: "head", after: "ACTO PRIMERO", paragraphs: ["Del título."]},
+               %{in: "speaker", after: "ANA", paragraphs: ["Del hablante."]}
+             ] = xml_notes(export_tei(play))
+    end
+
+    test "a repeated word is numbered, so a note can go after either", %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg><l n="1">partes de partes</l></lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "partes de partes")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      lv |> element("button", t("Add note")) |> render_click()
+      assert has_element?(lv, "#note-form option", "partes (2)")
+
+      lv |> form("#note-form", note: %{"offset" => "16", "body" => "Glosa."}) |> render_submit()
+      assert [%{after: "partes de partes"}] = xml_notes(export_tei(play))
+    end
+
+    test "a note id that is not this line's changes nothing and says so", %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg>
+                  <l n="1">Una línea<note n="1" type="editor"><p>Glosa uno.</p></note></l>
+                  <l n="2">Otra línea<note n="2" type="editor"><p>Glosa dos.</p></note></l>
+                </lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      before = xml_notes(export_tei(play))
+      other_line = row(play, &(Map.get(&1, :content) == "Otra línea"))
+      [%{id: other_id}] = other_line.notes
+
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Una línea")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      for button <- [t("Edit"), t("Delete")] do
+        lv
+        |> element("#{notes_section()} button", button)
+        |> render_click(%{"id" => other_id})
+
+        assert render(lv) =~ gone(), button
+        assert xml_notes(export_tei(play)) == before, button
+      end
+    end
+  end
+
   defp gone, do: t("That item no longer exists. The list has been refreshed.")
 
   defp speakers(play) do

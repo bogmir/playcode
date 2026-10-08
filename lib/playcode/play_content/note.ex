@@ -15,7 +15,7 @@ defmodule Playcode.PlayContent.Note do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Playcode.PlayContent.{Division, Element}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup}
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -68,6 +68,27 @@ defmodule Playcode.PlayContent.Note do
 
   defp loaded(%Ecto.Association.NotLoaded{}), do: []
   defp loaded(list), do: list
+
+  @doc """
+  Where a note can go in `text`: after each word, as `{word, offset}`, a repeated word
+  numbered ("partes (2)"). The offset counts graphemes of the plain text.
+  """
+  def word_ends(text) do
+    plain = InlineMarkup.plain(text)
+
+    {ends, _seen} =
+      ~r/[\p{L}\p{N}'’]+/u
+      |> Regex.scan(plain, return: :index)
+      |> Enum.map_reduce(%{}, fn [{start, length}], seen ->
+        word = binary_part(plain, start, length)
+        count = Map.get(seen, word, 0) + 1
+        label = if count == 1, do: word, else: "#{word} (#{count})"
+        offset = String.length(binary_part(plain, 0, start + length))
+        {{label, offset}, Map.put(seen, word, count)}
+      end)
+
+    ends
+  end
 
   def changeset(note, attrs) do
     note

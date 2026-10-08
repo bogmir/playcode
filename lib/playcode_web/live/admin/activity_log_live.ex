@@ -125,6 +125,7 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
       "character" -> gettext("character")
       "division" -> gettext("division")
       "element" -> gettext("element")
+      "note" -> gettext("note")
       "editor" -> gettext("editor")
       "source" -> gettext("source")
       "editorial_note" -> gettext("editorial note")

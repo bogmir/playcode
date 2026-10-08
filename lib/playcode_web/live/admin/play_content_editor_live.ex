@@ -961,6 +961,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
      |> reload_speeches()}
   end
 
+  # The notes component's flash would stay in the component, so it asks for ours.
+  def handle_info(:note_gone, socket), do: {:noreply, LiveHelpers.put_gone_flash(socket)}
+
   # --- Reload helpers ---
 
   defp reload_editorial_notes(socket) do
@@ -1961,6 +1964,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           characters={@characters}
           modal_element_type={@modal_element_type}
           editing_character_ids={@editing_character_ids}
+          play_id={@play.id}
+          user={@current_user}
         />
       </.modal>
     </div>
@@ -2572,6 +2577,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   attr :characters, :list, default: []
   attr :modal_element_type, :string, default: nil
   attr :editing_character_ids, :list, default: []
+  attr :play_id, :string, default: nil
+  attr :user, :any, default: nil
 
   defp modal_content(%{modal: :editorial_note} = assigns) do
     ~H"""
@@ -2695,6 +2702,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </button>
       </div>
     </.form>
+    <.live_component
+      :if={@editing}
+      module={PlaycodeWeb.Admin.NotesComponent}
+      id={"notes-#{@editing.id}"}
+      anchor={@editing}
+      play_id={@play_id}
+      user={@user}
+    />
     """
   end
 
@@ -2863,6 +2878,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </button>
       </div>
     </.form>
+    <.live_component
+      :if={@editing && @editing.type in ~w(verse_line prose stage_direction trailer speech)}
+      module={PlaycodeWeb.Admin.NotesComponent}
+      id={"notes-#{@editing.id}"}
+      anchor={@editing}
+      play_id={@play_id}
+      user={@user}
+    />
     """
   end
 
