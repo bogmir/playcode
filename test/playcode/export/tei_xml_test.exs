@@ -9,6 +9,22 @@ defmodule Playcode.Export.TeiXmlTest do
   import Playcode.TestFixtures
   import Playcode.ImportHelpers
 
+  # Attributes came from atom-keyed maps, whose order is that of the atoms' creation in
+  # the running VM: two builds wrote <date notBefore notAfter> in either order, so
+  # unchanged plays showed as changed in the deployed site's history.
+  test "every element writes its attributes in alphabetical order" do
+    play =
+      play_fixture(%{"composition_date_from" => 1600, "composition_date_to" => 1601})
+
+    xml = Playcode.Export.TeiXml.generate(play)
+    assert xml =~ ~s(<date notAfter="1601" notBefore="1600")
+
+    for [_tag, attrs] <- Regex.scan(~r/<([\w:]+)((?:\s+[\w:.-]+="[^"]*")+)/, xml) do
+      names = Regex.scan(~r/([\w:.-]+)=/, attrs, capture: :all_but_first) |> List.flatten()
+      assert names == Enum.sort(names), "attributes out of order: #{attrs}"
+    end
+  end
+
   describe "places" do
     # Every slug here carries a "tx-" prefix. `places.slug` is globally unique and these
     # tests run async alongside others that use the same toponyms, so two transactions

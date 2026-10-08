@@ -5,7 +5,17 @@ defmodule Playcode.Export.TeiXml do
 
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{InlineMarkup, Note}
-  import XmlBuilder
+  import XmlBuilder, except: [element: 2, element: 3]
+
+  # Attributes in alphabetical order. An atom-keyed map lists its keys in the order the
+  # running VM created those atoms, so two builds wrote <date notBefore notAfter> in
+  # either order and unchanged files changed.
+  defp element(name, attrs) when is_map(attrs), do: XmlBuilder.element(name, sorted(attrs), nil)
+  defp element(name, content), do: XmlBuilder.element(name, content)
+  defp element(name, attrs, content), do: XmlBuilder.element(name, sorted(attrs), content)
+
+  defp sorted(attrs) when is_map(attrs), do: Enum.sort_by(attrs, &to_string(elem(&1, 0)))
+  defp sorted(attrs), do: attrs
 
   @body_types ~w(acto jornada prologo argumento act acte play prologue induction epilogue
                  interlude dumb_show auto)
