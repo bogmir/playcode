@@ -1628,17 +1628,15 @@ defmodule Playcode.Import.TeiParser do
   end
 
   # Stores the notes take_notes/2 found on `anchor`, %{element_id: id} or
-  # %{division_id: id}. `position` orders the notes at one offset.
+  # %{division_id: id}, in document order: `create_note/1` puts each after the notes
+  # already at its offset.
   defp create_text_notes(anchor, notes, play) do
-    notes
-    |> Enum.chunk_by(&elem(&1, 0))
-    |> Enum.flat_map(&Enum.with_index/1)
-    |> Enum.each(fn {{offset, note}, position} ->
+    Enum.each(notes, fn {offset, note} ->
       with %{} = fields <- parse_note(note) do
         attrs =
           fields
           |> Map.merge(anchor)
-          |> Map.merge(%{play_id: play.id, offset: offset, position: position})
+          |> Map.merge(%{play_id: play.id, offset: offset})
 
         case PlayContent.create_note(attrs) do
           {:ok, _note} -> :ok

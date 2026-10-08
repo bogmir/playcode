@@ -447,6 +447,47 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
                xml_notes(export_tei(play))
     end
 
+    test "a note added after a word that has one comes second, and editing the first keeps that",
+         %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg>
+                  <l n="1">Buscad por todas<note n="1" type="editor"><p>Importada.</p></note> partes</l>
+                </lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      glosses = fn -> for %{paragraphs: [text]} <- xml_notes(export_tei(play)), do: text end
+
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Buscad por todas partes")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      lv |> element("button", t("Add note")) |> render_click()
+
+      lv
+      |> form("#note-form", note: %{"offset" => "16", "body" => "Nueva."})
+      |> render_submit()
+
+      assert glosses.() == ["Importada.", "Nueva."]
+
+      lv
+      |> element("#{notes_section()} li:first-child button", t("Edit"))
+      |> render_click()
+
+      lv |> form("#note-form", note: %{"body" => "Importada, corregida."}) |> render_submit()
+      assert glosses.() == ["Importada, corregida.", "Nueva."]
+    end
+
     test "a speaker label and a heading take notes too", %{conn: conn, play: play} do
       lv = open_structure(conn, play)
 

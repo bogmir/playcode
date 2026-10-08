@@ -372,17 +372,66 @@ defmodule Playcode.PlayContent do
 
   defp notes_query, do: from(n in Note, order_by: [n.offset, n.position])
 
-  @doc "Creates a note; `attrs` carry its `play_id` and its `element_id` or `division_id`."
-  def create_note(attrs), do: %Note{} |> Note.changeset(attrs) |> Repo.insert()
+  @doc """
+  Creates a note; `attrs` carry its `play_id` and its `element_id` or `division_id`. It goes
+  after the notes already at its offset, whatever `position` says.
+  """
+  def create_note(attrs),
+    do: %Note{} |> Note.changeset(attrs) |> put_next_position() |> Repo.insert()
 
   @doc "A note's changeset, for a form."
   def change_note(%Note{} = note, attrs \\ %{}), do: Note.changeset(note, attrs)
 
-  @doc "Updates a note."
-  def update_note(%Note{} = note, attrs), do: note |> Note.changeset(attrs) |> Repo.update()
+  @doc """
+  Updates a note. One moved to another offset goes after the notes already there; any
+  other change leaves it where it is among them.
+  """
+  def update_note(%Note{} = note, attrs) do
+    changeset = Note.changeset(note, attrs)
+
+    changeset =
+      if Map.has_key?(changeset.changes, :offset),
+        do: put_next_position(changeset),
+        else: changeset
+
+    Repo.update(changeset)
+  end
 
   @doc "Deletes a note."
   def delete_note(%Note{} = note), do: Repo.delete(note)
+
+  # `position` orders the notes at one offset of one anchor, and the public numbering, the
+  # pop-ups and the TEI export follow it, so a note must not tie with another.
+  # ponytail: two curators adding at one word in the same instant can still tie; lock the
+  # anchor's row if that ever happens.
+  defp put_next_position(%{valid?: true} = changeset) do
+    offset = Ecto.Changeset.get_field(changeset, :offset)
+
+    anchor =
+      case {Ecto.Changeset.get_field(changeset, :element_id),
+            Ecto.Changeset.get_field(changeset, :division_id)} do
+        {nil, nil} -> nil
+        {nil, division_id} -> {:division_id, division_id}
+        {element_id, _} -> {:element_id, element_id}
+      end
+
+    case anchor do
+      nil ->
+        changeset
+
+      {key, id} ->
+        last =
+          Repo.one(
+            from n in Note,
+              where: n.offset == ^offset and field(n, ^key) == ^id,
+              select: max(n.position)
+          )
+
+        Ecto.Changeset.put_change(changeset, :position, (last || -1) + 1)
+    end
+  end
+
+  defp put_next_position(changeset), do: changeset
 
   @doc """
   The text a note on `anchor` counts its offset in: a division's title, a speech's

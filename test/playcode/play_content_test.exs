@@ -178,5 +178,29 @@ defmodule Playcode.PlayContentTest do
       {:ok, _} = PlayContent.delete_element(line)
       assert PlayContent.list_notes(line) == []
     end
+
+    test "notes at one offset keep the order they were added in, through edits" do
+      %{play: play, verse_line: line} = play_with_structure_fixture()
+
+      note = fn offset, body ->
+        %{play_id: play.id, element_id: line.id, offset: offset, body: body}
+      end
+
+      bodies = fn -> PlayContent.list_notes(line) |> Enum.map(& &1.body) end
+
+      {:ok, first} = PlayContent.create_note(note.(3, "Primera"))
+      {:ok, _second} = PlayContent.create_note(note.(3, "Segunda"))
+      {:ok, _} = PlayContent.create_note(note.(7, "Tercera"))
+      {:ok, _} = PlayContent.create_note(note.(7, "Cuarta"))
+      assert bodies.() == ["Primera", "Segunda", "Tercera", "Cuarta"]
+
+      # Changing a note's text does not move it among its neighbours.
+      {:ok, first} = PlayContent.update_note(first, %{"body" => "Primera, corregida"})
+      assert bodies.() == ["Primera, corregida", "Segunda", "Tercera", "Cuarta"]
+
+      # Moving a note to a word that has one puts it after that one.
+      {:ok, _} = PlayContent.update_note(first, %{"offset" => "7"})
+      assert bodies.() == ["Segunda", "Tercera", "Cuarta", "Primera, corregida"]
+    end
   end
 end
