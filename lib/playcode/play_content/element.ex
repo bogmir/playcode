@@ -1,4 +1,33 @@
 defmodule Playcode.PlayContent.Element do
+  @moduledoc """
+  One piece of a play's text. Elements form a tree through `parent_id`: a `speech`
+  holds `line_group`s, which hold `verse_line`s, or it holds `prose` directly.
+  Stage directions can sit at any level. Every element also carries its
+  `division_id`, nested ones included.
+
+  Other types:
+
+    * A `prose` or `line_group` with no parent is text nobody speaks, such as a dumb
+      show or a stanza that opens a prologue.
+    * A `trailer` is a division's closing formula ("FIN DEL PRIMER ACTO"), exported
+      last in its division.
+    * `unrecognized` comes only from the Word importer.
+
+  A speech's speakers are `element_characters`, kept in order, because `<sp who>` can
+  name several. `characters/1` reads them, preloaded. `speaker_label` is the
+  `<speaker>` text as printed.
+
+  On a verse line:
+
+    * `line_number` is `@n`.
+    * `line_id` is `@xml:id`.
+    * `part` (`I`, `M`, `F`) marks a verse split between speakers.
+    * `verse_type` (redondilla, romance…) sits on the `line_group`.
+
+  `content` is plain text with italics as `<<…>>` markers (see `InlineMarkup`).
+  `position` orders an element among its siblings.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

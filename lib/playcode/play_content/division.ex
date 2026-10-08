@@ -1,4 +1,16 @@
 defmodule Playcode.PlayContent.Division do
+  @moduledoc """
+  A section of a play's text: an act holding scenes (`parent_id`), or a front-matter
+  section such as the prologue, the dedication or the cast list (`elenco`).
+
+  `type` is the TEI `@type` as the edition spells it: Spanish (`acto`, `jornada`,
+  `escena`), English (`act`, `scene`) or French (`acte`). `PlaycodeWeb.PlayLabels` names
+  it for display. `title` is the `<head>`. `position` orders a division among its siblings.
+
+  `loaded_elements` is filled when the play's content is loaded as a tree, never
+  stored.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

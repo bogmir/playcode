@@ -1,4 +1,15 @@
 defmodule Playcode.PlayContent.Character do
+  @moduledoc """
+  A character in the play's cast list (`<castList>`).
+
+  `xml_id` is the identifier speeches cite: `<sp who="#don_diego">`. It is unique within
+  the play. `description` is the `<roleDesc>`. `position` is the order in the cast
+  list.
+
+  A hidden character (`is_hidden`, TEI `ana="oculto"`) may speak, but every printed cast
+  list leaves it out.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 

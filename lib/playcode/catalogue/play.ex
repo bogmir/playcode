@@ -1,4 +1,31 @@
 defmodule Playcode.Catalogue.Play do
+  @moduledoc """
+  One edition of a play: its metadata. The text lives in `Playcode.PlayContent`.
+
+  `code` (`EMOTHE0010`, `AL0001` for ARTELOPE) is how people and URLs name a play, and
+  it is unique across archived plays too. `emothe_id` is the TEI header's
+  `<idno type="EMOTHE">`, not the application.
+
+  Plays form families. An original has a nil `relationship_type`. A translation,
+  adaptation or reworking (`traduccion`, `adaptacion`, `refundicion`) points at it
+  through `parent_play_id`.
+
+  `language` is the language the play is written in, from `<langUsage>` or the FileMaker
+  index. It is not the TEI root's `xml:lang`, which is always "es".
+
+  Who writes which column:
+
+    * The TEI importer owns most of them. A re-import overwrites them in place.
+    * The curators own the columns in `TeiParser`'s `@platform_owned`, which a
+      re-import never touches.
+    * `verse_count` and `is_verse` are derived from the verse lines by
+      `Catalogue.update_verse_count/1`. Read the play's form through `form/1`.
+    * `deleted_at` and `content_version` are written only by the functions and the
+      triggers named next to them.
+
+  `is_complete` decides what the static site publishes.
+  """
+
   use Ecto.Schema
   import Ecto.Changeset
 
