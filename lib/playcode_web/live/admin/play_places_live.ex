@@ -6,7 +6,6 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
 
   use PlaycodeWeb, :live_view
 
-  alias Playcode.ActivityLog
   alias Playcode.Catalogue
   alias Playcode.Places
   alias Playcode.Places.Authority
@@ -106,12 +105,14 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
     {:noreply, socket |> assign(:term, term) |> assign(:suggestions, suggestions)}
   end
 
+  # A suggestion deleted from the gazetteer since the search clears the picker instead.
   def handle_event("pick_place", %{"id" => id}, socket) do
-    {:noreply,
-     socket
-     |> assign(:picked, Places.get_place!(id))
-     |> assign(:term, "")
-     |> assign(:suggestions, [])}
+    socket = socket |> assign(:term, "") |> assign(:suggestions, [])
+
+    case Places.get_place(id) do
+      nil -> {:noreply, socket |> load_links() |> LiveHelpers.put_gone_flash()}
+      place -> {:noreply, assign(socket, :picked, place)}
+    end
   end
 
   def handle_event("clear_pick", _params, socket) do
@@ -166,13 +167,9 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
   end
 
   defp log(socket, action, link) do
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: socket.assigns.play.id,
-      action: action,
-      resource_type: "play_place",
-      resource_id: link.id,
-      metadata: %{place_id: link.place_id, role: link.role}
+    LiveHelpers.log_activity(socket, action, "play_place", link.id, %{
+      place_id: link.place_id,
+      role: link.role
     })
   end
 

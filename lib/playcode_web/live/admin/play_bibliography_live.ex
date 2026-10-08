@@ -7,7 +7,6 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   """
   use PlaycodeWeb, :live_view
 
-  alias Playcode.ActivityLog
   alias Playcode.Bibliography
   alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue
@@ -79,10 +78,10 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
 
     case save(socket.assigns.editing, socket.assigns.play.id, entry_params, link_params) do
       {:ok, link, action} ->
-        log(socket, action, "bibliography_entry", link.entry_id)
+        LiveHelpers.log_activity(socket, action, "bibliography_entry", link.entry_id)
 
         if link_changed?(socket.assigns.editing, link),
-          do: log(socket, action, "play_bibliography", link.id)
+          do: LiveHelpers.log_activity(socket, action, "play_bibliography", link.id)
 
         message =
           if action == "create", do: gettext("Entry added."), else: gettext("Entry saved.")
@@ -105,8 +104,10 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
 
       link ->
         {:ok, outcome} = Bibliography.unlink(link)
-        log(socket, "delete", "play_bibliography", link.id)
-        if outcome == :deleted, do: log(socket, "delete", "bibliography_entry", link.entry_id)
+        LiveHelpers.log_activity(socket, "delete", "play_bibliography", link.id)
+
+        if outcome == :deleted,
+          do: LiveHelpers.log_activity(socket, "delete", "bibliography_entry", link.entry_id)
 
         message =
           if outcome == :deleted,
@@ -137,7 +138,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   def handle_event("link", %{"entry" => entry_id}, socket) do
     case Bibliography.link_entry(socket.assigns.play.id, entry_id) do
       {:ok, link} ->
-        log(socket, "create", "play_bibliography", link.id)
+        LiveHelpers.log_activity(socket, "create", "play_bibliography", link.id)
 
         {:noreply,
          socket
@@ -208,16 +209,6 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
 
     if Entry.named?(entry),
       do: Citation.html(entry, %Link{volume: link_params["volume"], pages: link_params["pages"]})
-  end
-
-  defp log(socket, action, resource_type, resource_id) do
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: socket.assigns.play.id,
-      action: action,
-      resource_type: resource_type,
-      resource_id: resource_id
-    })
   end
 
   # The groups with only the links whose printed citation contains the filter, compared

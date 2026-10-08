@@ -7,7 +7,6 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.PlaySource
-  alias Playcode.ActivityLog
   alias PlaycodeWeb.Admin.LiveHelpers
 
   @impl true
@@ -83,14 +82,7 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
 
         case Catalogue.create_play_source(params) do
           {:ok, source} ->
-            ActivityLog.log!(%{
-              user_id: socket.assigns.current_user.id,
-              play_id: socket.assigns.play.id,
-              action: "create",
-              resource_type: "source",
-              resource_id: source.id,
-              metadata: %{title: source.title}
-            })
+            LiveHelpers.log_activity(socket, "create", "source", source.id, %{title: source.title})
 
             sources = Catalogue.list_play_sources(socket.assigns.play.id)
 
@@ -108,13 +100,8 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
       source ->
         case Catalogue.update_play_source(source, params) do
           {:ok, updated} ->
-            ActivityLog.log!(%{
-              user_id: socket.assigns.current_user.id,
-              play_id: socket.assigns.play.id,
-              action: "update",
-              resource_type: "source",
-              resource_id: updated.id,
-              metadata: %{title: updated.title}
+            LiveHelpers.log_activity(socket, "update", "source", updated.id, %{
+              title: updated.title
             })
 
             sources = Catalogue.list_play_sources(socket.assigns.play.id)
@@ -142,14 +129,7 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
   defp delete_source(socket, source) do
     {:ok, _} = Catalogue.delete_play_source(source)
 
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: socket.assigns.play.id,
-      action: "delete",
-      resource_type: "source",
-      resource_id: source.id,
-      metadata: %{title: source.title}
-    })
+    LiveHelpers.log_activity(socket, "delete", "source", source.id, %{title: source.title})
 
     socket
     |> assign(:sources, Catalogue.list_play_sources(socket.assigns.play.id))

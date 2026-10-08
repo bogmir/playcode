@@ -215,4 +215,16 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLiveTest do
 
     assert [%{note: "suya"}] = Places.list_play_places(other.id)
   end
+
+  test "picking a place that is gone says so instead of crashing", %{conn: conn} do
+    {conn, play} = setup_play(conn)
+
+    for id <- [Ecto.UUID.generate(), "not-an-id"] do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/places")
+
+      assert render_click(lv, "pick_place", %{"id" => id}) =~
+               t("That item no longer exists. The list has been refreshed."),
+             id
+    end
+  end
 end

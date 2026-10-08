@@ -78,6 +78,27 @@ defmodule PlaycodeWeb.AuthorizationTest do
     end
   end
 
+  # The table above is written by hand, and this keeps it whole: a route behind the log-in,
+  # or anywhere under /admin, with no row fails here until it gets one. A route counts as
+  # gated by its pipelines, read from the router, or by its /admin path, which also catches
+  # the site preview behind its own pipeline. LiveDashboard's own routes are excused: they
+  # sit in the scope of /admin/dashboard, which has a row.
+  @dashboard_internals ~w(/admin/dashboard/css-:md5 /admin/dashboard/js-:md5
+                          /admin/dashboard/:page /admin/dashboard/:node/:page)
+
+  test "every gated route has a row in the table" do
+    rows = Enum.map(@routes, fn {path, _who} -> path |> String.split("?") |> hd() end)
+
+    missing =
+      for route <- PlaycodeWeb.Router.__routes__(),
+          gated?(route),
+          route.path not in @dashboard_internals,
+          not Enum.any?(rows, &Regex.match?(pattern(route.path), &1)),
+          do: "#{route.verb} #{route.path}"
+
+    assert missing == []
+  end
+
   describe "navigating inside the admin area" do
     # A live navigation stays in the :admin live_session, so no router plug runs:
     # only each LiveView's own on_mount stands between a researcher and the page.
@@ -114,6 +135,28 @@ defmodule PlaycodeWeb.AuthorizationTest do
 
       refute Playcode.Accounts.get_user_by_session_token(token)
     end
+  end
+
+  defp gated?(route) do
+    verb = route.verb |> to_string() |> String.upcase()
+    sample = String.replace(route.path, ~r/[:*][a-z_]+/, "x")
+    %{pipe_through: pipes} = Phoenix.Router.route_info(PlaycodeWeb.Router, verb, sample, "")
+
+    :require_authenticated_user in pipes or String.starts_with?(route.path, "/admin")
+  end
+
+  # A route's path as a regex over the table's concrete paths: `:id` matches any one
+  # segment, `*path` the rest.
+  defp pattern(path) do
+    path
+    |> String.split("/")
+    |> Enum.map(fn
+      ":" <> _param -> "[^/]+"
+      "*" <> _glob -> ".+"
+      segment -> Regex.escape(segment)
+    end)
+    |> Enum.join("/")
+    |> then(&Regex.compile!("^" <> &1 <> "$"))
   end
 
   defp conn_for(nil), do: build_conn()

@@ -332,6 +332,34 @@ defmodule Playcode.Export.StaticSiteTest do
     assert page > 0 and index > 0 and shard > 0
   end
 
+  # The export page's progress bar moves on these. Reported only once the last play was
+  # built, it sat at "Writing assets..." for the whole of a 372-play Generate.
+  test "each play is reported as it is built, while the plays after it wait" do
+    workers = min(System.schedulers_online(), Playcode.Repo.config()[:pool_size] - 2)
+    plays = for _ <- 1..(workers + 2), do: complete_play()
+    dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm_rf(dir) end)
+    test = self()
+
+    on_progress = fn
+      %{step: :play, current: 1} ->
+        send(test, {:written, length(StaticSite.list_exported_codes(dir))})
+
+      _ ->
+        :ok
+    end
+
+    assert {:ok, _} =
+             StaticSite.generate(
+               output_dir: dir,
+               play_codes: Enum.map(plays, & &1.code),
+               on_progress: on_progress
+             )
+
+    assert_received {:written, written}
+    assert written < length(plays)
+  end
+
   test "the title page names the curator's form" do
     prose = complete_play(%{"form" => "prose"})
     mixed = complete_play(%{"form" => "mixed"})

@@ -65,4 +65,17 @@ defmodule PlaycodeWeb.PlayCatalogueLiveTest do
     {:ok, _lv, page} = conn |> log_in_user(user_fixture()) |> live(~p"/plays/#{draft.code}")
     assert page =~ draft.title
   end
+
+  # LiveView takes a click on a plain link for leaving the page: it tears the page down
+  # and closes its socket. A download never leaves, so the reader saw the error panel
+  # while the PDF rendered, and then a reload. A link marked `download` is left alone.
+  test "the download links are marked as downloads, so the page stays connected",
+       %{conn: conn} do
+    play = complete(%{"title" => "Lástima que sea una puta"})
+    {:ok, lv, _html} = live(conn, ~p"/plays")
+
+    for format <- ~w(tei html pdf epub) do
+      assert has_element?(lv, ~s(a[href="/export/#{play.id}/#{format}"][download])), format
+    end
+  end
 end

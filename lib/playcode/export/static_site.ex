@@ -73,7 +73,9 @@ defmodule Playcode.Export.StaticSite do
             max_concurrency: concurrency(),
             timeout: :infinity
           )
-          |> Enum.with_index(1)
+          # Stream, not Enum: Enum.with_index/2 would build every play before the first
+          # was reported, leaving the progress bar still until the end.
+          |> Stream.with_index(1)
           |> Enum.map(fn {{:ok, result}, n} ->
             opts[:on_progress].(%{step: :play, current: n, total: total, detail: result.code})
             result
@@ -86,17 +88,21 @@ defmodule Playcode.Export.StaticSite do
           detail: "Generating catalogue..."
         })
 
+        versions = Map.new(results, &{&1.code, &1.version})
+        largest = results |> Enum.map(& &1.largest_page_gzip) |> Enum.max(fn -> 0 end)
         write_catalogue(plays, dir, opts)
+        # results is not used past here, so the index can let go of postings as it goes:
+        # 58 MB less at the peak of a 371-play build.
         report = write_search(plays, Map.new(results, &{&1.code, &1.postings}), dir)
         # Last: a build cut short leaves no record, so the next Generate rebuilds it all.
-        write_build(dir, built_with(opts), Map.new(results, &{&1.code, &1.version}))
+        write_build(dir, built_with(opts), versions)
 
         {:ok,
          Map.merge(report, %{
            plays: total,
            size: dir_size(dir),
            output_dir: dir,
-           largest_page_gzip: results |> Enum.map(& &1.largest_page_gzip) |> Enum.max(fn -> 0 end)
+           largest_page_gzip: largest
          })}
       end
     end)

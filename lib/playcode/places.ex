@@ -52,11 +52,23 @@ defmodule Playcode.Places do
     |> Repo.delete()
   end
 
-  def get_place!(id) do
-    Place
-    |> Repo.get!(id)
-    |> Repo.preload([:parent, names: from(n in PlaceName, order_by: ^@name_order)])
+  def get_place!(id), do: Place |> Repo.get!(id) |> preload_place()
+
+  @doc """
+  The place `id`, as `get_place!/1` loads it, or nil for a deleted place or a malformed
+  id: the one to use on an id from the browser.
+  """
+  def get_place(id) do
+    with {:ok, id} <- Ecto.UUID.cast(id),
+         %Place{} = place <- Repo.get(Place, id) do
+      preload_place(place)
+    else
+      _ -> nil
+    end
   end
+
+  defp preload_place(place),
+    do: Repo.preload(place, [:parent, names: from(n in PlaceName, order_by: ^@name_order)])
 
   def list_places(opts \\ []) do
     locale = opts[:locale] || "es"

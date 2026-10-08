@@ -104,8 +104,8 @@ if config_env() == :prod do
     # debug Chrome itself. config/test.exs deliberately keeps it false, because a
     # failing PDF test is exactly when that output is worth having.
     discard_stderr: true,
-    chrome_args: "--disable-dev-shm-usage",
-    session_pool: [size: 1, timeout: 60_000, checkout_timeout: 60_000, init_timeout: 30_000]
+    # Timeouts and on_demand are in config/config.exs, for every environment.
+    chrome_args: "--disable-dev-shm-usage"
 
   otel_traces_exporter =
     System.get_env("OTEL_TRACES_EXPORTER", "none")

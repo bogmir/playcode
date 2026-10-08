@@ -8,7 +8,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
   alias Playcode.Catalogue
   alias Playcode.PlayContent
-  alias Playcode.ActivityLog
+  alias PlaycodeWeb.Admin.LiveHelpers
 
   @per_page 50
 
@@ -63,13 +63,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   def handle_event("delete", %{"id" => id}, socket) do
     play = Catalogue.get_play!(id)
 
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: play.id,
-      action: "delete",
-      resource_type: "play",
-      resource_id: play.id,
-      metadata: %{title: play.title, code: play.code, archived: true}
+    LiveHelpers.log_activity(socket, "delete", "play", play.id, %{
+      title: play.title,
+      code: play.code,
+      archived: true
     })
 
     {:ok, _} = Catalogue.delete_play(play)
@@ -82,13 +79,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
     {:ok, _} = Catalogue.restore_play(play)
 
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: play.id,
-      action: "update",
-      resource_type: "play",
-      resource_id: play.id,
-      metadata: %{title: play.title, code: play.code, restored: true}
+    LiveHelpers.log_activity(socket, "update", "play", play.id, %{
+      title: play.title,
+      code: play.code,
+      restored: true
     })
 
     {:noreply, reload(socket)}

@@ -7,7 +7,6 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.PlayEditor
-  alias Playcode.ActivityLog
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
@@ -84,13 +83,9 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
 
         case Catalogue.create_play_editor(params) do
           {:ok, editor} ->
-            ActivityLog.log!(%{
-              user_id: socket.assigns.current_user.id,
-              play_id: socket.assigns.play.id,
-              action: "create",
-              resource_type: "editor",
-              resource_id: editor.id,
-              metadata: %{person_name: editor.person_name, role: editor.role}
+            LiveHelpers.log_activity(socket, "create", "editor", editor.id, %{
+              person_name: editor.person_name,
+              role: editor.role
             })
 
             editors = Catalogue.list_play_editors(socket.assigns.play.id)
@@ -109,13 +104,9 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
       editor ->
         case Catalogue.update_play_editor(editor, params) do
           {:ok, updated} ->
-            ActivityLog.log!(%{
-              user_id: socket.assigns.current_user.id,
-              play_id: socket.assigns.play.id,
-              action: "update",
-              resource_type: "editor",
-              resource_id: updated.id,
-              metadata: %{person_name: updated.person_name, role: updated.role}
+            LiveHelpers.log_activity(socket, "update", "editor", updated.id, %{
+              person_name: updated.person_name,
+              role: updated.role
             })
 
             editors = Catalogue.list_play_editors(socket.assigns.play.id)
@@ -143,13 +134,9 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   defp delete_editor(socket, editor) do
     {:ok, _} = Catalogue.delete_play_editor(editor)
 
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: socket.assigns.play.id,
-      action: "delete",
-      resource_type: "editor",
-      resource_id: editor.id,
-      metadata: %{person_name: editor.person_name, role: editor.role}
+    LiveHelpers.log_activity(socket, "delete", "editor", editor.id, %{
+      person_name: editor.person_name,
+      role: editor.role
     })
 
     socket
