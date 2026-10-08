@@ -9,9 +9,9 @@ defmodule PlaycodeWeb.Admin.PlaceFormComponent do
 
   use PlaycodeWeb, :live_component
 
-  alias Playcode.ActivityLog
   alias Playcode.Places
   alias Playcode.Places.Authority
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -108,13 +108,7 @@ defmodule PlaycodeWeb.Admin.PlaceFormComponent do
   end
 
   defp log(socket, action, place) do
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      action: action,
-      resource_type: "place",
-      resource_id: place.id,
-      metadata: %{slug: place.slug}
-    })
+    LiveHelpers.log_activity(socket, action, "place", place.id, %{slug: place.slug})
   end
 
   # One Wikidata click seeds a name row per language it knows, which is the whole point

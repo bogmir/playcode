@@ -10,9 +10,9 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
   # sections still navigate without a full page reload.
   on_mount {PlaycodeWeb.UserAuth, {:ensure_can, :manage_places}}
 
-  alias Playcode.ActivityLog
   alias Playcode.Places
   alias Playcode.Places.{Authority, Place}
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -49,13 +49,7 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
 
     case Places.delete_place(place) do
       {:ok, _} ->
-        ActivityLog.log!(%{
-          user_id: socket.assigns.current_user.id,
-          action: "delete",
-          resource_type: "place",
-          resource_id: place.id,
-          metadata: %{slug: place.slug}
-        })
+        LiveHelpers.log_activity(socket, "delete", "place", place.id, %{slug: place.slug})
 
         {:noreply, socket |> load_places() |> put_flash(:info, gettext("Place deleted."))}
 

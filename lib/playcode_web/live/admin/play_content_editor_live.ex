@@ -14,7 +14,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   alias Playcode.Catalogue.PlayEditorialNote
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element}
-  alias Playcode.ActivityLog
   alias PlaycodeWeb.Admin.LiveHelpers
 
   @impl true
@@ -175,7 +174,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   def handle_event("delete_editorial_note", %{"id" => id}, socket) do
     with_row(socket, Catalogue.get_play_editorial_note(socket.assigns.play.id, id), fn note ->
       {:ok, _} = Catalogue.delete_play_editorial_note(note)
-      log_action(socket, "delete", "editorial_note", note.id, %{section_type: note.section_type})
+
+      LiveHelpers.log_activity(socket, "delete", "editorial_note", note.id, %{
+        section_type: note.section_type
+      })
 
       socket
       |> put_flash(:info, gettext("Editorial note deleted."))
@@ -215,7 +217,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       {:ok, _} = PlayContent.delete_character(character)
       PlayContent.refresh_derived(socket.assigns.play.id)
 
-      log_action(socket, "delete", "character", character.id, %{
+      LiveHelpers.log_activity(socket, "delete", "character", character.id, %{
         name: character.name,
         xml_id: character.xml_id
       })
@@ -308,7 +310,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     PlayContent.refresh_derived(socket.assigns.play.id)
 
-    log_action(socket, "update", "element", nil, %{
+    LiveHelpers.log_activity(socket, "update", "element", nil, %{
       bulk: true,
       count: MapSet.size(socket.assigns.selected_speeches),
       action: "assign_characters"
@@ -440,7 +442,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       {:ok, _} = PlayContent.delete_division(division)
       PlayContent.refresh_derived(socket.assigns.play.id)
 
-      log_action(socket, "delete", "division", division.id, %{
+      LiveHelpers.log_activity(socket, "delete", "division", division.id, %{
         type: division.type,
         number: division.number
       })
@@ -567,7 +569,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           {:ok, _el} ->
             PlayContent.refresh_derived(socket.assigns.play.id)
 
-            log_action(socket, "update", "element", element.id, %{
+            LiveHelpers.log_activity(socket, "update", "element", element.id, %{
               type: element.type,
               inline: true
             })
@@ -707,7 +709,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
 
     PlayContent.refresh_derived(play_id)
-    log_action(socket, "delete", "element", element.id, %{type: element.type})
+    LiveHelpers.log_activity(socket, "delete", "element", element.id, %{type: element.type})
 
     socket
     |> put_flash(:info, gettext("Element deleted."))
@@ -802,7 +804,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       {:ok, saved} ->
         action = if socket.assigns.editing, do: "update", else: "create"
 
-        log_action(socket, action, "editorial_note", saved.id, %{section_type: saved.section_type})
+        LiveHelpers.log_activity(socket, action, "editorial_note", saved.id, %{
+          section_type: saved.section_type
+        })
 
         {:noreply,
          socket
@@ -834,7 +838,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
 
-        log_action(socket, action, "character", saved.id, %{
+        LiveHelpers.log_activity(socket, action, "character", saved.id, %{
           name: saved.name,
           xml_id: saved.xml_id
         })
@@ -873,7 +877,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
 
-        log_action(socket, action, "division", saved.id, %{type: saved.type, number: saved.number})
+        LiveHelpers.log_activity(socket, action, "division", saved.id, %{
+          type: saved.type,
+          number: saved.number
+        })
 
         {:noreply,
          socket
@@ -931,7 +938,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
         PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
-        log_action(socket, action, "element", el.id, %{type: el.type})
+        LiveHelpers.log_activity(socket, action, "element", el.id, %{type: el.type})
 
         {:noreply,
          socket
@@ -2864,16 +2871,5 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       </div>
     </.form>
     """
-  end
-
-  defp log_action(socket, action, resource_type, resource_id, metadata) do
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: socket.assigns.play.id,
-      action: action,
-      resource_type: resource_type,
-      resource_id: resource_id,
-      metadata: metadata
-    })
   end
 end

@@ -8,7 +8,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
-  alias Playcode.ActivityLog
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @al_project_description "El proyecto Artelope supone la creación de un banco de datos, argumentos y ediciones para un corpus fundamental del patrimonio literario español: el teatro de Lope de Vega y, extendido, en los últimos años, a Guillén de Castro."
@@ -239,13 +239,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   defp save_play(socket, :new, play_params) do
     case Catalogue.create_play_from_form(play_params) do
       {:ok, play} ->
-        ActivityLog.log!(%{
-          user_id: socket.assigns.current_user.id,
-          play_id: play.id,
-          action: "create",
-          resource_type: "play",
-          resource_id: play.id,
-          metadata: %{title: play.title, code: play.code}
+        LiveHelpers.log_activity(socket, "create", "play", play.id, %{
+          title: play.title,
+          code: play.code
         })
 
         {:noreply,
@@ -261,13 +257,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   defp save_play(socket, :edit, play_params) do
     case Catalogue.update_play_from_form(socket.assigns.play, play_params) do
       {:ok, play} ->
-        ActivityLog.log!(%{
-          user_id: socket.assigns.current_user.id,
-          play_id: play.id,
-          action: "update",
-          resource_type: "play",
-          resource_id: play.id,
-          metadata: %{title: play.title, code: play.code}
+        LiveHelpers.log_activity(socket, "update", "play", play.id, %{
+          title: play.title,
+          code: play.code
         })
 
         {:noreply,

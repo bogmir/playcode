@@ -6,7 +6,6 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
 
   use PlaycodeWeb, :live_view
 
-  alias Playcode.ActivityLog
   alias Playcode.Catalogue
   alias Playcode.Places
   alias Playcode.Places.Authority
@@ -166,13 +165,9 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
   end
 
   defp log(socket, action, link) do
-    ActivityLog.log!(%{
-      user_id: socket.assigns.current_user.id,
-      play_id: socket.assigns.play.id,
-      action: action,
-      resource_type: "play_place",
-      resource_id: link.id,
-      metadata: %{place_id: link.place_id, role: link.role}
+    LiveHelpers.log_activity(socket, action, "play_place", link.id, %{
+      place_id: link.place_id,
+      role: link.role
     })
   end
 

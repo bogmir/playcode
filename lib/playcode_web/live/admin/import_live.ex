@@ -7,7 +7,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   use PlaycodeWeb, :live_view
 
   alias Playcode.Import.TeiParser
-  alias Playcode.ActivityLog
+  alias PlaycodeWeb.Admin.LiveHelpers
 
   @impl true
   def mount(_params, _session, socket) do
@@ -139,13 +139,10 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     socket =
       case TeiParser.import_file(path) do
         {:ok, play} ->
-          ActivityLog.log!(%{
-            user_id: socket.assigns[:current_user] && socket.assigns.current_user.id,
-            play_id: play.id,
-            action: "import",
-            resource_type: "play",
-            resource_id: play.id,
-            metadata: %{filename: filename, title: play.title, code: play.code}
+          LiveHelpers.log_activity(socket, "import", "play", play.id, %{
+            filename: filename,
+            title: play.title,
+            code: play.code
           })
 
           # validation_warnings = validate_source_file(path)
