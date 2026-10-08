@@ -4008,6 +4008,7 @@ msgstr "Capítulo de libro"
 msgid "Book or journal"
 msgstr "Libro o revista"
 
+#: lib/playcode_web/components/play_text.ex:297
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:339
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -4151,6 +4152,7 @@ msgstr "Esta obra aún no tiene bibliografía."
 msgid "Not stated"
 msgstr "Sin indicar"
 
+#: lib/playcode_web/components/play_text.ex:289
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:493
 #, elixir-autogen, elixir-format
 msgid "Notes"

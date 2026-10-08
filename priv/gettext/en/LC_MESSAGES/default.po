@@ -4002,6 +4002,7 @@ msgstr ""
 msgid "Book or journal"
 msgstr ""
 
+#: lib/playcode_web/components/play_text.ex:297
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:339
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Close"
@@ -4145,6 +4146,7 @@ msgstr ""
 msgid "Not stated"
 msgstr ""
 
+#: lib/playcode_web/components/play_text.ex:289
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:493
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Notes"

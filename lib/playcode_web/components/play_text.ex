@@ -4,7 +4,10 @@ defmodule PlaycodeWeb.Components.PlayText do
   Styled to match the production EMOTHE/Artelope color scheme and fonts.
   """
   use Phoenix.Component
-  alias Playcode.PlayContent.{Division, InlineMarkup}
+  use Gettext, backend: PlaycodeWeb.Gettext
+
+  alias Playcode.PlayContent.{Division, InlineMarkup, Note}
+  alias PlaycodeWeb.PlayLabels
 
   attr :divisions, :list, required: true
   attr :characters, :list, default: []
@@ -59,6 +62,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           </div>
         </div>
       </div>
+      <.endnotes notes={Note.reading_order(@divisions)} />
     </div>
     """
   end
@@ -83,14 +87,14 @@ defmodule PlaycodeWeb.Components.PlayText do
       class="font-bold text-center my-6 text-lg uppercase tracking-wide play-act-title"
       data-sync-div={@sync_key}
     >
-      {@division.title}
+      <.inline_content text={@division.title} notes={@division.notes} />
     </h2>
     <h3
       :if={@division.title && !@is_act}
       class="font-semibold text-center my-4 text-xs uppercase tracking-widest play-scene-title"
       data-sync-div={@sync_key}
     >
-      {@division.title}
+      <.inline_content text={@division.title} notes={@division.notes} />
     </h3>
     """
   end
@@ -162,7 +166,7 @@ defmodule PlaycodeWeb.Components.PlayText do
       data-sync-act={@act_key}
     >
       <div :if={@element.speaker_label} class="speaker mb-1">
-        {@element.speaker_label}
+        <.inline_content text={@element.speaker_label} notes={@element.notes} />
       </div>
       <div :for={child <- Map.get(@element, :children, [])}>
         <.render_element
@@ -215,7 +219,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         @show_split_verses && @element.part == "F" && "part-f",
         @show_split_verses && @element.part == "M" && "part-m"
       ]}>
-        <.inline_content text={@element.content} />
+        <.inline_content text={@element.content} notes={@element.notes} />
       </span>
       <span
         :if={@element.line_number}
@@ -237,7 +241,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp render_element(%{element: %{type: "stage_direction"}} = assigns) do
     ~H"""
     <div :if={@show_stage_directions} class="stage-direction text-center my-4 px-2 sm:px-8">
-      (<.inline_content text={@element.content} />)
+      (<.inline_content text={@element.content} notes={@element.notes} />)
     </div>
     """
   end
@@ -245,7 +249,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp render_element(%{element: %{type: "prose"}} = assigns) do
     ~H"""
     <div :if={!@element.is_aside || @show_asides} class="ml-1 sm:ml-4 mb-2 text-justify">
-      <.inline_content text={@element.content} />
+      <.inline_content text={@element.content} notes={@element.notes} />
     </div>
     """
   end
@@ -253,24 +257,54 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp render_element(assigns) do
     ~H"""
     <div :if={@element.content}>
-      {@element.content}
+      <.inline_content text={@element.content} notes={@element.notes} />
     </div>
     """
   end
 
-  attr :text, :string, required: true
+  attr :text, :string, default: nil
+  attr :notes, :list, default: []
 
+  # One line, kept from the formatter by phx-no-format: a line break between a word and
+  # its note's number would show as a space.
   defp inline_content(assigns) do
-    parts = InlineMarkup.parts(assigns.text)
-    assigns = assign(assigns, :parts, parts)
+    assigns = assign(assigns, :parts, InlineMarkup.parts(assigns.text, assigns.notes))
 
     ~H"""
-    <%= for part <- @parts do %>
-      <em :if={part.italic}>{part.text}</em>
-      <%= if !part.italic do %>
-        {part.text}
-      <% end %>
-    <% end %>
+    <span phx-no-format><%= for part <- @parts do %><%= case part do %><% %{note: note} -> %><button type="button" class="nref" popovertarget={"note-#{note.id}"} aria-label={note_label(note)}>{note.number}</button><% %{italic: true} -> %><em>{part.text}</em><% _ -> %>{part.text}<% end %><% end %></span>
+    """
+  end
+
+  defp note_label(note), do: "#{PlayLabels.note_type_label(note.type)} #{note.number}"
+
+  attr :notes, :list, required: true
+
+  # The play's notes, each a popover its number opens.
+  defp endnotes(assigns) do
+    ~H"""
+    <section
+      :if={@notes != []}
+      class="play-notes"
+      role="doc-endnotes"
+      aria-label={gettext("Notes")}
+    >
+      <ol>
+        <li :for={note <- @notes} id={"note-#{note.id}"} popover value={note.number}>
+          <button
+            type="button"
+            popovertarget={"note-#{note.id}"}
+            popovertargetaction="hide"
+            aria-label={gettext("Close")}
+            class="float-right"
+          >
+            ×
+          </button>
+          <b>{PlayLabels.note_type_label(note.type)}</b>
+          <i :if={note.term}><.inline_content text={note.term} /></i>
+          <p :for={paragraph <- Note.paragraphs(note)}><.inline_content text={paragraph} /></p>
+        </li>
+      </ol>
+    </section>
     """
   end
 end

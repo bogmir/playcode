@@ -30,6 +30,108 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "&lt;&lt;"
   end
 
+  test "a note is a number after its word, opening the note with its type, term and text",
+       %{conn: conn} do
+    play =
+      tei(
+        body: """
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>ANA</speaker><lg><l n="1">Nous voyent<note n="6089" type="traductor"><term>voyent</term><p>Forma arcaica.</p></note> dans la ville</l></lg></sp>
+        </div1>
+        """
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+    doc = LazyHTML.from_fragment(html)
+    squish = &(&1 |> String.replace(~r/\s+/u, " ") |> String.trim())
+
+    assert [target] =
+             doc
+             |> LazyHTML.query(~s(button[aria-label="#{t("Translator's note")} 1"]))
+             |> LazyHTML.attribute("popovertarget")
+
+    note = squish.(doc |> LazyHTML.query("#" <> target) |> LazyHTML.text())
+    assert note =~ t("Translator's note")
+    assert note =~ "voyent"
+    assert note =~ "Forma arcaica."
+
+    assert squish.(LazyHTML.text(doc)) =~ "Nous voyent1 dans la ville"
+    assert doc |> LazyHTML.text() |> String.split("Forma arcaica.") |> length() == 2
+  end
+
+  describe "a note's number, wherever its word is" do
+    # One note in each place the page draws text: an act heading, a stage direction, a
+    # scene heading, a speaker, a verse line, a prose paragraph and a trailer.
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I<note n="1" type="autor"><p>Del encabezado.</p></note></head>
+            <stage>Salen todos<note n="2" type="editor"><p>Del acto.</p></note></stage>
+            <div2 type="escena" n="1"><head>Escena<note n="3" type="traductor"><p>Del título.</p></note> 1</head>
+              <sp><speaker>ANA<note n="4" type="editor_critico"><p>Del hablante.</p></note></speaker><lg><l n="1">verso<note n="5" type="editor_digital"><p>Del verso.</p></note></l></lg></sp>
+              <sp><speaker>BLAS</speaker><p>prosa<note n="6"><p>De la prosa.</p></note></p></sp>
+              <trailer>FIN<note n="7" type="autor"><p>Del cierre.</p></note></trailer>
+            </div2>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+      %{doc: LazyHTML.from_fragment(html)}
+    end
+
+    # The text of the note a button opens, by the button's label, within `within`.
+    defp opened_by(doc, label, within) do
+      assert [target] =
+               doc
+               |> LazyHTML.query(~s(#{within} button[aria-label="#{label}"]))
+               |> LazyHTML.attribute("popovertarget"),
+             "no #{within} button labelled #{label}"
+
+      doc |> LazyHTML.query("#" <> target) |> LazyHTML.text()
+    end
+
+    test "an act heading, a scene heading, a stage direction, a speaker, a line, a paragraph and a trailer each carry theirs",
+         %{doc: doc} do
+      text = doc |> LazyHTML.text() |> String.replace(~r/\s+/u, " ")
+
+      assert opened_by(doc, "#{t("Author's note")} 1", "h2") =~ "Del encabezado."
+      assert text =~ "Acto I1"
+
+      assert opened_by(doc, "#{t("Editor's note")} 2", "main") =~ "Del acto."
+      assert text =~ "Salen todos2"
+
+      assert opened_by(doc, "#{t("Translator's note")} 3", "h3") =~ "Del título."
+      assert text =~ "Escena3 1"
+
+      assert opened_by(doc, "#{t("Critical editor's note")} 4", "main") =~ "Del hablante."
+      assert text =~ "ANA4"
+
+      assert opened_by(doc, "#{t("Digital editor's note")} 5", "main") =~ "Del verso."
+      assert text =~ "verso5"
+
+      assert opened_by(doc, "#{t("Note")} 6", "main") =~ "De la prosa."
+      assert text =~ "prosa6"
+
+      assert opened_by(doc, "#{t("Author's note")} 7", "main") =~ "Del cierre."
+      assert text =~ "FIN7"
+    end
+
+    test "the notes are listed once each, in reading order: the speaker's before the lines'",
+         %{doc: doc} do
+      assert doc |> LazyHTML.query("li[popover]") |> LazyHTML.attribute("value") ==
+               Enum.map(1..7, &to_string/1)
+
+      ids = doc |> LazyHTML.query("li[popover]") |> LazyHTML.attribute("id")
+      assert ids == Enum.uniq(ids)
+    end
+  end
+
   test "the play's form is the curator's when one is set", %{conn: conn} do
     play =
       import_tei!(

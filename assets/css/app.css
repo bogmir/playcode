@@ -179,6 +179,34 @@
   }
 }
 
+/* In-text notes: the number after a glossed word opens its note, a popover. */
+.play-text .nref {
+  font-size: 0.65em;
+  line-height: 0;
+  vertical-align: super;
+  padding: 0 0.1em;
+  color: var(--color-primary);
+  cursor: pointer;
+}
+
+.play-notes ol {
+  margin: 0;
+  padding: 0;
+}
+
+.play-notes [popover] {
+  max-width: min(32rem, calc(100vw - 2rem));
+  padding: 1rem 1.25rem;
+  border: 1px solid var(--color-base-300);
+  border-radius: var(--radius-box);
+  background: var(--color-base-100);
+  color: var(--color-base-content);
+}
+
+.play-notes [popover] p {
+  margin-top: 0.5em;
+}
+
 .play-text .aside-border {
   border-left: 2px solid oklch(from var(--color-warning) l c h / 0.4);
 }
