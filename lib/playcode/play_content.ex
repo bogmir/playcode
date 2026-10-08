@@ -10,7 +10,7 @@ defmodule Playcode.PlayContent do
 
   import Ecto.Query
   alias Playcode.Repo
-  alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter}
+  alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, Note}
 
   @pubsub Playcode.PubSub
 
@@ -363,6 +363,26 @@ defmodule Playcode.PlayContent do
   def delete_element(%Element{} = element) do
     Repo.delete(element)
   end
+
+  # --- Notes ---
+
+  @doc "The notes on an element or a division, in text order."
+  def list_notes(%Element{id: id}), do: notes_query() |> where(element_id: ^id) |> Repo.all()
+  def list_notes(%Division{id: id}), do: notes_query() |> where(division_id: ^id) |> Repo.all()
+
+  defp notes_query, do: from(n in Note, order_by: [n.offset, n.position])
+
+  @doc "Creates a note; `attrs` carry its `play_id` and its `element_id` or `division_id`."
+  def create_note(attrs), do: %Note{} |> Note.changeset(attrs) |> Repo.insert()
+
+  @doc "A note's changeset, for a form."
+  def change_note(%Note{} = note, attrs \\ %{}), do: Note.changeset(note, attrs)
+
+  @doc "Updates a note."
+  def update_note(%Note{} = note, attrs), do: note |> Note.changeset(attrs) |> Repo.update()
+
+  @doc "Deletes a note."
+  def delete_note(%Note{} = note), do: Repo.delete(note)
 
   @doc """
   Shifts positions of elements at or after `from_position` up by 1,

@@ -27,6 +27,7 @@ defmodule Playcode.PlayContent.Division do
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
     has_many :elements, Playcode.PlayContent.Element
+    has_many :notes, Playcode.PlayContent.Note, preload_order: [asc: :offset, asc: :position]
 
     field :loaded_elements, {:array, :map}, virtual: true, default: []
 

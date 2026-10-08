@@ -1,6 +1,8 @@
 defmodule Playcode.PlayContentTest do
   use Playcode.DataCase, async: true
 
+  import Playcode.TestFixtures
+
   alias Playcode.PlayContent
   alias Playcode.TestFixtures
 
@@ -140,6 +142,41 @@ defmodule Playcode.PlayContentTest do
 
       # Empty group, global max is 1, so should return 2
       assert PlayContent.auto_line_number(play.id, lg.id, 0) == 2
+    end
+  end
+
+  describe "in-text notes" do
+    test "a note hangs on an element or a division, never on both or neither" do
+      %{play: play, act: act, verse_line: line} = play_with_structure_fixture()
+      note = %{play_id: play.id, offset: 0, body: "Glosa"}
+
+      assert {:ok, _} = PlayContent.create_note(Map.put(note, :element_id, line.id))
+      assert {:ok, _} = PlayContent.create_note(Map.put(note, :division_id, act.id))
+      assert {:error, _} = PlayContent.create_note(note)
+
+      assert {:error, _} =
+               PlayContent.create_note(
+                 Map.merge(note, %{element_id: line.id, division_id: act.id})
+               )
+    end
+
+    test "a line's notes list in text order, and go when the line goes" do
+      %{play: play, verse_line: line} = play_with_structure_fixture()
+
+      for {offset, body} <- [{5, "Segunda"}, {1, "Primera"}] do
+        {:ok, _} =
+          PlayContent.create_note(%{
+            play_id: play.id,
+            element_id: line.id,
+            offset: offset,
+            body: body
+          })
+      end
+
+      assert Enum.map(PlayContent.list_notes(line), & &1.body) == ["Primera", "Segunda"]
+
+      {:ok, _} = PlayContent.delete_element(line)
+      assert PlayContent.list_notes(line) == []
     end
   end
 end

@@ -42,6 +42,14 @@ defmodule Playcode.ContentVersionTest do
     edits = [
       division: fn -> PlayContent.update_division(act, %{title: "ACTO I"}) end,
       element: fn -> PlayContent.update_element(line, %{content: "Otro verso"}) end,
+      text_note: fn ->
+        PlayContent.create_note(%{
+          play_id: play.id,
+          element_id: line.id,
+          offset: 0,
+          body: "Glosa"
+        })
+      end,
       character: fn -> PlayContent.update_character(character, %{name: "BETA"}) end,
       speaker: fn -> PlayContent.set_element_characters(speech.id, []) end,
       editor: fn ->

@@ -52,6 +52,7 @@ defmodule Playcode.PlayContent.Element do
     belongs_to :parent, __MODULE__
     has_many :children, __MODULE__, foreign_key: :parent_id
     has_many :element_characters, Playcode.PlayContent.ElementCharacter
+    has_many :notes, Playcode.PlayContent.Note, preload_order: [asc: :offset, asc: :position]
 
     many_to_many :characters, Playcode.PlayContent.Character,
       join_through: Playcode.PlayContent.ElementCharacter,
