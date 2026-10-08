@@ -646,8 +646,6 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
-  # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
-  # re-importing that copy made a second editor: one more per round trip.
   describe "in-text notes" do
     @noted """
     <div1 type="acto" n="1"><head>ACTO I</head>
@@ -741,6 +739,8 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
+  # re-importing that copy made a second editor: one more per round trip.
   test "exporting, re-importing and exporting again changes nothing" do
     body = """
     <div1 type="acto" n="1"><head>ACTO I</head><div2 type="escena" n="1"><head>ESCENA I</head>

@@ -132,6 +132,9 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
       assert endnote =~ "voyent"
       assert endnote =~ "Forme & archaïque."
       assert doc |> LazyHTML.query("#note-1 a") |> LazyHTML.attribute("href") == ["#ref-1"]
+
+      # The endnote's back-link lands on the marker: the marker carries the id it points at.
+      assert doc |> LazyHTML.query("sup a") |> LazyHTML.attribute("id") == ["ref-1"]
     end
 
     test "the EPUB marks a note as a noteref, with its footnote in the act's chapter",

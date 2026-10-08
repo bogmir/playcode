@@ -26,8 +26,8 @@ defmodule Playcode.PlayContent.InlineMarkup do
   @doc """
   As `parts/1`, with each of `notes` placed as a `%{note: note}` part after the first
   `note.offset` graphemes of the plain text. A note at the end of a piece follows that
-  piece; one inside an italic run splits it. Notes at one offset keep their order in
-  `notes`, and a note past the end of the text goes last.
+  piece; one inside an italic run splits it. `notes` are placed by `{offset, position}`
+  whatever their order in the list, and a note past the end of the text goes last.
   """
   def parts(text, []), do: parts(text)
 
