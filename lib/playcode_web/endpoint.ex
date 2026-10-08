@@ -27,6 +27,12 @@ defmodule PlaycodeWeb.Endpoint do
     only: PlaycodeWeb.static_paths(),
     raise_on_missing_only: code_reloading?
 
+  # Tidewave's MCP server for coding agents, at /tidewave/mcp. Dev only:
+  # its project_eval runs arbitrary code in this VM.
+  if Mix.env() == :dev do
+    plug Tidewave
+  end
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
