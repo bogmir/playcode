@@ -20,7 +20,8 @@
 - A new table with a `play_id` whose rows show on a play's pages needs the `play_row_changed()` trigger in its migration.
 - Offsets count graphemes of `InlineMarkup.plain(anchor_text)`, the `<<`/`>>` markers excluded. The anchor text is a division's `title`, a speech's `speaker_label`, any other element's `content`.
 - Static site: no third-party requests, works opened as `file://`, `priv/static_site/site.js` untouched, `style.css` within its 25 KB budget (asserted in `static_site_test.exs`).
-- Labels are gettext strings in `PlaycodeWeb.PlayLabels` with English msgids. The static site and the downloads render them in English; the live page and the admin in Spanish, through `priv/gettext/es/LC_MESSAGES/default.po`. After `mix gettext.extract --merge`, check every entry it marks fuzzy.
+- Labels are gettext strings in `PlaycodeWeb.PlayLabels` with English msgids. The static site and the downloads render them in English; the live page and the admin in Spanish, through `priv/gettext/es/LC_MESSAGES/default.po`. After `mix gettext.extract --merge`, check every entry it marks fuzzy: `test/playcode_web/spanish_translations_test.exs` fails while any Spanish entry is fuzzy.
+- `main` gained moduledocs on every module after this plan was drafted; line numbers given as "around line N" are hints. Find code by the function names given.
 - Commit messages end with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`.
 - Never write `Emothe` as the application's name (`test/rename_guard_test.exs`).
 
