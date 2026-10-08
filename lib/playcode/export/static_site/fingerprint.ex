@@ -31,6 +31,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.Catalogue.Play,
     Playcode.PlayContent.InlineMarkup,
     Playcode.PlayContent.Element,
+    Playcode.PlayContent.Note,
     Playcode.Places,
     Playcode.Places.Place,
     Playcode.Places.PlayPlace,

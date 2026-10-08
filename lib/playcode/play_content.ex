@@ -515,7 +515,10 @@ defmodule Playcode.PlayContent do
       |> where([d], is_nil(d.parent_id))
       |> order_by(:position)
       |> Repo.all()
-      |> Repo.preload(children: from(d in Division, order_by: d.position))
+      |> Repo.preload([
+        :notes,
+        children: from(d in Division, order_by: d.position, preload: :notes)
+      ])
 
     # Load elements per division (including sub-divisions)
     all_division_ids = collect_division_ids(divisions)
@@ -528,21 +531,23 @@ defmodule Playcode.PlayContent do
       |> where([e], is_nil(e.parent_id))
       |> order_by(:position)
       |> Repo.all()
-      |> Repo.preload(
+      |> Repo.preload([
+        :notes,
         element_characters: ec_preload,
         children:
           from(e in Element,
             order_by: e.position,
             preload: [
+              :notes,
               element_characters: ^ec_preload,
               children:
                 ^from(c in Element,
                   order_by: c.position,
-                  preload: [element_characters: ^ec_preload]
+                  preload: [:notes, element_characters: ^ec_preload]
                 )
             ]
           )
-      )
+      ])
 
     elements_by_division = Enum.group_by(elements, & &1.division_id)
 

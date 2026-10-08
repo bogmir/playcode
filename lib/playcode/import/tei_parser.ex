@@ -1120,7 +1120,7 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.each(fn {{_name, attrs, act_children}, pos} ->
       type = (attr_value(attrs, "type") || "acto") |> String.downcase()
       number = parse_int(attr_value(attrs, "n"))
-      heading = safe_text(find_child(act_children, "head"))
+      {heading, head_notes} = text_and_notes(find_child(act_children, "head"))
 
       act_div =
         case PlayContent.create_division(%{
@@ -1133,6 +1133,8 @@ defmodule Playcode.Import.TeiParser do
           {:ok, div} -> div
           {:error, cs} -> Repo.rollback({:division_create_failed, cs})
         end
+
+      create_text_notes(%{division_id: act_div.id}, head_notes, play)
 
       import_act_content(act_children, play, act_div)
     end)
@@ -1150,7 +1152,7 @@ defmodule Playcode.Import.TeiParser do
           # Scene subdivision
           scene_type = (attr_value(attrs, "type") || "escena") |> String.downcase()
           number = parse_int(attr_value(attrs, "n"))
-          heading = safe_text(find_child(scene_children, "head"))
+          {heading, head_notes} = text_and_notes(find_child(scene_children, "head"))
 
           scene_div =
             case PlayContent.create_division(%{
@@ -1164,6 +1166,8 @@ defmodule Playcode.Import.TeiParser do
               {:ok, div} -> div
               {:error, cs} -> Repo.rollback({:division_create_failed, cs})
             end
+
+          create_text_notes(%{division_id: scene_div.id}, head_notes, play)
 
           new_el_pos = import_scene_content(scene_children, play, scene_div, el_pos)
           {new_el_pos, scene_pos + 1}
@@ -1218,7 +1222,7 @@ defmodule Playcode.Import.TeiParser do
   defp import_speech(attrs, children, play, division, start_pos) do
     who = attr_value(attrs, "who")
     speaker_elem = find_child(children, "speaker")
-    speaker_label = safe_text(speaker_elem)
+    {speaker_label, speaker_notes} = text_and_notes(speaker_elem)
 
     # Resolve characters from who attribute (supports multi-character who="#ALB #COR")
     character_ids = resolve_characters(play.id, who)
@@ -1234,6 +1238,8 @@ defmodule Playcode.Import.TeiParser do
         {:ok, el} -> el
         {:error, cs} -> Repo.rollback({:element_create_failed, :speech, cs})
       end
+
+    create_text_notes(%{element_id: speech.id}, speaker_notes, play)
 
     # Associate characters with the speech
     if character_ids != [] do
@@ -1318,7 +1324,8 @@ defmodule Playcode.Import.TeiParser do
     part = attr_value(attrs, "part")
     rend = attr_value(attrs, "rend")
     is_aside = aside_delivery?(children)
-    content = verse_line_content({name, attrs, children}, is_aside)
+    line = {name, attrs, children}
+    {content, notes} = line |> verse_line_content(is_aside) |> take_notes(line)
 
     case PlayContent.create_element(%{
            play_id: play.id,
@@ -1333,7 +1340,7 @@ defmodule Playcode.Import.TeiParser do
            is_aside: is_aside,
            position: pos
          }) do
-      {:ok, _el} -> :ok
+      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
       {:error, cs} -> Repo.rollback({:element_create_failed, :verse_line, cs})
     end
   end
@@ -1360,47 +1367,29 @@ defmodule Playcode.Import.TeiParser do
 
   defp aside_delivery?(_), do: false
 
-  # Extracts the spoken content from a verse line element.
-  # For aside lines, prefers <seg type="aside"> children; falls back to
-  # stripping stage direction text if no <seg> is present.
+  # The spoken text of a verse line, read with note marks (text_content/2). An aside line
+  # is its <seg type="aside"> text, with the line's own notes kept beside it; with no
+  # <seg>, the line without its delivery <stage>.
   defp verse_line_content({_name, _attrs, children}, true) do
-    aside_segs =
-      Enum.filter(children, fn
-        {"seg", attrs, _} -> attr_value(attrs, "type") == "aside"
-        _ -> false
-      end)
-
-    if aside_segs != [] do
-      aside_segs
-      |> Enum.map(&text_content/1)
-      |> Enum.join(" ")
-      |> String.trim()
+    if aside_in_children?(children) do
+      aside_content(children)
     else
-      # No <seg type="aside">: strip the stage direction and use remaining text
-      non_stage =
-        Enum.reject(children, fn
-          {"stage", _, _} -> true
-          _ -> false
-        end)
-
-      non_stage
-      |> Enum.map(fn
-        text when is_binary(text) -> String.trim(text)
-        child when is_tuple(child) -> text_content(child)
-        _ -> ""
-      end)
-      |> Enum.join(" ")
-      |> String.replace(~r/\s+/, " ")
-      |> String.trim()
+      children
+      |> Enum.reject(&match?({"stage", _, _}, &1))
+      |> pieces(:mark, &text_content(&1, :mark))
+      |> squeeze()
     end
   end
 
-  defp verse_line_content(line, false), do: text_content(line)
+  defp verse_line_content(line, false), do: text_content(line, :mark)
+
+  defp aside_seg?({"seg", attrs, _}), do: attr_value(attrs, "type") == "aside"
+  defp aside_seg?(_), do: false
 
   # --- Stage direction ---
 
   defp import_stage_direction({_name, attrs, _children} = stage, play, division, parent_id, pos) do
-    content = text_content(stage)
+    {content, notes} = text_and_notes(stage)
 
     case PlayContent.create_element(%{
            play_id: play.id,
@@ -1411,7 +1400,7 @@ defmodule Playcode.Import.TeiParser do
            stage_type: attr_value(attrs, "type"),
            position: pos
          }) do
-      {:ok, _el} -> :ok
+      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
       {:error, cs} -> Repo.rollback({:element_create_failed, :stage_direction, cs})
     end
   end
@@ -1419,14 +1408,16 @@ defmodule Playcode.Import.TeiParser do
   # --- Trailer ---
 
   defp import_trailer(trailer, play, division, pos) do
+    {content, notes} = text_and_notes(trailer)
+
     case PlayContent.create_element(%{
            play_id: play.id,
            division_id: division.id,
            type: "trailer",
-           content: text_content(trailer),
+           content: content,
            position: pos
          }) do
-      {:ok, _el} -> :ok
+      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
       {:error, cs} -> Repo.rollback({:element_create_failed, :trailer, cs})
     end
   end
@@ -1435,7 +1426,8 @@ defmodule Playcode.Import.TeiParser do
 
   defp import_prose({_name, _attrs, children} = para, play, division, parent_id, pos) do
     is_aside = aside_in_children?(children)
-    content = if is_aside, do: prose_aside_content(children), else: text_content(para)
+    marked = if is_aside, do: aside_content(children), else: text_content(para, :mark)
+    {content, notes} = take_notes(marked, para)
 
     case PlayContent.create_element(%{
            play_id: play.id,
@@ -1446,31 +1438,22 @@ defmodule Playcode.Import.TeiParser do
            is_aside: is_aside,
            position: pos
          }) do
-      {:ok, _el} -> :ok
+      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
       {:error, cs} -> Repo.rollback({:element_create_failed, :prose, cs})
     end
   end
 
   # Check if children contain a <seg type="aside"> element
-  defp aside_in_children?(children) when is_list(children) do
-    Enum.any?(children, fn
-      {"seg", attrs, _} -> attr_value(attrs, "type") == "aside"
-      _ -> false
-    end)
-  end
+  defp aside_in_children?(children) when is_list(children), do: Enum.any?(children, &aside_seg?/1)
 
   defp aside_in_children?(_), do: false
 
-  # Extract aside content from prose children, preferring <seg type="aside"> text
-  defp prose_aside_content(children) do
+  # An aside line's or paragraph's <seg type="aside"> text, with its own notes beside it.
+  defp aside_content(children) do
     children
-    |> Enum.filter(fn
-      {"seg", attrs, _} -> attr_value(attrs, "type") == "aside"
-      _ -> false
-    end)
-    |> Enum.map(&text_content/1)
-    |> Enum.join(" ")
-    |> String.trim()
+    |> Enum.filter(&(aside_seg?(&1) or match?({"note", _, _}, &1)))
+    |> pieces(:mark, &text_content(&1, :mark))
+    |> squeeze()
   end
 
   # --- Character resolution ---
@@ -1512,24 +1495,21 @@ defmodule Playcode.Import.TeiParser do
 
   defp find_children(_, _), do: []
 
-  defp text_content({name, attrs, children}) do
+  # The text of an element, whitespace collapsed, italics as <<…>>. A <note> inside it is
+  # pasted in (:paste, what the header and the front matter read) or left as a mark
+  # (:mark, the play text), which take_notes/2 turns into the note's offset.
+  defp text_content(element, notes \\ :paste)
+
+  defp text_content({name, attrs, children}, notes) do
     if emph_element?(name, attrs) do
-      "<<" <> extract_plain_text(children) <> ">>"
+      "<<" <> extract_plain_text(children, notes) <> ">>"
     else
-      children
-      |> Enum.map(fn
-        text when is_binary(text) -> String.trim(text)
-        child when is_tuple(child) -> text_content(child)
-        _ -> ""
-      end)
-      |> Enum.join(" ")
-      |> String.replace(~r/\s+/, " ")
-      |> String.trim()
+      children |> pieces(notes, &text_content(&1, notes)) |> squeeze()
     end
   end
 
-  defp text_content(text) when is_binary(text), do: String.trim(text)
-  defp text_content(_), do: ""
+  defp text_content(text, _notes) when is_binary(text), do: String.trim(text)
+  defp text_content(_, _notes), do: ""
 
   defp emph_element?("emph", _attrs), do: true
 
@@ -1538,16 +1518,134 @@ defmodule Playcode.Import.TeiParser do
 
   defp emph_element?(_, _), do: false
 
-  defp extract_plain_text(children) when is_list(children) do
+  defp extract_plain_text(children, notes) when is_list(children),
+    do: children |> pieces(notes, &extract_plain_text(elem(&1, 2), notes)) |> squeeze()
+
+  # Pieces of text as one string, a space between them, whitespace collapsed.
+  defp squeeze(pieces),
+    do: pieces |> Enum.join(" ") |> String.replace(~r/\s+/, " ") |> String.trim()
+
+  # Each child's text, read by `fun`; under :mark a <note> child is its mark instead.
+  defp pieces(children, notes, fun) do
     children
+    |> Enum.with_index()
     |> Enum.map(fn
-      text when is_binary(text) -> String.trim(text)
-      child when is_tuple(child) -> extract_plain_text(elem(child, 2))
+      {{"note", _, _} = note, i} when notes == :mark -> note_mark(note, children, i)
+      {text, _} when is_binary(text) -> String.trim(text)
+      {child, _} when is_tuple(child) -> fun.(child)
       _ -> ""
     end)
-    |> Enum.join(" ")
-    |> String.replace(~r/\s+/, " ")
-    |> String.trim()
+  end
+
+  # Where a note was in the text being read: "\u{E000}<key><s|n>\u{E001}". The key finds
+  # the note again among the element's (take_notes/2); "s" records that the source had
+  # whitespace beside the note, so the words either side stay apart, and "n" that it had
+  # none, so "Iliria<note/>." reads "Iliria.".
+  defp note_mark(note, siblings, i) do
+    before = if i > 0, do: Enum.at(siblings, i - 1)
+    next = Enum.at(siblings, i + 1)
+
+    spaced =
+      (is_binary(before) and before =~ ~r/\s\z/u) or (is_binary(next) and next =~ ~r/\A\s/u)
+
+    "\u{E000}#{:erlang.phash2(note)}#{if spaced, do: "s", else: "n"}\u{E001}"
+  end
+
+  @note_mark ~r/ ?\x{E000}(\d+)([sn])\x{E001} ?/u
+
+  # Takes the note marks out of `marked`, text `element` was read into with :mark.
+  # Returns the text and `[{offset, note}]`, the offset counting graphemes of the text
+  # without its << and >> markers, as InlineMarkup.plain/1 does. A note whose mark the
+  # reading dropped (inside a stripped aside <stage>) is dropped with it.
+  # ponytail: two adjacent notes each with whitespace beside them ("a <note/><note/> b")
+  # store "a  b" and the second note one grapheme later; the corpus has no note after a
+  # space. Carry a pending space to the next text if one turns up.
+  defp take_notes(marked, element) do
+    by_key = Map.new(nested_notes(element), &{Integer.to_string(:erlang.phash2(&1)), &1})
+
+    {text, found} =
+      @note_mark
+      |> Regex.split(marked, include_captures: true)
+      |> Enum.reduce({"", []}, fn piece, {text, found} ->
+        case Regex.run(@note_mark, piece) do
+          [_, key, spaced] ->
+            space = if spaced == "s" and text != "", do: " ", else: ""
+            {text <> space, [{plain_length(text), Map.fetch!(by_key, key)} | found]}
+
+          nil ->
+            {text <> piece, found}
+        end
+      end)
+
+    text = String.trim_trailing(text)
+    last = plain_length(text)
+
+    {text,
+     found |> Enum.reverse() |> Enum.map(fn {offset, note} -> {min(offset, last), note} end)}
+  end
+
+  defp plain_length(text), do: String.length(text) - 2 * length(Regex.scan(~r/<<|>>/, text))
+
+  # The <note>s inside an element, not counting notes inside notes.
+  defp nested_notes({_name, _attrs, children}) do
+    Enum.flat_map(children, fn
+      {"note", _, _} = note -> [note]
+      {_, _, _} = child -> nested_notes(child)
+      _text -> []
+    end)
+  end
+
+  # An element of the play text read with its notes taken out: `{text, [{offset, note}]}`,
+  # or `{nil, []}` for no element.
+  defp text_and_notes(nil), do: {nil, []}
+  defp text_and_notes(element), do: element |> text_content(:mark) |> take_notes(element)
+
+  # A note's own fields, or nil when it has no text: there is nothing to show (the
+  # empty notes of the EMOTHE0010 test file).
+  defp parse_note({"note", attrs, children}) do
+    body =
+      case find_children(children, "p") do
+        [] ->
+          text_content({"note", attrs, Enum.reject(children, &match?({"term", _, _}, &1))})
+
+        paragraphs ->
+          paragraphs
+          |> Enum.map(&text_content/1)
+          |> Enum.reject(&(&1 == ""))
+          |> Enum.join("\n\n")
+      end
+
+    term = safe_text(find_child(children, "term"))
+
+    if body != "" do
+      %{
+        n: attr_value(attrs, "n"),
+        type: attr_value(attrs, "type"),
+        term: if(term in [nil, ""], do: nil, else: term),
+        body: body
+      }
+    end
+  end
+
+  # Stores the notes take_notes/2 found on `anchor`, %{element_id: id} or
+  # %{division_id: id}. `position` orders the notes at one offset.
+  defp create_text_notes(anchor, notes, play) do
+    notes
+    |> Enum.chunk_by(&elem(&1, 0))
+    |> Enum.flat_map(&Enum.with_index/1)
+    |> Enum.each(fn {{offset, note}, position} ->
+      with %{} = fields <- parse_note(note) do
+        attrs =
+          fields
+          |> Map.merge(anchor)
+          |> Map.merge(%{play_id: play.id, offset: offset, position: position})
+
+        case PlayContent.create_note(attrs) do
+          {:ok, _note} -> :ok
+          {:error, cs} -> Repo.rollback({:note_create_failed, cs})
+        end
+      end
+    end)
   end
 
   defp safe_text(nil), do: nil

@@ -218,6 +218,92 @@ defmodule Playcode.ImportHelpers do
   def xml_texts(xml, tag, opts \\ []),
     do: xml |> xml_elements(tag, opts) |> Enum.map(&elem(&1, 1))
 
+  @doc """
+  The text of every `tag` element in the body, outside notes, as a reader reads it: its
+  notes left out, its pieces joined as written (`Iliria<note/>.` reads "Iliria."),
+  whitespace collapsed.
+  """
+  def reading_texts(xml, tag) do
+    xml
+    |> parse()
+    |> descendants("body")
+    |> Enum.flat_map(&outside_notes(&1, tag))
+    |> Enum.map(fn element ->
+      element
+      |> tokens()
+      |> Enum.filter(&is_binary/1)
+      |> Enum.join()
+      |> String.replace(~r/\s+/u, " ")
+      |> String.trim()
+    end)
+  end
+
+  @doc """
+  Every `<note>` in the body, in document order, as a map: `in`, the tag of the line,
+  paragraph, stage direction, speaker or heading it sits in; `after`, that element's text
+  before it (notes left out, whitespace collapsed); its `n`, `type` and `term`; the text
+  of each `<p>`; and `text`, all of its text.
+  """
+  def xml_notes(xml) do
+    xml
+    |> parse()
+    |> descendants("body")
+    |> Enum.flat_map(&leaf_notes/1)
+  end
+
+  @leaves ~w(l p stage speaker head trailer)
+
+  defp leaf_notes({name, _, _} = leaf) when name in @leaves do
+    {notes, _before} =
+      leaf
+      |> tokens()
+      |> Enum.flat_map_reduce("", fn
+        {:note, note}, before -> {[note_map(note, name, before)], before}
+        text, before -> {[], before <> text}
+      end)
+
+    notes
+  end
+
+  defp leaf_notes({_name, _, children}), do: Enum.flat_map(children, &leaf_notes/1)
+  defp leaf_notes(_text), do: []
+
+  # An element's text and notes in order: text as binaries, each note as {:note, element}.
+  defp tokens({_name, _, children}) do
+    Enum.flat_map(children, fn
+      {"note", _, _} = note -> [{:note, note}]
+      {_, _, _} = element -> tokens(element)
+      text -> [text]
+    end)
+  end
+
+  defp note_map({"note", attrs, _children} = note, tag, before) do
+    attrs = Map.new(attrs)
+
+    %{
+      in: tag,
+      after: before |> String.replace(~r/\s+/u, " ") |> String.trim(),
+      n: attrs["n"],
+      type: attrs["type"],
+      term:
+        case children_named(note, "term") do
+          [term | _] -> text(term)
+          [] -> nil
+        end,
+      paragraphs: note |> children_named("p") |> Enum.map(&text/1),
+      text: text(note)
+    }
+  end
+
+  defp outside_notes({"note", _, _}, _tag), do: []
+
+  defp outside_notes({name, _, children} = element, tag) do
+    own = if name == tag, do: [element], else: []
+    own ++ Enum.flat_map(children, &outside_notes(&1, tag))
+  end
+
+  defp outside_notes(_text, _tag), do: []
+
   defp collect({name, attrs, children}, tag, ancestors) do
     inner = Enum.flat_map(children, &collect(&1, tag, [name | ancestors]))
 

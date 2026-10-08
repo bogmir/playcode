@@ -4,6 +4,7 @@ defmodule Playcode.Export.TeiXml do
   """
 
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.{InlineMarkup, Note}
   import XmlBuilder
 
   @body_types ~w(acto jornada prologo argumento act acte play prologue induction epilogue
@@ -661,7 +662,10 @@ defmodule Playcode.Export.TeiXml do
         attrs = %{type: div.type}
         attrs = if div.number, do: Map.put(attrs, :n, to_string(div.number)), else: attrs
 
-        children = if div.title, do: [element(:head, div.title)], else: []
+        children =
+          if div.title,
+            do: [inline_element(:head, %{}, build_inline_content(div.title, div.notes))],
+            else: []
 
         # Add elements from the division. TEI only allows a trailer at the end, so the
         # act's trailers follow its scenes.
@@ -681,7 +685,10 @@ defmodule Playcode.Export.TeiXml do
                 do: Map.put(child_attrs, :n, to_string(child.number)),
                 else: child_attrs
 
-            child_head = if child.title, do: [element(:head, child.title)], else: []
+            child_head =
+              if child.title,
+                do: [inline_element(:head, %{}, build_inline_content(child.title, child.notes))],
+                else: []
 
             child_elements =
               Map.get(child, :loaded_elements, [])
@@ -705,7 +712,12 @@ defmodule Playcode.Export.TeiXml do
     children = []
 
     children =
-      if el.speaker_label, do: [element(:speaker, el.speaker_label) | children], else: children
+      if el.speaker_label,
+        do: [
+          inline_element(:speaker, %{}, build_inline_content(el.speaker_label, el.notes))
+          | children
+        ],
+        else: children
 
     child_elements =
       Map.get(el, :children, [])
@@ -744,7 +756,7 @@ defmodule Playcode.Export.TeiXml do
     attrs = if el.part, do: Map.put(attrs, :part, el.part), else: attrs
     attrs = if el.rend, do: Map.put(attrs, :rend, el.rend), else: attrs
 
-    inline = build_inline_content(el.content)
+    inline = build_inline_content(el.content, el.notes)
 
     content =
       if el.is_aside do
@@ -753,16 +765,16 @@ defmodule Playcode.Export.TeiXml do
         inline
       end
 
-    element(:l, attrs, content)
+    inline_element(:l, attrs, content)
   end
 
   defp build_element(%{type: "stage_direction"} = el) do
     attrs = if el.stage_type, do: %{type: el.stage_type}, else: %{}
-    element(:stage, attrs, build_inline_content(el.content))
+    inline_element(:stage, attrs, build_inline_content(el.content, el.notes))
   end
 
   defp build_element(%{type: "prose"} = el) do
-    inline = build_inline_content(el.content)
+    inline = build_inline_content(el.content, el.notes)
 
     content =
       if el.is_aside do
@@ -771,37 +783,73 @@ defmodule Playcode.Export.TeiXml do
         inline
       end
 
-    element(:p, content)
+    inline_element(:p, %{}, content)
   end
 
   defp build_element(%{type: "trailer"} = el),
-    do: element(:trailer, build_inline_content(el.content))
+    do: inline_element(:trailer, %{}, build_inline_content(el.content, el.notes))
 
   defp build_element(_), do: nil
 
-  # Converts <<text>> markers to <emph> elements for TEI export.
-  # Uses <emph> to match existing EMOTHE corpus convention.
-  # Could also use <hi rend="italic"> per TEI P5 for purely typographic italics.
-  defp build_inline_content(nil), do: ""
-
-  defp build_inline_content(text) do
-    parts =
-      Regex.split(~r/<<(.*?)>>/, text, include_captures: true)
-      |> Enum.map(fn part ->
-        case Regex.run(~r/^<<(.*)>>$/, part) do
-          [_, inner] -> element(:emph, inner)
-          nil -> part
-        end
-      end)
-      |> Enum.reject(fn
-        p when is_binary(p) -> p == ""
-        _ -> false
-      end)
-
-    case parts do
+  # A text as TEI: <<…>> becomes <emph>, as the EMOTHE corpus writes italics (<hi
+  # rend="italic"> would do too, per TEI P5), and each note goes back at its offset
+  # (InlineMarkup.parts/2). The bibliography has no notes.
+  defp build_inline_content(text, notes \\ []) do
+    (text || "")
+    |> InlineMarkup.parts(notes)
+    |> inline_nodes()
+    |> case do
       [] -> ""
       [single] when is_binary(single) -> single
       list -> list
     end
   end
+
+  # A note inside an italic run, which InlineMarkup.parts/2 splits there, goes back inside
+  # its <emph>, as the source had it: split, the space after the note would open the
+  # second <emph>, and the importer, which trims italics, would glue the words together.
+  defp inline_nodes([%{italic: true} | _] = parts) do
+    {run, rest} = italic_run(parts)
+
+    emph =
+      case Enum.map(run, &inline_node/1) do
+        [text] -> text
+        nodes -> nodes
+      end
+
+    [element(:emph, emph) | inline_nodes(rest)]
+  end
+
+  defp inline_nodes([part | rest]), do: [inline_node(part) | inline_nodes(rest)]
+  defp inline_nodes([]), do: []
+
+  # An italic piece and the pieces of its run after it, with the notes between them.
+  defp italic_run([piece | rest]) do
+    case Enum.split_while(rest, &is_map_key(&1, :note)) do
+      {notes, [%{italic: true} | _] = more} ->
+        {run, rest} = italic_run(more)
+        {[piece | notes] ++ run, rest}
+
+      _ ->
+        {[piece], rest}
+    end
+  end
+
+  defp inline_node(%{note: note}), do: build_note(note)
+  defp inline_node(%{text: text}), do: text
+
+  defp build_note(note) do
+    attrs = for {key, value} <- [n: note.n, type: note.type], value, into: %{}, do: {key, value}
+    term = if note.term, do: [element(:term, build_inline_content(note.term))], else: []
+    paragraphs = Enum.map(Note.paragraphs(note), &element(:p, build_inline_content(&1)))
+    element(:note, attrs, term ++ paragraphs)
+  end
+
+  # An element whose text holds others (<emph>, <note>) goes out on one line, its text
+  # exactly as it runs: :indent would put line breaks inside it, and a break before a
+  # <note> reads back as a space between the word and what follows it.
+  defp inline_element(name, attrs, content) when is_list(content),
+    do: {:iodata, XmlBuilder.generate(element(name, attrs, content), format: :none)}
+
+  defp inline_element(name, attrs, content), do: element(name, attrs, content)
 end

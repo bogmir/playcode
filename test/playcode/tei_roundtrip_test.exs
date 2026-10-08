@@ -648,6 +648,99 @@ defmodule Playcode.TeiRoundtripTest do
 
   # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
   # re-importing that copy made a second editor: one more per round trip.
+  describe "in-text notes" do
+    @noted """
+    <div1 type="acto" n="1"><head>ACTO I</head>
+      <div2 type="escena" n="1"><head>ESCENA PRIMERA<note n="1" type="traductor"><term>PRIMERA</term><p>Argumento.</p></note></head>
+        <sp><speaker>AMINTAS<note n="2" type="editor"><term>AMINTAS</term><p>Corregimos «Andromire».</p></note></speaker>
+          <l n="1">Nous voyent<note n="3" type="editor"><term>voyent</term><p>Forme archaïque.</p><p>Deux syllabes &amp; plus.</p></note> dans la ville</l>
+          <l n="2">de Grecia y de Iliria<note n="4" type="traductor"><term>Iliria</term><p>Región de los Balcanes.</p></note>.</l>
+          <l n="3">con dos caras que tiene,<note n="5" type="editor_digital">
+              <term>tiene,</term>
+              <p>Este verso aparece <emph>erróneamente</emph> aquí.</p>
+            </note>
+          </l>
+          <l n="4">un <emph>sueño<note n="6" type="editor"><p>En cursiva.</p></note> breve</emph> fue</l>
+          <l n="5">sin glosa<note type="lines"/></l>
+          <p>Buscad por todas partes …<note n="7" type="traductor"><p><emph>"partes …"</emph></p><p>(14) De aquí en adelante.</p></note></p>
+          <stage>Sale<note n="8" type="editor"><p>Una.</p></note><note n="9" type="editor"><p>Dos.</p></note> el rey</stage>
+        </sp>
+      </div2>
+    </div1>
+    """
+
+    test "a note leaves the text it glosses, and comes back after the same word" do
+      xml = roundtrip(tei(body: @noted))
+
+      assert reading_texts(xml, "l") == [
+               "Nous voyent dans la ville",
+               "de Grecia y de Iliria.",
+               "con dos caras que tiene,",
+               "un sueño breve fue",
+               "sin glosa"
+             ]
+
+      assert reading_texts(xml, "p") == ["Buscad por todas partes …"]
+      assert reading_texts(xml, "stage") == ["Sale el rey"]
+      assert reading_texts(xml, "speaker") == ["AMINTAS"]
+      assert reading_texts(xml, "head") == ["ACTO I", "ESCENA PRIMERA"]
+
+      assert Enum.map(xml_notes(xml), &{&1.in, &1.after, &1.n}) == [
+               {"head", "ESCENA PRIMERA", "1"},
+               {"speaker", "AMINTAS", "2"},
+               {"l", "Nous voyent", "3"},
+               {"l", "de Grecia y de Iliria", "4"},
+               {"l", "con dos caras que tiene,", "5"},
+               {"l", "un sueño", "6"},
+               {"p", "Buscad por todas partes …", "7"},
+               {"stage", "Sale", "8"},
+               {"stage", "Sale", "9"}
+             ]
+    end
+
+    test "a note keeps its type, term and paragraphs, italics and all" do
+      xml = roundtrip(tei(body: @noted))
+      notes = xml_notes(xml)
+
+      assert %{
+               type: "editor",
+               term: "voyent",
+               paragraphs: ["Forme archaïque.", "Deux syllabes & plus."]
+             } =
+               Enum.at(notes, 2)
+
+      assert %{
+               type: "traductor",
+               term: nil,
+               paragraphs: ["\"partes …\"", "(14) De aquí en adelante."]
+             } =
+               Enum.at(notes, 6)
+
+      assert %{
+               type: "editor_digital",
+               term: "tiene,",
+               paragraphs: ["Este verso aparece erróneamente aquí."]
+             } =
+               Enum.at(notes, 4)
+
+      assert xml_texts(xml, "emph", within: "note") == ["erróneamente", "\"partes …\""]
+    end
+
+    test "importing a file again replaces its notes, never doubles them" do
+      path =
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno<note n="1" type="editor"><p>Glosa.</p></note></l></sp></div1>)
+        )
+        |> write_tmp!()
+
+      {:ok, _} = Playcode.Import.TeiParser.import_file(path)
+      {:ok, play} = Playcode.Import.TeiParser.import_file(path)
+
+      assert [%{after: "uno"}] = play |> export_tei() |> xml_notes()
+    end
+  end
+
   test "exporting, re-importing and exporting again changes nothing" do
     body = """
     <div1 type="acto" n="1"><head>ACTO I</head><div2 type="escena" n="1"><head>ESCENA I</head>
@@ -655,7 +748,9 @@ defmodule Playcode.TeiRoundtripTest do
       <sp who="#ANA"><speaker>ANA</speaker>
         <lg type="redondilla"><l n="1" part="I" xml:id="v1">Uno</l></lg></sp>
       <sp who="#DON"><speaker>DON</speaker>
-        <lg type="redondilla"><l n="1" part="F">dos</l><l n="2" rend="indent"><seg type="aside">tres</seg></l></lg>
+        <lg type="redondilla"><l n="1" part="F">dos</l><l n="2" rend="indent"><seg type="aside">tres</seg></l>
+          <l n="3">cuatro<note n="1" type="editor"><term>cuatro</term><p>Una <emph>glosa</emph>.</p></note>.</l>
+          <l n="4">un <emph>sueño<note n="2" type="editor"><p>En cursiva.</p></note> breve</emph> fue</l></lg>
         <p>Prosa con <emph>énfasis</emph>.</p></sp>
     </div2></div1>
     """
