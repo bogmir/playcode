@@ -4,7 +4,9 @@ defmodule Playcode.Export.Html do
   styled to match the public play presentation page.
   """
 
+  alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.Note
 
   def generate(play) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :editorial_notes])
@@ -223,6 +225,12 @@ defmodule Playcode.Export.Html do
         .division { margin-bottom: 2rem; }
         .child-division { margin-bottom: 1.5rem; }
 
+        /* In-text notes: a number after the word, the act's notes listed after it */
+        .nref { font-size: 0.7em; line-height: 0; }
+        .nref a { text-decoration: none; }
+        .notes { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.9rem; }
+        .notes li p { margin: 0.3rem 0; }
+
         @media print {
           body { background: white; }
           .page { max-width: 100%; padding: 0.5rem 0; }
@@ -328,7 +336,9 @@ defmodule Playcode.Export.Html do
         end)
         |> Enum.join("\n")
 
-      "    <div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n    </div>"
+      notes = NoteMarkup.endnotes(Note.reading_order(div), :html)
+
+      "    <div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n#{notes}    </div>"
     end)
     |> Enum.join("\n")
   end
@@ -336,19 +346,19 @@ defmodule Playcode.Export.Html do
   defp division_heading(%{title: nil}), do: ""
   defp division_heading(%{title: ""}), do: ""
 
-  defp division_heading(%{title: title, type: type}) when type in @act_types do
-    "      <h2 class=\"act-heading\">#{escape(title)}</h2>\n"
+  defp division_heading(%{title: title, type: type} = div) when type in @act_types do
+    "      <h2 class=\"act-heading\">#{NoteMarkup.inline(title, div.notes, :html)}</h2>\n"
   end
 
-  defp division_heading(%{title: title}) do
-    "      <h3 class=\"scene-heading\">#{escape(title)}</h3>\n"
+  defp division_heading(%{title: title} = div) do
+    "      <h3 class=\"scene-heading\">#{NoteMarkup.inline(title, div.notes, :html)}</h3>\n"
   end
 
   defp child_heading(%{title: nil}), do: ""
   defp child_heading(%{title: ""}), do: ""
 
-  defp child_heading(%{title: title}),
-    do: "        <h3 class=\"scene-heading\">#{escape(title)}</h3>\n"
+  defp child_heading(%{title: title} = div),
+    do: "        <h3 class=\"scene-heading\">#{NoteMarkup.inline(title, div.notes, :html)}</h3>\n"
 
   defp render_elements(elements) do
     Enum.map(elements, &render_element/1) |> Enum.join()
@@ -359,7 +369,8 @@ defmodule Playcode.Export.Html do
 
     speaker =
       if el.speaker_label,
-        do: "        <div class=\"speaker\">#{escape(el.speaker_label)}</div>\n",
+        do:
+          "        <div class=\"speaker\">#{NoteMarkup.inline(el.speaker_label, el.notes, :html)}</div>\n",
         else: ""
 
     children = Map.get(el, :children, []) |> Enum.map(&render_element/1) |> Enum.join()
@@ -384,15 +395,15 @@ defmodule Playcode.Export.Html do
         do: "<span class=\"line-number\">#{el.line_number}</span>",
         else: "<span class=\"line-number\"></span>"
 
-    "        <div class=\"verse-line\"><span class=\"#{content_class}\">#{escape(el.content || "")}</span>#{line_num}</div>\n"
+    "        <div class=\"verse-line\"><span class=\"#{content_class}\">#{NoteMarkup.inline(el.content, el.notes, :html)}</span>#{line_num}</div>\n"
   end
 
   defp render_element(%{type: "stage_direction"} = el) do
-    "        <div class=\"stage-direction\">(#{escape(el.content || "")})</div>\n"
+    "        <div class=\"stage-direction\">(#{NoteMarkup.inline(el.content, el.notes, :html)})</div>\n"
   end
 
   defp render_element(%{type: "prose"} = el) do
-    "        <div class=\"prose-block\">#{escape(el.content || "")}</div>\n"
+    "        <div class=\"prose-block\">#{NoteMarkup.inline(el.content, el.notes, :html)}</div>\n"
   end
 
   defp render_element(_), do: ""

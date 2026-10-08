@@ -4,7 +4,9 @@ defmodule Playcode.Export.Epub do
   Reuses rendering patterns from `Playcode.Export.Html`.
   """
 
+  alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.Note
 
   @act_types ~w(acto act acte jornada)
 
@@ -93,7 +95,7 @@ defmodule Playcode.Export.Epub do
     xhtml = """
     <?xml version="1.0" encoding="UTF-8"?>
     <!DOCTYPE html>
-    <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="#{lang}" lang="#{lang}">
+    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="#{lang}" lang="#{lang}">
     <head>
       <meta charset="utf-8"/>
       <title>#{escape(title)}</title>
@@ -219,23 +221,27 @@ defmodule Playcode.Export.Epub do
       end)
       |> Enum.join("\n")
 
-    "<div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n</div>"
+    notes = NoteMarkup.endnotes(Note.reading_order(div), :epub)
+
+    "<div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n#{notes}</div>"
   end
 
   defp division_heading(%{title: nil}), do: ""
   defp division_heading(%{title: ""}), do: ""
 
-  defp division_heading(%{title: title, type: type}) when type in @act_types do
-    "<h2 class=\"act-heading\">#{escape(title)}</h2>\n"
+  defp division_heading(%{title: title, type: type} = div) when type in @act_types do
+    "<h2 class=\"act-heading\">#{NoteMarkup.inline(title, div.notes, :epub)}</h2>\n"
   end
 
-  defp division_heading(%{title: title}) do
-    "<h3 class=\"scene-heading\">#{escape(title)}</h3>\n"
+  defp division_heading(%{title: title} = div) do
+    "<h3 class=\"scene-heading\">#{NoteMarkup.inline(title, div.notes, :epub)}</h3>\n"
   end
 
   defp child_heading(%{title: nil}), do: ""
   defp child_heading(%{title: ""}), do: ""
-  defp child_heading(%{title: title}), do: "<h3 class=\"scene-heading\">#{escape(title)}</h3>\n"
+
+  defp child_heading(%{title: title} = div),
+    do: "<h3 class=\"scene-heading\">#{NoteMarkup.inline(title, div.notes, :epub)}</h3>\n"
 
   defp render_elements(elements) do
     Enum.map(elements, &render_element/1) |> Enum.join()
@@ -246,7 +252,8 @@ defmodule Playcode.Export.Epub do
 
     speaker =
       if el.speaker_label,
-        do: "<div class=\"speaker\">#{escape(el.speaker_label)}</div>\n",
+        do:
+          "<div class=\"speaker\">#{NoteMarkup.inline(el.speaker_label, el.notes, :epub)}</div>\n",
         else: ""
 
     children = Map.get(el, :children, []) |> Enum.map(&render_element/1) |> Enum.join()
@@ -271,15 +278,15 @@ defmodule Playcode.Export.Epub do
         do: "<span class=\"line-number\">#{el.line_number}</span>",
         else: "<span class=\"line-number\"></span>"
 
-    "<div class=\"verse-line\"><span class=\"#{content_class}\">#{escape(el.content || "")}</span>#{line_num}</div>\n"
+    "<div class=\"verse-line\"><span class=\"#{content_class}\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</span>#{line_num}</div>\n"
   end
 
   defp render_element(%{type: "stage_direction"} = el) do
-    "<div class=\"stage-direction\">(#{escape(el.content || "")})</div>\n"
+    "<div class=\"stage-direction\">(#{NoteMarkup.inline(el.content, el.notes, :epub)})</div>\n"
   end
 
   defp render_element(%{type: "prose"} = el) do
-    "<div class=\"prose-block\">#{escape(el.content || "")}</div>\n"
+    "<div class=\"prose-block\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</div>\n"
   end
 
   defp render_element(_), do: ""
@@ -437,6 +444,9 @@ defmodule Playcode.Export.Epub do
 
     .division { margin-bottom: 2em; }
     .child-division { margin-bottom: 1.5em; }
+
+    aside { font-size: 0.9em; }
+    sup a { text-decoration: none; }
     """
   end
 

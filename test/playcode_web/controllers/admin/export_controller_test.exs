@@ -93,4 +93,139 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
 
     assert String.trim(out) == "1"
   end
+
+  describe "a play with in-text notes" do
+    setup do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO I</head>
+              <sp><speaker>ANA</speaker>
+                <l n="1">Nous <emph>voyent</emph><note n="6089" type="editor"><term>voyent</term><p>Forme &amp; archaïque.</p></note> dans la ville</l>
+              </sp>
+            </div1>
+            """
+          )
+        )
+
+      %{noted: play}
+    end
+
+    test "the HTML download numbers a note after its word and lists it after the act",
+         %{conn: conn, noted: play} do
+      doc =
+        conn
+        |> get(~p"/admin/plays/#{play.id}/export/html")
+        |> response(200)
+        |> LazyHTML.from_document()
+
+      text = doc |> LazyHTML.text() |> String.replace(~r/\s+/u, " ")
+
+      assert text =~ "Nous voyent1 dans la ville"
+      refute text =~ "<<"
+      assert "voyent" in (doc |> LazyHTML.query("em") |> Enum.map(&LazyHTML.text/1))
+      assert doc |> LazyHTML.query("sup a") |> LazyHTML.attribute("href") == ["#note-1"]
+
+      endnote = doc |> LazyHTML.query("#note-1") |> LazyHTML.text()
+      assert endnote =~ "Editor's note"
+      assert endnote =~ "voyent"
+      assert endnote =~ "Forme & archaïque."
+      assert doc |> LazyHTML.query("#note-1 a") |> LazyHTML.attribute("href") == ["#ref-1"]
+    end
+
+    test "the EPUB marks a note as a noteref, with its footnote in the act's chapter",
+         %{conn: conn, noted: play} do
+      conn = get(conn, ~p"/admin/plays/#{play.id}/export/epub")
+      {:ok, files} = :zip.unzip(response(conn, 200), [:memory])
+      {_name, chapter} = Enum.find(files, fn {name, _} -> to_string(name) =~ "chapter-001" end)
+
+      # Well-formed XHTML, or e-readers refuse the chapter. Saxy is given it without its
+      # DOCTYPE, which is not what is being checked.
+      assert {:ok, _} =
+               chapter
+               |> String.replace(~r/<!DOCTYPE[^>]*>/, "")
+               |> Saxy.SimpleForm.parse_string()
+
+      assert chapter =~ ~s(xmlns:epub="http://www.idpf.org/2007/ops")
+      assert chapter =~ ~s(<a epub:type="noteref" href="#note-1">1</a>)
+      assert chapter =~ ~s(<aside epub:type="footnote" id="note-1">)
+      assert chapter =~ "Forme &amp; archaïque."
+    end
+  end
+
+  describe "a play with a note in every place a note can sit" do
+    setup do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO I<note n="1" type="autor"><p>Del encabezado.</p></note></head>
+              <stage>Salen todos<note n="2" type="editor"><p>De la acotación.</p></note></stage>
+              <div2 type="escena" n="1"><head>ESCENA<note n="3" type="traductor"><p>Del título.</p></note> I</head>
+                <sp><speaker>ANA<note n="4" type="editor_critico"><p>Del hablante.</p></note></speaker>
+                  <l n="1">verso<note n="5" type="editor_digital"><p>Del verso.</p></note></l>
+                </sp>
+                <sp><speaker>BLAS</speaker><p>prosa<note n="6" type="editor"><p>De la prosa.</p></note> final</p></sp>
+              </div2>
+            </div1>
+            <div1 type="prologo" n="1"><head>LOA<note n="7" type="autor"><p>De la loa.</p></note></head>
+              <stage>Sale la loa</stage>
+            </div1>
+            """
+          )
+        )
+
+      %{everywhere: play}
+    end
+
+    test "the HTML download puts each number where its text is, in reading order",
+         %{conn: conn, everywhere: play} do
+      doc =
+        conn
+        |> get(~p"/admin/plays/#{play.id}/export/html")
+        |> response(200)
+        |> LazyHTML.from_document()
+
+      text = doc |> LazyHTML.text() |> String.replace(~r/\s+/u, " ")
+
+      # The act heading, a stage direction, the scene heading, a speaker, a line, a prose
+      # paragraph and a prologue's heading: each number follows the word it glosses.
+      for marked <- [
+            "ACTO I1",
+            "(Salen todos2)",
+            "ESCENA3 I",
+            "ANA4",
+            "verso5",
+            "prosa6 final",
+            "LOA7"
+          ] do
+        assert text =~ marked
+      end
+
+      assert doc |> LazyHTML.query("sup a") |> LazyHTML.attribute("href") ==
+               Enum.map(1..7, &"#note-#{&1}")
+
+      # The act heading is an h2; the scene's and the prologue's headings are h3s.
+      assert doc |> LazyHTML.query("h2 sup a") |> LazyHTML.attribute("href") == ["#note-1"]
+
+      assert doc |> LazyHTML.query("h3 sup a") |> LazyHTML.attribute("href") ==
+               ["#note-3", "#note-7"]
+
+      # All seven are listed after their division, each with its type's label and its text.
+      for {label, body, n} <- [
+            {"Author's note", "Del encabezado.", 1},
+            {"Editor's note", "De la acotación.", 2},
+            {"Translator's note", "Del título.", 3},
+            {"Critical editor's note", "Del hablante.", 4},
+            {"Digital editor's note", "Del verso.", 5},
+            {"Editor's note", "De la prosa.", 6},
+            {"Author's note", "De la loa.", 7}
+          ] do
+        endnote = doc |> LazyHTML.query("#note-#{n}") |> LazyHTML.text()
+        assert endnote =~ label
+        assert endnote =~ body
+      end
+    end
+  end
 end
