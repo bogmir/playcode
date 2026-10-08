@@ -726,22 +726,35 @@ defmodule Playcode.Import.WordParser do
     speaker_labels
     |> Enum.with_index()
     |> Enum.reduce(%{}, fn {label, idx}, acc ->
-      xml_id =
-        label
-        |> String.downcase()
-        |> String.replace(~r/[^a-z0-9]+/, "_")
-        |> String.trim("_")
-
       {:ok, char} =
         PlayContent.create_character_unless_exists(%{
           play_id: play_id,
-          xml_id: xml_id,
+          xml_id: character_xml_id(label, idx),
           name: label,
           position: idx
         })
 
       Map.put(acc, label, char.id)
     end)
+  end
+
+  # The xml:id every <sp who> of this speaker cites: the label's letters and digits without
+  # their accents ("ABSALÓN" is absalon), a leading number moved last as the corpus's
+  # editors write it ("1ª Dama" is dama_1), since an XML id may not start with a digit.
+  # A label with neither letter nor digit is numbered by its place among the speakers.
+  defp character_xml_id(label, idx) do
+    id =
+      label
+      |> :unicode.characters_to_nfkd_binary()
+      |> String.replace(~r/\p{Mn}/u, "")
+      |> String.downcase()
+      |> String.replace(~r/[^a-z0-9]+/, "_")
+      |> String.trim("_")
+      |> then(
+        &Regex.replace(~r/^(\d+)(?:_?(?:st|nd|rd|th|er|em|me|e|a|o))?_(.+)$/, &1, "\\2_\\1")
+      )
+
+    if id =~ ~r/^[a-z]/, do: id, else: "character_#{idx + 1}"
   end
 
   defp create_elements(elements, play_id, division_id, parent_id, verse_counter, character_map) do

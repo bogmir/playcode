@@ -135,6 +135,26 @@ defmodule Playcode.Import.WordParserTest do
       assert Enum.map(xml_elements(xml, "sp"), fn {attrs, _} -> attrs["who"] end) ==
                ["##{ids["FEBO"]}", "##{ids["RICARDO"]}"]
     end
+
+    # A character's xml:id is what every <sp who> cites. It keeps the name's letters
+    # without their accents and puts a leading number last, as the corpus's editors do
+    # ("1º Senatore" is senatore_1): an XML id may not start with a digit. A name with
+    # neither letter nor digit gets a numbered id; an empty one stopped the import.
+    test "a speaker's id keeps its letters, puts a number last, and is never empty" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}ABSALÓN  {v}Uno.",
+          "{p}Alcibíades  {v}Dos.",
+          "{p}1ª Dama  {v}Tres.",
+          "{p}1.º HOMBRE  {v}Cuatro.",
+          "{p}2me CITOYEN  {v}Cinco.",
+          "{p}¿?  {v}Seis."
+        ])
+
+      assert Enum.map(xml_elements(xml, "role"), fn {attrs, _} -> attrs["xml:id"] end) ==
+               ["absalon", "alcibiades", "dama_1", "hombre_1", "citoyen_2", "character_6"]
+    end
   end
 
   describe "the divisions" do
