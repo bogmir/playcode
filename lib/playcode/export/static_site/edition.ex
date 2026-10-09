@@ -7,7 +7,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   """
 
   alias Playcode.{Bibliography, Catalogue, PlayContent, Statistics}
-  alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.PlayContent.Note
   alias Playcode.Statistics.Metrics
 
   defstruct [
@@ -214,14 +214,16 @@ defmodule Playcode.Export.StaticSite.Edition do
   defp where(%{act: act}) when is_integer(act), do: roman(act)
   defp where(%{division: division}), do: division.title || String.capitalize(division.type)
 
-  # The text of a split verse's earlier fragments, rendered invisible before an M or
-  # F fragment so it starts where the previous fragment ended.
+  # The content of a split verse's earlier fragments, rendered invisible before an M or
+  # F fragment so it starts where the previous fragment ended. Content, markers and all:
+  # the page draws it as the fragments themselves are drawn, so a stage direction in an
+  # earlier fragment is hidden in the lead as it is in the fragment (`Components.el/1`).
   defp ghosts(items) do
     {ghosts, _open} =
       items
       |> Enum.filter(&(&1.kind == :verse))
       |> Enum.reduce({%{}, []}, fn %{element: el}, {ghosts, open} ->
-        text = InlineMarkup.plain(el.content)
+        text = el.content
 
         case el.part do
           "I" ->

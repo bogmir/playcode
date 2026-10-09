@@ -30,6 +30,81 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "&lt;&lt;"
   end
 
+  describe "an inline stage direction" do
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>CHIMÈNE</speaker><lg><l n="1"><stage>(A Léonor.)</stage>Allez l'entretenir.</l></lg></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+      %{view: view, html: html}
+    end
+
+    defp squish(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
+
+    test "reads in its line, set apart", %{html: html} do
+      doc = LazyHTML.from_fragment(html)
+
+      assert doc |> LazyHTML.query(".inline-stage") |> Enum.map(&LazyHTML.text/1) == [
+               "(A Léonor.)"
+             ]
+
+      assert squish(LazyHTML.text(doc)) =~ "(A Léonor.) Allez l'entretenir."
+      refute html =~ "&lt;stage"
+    end
+
+    # The checkbox is a plain input that pushes this event; LiveViewTest cannot click a label.
+    test "goes when the stage directions are hidden, and the words stay", %{view: view} do
+      html = render_click(view, "toggle_stage_directions")
+
+      refute html =~ "(A Léonor.)"
+      # The page's text, not its markup: the markup escapes the apostrophe.
+      assert squish(html |> LazyHTML.from_fragment() |> LazyHTML.text()) =~ "Allez l'entretenir."
+    end
+  end
+
+  # The line's markup is built by hand (PlayText.part_html/2), not by HEEx, so nothing
+  # else escapes it. The assertions read the raw HTML: LazyHTML.text decodes it again and
+  # passes whether the page escaped or not.
+  test "text typed with markup characters is escaped, in a line, in italics and in a stage", %{
+    conn: conn
+  } do
+    play =
+      tei(
+        body: """
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>ANA</speaker><lg><l n="1">Di &lt;script&gt;alert(1)&lt;/script&gt; &amp; "adiós" <emph>&lt;b&gt;fuerte</emph> <stage type="delivery">(&lt;script&gt;alert(2)&lt;/script&gt; &amp; "bajo" <emph>&lt;i&gt;x</emph>)</stage></l></lg></sp>
+        </div1>
+        """
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    for html <- [html, render(view)] do
+      assert html =~ "Di &lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;adiós&quot;"
+      assert html =~ "<em>&lt;b&gt;fuerte</em>"
+
+      # Each piece of a stage is in a span of its own, an italic one included.
+      assert html =~
+               ~s|<span class="inline-stage">(&lt;script&gt;alert(2)&lt;/script&gt; &amp; &quot;bajo&quot; </span>|
+
+      assert html =~ ~s|<span class="inline-stage"><em>&lt;i&gt;x</em></span>|
+
+      refute html =~ "<script>alert"
+      refute html =~ "<b>fuerte"
+      refute html =~ "<i>x"
+    end
+  end
+
   test "a note is a number after its word, opening the note with its type, term and text",
        %{conn: conn} do
     play =

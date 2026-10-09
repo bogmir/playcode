@@ -8,12 +8,12 @@ defmodule Playcode.Statistics do
   alias Playcode.Catalogue.Play
   alias Playcode.Statistics.PlayStatistic
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Division, Element, ElementCharacter}
+  alias Playcode.PlayContent.{Division, Element, ElementCharacter, InlineMarkup}
   alias Playcode.Statistics.Metrics
 
   # Bump when compute/1 changes what it stores: a cached row with another version is
   # recomputed on its next read, so no migration or manual recompute is needed.
-  @version 2
+  @version 3
 
   # A cached row is current only for the play's content_version it was computed at:
   # Postgres moves that version on every edit to the play's text, so no edit has to
@@ -82,7 +82,8 @@ defmodule Playcode.Statistics do
       "split_verses" => count_split_verses(all_elements),
       "prose_fragments" => count_prose_fragments(all_elements, division_to_act, acts),
       "total_prose_fragments" => count_by_type(all_elements, "prose"),
-      "total_stage_directions" => count_by_type(all_elements, "stage_direction"),
+      "total_stage_directions" =>
+        count_by_type(all_elements, "stage_direction") + inline_stages(all_elements),
       "total_asides" => count_asides(all_elements),
       "aside_verses" => count_aside_verses(all_elements),
       "character_appearances" => character_appearances(all_elements),
@@ -172,6 +173,9 @@ defmodule Playcode.Statistics do
   defp count_by_type(elements, type) do
     Enum.count(elements, &(&1.type == type))
   end
+
+  defp inline_stages(elements),
+    do: elements |> Enum.map(&InlineMarkup.stage_count(&1.content)) |> Enum.sum()
 
   defp verse_distribution(elements, division_to_act, acts) do
     verses = Enum.filter(elements, &(&1.type == "verse_line"))

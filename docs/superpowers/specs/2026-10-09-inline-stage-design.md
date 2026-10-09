@@ -1,6 +1,6 @@
 # Inline stage directions
 
-**Status:** design, 2026-10-09. The follow-up named in `2026-10-08-in-text-notes-design.md`
+**Status:** implemented, 2026-10-09 (commits 30d157b to ff4de00 of the inline-stage branch). The follow-up named in `2026-10-08-in-text-notes-design.md`
 ("Out of scope") and the "Inline `<stage>` is flattened" gap in `CLAUDE.md`.
 
 A `<stage>` inside a verse line or a prose paragraph is a stage direction in the middle of
@@ -100,7 +100,8 @@ wrap goes on children, never on the element being read, so a standalone `<stage>
 `inline_nodes` wraps each run of stage parts in `<stage type="…">`, with italics and notes
 nested inside it, as it nests a note inside `<emph>`. The line is built by `inline_element/3`
 as one line of mixed content, so the whitespace round trips. TEI P5 allows `<stage>` in `<l>`
-and `<p>`; the slow suite validates against the schema.
+and `<p>`; the slow suite validates against the schema (`tei_validator_test.exs`, with
+EMOTHE0746, whose lines hold 54 of them).
 
 ## Renderers
 
@@ -150,9 +151,11 @@ Generate rebuilds the index.
 
 A deploy changes nothing in the database: a play renders as today until its TEI file is
 re-imported. Dev: `mix playcode.import.tei --force`, run only with the project owner's go-ahead.
-Production: re-upload the TEI files at `/admin/plays/import`. If the in-text notes re-upload has
-not happened yet, it covers both, once, before the first Generate. A re-import replaces the
-play's elements, divisions and notes: its hand edits are lost.
+Production: re-upload the TEI files at `/admin/plays/import`. Re-import every TEI file whose
+`<body>` holds a `<note>`, or a `<stage>` inside an `<l>`, `<p>` or `<seg>` (20 and 49 plays in the
+fixture corpus; simplest: every file); one re-upload covers both the in-text notes and the
+inline stages, once, before the first Generate. A re-import replaces the play's elements,
+divisions and notes: its hand edits are lost.
 
 ## Tests
 
@@ -193,3 +196,9 @@ Each is run and seen failing before the code it covers. Through the outermost AP
 - **Content search** in the editor matches the marker text too (a search for "stage" finds a
   line with a marker).
 - **The Word importer** produces no inline stages and is not touched.
+- **Two or more notes at the very start of a stage that follows text** are not an export/import
+  fixpoint: the adjacent-spaced-notes limit of `take_notes/2`.
+- **`search.js`** classifies a line by the first query word's flag, so a line holding a
+  stage-only word and another queried word counts as a stage hit or as spoken by word order.
+- **`Metrics.words/1`** counts a letter touching an italic boundary (`<<a>>b`) as one word, where
+  it counted two; a few sites in the tracked fixtures move.

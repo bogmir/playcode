@@ -486,7 +486,7 @@ defmodule Playcode.Export.StaticSite.Components do
       )
 
     ~H"""
-    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true">{@ghost} </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
+    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true"><.inline text={@ghost} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
     """
   end
 
@@ -523,6 +523,11 @@ defmodule Playcode.Export.StaticSite.Components do
     {Phoenix.HTML.raw(Enum.map(@parts, &part/1))}
     """
   end
+
+  # A piece of an inline stage direction, a note's number among them: in a span the
+  # "Stage directions" toggle hides.
+  defp part(%{stage: %{}} = part),
+    do: [~s(<span class="sdi">), part(%{part | stage: nil}), "</span>"]
 
   # A note's marker: its number, a button that opens the note (endnotes/1) as a popover.
   defp part(%{note: note}) do

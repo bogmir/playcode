@@ -578,8 +578,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             |> assign(inline_editing_id: nil)
             |> reload_elements()
 
-          {:error, _changeset} ->
-            put_flash(socket, :error, gettext("Could not save element."))
+          {:error, changeset} ->
+            put_flash(socket, :error, save_error(changeset))
         end
       end)
     end
@@ -893,6 +893,19 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
   end
 
+  # The generic refusal, then the changeset's first error as the form would show it, a
+  # colon between (the generic text's full stop would leave a lower-case clause after it).
+  defp save_error(%{errors: errors}) do
+    case List.last(errors) do
+      nil ->
+        gettext("Could not save element.")
+
+      {_field, error} ->
+        String.trim_trailing(gettext("Could not save element."), ".") <>
+          ": " <> translate_error(error)
+    end
+  end
+
   defp save_element(socket, params) do
     el_params = params["element"] || %{}
 
@@ -909,21 +922,29 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             |> Map.put("play_id", play.id)
             |> Map.put("division_id", socket.assigns.selected_division_id)
 
-          if el_params["type"] == "verse_line" do
-            case el_params["line_number"] do
-              nil ->
-                :ok
+          changeset = PlayContent.change_element(%PlayContent.Element{}, el_params)
 
-              "" ->
-                :ok
+          if changeset.valid? do
+            if el_params["type"] == "verse_line" do
+              case el_params["line_number"] do
+                nil ->
+                  :ok
 
-              ln ->
-                line_num = if is_binary(ln), do: String.to_integer(ln), else: ln
-                PlayContent.shift_line_numbers(play.id, line_num)
+                "" ->
+                  :ok
+
+                ln ->
+                  line_num = if is_binary(ln), do: String.to_integer(ln), else: ln
+                  PlayContent.shift_line_numbers(play.id, line_num)
+              end
             end
-          end
 
-          PlayContent.create_element(el_params)
+            PlayContent.create_element(el_params)
+          else
+            # A refusal comes back before any later line is renumbered for a line that
+            # will not be saved.
+            {:error, %{changeset | action: :insert}}
+          end
 
         element ->
           PlayContent.update_element(element, el_params)
@@ -2839,6 +2860,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           rows="4"
           placeholder={gettext("Prose text...")}
         />
+        <p class="mt-1 text-xs text-base-content/60">
+          {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
+        </p>
       </div>
 
       <%!-- Line group fields --%>
@@ -2861,6 +2885,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             required
             placeholder={gettext("Verse line text...")}
           />
+          <p class="mt-1 text-xs text-base-content/60">
+            {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
+          </p>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>

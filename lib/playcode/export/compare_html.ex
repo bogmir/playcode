@@ -5,6 +5,7 @@ defmodule Playcode.Export.CompareHtml do
   scrolling between panels. No external dependencies.
   """
 
+  alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
   alias Playcode.PlayContent.Division
 
@@ -191,6 +192,8 @@ defmodule Playcode.Export.CompareHtml do
           margin: 0.5rem 1rem;
           font-size: 12px;
         }
+
+        .stage { font-style: italic; color: #555; }
 
         /* Prose */
         .prose-block {
@@ -392,15 +395,15 @@ defmodule Playcode.Export.CompareHtml do
         do: "<span class=\"line-number\">#{el.line_number}</span>",
         else: "<span class=\"line-number\"></span>"
 
-    "        <div class=\"verse-line\"><span class=\"#{content_class}\">#{escape(el.content || "")}</span>#{line_num}</div>\n"
+    "        <div class=\"verse-line\"><span class=\"#{content_class}\">#{NoteMarkup.inline(el.content, [], :html)}</span>#{line_num}</div>\n"
   end
 
   defp render_element(%{type: "stage_direction"} = el, _key) do
-    "        <div class=\"stage-direction\">(#{escape(el.content || "")})</div>\n"
+    "        <div class=\"stage-direction\">(#{NoteMarkup.inline(el.content, [], :html)})</div>\n"
   end
 
   defp render_element(%{type: "prose"} = el, _key) do
-    "        <div class=\"prose-block\">#{escape(el.content || "")}</div>\n"
+    "        <div class=\"prose-block\">#{NoteMarkup.inline(el.content, [], :html)}</div>\n"
   end
 
   defp render_element(_, _key), do: ""

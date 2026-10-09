@@ -15,7 +15,8 @@ defmodule Playcode.RoundtripTest do
   @tracked_dir Path.expand("../fixtures", __DIR__)
   @corpus_dir Path.expand("../fixtures/tei_files", __DIR__)
   @fields ~w(acts scenes characters speeches verses line_groups stage_dirs asides
-             split_parts verse_type_attrs hidden_chars heads front_notes speaker_refs notes)a
+             split_parts verse_type_attrs hidden_chars heads front_notes speaker_refs notes
+             inline_stages)a
 
   # Read a possibly UTF-16 file and return UTF-8 string
   defp read_original(path) do
@@ -204,7 +205,8 @@ defmodule Playcode.RoundtripTest do
       hidden_chars: count_hidden_chars(front),
       heads: count_heads_in_body(body),
       front_notes: count_front_note_divs(front),
-      notes: count_notes(xml)
+      notes: count_notes(xml),
+      inline_stages: count_inline_stages(body)
     }
   end
 
@@ -232,6 +234,45 @@ defmodule Playcode.RoundtripTest do
 
       _, acc ->
         acc
+    end)
+  end
+
+  # <stage> children of <l> and <p> that the importer keeps, as markers in the line's
+  # text: those of a line or paragraph that is not an aside, which drops every stage it
+  # holds. An <l> is an aside when it has a <seg type="aside"> or a delivery <stage>
+  # naming an aside; a <p> only by its <seg>.
+  defp count_inline_stages(body) do
+    clean = Regex.replace(~r/<\?xml[^?]*\?>/, body, "")
+    {:ok, tree} = Saxy.SimpleForm.parse_string("<root>#{clean}</root>")
+    count_inline_stage_leaves(tree)
+  end
+
+  defp count_inline_stage_leaves({_name, _attrs, children}) do
+    Enum.reduce(children, 0, fn
+      {tag, _attrs, inner}, acc when tag in ~w(l p) ->
+        if aside_leaf?(tag, inner),
+          do: acc,
+          else: acc + Enum.count(inner, &match?({"stage", _, _}, &1))
+
+      {_tag, _, _} = child, acc ->
+        acc + count_inline_stage_leaves(child)
+
+      _, acc ->
+        acc
+    end)
+  end
+
+  defp aside_leaf?(tag, inner) do
+    Enum.any?(inner, fn
+      {"seg", attrs, _} ->
+        attr_val(attrs, "type") == "aside"
+
+      {"stage", attrs, _kids} = stage ->
+        tag == "l" and attr_val(attrs, "type") == "delivery" and
+          Regex.match?(~r/aparte/i, text_of(stage))
+
+      _ ->
+        false
     end)
   end
 

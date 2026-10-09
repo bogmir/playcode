@@ -1,7 +1,8 @@
 defmodule Playcode.Export.NoteMarkup do
   @moduledoc """
   A line's text as HTML for the HTML (and so PDF) and EPUB downloads: italics as `<em>`,
-  each in-text note as a reference to its endnote, and an act's notes as endnotes.
+  an inline stage direction as `<span class="stage">`, each in-text note as a reference
+  to its endnote, and an act's notes as endnotes.
   `:html` links a superscript number to its endnote and back; `:epub` marks them
   `noteref` and `footnote`, which e-readers show as pop-ups. The labels are English, as
   the rest of the downloads are.
@@ -10,9 +11,16 @@ defmodule Playcode.Export.NoteMarkup do
   alias Playcode.PlayContent.{InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
-  @doc "`text`, with `<<…>>` italics, and its `notes`, as escaped HTML."
+  @doc """
+  `text`, with `<<…>>` italics as `<em>`, each inline stage direction in a `<span class="stage">`
+  (a note's number inside it when the note falls inside the stage), and its `notes`, as escaped HTML.
+  """
   def inline(text, notes, format),
     do: text |> InlineMarkup.parts(notes) |> Enum.map_join(&part(&1, format))
+
+  # A piece of an inline stage direction, a note's number among them.
+  defp part(%{stage: %{}} = part, format),
+    do: ~s(<span class="stage">) <> part(%{part | stage: nil}, format) <> "</span>"
 
   defp part(%{note: %{number: n}}, :html),
     do: ~s(<sup class="nref"><a id="ref-#{n}" href="#note-#{n}">#{n}</a></sup>)

@@ -363,6 +363,140 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  describe "inline stage directions" do
+    defp refusal,
+      do:
+        Gettext.dgettext(
+          PlaycodeWeb.Gettext,
+          "errors",
+          "has a stage marker that is not well formed"
+        )
+
+    defp span(lv, text), do: element(lv, "span[title*='#{text}']")
+
+    defp edit(lv, from, to) do
+      lv |> span(from) |> render_click()
+      lv |> element("form[id^='inline-edit-']") |> render_submit(%{"value" => to})
+    end
+
+    test "the verse form says how to mark one", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Tercera línea")} button[aria-label='#{t("Insert Above")}']")
+      |> render_click()
+
+      assert has_element?(
+               lv,
+               "#element-form",
+               t(~s|Stage direction in the text: <stage type="delivery">…</stage>|)
+             )
+    end
+
+    test "one typed into a line is a <stage> in the exported line", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      edit(lv, "Segunda línea", ~s|<stage type="exit">(Vase)</stage> Segunda línea|)
+
+      assert [%{in: "l", type: "exit", text: "(Vase)", after: "Segunda línea"}] =
+               play |> export_tei() |> xml_inline_stages()
+    end
+
+    test "two typed touching stay two", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      edit(lv, "Segunda línea", "<stage>(a)</stage><stage>(b)</stage> Segunda línea")
+
+      assert [%{text: "(a)"}, %{text: "(b)"}] = play |> export_tei() |> xml_inline_stages()
+    end
+
+    test "a marker that is not closed is refused in place, and the line is unchanged",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      html = edit(lv, "Segunda línea", "<stage>sin cerrar")
+
+      # The generic refusal, a colon, then the reason: its full stop does not stay in front
+      # of a lower-case clause ("No se pudo guardar el elemento. tiene una marca…").
+      assert html =~
+               String.trim_trailing(t("Could not save element."), ".") <> ": " <> refusal()
+
+      assert {"Segunda línea", 2} in lines(play)
+    end
+
+    test "a marker that is not closed is refused in the edit form, and the line is unchanged",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      html =
+        lv
+        |> form("#element-form", element: %{"content" => "<stage>sin cerrar"})
+        |> render_submit()
+
+      assert html =~ refusal()
+      assert {"Segunda línea", 2} in lines(play)
+    end
+
+    test "a refused marker in a new line renumbers nothing", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Tercera línea")} button[aria-label='#{t("Insert Above")}']")
+      |> render_click()
+
+      html =
+        lv
+        |> form("#element-form", element: %{"content" => "<stage>sin cerrar"})
+        |> render_submit()
+
+      assert html =~ refusal()
+
+      assert lines(play) == [
+               {"Primera línea", 1},
+               {"Segunda línea", 2},
+               {"Tercera línea", 3}
+             ]
+    end
+  end
+
+  describe "a stage direction's type, changed in a line that has a note" do
+    setup %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg>
+                  <l n="1">Dijo <stage>(bajo)</stage> que sí<note n="1" type="editor"><p>Glosa.</p></note> ya</l>
+                </lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: play}
+    end
+
+    test "leaves the note where it was", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv |> element("span[title*='que sí ya']") |> render_click()
+
+      lv
+      |> element("form[id^='inline-edit-']")
+      |> render_submit(%{"value" => ~s|Dijo <stage type="exit">(bajo)</stage> que sí ya|})
+
+      assert [%{n: "1", after: "Dijo (bajo) que sí"}] = xml_notes(export_tei(play))
+      assert [%{type: "exit"}] = xml_inline_stages(export_tei(play))
+    end
+  end
+
   describe "the note editor" do
     defp notes_section, do: "section[aria-label='#{t("Notes")}']"
 

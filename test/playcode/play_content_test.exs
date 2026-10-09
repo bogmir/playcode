@@ -203,4 +203,67 @@ defmodule Playcode.PlayContentTest do
       assert bodies.() == ["Segunda", "Tercera", "Cuarta", "Primera, corregida"]
     end
   end
+
+  describe "a stage marker in an element's text" do
+    setup do
+      %{play: play, scene: scene, line_group: line_group} =
+        TestFixtures.play_with_structure_fixture()
+
+      attrs = fn content ->
+        %{
+          play_id: play.id,
+          division_id: scene.id,
+          parent_id: line_group.id,
+          type: "verse_line",
+          content: content,
+          position: 9
+        }
+      end
+
+      %{attrs: attrs}
+    end
+
+    test "is accepted when it is closed and flat", %{attrs: attrs} do
+      assert {:ok, %{content: "<stage>(Vase)</stage> Allez"}} =
+               PlayContent.create_element(attrs.("<stage>(Vase)</stage> Allez"))
+    end
+
+    test "is refused when it is not, on create and on update", %{attrs: attrs} do
+      message = "has a stage marker that is not well formed"
+
+      assert {:error, changeset} = PlayContent.create_element(attrs.("<stage>sin cerrar"))
+      assert %{content: [^message]} = errors_on(changeset)
+
+      {:ok, element} = PlayContent.create_element(attrs.("Allez"))
+
+      assert {:error, changeset} =
+               PlayContent.update_element(element, %{"content" => "a</stage>"})
+
+      assert %{content: [^message]} = errors_on(changeset)
+      assert PlayContent.get_element!(element.id).content == "Allez"
+    end
+
+    test "is accepted in a verse line and a paragraph only", %{attrs: attrs} do
+      message = "has a stage marker that is not well formed"
+      content = "<stage>(Vase)</stage> Allez"
+
+      assert {:ok, _} = PlayContent.create_element(%{attrs.(content) | type: "prose"})
+
+      # A stage direction or a trailer is a stage already: a marker in it would be
+      # counted twice and written back as <stage><stage>…</stage></stage>.
+      for type <- ~w(stage_direction trailer) do
+        assert {:error, changeset} = PlayContent.create_element(%{attrs.(content) | type: type})
+        assert %{content: [^message]} = errors_on(changeset), type
+      end
+
+      # Turning a line that holds a marker into a stage direction is refused too.
+      {:ok, element} = PlayContent.create_element(attrs.(content))
+
+      assert {:error, changeset} =
+               PlayContent.update_element(element, %{"type" => "stage_direction"})
+
+      assert %{content: [^message]} = errors_on(changeset)
+      assert PlayContent.get_element!(element.id).type == "verse_line"
+    end
+  end
 end

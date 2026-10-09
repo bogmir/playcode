@@ -24,7 +24,8 @@ defmodule Playcode.PlayContent.Element do
     * `part` (`I`, `M`, `F`) marks a verse split between speakers.
     * `verse_type` (redondilla, romance…) sits on the `line_group`.
 
-  `content` is plain text with italics as `<<…>>` markers (see `InlineMarkup`).
+  `content` is plain text with italics as `<<…>>` markers and a stage direction inside a
+  line or paragraph as `<stage type="…">…</stage>` (see `InlineMarkup`).
   `position` orders an element among its siblings.
   """
 
@@ -93,5 +94,27 @@ defmodule Playcode.PlayContent.Element do
       :type,
       ~w(speech stage_direction verse_line prose line_group trailer unrecognized)
     )
+    |> validate_stage_markers()
+  end
+
+  # A marker that is not closed, or is nested, would print as literal tags on every page
+  # and could not be written back as <stage>. Only a verse line or a paragraph may hold
+  # one: a stage direction or a trailer is a stage already, so a marker in it would be
+  # counted twice and exported as <stage><stage>…</stage></stage>.
+  defp validate_stage_markers(changeset) do
+    if changed?(changeset, :content) or changed?(changeset, :type) do
+      content = get_field(changeset, :content)
+
+      sound? =
+        if get_field(changeset, :type) in ~w(verse_line prose),
+          do: Playcode.PlayContent.InlineMarkup.well_formed?(content),
+          else: not String.contains?(content || "", ["<stage", "</stage>"])
+
+      if sound?,
+        do: changeset,
+        else: add_error(changeset, :content, "has a stage marker that is not well formed")
+    else
+      changeset
+    end
   end
 end
