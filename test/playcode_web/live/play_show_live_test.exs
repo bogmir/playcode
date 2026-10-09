@@ -246,6 +246,21 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     end
   end
 
+  test "a note in a division with no heading is placed by the division's type", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="3">uno<note n="1" type="editor"><p>Glosa.</p></note></l></sp></div1>)
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+    view |> element("#play-sections-panel button", t("Notes")) |> render_click()
+
+    assert has_element?(view, "#play-tab-notes li button", "Acto, #{t("line %{n}", n: 3)}")
+  end
+
   test "a play without notes has no Notes view", %{conn: conn} do
     play =
       tei(body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>))

@@ -510,7 +510,7 @@ defmodule PlaycodeWeb.PlayShowLive do
 
       where =
         [
-          division.title,
+          division.title || String.capitalize(division.type),
           scene && scene.title,
           line && gettext("line %{n}", n: line)
         ]
