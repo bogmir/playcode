@@ -375,8 +375,8 @@ defmodule PlaycodeWeb.Components.PlayText do
     """
   end
 
-  defp note_key(note), do: note.type || "untyped"
-  defp type_label("untyped"), do: PlayLabels.note_type_label(nil)
+  defp note_key(note), do: PlayLabels.note_type_key(note.type)
+  defp type_label("other"), do: PlayLabels.note_type_label(nil)
   defp type_label(type), do: PlayLabels.note_type_label(type)
 
   attr :notes, :list, required: true

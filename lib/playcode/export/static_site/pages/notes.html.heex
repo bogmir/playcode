@@ -16,7 +16,9 @@
     <legend>Show</legend>
     <label><input type="radio" name="note-type" value="" checked /> All</label>
     <label :for={type <- note_types(@edition)}>
-      <input type="radio" name="note-type" value={type} /> {PlayLabels.note_type_label(type)}
+      <input type="radio" name="note-type" value={type} /> {PlayLabels.note_type_label(
+        if type != "other", do: type
+      )}
     </label>
   </fieldset>
   <ol class="note-list" data-notes>

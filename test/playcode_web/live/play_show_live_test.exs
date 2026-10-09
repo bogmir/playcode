@@ -143,7 +143,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
           body: """
           <div1 type="acto" n="1"><head>Acto I</head>
             <div2 type="escena" n="1"><head>Escena 1</head>
-              <sp><speaker>ANA<note n="1" type="editor"><p>La dama.</p></note></speaker>
+              <sp><speaker>ANA<note n="1" type="falta_tipo"><p>La dama.</p></note></speaker>
                 <lg><l n="12">Nous voyent<note n="2" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l></lg>
                 <lg><l n="13">Ni un ratón se ha movido.<note n="3" type="traductor"><p>De soldado.</p></note></l></lg>
               </sp>
@@ -183,8 +183,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       # Each part by itself: LiveViewTest drops the spaces between tags.
       parts = fn selector -> texts(doc, "#play-tab-notes li " <> selector) end
 
-      assert parts.("b") ==
-               List.duplicate(t("Editor's note"), 1) ++ List.duplicate(t("Translator's note"), 2)
+      # A type with no label of its own is a plain Note.
+      assert parts.("b") == [t("Note"), t("Translator's note"), t("Translator's note")]
 
       assert parts.("i") == ["ANA", "voyent", "movido"]
 
@@ -208,6 +208,12 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       assert [voyent, movido] = listed(html)
       assert voyent =~ "voyent"
       assert movido =~ "movido"
+
+      assert texts(LazyHTML.from_fragment(html), "#play-tab-notes [role=group] button") == [
+               t("All"),
+               t("Note"),
+               t("Translator's note")
+             ]
 
       html = view |> element("#play-tab-notes button", t("All")) |> render_click()
       assert length(listed(html)) == 3

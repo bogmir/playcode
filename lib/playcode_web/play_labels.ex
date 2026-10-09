@@ -40,6 +40,13 @@ defmodule PlaycodeWeb.PlayLabels do
   def note_type_label("autor"), do: gettext("Author's note")
   def note_type_label(_other), do: gettext("Note")
 
+  @doc """
+  The type a note is filtered by: its own when it has a label (`Note.types/0`), else
+  `"other"`, so the many types the corpus carries without one (`latinismo`,
+  `falta_tipo`, …) are one plain Note, not several options that read the same.
+  """
+  def note_type_key(type), do: if(type in Note.types(), do: type, else: "other")
+
   @doc "`{label, type}` pairs for a select: an untyped note first, then the corpus's types."
   def note_type_options,
     do: [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]

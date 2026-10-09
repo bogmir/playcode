@@ -433,7 +433,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
     setup do
       {play, dir} =
         publish!("""
-        <div1 type="acto" n="1"><head>Acto I<note n="1"><p>Del encabezado.</p></note></head>
+        <div1 type="acto" n="1"><head>Acto I<note n="1" type="latinismo"><p>Del encabezado.</p></note></head>
           <sp><speaker>ANA<note n="2" type="editor"><p>La dama.</p></note></speaker>
             <l n="1">Nous voyent<note n="3" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l>
             <l n="2">Ni un ratón se ha movido.<note n="4" type="traductor"><p>Expresión de soldado.</p></note></l>
@@ -451,8 +451,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       assert LazyHTML.attribute(items, "value") == ["1", "2", "3", "4"]
 
+      # A type with no label of its own (latinismo here; or none) is a plain Note.
       assert LazyHTML.attribute(items, "data-type") == [
-               "untyped",
+               "other",
                "editor",
                "traductor",
                "traductor"
@@ -498,7 +499,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert LazyHTML.attribute(filter, "hidden") == [""]
 
       assert filter |> LazyHTML.query("input") |> LazyHTML.attribute("value") ==
-               ["", "untyped", "editor", "traductor"]
+               ["", "other", "editor", "traductor"]
 
       assert texts(filter, "label") == ["All", "Note", "Editor's note", "Translator's note"]
     end

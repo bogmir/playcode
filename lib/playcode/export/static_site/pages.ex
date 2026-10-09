@@ -17,8 +17,7 @@ defmodule Playcode.Export.StaticSite.Pages do
   defp words_unit?(edition),
     do: Play.form(edition.play) != "verse" or (edition.stats["verses"] || 0) == 0
 
-  # A note's type as the Notes page's filter reads it: TEI's, or "untyped".
-  defp note_type(note), do: note.type || "untyped"
+  defp note_type(note), do: PlayLabels.note_type_key(note.type)
 
   # The note types a play uses, in the order they first appear.
   defp note_types(edition), do: edition.notes |> Enum.map(&note_type(&1.note)) |> Enum.uniq()
