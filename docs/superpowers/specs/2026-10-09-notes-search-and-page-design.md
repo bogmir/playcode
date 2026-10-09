@@ -61,6 +61,7 @@ kind must be readable from its posting. The one flag bit is taken by stage direc
 - A note hit is drawn like a line, its text in `class="line note"`; its link opens
   `<slug>.html#nref-<n>`.
 - Phrase search reads the note's text as it reads a line's. The count stays "N lines in M plays".
+  Within a play, results list by entry number, so its note hits come after its lines.
 
 Unchanged: shard sharding and file names, `plays.js`, the lines files of the play text, the
 normaliser.
@@ -94,7 +95,10 @@ writer and the Notes page alike:
   `<a href="<slug>.html#nref-<n>">` reading the `ref`, and the note's paragraphs.
 - **The filter**: a fieldset of radio buttons, All and each type the play uses (first appearance
   order), `hidden` in the markup and shown by `site.js`, which hides the other types' items. Only
-  with two or more types. Without JS, and in print, every note shows.
+  with two or more types. Without JS, and in print, every note shows. A type with no label
+  (`PlayLabels.note_type_key/1`: anything outside `Note.types/0`, untyped included) is filed
+  under one option, `other`, read "Note": the dev corpus has 17 types, 11 without a label, which
+  would otherwise be several options reading the same (found building the dev corpus).
 - The markers get an id: `<button id="nref-<n>" class="nref" …>` (`Components.part/1`). No page
   prints the same note's marker twice, so the ids stay unique per page.
 - `about.html` names the Notes page among a play's pages.

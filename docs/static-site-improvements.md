@@ -107,6 +107,11 @@ Measured on the 83-play dev corpus, `--all`:
 - Builds (83 plays): 45.2 s sequential, 17.0 s parallel; removing one play 2.8 s, adding one
   4.3 s (`9b37335`).
 
+**Also over budget, found 2026-10-09: a play with one division.** EMOTHE0187 (*Friar Bacon
+and Friar Bungay*) has its whole text in one division, `play`, with no scenes to split it by,
+so `play.html` is 118 KB gzipped, its 808 notes' endnotes included. The scene split cannot
+help; a split by size, or notes on a page of their own, would.
+
 **Still over budget: a phrase over common words.** *"vida es"* costs 954 KB gzipped (232
 chunks), *"la vida es"* 691 KB (119). The postings say which lines hold a word, not where in
 the line it sits, so a phrase is checked against the line text and the search page must load
@@ -117,33 +122,26 @@ words is wanted, not before.
 
 ## 6. Notes in the static site's search
 
-**Problem**: in-text notes (item 1) are stored in `play_notes` but the search index holds only
-spoken lines and stage directions, so a reader cannot find a word that only a note contains.
+**Done** (2026-10-09), see `superpowers/specs/2026-10-09-notes-search-and-page-design.md`.
 
-**Fix**: index each note's `body` as a hit that points at the line it hangs on. The index file
-format stays as it is. A new facet, "Notes", sits beside "Spoken" and "Stage directions" on the
-search page. Touches `StaticSite.Search` (the writer; its normaliser must keep agreeing with
-`EMOTHE.normalise` in `site.js`), `search.js` (the facet) and the fingerprint (already covers
-`Note`). Stage flag in the posting delta (`delta × 2 + stage flag`) has no room for a third kind:
-**decide** how a note hit is marked without changing the format, e.g. a separate shard set or a
-flag in the chunk line rather than the posting.
+**Problem**: in-text notes (item 1) are stored in `play_notes` but the search index held only
+spoken lines and stage directions, so a reader could not find a word that only a note contains.
+
+**What shipped**: each note is an entry of its own, numbered from `Search.note_base/0`
+(1,000,000) after the play's lines, so `search.js` tells a note hit by its number and counts
+the Text facet's new **Notes** value before any line text loads. Its row is in
+`search/lines/<CODE>/n<k>.js`, in the lines files' shape (kind `"n"`), and links to the note's
+marker (`#nref-<n>`) on the first page that shows it. Notes count under All. The shards, the
+lines files and `plays.js` keep their format. Within a play, note hits list after its lines.
 
 ## 7. A "Notes" page per play
 
-**Problem**: notes show only as pop-ups, so a reader cannot scan a play's notes together.
+**Done** (2026-10-09), same spec.
 
-**Fix**: one page listing every note with its number, type, glossed word and a link back to the
-line, filterable by type (translator, editor, …). On the static site (`plays/<CODE>/notes.html`,
-a rail entry, `Edition` anchors for the link back) and on `/plays/:code` (a new tab beside Text,
-Characters and Statistics). Numbers come from `Note.reading_order/1`; the glossed word from
-`PlayContent.anchor_text/1` at the note's offset.
-
-**Open**: filter on the static site needs a few lines of `site.js` (budget 15 KB); the live page
-filters in the LiveView. Types are free text in `play_notes.type`, so the filter list is whatever
-the play holds. The 82 fixture files' bodies hold 503 notes in 20 plays, every one typed:
-`traductor` 253, `editor` 177, `editor_digital` 46, `editor_critico` 24, and `autor`, `lines`,
-`comment` once each. Those codes need labels; FileMaker's note-type table
-(`T07.261`, see the FileMaker roadmap's master-database map) may hold the project's own wording.
+**What shipped**: `plays/<CODE>/notes.html` on the static site (in the contents list) and a
+Notes view on `/plays/:code`, both only for a play with notes: number, type, the word glossed
+(the `<term>`, else the word before the note), where it is (linked back to the marker), and
+the note's paragraphs, filterable by type when the play uses two or more.
 
 ## Awaiting the project
 
@@ -157,6 +155,19 @@ the catalogue's Kind facet, its "translation" tag and the search page's Original
 facet. The schema also allows `adaptacion` and `refundicion` (`Play.changeset/2`). Should an
 adaptation or a *refundición* be labelled as such, counted as a translation, or as an
 original? **Needs**: the stakeholders' answer; then a label per type and a facet value each.
+
+### Labels for the other note types
+
+The dev corpus's notes carry 17 types (2026-10-09). Six have a label (`traductor`, `editor`,
+`editor_critico`, `editor_digital`, `autor`, and none). The other eleven read "Note" in the
+pop-ups and the Notes pages, and the type filter files them all under that one option:
+`falta_tipo` 132 notes in 10 plays, `latinismo` 46, `toponimo_accion` 24, `toponimo_aludido` 8,
+`variantes` 3, `atrezzo`, `oficio` and `vestuario` 2 each, `gesto_movimiento`, `video` and
+`nota_editor_digital` 1 each. Most are subjects (props, costume, Latinisms, places), not who
+wrote the note. **Needs**: the project's wording for each, or a decision to fold some into
+others (`nota_editor_digital` into `editor_digital`, `falta_tipo` into no type); FileMaker's
+`T07.261` may already hold it. Then a clause per type in `PlayLabels.note_type_label/1` and
+`Note.types/0`.
 
 ### The grouping of verse forms into families
 
