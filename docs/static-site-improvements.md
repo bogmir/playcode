@@ -28,13 +28,13 @@ never compares a line's text against the source.
   so the static site only needs a template change. The live page needs its own.
 
 **Same root cause**: the "Inline `<stage>` is flattened" gap in CLAUDE.md is `text_content/1`
-flattening a child too. The project fixed the notes only; the inline `<stage>` is its follow-up
-(the spec's *Out of scope*).
+flattening a child too. The project fixed the notes only. Done (2026-10-09), see
+`superpowers/specs/2026-10-09-inline-stage-design.md`.
 
 ## 2. Italics show as literal `<<word>>` in the other exporters
 
-Done for `Export.Html`, `Export.Pdf` and `Export.Epub` with the notes (`Export.NoteMarkup`);
-`Export.CompareHtml` still prints `<<…>>`.
+Done for `Export.Html`, `Export.Pdf` and `Export.Epub` with the notes (`Export.NoteMarkup`), and for
+`Export.CompareHtml` with the inline stage directions (2026-10-09).
 
 **Problem**: the importer stores `<emph>` / `<hi rend="italic">` as `<<…>>` inside the text.
 Only the live page (`PlaycodeWeb.Components.PlayText`, private `split_inline_markup/1`) turns it back into `<em>`.

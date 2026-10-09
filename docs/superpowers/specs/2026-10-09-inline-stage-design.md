@@ -1,6 +1,6 @@
 # Inline stage directions
 
-**Status:** design, 2026-10-09. The follow-up named in `2026-10-08-in-text-notes-design.md`
+**Status:** implemented, 2026-10-09 (commits 30d157b to ff4de00 of the inline-stage branch). The follow-up named in `2026-10-08-in-text-notes-design.md`
 ("Out of scope") and the "Inline `<stage>` is flattened" gap in `CLAUDE.md`.
 
 A `<stage>` inside a verse line or a prose paragraph is a stage direction in the middle of
@@ -193,3 +193,9 @@ Each is run and seen failing before the code it covers. Through the outermost AP
 - **Content search** in the editor matches the marker text too (a search for "stage" finds a
   line with a marker).
 - **The Word importer** produces no inline stages and is not touched.
+- **Two or more notes at the very start of a stage that follows text** are not an export/import
+  fixpoint: the adjacent-spaced-notes limit of `take_notes/2`.
+- **`search.js`** classifies a line by the first query word's flag, so a line holding a
+  stage-only word and another queried word counts as a stage hit or as spoken by word order.
+- **`Metrics.words/1`** counts a letter touching an italic boundary (`<<a>>b`) as one word, where
+  it counted two; a few sites in the tracked fixtures move.
