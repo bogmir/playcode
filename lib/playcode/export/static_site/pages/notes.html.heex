@@ -1,0 +1,34 @@
+<Components.shell
+  root="../../"
+  title={"Notes — #{@edition.play.title} — EMOTHE"}
+  site={@site}
+  play={@edition.play}
+>
+  <:rail><Components.play_rail edition={@edition} current="notes" /></:rail>
+  <Components.play_header play={@edition.play} />
+  <h2>Notes</h2>
+  <fieldset
+    :if={length(note_types(@edition)) > 1}
+    class="facet note-filter"
+    data-note-filter
+    hidden
+  >
+    <legend>Show</legend>
+    <label><input type="radio" name="note-type" value="" checked /> All</label>
+    <label :for={type <- note_types(@edition)}>
+      <input type="radio" name="note-type" value={type} /> {PlayLabels.note_type_label(type)}
+    </label>
+  </fieldset>
+  <ol class="note-list" data-notes>
+    <li :for={entry <- @edition.notes} data-type={note_type(entry.note)} value={entry.note.number}>
+      <p class="note-head">
+        <b>{PlayLabels.note_type_label(entry.note.type)}</b>
+        <i :if={entry.glossed}>{entry.glossed}</i>
+        <a href={"#{entry.slug}.html#nref-#{entry.note.number}"}>{entry.ref}</a>
+      </p>
+      <p :for={paragraph <- Note.paragraphs(entry.note)}>
+        <Components.inline text={paragraph} />
+      </p>
+    </li>
+  </ol>
+</Components.shell>

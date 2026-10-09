@@ -157,6 +157,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <li>
         <a href="statistics.html" aria-current={@current == "statistics" && "page"}>Statistics</a>
       </li>
+      <li :if={@edition.notes != []}>
+        <a href="notes.html" aria-current={@current == "notes" && "page"}>Notes</a>
+      </li>
       <li :if={@edition.bibliography != []}>
         <a href="index.html#bibliography">Bibliography</a>
       </li>

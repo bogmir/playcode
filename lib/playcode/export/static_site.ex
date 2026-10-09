@@ -481,6 +481,9 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(play_dir, "text.html"), Pages.render(:text, assigns))
     File.write!(Path.join(play_dir, "statistics.html"), Pages.render(:statistics, assigns))
 
+    if edition.notes != [],
+      do: File.write!(Path.join(play_dir, "notes.html"), Pages.render(:notes, assigns))
+
     File.write!(
       Path.join([dir, "plays", "#{code}.html"]),
       Pages.render(:redirect, %{code: code, title: play.title})
