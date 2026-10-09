@@ -530,12 +530,15 @@ defmodule Playcode.Export.StaticSite.Components do
     do: [~s(<span class="sdi">), part(%{part | stage: nil}), "</span>"]
 
   # A note's marker: its number, a button that opens the note (endnotes/1) as a popover.
+  # Its id is what a search result and the Notes page link to.
   defp part(%{note: note}) do
     number = Integer.to_string(note.number)
     label = escape("#{PlayLabels.note_type_label(note.type)} #{number}")
 
     [
-      ~s(<button type="button" class="nref" popovertarget="note-),
+      ~s(<button type="button" id="nref-),
+      number,
+      ~s(" class="nref" popovertarget="note-),
       number,
       ~s(" aria-label="),
       label,

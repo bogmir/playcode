@@ -399,6 +399,28 @@ defmodule Playcode.Export.StaticSitePlayTest do
       end
     end
 
+    test "a note's search result lands on the first page that shows its marker", %{
+      play: play,
+      dir: dir
+    } do
+      {"lines", _, %{"lines" => notes}} = load_js!(dir, "search/lines/#{play.code}/n0.js")
+
+      # The act heading's note is printed again on every scene page; its result goes to
+      # the act's own page. A scene heading's cites the scene.
+      assert Enum.map(notes, &Enum.take(&1, 3)) == [
+               ["act-1", "nref-1", "Acto I"],
+               ["act-1", "nref-2", "I"],
+               ["act-1-s1", "nref-3", "Acto I, Escena 1"],
+               ["act-1-s1", "nref-4", "I"],
+               ["act-1-s1", "nref-5", "I"],
+               ["act-1-s2", "nref-6", "I"]
+             ]
+
+      for [slug, anchor | _] <- notes do
+        assert anchor in ids(page(dir, play, slug <> ".html"))
+      end
+    end
+
     test "a search result lands on the scene's page", %{play: play, dir: dir} do
       {"lines", _, %{"lines" => lines}} = load_js!(dir, "search/lines/#{play.code}/0.js")
 
