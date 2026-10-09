@@ -219,7 +219,11 @@ defmodule PlaycodeWeb.Components.PlayText do
         @show_split_verses && @element.part == "F" && "part-f",
         @show_split_verses && @element.part == "M" && "part-m"
       ]}>
-        <.inline_content text={@element.content} notes={@element.notes} />
+        <.inline_content
+          text={@element.content}
+          notes={@element.notes}
+          show_stage={@show_stage_directions}
+        />
       </span>
       <span
         :if={@element.line_number}
@@ -249,7 +253,11 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp render_element(%{element: %{type: "prose"}} = assigns) do
     ~H"""
     <div :if={!@element.is_aside || @show_asides} class="ml-1 sm:ml-4 mb-2 text-justify">
-      <.inline_content text={@element.content} notes={@element.notes} />
+      <.inline_content
+        text={@element.content}
+        notes={@element.notes}
+        show_stage={@show_stage_directions}
+      />
     </div>
     """
   end
@@ -257,23 +265,57 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp render_element(assigns) do
     ~H"""
     <div :if={@element.content}>
-      <.inline_content text={@element.content} notes={@element.notes} />
+      <.inline_content
+        text={@element.content}
+        notes={@element.notes}
+        show_stage={@show_stage_directions}
+      />
     </div>
     """
   end
 
   attr :text, :string, default: nil
   attr :notes, :list, default: []
+  attr :show_stage, :boolean, default: true
 
-  # One line, kept from the formatter by phx-no-format: a line break between a word and
-  # its note's number would show as a space.
+  # One line, kept from the formatter by phx-no-format and built as iodata: a line break
+  # between a word and its note's number would show as a space.
   defp inline_content(assigns) do
-    assigns = assign(assigns, :parts, InlineMarkup.parts(assigns.text, assigns.notes))
+    html =
+      assigns.text
+      |> InlineMarkup.parts(assigns.notes)
+      |> Enum.map(&part_html(&1, assigns.show_stage))
+
+    assigns = assign(assigns, :html, html)
 
     ~H"""
-    <span phx-no-format><%= for part <- @parts do %><%= case part do %><% %{note: note} -> %><button type="button" class="nref" popovertarget={"note-#{note.id}"} aria-label={note_label(note)}>{note.number}</button><% %{italic: true} -> %><em>{part.text}</em><% _ -> %>{part.text}<% end %><% end %></span>
+    <span phx-no-format>{Phoenix.HTML.raw(@html)}</span>
     """
   end
+
+  # A piece of an inline stage direction, a note's number among them: in a span, and left
+  # out while the stage directions are hidden.
+  defp part_html(%{stage: %{}}, false), do: ""
+
+  defp part_html(%{stage: %{}} = part, true),
+    do: [~s(<span class="inline-stage">), part_html(%{part | stage: nil}, true), "</span>"]
+
+  defp part_html(%{note: note}, _show_stage) do
+    [
+      ~s(<button type="button" class="nref" popovertarget="note-),
+      escape(note.id),
+      ~s(" aria-label="),
+      escape(note_label(note)),
+      ~s(">),
+      Integer.to_string(note.number),
+      "</button>"
+    ]
+  end
+
+  defp part_html(%{italic: true, text: text}, _show_stage), do: ["<em>", escape(text), "</em>"]
+  defp part_html(%{text: text}, _show_stage), do: escape(text)
+
+  defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   defp note_label(note), do: "#{PlayLabels.note_type_label(note.type)} #{note.number}"
 

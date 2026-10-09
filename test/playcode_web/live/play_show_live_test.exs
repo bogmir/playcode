@@ -30,6 +30,46 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "&lt;&lt;"
   end
 
+  describe "an inline stage direction" do
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>CHIMÈNE</speaker><lg><l n="1"><stage>(A Léonor.)</stage>Allez l'entretenir.</l></lg></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+      %{view: view, html: html}
+    end
+
+    defp squish(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
+
+    test "reads in its line, set apart", %{html: html} do
+      doc = LazyHTML.from_fragment(html)
+
+      assert doc |> LazyHTML.query(".inline-stage") |> Enum.map(&LazyHTML.text/1) == [
+               "(A Léonor.)"
+             ]
+
+      assert squish(LazyHTML.text(doc)) =~ "(A Léonor.) Allez l'entretenir."
+      refute html =~ "&lt;stage"
+    end
+
+    # The checkbox is a plain input that pushes this event; LiveViewTest cannot click a label.
+    test "goes when the stage directions are hidden, and the words stay", %{view: view} do
+      html = render_click(view, "toggle_stage_directions")
+
+      refute html =~ "(A Léonor.)"
+      # The page's text, not its markup: the markup escapes the apostrophe.
+      assert squish(html |> LazyHTML.from_fragment() |> LazyHTML.text()) =~ "Allez l'entretenir."
+    end
+  end
+
   test "a note is a number after its word, opening the note with its type, term and text",
        %{conn: conn} do
     play =
