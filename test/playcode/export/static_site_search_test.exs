@@ -30,6 +30,10 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     assert Search.lines_per_chunk() == cases()["lines_per_chunk"]
   end
 
+  test "notes are numbered from the entry the browser expects" do
+    assert Search.note_base() == cases()["note_base"]
+  end
+
   describe "the index files" do
     setup do
       play =

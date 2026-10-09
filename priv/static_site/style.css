@@ -202,6 +202,8 @@ main td { padding: .3rem .5rem; border-bottom: 1px solid var(--hair-2); }
 .hit .ref { font: .75rem var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
 .hit .spk { margin: 0; }
 .hit .stage { font-style: italic; color: var(--ink-2); }
+.hit .note { font: .875rem/1.5 var(--sans); color: var(--ink-2); }
+.hit .note::before { content: "Note: "; color: var(--muted); }
 mark { background: var(--mark); color: var(--accent); font-weight: 600; padding: 0 .1em; border-radius: 2px; }
 
 /* In-text notes: the number after a glossed word opens its note, a popover. In print,

@@ -7,8 +7,10 @@
   var store = { plays: null, index: {}, lines: {} };
   var waiting = {};
 
-  // Must match Playcode.Export.StaticSite.Search.lines_per_chunk/0.
+  // Must match Playcode.Export.StaticSite.Search.lines_per_chunk/0 and note_base/0: a
+  // play's notes are indexed after its lines, note i as entry NOTE_BASE + i.
   S.LINES_PER_CHUNK = 100;
+  S.NOTE_BASE = 1000000;
 
   S.load = function (kind, key, value) {
     if (kind === 'plays') store.plays = value; else store[kind][key] = value;
@@ -25,7 +27,14 @@
     }).join('');
   };
 
-  S.chunkKey = function (code, line) { return code + '/' + Math.floor(line / S.LINES_PER_CHUNK); };
+  S.chunkKey = function (code, line) {
+    return line >= S.NOTE_BASE
+      ? code + '/n' + Math.floor((line - S.NOTE_BASE) / S.LINES_PER_CHUNK)
+      : code + '/' + Math.floor(line / S.LINES_PER_CHUNK);
+  };
+
+  // What a hit is, from its posting alone: the facets are counted before any line loads.
+  S.kind = function (line, flag) { return line >= S.NOTE_BASE ? 'note' : flag ? 'stage' : 'spoken'; };
 
   // [play, n, d1 … dn, play, n, …], d = (line - previous line) * 2 + flag  →  [[play, line, flag]]
   S.decode = function (list) {
@@ -68,12 +77,12 @@
     return false;
   };
 
-  // Hits for one word: {"play:line": 1 for a stage direction, 0 for spoken text}.
+  // Hits for one word: {"play:line": "spoken", "stage" or "note"}.
   S.hits = function (shard, word, mode) {
     var hits = {};
     Object.keys(shard || {}).forEach(function (token) {
       if (!S.matches(token, word, mode)) return;
-      S.decode(shard[token]).forEach(function (h) { hits[h[0] + ':' + h[1]] = h[2]; });
+      S.decode(shard[token]).forEach(function (h) { hits[h[0] + ':' + h[1]] = S.kind(h[1], h[2]); });
     });
     return hits;
   };
@@ -90,12 +99,13 @@
   if (!root.document) return;
 
   var FIRST_PLAYS = 10, FIRST_LINES = 5;
+  var TYPES = { spoken: 'Spoken', stage: 'Stage directions', note: 'Notes' };
   var form, results, count, facetsEl, state = null, renders = 0, runs = 0;
   var FACETS = [
     ['language', 'Language', function (play) { return play.language_name; }],
     ['author', 'Author', function (play) { return play.author || '—'; }],
     ['kind', 'Kind', function (play) { return play.kind === 'original' ? 'Originals' : 'Translations'; }],
-    ['type', 'Text', function (play, stage) { return stage ? 'Stage directions' : 'Spoken'; }]
+    ['type', 'Text', function (play, kind) { return TYPES[kind]; }]
   ];
 
   function el(tag, cls, text) {
@@ -183,10 +193,10 @@
       });
   }
 
-  function passes(play, stage, skip) {
+  function passes(play, kind, skip) {
     return FACETS.every(function (f) {
       var want = state.filters[f[0]];
-      return f === skip || !want || f[2](play, stage) === want;
+      return f === skip || !want || f[2](play, kind) === want;
     });
   }
 
@@ -199,7 +209,7 @@
     var groups = {};
     Object.keys(state.hits).forEach(function (k) {
       var pl = k.split(':').map(Number);
-      if (passes(store.plays[pl[0]], state.hits[k] === 1)) (groups[pl[0]] = groups[pl[0]] || []).push(pl[1]);
+      if (passes(store.plays[pl[0]], state.hits[k])) (groups[pl[0]] = groups[pl[0]] || []).push(pl[1]);
     });
     var order = Object.keys(groups).map(Number).sort(function (a, b) {
       return groups[b].length - groups[a].length || store.plays[a].title.localeCompare(store.plays[b].title);
@@ -228,8 +238,8 @@
     FACETS.forEach(function (f) {
       var counts = {};
       Object.keys(state.hits).forEach(function (k) {
-        var p = Number(k.split(':')[0]), stage = state.hits[k] === 1, play = store.plays[p];
-        if (passes(play, stage, f)) { var v = f[2](play, stage); counts[v] = (counts[v] || 0) + 1; }
+        var p = Number(k.split(':')[0]), kind = state.hits[k], play = store.plays[p];
+        if (passes(play, kind, f)) { var v = f[2](play, kind); counts[v] = (counts[v] || 0) + 1; }
       });
       var values = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
       if (values.length < 2 && !state.filters[f[0]]) return;
@@ -274,7 +284,7 @@
     ref.href = 'plays/' + play.code + '/' + row[0] + '.html#' + row[1];
     li.appendChild(ref);
     li.appendChild(el('span', 'spk', row[3] === null ? '' : line.speakers[row[3]]));
-    var text = el('span', row[4] === 's' ? 'line stage' : 'line');
+    var text = el('span', row[4] === 's' ? 'line stage' : row[4] === 'n' ? 'line note' : 'line');
     highlight(text, row[5]);
     li.appendChild(text);
     return li;
