@@ -1504,24 +1504,37 @@ defmodule Playcode.Import.TeiParser do
     if emph_element?(name, attrs) do
       "<<" <> extract_plain_text(children, notes) <> ">>"
     else
-      children |> pieces(notes, &read_child(&1, notes)) |> squeeze()
+      children |> pieces(notes, &read_child(&1, notes, name)) |> squeeze()
     end
   end
 
   defp text_content(text, _notes) when is_binary(text), do: String.trim(text)
   defp text_content(_, _notes), do: ""
 
-  # A child of the element being read. Under :mark (the play text) a <stage> is kept as a
-  # marker (InlineMarkup); the element being read is never wrapped, so a standalone stage
-  # direction is not. A stage inside a stage is flattened: markers do not nest.
-  defp read_child({"stage", attrs, _children} = stage, :mark) do
-    case stage |> text_content(:mark) |> String.replace(~r/<\/?stage[^>]*>/, "") do
-      "" -> ""
-      text -> stage_tag(attrs) <> text <> "</stage>"
+  @stage_parents ~w(l p seg)
+  @leading_marks ~r/\A((?:\x{E000}\d+[sn]\x{E001} ?)*)(.*)\z/su
+
+  # A child of the element `parent` being read. Under :mark (the play text) a <stage>
+  # child of an <l>, <p> or <seg> is kept as a marker (InlineMarkup). Anywhere else (a
+  # speaker label, a heading, a stage inside a standalone stage direction) its words are
+  # pasted as text of the parent: TEI allows no <stage> there, and markers do not nest.
+  #
+  # A note at the very start of the stage goes in front of its tag, and a stage left with
+  # no words is dropped, its notes staying in the line. The note leads with a space ("s")
+  # because the pieces of the element are joined by one: the offset the first import
+  # stores is the one a re-import of the export computes, a note before the stage.
+  defp read_child({"stage", attrs, _children} = stage, :mark, parent)
+       when parent in @stage_parents do
+    [_all, lead, words] = Regex.run(@leading_marks, text_content(stage, :mark))
+    lead = Regex.replace(~r/\A(\x{E000}\d+)[sn]/u, String.trim(lead), "\\1s")
+
+    case String.trim(words) do
+      "" -> lead
+      words -> lead <> stage_tag(attrs) <> words <> "</stage>"
     end
   end
 
-  defp read_child(child, notes), do: text_content(child, notes)
+  defp read_child(child, notes, _parent), do: text_content(child, notes)
 
   # The type goes into the marker when it is the plain word the marker allows.
   defp stage_tag(attrs) do

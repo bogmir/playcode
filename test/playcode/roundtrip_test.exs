@@ -267,19 +267,12 @@ defmodule Playcode.RoundtripTest do
       {"seg", attrs, _} ->
         attr_val(attrs, "type") == "aside"
 
-      {"stage", attrs, kids} ->
+      {"stage", attrs, _kids} = stage ->
         tag == "l" and attr_val(attrs, "type") == "delivery" and
-          Regex.match?(~r/aparte/i, plain_text(kids))
+          Regex.match?(~r/aparte/i, text_of(stage))
 
       _ ->
         false
-    end)
-  end
-
-  defp plain_text(nodes) do
-    Enum.map_join(nodes, fn
-      text when is_binary(text) -> text
-      {_name, _attrs, kids} -> plain_text(kids)
     end)
   end
 

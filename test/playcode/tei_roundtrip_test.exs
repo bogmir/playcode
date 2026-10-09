@@ -833,6 +833,87 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(xml, "emph") == ["uno", "dos"]
     end
 
+    test "a note at the start of a stage comes out before it, and stays there" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1">Dijo <stage><note n="1" type="editor"><p>X.</p></note>(Vase)</stage> y calló.</l>
+        <p>Dijo<stage><note n="2" type="editor"><p>Y.</p></note>(Vase)</stage> y calló.</p>
+      </sp></div1>
+      """
+
+      xml = roundtrip(tei(code: "STG3", body: body))
+
+      # Written out again and read back, the notes do not move.
+      again =
+        xml |> String.replace("STG3", "STG4") |> roundtrip() |> String.replace("STG4", "STG3")
+
+      assert again == xml
+
+      # The words either side of the stage stay apart.
+      assert reading_texts(xml, "l") == ["Dijo (Vase) y calló."]
+      assert reading_texts(xml, "p") == ["Dijo (Vase) y calló."]
+
+      assert xml_elements(xml, "note", within: "stage") == []
+
+      assert [%{in: "l", n: "1", after: "Dijo"}, %{in: "p", n: "2", after: "Dijo"}] =
+               xml_notes(xml)
+
+      # The note is among the words before the stage, so the stage reads "(Vase)" after it.
+      assert [
+               %{in: "l", text: "(Vase)", before: "Dijo X.", after: "y calló."},
+               %{in: "p", text: "(Vase)", before: "Dijo Y.", after: "y calló."}
+             ] = xml_inline_stages(xml)
+    end
+
+    test "a stage with no words is no stage, and a note in it stays in the line" do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><sp><speaker>A</speaker>
+              <l n="1">uno <stage><note n="1" type="editor"><p>Sola.</p></note></stage> dos</l>
+              <l n="2">tres <stage></stage> cuatro</l>
+            </sp></div1>
+            """
+          )
+        )
+
+      xml = export_tei(play)
+
+      assert xml_inline_stages(xml) == []
+      assert [%{in: "l", n: "1", after: "uno"}] = xml_notes(xml)
+      assert reading_texts(xml, "l") == ["uno dos", "tres cuatro"]
+
+      # And the lines are stored with no marker at all, not an empty one.
+      lines =
+        for d <- Playcode.PlayContent.load_play_content(play.id),
+            el <- d.loaded_elements,
+            %{type: "verse_line"} = l <- el.children,
+            do: l
+
+      assert length(lines) == 2
+      assert Enum.all?(lines, &(Playcode.PlayContent.InlineMarkup.stage_count(&1.content) == 0))
+    end
+
+    test "only a stage in a line or paragraph is kept as a stage" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><sp><speaker>ANA <stage>(aparte)</stage></speaker>
+              <stage>Entra <stage>(solo)</stage></stage>
+              <l n="1">uno</l>
+            </sp></div1>
+            """
+          )
+        )
+
+      # A speaker label and a standalone stage direction paste a stage's words as their own.
+      assert xml_texts(xml, "speaker") == ["ANA (aparte)"]
+      assert xml_elements(xml, "stage", within: "speaker") == []
+      assert xml_texts(xml, "stage") == ["Entra (solo)"]
+    end
+
     test "a stage in an aside line is dropped with the aside's delivery, as before" do
       xml =
         roundtrip(
@@ -866,6 +947,8 @@ defmodule Playcode.TeiRoundtripTest do
       <div1 type="acto" n="2"><sp><speaker>A</speaker>
         <l n="9">Dijo <stage>(en voz <note n="1" type="editor"><p>Dentro.</p></note>baja)</stage> y calló.</l>
         <l n="10"><stage>(Vase)<note n="2" type="editor"><p>Fuera.</p></note></stage> Adiós</l>
+        <l n="11">Dijo <stage><note n="3" type="editor"><p>X.</p></note>(Vase)</stage> y calló.</l>
+        <p>Dijo<stage><note n="4" type="editor"><p>Y.</p></note>(Vase)</stage> y calló.</p>
         <p>Prosa <stage>(con <emph>énfasis</emph>)</stage> final.</p>
       </sp></div1>
       """
