@@ -416,8 +416,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
       html = edit(lv, "Segunda línea", "<stage>sin cerrar")
 
-      assert html =~ t("Could not save element.")
-      assert html =~ refusal()
+      # The generic refusal, a colon, then the reason: its full stop does not stay in front
+      # of a lower-case clause ("No se pudo guardar el elemento. tiene una marca…").
+      assert html =~
+               String.trim_trailing(t("Could not save element."), ".") <> ": " <> refusal()
+
       assert {"Segunda línea", 2} in lines(play)
     end
 

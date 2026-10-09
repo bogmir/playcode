@@ -486,7 +486,7 @@ defmodule Playcode.Export.StaticSite.Components do
       )
 
     ~H"""
-    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true">{@ghost} </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
+    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true"><.inline text={@ghost} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
     """
   end
 

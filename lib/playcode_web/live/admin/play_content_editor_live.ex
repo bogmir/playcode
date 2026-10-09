@@ -893,11 +893,16 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
   end
 
-  # The generic refusal, then the changeset's first error as the form would show it.
+  # The generic refusal, then the changeset's first error as the form would show it, a
+  # colon between (the generic text's full stop would leave a lower-case clause after it).
   defp save_error(%{errors: errors}) do
     case List.last(errors) do
-      nil -> gettext("Could not save element.")
-      {_field, error} -> gettext("Could not save element.") <> " " <> translate_error(error)
+      nil ->
+        gettext("Could not save element.")
+
+      {_field, error} ->
+        String.trim_trailing(gettext("Could not save element."), ".") <>
+          ": " <> translate_error(error)
     end
   end
 

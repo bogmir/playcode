@@ -15,6 +15,11 @@ defmodule Playcode.Export.TeiValidatorTest do
                   __DIR__
                 )
 
+  @staged_fixture_file Path.expand(
+                         "../../fixtures/EMOTHE0746_LesOccasionsPerdues.xml",
+                         __DIR__
+                       )
+
   describe "validate/1" do
     # @fixture_file under a code of its own: each test importing the file as it is holds
     # the same unique play code in its own sandbox transaction, so they queue behind each
@@ -84,6 +89,27 @@ defmodule Playcode.Export.TeiValidatorTest do
 
       xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
 
+      assert TeiValidator.validate(xml) == {:ok, :valid}
+    end
+
+    # 54 lines of this play hold a <stage> (a delivery, an exit): TEI allows it inside <l>
+    # and <p>, and the export writes it back there. Under a code of its own, for the same
+    # reason as the bibliography test.
+    test "a play with stage directions inside its lines exports as schema-valid TEI" do
+      play =
+        @staged_fixture_file
+        |> File.read!()
+        |> String.replace(
+          ~s(<title key="archivo">EMOTHE0746_LesOccasionsPerdues</title>),
+          ~s(<title key="archivo">STG#{System.unique_integer([:positive])}</title>)
+        )
+        |> Playcode.ImportHelpers.import_tei!()
+
+      refute play.code =~ "0746"
+
+      xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
+
+      assert xml =~ ~r/<l\b[^>]*>[^<]*<stage/
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
