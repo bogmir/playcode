@@ -728,6 +728,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     )
   end
 
+  defp done(socket, :generate, {:ok, %{changed: 0, assets: true}}),
+    do: put_flash(socket, :info, gettext("The site's styles and scripts are updated."))
+
   defp done(socket, :generate, {:ok, %{changed: 0}}),
     do: put_flash(socket, :info, gettext("Nothing has changed since the last build."))
 

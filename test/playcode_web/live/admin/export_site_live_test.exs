@@ -517,6 +517,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       assert render(lv) =~ t("The site's styles and scripts have changed. Generate updates them.")
       refute render(lv) =~ t("Every play in the site is up to date.")
+
+      # It said "Nothing has changed since the last build." right after updating them.
+      lv |> element("form[phx-submit=generate]") |> render_submit()
+      wait_for(fn -> render(lv) =~ t("The site's styles and scripts are updated.") end)
+      refute render(lv) =~ t("Nothing has changed since the last build.")
+      assert render(lv) =~ t("Every play in the site is up to date.")
     end
 
     test "Generate with nothing changed says so", %{conn: conn} do

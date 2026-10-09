@@ -4,12 +4,12 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   `build.json` records the one a site was built with; when the current one differs, any
   page may be out of date, and Generate rebuilds every play.
 
-  It covers the code (`module_info(:md5)` of `modules/0`), the English translations, the versions of the libraries that render
-  and encode the pages, and the `:version` option. Not the files under `priv/static_site`
-  (styles, scripts, fonts): no page embeds anything of them, only their fixed paths, so
-  they have their own hash, `assets/0`, and a change to them alone is copied, not
-  rebuilt. Not `build_date`: a page's footer says
-  when that page was written. The play data is `plays.content_version`'s.
+  It covers the code (`module_info(:md5)` of `modules/0`), the English translations, the
+  versions of the libraries that render and encode the pages, and the `:version` option.
+  Not the files under `priv/static_site` (styles, scripts, fonts): no page embeds anything
+  of them but their fixed paths, so they have their own hash, `assets/1`, and a change to
+  them alone is copied, not rebuilt. Not `build_date`: a page's footer says when that page
+  was written. The play data is `plays.content_version`'s.
 
   Not `PlaycodeWeb.Gettext`'s code: it is compiled from every locale's translations, so a
   Spanish edit in the admin pages changed it, and the site is in English. Its English
@@ -40,22 +40,29 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     PlaycodeWeb.PlayLabels
   ]
 
+  # StaticSite modules that shape no page: pushing the site, and this hash itself.
+  @left_out [Playcode.Export.StaticSite.Deployer, __MODULE__]
+
   @libraries [:phoenix_live_view, :phoenix_html, :jason, :xml_builder]
 
   @doc """
-  Every `Playcode.Export.StaticSite*` module and the modules listed above. Read from the
-  application's module list, not the loaded modules: in dev a module loads on first use,
-  so a list of loaded ones would differ before and after the first build.
+  Every `Playcode.Export.StaticSite*` module but `left_out/0`, and the modules listed
+  above. Read from the application's module list, not the loaded modules: in dev a module
+  loads on first use, so a list of loaded ones would differ before and after the first
+  build.
   """
   def modules do
     exported =
       Enum.filter(
         Application.spec(:playcode, :modules),
-        &String.starts_with?(Atom.to_string(&1), @prefix)
+        &(String.starts_with?(Atom.to_string(&1), @prefix) and &1 not in @left_out)
       )
 
     Enum.sort(exported ++ @modules)
   end
+
+  @doc "The StaticSite modules left out of `modules/0` because they shape no page."
+  def left_out, do: @left_out
 
   @doc """
   A hex SHA-256 of what the pages are built with, for `opts[:version]`. `:gettext_dir`
@@ -69,9 +76,12 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     hash({code, english(gettext_dir), libraries, opts[:version]})
   end
 
-  @doc "A hex SHA-256 of the files under `priv/static_site`, by path and contents."
-  def assets do
-    dir = Application.app_dir(:playcode, "priv/static_site")
+  @doc """
+  A hex SHA-256 of the files under `priv/static_site`, by path and contents.
+  `:assets_dir` reads them from another directory.
+  """
+  def assets(opts \\ []) do
+    dir = opts[:assets_dir] || Application.app_dir(:playcode, "priv/static_site")
 
     dir
     |> Path.join("**")

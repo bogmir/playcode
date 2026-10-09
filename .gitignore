@@ -43,5 +43,9 @@ npm-debug.log
 
 # Static site export output
 /_site/
+# What a Generate cut short leaves beside it: the unfinished build, and the old site a
+# swap died before deleting (StaticSite.generate/1).
+/_site.new/
+/_site.old/
 # The live settings of the emothe.uv.es deploy script; copied to the server, not committed
 deploy/playcode-deploy.config.php
