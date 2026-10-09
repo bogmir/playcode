@@ -1,0 +1,685 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Variants and HTML in TEI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #F4F6F3;
+    --surface: #FFFFFF;
+    --ink: #1A2130;
+    --muted: #586171;
+    --rule: #D6DBD4;
+    --accent: #27487A;
+    --accent-soft: #E4EBF5;
+    --on-accent: #FFFFFF;
+    --mark-bg: #F7E37C;
+    --mark-ink: #3A2F00;
+    --code-bg: #ECEFEA;
+    --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #12161B;
+      --surface: #1A1F26;
+      --ink: #E4E7EA;
+      --muted: #9AA3AE;
+      --rule: #2C333C;
+      --accent: #9DB9E8;
+      --accent-soft: #1F2B3D;
+      --on-accent: #0F1620;
+      --mark-bg: #5B4C10;
+      --mark-ink: #F8EBB0;
+      --code-bg: #161B21;
+    }
+  }
+
+  [hidden] { display: none !important; }
+  img { max-width: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+  }
+  main {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 3rem 5rem;
+    display: grid;
+    gap: 3.25rem;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  header { display: grid; gap: 1rem; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .lede { font-size: 1.125rem; max-width: 62ch; }
+  .meta { font-size: 0.875rem; color: var(--muted); }
+
+  section { display: grid; gap: 1.1rem; }
+  section > h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  .note { font-size: 0.9375rem; color: var(--muted); }
+  code, .field {
+    font-family: var(--mono);
+    font-size: 0.85em;
+  }
+
+  /* Citations set as a bibliography: hanging indent, period face */
+  .bib {
+    list-style: none;
+    margin: 0;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .bib li {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    line-height: 1.45;
+    padding-left: 2em;
+    text-indent: -2em;
+  }
+  .bib .from {
+    display: block;
+    text-indent: 0;
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+  mark {
+    background: var(--mark-bg);
+    color: var(--mark-ink);
+    font-family: var(--mono);
+    font-size: 0.8em;
+    padding: 0.05em 0.25em;
+    border-radius: 2px;
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td.num, th.num { text-align: right; padding-right: 0; }
+  tfoot td { font-weight: 600; border-bottom: none; }
+
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+  }
+  .fields div { display: grid; gap: 0.1rem; }
+  .fields dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fields dd { margin: 0; }
+
+  .losses { display: grid; gap: 1.5rem; }
+  .loss { display: grid; gap: 0.5rem; }
+  .loss h3 { font-size: 1.0625rem; font-weight: 600; }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.1rem 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .callout h3 { font-size: 1.0625rem; font-weight: 600; }
+  .callout table th, .callout table td { border-bottom-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+  .plan { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.6rem; }
+
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+
+  /* Questions */
+  .group { display: grid; gap: 1rem; }
+  .group > h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .q {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1.25rem 1.25rem 1.1rem;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
+    gap: 0 0.75rem;
+  }
+  .q-num {
+    font-family: var(--serif);
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--accent);
+    font-variant-numeric: lining-nums;
+  }
+  .q-body { display: grid; gap: 0.8rem; min-width: 0; }
+  .q h4 { margin: 0; font-size: 1.125rem; font-weight: 600; line-height: 1.35; text-wrap: balance; }
+  .why { font-size: 0.9375rem; color: var(--muted); }
+  .codes { font-size: 0.9375rem; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 0.5rem; }
+  legend, .label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0;
+    margin-bottom: 0.4rem;
+  }
+  .options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem 0.35rem 0.6rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: var(--paper);
+  }
+  .options input { accent-color: var(--accent); margin: 0; }
+  .options label:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .options label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 5.5rem;
+    resize: vertical;
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.6rem 0.7rem;
+  }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .status { font-size: 0.8125rem; color: var(--muted); min-height: 1.2em; }
+
+  .send {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.25rem;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .send-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--on-accent);
+    background: var(--accent);
+    border: 0;
+    border-radius: 4px;
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .count { font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  #answers-out { min-height: 12rem; font-family: var(--mono); font-size: 0.8125rem; }
+
+  @media (max-width: 480px) {
+    .q { grid-template-columns: 1fr; gap: 0.5rem; }
+    .bib { padding: 0.9rem 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.5rem; }
+  .muted { color: var(--muted); }
+  .plan strong { font-weight: 600; }
+  .record { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+  .record-fields {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    font-size: 0.875rem;
+  }
+  .record-fields div { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.5rem; }
+  .record-fields dt { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); padding-top: 0.1rem; }
+  .record-fields dd { margin: 0; overflow-wrap: anywhere; }
+  .fieldlist { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; }
+  .fieldlist .field { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 3px; padding: 0.1rem 0.4rem; font-size: 0.8rem; }
+  mark.gap { font-family: inherit; font-size: inherit; padding: 0 0.15em; }
+  @media (max-width: 640px) { .record { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Playcode · TEI import · For review</p>
+    <h1>Variant readings and HTML fragments in the TEI files</h1>
+    <p class="lede">Six plays carry a critical apparatus, the readings of other witnesses beside the edited text, and seven have pieces of HTML typed into the text. Playcode currently pastes both into the lines, so readers see them as words. This page shows what the old site did with them, what we plan, and the questions only the project can answer.</p>
+    <p class="meta">Prepared by Bogdan, 10 October 2026, from the 370 TEI files of the published corpus and the pages of emothe.uv.es.</p>
+  </header>
+
+  <section aria-labelledby="h-variants">
+    <h2 id="h-variants">Variant readings</h2>
+    <p>An entry follows the word it is about and lists which witness reads what: the reading the edition follows, the other readings, and sometimes the editor’s comment. 604 entries in six plays:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Play</th><th class="num">Entries</th></tr></thead>
+        <tbody>
+          <tr><td><i>La discreta enamorada</i> (EMOTHE0560)</td><td class="num">212</td></tr>
+          <tr><td><i>The Summoning of Everyman</i> (EMOTHE0460)</td><td class="num">127</td></tr>
+          <tr><td><i>Friar Bacon and Friar Bungay</i> (EMOTHE0187)</td><td class="num">98</td></tr>
+          <tr><td><i>The Tragedy of Hamlet</i> (EMOTHE0010)</td><td class="num">94</td></tr>
+          <tr><td><i>Les amours tragiques de Pyrame et Thisbé</i> (EMOTHE0530)</td><td class="num">63</td></tr>
+          <tr><td><i>El bastardo Mudarra</i> (EMOTHE0435)</td><td class="num">10</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <h3><i>La discreta enamorada</i>, Jornada I, v. 72</h3>
+      <p><strong>Old site:</strong> “mucho la hermosura llama*,” and the asterisk opens: – <i>H</i> llama (Corrección de Hartzenbusch, lección que acepto por ajustarse mejor a la rima consonante y al sentido del pasaje.) – <i>P3</i> falta – <i>MP</i> infama</p>
+      <p><strong>Playcode today:</strong> “mucho la hermosura llama llamafalta infama ,”</p>
+    </div>
+    <ul class="plan">
+      <li><strong>The line keeps only the edited text</strong>, as on the old site.</li>
+      <li><strong>Each entry becomes a note of its own kind</strong>, “Textual variant”, after the word it is about. Opening it lists each witness and its reading, then the comment, as the old site did.</li>
+      <li><strong>Researchers can edit the readings</strong> in the content editor, like any note.</li>
+      <li><strong>The TEI file comes back as it was</strong>: the export writes each entry back where it stood.</li>
+    </ul>
+    <p class="note">The old site showed only 4 of Hamlet’s 94 entries; its Folio readings went through the HTML fragments below.</p>
+  </section>
+
+  <section aria-labelledby="h-html">
+    <h2 id="h-html">HTML typed into the text</h2>
+    <p>Seven plays hold 1,211 fragments of HTML, written as text inside the TEI. The old site printed them as HTML, and its stylesheet hid one kind (<code>.folio { display: none }</code>). Playcode stores them as text, so 236 lines show the tags themselves. They do four different things:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>What</th><th>Plays</th><th>Old site</th><th>Playcode today</th></tr></thead>
+        <tbody>
+          <tr><td>Words found only in the 1623 Folio, between two superscript F’s (247)</td><td><i>Hamlet</i></td><td>Hidden: readers saw “O God, God,”</td><td>“O God, &lt;span class="folio"&gt; &lt;sup&gt; F &lt;/sup&gt; O … God,”</td></tr>
+          <tr><td>The Q4 Additions, a superscript Q4 at each end; some ends are written backwards</td><td><i>The Spanish Tragedy</i> in English, French, Italian and Spanish</td><td>Superscript Q4; after a backwards end, the text runs on in superscript</td><td>“&lt;sup&gt; Q4 &lt;/sup&gt; [Draws his sword.] &lt;/sup&gt; Q4 &lt;sup&gt;”</td></tr>
+          <tr><td>The labels “Aside” and “Exit” (40)</td><td><i>The Rover</i></td><td>Hidden</td><td>The tags show in 11 lines</td></tr>
+          <tr><td>One stray superscript tag, v. 623</td><td><i>Mariamne</i></td><td>The rest of the line in superscript</td><td>“tr &lt;sup&gt; ne du Dieu qui tonne,”</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p>Whatever you choose, these tags will no longer reach the page as text.</p>
+  </section>
+
+  <section aria-labelledby="h-questions">
+    <h2 id="h-questions">Questions</h2>
+    <p>Questions 1 to 4 are about the variant readings, 5 to 8 about the HTML fragments. Your answers are kept in this browser as you type. Send them with the button at the end.</p>
+    <div class="group">
+      <h3>Variant readings</h3>
+      <div class="q" data-q="q1" data-n="1">
+        <span class="q-num" aria-hidden="true">1</span>
+        <div class="q-body">
+          <h4>Should a variant be marked with a number, like the notes, or with an asterisk as before?</h4>
+          <p class="why">The old site marked a variant with an asterisk and listed it apart from the notes, which carry numbers. Playcode numbers the notes 1, 2, 3 through the play. A variant could take the next number, so a page has one sequence and one list, or keep a sign of its own.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q1-o1"><input type="radio" id="q1-o1" name="q1-choice" value="A number, in the same sequence as the notes">A number, in the same sequence as the notes</label>
+            <label for="q1-o2"><input type="radio" id="q1-o2" name="q1-choice" value="An asterisk, as on the old site">An asterisk, as on the old site</label>
+            <label for="q1-o3"><input type="radio" id="q1-o3" name="q1-choice" value="A numbering of its own (a, b, c…)">A numbering of its own (a, b, c…)</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q1-text">Notes</label>
+            <textarea id="q1-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="q" data-q="q2" data-n="2">
+        <span class="q-num" aria-hidden="true">2</span>
+        <div class="q-body">
+          <h4>Should Hamlet show all 94 entries in its TEI file?</h4>
+          <p class="why">The old site showed 4 of them. The others include, at v. 8, “Barnardo.” where the Folio reads “Barnardo?”, and readings with the original spelling, such as F1 “euen” (mod. “even”).</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q2-o1"><input type="radio" id="q2-o1" name="q2-choice" value="Yes, all 94">Yes, all 94</label>
+            <label for="q2-o2"><input type="radio" id="q2-o2" name="q2-choice" value="Only the 4 shown before">Only the 4 shown before</label>
+            <label for="q2-o3"><input type="radio" id="q2-o3" name="q2-choice" value="Not sure: ask the play’s editor">Not sure: ask the play’s editor</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q2-text">Notes</label>
+            <textarea id="q2-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="q" data-q="q3" data-n="3">
+        <span class="q-num" aria-hidden="true">3</span>
+        <div class="q-body">
+          <h4>How should the witnesses be named?</h4>
+          <p class="why">The files name them with the editor’s sigla: Q2, F1, Aut., PXXIV, H, P3, MP, Dyce. Only <i>Everyman</i> lists its witnesses in full; for the others the files do not say which edition H or MP is.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q3-o1"><input type="radio" id="q3-o1" name="q3-choice" value="The sigla as written are enough">The sigla as written are enough</label>
+            <label for="q3-o2"><input type="radio" id="q3-o2" name="q3-choice" value="Sigla, with a list of the witnesses on the play’s title page (we will send the lists)">Sigla, with a list of the witnesses on the play’s title page (we will send the lists)</label>
+            <label for="q3-o3"><input type="radio" id="q3-o3" name="q3-choice" value="Not sure">Not sure</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q3-text">Notes</label>
+            <textarea id="q3-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="q" data-q="q4" data-n="4">
+        <span class="q-num" aria-hidden="true">4</span>
+        <div class="q-body">
+          <h4>Should readers see the variants by default?</h4>
+          <p class="why">The reading pages have switches for line numbers, stage directions and asides. Variants could be shown with a switch to hide them, hidden with a switch to show them, or always shown.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q4-o1"><input type="radio" id="q4-o1" name="q4-choice" value="Shown, with a switch to hide them">Shown, with a switch to hide them</label>
+            <label for="q4-o2"><input type="radio" id="q4-o2" name="q4-choice" value="Hidden, with a switch to show them">Hidden, with a switch to show them</label>
+            <label for="q4-o3"><input type="radio" id="q4-o3" name="q4-choice" value="Always shown">Always shown</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q4-text">Notes</label>
+            <textarea id="q4-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+    <div class="group">
+      <h3>HTML typed into the text</h3>
+      <div class="q" data-q="q5" data-n="5">
+        <span class="q-num" aria-hidden="true">5</span>
+        <div class="q-body">
+          <h4>What should readers of Hamlet see of the words found only in the Folio?</h4>
+          <p class="why">There are 247 such passages, from a single word (“O God, <i>O</i> God,”) to whole speeches. The old site hid them, so its text was Q2’s.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q5-o1"><input type="radio" id="q5-o1" name="q5-choice" value="Hide them, as before">Hide them, as before</label>
+            <label for="q5-o2"><input type="radio" id="q5-o2" name="q5-choice" value="Show them in grey between superscript F’s, with a switch">Show them in grey between superscript F’s, with a switch</label>
+            <label for="q5-o3"><input type="radio" id="q5-o3" name="q5-choice" value="Turn each into a variant entry, “F1: O God, O God”">Turn each into a variant entry, “F1: O God, O God”</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q5-text">Notes</label>
+            <textarea id="q5-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="q" data-q="q6" data-n="6">
+        <span class="q-num" aria-hidden="true">6</span>
+        <div class="q-body">
+          <h4>How should the Q4 Additions of The Spanish Tragedy be marked?</h4>
+          <p class="why">The English, French, Italian and Spanish versions mark where each addition starts and ends with a superscript Q4; the Spanish one numbers them (Q4.1…). Some ends are written backwards, which on the old site set the following text in superscript.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q6-o1"><input type="radio" id="q6-o1" name="q6-choice" value="A superscript Q4 at each end, as before, repaired">A superscript Q4 at each end, as before, repaired</label>
+            <label for="q6-o2"><input type="radio" id="q6-o2" name="q6-choice" value="Shade the whole added passage, with a switch">Shade the whole added passage, with a switch</label>
+            <label for="q6-o3"><input type="radio" id="q6-o3" name="q6-choice" value="Not sure">Not sure</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q6-text">Notes</label>
+            <textarea id="q6-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="q" data-q="q7" data-n="7">
+        <span class="q-num" aria-hidden="true">7</span>
+        <div class="q-body">
+          <h4>Should the “Aside” and “Exit” labels of The Rover appear in the text?</h4>
+          <p class="why">There are 40. The old site hid them; asides are marked anyway.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q7-o1"><input type="radio" id="q7-o1" name="q7-choice" value="Show them, as stage directions">Show them, as stage directions</label>
+            <label for="q7-o2"><input type="radio" id="q7-o2" name="q7-choice" value="Leave them out, as before">Leave them out, as before</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q7-text">Notes</label>
+            <textarea id="q7-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+      <div class="q" data-q="q8" data-n="8">
+        <span class="q-num" aria-hidden="true">8</span>
+        <div class="q-body">
+          <h4>Is v. 623 of Mariamne “Devant le Ciel voûté, trône du Dieu qui tonne,”?</h4>
+          <p class="why">The file has “tr”, a stray superscript tag, then “ne”. On the old site the rest of the line ran on in superscript.</p>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+            <label for="q8-o1"><input type="radio" id="q8-o1" name="q8-choice" value="Yes: trône">Yes: trône</label>
+            <label for="q8-o2"><input type="radio" id="q8-o2" name="q8-choice" value="No, see my note">No, see my note</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q8-text">Notes</label>
+            <textarea id="q8-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-send">
+    <h2 id="h-send">Send your answers</h2>
+    <div class="send">
+      <p>Your answers are kept in this browser only. When you are done, copy them and paste them into your reply to Bogdan.</p>
+      <div class="send-row">
+        <button type="button" id="copy-answers">Copy answers</button>
+        <span class="count" id="answered-count">0 of 8 answered</span>
+      </div>
+      <p class="status" id="copy-status" aria-live="polite"></p>
+      <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
+      <textarea id="answers-out" readonly hidden></textarea>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var KEY = "variantes-y-codigo-answers-v1";
+  var questions = Array.prototype.slice.call(document.querySelectorAll(".q"));
+  var storage = null;
+  try {
+    storage = window.localStorage;
+    storage.getItem(KEY);
+  } catch (e) {
+    storage = null;
+  }
+
+  var answers = {};
+  try {
+    answers = JSON.parse((storage && storage.getItem(KEY)) || "{}") || {};
+  } catch (e) {
+    answers = {};
+  }
+
+  function read(q) {
+    var checked = q.querySelector('input[type="radio"]:checked');
+    return {
+      choice: checked ? checked.value : "",
+      text: q.querySelector("textarea").value
+    };
+  }
+
+  function isAnswered(a) {
+    return !!(a.choice || (a.text && a.text.trim()));
+  }
+
+  function updateCount() {
+    var n = questions.filter(function (q) { return isAnswered(read(q)); }).length;
+    document.getElementById("answered-count").textContent = n + " of " + questions.length + " answered";
+  }
+
+  var timers = {};
+  function save(q) {
+    var id = q.dataset.q;
+    var status = q.querySelector(".status");
+    answers[id] = read(q);
+    var ok = false;
+    if (storage) {
+      try {
+        storage.setItem(KEY, JSON.stringify(answers));
+        ok = true;
+      } catch (e) {
+        ok = false;
+      }
+    }
+    status.textContent = ok
+      ? "Saved in this browser."
+      : "Not saved: this browser blocks local storage. Copy your answers before you close the page.";
+    updateCount();
+  }
+
+  questions.forEach(function (q) {
+    var saved = answers[q.dataset.q] || {};
+    if (saved.choice) {
+      q.querySelectorAll('input[type="radio"]').forEach(function (r) {
+        if (r.value === saved.choice) r.checked = true;
+      });
+    }
+    if (saved.text) q.querySelector("textarea").value = saved.text;
+    function schedule() {
+      clearTimeout(timers[q.dataset.q]);
+      timers[q.dataset.q] = setTimeout(function () { save(q); }, 400);
+    }
+    q.addEventListener("input", schedule);
+    q.addEventListener("change", schedule);
+  });
+  updateCount();
+
+  function compile() {
+    var lines = ["Variant readings and HTML in the TEI files: answers", ""];
+    questions.forEach(function (q) {
+      var a = read(q);
+      var hasOptions = !!q.querySelector('input[type="radio"]');
+      lines.push(q.dataset.n + ". " + q.querySelector("h4").textContent.trim());
+      if (hasOptions) lines.push("   Answer: " + (a.choice || "(none chosen)"));
+      var text = a.text.trim();
+      if (text) lines.push("   Notes: " + text.replace(/\n/g, "\n          "));
+      else if (!hasOptions) lines.push("   (not answered)");
+      lines.push("");
+    });
+    return lines.join("\n");
+  }
+
+  document.getElementById("copy-answers").addEventListener("click", function () {
+    var text = compile();
+    var out = document.getElementById("answers-out");
+    var status = document.getElementById("copy-status");
+    out.value = text;
+    out.hidden = false;
+    document.getElementById("answers-out-label").hidden = false;
+    function fallback() {
+      out.focus();
+      out.select();
+      status.textContent = "Copying was blocked by the browser. The answers are selected in the box below: press Ctrl+C, or ⌘C on a Mac.";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        status.textContent = "Copied. Paste them into your reply to Bogdan. The same text is in the box below.";
+      }, fallback);
+    } catch (e) {
+      fallback();
+    }
+  });
+})();
+</script>
+</body>
+</html>
