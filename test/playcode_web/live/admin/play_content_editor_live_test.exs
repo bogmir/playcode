@@ -417,6 +417,24 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       html = edit(lv, "Segunda línea", "<stage>sin cerrar")
 
       assert html =~ t("Could not save element.")
+      assert html =~ refusal()
+      assert {"Segunda línea", 2} in lines(play)
+    end
+
+    test "a marker that is not closed is refused in the edit form, and the line is unchanged",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      html =
+        lv
+        |> form("#element-form", element: %{"content" => "<stage>sin cerrar"})
+        |> render_submit()
+
+      assert html =~ refusal()
       assert {"Segunda línea", 2} in lines(play)
     end
 

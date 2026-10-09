@@ -578,8 +578,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             |> assign(inline_editing_id: nil)
             |> reload_elements()
 
-          {:error, _changeset} ->
-            put_flash(socket, :error, gettext("Could not save element."))
+          {:error, changeset} ->
+            put_flash(socket, :error, save_error(changeset))
         end
       end)
     end
@@ -890,6 +890,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
+    end
+  end
+
+  # The generic refusal, then the changeset's first error as the form would show it.
+  defp save_error(%{errors: errors}) do
+    case List.last(errors) do
+      nil -> gettext("Could not save element.")
+      {_field, error} -> gettext("Could not save element.") <> " " <> translate_error(error)
     end
   end
 
