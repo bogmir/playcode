@@ -94,6 +94,67 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert String.trim(out) == "1"
   end
 
+  describe "a play with an inline stage direction" do
+    setup do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO I</head>
+              <sp><speaker>CHIMÈNE</speaker>
+                <l n="1"><stage type="exit">(A Léonor.)</stage>Allez l'entretenir.</l>
+                <p>Dijo <stage>(Tom &amp; Jerry)</stage> y salió.</p>
+              </sp>
+            </div1>
+            """
+          )
+        )
+
+      %{staged: play}
+    end
+
+    test "the HTML download sets it apart, escaped, and prints no marker",
+         %{conn: conn, staged: play} do
+      doc =
+        conn
+        |> get(~p"/admin/plays/#{play.id}/export/html")
+        |> response(200)
+        |> LazyHTML.from_document()
+
+      assert doc |> LazyHTML.query("span.stage") |> Enum.map(&LazyHTML.text/1) ==
+               ["(A Léonor.)", "(Tom & Jerry)"]
+
+      refute LazyHTML.text(doc) =~ "<stage"
+    end
+
+    test "the EPUB sets it apart in well-formed XHTML", %{conn: conn, staged: play} do
+      conn = get(conn, ~p"/admin/plays/#{play.id}/export/epub")
+      {:ok, files} = :zip.unzip(response(conn, 200), [:memory])
+      {_name, chapter} = Enum.find(files, fn {name, _} -> to_string(name) =~ "chapter-001" end)
+
+      assert {:ok, _} =
+               chapter
+               |> String.replace(~r/<!DOCTYPE[^>]*>/, "")
+               |> Saxy.SimpleForm.parse_string()
+
+      assert chapter =~ ~s|<span class="stage">(A Léonor.)</span>|
+      assert chapter =~ ~s|<span class="stage">(Tom &amp; Jerry)</span>|
+    end
+
+    test "the comparison page prints no marker either", %{conn: conn, staged: play} do
+      other = play_fixture(%{"title" => "La otra versión"})
+      conn = get(conn, ~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{other.id}"]}")
+      body = response(conn, 200)
+
+      assert body
+             |> LazyHTML.from_document()
+             |> LazyHTML.query("span.stage")
+             |> Enum.map(&LazyHTML.text/1) == ["(A Léonor.)", "(Tom & Jerry)"]
+
+      refute body =~ "&lt;stage"
+    end
+  end
+
   describe "a play with in-text notes" do
     setup do
       play =

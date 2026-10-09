@@ -436,6 +436,8 @@ defmodule Playcode.Export.Epub do
       margin: 0.75em 2em;
     }
 
+    .stage { font-style: italic; color: #555; }
+
     .prose-block {
       margin-left: 1em;
       margin-bottom: 0.5em;
