@@ -2,7 +2,8 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
   @shortdoc "Import the local TEI corpus into the database"
 
   @moduledoc """
-  Imports every .xml file under the fixture directories, one play per code.
+  Imports every .xml file under `doc/tei_corpus` (the production corpus, git-ignored)
+  and the fixture directories, one play per code; a code in `doc/tei_corpus` wins.
 
       mix playcode.import.tei                  # skip codes already imported
       mix playcode.import.tei --force          # re-import everything

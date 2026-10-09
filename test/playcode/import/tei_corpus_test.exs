@@ -28,6 +28,13 @@ defmodule Playcode.Import.TeiCorpusTest do
       assert playcode_path == Path.join(first, "EMOTHE0038_AntonyAndCleopatra.xml")
     end
 
+    # doc/tei_corpus (git-ignored) holds the 370 files that went to production; 17 of
+    # them are newer than the copies under test/fixtures, so it must be read first.
+    test "the local production corpus comes before the fixtures" do
+      assert ["doc/tei_corpus" | rest] = TeiCorpus.default_dirs()
+      assert "test/fixtures" in rest
+    end
+
     test "ignores non-xml files and missing directories" do
       dir = tmp_dir("mixed")
       File.write!(Path.join(dir, "notes.txt"), "hello")

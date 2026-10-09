@@ -14,7 +14,9 @@ defmodule Playcode.Import.TeiCorpus do
 
   require Logger
 
-  @default_dirs ["test/fixtures", "test/fixtures/tei_files"]
+  # doc/tei_corpus (git-ignored) is the production corpus and goes first, so its copies
+  # win over the older ones some fixtures hold.
+  @default_dirs ["doc/tei_corpus", "test/fixtures", "test/fixtures/tei_files"]
 
   def default_dirs, do: @default_dirs
 
