@@ -70,6 +70,41 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     end
   end
 
+  # The line's markup is built by hand (PlayText.part_html/2), not by HEEx, so nothing
+  # else escapes it. The assertions read the raw HTML: LazyHTML.text decodes it again and
+  # passes whether the page escaped or not.
+  test "text typed with markup characters is escaped, in a line, in italics and in a stage", %{
+    conn: conn
+  } do
+    play =
+      tei(
+        body: """
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>ANA</speaker><lg><l n="1">Di &lt;script&gt;alert(1)&lt;/script&gt; &amp; "adiós" <emph>&lt;b&gt;fuerte</emph> <stage type="delivery">(&lt;script&gt;alert(2)&lt;/script&gt; &amp; "bajo" <emph>&lt;i&gt;x</emph>)</stage></l></lg></sp>
+        </div1>
+        """
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    for html <- [html, render(view)] do
+      assert html =~ "Di &lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;adiós&quot;"
+      assert html =~ "<em>&lt;b&gt;fuerte</em>"
+
+      # Each piece of a stage is in a span of its own, an italic one included.
+      assert html =~
+               ~s|<span class="inline-stage">(&lt;script&gt;alert(2)&lt;/script&gt; &amp; &quot;bajo&quot; </span>|
+
+      assert html =~ ~s|<span class="inline-stage"><em>&lt;i&gt;x</em></span>|
+
+      refute html =~ "<script>alert"
+      refute html =~ "<b>fuerte"
+      refute html =~ "<i>x"
+    end
+  end
+
   test "a note is a number after its word, opening the note with its type, term and text",
        %{conn: conn} do
     play =
