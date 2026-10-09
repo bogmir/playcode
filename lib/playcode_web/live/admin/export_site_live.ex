@@ -199,14 +199,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
                 <span :if={@generating} class="loading loading-spinner loading-sm"></span>
                 {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
               </button>
-              <span class="text-sm text-base-content/60">
+              <span class="text-sm text-base-content/70">
                 {gettext("%{complete} of %{total} plays marked as complete",
                   complete: @complete_count,
                   total: @total_count
                 )}
               </span>
             </div>
-            <p class="text-xs text-base-content/50">
+            <p class="text-xs text-base-content/70">
               {generate_hint(@exported_codes, @site_changed, @assets_changed, @changed, @plays)}
             </p>
           </form>
@@ -218,11 +218,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         <div class="card-body">
           <h2 class="card-title">{gettext("Plays")}</h2>
 
-          <div :if={@plays == []} class="text-sm text-base-content/50 text-center py-4">
+          <div :if={@plays == []} class="text-sm text-base-content/70 text-center py-4">
             {gettext("No plays marked as complete.")}
           </div>
 
-          <p :if={@plays != []} class="text-sm text-base-content/60 mb-3">
+          <p :if={@plays != []} class="text-sm text-base-content/70 mb-3">
             {gettext("%{exported} of %{total} complete plays exported",
               exported: Enum.count(@plays, &MapSet.member?(@exported_codes, &1.code)),
               total: length(@plays)
@@ -236,7 +236,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               } />
               <%!-- Only the name labels the switch: a label around Refresh would take it as its control. --%>
               <label for={"switch-#{play.id}"} class="min-w-0 flex-1 cursor-pointer">
-                <span class="font-mono text-xs text-base-content/50">{play.code}</span>
+                <span class="font-mono text-xs text-base-content/70">{play.code}</span>
                 <span class="font-medium ml-2 truncate">{play.title}</span>
               </label>
               <button
@@ -256,7 +256,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               </button>
               <span
                 :if={Map.has_key?(@pending, play.id)}
-                class="loading loading-spinner loading-xs text-base-content/50"
+                class="loading loading-spinner loading-xs text-base-content/70"
               />
               <%!-- On means in the site; flipping it adds or removes the play at once. --%>
               <.site_switch
@@ -277,7 +277,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               <.status_dot status={:leaving} />
               <label
                 for={"switch-#{play.id || play.code}"}
-                class="min-w-0 flex-1 cursor-pointer text-base-content/50"
+                class="min-w-0 flex-1 cursor-pointer text-base-content/70"
               >
                 <span class="font-mono text-xs">{play.code}</span>
                 <span :if={play.title} class="ml-2 truncate">{play.title}</span>
@@ -285,7 +285,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               <%!-- A removal is pending under the play's code: it is not among @plays. --%>
               <span
                 :if={Map.has_key?(@pending, play.code)}
-                class="loading loading-spinner loading-xs text-base-content/50"
+                class="loading loading-spinner loading-xs text-base-content/70"
               />
               <.site_switch
                 play={play}
@@ -384,7 +384,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               {gettext("Download .zip")}
             </button>
           </div>
-          <p class="text-xs text-base-content/50 mt-2">{deploy_hint(@deploy_to)}</p>
+          <p class="text-xs text-base-content/70 mt-2">{deploy_hint(@deploy_to)}</p>
         </div>
       </div>
 
@@ -415,7 +415,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               {@deploy_url}
             </a>
           </p>
-          <p :if={!@deploy_to[:host]} class="text-xs text-base-content/50 mt-1">
+          <p :if={!@deploy_to[:host]} class="text-xs text-base-content/70 mt-1">
             {gettext("Note: GitHub Pages may take a few minutes to update.")}
           </p>
         </div>

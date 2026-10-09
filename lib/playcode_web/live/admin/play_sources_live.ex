@@ -152,7 +152,7 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
           <h1 class="text-2xl font-semibold tracking-tight text-base-content">
             {gettext("Bibliographic Sources")}
           </h1>
-          <p class="mt-1 text-sm text-base-content/60">
+          <p class="mt-1 text-sm text-base-content/70">
             {gettext("Manage the bibliographic sources for this play.")}
           </p>
         </div>
@@ -181,25 +181,25 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
         >
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:title].id}>
                 <span class="label-text font-medium">{gettext("Title")}</span>
               </label>
               <.input field={@source_form[:title]} type="text" />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:author].id}>
                 <span class="label-text font-medium">{gettext("Author")}</span>
               </label>
               <.input field={@source_form[:author]} type="text" />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:editor].id}>
                 <span class="label-text font-medium">{gettext("Editor")}</span>
               </label>
               <.input field={@source_form[:editor]} type="text" />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:editor_role].id}>
                 <span class="label-text font-medium">{gettext("Editor role")}</span>
               </label>
               <.input
@@ -209,32 +209,32 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
               />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:language].id}>
                 <span class="label-text font-medium">{gettext("Language")}</span>
               </label>
               <.input field={@source_form[:language]} type="text" />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:publisher].id}>
                 <span class="label-text font-medium">{gettext("Publisher")}</span>
               </label>
               <.input field={@source_form[:publisher]} type="text" />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:pub_place].id}>
                 <span class="label-text font-medium">{gettext("Place")}</span>
               </label>
               <.input field={@source_form[:pub_place]} type="text" />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@source_form[:pub_date].id}>
                 <span class="label-text font-medium">{gettext("Date")}</span>
               </label>
               <.input field={@source_form[:pub_date]} type="text" />
             </div>
           </div>
           <div class="mt-4">
-            <label class="label">
+            <label class="label" for={@source_form[:note].id}>
               <span class="label-text font-medium">{gettext("Reference / citation")}</span>
             </label>
             <.input field={@source_form[:note]} type="textarea" rows="3" />
@@ -253,7 +253,7 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
       <%!-- Empty state --%>
       <div
         :if={@sources == [] && @source_form == nil}
-        class="text-center py-12 text-base-content/50"
+        class="text-center py-12 text-base-content/70"
       >
         <.icon name="hero-book-open" class="size-12 mx-auto mb-3 opacity-30" />
         <p class="text-sm">{gettext("No bibliographic sources yet.")}</p>
@@ -271,47 +271,47 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
         >
           <div class="p-4">
             <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              <span :if={source.title} class="font-medium text-base-content/60 text-right">
+              <span :if={source.title} class="font-medium text-base-content/70 text-right">
                 {gettext("Title")}
               </span>
               <span :if={source.title}>{source.title}</span>
 
-              <span :if={source.author} class="font-medium text-base-content/60 text-right">
+              <span :if={source.author} class="font-medium text-base-content/70 text-right">
                 {gettext("Author")}
               </span>
               <span :if={source.author}>{source.author}</span>
 
-              <span :if={source.editor} class="font-medium text-base-content/60 text-right">
+              <span :if={source.editor} class="font-medium text-base-content/70 text-right">
                 {gettext("Editor")}
               </span>
               <span :if={source.editor}>
                 {source.editor}
-                <span :if={source.editor_role} class="text-xs text-base-content/50">
+                <span :if={source.editor_role} class="text-xs text-base-content/70">
                   ({source.editor_role})
                 </span>
               </span>
 
-              <span :if={source.publisher} class="font-medium text-base-content/60 text-right">
+              <span :if={source.publisher} class="font-medium text-base-content/70 text-right">
                 {gettext("Publisher")}
               </span>
               <span :if={source.publisher}>{source.publisher}</span>
 
-              <span :if={source.pub_place} class="font-medium text-base-content/60 text-right">
+              <span :if={source.pub_place} class="font-medium text-base-content/70 text-right">
                 {gettext("Place")}
               </span>
               <span :if={source.pub_place}>{source.pub_place}</span>
 
-              <span :if={source.pub_date} class="font-medium text-base-content/60 text-right">
+              <span :if={source.pub_date} class="font-medium text-base-content/70 text-right">
                 {gettext("Date")}
               </span>
               <span :if={source.pub_date}>{source.pub_date}</span>
 
-              <span :if={source.language} class="font-medium text-base-content/60 text-right">
+              <span :if={source.language} class="font-medium text-base-content/70 text-right">
                 {gettext("Language")}
               </span>
               <span :if={source.language}>{source.language}</span>
 
-              <span :if={source.note} class="font-medium text-base-content/60 text-right">
+              <span :if={source.note} class="font-medium text-base-content/70 text-right">
                 {gettext("Reference")}
               </span>
               <span :if={source.note} class="text-xs text-base-content/80">{source.note}</span>

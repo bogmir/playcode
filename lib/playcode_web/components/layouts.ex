@@ -119,7 +119,7 @@ defmodule PlaycodeWeb.Layouts do
         </.link>
         <div class="min-w-0 flex-1">
           <h2 class="text-sm font-semibold text-base-content truncate">{@play.title}</h2>
-          <p class="text-xs text-base-content/60 truncate">
+          <p class="text-xs text-base-content/70 truncate">
             {if @play.author_name, do: "#{@play.author_name} — "}{@play.code}
           </p>
         </div>
@@ -210,7 +210,7 @@ defmodule PlaycodeWeb.Layouts do
       <.locale_toggle locale={@locale} />
       <.theme_toggle />
       <div :if={@current_user} class="dropdown dropdown-end">
-        <label tabindex="0" class="btn btn-ghost btn-xs gap-1">
+        <label tabindex="0" role="button" class="btn btn-ghost btn-xs gap-1">
           <.icon name="hero-user-circle-micro" class="size-4" />
           <span class="max-w-[8rem] truncate text-xs">{@current_user.email}</span>
           <.icon name="hero-chevron-down-micro" class="size-3" />
@@ -247,7 +247,7 @@ defmodule PlaycodeWeb.Layouts do
     <aside class="w-56 shrink-0 border-r border-base-300 bg-base-200 min-h-full">
       <nav class="p-3 space-y-4">
         <div :for={{label, items} <- @groups}>
-          <p class="px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-base-content/40">
+          <p class="px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-base-content/70">
             {label}
           </p>
           <ul class="menu menu-sm gap-0.5 p-0">

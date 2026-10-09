@@ -344,13 +344,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       >
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:title].id}>
               <span class="label-text font-medium">{gettext("Title")} *</span>
             </label>
             <.input field={@form[:title]} type="text" required />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:original_title].id}>
               <span class="label-text font-medium">
                 {gettext("Original Title")}
                 <button
@@ -375,7 +375,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:title_sort].id}>
               <span class="label-text font-medium">
                 {gettext("Title (sort)")}
                 <button
@@ -397,7 +397,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:edition_title].id}>
               <span class="label-text font-medium">
                 {gettext("Edition Title")}
                 <button
@@ -422,15 +422,15 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:code].id}>
               <span class="label-text font-medium">{gettext("Code")} *</span>
             </label>
             <.input field={@form[:code]} type="text" required placeholder={gettext("e.g. AL0569")} />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:emothe_id].id}>
               <span class="label-text font-medium">{gettext("EMOTHE ID")}</span>
-              <span :if={emothe_id_derived?(@form)} class="text-xs text-base-content/50 ml-1">
+              <span :if={emothe_id_derived?(@form)} class="text-xs text-base-content/70 ml-1">
                 {gettext("(auto)")}
               </span>
             </label>
@@ -444,12 +444,12 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
         </div>
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
             {gettext("Work Relationship")}
           </h3>
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="label">
+              <label class="label" for={@form[:relationship_type].id}>
                 <span class="label-text font-medium">{gettext("Relationship Type")}</span>
               </label>
               <.input
@@ -507,7 +507,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                         <div class="text-sm font-medium text-base-content truncate">
                           {sugg.title}
                         </div>
-                        <div class="text-xs text-base-content/50 truncate mt-0.5">
+                        <div class="text-xs text-base-content/70 truncate mt-0.5">
                           {sugg.code}
                         </div>
                       </button>
@@ -515,13 +515,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                   </ul>
                   <p
                     :if={@parent_play_search == ""}
-                    class="mt-1 text-xs text-base-content/50"
+                    class="mt-1 text-xs text-base-content/70"
                   >
                     {gettext("Type to search for a play")}
                   </p>
                   <p
                     :if={@parent_play_search != "" && @parent_play_suggestions == []}
-                    class="mt-1 text-xs text-base-content/50"
+                    class="mt-1 text-xs text-base-content/70"
                   >
                     {gettext("No plays found")}
                   </p>
@@ -539,13 +539,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:author_name].id}>
               <span class="label-text font-medium">{gettext("Author Name")}</span>
             </label>
             <.input field={@form[:author_name]} type="text" />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:author_sort].id}>
               <span class="label-text font-medium">
                 {gettext("Author (sort)")}
                 <button
@@ -566,13 +566,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:language].id}>
               <span class="label-text font-medium">{gettext("Language")}</span>
             </label>
             <.input field={@form[:language]} type="select" options={language_options()} />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:author_attribution].id}>
               <span class="label-text font-medium">{gettext("Attribution")}</span>
             </label>
             <div :if={@attribution_mode == :select}>
@@ -605,13 +605,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:pub_place].id}>
               <span class="label-text font-medium">{gettext("Publication Place")}</span>
             </label>
             <.input field={@form[:pub_place]} type="text" />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:publication_date].id}>
               <span class="label-text font-medium">{gettext("Publication Date")}</span>
             </label>
             <.input
@@ -624,13 +624,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:publisher].id}>
               <span class="label-text font-medium">{gettext("Publisher")}</span>
             </label>
             <.input field={@form[:publisher]} type="text" />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:authority].id}>
               <span class="label-text font-medium">{gettext("Authority")}</span>
             </label>
             <.input
@@ -642,7 +642,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
         </div>
 
         <div>
-          <label class="label">
+          <label class="label" for={@form[:availability_note].id}>
             <span class="label-text font-medium">{gettext("Availability Note")}</span>
           </label>
           <.input
@@ -654,18 +654,18 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="flex gap-4">
           <div class="rounded-box bg-base-200 px-3 py-2">
-            <label class="flex items-center gap-2 text-sm text-base-content/85">
-              <.input field={@form[:is_complete]} type="checkbox" /> {gettext("Complete")}
-            </label>
+            <div class="text-sm text-base-content/85">
+              <.input field={@form[:is_complete]} type="checkbox" label={gettext("Complete")} />
+            </div>
           </div>
         </div>
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
             {gettext("Project & Editorial")}
           </h3>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:project_description].id}>
               <span class="label-text font-medium">{gettext("Project Description")}</span>
             </label>
             <.input
@@ -675,7 +675,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:editorial_declaration].id}>
               <span class="label-text font-medium">{gettext("Editorial Declaration")}</span>
             </label>
             <.input
@@ -687,20 +687,20 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
         </div>
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
             {gettext("Research Metadata")}
           </h3>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:form].id}>
               <span class="label-text font-medium">{gettext("Form")}</span>
             </label>
             <.input field={@form[:form]} type="select" options={PlayLabels.form_options(@play)} />
-            <p class="mt-1 text-xs text-base-content/60">
+            <p class="mt-1 text-xs text-base-content/70">
               {gettext("Automatic follows the text: verse when it has any verse lines.")}
             </p>
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:historical_time].id}>
               <span class="label-text font-medium">{gettext("Historical Time")}</span>
             </label>
             <.input
@@ -710,7 +710,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:historical_time_note].id}>
               <span class="label-text font-medium">{gettext("Historical Time Note")}</span>
             </label>
             <.input
@@ -729,7 +729,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                 type="number"
                 placeholder={gettext("From")}
               />
-              <span class="text-base-content/50">–</span>
+              <span class="text-base-content/70">–</span>
               <.input
                 field={@form[:composition_date_to]}
                 type="number"
@@ -738,7 +738,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             </div>
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:composition_date_note].id}>
               <span class="label-text font-medium">{gettext("Composition Date Note")}</span>
             </label>
             <.input
@@ -750,11 +750,11 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
         </div>
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/60">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
             {gettext("Funding & Licence")}
           </h3>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:sponsor].id}>
               <span class="label-text font-medium">{gettext("Sponsor")}</span>
             </label>
             <.input
@@ -764,7 +764,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:funder].id}>
               <span class="label-text font-medium">{gettext("Funder")}</span>
             </label>
             <.input
@@ -774,7 +774,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:licence_url].id}>
               <span class="label-text font-medium">{gettext("Licence URL")}</span>
             </label>
             <.input
@@ -784,7 +784,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:licence_text].id}>
               <span class="label-text font-medium">{gettext("Licence Text")}</span>
             </label>
             <.input

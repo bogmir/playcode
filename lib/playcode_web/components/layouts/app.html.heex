@@ -9,7 +9,12 @@
     </a>
     <%!-- Mobile hamburger menu --%>
     <div class="dropdown sm:hidden">
-      <label tabindex="0" class="btn btn-ghost btn-xs btn-square">
+      <label
+        tabindex="0"
+        role="button"
+        class="btn btn-ghost btn-xs btn-square"
+        aria-label={gettext("Menu")}
+      >
         <.icon name="hero-bars-3-micro" class="size-4" />
       </label>
       <ul
@@ -23,7 +28,7 @@
       </ul>
     </div>
     <%!-- Desktop navigation --%>
-    <span class="text-base-content/30 hidden sm:inline">|</span>
+    <span class="text-base-content/70 hidden sm:inline">|</span>
     <nav class="hidden sm:flex items-center gap-1">
       <.link navigate={~p"/plays"} class="btn btn-ghost btn-xs">{gettext("Catalogue")}</.link>
       <.link

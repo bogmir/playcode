@@ -134,6 +134,7 @@ defmodule PlaycodeWeb.Admin.FilemakerSyncLive do
             <.live_file_input
               upload={@uploads.export}
               class="file-input file-input-bordered w-full mb-4"
+              aria-label={gettext("Select the export")}
             />
 
             <div :for={err <- upload_errors(@uploads.export)} class="text-error text-sm mb-2">
@@ -156,7 +157,12 @@ defmodule PlaycodeWeb.Admin.FilemakerSyncLive do
           <h2 class="card-title">
             {gettext("%{count} play(s) to update", count: length(@plan.changes))}
           </h2>
-          <div class="overflow-x-auto">
+          <div
+            class="overflow-x-auto"
+            tabindex="0"
+            role="region"
+            aria-label={gettext("%{count} play(s) to update", count: length(@plan.changes))}
+          >
             <table class="table table-sm">
               <thead>
                 <tr>
@@ -173,7 +179,7 @@ defmodule PlaycodeWeb.Admin.FilemakerSyncLive do
                     <ul class="space-y-0.5">
                       <li :for={{field, value} <- change.sets} class="text-xs">
                         <span class="font-medium">{field_label(field)}</span>:
-                        <span class="text-base-content/60">
+                        <span class="text-base-content/70">
                           {current_value(@plays_by_id, change.play_id, field)}
                         </span>
                         <span aria-hidden="true">&rarr;</span>

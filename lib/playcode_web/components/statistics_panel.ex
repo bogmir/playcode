@@ -40,7 +40,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
         label_key="act"
         value_key="count"
         label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
-        color="bg-amber-500"
+        color="bg-amber-700"
       />
 
       <%!-- Verse distribution --%>
@@ -50,7 +50,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
         label_key="act"
         value_key="count"
         label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
-        color="bg-indigo-500"
+        color="bg-indigo-600"
       />
 
       <%!-- Prose fragments --%>
@@ -61,7 +61,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
         label_key="act"
         value_key="count"
         label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
-        color="bg-emerald-500"
+        color="bg-emerald-700"
       />
 
       <%!-- Additional stats --%>
@@ -89,7 +89,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
             </span>
             <div class="flex-1 bg-base-200 rounded-full h-6 overflow-hidden">
               <div
-                class="bg-violet-500 h-full rounded-full transition-all flex items-center justify-end pr-2"
+                class="bg-violet-600 h-full rounded-full transition-all flex items-center justify-end pr-2"
                 style={"width: #{bar_percent(vt["count"], max_verse_type(@data["verse_type_distribution"]))}%"}
               >
                 <span class="text-xs text-white font-medium">{vt["count"]}</span>
@@ -115,7 +115,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
             </span>
             <div class="flex-1 bg-base-200 rounded-full h-6 overflow-hidden">
               <div
-                class="bg-amber-500 h-full rounded-full transition-all flex items-center justify-end pr-2"
+                class="bg-amber-700 h-full rounded-full transition-all flex items-center justify-end pr-2"
                 style={"width: #{bar_percent(char["speeches"], max_speeches(@data["character_appearances"]))}%"}
               >
                 <span class="text-xs text-white font-medium">{char["speeches"]}</span>
@@ -137,7 +137,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
     <div class="bg-base-100 border border-base-300 rounded-xl p-4 text-center">
       <div class="text-2xl mb-1">{@icon}</div>
       <div class="text-2xl font-bold text-base-content">{@value || 0}</div>
-      <div class="text-sm text-base-content/60">{@label}</div>
+      <div class="text-sm text-base-content/70">{@label}</div>
     </div>
     """
   end
@@ -147,7 +147,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
   attr :label_key, :string, required: true
   attr :value_key, :string, required: true
   attr :label_prefix, :string, default: ""
-  attr :color, :string, default: "bg-blue-500"
+  attr :color, :string, default: "bg-blue-600"
 
   defp bar_chart(assigns) do
     max = assigns.items |> Enum.map(&(&1[assigns.value_key] || 0)) |> Enum.max(fn -> 1 end)

@@ -1257,22 +1257,22 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-base-content">
             {gettext("Editorial Notes")}
-            <span class="text-base-content/50 font-normal">({length(@editorial_notes)})</span>
+            <span class="text-base-content/70 font-normal">({length(@editorial_notes)})</span>
           </h2>
           <button phx-click="new_editorial_note" class="btn btn-sm btn-primary gap-1">
             <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add Note")}
           </button>
         </div>
-        <p class="mb-4 text-sm text-base-content/60">
+        <p class="mb-4 text-sm text-base-content/70">
           {gettext(
             "Front-matter sections: dedications, editor's introductions, prologues, arguments."
           )}
         </p>
         <div
           :if={@editorial_notes == []}
-          class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/60"
+          class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/70"
         >
-          <.icon name="hero-document-text" class="mx-auto mb-2 size-8 text-base-content/30" />
+          <.icon name="hero-document-text" class="mx-auto mb-2 size-8 text-base-content/70" />
           <p>{gettext("No editorial notes yet.")}</p>
         </div>
         <div class="space-y-3">
@@ -1293,7 +1293,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   {note.content}
                 </p>
               </div>
-              <span class="text-xs text-base-content/30 shrink-0">#{note.position}</span>
+              <span class="text-xs text-base-content/70 shrink-0">#{note.position}</span>
             </div>
             <div class="flex justify-end gap-1 border-t border-base-300 px-3 py-2">
               <button
@@ -1322,7 +1322,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <div class="rounded-box border border-base-300 bg-base-100 px-4 py-3 shadow-sm">
             <div class="flex items-center justify-between gap-3">
               <div class="min-w-0">
-                <div class="text-xs font-medium text-base-content/50">
+                <div class="text-xs font-medium text-base-content/70">
                   {gettext("Header")}
                 </div>
                 <div class="truncate text-sm font-semibold text-base-content">
@@ -1334,6 +1334,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 phx-click="edit_division"
                 phx-value-id={cast_list_division(@divisions).id}
                 class="btn btn-ghost btn-xs tooltip"
+                aria-label={gettext("Edit header")}
                 data-tip={gettext("Edit header")}
               >
                 <.icon name="hero-pencil-square-mini" class="size-4" />
@@ -1344,7 +1345,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-base-content">
             {gettext("Cast list")}
-            <span class="text-base-content/50 font-normal">({length(@characters)})</span>
+            <span class="text-base-content/70 font-normal">({length(@characters)})</span>
           </h2>
           <button phx-click="new_character" class="btn btn-sm btn-primary gap-1">
             <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add Character")}
@@ -1352,9 +1353,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </div>
         <div
           :if={@characters == []}
-          class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/60"
+          class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/70"
         >
-          <.icon name="hero-user-group" class="mx-auto mb-2 size-8 text-base-content/30" />
+          <.icon name="hero-user-group" class="mx-auto mb-2 size-8 text-base-content/70" />
           <p>{gettext("No characters yet. Add one to get started.")}</p>
         </div>
         <div
@@ -1370,12 +1371,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             class="drag-item group flex items-center gap-2 px-3 py-2.5 transition-all hover:bg-base-200/40 border-b border-base-300/60 last:border-b-0"
           >
             <%!-- Drag handle --%>
-            <div class="drag-handle shrink-0 cursor-grab active:cursor-grabbing p-1 -ml-1 rounded text-base-content/25 hover:text-base-content/50 hover:bg-base-200/60 transition-colors">
+            <div class="drag-handle shrink-0 cursor-grab active:cursor-grabbing p-1 -ml-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-200/60 transition-colors">
               <.icon name="hero-bars-3-mini" class="size-4" />
             </div>
 
             <%!-- Position number --%>
-            <span class="drag-position flex size-6 shrink-0 items-center justify-center rounded-full bg-base-200 text-[10px] font-semibold text-base-content/50 tabular-nums">
+            <span class="drag-position flex size-6 shrink-0 items-center justify-center rounded-full bg-base-200 text-[10px] font-semibold text-base-content/70 tabular-nums">
               {idx + 1}
             </span>
 
@@ -1388,7 +1389,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             <div class="min-w-0 flex-1">
               <div class="flex items-center gap-2">
                 <span class="font-medium text-sm">{char.name}</span>
-                <span class="text-[10px] text-base-content/35 font-mono">{char.xml_id}</span>
+                <span class="text-[10px] text-base-content/70 font-mono">{char.xml_id}</span>
                 <span
                   :if={char.is_hidden}
                   class="badge badge-ghost badge-xs text-[10px]"
@@ -1396,7 +1397,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   {gettext("hidden")}
                 </span>
               </div>
-              <p :if={char.description} class="text-xs text-base-content/50 truncate">
+              <p :if={char.description} class="text-xs text-base-content/70 truncate">
                 {char.description}
               </p>
             </div>
@@ -1407,6 +1408,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 phx-click="edit_character"
                 phx-value-id={char.id}
                 class="btn btn-ghost btn-xs tooltip"
+                aria-label={gettext("Edit")}
                 data-tip={gettext("Edit")}
               >
                 <.icon name="hero-pencil-mini" class="size-3.5" />
@@ -1418,6 +1420,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   gettext("Delete this character? Speeches referencing it will lose their speaker.")
                 }
                 class="btn btn-ghost btn-xs text-error tooltip"
+                aria-label={gettext("Delete")}
                 data-tip={gettext("Delete")}
               >
                 <.icon name="hero-trash-mini" class="size-3.5" />
@@ -1574,7 +1577,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-base-content">
             {gettext("Play Structure")}
-            <span class="text-base-content/50 font-normal">
+            <span class="text-base-content/70 font-normal">
               ({Enum.count(@divisions, &(&1.type != "elenco"))} {gettext("acts")})
             </span>
           </h2>
@@ -1584,9 +1587,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </div>
         <div
           :if={@divisions == []}
-          class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/60"
+          class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/70"
         >
-          <.icon name="hero-bars-3-bottom-left" class="mx-auto mb-2 size-8 text-base-content/30" />
+          <.icon name="hero-bars-3-bottom-left" class="mx-auto mb-2 size-8 text-base-content/70" />
           <p>{gettext("No acts or scenes yet. Add an act to get started.")}</p>
         </div>
         <div :if={@divisions != []} class="space-y-3">
@@ -1599,7 +1602,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               class="flex items-center justify-between px-4 py-3 bg-base-200/30"
             >
               <div class="flex items-center gap-2">
-                <.icon name="hero-folder-mini" class="size-4 text-base-content/40" />
+                <.icon name="hero-folder-mini" class="size-4 text-base-content/70" />
                 <span class="font-semibold">{division_label(div)}</span>
                 <span class="badge badge-ghost badge-xs">
                   {div.type}{if div.number, do: " #{div.number}"}
@@ -1736,7 +1739,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             <div class="relative">
               <.icon
                 name="hero-magnifying-glass-mini"
-                class="absolute left-3 top-2.5 size-4 text-base-content/40 pointer-events-none"
+                class="absolute left-3 top-2.5 size-4 text-base-content/70 pointer-events-none"
               />
               <input
                 type="text"
@@ -1752,6 +1755,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 type="button"
                 phx-click="content_search_clear"
                 class="absolute right-2 top-1.5 btn btn-ghost btn-xs btn-circle"
+                aria-label={gettext("Clear search")}
               >
                 <.icon name="hero-x-mark-mini" class="size-3.5" />
               </button>
@@ -1761,7 +1765,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
         <%!-- Search results --%>
         <div :if={@content_search != ""} class="mb-4">
-          <p class="text-xs text-base-content/50 mb-2">
+          <p class="text-xs text-base-content/70 mb-2">
             {ngettext(
               "1 result",
               "%{count} results",
@@ -1769,7 +1773,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               count: length(@content_search_results)
             )}
           </p>
-          <div class="rounded-box border border-base-300 bg-base-100 shadow-sm divide-y divide-base-200 max-h-64 overflow-y-auto">
+          <div
+            class="rounded-box border border-base-300 bg-base-100 shadow-sm divide-y divide-base-200 max-h-64 overflow-y-auto"
+            tabindex="0"
+            role="region"
+            aria-label={gettext("Search results")}
+          >
             <div
               :for={result <- @content_search_results}
               class="px-4 py-2 cursor-pointer hover:bg-base-200/50"
@@ -1785,7 +1794,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 <span :if={result.speaker_label} class="text-xs font-medium">
                   {result.speaker_label}
                 </span>
-                <span :if={result.division} class="text-xs text-base-content/40">
+                <span :if={result.division} class="text-xs text-base-content/70">
                   {result.division.title || result.division.type}
                 </span>
               </div>
@@ -1795,7 +1804,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             </div>
             <div
               :if={@content_search_results == []}
-              class="px-4 py-6 text-center text-sm text-base-content/50"
+              class="px-4 py-6 text-center text-sm text-base-content/70"
             >
               {gettext("No results found.")}
             </div>
@@ -1807,8 +1816,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           :if={!@selected_division_id}
           class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-12 text-center"
         >
-          <.icon name="hero-cursor-arrow-rays" class="mx-auto mb-3 size-10 text-base-content/30" />
-          <p class="text-base-content/60 mb-3">
+          <.icon name="hero-cursor-arrow-rays" class="mx-auto mb-3 size-10 text-base-content/70" />
+          <p class="text-base-content/70 mb-3">
             {gettext("Select a scene or act from the Structure tab to edit its content.")}
           </p>
           <button
@@ -1827,7 +1836,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             <div class="flex flex-col gap-1">
               <div
                 :if={parent_division_label(@divisions, @selected_division_id)}
-                class="flex items-center gap-1.5 text-sm text-base-content/50"
+                class="flex items-center gap-1.5 text-sm text-base-content/70"
               >
                 <.icon name="hero-folder-mini" class="size-3.5" />
                 <span>{parent_division_label(@divisions, @selected_division_id)}</span>
@@ -1844,6 +1853,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                     phx-click="select_division"
                     phx-value-id={prev_division_id(@divisions, @selected_division_id)}
                     class="btn btn-ghost btn-xs tooltip"
+                    aria-label={gettext("Previous")}
                     data-tip={gettext("Previous")}
                   >
                     <.icon name="hero-chevron-left-mini" class="size-4" />
@@ -1853,6 +1863,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                     phx-click="select_division"
                     phx-value-id={next_division_id(@divisions, @selected_division_id)}
                     class="btn btn-ghost btn-xs tooltip"
+                    aria-label={gettext("Next")}
                     data-tip={gettext("Next")}
                   >
                     <.icon name="hero-chevron-right-mini" class="size-4" />
@@ -1887,9 +1898,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
           <div
             :if={@elements == []}
-            class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/60"
+            class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/70"
           >
-            <.icon name="hero-document-text" class="mx-auto mb-2 size-8 text-base-content/30" />
+            <.icon name="hero-document-text" class="mx-auto mb-2 size-8 text-base-content/70" />
             <p>{gettext("No content yet. Add a speech, stage direction, or prose.")}</p>
           </div>
 
@@ -1952,6 +1963,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           id="preview-scroll-container"
           phx-hook=".PreviewScroll"
           class="rounded-box border border-base-300 bg-base-100 p-6 shadow-sm max-h-[70vh] overflow-y-auto"
+          tabindex="0"
+          role="region"
+          aria-label={gettext("Play Text Preview")}
         >
           <script :type={Phoenix.LiveView.ColocatedHook} name=".PreviewScroll">
             export default {
@@ -1970,8 +1984,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               }
             }
           </script>
-          <div :if={@preview_divisions == []} class="text-center py-8 text-base-content/60">
-            <.icon name="hero-document" class="mx-auto mb-2 size-8 text-base-content/30" />
+          <div :if={@preview_divisions == []} class="text-center py-8 text-base-content/70">
+            <.icon name="hero-document" class="mx-auto mb-2 size-8 text-base-content/70" />
             <p>{gettext("No content to preview yet.")}</p>
           </div>
           <.play_body
@@ -2107,7 +2121,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       <div class="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h2 class="text-lg font-semibold text-base-content">{gettext("Character Review")}</h2>
-          <p class="mt-1 text-sm text-base-content/60">
+          <p class="mt-1 text-sm text-base-content/70">
             {gettext(
               "Assign characters to speeches. Create characters from speaker labels found in the text."
             )}
@@ -2120,14 +2134,22 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <div class="lg:col-span-1">
           <div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
             <div class="border-b border-base-300 px-4 py-3">
-              <h3 class="font-semibold text-sm">{gettext("Characters")} ({length(@characters)})</h3>
+              <h3 id="cr-characters-heading" class="font-semibold text-sm">
+                {gettext("Characters")} ({length(@characters)})
+              </h3>
             </div>
-            <div class="divide-y divide-base-200 max-h-96 overflow-y-auto">
+            <%!-- Focusable: nothing inside it is, so the keyboard could not scroll it. --%>
+            <div
+              class="divide-y divide-base-200 max-h-96 overflow-y-auto"
+              role="region"
+              tabindex="0"
+              aria-labelledby="cr-characters-heading"
+            >
               <div :for={char <- @characters} class="px-4 py-2 text-sm">
                 <span class="font-medium">{char.name}</span>
-                <span class="text-base-content/50 text-xs ml-1">{char.xml_id}</span>
+                <span class="text-base-content/70 text-xs ml-1">{char.xml_id}</span>
               </div>
-              <div :if={@characters == []} class="px-4 py-6 text-sm text-base-content/50 text-center">
+              <div :if={@characters == []} class="px-4 py-6 text-sm text-base-content/70 text-center">
                 {gettext("No characters yet.")}
               </div>
             </div>
@@ -2138,7 +2160,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <div class="lg:col-span-3">
           <div class="mb-4 flex flex-wrap items-center gap-3">
             <form phx-change="cr_filter" class="flex items-center gap-2 flex-1">
-              <select name="label" class="select select-bordered select-sm">
+              <select
+                name="label"
+                class="select select-bordered select-sm"
+                aria-label={gettext("Filter by speaker")}
+              >
                 <option value="">{gettext("All speakers")}</option>
                 <option value="__none__" selected={@filter_label == :none}>
                   {gettext("(No label)")}
@@ -2152,7 +2178,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   {label}
                 </option>
               </select>
-              <select name="assigned" class="select select-bordered select-sm">
+              <select
+                name="assigned"
+                class="select select-bordered select-sm"
+                aria-label={gettext("Filter by assignment")}
+              >
                 <option value="">{gettext("All")}</option>
                 <option value="yes" selected={@filter_assigned == true}>{gettext("Assigned")}</option>
                 <option value="no" selected={@filter_assigned == false}>
@@ -2180,7 +2210,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
             <%!-- Character assignment section --%>
             <div class="flex flex-wrap items-center gap-2">
-              <span class="text-sm text-base-content/60">{gettext("Characters:")}</span>
+              <span class="text-sm text-base-content/70">{gettext("Characters:")}</span>
               <span
                 :for={char <- @selected_chars}
                 class="badge badge-sm badge-primary gap-1"
@@ -2196,11 +2226,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   <.icon name="hero-x-mark-mini" class="size-3" />
                 </button>
               </span>
-              <span :if={@selected_chars == []} class="text-sm text-base-content/40 italic">
+              <span :if={@selected_chars == []} class="text-sm text-base-content/70 italic">
                 {gettext("none")}
               </span>
               <form :if={@available_chars != []} phx-change="cr_add_character" class="inline">
-                <select name="character_id" class="select select-bordered select-xs">
+                <select
+                  name="character_id"
+                  class="select select-bordered select-xs"
+                  aria-label={gettext("Add character")}
+                >
                   <option value="">{gettext("Add...")}</option>
                   <option :for={char <- @available_chars} value={char.id}>
                     {char.name}
@@ -2218,8 +2252,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
             <%!-- Label editing section --%>
             <form phx-submit="cr_set_label" class="flex flex-wrap items-center gap-2">
-              <span class="text-sm text-base-content/60">{gettext("Label:")}</span>
+              <label for="cr-speaker-label" class="text-sm text-base-content/70">
+                {gettext("Label:")}
+              </label>
               <input
+                id="cr-speaker-label"
                 type="text"
                 name="speaker_label"
                 placeholder={gettext("Leave empty to clear")}
@@ -2254,20 +2291,22 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 type="checkbox"
                 class="checkbox checkbox-sm checkbox-primary"
                 checked={MapSet.member?(@selected_speeches, speech.id)}
+                aria-labelledby={"cr-speaker-#{speech.id} cr-first-#{speech.id}"}
                 readonly
               />
               <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2">
-                  <span class="font-medium text-sm">
+                  <span id={"cr-speaker-#{speech.id}"} class="font-medium text-sm">
                     {speech.speaker_label || gettext("(no speaker)")}
                   </span>
-                  <span :if={speech.division} class="text-xs text-base-content/40">
+                  <span :if={speech.division} class="text-xs text-base-content/70">
                     {speech.division.title || speech.division.type}
                   </span>
                 </div>
                 <p
                   :if={@first_child_contents[speech.id]}
-                  class="text-xs text-base-content/50 truncate mt-0.5"
+                  id={"cr-first-#{speech.id}"}
+                  class="text-xs text-base-content/70 truncate mt-0.5"
                 >
                   {@first_child_contents[speech.id]}
                 </p>
@@ -2298,7 +2337,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             </div>
             <div
               :if={@visible_speeches == []}
-              class="px-4 py-8 text-center text-sm text-base-content/50"
+              class="px-4 py-8 text-center text-sm text-base-content/70"
             >
               {gettext("No speeches found.")}
             </div>
@@ -2338,7 +2377,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         if(@active == @tab,
           do: "border-primary text-primary",
           else:
-            "border-transparent text-base-content/60 hover:text-base-content hover:border-base-300"
+            "border-transparent text-base-content/70 hover:text-base-content hover:border-base-300"
         )
       ]}
     >
@@ -2380,13 +2419,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             type="checkbox"
             class="checkbox checkbox-sm checkbox-primary mr-2 shrink-0"
             checked={MapSet.member?(@selected_elements, @element.id)}
+            aria-labelledby={"el-type-#{@element.id} el-speaker-#{@element.id} el-text-#{@element.id}"}
           />
-          <span class="badge badge-sm badge-outline mr-2 shrink-0">
+          <span id={"el-type-#{@element.id}"} class="badge badge-sm badge-outline mr-2 shrink-0">
             {element_type_label(@element.type)}
           </span>
           <%!-- Speaker label: click opens modal --%>
           <span
             :if={@element.speaker_label}
+            id={"el-speaker-#{@element.id}"}
             phx-click="edit_element"
             phx-value-id={@element.id}
             class="font-medium cursor-pointer hover:text-primary shrink-0"
@@ -2396,6 +2437,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <%!-- Content: inline editing or click to edit --%>
           <span
             :if={@element.content && !@is_inline_editing}
+            id={"el-text-#{@element.id}"}
             phx-click="inline_edit"
             phx-value-id={@element.id}
             class="text-sm text-base-content/80 cursor-pointer hover:text-base-content truncate"
@@ -2418,14 +2460,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               name="value"
               value={@element.content || ""}
               class="input input-sm input-bordered w-full"
+              aria-label={element_type_label(@element.type)}
               phx-key="Escape"
               phx-keydown="inline_cancel"
             />
           </form>
-          <span :if={@element.verse_type} class="text-xs text-base-content/50 ml-2">
+          <span :if={@element.verse_type} class="text-xs text-base-content/70 ml-2">
             ({@element.verse_type})
           </span>
-          <span :if={@element.line_number} class="text-xs text-base-content/50 ml-1">
+          <span :if={@element.line_number} class="text-xs text-base-content/70 ml-1">
             L{@element.line_number}
           </span>
           <span :if={@element.is_aside} class="badge badge-ghost badge-xs ml-1">
@@ -2437,6 +2480,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <div :if={@depth == 0} class="dropdown dropdown-end">
             <label
               tabindex="0"
+              role="button"
               class="btn btn-xs btn-ghost btn-outline tooltip"
               aria-label={gettext("Insert Above")}
               data-tip={gettext("Insert Above")}
@@ -2621,13 +2665,13 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       class="space-y-4"
     >
       <div>
-        <label class="label">
+        <label class="label" for={@form[:section_type].id}>
           <span class="label-text font-medium">{gettext("Section Type")} *</span>
         </label>
         <.input field={@form[:section_type]} type="select" options={section_type_options()} />
       </div>
       <div>
-        <label class="label">
+        <label class="label" for={@form[:heading].id}>
           <span class="label-text font-medium">{gettext("Heading")}</span>
         </label>
         <.input
@@ -2637,7 +2681,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         />
       </div>
       <div>
-        <label class="label">
+        <label class="label" for={@form[:content].id}>
           <span class="label-text font-medium">{gettext("Content")} *</span>
         </label>
         <.input
@@ -2669,24 +2713,25 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       class="space-y-4"
     >
       <div>
-        <label class="label"><span class="label-text font-medium">XML ID *</span></label>
+        <label class="label" for={@form[:xml_id].id}>
+          <span class="label-text font-medium">XML ID *</span>
+        </label>
         <.input field={@form[:xml_id]} type="text" required placeholder={gettext("e.g. DONA_ANA")} />
       </div>
       <div>
-        <label class="label"><span class="label-text font-medium">{gettext("Name")} *</span></label>
+        <label class="label" for={@form[:name].id}>
+          <span class="label-text font-medium">{gettext("Name")} *</span>
+        </label>
         <.input field={@form[:name]} type="text" required placeholder={gettext("e.g. Dona Ana")} />
       </div>
       <div>
-        <label class="label">
+        <label class="label" for={@form[:description].id}>
           <span class="label-text font-medium">{gettext("Description")}</span>
         </label>
         <.input field={@form[:description]} type="text" placeholder={gettext("e.g. una dama")} />
       </div>
       <div>
-        <label class="flex items-center gap-2">
-          <.input field={@form[:is_hidden]} type="checkbox" />
-          <span class="label-text">{gettext("Hidden character")}</span>
-        </label>
+        <.input field={@form[:is_hidden]} type="checkbox" label={gettext("Hidden character")} />
       </div>
       <.input field={@form[:position]} type="hidden" />
       <div class="flex gap-2 pt-2">
@@ -2711,15 +2756,21 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       class="space-y-4"
     >
       <div>
-        <label class="label"><span class="label-text font-medium">{gettext("Type")} *</span></label>
+        <label class="label" for={@form[:type].id}>
+          <span class="label-text font-medium">{gettext("Type")} *</span>
+        </label>
         <.input field={@form[:type]} type="select" options={division_types()} />
       </div>
       <div>
-        <label class="label"><span class="label-text font-medium">{gettext("Number")}</span></label>
+        <label class="label" for={@form[:number].id}>
+          <span class="label-text font-medium">{gettext("Number")}</span>
+        </label>
         <.input field={@form[:number]} type="number" />
       </div>
       <div>
-        <label class="label"><span class="label-text font-medium">{gettext("Title")}</span></label>
+        <label class="label" for={@form[:title].id}>
+          <span class="label-text font-medium">{gettext("Title")}</span>
+        </label>
         <.input field={@form[:title]} type="text" placeholder={gettext("e.g. ACTO PRIMERO")} />
       </div>
       <.input field={@form[:position]} type="hidden" />
@@ -2761,7 +2812,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       <%!-- Speech fields --%>
       <div :if={@modal_element_type == "speech"}>
         <div class="mb-4">
-          <label class="label">
+          <label class="label" for={@form[:speaker_label].id}>
             <span class="label-text font-medium">{gettext("Speaker Label")}</span>
           </label>
           <.input field={@form[:speaker_label]} type="text" placeholder={gettext("e.g. ANA")} />
@@ -2794,7 +2845,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 <.icon name="hero-x-mark-mini" class="size-3" />
               </button>
             </span>
-            <span :if={selected_chars == []} class="text-sm text-base-content/40 italic">
+            <span :if={selected_chars == []} class="text-sm text-base-content/70 italic">
               {gettext("none")}
             </span>
           </div>
@@ -2803,6 +2854,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             id="el-char-select"
             phx-hook=".ElCharSelect"
             class="select select-bordered select-sm w-full"
+            aria-label={gettext("Add character")}
           >
             <option value="">{gettext("Add character...")}</option>
             <option :for={char <- available_chars} value={char.id}>
@@ -2820,22 +2872,19 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               }
             }
           </script>
-          <div :if={@characters == []} class="text-sm text-base-content/50 text-center py-2">
+          <div :if={@characters == []} class="text-sm text-base-content/70 text-center py-2">
             {gettext("No characters defined.")}
           </div>
         </div>
         <div>
-          <label class="flex items-center gap-2">
-            <.input field={@form[:is_aside]} type="checkbox" />
-            <span class="label-text">{gettext("Aside")}</span>
-          </label>
+          <.input field={@form[:is_aside]} type="checkbox" label={gettext("Aside")} />
         </div>
       </div>
 
       <%!-- Stage direction fields --%>
       <div :if={@modal_element_type == "stage_direction"}>
         <div class="mb-4">
-          <label class="label">
+          <label class="label" for={@form[:content].id}>
             <span class="label-text font-medium">{gettext("Content")}</span>
           </label>
           <.input
@@ -2846,28 +2895,32 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           />
         </div>
         <div>
-          <label class="label"><span class="label-text font-medium">Rend</span></label>
+          <label class="label" for={@form[:rend].id}>
+            <span class="label-text font-medium">Rend</span>
+          </label>
           <.input field={@form[:rend]} type="text" placeholder={gettext("e.g. italics")} />
         </div>
       </div>
 
       <%!-- Prose fields --%>
       <div :if={@modal_element_type == "prose"}>
-        <label class="label"><span class="label-text font-medium">{gettext("Content")}</span></label>
+        <label class="label" for={@form[:content].id}>
+          <span class="label-text font-medium">{gettext("Content")}</span>
+        </label>
         <.input
           field={@form[:content]}
           type="textarea"
           rows="4"
           placeholder={gettext("Prose text...")}
         />
-        <p class="mt-1 text-xs text-base-content/60">
+        <p class="mt-1 text-xs text-base-content/70">
           {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
         </p>
       </div>
 
       <%!-- Line group fields --%>
       <div :if={@modal_element_type == "line_group"}>
-        <label class="label">
+        <label class="label" for={@form[:verse_type].id}>
           <span class="label-text font-medium">{gettext("Verse Type")}</span>
         </label>
         <.input field={@form[:verse_type]} type="select" options={verse_types()} />
@@ -2876,7 +2929,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       <%!-- Verse line fields --%>
       <div :if={@modal_element_type == "verse_line"}>
         <div class="mb-4">
-          <label class="label">
+          <label class="label" for={@form[:content].id}>
             <span class="label-text font-medium">{gettext("Content")} *</span>
           </label>
           <.input
@@ -2885,19 +2938,19 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             required
             placeholder={gettext("Verse line text...")}
           />
-          <p class="mt-1 text-xs text-base-content/60">
+          <p class="mt-1 text-xs text-base-content/70">
             {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
           </p>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
-            <label class="label">
+            <label class="label" for={@form[:line_number].id}>
               <span class="label-text font-medium">{gettext("Line Number")}</span>
             </label>
             <.input field={@form[:line_number]} type="number" />
           </div>
           <div>
-            <label class="label">
+            <label class="label" for={@form[:part].id}>
               <span class="label-text font-medium">{gettext("Part (split line)")}</span>
             </label>
             <.input field={@form[:part]} type="select" options={part_options()} />

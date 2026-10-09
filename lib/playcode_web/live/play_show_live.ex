@@ -128,7 +128,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                       do: "hero-chevron-up-micro",
                       else: "hero-chevron-down-micro"
                   }
-                  class="size-4 text-base-content/40"
+                  class="size-4 text-base-content/70"
                 />
               </button>
             </div>
@@ -141,7 +141,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             >
               <%!-- View switcher --%>
               <section>
-                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
+                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
                   {gettext("View")}
                 </h3>
                 <nav class="mt-1 space-y-px">
@@ -167,7 +167,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               </section>
 
               <section :if={@active_tab == :text && @metadata_sections != []}>
-                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
+                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
                   {gettext("Metadata")}
                 </h3>
                 <nav class="mt-1 space-y-px">
@@ -182,7 +182,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               </section>
 
               <section :if={@active_tab == :text && @play_sections != []}>
-                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
+                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
                   {gettext("Sections")}
                 </h3>
                 <nav class="mt-1 space-y-px">
@@ -203,7 +203,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               :if={@sidebar_open && @active_tab == :text}
               class="border-t border-base-300 px-3 py-2.5 space-y-2"
             >
-              <h3 class="text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
+              <h3 class="text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
                 {gettext("Visual markers")}
               </h3>
               <label class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70">
@@ -252,7 +252,7 @@ defmodule PlaycodeWeb.PlayShowLive do
           <%!-- Navigation quick links --%>
           <.link
             navigate={~p"/plays"}
-            class="mt-2 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/60 hover:text-primary hover:border-primary/30 transition-colors"
+            class="mt-2 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/70 hover:text-primary hover:border-primary/30 transition-colors"
           >
             <.icon name="hero-arrow-left-micro" class="size-3.5" />
             {gettext("Back to Catalogue")}
@@ -260,7 +260,7 @@ defmodule PlaycodeWeb.PlayShowLive do
           <.link
             :if={assigns[:current_user]}
             navigate={~p"/admin/plays/#{@play.id}"}
-            class="mt-1 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/60 hover:text-primary hover:border-primary/30 transition-colors"
+            class="mt-1 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/70 hover:text-primary hover:border-primary/30 transition-colors"
           >
             <.icon name="hero-pencil-square-micro" class="size-3.5" />
             {gettext("Edit in Admin")}
@@ -275,12 +275,12 @@ defmodule PlaycodeWeb.PlayShowLive do
           >
             <h2 class="play-author">{@play.author_name}</h2>
             <h1 class="play-title font-bold">{@play.title}</h1>
-            <p :if={@play.original_title} class="mt-1 text-sm italic text-base-content/50">
+            <p :if={@play.original_title} class="mt-1 text-sm italic text-base-content/70">
               {@play.original_title}
             </p>
 
             <%!-- Relationship badge --%>
-            <div :if={@play.relationship_type} class="mt-2 text-xs text-base-content/60">
+            <div :if={@play.relationship_type} class="mt-2 text-xs text-base-content/70">
               <span class="badge badge-outline badge-xs">
                 {relationship_type_label(@play.relationship_type)}
               </span>
@@ -298,13 +298,13 @@ defmodule PlaycodeWeb.PlayShowLive do
             </div>
             <div
               :if={@play.derived_plays != []}
-              class="mt-2 flex flex-wrap justify-center gap-2 text-xs text-base-content/50"
+              class="mt-2 flex flex-wrap justify-center gap-2 text-xs text-base-content/70"
             >
               <span :for={derived <- @play.derived_plays}>
                 <.link navigate={~p"/plays/#{derived.code}"} class="link link-primary">
                   {derived.title}
                 </.link>
-                <span :if={derived.relationship_type} class="text-base-content/35">
+                <span :if={derived.relationship_type} class="text-base-content/70">
                   ({relationship_type_label(derived.relationship_type)})
                 </span>
               </span>
@@ -312,7 +312,7 @@ defmodule PlaycodeWeb.PlayShowLive do
 
             <%!-- Source info --%>
             <div :if={@play.sources != []} id="meta-sources" class="scroll-mt-20">
-              <div :for={source <- @play.sources} class="mt-4 text-xs text-base-content/50">
+              <div :for={source <- @play.sources} class="mt-4 text-xs text-base-content/70">
                 <p :if={source.note} class="italic">{source.note}</p>
               </div>
             </div>
@@ -323,20 +323,20 @@ defmodule PlaycodeWeb.PlayShowLive do
               id="meta-editors"
               class="mt-3 flex flex-wrap justify-center gap-2 scroll-mt-20"
             >
-              <span :for={editor <- @play.editors} class="text-xs text-base-content/50">
+              <span :for={editor <- @play.editors} class="text-xs text-base-content/70">
                 {editor.person_name}
-                <span class="text-base-content/35">
+                <span class="text-base-content/70">
                   ({PlayLabels.editor_role_label(editor.role)})
                 </span>
               </span>
             </div>
 
-            <p class="mt-2 text-xs text-base-content/50">
+            <p class="mt-2 text-xs text-base-content/70">
               {Play.language_name(@play.language)}{" · " <> form_line(@play)}
             </p>
             <p
               :if={@play.licence_url || @play.licence_text}
-              class="mt-1 text-xs text-base-content/40"
+              class="mt-1 text-xs text-base-content/70"
             >
               <%= if @play.licence_url do %>
                 <a
@@ -350,7 +350,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                 {@play.licence_text}
               <% end %>
             </p>
-            <p class="mt-1 text-xs text-base-content/30">
+            <p class="mt-1 text-xs text-base-content/70">
               {PlaycodeWeb.Endpoint.url() <> ~p"/plays/#{@play.code}"}
             </p>
           </header>
@@ -362,25 +362,25 @@ defmodule PlaycodeWeb.PlayShowLive do
             class="mb-8 max-w-2xl mx-auto scroll-mt-20 text-sm"
           >
             <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1">
-              <dt :if={@play.historical_time} class="text-base-content/50">
+              <dt :if={@play.historical_time} class="text-base-content/70">
                 {gettext("Historical time")}
               </dt>
               <dd :if={@play.historical_time}>
                 {PlayLabels.historical_time_label(@play.historical_time)}
-                <p :if={@play.historical_time_note} class="mt-1 text-xs text-base-content/60">
+                <p :if={@play.historical_time_note} class="mt-1 text-xs text-base-content/70">
                   {@play.historical_time_note}
                 </p>
               </dd>
 
               <dt
                 :if={@play.composition_date_from || @play.composition_date_note}
-                class="text-base-content/50"
+                class="text-base-content/70"
               >
                 {gettext("Composition")}
               </dt>
               <dd :if={@play.composition_date_from || @play.composition_date_note}>
                 {composition_date(@play)}
-                <p :if={@play.composition_date_note} class="mt-1 text-xs text-base-content/60">
+                <p :if={@play.composition_date_note} class="mt-1 text-xs text-base-content/70">
                   {@play.composition_date_note}
                 </p>
               </dd>
@@ -394,12 +394,12 @@ defmodule PlaycodeWeb.PlayShowLive do
             class="mb-8 max-w-2xl mx-auto scroll-mt-20 text-sm"
           >
             <dl class="grid grid-cols-[max-content_1fr] gap-x-4 gap-y-2">
-              <dt class="text-base-content/50">{gettext("Places")}</dt>
+              <dt class="text-base-content/70">{gettext("Places")}</dt>
               <dd>
                 <ul class="space-y-1">
                   <li :for={link <- sorted_places(@play.play_places)}>
                     <span>{Places.breadcrumb(link.place, @gazetteer, @locale)}</span>
-                    <span :if={link.role == "mentioned"} class="text-xs text-base-content/50">
+                    <span :if={link.role == "mentioned"} class="text-xs text-base-content/70">
                       ({PlayLabels.place_role_label(link.role)})
                     </span>
                     <span :if={link.place.is_fictional} class="badge badge-outline badge-xs">
@@ -413,7 +413,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                     >
                       {Authority.label(link.place.authority)}
                     </a>
-                    <p :if={link.note} class="text-xs text-base-content/60">{link.note}</p>
+                    <p :if={link.note} class="text-xs text-base-content/70">{link.note}</p>
                   </li>
                 </ul>
               </dd>
@@ -427,7 +427,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             class="mb-8 max-w-2xl mx-auto scroll-mt-20 text-sm"
           >
             <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">
-              <dt class="text-base-content/50">{gettext("Bibliography")}</dt>
+              <dt class="text-base-content/70">{gettext("Bibliography")}</dt>
               <dd class="min-w-0">
                 <div
                   :for={{kind, subgroups} <- @bibliography}
@@ -440,7 +440,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                   <div :for={{language, links} <- subgroups}>
                     <h4
                       :if={kind == "translation"}
-                      class="mb-1 mt-3 text-xs uppercase tracking-wide text-base-content/50"
+                      class="mb-1 mt-3 text-xs uppercase tracking-wide text-base-content/70"
                     >
                       {PlayLabels.bibliography_language_label(language)}
                     </h4>

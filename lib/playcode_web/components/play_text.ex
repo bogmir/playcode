@@ -191,7 +191,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         class="flex items-baseline gap-2 ml-1 sm:ml-4 -mb-0.5"
       >
         <span class="flex-1" />
-        <span class="w-8 sm:w-16 text-left text-[9px] italic text-base-content/35 shrink-0 leading-tight">
+        <span class="w-8 sm:w-16 text-left text-[9px] italic text-base-content/70 shrink-0 leading-tight">
           {@element.verse_type}
         </span>
       </div>
@@ -355,7 +355,7 @@ defmodule PlaycodeWeb.Components.PlayText do
     </div>
     <ol class="space-y-5 list-decimal pl-6 text-sm">
       <li :for={entry <- @shown} id={"play-note-#{entry.note.id}"} value={entry.note.number}>
-        <p class="flex flex-wrap items-baseline gap-x-2 text-base-content/60">
+        <p class="flex flex-wrap items-baseline gap-x-2 text-base-content/70">
           <b class="text-base-content">{PlayLabels.note_type_label(entry.note.type)}</b>
           <i :if={entry.glossed} class="text-base-content font-serif">{entry.glossed}</i>
           <button

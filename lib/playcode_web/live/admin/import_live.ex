@@ -193,6 +193,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
             <.live_file_input
               upload={@uploads.tei_files}
               class="file-input file-input-bordered w-full mb-4"
+              aria-label={gettext("Select Files")}
               disabled={@importing}
             />
 
@@ -207,6 +208,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                 phx-click="cancel-upload"
                 phx-value-ref={entry.ref}
                 class="btn btn-ghost btn-xs text-error tooltip"
+                aria-label={gettext("Remove")}
                 data-tip={gettext("Remove")}
               >
                 <.icon name="hero-x-mark-mini" class="size-4" />
@@ -310,7 +312,12 @@ defmodule PlaycodeWeb.Admin.ImportLive do
       >
         <div class="card-body">
           <h2 class="card-title">{gettext("Imported Plays")}</h2>
-          <div class="overflow-x-auto">
+          <div
+            class="overflow-x-auto"
+            tabindex="0"
+            role="region"
+            aria-label={gettext("Imported Plays")}
+          >
             <table class="table table-sm">
               <thead>
                 <tr>
@@ -340,9 +347,13 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                           <.icon name="hero-exclamation-triangle-mini" class="size-3" />
                           {gettext("%{count} warning(s)", count: length(warnings))}
                         </summary>
-                        <ul class="mt-2 ml-2 text-xs font-mono text-base-content/70 space-y-1 max-h-40 overflow-y-auto">
+                        <ul
+                          class="mt-2 ml-2 text-xs font-mono text-base-content/70 space-y-1 max-h-40 overflow-y-auto"
+                          tabindex="0"
+                          aria-label={gettext("%{count} warning(s)", count: length(warnings))}
+                        >
                           <li :for={w <- Enum.take(warnings, 10)}>{w}</li>
-                          <li :if={length(warnings) > 10} class="text-base-content/50">
+                          <li :if={length(warnings) > 10} class="text-base-content/70">
                             … {gettext("and %{count} more", count: length(warnings) - 10)}
                           </li>
                         </ul>
@@ -353,6 +364,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                     <.link
                       navigate={~p"/admin/plays/#{play_id}"}
                       class="btn btn-ghost btn-xs tooltip"
+                      aria-label={gettext("Edit in Admin")}
                       data-tip={gettext("Edit in Admin")}
                     >
                       <.icon name="hero-pencil-square-mini" class="size-4" />
@@ -361,6 +373,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                       href={~p"/plays/#{code}"}
                       target="_blank"
                       class="btn btn-ghost btn-xs tooltip"
+                      aria-label={gettext("View public page")}
                       data-tip={gettext("View public page")}
                     >
                       <.icon name="hero-arrow-top-right-on-square-mini" class="size-4" />

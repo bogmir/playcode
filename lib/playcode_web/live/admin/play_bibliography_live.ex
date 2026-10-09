@@ -259,7 +259,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
           <h1 class="text-2xl font-semibold tracking-tight text-base-content">
             {gettext("Bibliography")}
           </h1>
-          <p class="mt-1 max-w-2xl text-sm text-base-content/60">
+          <p class="mt-1 max-w-2xl text-sm text-base-content/70">
             {gettext(
               "Modern editions, criticism, translations and adaptations of this play. An entry shared with other plays is edited once for all of them."
             )}
@@ -359,7 +359,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
               {gettext("Add")}
             </button>
           </li>
-          <li :if={@term != "" and @suggestions == []} class="py-3 text-sm text-base-content/60">
+          <li :if={@term != "" and @suggestions == []} class="py-3 text-sm text-base-content/70">
             {gettext("Nothing matches.")}
           </li>
         </ul>
@@ -507,7 +507,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
           </div>
 
           <aside class="self-start rounded-box bg-base-200/60 p-4 lg:sticky lg:top-24">
-            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/50">
+            <h3 class="mb-2 text-xs font-semibold uppercase tracking-wide text-base-content/70">
               {gettext("As it will be printed")}
             </h3>
             <p id="citation-preview" class="font-serif text-[15px] leading-relaxed [&_a]:link">
@@ -519,27 +519,27 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
 
       <div
         :if={@groups == [] and is_nil(@editing)}
-        class="rounded-box border border-dashed border-base-300 py-14 text-center text-base-content/60"
+        class="rounded-box border border-dashed border-base-300 py-14 text-center text-base-content/70"
       >
         <.icon name="hero-book-open" class="mx-auto mb-3 size-12 opacity-30" />
         <p class="text-sm">{gettext("No bibliography for this play yet.")}</p>
       </div>
 
-      <p :if={@groups != [] and @shown == []} class="py-10 text-center text-sm text-base-content/60">
+      <p :if={@groups != [] and @shown == []} class="py-10 text-center text-sm text-base-content/70">
         {gettext("Nothing matches the filter.")}
       </p>
 
       <section :for={{kind, subgroups} <- @shown} id={"kind-#{kind}"} class="mb-10 scroll-mt-24">
         <h2 class="mb-3 flex items-baseline gap-2 border-b border-base-300 pb-2 text-lg font-semibold">
           {PlayLabels.bibliography_kind_label(kind)}
-          <span class="text-sm font-normal tabular-nums text-base-content/50">
+          <span class="text-sm font-normal tabular-nums text-base-content/70">
             {count(subgroups)}
           </span>
         </h2>
         <div :for={{language, links} <- subgroups} class="mb-4">
           <h3
             :if={kind == "translation"}
-            class="mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-base-content/50"
+            class="mb-1 mt-4 text-xs font-semibold uppercase tracking-wide text-base-content/70"
           >
             {PlayLabels.bibliography_language_label(language)}
           </h3>
@@ -553,7 +553,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
                 <p class="font-serif text-[15px] leading-relaxed text-base-content [&_a]:link [&_a]:break-all">
                   {Citation.html(link.entry, link)}
                 </p>
-                <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-base-content/55">
+                <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-base-content/70">
                   <span :if={link.entry.pub_type} class="badge badge-ghost badge-xs">
                     {PlayLabels.pub_type_label(link.entry.pub_type)}
                   </span>
@@ -575,7 +575,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
                   </span>
                 </div>
               </div>
-              <div class="flex shrink-0 items-start gap-0.5 opacity-60 transition group-hover:opacity-100 focus-within:opacity-100">
+              <div class="flex shrink-0 items-start gap-0.5 opacity-70 transition group-hover:opacity-100 focus-within:opacity-100">
                 <button
                   type="button"
                   phx-click="edit"

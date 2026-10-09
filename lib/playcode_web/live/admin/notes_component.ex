@@ -149,7 +149,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
           <div class="flex-1">
             <span class="font-medium">{PlayLabels.note_type_label(note.type)}</span>
             <em :if={note.term}>{note.term}</em>
-            <span class="text-base-content/60">{String.slice(note.body, 0, 80)}</span>
+            <span class="text-base-content/70">{String.slice(note.body, 0, 80)}</span>
           </div>
           <button
             type="button"
@@ -172,7 +172,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
           </button>
         </li>
       </ul>
-      <p :if={@notes == [] and is_nil(@form)} class="text-sm text-base-content/50 mb-3">
+      <p :if={@notes == [] and is_nil(@form)} class="text-sm text-base-content/70 mb-3">
         {gettext("No notes.")}
       </p>
       <button

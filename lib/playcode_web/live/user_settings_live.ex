@@ -27,7 +27,7 @@ defmodule PlaycodeWeb.UserSettingsLive do
           <%!-- Only useful to someone who cannot change it themselves. --%>
           <p
             :if={not Playcode.Authz.can?(@current_user, :manage_users)}
-            class="text-sm text-base-content/60"
+            class="text-sm text-base-content/70"
           >
             {gettext("Your address is set by the administrator who invited you.")}
           </p>
@@ -38,7 +38,7 @@ defmodule PlaycodeWeb.UserSettingsLive do
         <div class="card-body gap-4">
           <div>
             <h2 class="text-base font-semibold">{gettext("Password")}</h2>
-            <p class="text-sm text-base-content/60">
+            <p class="text-sm text-base-content/70">
               {gettext("At least 12 characters. Changing it signs out your other sessions.")}
             </p>
           </div>
@@ -93,7 +93,7 @@ defmodule PlaycodeWeb.UserSettingsLive do
           <div class="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 class="text-base font-semibold">{gettext("Active sessions")}</h2>
-              <p class="text-sm text-base-content/60">
+              <p class="text-sm text-base-content/70">
                 {gettext("Where your account is currently signed in.")}
               </p>
             </div>
@@ -106,10 +106,15 @@ defmodule PlaycodeWeb.UserSettingsLive do
             </button>
           </div>
 
-          <div class="overflow-x-auto">
+          <div
+            class="overflow-x-auto"
+            tabindex="0"
+            role="region"
+            aria-label={gettext("Active sessions")}
+          >
             <table class="table table-sm">
               <thead>
-                <tr class="text-xs uppercase tracking-wide text-base-content/60">
+                <tr class="text-xs uppercase tracking-wide text-base-content/70">
                   <th>{gettext("Signed in")}</th>
                   <th>{gettext("Address")}</th>
                   <th>{gettext("Browser")}</th>

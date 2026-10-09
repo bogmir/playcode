@@ -9,12 +9,12 @@
           <span class="flex items-center gap-2">
             <.icon name="hero-list-bullet-micro" class="size-4" /> Contents
           </span>
-          <.icon name="hero-chevron-up-micro" class="size-4 text-base-content/40" />
+          <.icon name="hero-chevron-up-micro" class="size-4 text-base-content/70" />
         </button>
 
         <div class="border-t border-base-300 max-h-[65vh] overflow-y-auto px-2 py-2 space-y-3">
           <section>
-            <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
+            <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
               Metadata
             </h3>
             <nav class="mt-1 space-y-px">
@@ -34,7 +34,7 @@
           </section>
 
           <section>
-            <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/40">
+            <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
               Sections
             </h3>
             <nav class="mt-1 space-y-px">
@@ -59,7 +59,7 @@
 
       <a
         href="/demo/ui/admin/play"
-        class="mt-2 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/60 hover:text-primary hover:border-primary/30 transition-colors"
+        class="mt-2 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/70 hover:text-primary hover:border-primary/30 transition-colors"
       >
         <.icon name="hero-pencil-square-micro" class="size-3.5" /> Edit in Admin
       </a>
@@ -74,19 +74,19 @@
         <h1 class="play-title font-bold">{@play.title}</h1>
 
         <div id="meta-sources" class="scroll-mt-20">
-          <div :for={source <- @play.sources} class="mt-4 text-xs text-base-content/50">
+          <div :for={source <- @play.sources} class="mt-4 text-xs text-base-content/70">
             <p :if={source.note} class="italic">{source.note}</p>
           </div>
         </div>
 
         <div id="meta-editors" class="mt-3 flex flex-wrap justify-center gap-2 scroll-mt-20">
-          <span :for={editor <- @play.editors} class="text-xs text-base-content/50">
+          <span :for={editor <- @play.editors} class="text-xs text-base-content/70">
             {editor.person_name}
-            <span class="text-base-content/35">({editor.role})</span>
+            <span class="text-base-content/70">({editor.role})</span>
           </span>
         </div>
 
-        <p :if={@play.verse_count} class="mt-2 text-xs text-base-content/50">
+        <p :if={@play.verse_count} class="mt-2 text-xs text-base-content/70">
           {if @play.is_verse, do: "#{@play.verse_count} verses", else: "Prose"}
         </p>
       </header>
@@ -109,13 +109,13 @@
         </button>
         <button
           type="button"
-          class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer border-transparent text-base-content/50 hover:text-primary/70"
+          class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer border-transparent text-base-content/70 hover:text-primary/70"
         >
           Characters
         </button>
         <button
           type="button"
-          class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer border-transparent text-base-content/50 hover:text-primary/70"
+          class="px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-colors cursor-pointer border-transparent text-base-content/70 hover:text-primary/70"
         >
           Statistics
         </button>
@@ -143,24 +143,24 @@
             <div>
               <p class="font-semibold text-base-content">FINEA</p>
               <p class="text-base-content/80">
-                <span class="text-base-content/40 font-mono text-xs">1</span>
+                <span class="text-base-content/70 font-mono text-xs">1</span>
                 Si el saber no me da vida,
               </p>
               <p class="text-base-content/80">
-                <span class="text-base-content/40 font-mono text-xs">2</span>
+                <span class="text-base-content/70 font-mono text-xs">2</span>
                 ¿por qué me lo dais, señores?
               </p>
             </div>
 
-            <div class="italic text-base-content/60">
-              <span class="text-base-content/40 font-mono text-xs">[SD]</span>
+            <div class="italic text-base-content/70">
+              <span class="text-base-content/70 font-mono text-xs">[SD]</span>
               (Sale Nise con papeles.)
             </div>
 
             <div>
               <p class="font-semibold text-base-content">NISE</p>
               <p class="text-base-content/80">
-                <span class="text-base-content/40 font-mono text-xs">3</span>
+                <span class="text-base-content/70 font-mono text-xs">3</span>
                 Llegad, que el tiempo se pasa.
               </p>
             </div>
@@ -181,7 +181,7 @@
             class="flex items-center gap-3 p-3 bg-base-100/60 border border-base-300 rounded-box"
           >
             <span class="font-semibold text-base-content">{char.name}</span>
-            <span :if={char.description} class="text-sm text-base-content/50">
+            <span :if={char.description} class="text-sm text-base-content/70">
               {char.description}
             </span>
           </div>
