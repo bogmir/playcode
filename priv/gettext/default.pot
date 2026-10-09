@@ -4376,3 +4376,13 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "Stage direction in the text: <stage type=\"delivery\">…</stage>"
 msgstr ""
+
+#: lib/playcode_web/components/play_text.ex:342
+#, elixir-autogen, elixir-format
+msgid "Note type"
+msgstr ""
+
+#: lib/playcode_web/live/play_show_live.ex:515
+#, elixir-autogen, elixir-format
+msgid "line %{n}"
+msgstr ""

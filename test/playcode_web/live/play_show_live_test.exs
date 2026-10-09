@@ -136,6 +136,121 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert doc |> LazyHTML.text() |> String.split("Forma arcaica.") |> length() == 2
   end
 
+  describe "the Notes view" do
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <div2 type="escena" n="1"><head>Escena 1</head>
+              <sp><speaker>ANA<note n="1" type="editor"><p>La dama.</p></note></speaker>
+                <lg><l n="12">Nous voyent<note n="2" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l></lg>
+                <lg><l n="13">Ni un ratón se ha movido.<note n="3" type="traductor"><p>De soldado.</p></note></l></lg>
+              </sp>
+            </div2>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      %{view: view}
+    end
+
+    defp open_notes(view),
+      do: view |> element("#play-sections-panel button", t("Notes")) |> render_click()
+
+    defp texts(doc, selector),
+      do: doc |> LazyHTML.query(selector) |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
+
+    defp listed(html) do
+      html
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("#play-tab-notes li")
+      |> Enum.map(&(&1 |> LazyHTML.text() |> String.replace(~r/\s+/u, " ") |> String.trim()))
+    end
+
+    test "lists every note: number, type, glossed word, where it is, and its text", %{
+      view: view
+    } do
+      html = open_notes(view)
+      doc = LazyHTML.from_fragment(html)
+
+      assert doc |> LazyHTML.query("#play-tab-notes li") |> LazyHTML.attribute("value") ==
+               ["1", "2", "3"]
+
+      # Each part by itself: LiveViewTest drops the spaces between tags.
+      parts = fn selector -> texts(doc, "#play-tab-notes li " <> selector) end
+
+      assert parts.("b") ==
+               List.duplicate(t("Editor's note"), 1) ++ List.duplicate(t("Translator's note"), 2)
+
+      assert parts.("i") == ["ANA", "voyent", "movido"]
+
+      assert parts.("button") == [
+               "Acto I, Escena 1",
+               "Acto I, Escena 1, #{t("line %{n}", n: 12)}",
+               "Acto I, Escena 1, #{t("line %{n}", n: 13)}"
+             ]
+
+      assert parts.("p + p") == ["La dama.", "Forma arcaica.", "Dos sílabas.", "De soldado."]
+    end
+
+    test "filters by type", %{view: view} do
+      open_notes(view)
+
+      html =
+        view
+        |> element("#play-tab-notes button", t("Translator's note"))
+        |> render_click()
+
+      assert [voyent, movido] = listed(html)
+      assert voyent =~ "voyent"
+      assert movido =~ "movido"
+
+      html = view |> element("#play-tab-notes button", t("All")) |> render_click()
+      assert length(listed(html)) == 3
+    end
+
+    test "takes the reader back to the note's word in the text", %{view: view} do
+      open_notes(view)
+
+      html =
+        view
+        |> element(
+          "#play-tab-notes li:nth-child(2) button",
+          "Acto I, Escena 1, #{t("line %{n}", n: 12)}"
+        )
+        |> render_click()
+
+      assert_push_event(view, "scroll-to", %{id: "nref-" <> _ = id})
+      assert html |> LazyHTML.from_fragment() |> LazyHTML.query("#play-tab-text") |> Enum.any?()
+
+      assert html |> LazyHTML.from_fragment() |> LazyHTML.query("#" <> id) |> LazyHTML.text() ==
+               "2"
+    end
+
+    test "ignores a note id that is not the play's", %{view: view} do
+      open_notes(view)
+      render_click(view, "show_note", %{"id" => Ecto.UUID.generate()})
+
+      refute_push_event(view, "scroll-to", _)
+      assert has_element?(view, "#play-tab-notes")
+    end
+  end
+
+  test "a play without notes has no Notes view", %{conn: conn} do
+    play =
+      tei(body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>))
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+    refute has_element?(view, "#play-sections-panel button", t("Notes"))
+  end
+
   describe "a note's number, wherever its word is" do
     # One note in each place the page draws text: an act heading, a stage direction, a
     # scene heading, a speaker, a verse line, a prose paragraph and a trailer.
