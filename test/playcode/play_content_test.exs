@@ -242,5 +242,28 @@ defmodule Playcode.PlayContentTest do
       assert %{content: [^message]} = errors_on(changeset)
       assert PlayContent.get_element!(element.id).content == "Allez"
     end
+
+    test "is accepted in a verse line and a paragraph only", %{attrs: attrs} do
+      message = "has a stage marker that is not well formed"
+      content = "<stage>(Vase)</stage> Allez"
+
+      assert {:ok, _} = PlayContent.create_element(%{attrs.(content) | type: "prose"})
+
+      # A stage direction or a trailer is a stage already: a marker in it would be
+      # counted twice and written back as <stage><stage>…</stage></stage>.
+      for type <- ~w(stage_direction trailer) do
+        assert {:error, changeset} = PlayContent.create_element(%{attrs.(content) | type: type})
+        assert %{content: [^message]} = errors_on(changeset), type
+      end
+
+      # Turning a line that holds a marker into a stage direction is refused too.
+      {:ok, element} = PlayContent.create_element(attrs.(content))
+
+      assert {:error, changeset} =
+               PlayContent.update_element(element, %{"type" => "stage_direction"})
+
+      assert %{content: [^message]} = errors_on(changeset)
+      assert PlayContent.get_element!(element.id).type == "verse_line"
+    end
   end
 end

@@ -57,6 +57,34 @@ defmodule Playcode.StatisticsTest do
     assert data["words"] == 3
   end
 
+  # `Metrics.words/1` is pure and runs once per line, so it has a fast path for a line with
+  # no stage; the import route would need a whole play to compare the two. A text with a
+  # stage goes through the full reading, so adding a stage of words that are not counted
+  # is the way to bypass the fast path and get the same answer.
+  test "a line counts the same words whether or not it holds a stage" do
+    alias Playcode.Statistics.Metrics
+
+    for text <- [
+          "Dulce sueño mío",
+          "Dulce <<sueño>> mío",
+          "<<Dulce>> sueño <<mío>>",
+          "Dulce <<sueño>>mío",
+          "<<a>>b <<c>>",
+          "Dulce &lt;&lt;sueño&gt;&gt; mío",
+          "",
+          "!?"
+        ] do
+      assert Metrics.words(text) == Metrics.words(text <> "<stage>(bajo y suave)</stage>"),
+             inspect(text)
+    end
+
+    assert Metrics.words("Dulce <<sueño>> mío") == 3
+    # Touching italics are one word, as they are said.
+    assert Metrics.words("<<a>>b c") == 2
+    assert Metrics.words("Dulce <stage>(bajo)</stage> sueño") == 2
+    assert Metrics.words(nil) == 0
+  end
+
   test "a row cached by an older version is recomputed on read" do
     %{play: play} = TestFixtures.play_with_structure_fixture()
     stat = Statistics.get_statistics(play.id)

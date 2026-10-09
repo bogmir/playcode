@@ -98,16 +98,23 @@ defmodule Playcode.PlayContent.Element do
   end
 
   # A marker that is not closed, or is nested, would print as literal tags on every page
-  # and could not be written back as <stage>.
+  # and could not be written back as <stage>. Only a verse line or a paragraph may hold
+  # one: a stage direction or a trailer is a stage already, so a marker in it would be
+  # counted twice and exported as <stage><stage>…</stage></stage>.
   defp validate_stage_markers(changeset) do
-    case get_change(changeset, :content) do
-      nil ->
-        changeset
+    if changed?(changeset, :content) or changed?(changeset, :type) do
+      content = get_field(changeset, :content)
 
-      content ->
-        if Playcode.PlayContent.InlineMarkup.well_formed?(content),
-          do: changeset,
-          else: add_error(changeset, :content, "has a stage marker that is not well formed")
+      sound? =
+        if get_field(changeset, :type) in ~w(verse_line prose),
+          do: Playcode.PlayContent.InlineMarkup.well_formed?(content),
+          else: not String.contains?(content || "", ["<stage", "</stage>"])
+
+      if sound?,
+        do: changeset,
+        else: add_error(changeset, :content, "has a stage marker that is not well formed")
+    else
+      changeset
     end
   end
 end

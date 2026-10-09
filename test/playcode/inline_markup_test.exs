@@ -137,5 +137,37 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
         refute InlineMarkup.well_formed?(text), inspect(text)
       end
     end
+
+    test "refuses an empty stage, which has no words to show" do
+      refute InlineMarkup.well_formed?("<stage></stage>x")
+      refute InlineMarkup.well_formed?(~s|<stage type="exit"></stage>|)
+    end
+  end
+
+  describe "junk text" do
+    # A researcher can paste anything into the editor: a run of stages that never close
+    # must cost time in proportion to its length, not its square (32 KB took 1.7 s).
+    test "a long run of unclosed stages is read in well under a second" do
+      junk = String.duplicate("<stage>a", 5_000)
+
+      for {name, fun} <- [
+            well_formed?: &InlineMarkup.well_formed?/1,
+            parts: &InlineMarkup.parts/1,
+            stage_count: &InlineMarkup.stage_count/1
+          ] do
+        {microseconds, _} = :timer.tc(fn -> fun.(junk) end)
+        assert microseconds < 500_000, "#{name} took #{div(microseconds, 1000)} ms"
+      end
+
+      refute InlineMarkup.well_formed?(junk)
+    end
+
+    test "a very long stage is still one stage" do
+      words = String.duplicate("a ", 100_000)
+
+      assert [%{text: ^words, stage: %{run: 0}}] = InlineMarkup.parts("<stage>#{words}</stage>")
+      assert InlineMarkup.stage_count("<stage>#{words}</stage>") == 1
+      assert InlineMarkup.well_formed?("<stage>#{words}</stage>")
+    end
   end
 end

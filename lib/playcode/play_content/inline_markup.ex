@@ -13,7 +13,10 @@ defmodule Playcode.PlayContent.InlineMarkup do
   """
 
   # The type and the text of one stage. Groups: type (empty when there is none), text.
-  @stage ~r/<stage(?: type="([A-Za-z0-9_]+)")?>(.*?)<\/stage>/s
+  # The text stops at the next stage tag, so a stage is flat, an empty one is no stage,
+  # and a run of stages that never close costs time in proportion to its length (a
+  # lazy `.*?` read to the end of the text from every `<stage>`).
+  @stage ~r/<stage(?: type="([A-Za-z0-9_]+)")?>((?:(?!<\/?stage[\s>]).)+?)<\/stage>/s
 
   @doc """
   Splits `text` into `%{text: binary, italic: boolean, stage: stage}` parts, in order.
@@ -25,6 +28,12 @@ defmodule Playcode.PlayContent.InlineMarkup do
   def parts(text) do
     text = text |> String.replace("&lt;&lt;", "<<") |> String.replace("&gt;&gt;", ">>")
 
+    if String.contains?(text, "<stage"),
+      do: Enum.reject(with_stages(text), &(&1.text == "")),
+      else: Enum.reject(italics(text, nil), &(&1.text == ""))
+  end
+
+  defp with_stages(text) do
     {parts, _runs} =
       @stage
       |> Regex.split(text, include_captures: true)
@@ -38,7 +47,7 @@ defmodule Playcode.PlayContent.InlineMarkup do
         end
       end)
 
-    Enum.reject(parts, &(&1.text == ""))
+    parts
   end
 
   defp italics(text, stage) do

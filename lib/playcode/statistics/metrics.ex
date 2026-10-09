@@ -203,7 +203,19 @@ defmodule Playcode.Statistics.Metrics do
   inline stage direction are not spoken.
   """
   def words(nil), do: 0
-  def words(text), do: length(Regex.scan(~r/[\p{L}\p{N}]+/u, InlineMarkup.spoken(text)))
+
+  def words(text) do
+    # Most lines hold no stage, and most of those no marker at all: `spoken/1` would only
+    # drop the italics markers, so do that, or nothing, without parsing the line.
+    spoken =
+      cond do
+        String.contains?(text, "</stage>") -> InlineMarkup.spoken(text)
+        not (String.contains?(text, "<") or String.contains?(text, "&")) -> text
+        true -> String.replace(text, ["<<", ">>", "&lt;&lt;", "&gt;&gt;"], "")
+      end
+
+    length(Regex.scan(~r/[\p{L}\p{N}]+/u, spoken))
+  end
 
   @doc """
   Presence columns: the play's scenes if it has any, else its metrical passages, else
