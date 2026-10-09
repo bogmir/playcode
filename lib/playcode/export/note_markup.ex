@@ -11,7 +11,10 @@ defmodule Playcode.Export.NoteMarkup do
   alias Playcode.PlayContent.{InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
-  @doc "`text`, with `<<…>>` italics, and its `notes`, as escaped HTML."
+  @doc """
+  `text`, with `<<…>>` italics as `<em>`, each inline stage direction in a `<span class="stage">`
+  (a note's number inside it when the note falls inside the stage), and its `notes`, as escaped HTML.
+  """
   def inline(text, notes, format),
     do: text |> InlineMarkup.parts(notes) |> Enum.map_join(&part(&1, format))
 

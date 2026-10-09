@@ -100,7 +100,8 @@ wrap goes on children, never on the element being read, so a standalone `<stage>
 `inline_nodes` wraps each run of stage parts in `<stage type="…">`, with italics and notes
 nested inside it, as it nests a note inside `<emph>`. The line is built by `inline_element/3`
 as one line of mixed content, so the whitespace round trips. TEI P5 allows `<stage>` in `<l>`
-and `<p>`; the slow suite validates against the schema.
+and `<p>`; the slow suite validates against the schema (`tei_validator_test.exs`, with
+EMOTHE0746, whose lines hold 54 of them).
 
 ## Renderers
 
@@ -150,9 +151,11 @@ Generate rebuilds the index.
 
 A deploy changes nothing in the database: a play renders as today until its TEI file is
 re-imported. Dev: `mix playcode.import.tei --force`, run only with the project owner's go-ahead.
-Production: re-upload the TEI files at `/admin/plays/import`. If the in-text notes re-upload has
-not happened yet, it covers both, once, before the first Generate. A re-import replaces the
-play's elements, divisions and notes: its hand edits are lost.
+Production: re-upload the TEI files at `/admin/plays/import`. Re-import every TEI file whose
+`<body>` holds a `<note>`, or a `<stage>` inside an `<l>`, `<p>` or `<seg>` (20 and 49 plays in the
+fixture corpus; simplest: every file); one re-upload covers both the in-text notes and the
+inline stages, once, before the first Generate. A re-import replaces the play's elements,
+divisions and notes: its hand edits are lost.
 
 ## Tests
 

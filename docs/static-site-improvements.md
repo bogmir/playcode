@@ -34,7 +34,8 @@ flattening a child too. The project fixed the notes only. Done (2026-10-09), see
 ## 2. Italics show as literal `<<word>>` in the other exporters
 
 Done for `Export.Html`, `Export.Pdf` and `Export.Epub` with the notes (`Export.NoteMarkup`), and for
-`Export.CompareHtml` with the inline stage directions (2026-10-09).
+`Export.CompareHtml` with the inline stage directions (2026-10-09): done for the lines; the comparison
+page's speaker labels and headings still print `<<…>>`.
 
 **Problem**: the importer stores `<emph>` / `<hi rend="italic">` as `<<…>>` inside the text.
 Only the live page (`PlaycodeWeb.Components.PlayText`, private `split_inline_markup/1`) turns it back into `<em>`.

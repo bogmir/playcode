@@ -225,8 +225,10 @@ defmodule Playcode.Export.Html do
         .division { margin-bottom: 2rem; }
         .child-division { margin-bottom: 1.5rem; }
 
-        /* In-text notes: a number after the word, the act's notes listed after it */
+        /* A stage direction inside a line */
         .stage { font-style: italic; color: #555; }
+
+        /* In-text notes: a number after the word, the act's notes listed after it */
         .nref { font-size: 0.7em; line-height: 0; }
         .nref a { text-decoration: none; }
         .notes { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.9rem; }
