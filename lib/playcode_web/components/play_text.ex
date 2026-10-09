@@ -300,9 +300,12 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp part_html(%{stage: %{}} = part, true),
     do: [~s(<span class="inline-stage">), part_html(%{part | stage: nil}, true), "</span>"]
 
+  # Its id is where the Notes view takes the reader back to.
   defp part_html(%{note: note}, _show_stage) do
     [
-      ~s(<button type="button" class="nref" popovertarget="note-),
+      ~s(<button type="button" id="nref-),
+      escape(note.id),
+      ~s(" class="nref" popovertarget="note-),
       escape(note.id),
       ~s(" aria-label="),
       escape(note_label(note)),
@@ -318,6 +321,63 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   defp note_label(note), do: "#{PlayLabels.note_type_label(note.type)} #{note.number}"
+
+  attr :notes, :list, required: true, doc: "`%{note, glossed, where}`, in reading order"
+  attr :type, :string, default: nil, doc: "the one type shown, or nil for all"
+
+  @doc """
+  The play's notes as a list: each one's type, the word it glosses, where it is (a button
+  back to its number in the text) and its paragraphs. Buttons filter by type when the play
+  uses two or more.
+  """
+  def notes_list(assigns) do
+    types = assigns.notes |> Enum.map(&note_key(&1.note)) |> Enum.uniq()
+    shown = Enum.filter(assigns.notes, &(assigns.type in [nil, note_key(&1.note)]))
+    assigns = assign(assigns, types: types, shown: shown)
+
+    ~H"""
+    <div
+      :if={length(@types) > 1}
+      role="group"
+      aria-label={gettext("Note type")}
+      class="flex flex-wrap gap-2 mb-6"
+    >
+      <button
+        :for={{key, label} <- [{"", gettext("All")} | Enum.map(@types, &{&1, type_label(&1)})]}
+        type="button"
+        phx-click="filter_notes"
+        phx-value-type={key}
+        aria-pressed={to_string((@type || "") == key)}
+        class={["btn btn-xs", if((@type || "") == key, do: "btn-primary", else: "btn-ghost")]}
+      >
+        {label}
+      </button>
+    </div>
+    <ol class="space-y-5 list-decimal pl-6 text-sm">
+      <li :for={entry <- @shown} id={"play-note-#{entry.note.id}"} value={entry.note.number}>
+        <p class="flex flex-wrap items-baseline gap-x-2 text-base-content/60">
+          <b class="text-base-content">{PlayLabels.note_type_label(entry.note.type)}</b>
+          <i :if={entry.glossed} class="text-base-content font-serif">{entry.glossed}</i>
+          <button
+            type="button"
+            phx-click="show_note"
+            phx-value-id={entry.note.id}
+            class="link link-hover text-primary"
+          >
+            {entry.where}
+          </button>
+        </p>
+        <p :for={paragraph <- Note.paragraphs(entry.note)} class="mt-1">
+          <.inline_content text={paragraph} />
+        </p>
+      </li>
+    </ol>
+    """
+  end
+
+  defp note_key(note), do: PlayLabels.note_type_key(note.type)
+  defp type_label("other"), do: PlayLabels.note_type_label(nil)
+  defp type_label(type), do: PlayLabels.note_type_label(type)
 
   attr :notes, :list, required: true
 

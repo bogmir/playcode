@@ -1,6 +1,6 @@
 defmodule PlaycodeWeb.PlayShowLive do
   @moduledoc """
-  /plays/:code: a play's text, characters and statistics, with its metadata, places and
+  /plays/:code: a play's text, statistics and notes, with its metadata, places and
   bibliography. A draft is a 404 except for staff, who reach it from the admin pages.
   """
 
@@ -15,6 +15,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.{Division, Note}
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Statistics
@@ -43,6 +44,8 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:characters, characters)
      |> assign(:statistic, statistic)
      |> assign(:bibliography, bibliography)
+     |> assign(:notes, notes(divisions))
+     |> assign(:note_type, nil)
      |> assign(:metadata_sections, metadata_sections)
      |> assign(:play_sections, play_sections)
      |> assign(:gazetteer, Places.gazetteer())
@@ -83,6 +86,22 @@ defmodule PlaycodeWeb.PlayShowLive do
 
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
     {:noreply, assign(socket, :active_tab, String.to_existing_atom(tab))}
+  end
+
+  def handle_event("filter_notes", %{"type" => type}, socket) do
+    {:noreply, assign(socket, :note_type, if(type == "", do: nil, else: type))}
+  end
+
+  # The note's id came from the browser: only one of this play's notes is scrolled to.
+  def handle_event("show_note", %{"id" => id}, socket) do
+    if Enum.any?(socket.assigns.notes, &(&1.note.id == id)) do
+      {:noreply,
+       socket
+       |> assign(:active_tab, :text)
+       |> push_event("scroll-to", %{id: "nref-" <> id})}
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("toggle_sidebar", _, socket) do
@@ -128,10 +147,9 @@ defmodule PlaycodeWeb.PlayShowLive do
                 <nav class="mt-1 space-y-px">
                   <button
                     :for={
-                      {tab_key, tab_label} <- [
-                        {:text, gettext("Text")},
-                        {:statistics, gettext("Statistics")}
-                      ]
+                      {tab_key, tab_label} <-
+                        [{:text, gettext("Text")}, {:statistics, gettext("Statistics")}] ++
+                          if(@notes != [], do: [{:notes, gettext("Notes")}], else: [])
                     }
                     phx-click="switch_tab"
                     phx-value-tab={tab_key}
@@ -472,10 +490,35 @@ defmodule PlaycodeWeb.PlayShowLive do
           <div :if={@active_tab == :statistics} id="play-tab-statistics">
             <.stats_panel statistic={@statistic} play={@play} />
           </div>
+
+          <%!-- Notes tab --%>
+          <div :if={@active_tab == :notes} id="play-tab-notes" class="max-w-2xl mx-auto">
+            <.notes_list notes={@notes} type={@note_type} />
+          </div>
         </div>
       </div>
     </div>
     """
+  end
+
+  # Each note with the word it glosses and where it is: the division's and the scene's
+  # titles, and the line's number when it has one.
+  defp notes(divisions) do
+    for %{note: note, anchor: anchor, division: division, scene: scene} <-
+          Note.with_anchors(divisions) do
+      line = if match?(%Division{}, anchor), do: nil, else: anchor.line_number
+
+      where =
+        [
+          division.title || String.capitalize(division.type),
+          scene && scene.title,
+          line && gettext("line %{n}", n: line)
+        ]
+        |> Enum.reject(&is_nil/1)
+        |> Enum.join(", ")
+
+      %{note: note, glossed: Note.glossed(note, PlayContent.anchor_text(anchor)), where: where}
+    end
   end
 
   defp build_sections_navigation(play, divisions, bibliography) do

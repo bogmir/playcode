@@ -69,6 +69,18 @@
     sort.addEventListener('change', reorder);
   }
 
+  // The Notes page: show one type of note, or all.
+  function initNotes() {
+    var filter = document.querySelector('[data-note-filter]');
+    if (!filter) return;
+    var notes = document.querySelectorAll('[data-notes] > li');
+    filter.hidden = false;
+    filter.addEventListener('change', function (event) {
+      var type = event.target.value;
+      notes.forEach(function (note) { note.hidden = type !== '' && note.dataset.type !== type; });
+    });
+  }
+
   function remembered(key, value) {
     try {
       if (value === undefined) return root.localStorage.getItem('reader.' + key);
@@ -151,6 +163,7 @@
       document.querySelectorAll('details.rail').forEach(function (d) { d.open = false; });
     }
     initCatalogue();
+    initNotes();
     initTools();
     initLinks();
   });

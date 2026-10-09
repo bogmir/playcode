@@ -399,12 +399,136 @@ defmodule Playcode.Export.StaticSitePlayTest do
       end
     end
 
+    test "a note's search result lands on the first page that shows its marker", %{
+      play: play,
+      dir: dir
+    } do
+      {"lines", _, %{"lines" => notes}} = load_js!(dir, "search/lines/#{play.code}/n0.js")
+
+      # The act heading's note is printed again on every scene page; its result goes to
+      # the act's own page. A scene heading's cites the scene.
+      assert Enum.map(notes, &Enum.take(&1, 3)) == [
+               ["act-1", "nref-1", "Acto I"],
+               ["act-1", "nref-2", "I"],
+               ["act-1-s1", "nref-3", "Acto I, Escena 1"],
+               ["act-1-s1", "nref-4", "I"],
+               ["act-1-s1", "nref-5", "I"],
+               ["act-1-s2", "nref-6", "I"]
+             ]
+
+      for [slug, anchor | _] <- notes do
+        assert anchor in ids(page(dir, play, slug <> ".html"))
+      end
+    end
+
     test "a search result lands on the scene's page", %{play: play, dir: dir} do
       {"lines", _, %{"lines" => lines}} = load_js!(dir, "search/lines/#{play.code}/0.js")
 
       assert ["act-1-s2" | _] =
                Enum.find(lines, &String.ends_with?(Enum.at(&1, 5), "palabra dos"))
     end
+  end
+
+  describe "the Notes page" do
+    setup do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I<note n="1" type="latinismo"><p>Del encabezado.</p></note></head>
+          <sp><speaker>ANA<note n="2" type="editor"><p>La dama.</p></note></speaker>
+            <l n="1">Nous voyent<note n="3" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l>
+            <l n="2">Ni un ratón se ha movido.<note n="4" type="traductor"><p>Expresión de soldado.</p></note></l>
+          </sp>
+        </div1>
+        """)
+
+      %{play: play, dir: dir, notes: page(dir, play, "notes.html")}
+    end
+
+    test "lists every note: number, type, glossed word, where it is, and its text", %{
+      notes: notes
+    } do
+      items = LazyHTML.query(notes, "ol[data-notes] > li")
+
+      assert LazyHTML.attribute(items, "value") == ["1", "2", "3", "4"]
+
+      # A type with no label of its own (latinismo here; or none) is a plain Note.
+      assert LazyHTML.attribute(items, "data-type") == [
+               "other",
+               "editor",
+               "traductor",
+               "traductor"
+             ]
+
+      # The type, the word glossed (the term, else the word before the note), where.
+      assert texts(notes, "ol[data-notes] > li > p:first-child") == [
+               "Note I Acto I",
+               "Editor's note ANA I, 1",
+               "Translator's note voyent I, 1",
+               "Translator's note movido I, 2"
+             ]
+
+      assert texts(notes, "ol[data-notes] > li > p + p") == [
+               "Del encabezado.",
+               "La dama.",
+               "Forma arcaica.",
+               "Dos sílabas.",
+               "Expresión de soldado."
+             ]
+    end
+
+    test "links each note to its marker on the page that shows it", %{
+      play: play,
+      dir: dir,
+      notes: notes
+    } do
+      links = notes |> LazyHTML.query("ol[data-notes] a") |> LazyHTML.attribute("href")
+
+      assert links == Enum.map(1..4, &"act-1.html#nref-#{&1}")
+
+      for link <- links do
+        [file, id] = String.split(link, "#")
+        assert id in ids(page(dir, play, file))
+      end
+    end
+
+    test "offers a filter by type, shown by site.js, when there are two types or more", %{
+      notes: notes
+    } do
+      [filter] = notes |> LazyHTML.query("fieldset[data-note-filter]") |> Enum.to_list()
+
+      assert LazyHTML.attribute(filter, "hidden") == [""]
+
+      assert filter |> LazyHTML.query("input") |> LazyHTML.attribute("value") ==
+               ["", "other", "editor", "traductor"]
+
+      assert texts(filter, "label") == ["All", "Note", "Editor's note", "Translator's note"]
+    end
+
+    test "is linked from every page's contents", %{play: play, dir: dir} do
+      for file <- ["index.html", "act-1.html", "statistics.html", "notes.html"] do
+        rail = page(dir, play, file) |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+        assert "notes.html" in LazyHTML.attribute(rail, "href"), file
+      end
+
+      current = page(dir, play, "notes.html") |> LazyHTML.query(~s(a[aria-current="page"]))
+      assert LazyHTML.attribute(current, "href") == ["notes.html"]
+    end
+  end
+
+  test "a play with one type of note has no filter; a play without notes, no Notes page" do
+    {one, one_dir} =
+      publish!("""
+      <div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno<note n="1" type="editor"><p>A.</p></note> dos<note n="2" type="editor"><p>B.</p></note></l></sp></div1>
+      """)
+
+    assert one_dir |> page(one, "notes.html") |> LazyHTML.query("fieldset") |> Enum.empty?()
+
+    {none, none_dir} =
+      publish!(~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>))
+
+    refute File.exists?(Path.join([none_dir, "plays", none.code, "notes.html"]))
+    rail = page(none_dir, none, "index.html") |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+    refute "notes.html" in LazyHTML.attribute(rail, "href")
   end
 
   test "the title page lists the bibliography by kind, linked from the contents, without researchers' notes" do

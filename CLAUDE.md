@@ -148,7 +148,7 @@ lib/
     ├── play_labels.ex                # Translated play metadata vocabularies (historical_time, …)
     ├── live/
     │   ├── play_catalogue_live.ex    # Public: /plays - searchable catalogue
-    │   ├── play_show_live.ex         # Public: /plays/:code - play text, characters, stats
+    │   ├── play_show_live.ex         # Public: /plays/:code - play text, stats, notes
     │   ├── current_path_hook.ex      # Assigns :current_path for sidebar highlighting
     │   ├── user_accept_invite_live.ex # /users/accept-invite/:token
     │   ├── user_login_live.ex        # /users/log-in
@@ -258,7 +258,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 ### Public
 - `GET /` - Home page
 - `GET /plays` - Public play catalogue with search
-- `GET /plays/:code` - Public play presentation (text, characters, statistics tabs); a draft is a 404 except for staff
+- `GET /plays/:code` - Public play presentation (text, statistics and, for a play with notes, notes views); a draft is a 404 except for staff
 
 ### Authentication
 - `GET /users/accept-invite/:token` - Set a password on an invited account, then log in
@@ -321,8 +321,8 @@ Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No thi
 - `StaticSite.Edition` — one play prepared once: pages (`act-N`, or the division type), line anchors (`#l<n>`; `#l<act>-<scene>-<n>` when numbering restarts per scene; `#p<n>` otherwise), citation refs, split-verse ghost text, passage starts
 - A division with more than 120,000 bytes of text and two or more scenes with text also gets a page per scene (`act-1-s3.html`); `generate/1` builds plays concurrently (`Task.async_stream`, at most the number of cores or the pool size minus two, whichever is smaller)
 - `StaticSite.Pages` (`pages/*.html.heex`) and `StaticSite.Components` — HEEx rendered to strings with `Phoenix.HTML.Safe.to_iodata/1`; dev's HEEx annotations are stripped
-- `StaticSite.Search` — the normaliser (must agree with `EMOTHE.normalise` in `site.js`: `test/fixtures/search_normalisation.json` runs against both) and the index: `search/plays.js`, `search/index/<shard>.js` (per play `[play, n, deltas…]`, `delta = (line − previous) × 2 + stage flag`) and `search/lines/<CODE>/<k>.js` (100 lines each), all calling `EMOTHE.search.load`. `write_index/3` carries every play's postings over from the shards on disk, so adding or removing a play reloads no other; an index older than chunked lines is rebuilt in full. It writes one shard at a time, reading each old one only in its turn, and `write_play/2` hands back a play's postings as one string per shard (`"sueño 2,6,9"` lines), so a build never holds more than the index's own size: as tuples and lists, the 371 plays' 6.3 million postings took 455 MB and their index peaked at 1.7 GB
-- In-text notes: a `<button popovertarget>` after the word, each page's notes as a `doc-endnotes` list of `popover` items (endnotes in print). `Playcode.PlayContent.Note` is in the fingerprint
+- `StaticSite.Search` — the normaliser (must agree with `EMOTHE.normalise` in `site.js`: `test/fixtures/search_normalisation.json` runs against both) and the index: `search/plays.js`, `search/index/<shard>.js` (per play `[play, n, deltas…]`, `delta = (line − previous) × 2 + stage flag`) and `search/lines/<CODE>/<k>.js` (100 lines each), all calling `EMOTHE.search.load`. A play's notes are entries of their own after its lines, note `i` numbered `Search.note_base() + i` (1,000,000, the same in `search.js`, both pinned by `search_normalisation.json`), so the search page tells a note hit, and counts the Text facet's Notes, from the shard alone; their rows are in `search/lines/<CODE>/n<k>.js`, kind `"n"`, linking to the note's marker on the first page that shows it. `write_index/3` carries every play's postings over from the shards on disk, so adding or removing a play reloads no other; an index older than chunked lines is rebuilt in full. It writes one shard at a time, reading each old one only in its turn, and `write_play/2` hands back a play's postings as one string per shard (`"sueño 2,6,9"` lines), so a build never holds more than the index's own size: as tuples and lists, the 371 plays' 6.3 million postings took 455 MB and their index peaked at 1.7 GB
+- In-text notes: a `<button id="nref-<n>" popovertarget>` after the word, each page's notes as a `doc-endnotes` list of `popover` items (endnotes in print). `Playcode.PlayContent.Note` is in the fingerprint. `Edition.notes` decides once, for the search index and `notes.html`, each note's first page, citation, speakers and glossed word (`Note.glossed/2`: the `<term>`, else the word before the note). `notes.html` lists them, filterable by type (`PlayLabels.note_type_key/1`: a type with no label is filed under one plain Note) with a few lines of `site.js`
 - `Playcode.Statistics.Metrics` — metrical passages, characters, presence, divisions; cached by `Playcode.Statistics` (bump `@version` when what it stores changes)
 - `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
 - `StaticSite.Deployer` — pushes `_site/` to the `gh-pages` branch of the repository in `:static_site_deploy` (the GitHub token reaches git as an HTTP header for that repository only, through `GIT_CONFIG_*` environment variables, so it is never in a command line or URL, and is scrubbed from errors), then, when a publish URL is set, POSTs to it with the key in `X-Deploy-Token` and answers the published site's address. See *Publishing on emothe.uv.es* below
@@ -338,7 +338,7 @@ _site/
 ├── index.html  search.html  about.html
 ├── build.json                 the fingerprint and version it was built with, and each play's content_version
 ├── assets/                    style.css, site.js, search.js, fonts/
-├── search/                    plays.js, index/<shard>.js, lines/<CODE>/<k>.js
+├── search/                    plays.js, index/<shard>.js, lines/<CODE>/<k>.js and n<k>.js (its notes)
 └── plays/
     ├── <CODE>.html            redirect stub to the old address
     └── <CODE>/
@@ -346,6 +346,7 @@ _site/
         ├── act-1.html …       one per act (act-1-s3.html … per scene for a very long act); prologue.html etc.
         ├── text.html          full text
         ├── statistics.html
+        ├── notes.html         every note, filterable by type; only for a play with notes
         └── <CODE>.xml         TEI-XML
 ```
 
@@ -580,6 +581,7 @@ Each is pinned by a test as it behaves today, not endorsed.
   - `search.js` classifies a line by the first query word's flag, so a line holding a stage-only word and another queried word counts as a stage hit or as spoken by word order.
   - `Metrics.words/1` now counts a letter touching an italic boundary (`<<a>>b`) as one word, with a stage in the line or not, where it counted two; a few lines in the tracked fixtures move.
   - The Word importer produces no inline stages and is not touched.
+- [x] **Notes in search and a Notes page** - a note's text is found by the static site's search (Text facet value "Notes", counted under All), and a play with notes has `notes.html` on the static site and a Notes view on `/plays/:code`: number, type, glossed word, where it is (back to its marker: `#nref-<n>` on the site, `show_note` and a `scroll-to` event on the live page) and text, filterable by type. Spec: `docs/superpowers/specs/2026-10-09-notes-search-and-page-design.md`
 - [x] **In-text `<note>` is pasted into the line** - now stored in `play_notes` and written back by the TEI export, speaker labels included (52 speeches in 23 plays of the dev corpus carried a note in their label, "BELISA BELISA El nombre de Belisa…"); shown as numbered pop-ups on the static site and `/plays/:code`, as endnotes in the downloads, edited in the content editor. Spec: `docs/superpowers/specs/2026-10-08-in-text-notes-design.md`. One limit remains: Hamlet's 16 notes nested inside another note's `<p>` are still pasted into the outer note's body, and the real-fixture checks do not see them
 - [x] **Activity-log order was unstable within one second** - `activity_logs.inserted_at` is now microsecond precision (migration `20260926120000`), so a burst of entries lists newest first; the `to:` date filter ends at `23:59:59.999999`
 - [x] **`ExportSiteLive` hardcoded `_site`** and a shared temporary zip path - the output directory now comes from `StaticSite.output_dir/0` (`:static_site_dir`, a temporary directory under test), so `export_site_live_test.exs` drives Generate. The zip still goes to one shared temporary path, so that test file is `async: false`
@@ -630,6 +632,7 @@ Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode
 Questions only the stakeholders can answer, recorded in `docs/static-site-improvements.md`, "Awaiting the project":
 - [ ] **Adaptations are labelled "translation"** - `Components.kind/1` calls every `relationship_type` a translation, `adaptacion` and `refundicion` included
 - [ ] **Verse-form families** - the romance / Spanish stanzas / Italianate grouping in `Metrics` `@families` needs the philologists' confirmation
+- [ ] **Labels for the other note types** - 11 of the dev corpus's 17 note types (`falta_tipo`, `latinismo`, `toponimo_accion`, …) have no label, read "Note", and share one option in the Notes pages' type filter
 
 ### Low Priority / Future
 - [ ] **"Review character in text" UI** — admin page to review and assign/reassign `character_id` (the `who` attribute) on speeches across an entire play. Researchers need to: (1) define character identifiers (`xml_id`, the "acrónimo" e.g. `don_diego`) in the dramatis personae, (2) associate each `<speaker>` with a character to generate `<sp who="#don_diego">`, and (3) bulk-review all speech-character associations throughout the play. Character CRUD and import-time `who` resolution already exist; what's missing is the review/bulk-assign UI.

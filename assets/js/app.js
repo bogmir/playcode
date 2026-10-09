@@ -135,6 +135,15 @@ topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
 window.addEventListener("phx:page-loading-start", _info => topbar.show(300))
 window.addEventListener("phx:page-loading-stop", _info => topbar.hide())
 
+// The Notes view's way back to the text: the server switches to it, then names the
+// note's number to scroll to (PlaycodeWeb.PlayShowLive, "show_note").
+window.addEventListener("phx:scroll-to", ({detail}) => {
+  const target = document.getElementById(detail.id)
+  if (!target) return
+  target.scrollIntoView({block: "center"})
+  target.focus({preventScroll: true})
+})
+
 // connect if there are any LiveViews on the page
 liveSocket.connect()
 

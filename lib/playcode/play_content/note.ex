@@ -22,6 +22,9 @@ defmodule Playcode.PlayContent.Note do
 
   @types ~w(traductor editor editor_critico editor_digital autor)
 
+  # A word a note can follow: letters and digits, an apostrophe inside.
+  @word ~r/[\p{L}\p{N}'’]+/u
+
   schema "play_notes" do
     field :offset, :integer
     field :position, :integer, default: 0
@@ -54,20 +57,48 @@ defmodule Playcode.PlayContent.Note do
   order: a division's heading, its own text, then its scenes; an element's own notes (a
   speech's, on its speaker), then its children's. Note numbers follow this order.
   """
-  def reading_order(divisions) when is_list(divisions),
-    do: Enum.flat_map(divisions, &reading_order/1)
+  def reading_order(divisions), do: divisions |> with_anchors() |> Enum.map(& &1.note)
 
-  def reading_order(%Division{} = division) do
-    division.notes ++
-      Enum.flat_map(division.loaded_elements, &element_notes/1) ++
-      reading_order(loaded(division.children))
+  @doc """
+  `reading_order/1` with where each note is: `%{note, anchor, division, scene}`, `anchor`
+  the element or division it hangs on, `division` the top-level division of `divisions`
+  and `scene` its child holding the note, or nil.
+  """
+  def with_anchors(divisions) when is_list(divisions),
+    do: Enum.flat_map(divisions, &with_anchors/1)
+
+  def with_anchors(%Division{} = division), do: division_notes(division, division, nil)
+
+  defp division_notes(anchor, division, scene) do
+    at = %{division: division, scene: scene}
+
+    Enum.map(anchor.notes, &Map.merge(at, %{note: &1, anchor: anchor})) ++
+      Enum.flat_map(anchor.loaded_elements, &element_notes(&1, at)) ++
+      Enum.flat_map(loaded(anchor.children), &division_notes(&1, division, &1))
   end
 
-  defp element_notes(%Element{} = element),
-    do: element.notes ++ Enum.flat_map(loaded(element.children), &element_notes/1)
+  defp element_notes(%Element{} = element, at) do
+    Enum.map(element.notes, &Map.merge(at, %{note: &1, anchor: element})) ++
+      Enum.flat_map(loaded(element.children), &element_notes(&1, at))
+  end
 
   defp loaded(%Ecto.Association.NotLoaded{}), do: []
   defp loaded(list), do: list
+
+  @doc """
+  The word a note glosses: its `term`, or else the last word of `text` (the text it hangs
+  on, as `PlayContent.anchor_text/1` gives it) before its offset, or nil when there is none.
+  """
+  def glossed(%__MODULE__{term: term}, _text) when is_binary(term) and term != "", do: term
+
+  def glossed(%__MODULE__{offset: offset}, text) do
+    before = text |> InlineMarkup.plain() |> String.slice(0, offset)
+
+    case Regex.scan(@word, before) do
+      [] -> nil
+      words -> words |> List.last() |> hd()
+    end
+  end
 
   @doc """
   Where a note can go in `text`: after each word, as `{word, offset}`, a repeated word
@@ -77,7 +108,7 @@ defmodule Playcode.PlayContent.Note do
     plain = InlineMarkup.plain(text)
 
     {ends, _seen} =
-      ~r/[\p{L}\p{N}'’]+/u
+      @word
       |> Regex.scan(plain, return: :index)
       |> Enum.map_reduce(%{}, fn [{start, length}], seen ->
         word = binary_part(plain, start, length)

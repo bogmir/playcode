@@ -202,6 +202,8 @@ main td { padding: .3rem .5rem; border-bottom: 1px solid var(--hair-2); }
 .hit .ref { font: .75rem var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
 .hit .spk { margin: 0; }
 .hit .stage { font-style: italic; color: var(--ink-2); }
+.hit .note { font: .875rem/1.5 var(--sans); color: var(--ink-2); }
+.hit .note::before { content: "Note: "; color: var(--muted); }
 mark { background: var(--mark); color: var(--accent); font-weight: 600; padding: 0 .1em; border-radius: 2px; }
 
 /* In-text notes: the number after a glossed word opens its note, a popover. In print,
@@ -211,6 +213,14 @@ mark { background: var(--mark); color: var(--accent); font-weight: 600; padding:
 .notes [popover] { max-width: min(34rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); padding: 1rem 1.25rem; border: 1px solid var(--hair); border-radius: 6px; background: var(--raised); color: var(--ink); font: .875rem/1.55 var(--sans); }
 .notes [popover] > button { float: right; margin: -.4rem -.5rem 0 .5rem; border: 0; background: none; color: var(--muted); font-size: 1.2rem; cursor: pointer; }
 .notes [popover] p { margin: .5em 0 0; }
+.nref:target { background: var(--mark); border-radius: 2px; }
+/* A play's Notes page */
+.note-list { padding-left: 1.75rem; }
+.note-list > li { margin: 0 0 1.1rem; }
+.note-list p { margin: .25em 0 0; }
+.note-list .note-head { display: flex; flex-wrap: wrap; gap: .2rem .6rem; align-items: baseline; font: .8125rem var(--sans); color: var(--muted); }
+.note-head b { color: var(--ink); font-weight: 600; }
+.note-head i { color: var(--ink); font-family: var(--serif); font-size: 1rem; }
 
 @media (max-width: 600px) {
   :root { --gutter: 2.4rem; --margin: 0rem; }
@@ -232,4 +242,6 @@ mark { background: var(--mark); color: var(--accent); font-weight: 600; padding:
   .nref { color: inherit; }
   .notes [popover] { display: list-item; position: static; inset: auto; width: auto; height: auto; overflow: visible; margin: 0 0 .6em 1.5em; padding: 0; border: 0; max-width: none; max-height: none; background: none; }
   .notes [popover] > button { display: none; }
+  .note-filter { display: none !important; }
+  .note-list > li[hidden] { display: list-item !important; }
 }

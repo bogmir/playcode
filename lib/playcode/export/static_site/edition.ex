@@ -2,12 +2,12 @@ defmodule Playcode.Export.StaticSite.Edition do
   @moduledoc """
   One play prepared for the static site: which page each division goes on, the
   anchor and citation reference of every line, the ghost text that aligns a split
-  verse, and where each metrical passage starts. The pages and the search index both
-  read it, so a line's address is decided once.
+  verse, where each metrical passage starts, and where each note is. The pages and the
+  search index both read it, so a line's or a note's address is decided once.
   """
 
   alias Playcode.{Bibliography, Catalogue, PlayContent, Statistics}
-  alias Playcode.PlayContent.Note
+  alias Playcode.PlayContent.{Division, Note}
   alias Playcode.Statistics.Metrics
 
   defstruct [
@@ -22,7 +22,8 @@ defmodule Playcode.Export.StaticSite.Edition do
     :refs,
     :ghosts,
     :passage_starts,
-    :page_of
+    :page_of,
+    :notes
   ]
 
   @doc "Loads play `id` and everything the site derives from it."
@@ -34,6 +35,7 @@ defmodule Playcode.Export.StaticSite.Edition do
     divisions = PlayContent.load_play_content(id)
     items = Metrics.items(divisions)
     pages = pages(divisions, items)
+    refs = refs(items)
 
     %__MODULE__{
       play: play,
@@ -44,10 +46,11 @@ defmodule Playcode.Export.StaticSite.Edition do
       pages: pages,
       items: items,
       anchors: anchors(items, pages),
-      refs: refs(items),
+      refs: refs,
       ghosts: ghosts(items),
       passage_starts: passage_starts(Metrics.passages(items)),
-      page_of: page_of(pages, items)
+      page_of: page_of(pages, items),
+      notes: notes(divisions, items, pages, refs)
     }
   end
 
@@ -125,6 +128,48 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   def page_notes(%{scene: scene, division: division}),
     do: division.notes ++ Note.reading_order(scene)
+
+  # Each note once, in reading order, as the search index and the Notes page read it:
+  # the first page that lists it (a split act's heading note is on the act's own page,
+  # not on every scene page that prints the heading again), how a search result cites
+  # where it is, the speakers there, and the word it glosses. A note on no page (in a
+  # cast list) is left out.
+  defp notes(divisions, items, pages, refs) do
+    slug_of =
+      Enum.reduce(pages, %{}, fn page, acc ->
+        Enum.reduce(page_notes(page), acc, &Map.put_new(&2, &1.id, page.slug))
+      end)
+
+    title_of = Map.new(pages, &{&1.slug, &1.title})
+    item_of = Map.new(items, &{&1.element.id, &1})
+
+    first_of =
+      Enum.reduce(items, %{}, fn
+        %{speech: %{id: id}} = item, acc -> Map.put_new(acc, id, item)
+        _item, acc -> acc
+      end)
+
+    for %{note: note, anchor: anchor} = at <- Note.with_anchors(divisions),
+        slug when not is_nil(slug) <- [slug_of[note.id]] do
+      item = item_of[anchor.id] || first_of[anchor.id]
+
+      %{
+        note: note,
+        slug: slug,
+        ref: note_ref(anchor, at, item, refs, title_of[slug]),
+        speakers: if(item, do: item.speakers, else: []),
+        glossed: Note.glossed(note, PlayContent.anchor_text(anchor))
+      }
+    end
+  end
+
+  # A line's, or a speech's first line's, citation; a scene heading's scene; otherwise the
+  # title of the page the note is on.
+  defp note_ref(%Division{} = scene, %{scene: scene, division: division}, _item, _refs, _title),
+    do: "#{division.title || String.capitalize(division.type)}, #{scene_title(scene)}"
+
+  defp note_ref(_anchor, _at, %{element: element}, refs, _title), do: refs[element.id]
+  defp note_ref(_anchor, _at, nil, _refs, title), do: title
 
   @doc "The page a scene has to itself, or nil when it shares its division's page."
   def scene_page(%__MODULE__{pages: pages}, scene),

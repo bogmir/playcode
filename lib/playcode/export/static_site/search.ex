@@ -11,7 +11,10 @@ defmodule Playcode.Export.StaticSite.Search do
       characters. Per play, `[play, n, d1 … dn]`: `d = (line - previous line) * 2 + flag`,
       previous starting at 0, flag 1 for a stage direction;
     * `search/lines/<CODE>/<k>.js` — lines `k * 100` to `k * 100 + 99` of one play, so a
-      search loads only the lines it shows.
+      search loads only the lines it shows;
+    * `search/lines/<CODE>/n<k>.js` — the play's notes, in reading order, in the same
+      shape: kind `"n"`, the note's text, the page, marker, citation and speakers of where
+      it is. In the shards, note `i` is entry `note_base() + i`.
 
   `normalise/1` and `words/1` must agree with `EMOTHE.normalise` and `EMOTHE.words` in
   `site.js`; `test/fixtures/search_normalisation.json` runs against both.
@@ -20,7 +23,7 @@ defmodule Playcode.Export.StaticSite.Search do
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.{Components, Edition}
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{InlineMarkup, Note}
 
   @doc """
   Lowercase, accents dropped, `ñ` kept (so *año* and *ano* stay apart), NFC first so a
@@ -44,6 +47,12 @@ defmodule Playcode.Export.StaticSite.Search do
 
   @kinds %{verse: "v", prose: "p", stage: "s"}
   @lines_per_chunk 100
+  # A play's notes are indexed after its lines, entry i numbered @note_base + i, so the
+  # browser tells a note hit by its number alone; `search.js` has the same number.
+  @note_base 1_000_000
+
+  @doc "The number of a play's first note entry in the index; `search.js` uses the same."
+  def note_base, do: @note_base
 
   @doc "Lines per `search/lines/<CODE>/<k>.js` file; `search.js` uses the same number."
   def lines_per_chunk, do: @lines_per_chunk
@@ -92,24 +101,25 @@ defmodule Playcode.Export.StaticSite.Search do
         }
       end
 
-    entries
-    |> Enum.chunk_every(@lines_per_chunk)
-    |> Enum.with_index()
-    |> Enum.each(fn {chunk, k} ->
-      speakers = chunk |> Enum.map(& &1.speaker) |> Enum.reject(&is_nil/1) |> Enum.uniq()
-      index_of = speakers |> Enum.with_index() |> Map.new()
+    notes =
+      for entry <- edition.notes do
+        %{
+          slug: entry.slug,
+          anchor: "nref-#{entry.note.number}",
+          ref: entry.ref,
+          speaker: speaker(entry),
+          kind: "n",
+          text: entry.note |> Note.paragraphs() |> Enum.map_join(" ", &InlineMarkup.plain/1),
+          stage_only: []
+        }
+      end
 
-      lines =
-        Enum.map(chunk, &[&1.slug, &1.anchor, &1.ref, index_of[&1.speaker], &1.kind, &1.text])
+    if length(entries) >= @note_base, do: raise("#{code}: too many lines to number its notes")
 
-      write_js!(Path.join(play_dir, "#{k}.js"), "lines", "#{code}/#{k}", %{
-        "speakers" => speakers,
-        "lines" => lines
-      })
-    end)
+    write_chunks(play_dir, code, entries, "")
+    write_chunks(play_dir, code, notes, "n")
 
-    entries
-    |> Enum.with_index()
+    (Enum.with_index(entries) ++ Enum.with_index(notes, @note_base))
     |> Enum.flat_map(fn {entry, line} ->
       stage_line? = entry.kind == "s"
 
@@ -125,6 +135,26 @@ defmodule Playcode.Export.StaticSite.Search do
     |> Map.new(fn {key, words} ->
       {key,
        Enum.map_join(words, "\n", fn {word, lines} -> word <> " " <> group(deltas(lines)) end)}
+    end)
+  end
+
+  # search/lines/<CODE>/<prefix><k>.js: entries k * 100 to k * 100 + 99, each file naming
+  # its own speakers.
+  defp write_chunks(play_dir, code, entries, prefix) do
+    entries
+    |> Enum.chunk_every(@lines_per_chunk)
+    |> Enum.with_index()
+    |> Enum.each(fn {chunk, k} ->
+      speakers = chunk |> Enum.map(& &1.speaker) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+      index_of = speakers |> Enum.with_index() |> Map.new()
+
+      lines =
+        Enum.map(chunk, &[&1.slug, &1.anchor, &1.ref, index_of[&1.speaker], &1.kind, &1.text])
+
+      write_js!(Path.join(play_dir, "#{prefix}#{k}.js"), "lines", "#{code}/#{prefix}#{k}", %{
+        "speakers" => speakers,
+        "lines" => lines
+      })
     end)
   end
 

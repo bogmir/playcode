@@ -47,13 +47,26 @@ test('a phrase must occur in order', () => {
   assert.ok(!S.hasPhrase(['vida', 'la'], ['la', 'vida'], 'word'));
 });
 
-test('hits gather every matching word of a shard and keep the stage flag', () => {
-  // sueño: play 0, line 4, spoken; sueños: play 1, line 2, stage; suelo: play 0, line 9.
-  const shard = { 'sueño': [0, 1, 8], 'sueños': [1, 1, 5], 'suelo': [0, 1, 18] };
-  assert.deepEqual(plain(S.hits(shard, 'sueño', 'prefix')), { '0:4': 0, '1:2': 1 });
+// The map held the stage flag (0 or 1) until notes came: it now holds the hit's kind,
+// which a note's number decides, so the facets need no line text.
+test('hits gather every matching word of a shard and keep its kind', () => {
+  // sueño: play 0, line 4, spoken; sueños: play 1, line 2, stage; suelo: play 0, line 9;
+  // sueñan: play 1, its first note.
+  const shard = { 'sueño': [0, 1, 8], 'sueños': [1, 1, 5], 'suelo': [0, 1, 18], 'sueñan': [1, 1, S.NOTE_BASE * 2] };
+  assert.deepEqual(plain(S.hits(shard, 'sueño', 'prefix')), { '0:4': 'spoken', '1:2': 'stage' });
+  assert.deepEqual(plain(S.hits(shard, 'sueñan', 'word')), { ['1:' + S.NOTE_BASE]: 'note' });
   assert.deepEqual(plain(S.hits(undefined, 'sueño', 'prefix')), {});
-  assert.deepEqual(plain(S.intersect([{ '0:4': 0, '1:2': 1 }, { '0:4': 0 }])), { '0:4': 0 });
+  assert.deepEqual(plain(S.intersect([{ '0:4': 'spoken', '1:2': 'stage' }, { '0:4': 'spoken' }])), { '0:4': 'spoken' });
   assert.deepEqual(plain(S.intersect([])), {});
+});
+
+test('a note is told by its number: at or past NOTE_BASE, whatever its flag', () => {
+  assert.equal(S.NOTE_BASE, cases.note_base);
+  assert.equal(S.kind(4, 0), 'spoken');
+  assert.equal(S.kind(4, 1), 'stage');
+  assert.equal(S.kind(S.NOTE_BASE - 1, 1), 'stage');
+  assert.equal(S.kind(S.NOTE_BASE, 0), 'note');
+  assert.equal(S.kind(S.NOTE_BASE + 250, 0), 'note');
 });
 
 test('postings decode play by play from line deltas', () => {
@@ -66,4 +79,8 @@ test('a line is looked up in the chunk the build wrote it to', () => {
   assert.equal(S.chunkKey('EMOTHE0001', 0), 'EMOTHE0001/0');
   assert.equal(S.chunkKey('EMOTHE0001', 99), 'EMOTHE0001/0');
   assert.equal(S.chunkKey('EMOTHE0001', 100), 'EMOTHE0001/1');
+  // A play's notes are in their own files, n0, n1, …
+  assert.equal(S.chunkKey('EMOTHE0001', S.NOTE_BASE), 'EMOTHE0001/n0');
+  assert.equal(S.chunkKey('EMOTHE0001', S.NOTE_BASE + 99), 'EMOTHE0001/n0');
+  assert.equal(S.chunkKey('EMOTHE0001', S.NOTE_BASE + 100), 'EMOTHE0001/n1');
 });

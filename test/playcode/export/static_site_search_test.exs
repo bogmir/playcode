@@ -30,6 +30,10 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     assert Search.lines_per_chunk() == cases()["lines_per_chunk"]
   end
 
+  test "notes are numbered from the entry the browser expects" do
+    assert Search.note_base() == cases()["note_base"]
+  end
+
   describe "the index files" do
     setup do
       play =
@@ -91,6 +95,76 @@ defmodule Playcode.Export.StaticSiteSearchTest do
                load_js!(dir, "search/plays.js")
 
       assert code == play.code
+    end
+  end
+
+  describe "notes in the index" do
+    # Notes are entries of their own, numbered from Search.note_base/0 so the browser
+    # tells them apart by number alone, their text in search/lines/<CODE>/n<k>.js.
+    setup do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="jornada" n="1"><head>Jornada I</head>
+              <sp><speaker>Rosaura<note n="1" type="editor"><p>Dama disfrazada.</p></note></speaker><l n="1">Hipogrifo violento<note n="2" type="traductor"><p>Animal <emph>fabuloso</emph> y</p><p>quimera.</p></note></l></sp>
+            </div1>
+            <div1 type="jornada" n="2"><head>Jornada II<note n="3"><p>Segunda parte.</p></note></head>
+              <sp><speaker>Clarín</speaker><l n="2">¡Ñaque!</l></sp>
+            </div1>
+            """
+          )
+        )
+
+      %{play: play, dir: generate!([play], all: true)}
+    end
+
+    test "a word found only in a note points past the play's lines, at the note", %{
+      play: play,
+      dir: dir
+    } do
+      base = Search.note_base()
+      {"index", "qu", shard} = load_js!(dir, "search/index/qu.js")
+
+      # The play's second note: entry base + 1, flag 0.
+      assert shard["quimera"] == [0, 1, (base + 1) * 2]
+
+      {"lines", key, %{"speakers" => speakers, "lines" => notes}} =
+        load_js!(dir, "search/lines/#{play.code}/n0.js")
+
+      assert key == "#{play.code}/n0"
+
+      speaker = fn index -> index && Enum.at(speakers, index) end
+
+      assert [
+               ["act-1", "nref-1", "I, 1", rosaura, "n", "Dama disfrazada."],
+               ["act-1", "nref-2", "I, 1", rosaura, "n", "Animal fabuloso y quimera."],
+               ["act-2", "nref-3", "Jornada II", nil, "n", "Segunda parte."]
+             ] = notes
+
+      assert speaker.(rosaura) == "Rosaura"
+    end
+
+    test "the play's own lines files hold no note", %{play: play, dir: dir} do
+      {"lines", _, %{"lines" => lines}} = load_js!(dir, "search/lines/#{play.code}/0.js")
+
+      refute Enum.any?(lines, &(Enum.at(&1, 4) == "n"))
+      refute File.exists?(Path.join([dir, "search", "lines", play.code, "n1.js"]))
+    end
+
+    test "each note's marker carries the id its search result links to", %{
+      play: play,
+      dir: dir
+    } do
+      ids = fn file ->
+        dir
+        |> html!("plays/#{play.code}/#{file}")
+        |> LazyHTML.query("button.nref")
+        |> LazyHTML.attribute("id")
+      end
+
+      assert ids.("act-1.html") == ["nref-1", "nref-2"]
+      assert ids.("act-2.html") == ["nref-3"]
     end
   end
 
