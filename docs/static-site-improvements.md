@@ -114,6 +114,36 @@ unaffected. **Fix**: word positions in the postings, so a phrase is checked from
 alone. That is a format change and the shards grow; do it when phrase search over common
 words is wanted, not before.
 
+## 6. Notes in the static site's search
+
+**Problem**: in-text notes (item 1) are stored in `play_notes` but the search index holds only
+spoken lines and stage directions, so a reader cannot find a word that only a note contains.
+
+**Fix**: index each note's `body` as a hit that points at the line it hangs on. The index file
+format stays as it is. A new facet, "Notes", sits beside "Spoken" and "Stage directions" on the
+search page. Touches `StaticSite.Search` (the writer; its normaliser must keep agreeing with
+`EMOTHE.normalise` in `site.js`), `search.js` (the facet) and the fingerprint (already covers
+`Note`). Stage flag in the posting delta (`delta × 2 + stage flag`) has no room for a third kind:
+**decide** how a note hit is marked without changing the format, e.g. a separate shard set or a
+flag in the chunk line rather than the posting.
+
+## 7. A "Notes" page per play
+
+**Problem**: notes show only as pop-ups, so a reader cannot scan a play's notes together.
+
+**Fix**: one page listing every note with its number, type, glossed word and a link back to the
+line, filterable by type (translator, editor, …). On the static site (`plays/<CODE>/notes.html`,
+a rail entry, `Edition` anchors for the link back) and on `/plays/:code` (a new tab beside Text,
+Characters and Statistics). Numbers come from `Note.reading_order/1`; the glossed word from
+`PlayContent.anchor_text/1` at the note's offset.
+
+**Open**: filter on the static site needs a few lines of `site.js` (budget 15 KB); the live page
+filters in the LiveView. Types are free text in `play_notes.type`, so the filter list is whatever
+the play holds. The 82 fixture files' bodies hold 503 notes in 20 plays, every one typed:
+`traductor` 253, `editor` 177, `editor_digital` 46, `editor_critico` 24, and `autor`, `lines`,
+`comment` once each. Those codes need labels; FileMaker's note-type table
+(`T07.261`, see the FileMaker roadmap's master-database map) may hold the project's own wording.
+
 ## Awaiting the project
 
 Questions only the project can answer. Nothing here is built; each stays as it is until

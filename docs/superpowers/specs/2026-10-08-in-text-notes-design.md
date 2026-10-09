@@ -200,7 +200,7 @@ Native `popover`, no JavaScript:
   pages and the content editor's preview tab draw through `PlayText` too, so they show the
   notes; ids are `note-<uuid>`, unique on a page that shows two plays. The editor's own line
   list does not show markers; a line's modal lists its notes.
-- The search index does not include notes.
+- The search index does not include notes (follow-up: `docs/static-site-improvements.md`, item 6).
 
 ## Downloads
 
@@ -310,5 +310,5 @@ Afterwards: `CLAUDE.md` (schema list, the open gap marked done) and
 
 - Inline `<stage>` inside lines: the follow-up project.
 - Front-matter notes (cast list, dedication, editorial introduction).
-- Notes in search and in `Export.CompareHtml` (the downloaded comparison).
+- Notes in search (item 6) and a per-play Notes page (item 7), both in `docs/static-site-improvements.md`; notes in `Export.CompareHtml` (the downloaded comparison).
 - Placing the pop-up beside the word.
