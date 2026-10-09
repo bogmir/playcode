@@ -17,10 +17,29 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   alias PlaycodeWeb.Admin.LiveHelpers
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     play = Catalogue.get_play!(id)
-    mount_editor(socket, play)
+    {:ok, socket} = mount_editor(socket, play)
+    {:ok, open_requested(socket, params)}
   end
+
+  # ?element=<id> or ?division=<id>, the Notes tab's "Open in Content": that line's or
+  # heading's modal, its notes included. An id that is not one of the play's opens nothing.
+  defp open_requested(socket, %{"element" => id}) do
+    case PlayContent.get_element(socket.assigns.play.id, id) do
+      nil -> socket
+      element -> element_modal(socket, element)
+    end
+  end
+
+  defp open_requested(socket, %{"division" => id}) do
+    case PlayContent.get_division(socket.assigns.play.id, id) do
+      nil -> socket
+      division -> division_modal(socket, division)
+    end
+  end
+
+  defp open_requested(socket, _params), do: socket
 
   defp mount_editor(socket, play) do
     if connected?(socket) do
@@ -428,13 +447,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("edit_division", %{"id" => id}, socket) do
-    with_row(socket, PlayContent.get_division(socket.assigns.play.id, id), fn division ->
-      assign(socket,
-        modal: :division,
-        editing: division,
-        form: to_form(PlayContent.change_division(division))
-      )
-    end)
+    with_row(
+      socket,
+      PlayContent.get_division(socket.assigns.play.id, id),
+      &division_modal(socket, &1)
+    )
   end
 
   def handle_event("delete_division", %{"id" => id}, socket) do
@@ -528,15 +545,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("edit_element", %{"id" => id}, socket) do
-    with_row(socket, PlayContent.get_element(socket.assigns.play.id, id), fn element ->
-      assign(socket,
-        modal: :element,
-        editing: element,
-        modal_element_type: element.type,
-        editing_character_ids: Enum.map(element.element_characters, & &1.character_id),
-        form: to_form(PlayContent.change_element(element))
-      )
-    end)
+    with_row(
+      socket,
+      PlayContent.get_element(socket.assigns.play.id, id),
+      &element_modal(socket, &1)
+    )
   end
 
   def handle_event("el_add_character", params, socket) do
@@ -735,6 +748,26 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   # Runs `fun` on `row` (from a scoped getter) and replies with the socket it returns;
   # nil reloads the lists and says the item is gone.
+  # The modal that edits a division or an element, opened from its row or from the
+  # Notes tab's link.
+  defp division_modal(socket, division) do
+    assign(socket,
+      modal: :division,
+      editing: division,
+      form: to_form(PlayContent.change_division(division))
+    )
+  end
+
+  defp element_modal(socket, element) do
+    assign(socket,
+      modal: :element,
+      editing: element,
+      modal_element_type: element.type,
+      editing_character_ids: Enum.map(element.element_characters, & &1.character_id),
+      form: to_form(PlayContent.change_element(element))
+    )
+  end
+
   defp with_row(socket, nil, _fun), do: {:noreply, gone(socket)}
   defp with_row(_socket, row, fun), do: {:noreply, fun.(row)}
 

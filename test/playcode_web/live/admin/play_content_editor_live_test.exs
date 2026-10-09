@@ -552,6 +552,36 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       assert actions == ["create", "delete", "update"]
     end
 
+    # The Notes tab links a note's line or heading here; its modal opens on arrival.
+    test "?division= opens a heading's modal, and a type the select does not list survives an edit",
+         %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO<note n="1" type="latinismo"><p>Glosa.</p></note></head>
+              <sp><speaker>ANA</speaker><l n="1">Una línea</l></sp>
+            </div1>
+            """
+          )
+        )
+
+      [act] = Playcode.PlayContent.list_top_divisions(play.id)
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content?division=#{act.id}")
+
+      lv |> element("#{notes_section()} button", t("Edit")) |> render_click()
+      lv |> form("#note-form", note: %{"body" => "Glosa corregida."}) |> render_submit()
+
+      assert [%{type: "latinismo", paragraphs: ["Glosa corregida."]}] =
+               xml_notes(export_tei(play))
+
+      # Another play's id, or none of the play's rows, opens nothing.
+      {:ok, lv, _html} =
+        live(conn, ~p"/admin/plays/#{play.id}/content?element=#{Ecto.UUID.generate()}")
+
+      refute has_element?(lv, "#content-modal")
+    end
+
     test "changing only an imported note's text leaves it where it was", %{conn: conn} do
       play =
         import_tei!(
