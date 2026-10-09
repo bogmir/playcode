@@ -211,8 +211,10 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
       <form id="activity-filters" phx-change="filter" phx-submit="filter" class="mb-5">
         <div class="flex flex-wrap gap-3 items-end">
           <div class="form-control">
-            <label class="label"><span class="label-text text-xs">{gettext("Action")}</span></label>
-            <select name="action" class="select select-bordered select-sm">
+            <label class="label" for="activity-log-action">
+              <span class="label-text text-xs">{gettext("Action")}</span>
+            </label>
+            <select id="activity-log-action" name="action" class="select select-bordered select-sm">
               <option value="">{gettext("All actions")}</option>
               <option :for={a <- Entry.actions()} value={a} selected={@filters[:action] == a}>
                 {translate_action(a)}
@@ -221,10 +223,14 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
           </div>
 
           <div class="form-control">
-            <label class="label">
+            <label class="label" for="activity-log-resource_type">
               <span class="label-text text-xs">{gettext("Resource")}</span>
             </label>
-            <select name="resource_type" class="select select-bordered select-sm">
+            <select
+              id="activity-log-resource_type"
+              name="resource_type"
+              class="select select-bordered select-sm"
+            >
               <option value="">{gettext("All resources")}</option>
               <option
                 :for={rt <- Entry.resource_types()}
@@ -237,8 +243,10 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
           </div>
 
           <div class="form-control">
-            <label class="label"><span class="label-text text-xs">{gettext("User")}</span></label>
-            <select name="user_id" class="select select-bordered select-sm">
+            <label class="label" for="activity-log-user_id">
+              <span class="label-text text-xs">{gettext("User")}</span>
+            </label>
+            <select id="activity-log-user_id" name="user_id" class="select select-bordered select-sm">
               <option value="">{gettext("All users")}</option>
               <option :for={u <- @users} value={u.id} selected={@filters[:user_id] == u.id}>
                 {u.email}
@@ -247,8 +255,11 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
           </div>
 
           <div class="form-control">
-            <label class="label"><span class="label-text text-xs">{gettext("From")}</span></label>
+            <label class="label" for="activity-log-from">
+              <span class="label-text text-xs">{gettext("From")}</span>
+            </label>
             <input
+              id="activity-log-from"
               type="date"
               name="from"
               value={@filters[:from]}
@@ -257,8 +268,11 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
           </div>
 
           <div class="form-control">
-            <label class="label"><span class="label-text text-xs">{gettext("To")}</span></label>
+            <label class="label" for="activity-log-to">
+              <span class="label-text text-xs">{gettext("To")}</span>
+            </label>
             <input
+              id="activity-log-to"
               type="date"
               name="to"
               value={@filters[:to]}
@@ -272,10 +286,15 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
         </div>
       </form>
 
-      <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm">
+      <div
+        class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm"
+        tabindex="0"
+        role="region"
+        aria-label={gettext("Activity Log")}
+      >
         <table class="table table-zebra">
           <thead>
-            <tr class="text-xs uppercase tracking-wide text-base-content/60">
+            <tr class="text-xs uppercase tracking-wide text-base-content/70">
               <th class="w-36">{gettext("When")}</th>
               <th>{gettext("User")}</th>
               <th class="w-24">{gettext("Action")}</th>
@@ -286,7 +305,7 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
           </thead>
           <tbody>
             <tr :if={@entries == []}>
-              <td colspan="6" class="text-center text-base-content/50 py-8">
+              <td colspan="6" class="text-center text-base-content/70 py-8">
                 {gettext("No activity logged yet.")}
               </td>
             </tr>
@@ -311,11 +330,11 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
                 >
                   {entry.play.code}
                 </.link>
-                <span :if={!entry.play && entry.metadata["code"]} class="text-base-content/50">
+                <span :if={!entry.play && entry.metadata["code"]} class="text-base-content/70">
                   {entry.metadata["code"]}
                 </span>
               </td>
-              <td class="text-xs text-base-content/60 max-w-xs truncate">
+              <td class="text-xs text-base-content/70 max-w-xs truncate">
                 {detail_summary(entry)}
               </td>
             </tr>

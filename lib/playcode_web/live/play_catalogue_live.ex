@@ -94,14 +94,15 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
                 <span class="font-semibold text-base-content hover:text-primary transition-colors">
                   {play.title}
                 </span>
-                <span :if={play.author_name} class="text-sm text-base-content/60 ml-2">
+                <span :if={play.author_name} class="text-sm text-base-content/70 ml-2">
                   {play.author_name}
                 </span>
               </.link>
               <.link
                 :if={play.derived_plays != []}
                 navigate={~p"/plays/#{play.code}/compare"}
-                class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+                class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
+                aria-label={gettext("Compare")}
                 data-tip={gettext("Compare")}
               >
                 <.icon name="hero-arrows-right-left-mini" class="size-3.5" />
@@ -114,12 +115,12 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
             :for={derived <- play.derived_plays}
             class="ml-6 mt-1 flex items-center gap-2 rounded-box border border-base-300/60 bg-base-200/30 px-4 py-2.5"
           >
-            <span class="text-base-content/30 text-xs">└</span>
+            <span class="text-base-content/70 text-xs">└</span>
             <.link navigate={~p"/plays/#{derived.code}"} class="flex-1 min-w-0">
               <span class="text-sm text-base-content hover:text-primary transition-colors">
                 {derived.title}
               </span>
-              <span :if={derived.author_name} class="text-xs text-base-content/50 ml-2">
+              <span :if={derived.author_name} class="text-xs text-base-content/70 ml-2">
                 {derived.author_name}
               </span>
             </.link>
@@ -133,7 +134,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
           </div>
         </div>
 
-        <p :if={@plays == []} class="text-base-content/50 text-center py-12">
+        <p :if={@plays == []} class="text-base-content/70 text-center py-12">
           {gettext("No plays found. Try a different search term.")}
         </p>
       </div>
@@ -147,7 +148,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
         >
           <.icon name="hero-chevron-left-mini" class="size-4" />{gettext("Previous")}
         </.link>
-        <span class="text-sm text-base-content/60">
+        <span class="text-sm text-base-content/70">
           {gettext("Page %{page} of %{total}", page: @page, total: @total_pages)}
         </span>
         <.link
@@ -169,7 +170,8 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
         href={~p"/export/#{@play.id}/tei"}
         rel="nofollow"
         download
-        class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
+        aria-label="TEI-XML"
         data-tip="TEI-XML"
       >
         <.icon name="hero-code-bracket-mini" class="size-3.5" />
@@ -178,7 +180,8 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
         href={~p"/export/#{@play.id}/html"}
         rel="nofollow"
         download
-        class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
+        aria-label="HTML"
         data-tip="HTML"
       >
         <.icon name="hero-globe-alt-mini" class="size-3.5" />
@@ -187,7 +190,8 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
         href={~p"/export/#{@play.id}/pdf"}
         rel="nofollow"
         download
-        class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
+        aria-label="PDF"
         data-tip="PDF"
       >
         <.icon name="hero-document-arrow-down-mini" class="size-3.5" />
@@ -196,7 +200,8 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
         href={~p"/export/#{@play.id}/epub"}
         rel="nofollow"
         download
-        class="btn btn-xs btn-ghost btn-square text-base-content/50 hover:text-primary tooltip tooltip-bottom"
+        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
+        aria-label="EPUB"
         data-tip="EPUB"
       >
         <.icon name="hero-book-open-mini" class="size-3.5" />

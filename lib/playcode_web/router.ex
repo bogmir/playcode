@@ -131,6 +131,7 @@ defmodule PlaycodeWeb.Router do
     pipe_through [:browser, :require_authenticated_user]
 
     live_session :require_authenticated_user,
+      layout: {PlaycodeWeb.Layouts, :app},
       on_mount: [PlaycodeWeb.SetLocaleHook, {PlaycodeWeb.UserAuth, :ensure_authenticated}] do
       live "/users/settings", UserSettingsLive, :edit
     end

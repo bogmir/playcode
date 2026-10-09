@@ -100,7 +100,7 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
           <h1 class="text-2xl font-semibold tracking-tight text-base-content">
             {gettext("Places")}
           </h1>
-          <p class="mt-1 text-sm text-base-content/60">
+          <p class="mt-1 text-sm text-base-content/70">
             {gettext("One record per place, shared by every play that references it.")}
           </p>
         </div>
@@ -128,7 +128,7 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
         />
       </form>
 
-      <div :if={@places == []} class="py-12 text-center text-base-content/50">
+      <div :if={@places == []} class="py-12 text-center text-base-content/70">
         <.icon name="hero-map-pin" class="mx-auto mb-3 size-12 opacity-30" />
         <p class="text-sm">{gettext("No places yet.")}</p>
       </div>
@@ -147,7 +147,7 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
           <tr :for={place <- @places} id={"place-#{place.id}"}>
             <td>
               <span class="font-medium">{Places.display_name(place, "es")}</span>
-              <span class="block text-xs text-base-content/50">
+              <span class="block text-xs text-base-content/70">
                 {Places.breadcrumb(place, @gazetteer, "es")}
               </span>
             </td>
@@ -168,7 +168,7 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
               >
                 {place.authority_id}
               </a>
-              <span :if={place.latitude} class="block text-base-content/50">
+              <span :if={place.latitude} class="block text-base-content/70">
                 {place.latitude}, {place.longitude}
               </span>
             </td>

@@ -197,7 +197,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
           <h1 class="text-2xl font-semibold tracking-tight text-base-content">
             {gettext("Places")}
           </h1>
-          <p class="mt-1 text-sm text-base-content/60">
+          <p class="mt-1 text-sm text-base-content/70">
             {gettext("Where this play is set, and the places it names.")}
           </p>
         </div>
@@ -266,7 +266,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
                   <div class="truncate text-sm font-medium">
                     {Places.display_name(place, "es")}
                   </div>
-                  <div class="mt-0.5 truncate text-xs text-base-content/50">
+                  <div class="mt-0.5 truncate text-xs text-base-content/70">
                     {Places.breadcrumb(place, @gazetteer, "es")}
                   </div>
                 </button>
@@ -276,10 +276,14 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
           <form phx-submit="link" class="flex items-end gap-2">
             <input type="hidden" name="place_id" value={(@picked && @picked.id) || ""} />
             <div class="w-40">
-              <label class="label">
+              <label class="label" for="play-places-role">
                 <span class="label-text font-medium">{gettext("Role")}</span>
               </label>
-              <select name="role" class="select select-bordered select-sm w-full">
+              <select
+                id="play-places-role"
+                name="role"
+                class="select select-bordered select-sm w-full"
+              >
                 <option :for={{label, value} <- PlayLabels.place_role_options()} value={value}>
                   {label}
                 </option>
@@ -294,7 +298,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
              carrying the term across so the name is already typed. --%>
         <div
           :if={is_nil(@picked) and @term != "" and @suggestions == []}
-          class="mt-2 flex items-center gap-2 text-xs text-base-content/60"
+          class="mt-2 flex items-center gap-2 text-xs text-base-content/70"
         >
           <span>{gettext("No places found")}</span>
           <button
@@ -309,7 +313,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
         </div>
       </div>
 
-      <div :if={@links == []} class="py-12 text-center text-base-content/50">
+      <div :if={@links == []} class="py-12 text-center text-base-content/70">
         <.icon name="hero-map-pin" class="mx-auto mb-3 size-12 opacity-30" />
         <p class="text-sm">{gettext("No places recorded for this play.")}</p>
       </div>
@@ -323,15 +327,25 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
           <div class="mb-2 flex items-start justify-between gap-3">
             <div>
               <span class="font-medium">{Places.display_name(link.place, "es")}</span>
-              <span class="block text-xs text-base-content/50">
+              <span class="block text-xs text-base-content/70">
                 {Places.breadcrumb(link.place, @gazetteer, "es")}
               </span>
             </div>
             <div class="flex gap-1">
-              <button phx-click="move_up" phx-value-id={link.id} class="btn btn-ghost btn-xs">
+              <button
+                phx-click="move_up"
+                phx-value-id={link.id}
+                class="btn btn-ghost btn-xs"
+                aria-label={gettext("Move up")}
+              >
                 <.icon name="hero-arrow-up-micro" class="size-3.5" />
               </button>
-              <button phx-click="move_down" phx-value-id={link.id} class="btn btn-ghost btn-xs">
+              <button
+                phx-click="move_down"
+                phx-value-id={link.id}
+                class="btn btn-ghost btn-xs"
+                aria-label={gettext("Move down")}
+              >
                 <.icon name="hero-arrow-down-micro" class="size-3.5" />
               </button>
               <button
@@ -352,7 +366,11 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
           >
             <input type="hidden" name="link_id" value={link.id} />
             <div class="w-40">
-              <select name="play_place[role]" class="select select-bordered select-sm w-full">
+              <select
+                name="play_place[role]"
+                class="select select-bordered select-sm w-full"
+                aria-label={gettext("Role")}
+              >
                 <option
                   :for={{label, value} <- PlayLabels.place_role_options()}
                   value={value}

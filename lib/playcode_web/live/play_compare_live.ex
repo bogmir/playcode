@@ -81,12 +81,12 @@ defmodule PlaycodeWeb.PlayCompareLive do
       <div class="mb-4 flex flex-wrap items-center gap-4 rounded-box border border-base-300 bg-base-100 px-4 py-2 shadow-sm">
         <.link
           navigate={~p"/plays/#{@play.code}"}
-          class="btn btn-xs btn-ghost gap-1 text-base-content/60 hover:text-primary"
+          class="btn btn-xs btn-ghost gap-1 text-base-content/70 hover:text-primary"
         >
           <.icon name="hero-arrow-left-mini" class="size-3.5" />
           {gettext("Back to play")}
         </.link>
-        <span class="text-xs font-semibold text-base-content/50">{gettext("Display")}</span>
+        <span class="text-xs font-semibold text-base-content/70">{gettext("Display")}</span>
         <label class="flex items-center gap-1.5 text-xs cursor-pointer">
           <input
             type="checkbox"
@@ -131,7 +131,11 @@ defmodule PlaycodeWeb.PlayCompareLive do
         <%!-- Add play --%>
         <div :if={@available != [] && length(@panels) < 4} class="ml-auto flex items-center gap-2">
           <form phx-change="add_play" class="inline">
-            <select name="id" class="select select-xs select-bordered w-64">
+            <select
+              name="id"
+              class="select select-xs select-bordered w-64"
+              aria-label={gettext("Add play to compare...")}
+            >
               <option value="">{gettext("Add play to compare...")}</option>
               <option :for={p <- @available} value={p.id}>
                 {p.title} ({p.code})
@@ -164,18 +168,21 @@ defmodule PlaycodeWeb.PlayCompareLive do
                 :if={length(@panels) > 1}
                 phx-click="remove_panel"
                 phx-value-index={idx}
-                class="btn btn-ghost btn-xs btn-circle text-base-content/40 hover:text-error"
+                class="btn btn-ghost btn-xs btn-circle text-base-content/70 hover:text-error"
                 title={gettext("Remove")}
               >
                 <.icon name="hero-x-mark-micro" class="size-3.5" />
               </button>
             </div>
-            <p class="text-xs text-base-content/50 truncate">
+            <p class="text-xs text-base-content/70 truncate">
               {panel.play.author_name} — {panel.play.code}
             </p>
           </div>
           <div
             class="overflow-y-auto px-4 py-4 compare-panel"
+            tabindex="0"
+            role="region"
+            aria-label={panel.play.title}
             data-panel={"panel-#{idx}"}
             style={PlayComparison.panel_height(length(@panels))}
           >

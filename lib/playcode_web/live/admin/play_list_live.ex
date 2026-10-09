@@ -190,10 +190,15 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         </.link>
       </div>
 
-      <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm">
+      <div
+        class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm"
+        tabindex="0"
+        role="region"
+        aria-label={gettext("Plays")}
+      >
         <table class="table table-zebra">
           <thead>
-            <tr class="text-xs uppercase tracking-wide text-base-content/60">
+            <tr class="text-xs uppercase tracking-wide text-base-content/70">
               <th class="w-28">{gettext("Code")}</th>
               <th>{gettext("Title")}</th>
               <th class="w-20 text-right">{gettext("Verses")}</th>
@@ -206,7 +211,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
               <td
                 title={status_label(play)}
                 class={[
-                  "font-mono text-xs text-base-content/60 border-l-4",
+                  "font-mono text-xs text-base-content/70 border-l-4",
                   is_nil(play.deleted_at) && play.is_complete && "border-success",
                   is_nil(play.deleted_at) && !play.is_complete && "border-base-300",
                   play.deleted_at && "border-transparent"
@@ -231,7 +236,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <span :if={play.deleted_at} class="badge badge-ghost badge-sm ml-2">
                   {gettext("Archived")}
                 </span>
-                <p :if={play.author_name} class="text-xs text-base-content/60 mt-0.5">
+                <p :if={play.author_name} class="text-xs text-base-content/70 mt-0.5">
                   {play.author_name}
                 </p>
               </td>
@@ -244,6 +249,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                     :if={is_nil(play.deleted_at)}
                     navigate={~p"/admin/plays/#{play.id}/edit"}
                     class="btn btn-ghost btn-xs tooltip tooltip-left"
+                    aria-label={gettext("Edit metadata")}
                     data-tip={gettext("Edit metadata")}
                   >
                     <.icon name="hero-pencil-mini" class="size-4" />
@@ -253,6 +259,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                     href={~p"/plays/#{play.code}"}
                     target="_blank"
                     class="btn btn-ghost btn-xs tooltip tooltip-left"
+                    aria-label={gettext("View public page")}
                     data-tip={gettext("View public page")}
                   >
                     <.icon name="hero-arrow-top-right-on-square-mini" class="size-4" />
@@ -291,7 +298,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
       <p
         :if={@plays == []}
-        class="mt-8 rounded-box border border-dashed border-base-300 py-10 text-center text-base-content/60"
+        class="mt-8 rounded-box border border-dashed border-base-300 py-10 text-center text-base-content/70"
       >
         {gettext("No plays yet. Import a TEI-XML file or create a new play.")}
       </p>
@@ -305,7 +312,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         >
           <.icon name="hero-chevron-left-mini" class="size-4" />{gettext("Previous")}
         </.link>
-        <span class="text-sm text-base-content/60">
+        <span class="text-sm text-base-content/70">
           {gettext("Page %{page} of %{total}", page: @page, total: @total_pages)}
         </span>
         <.link

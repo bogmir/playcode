@@ -68,6 +68,15 @@ routes, LiveViews and controllers; `test/mix/tasks_test.exs` for the mix tasks;
 `test/support/fixtures.ex` for `play_fixture/1` and friends (users are made through the
 invite flow); `test/fixtures/` for TEI, Word and FileMaker sample files.
 
+**Accessibility** is held by `test/playcode_web/accessibility_test.exs`, which renders
+every page, the content editor's tabs and the modal forms, and fails on an unnamed control,
+link or button, an `aria-label` on a role-less element, content outside a landmark, or a
+scrolling box with nothing focusable (give it `tabindex="0" role="region" aria-label`); add
+a new page's path to its list. Contrast is not testable without a browser: both daisyUI
+themes' colours in `app.css` are tuned to 4.5:1 (regenerating a theme undoes that), muted
+text is never lighter than `text-base-content/70`, and a `<label>` names
+its control through `for={@form[:x].id}` or by wrapping it.
+
 `mix test --include slow` adds the TEI schema validation and the full corpus sweep in
 `test/playcode/roundtrip_test.exs`: every tracked `test/fixtures/*.xml` plus the
 git-ignored `test/fixtures/tei_files/`, a few minutes. The default run covers two of those

@@ -160,7 +160,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
           <h1 class="text-2xl font-semibold tracking-tight text-base-content">
             {gettext("Editors & Researchers")}
           </h1>
-          <p class="mt-1 text-sm text-base-content/60">
+          <p class="mt-1 text-sm text-base-content/70">
             {gettext("Manage the editorial team for this play.")}
           </p>
         </div>
@@ -189,13 +189,13 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
         >
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div>
-              <label class="label">
+              <label class="label" for={@editor_form[:person_name].id}>
                 <span class="label-text font-medium">{gettext("Name")} *</span>
               </label>
               <.input field={@editor_form[:person_name]} type="text" required />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@editor_form[:role].id}>
                 <span class="label-text font-medium">{gettext("Role")} *</span>
               </label>
               <.input
@@ -206,7 +206,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
               />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@editor_form[:organization].id}>
                 <span class="label-text font-medium">{gettext("Organization")}</span>
               </label>
               <.input
@@ -216,7 +216,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
               />
             </div>
             <div>
-              <label class="label">
+              <label class="label" for={@editor_form[:position].id}>
                 <span class="label-text font-medium">{gettext("Position")}</span>
               </label>
               <.input
@@ -240,7 +240,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
       <%!-- Empty state --%>
       <div
         :if={@editors == [] && @editor_form == nil}
-        class="text-center py-12 text-base-content/50"
+        class="text-center py-12 text-base-content/70"
       >
         <.icon name="hero-users" class="size-12 mx-auto mb-3 opacity-30" />
         <p class="text-sm">{gettext("No editors listed yet.")}</p>
@@ -259,14 +259,14 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
           <div class="flex items-center gap-4 p-4">
             <div class="flex-1 min-w-0">
               <p class="font-medium text-base-content truncate">{editor.person_name}</p>
-              <p class="text-sm text-base-content/60">
+              <p class="text-sm text-base-content/70">
                 {PlayLabels.editor_role_label(editor.role)}
-                <span :if={editor.organization} class="text-base-content/40">
+                <span :if={editor.organization} class="text-base-content/70">
                   — {editor.organization}
                 </span>
               </p>
             </div>
-            <span class="text-xs text-base-content/30 shrink-0">#{editor.position}</span>
+            <span class="text-xs text-base-content/70 shrink-0">#{editor.position}</span>
           </div>
           <div class="flex justify-end gap-1 border-t border-base-300 px-3 py-2">
             <button

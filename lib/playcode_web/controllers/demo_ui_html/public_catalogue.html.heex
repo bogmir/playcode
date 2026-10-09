@@ -31,14 +31,14 @@
         </div>
         <div class="text-right flex-shrink-0 ml-4">
           <span class="badge badge-primary badge-outline">{play.code}</span>
-          <p :if={play.verse_count} class="text-xs text-base-content/50 mt-1">
+          <p :if={play.verse_count} class="text-xs text-base-content/70 mt-1">
             {play.verse_count} verses
           </p>
         </div>
       </div>
     </a>
 
-    <p :if={@plays == []} class="text-base-content/50 text-center py-12">
+    <p :if={@plays == []} class="text-base-content/70 text-center py-12">
       No plays found. Try a different search term.
     </p>
   </div>

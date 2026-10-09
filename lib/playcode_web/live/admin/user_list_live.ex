@@ -260,10 +260,15 @@ defmodule PlaycodeWeb.Admin.UserListLive do
         />
       </form>
 
-      <div class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm">
+      <div
+        class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm"
+        tabindex="0"
+        role="region"
+        aria-label={gettext("Users")}
+      >
         <table class="table table-zebra">
           <thead>
-            <tr class="text-xs uppercase tracking-wide text-base-content/60">
+            <tr class="text-xs uppercase tracking-wide text-base-content/70">
               <th>{gettext("Email")}</th>
               <th class="w-28">{gettext("Role")}</th>
               <th class="w-40">{gettext("State")}</th>
@@ -295,7 +300,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
               <td class="space-x-1">
                 <.state_badge user={user} />
               </td>
-              <td class="text-sm text-base-content/60">
+              <td class="text-sm text-base-content/70">
                 {Calendar.strftime(user.inserted_at, "%Y-%m-%d")}
               </td>
               <td>
@@ -308,6 +313,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                         phx-value-role="researcher"
                         data-confirm={gettext("Demote %{email} to researcher?", email: user.email)}
                         class="btn btn-ghost btn-xs tooltip tooltip-left"
+                        aria-label={gettext("Demote to researcher")}
                         data-tip={gettext("Demote to researcher")}
                       >
                         <.icon name="hero-arrow-down-mini" class="size-4" />
@@ -319,6 +325,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                         phx-value-role="admin"
                         data-confirm={gettext("Promote %{email} to admin?", email: user.email)}
                         class="btn btn-ghost btn-xs tooltip tooltip-left"
+                        aria-label={gettext("Promote to admin")}
                         data-tip={gettext("Promote to admin")}
                       >
                         <.icon name="hero-arrow-up-mini" class="size-4" />
@@ -362,7 +369,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                     class="tooltip"
                     data-tip={gettext("Defined in ADMIN_EMAILS")}
                   >
-                    <.icon name="hero-lock-closed-micro" class="size-4 text-base-content/40" />
+                    <.icon name="hero-lock-closed-micro" class="size-4 text-base-content/70" />
                   </span>
                 </div>
               </td>
@@ -373,7 +380,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
 
       <p
         :if={@users == []}
-        class="mt-8 rounded-box border border-dashed border-base-300 py-10 text-center text-base-content/60"
+        class="mt-8 rounded-box border border-dashed border-base-300 py-10 text-center text-base-content/70"
       >
         {gettext("No users found.")}
       </p>
@@ -386,7 +393,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
         >
           <.icon name="hero-chevron-left-mini" class="size-4" />{gettext("Previous")}
         </.link>
-        <span class="text-sm text-base-content/60">
+        <span class="text-sm text-base-content/70">
           {gettext("Page %{page} of %{total}", page: @page, total: @total_pages)}
         </span>
         <.link

@@ -1,16 +1,9 @@
-<div class="flex min-h-screen">
-  <%!-- Checked means collapsed. CSS-only: the sidebar is a sibling of the
-        checkbox, so peer-checked removes it from the layout entirely rather
-        than dimming it behind an overlay. Play pages start collapsed so the
-        text gets the full width. --%>
-  <input
-    id="admin-sidebar"
-    type="checkbox"
-    class="peer sr-only"
-    checked={not is_nil(assigns[:play_context])}
-  />
-
-  <div class="peer-checked:hidden sticky top-0 h-screen overflow-y-auto">
+<%!-- #admin-sidebar checked means collapsed. CSS-only: the checkbox lives in the
+      header, so no content sits outside a landmark, and :has() removes the sidebar
+      from the layout entirely rather than dimming it behind an overlay. Play pages
+      start collapsed so the text gets the full width. --%>
+<div class="group/shell flex min-h-screen">
+  <div class="group-has-[#admin-sidebar:checked]/shell:hidden sticky top-0 h-screen overflow-y-auto">
     <.admin_sidebar
       current_user={assigns[:current_user]}
       current_path={assigns[:current_path] || ""}
@@ -20,13 +13,20 @@
   <div class="flex-1 min-w-0 flex flex-col">
     <header class="navbar bg-base-100 border-b border-base-300 px-3 min-h-0 py-1.5 sticky top-0 z-30">
       <div class="flex-1 flex items-center gap-2 min-w-0">
+        <%!-- The checkbox is what the keyboard reaches; the label's text names it. --%>
+        <input
+          id="admin-sidebar"
+          type="checkbox"
+          class="sr-only"
+          checked={not is_nil(assigns[:play_context])}
+        />
         <label
           for="admin-sidebar"
           class="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
           title={gettext("Toggle sidebar")}
-          aria-label={gettext("Toggle sidebar")}
         >
           <.icon name="hero-bars-3" class="size-5" />
+          <span class="sr-only">{gettext("Toggle sidebar")}</span>
         </label>
 
         <span class="h-6 w-px bg-base-300" aria-hidden="true"></span>
@@ -45,13 +45,12 @@
       <.user_menu current_user={assigns[:current_user]} locale={assigns[:locale] || "es"} />
     </header>
 
-    <.play_context_bar
-      :if={assigns[:play_context]}
-      play={@play_context.play}
-      active_tab={@play_context.active_tab}
-    />
-
     <main class="flex-1">
+      <.play_context_bar
+        :if={assigns[:play_context]}
+        play={@play_context.play}
+        active_tab={@play_context.active_tab}
+      />
       {@inner_content}
     </main>
   </div>

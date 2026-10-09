@@ -201,10 +201,16 @@ defmodule PlaycodeWeb.Admin.PlaceFormComponent do
       <%!-- Authority search: the only remote lookup, so the only typeahead --%>
       <div class="mb-4 rounded-box bg-base-200 p-3">
         <form phx-change="authority_search" phx-target={@myself} phx-debounce="300">
-          <label class="label">
+          <label class="label" for="place-form-component-term">
             <span class="label-text font-medium">{gettext("Search Wikidata")}</span>
           </label>
-          <input type="text" name="term" value="" class="input input-bordered input-sm w-full" />
+          <input
+            id="place-form-component-term"
+            type="text"
+            name="term"
+            value=""
+            class="input input-bordered input-sm w-full"
+          />
         </form>
         <p :if={@authority_error} class="mt-2 text-xs text-warning">{@authority_error}</p>
         <ul class="mt-2 space-y-1">
@@ -217,7 +223,7 @@ defmodule PlaycodeWeb.Admin.PlaceFormComponent do
               class="btn btn-ghost btn-xs justify-start w-full"
             >
               <span class="font-medium">{candidate.label}</span>
-              <span class="text-base-content/50">{candidate.description}</span>
+              <span class="text-base-content/70">{candidate.description}</span>
             </button>
           </li>
         </ul>
@@ -247,6 +253,7 @@ defmodule PlaycodeWeb.Admin.PlaceFormComponent do
                 <.input
                   field={name[:language]}
                   type="select"
+                  aria-label={gettext("Language")}
                   options={[
                     {"", nil},
                     {"es", "es"},
@@ -258,14 +265,12 @@ defmodule PlaycodeWeb.Admin.PlaceFormComponent do
                   ]}
                 />
               </div>
-              <label class="label cursor-pointer gap-1">
-                <.input field={name[:is_preferred]} type="checkbox" />
-                <span class="label-text text-xs">{gettext("Preferred")}</span>
-              </label>
-              <label class="label cursor-pointer gap-1">
-                <.input field={name[:is_historical]} type="checkbox" />
-                <span class="label-text text-xs">{gettext("Historical")}</span>
-              </label>
+              <div class="text-xs">
+                <.input field={name[:is_preferred]} type="checkbox" label={gettext("Preferred")} />
+              </div>
+              <div class="text-xs">
+                <.input field={name[:is_historical]} type="checkbox" label={gettext("Historical")} />
+              </div>
               <button
                 type="button"
                 name="place[names_delete][]"
@@ -322,16 +327,15 @@ defmodule PlaycodeWeb.Admin.PlaceFormComponent do
           </div>
         </div>
 
-        <label class="label mt-2 cursor-pointer gap-2 justify-start">
-          <.input field={@form[:is_fictional]} type="checkbox" />
-          <span class="label-text">{gettext("Fictional place")}</span>
-        </label>
+        <div class="mt-2">
+          <.input field={@form[:is_fictional]} type="checkbox" label={gettext("Fictional place")} />
+        </div>
 
         <div class="mt-2">
           <.input field={@form[:note]} type="textarea" rows="2" label={gettext("Note")} />
         </div>
 
-        <p class="mt-2 text-xs text-base-content/50">
+        <p class="mt-2 text-xs text-base-content/70">
           {gettext("Leave the coordinates empty for a place that cannot be located.")}
         </p>
 

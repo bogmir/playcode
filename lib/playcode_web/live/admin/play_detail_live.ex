@@ -146,16 +146,17 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
       <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 class="text-3xl font-semibold tracking-tight text-base-content">{@play.title}</h1>
-          <p class="mt-1 text-sm text-base-content/60">
+          <p class="mt-1 text-sm text-base-content/70">
             {@play.author_name} — {@play.code}
           </p>
         </div>
         <div class="flex items-center gap-1">
-          <span class="text-xs text-base-content/40 mr-1">{gettext("Export")}</span>
+          <span class="text-xs text-base-content/70 mr-1">{gettext("Export")}</span>
           <a
             href={~p"/admin/plays/#{@play.id}/export/tei"}
             target="_blank"
             class="btn btn-ghost btn-xs tooltip"
+            aria-label={gettext("Export TEI-XML")}
             data-tip={gettext("Export TEI-XML")}
           >
             <.icon name="hero-code-bracket-mini" class="size-4" />
@@ -164,6 +165,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
             href={~p"/admin/plays/#{@play.id}/export/html"}
             target="_blank"
             class="btn btn-ghost btn-xs tooltip"
+            aria-label={gettext("Export HTML")}
             data-tip={gettext("Export HTML")}
           >
             <.icon name="hero-globe-alt-mini" class="size-4" />
@@ -172,6 +174,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
             href={~p"/admin/plays/#{@play.id}/export/pdf"}
             target="_blank"
             class="btn btn-ghost btn-xs tooltip"
+            aria-label={gettext("Export PDF")}
             data-tip={gettext("Export PDF")}
           >
             <.icon name="hero-document-arrow-down-mini" class="size-4" />
@@ -180,6 +183,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
             href={~p"/admin/plays/#{@play.id}/export/epub"}
             target="_blank"
             class="btn btn-ghost btn-xs tooltip"
+            aria-label={gettext("Export EPUB")}
             data-tip={gettext("Export EPUB")}
           >
             <.icon name="hero-book-open-mini" class="size-4" />
@@ -188,6 +192,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           <button
             phx-click="validate_tei"
             class="btn btn-ghost btn-xs tooltip"
+            aria-label={gettext("Validate TEI-XML")}
             data-tip={gettext("Validate TEI-XML")}
             disabled={@validating}
           >
@@ -270,7 +275,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           {gettext("Import content")}
         </h2>
         <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-          <p class="text-sm text-base-content/60 mb-3">
+          <p class="text-sm text-base-content/70 mb-3">
             {gettext(
               "Upload a premarcado .docx file to import play content (divisions, speeches, verses, stage directions). Existing content will be replaced."
             )}
@@ -409,12 +414,12 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                 >
                   {@play.parent_play.title}
                 </.link>
-                <span class="text-base-content/50">({@play.parent_play.code})</span>
+                <span class="text-base-content/70">({@play.parent_play.code})</span>
               </span>
             <% else %>
               <span :if={@play.original_title} class="text-base-content/70">
                 {gettext("of")} {@play.original_title}
-                <span class="text-base-content/40">({gettext("not linked")})</span>
+                <span class="text-base-content/70">({gettext("not linked")})</span>
               </span>
             <% end %>
           </div>
@@ -428,7 +433,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                 >
                   {derived.title}
                 </.link>
-                <span class="text-base-content/50">({derived.code})</span>
+                <span class="text-base-content/70">({derived.code})</span>
                 <span :if={derived.relationship_type} class="badge badge-ghost badge-xs ml-1">
                   {relationship_type_label(derived.relationship_type)}
                 </span>
@@ -444,7 +449,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         <div class="divide-y rounded-box border border-base-300 bg-base-100 shadow-sm">
           <div :for={editor <- @play.editors} class="flex items-center justify-between p-3">
             <span class="font-medium">{editor.person_name}</span>
-            <span class="text-sm text-base-content/60">
+            <span class="text-sm text-base-content/70">
               {PlayLabels.editor_role_label(editor.role)} {if editor.organization,
                 do: "— #{editor.organization}"}
             </span>
@@ -460,7 +465,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         <div class="divide-y rounded-box border border-base-300 bg-base-100 shadow-sm">
           <div :for={char <- @characters} class="flex items-center gap-3 p-3">
             <span class="font-medium">{char.name}</span>
-            <span :if={char.description} class="text-sm text-base-content/60">
+            <span :if={char.description} class="text-sm text-base-content/70">
               {char.description}
             </span>
             <span :if={char.is_hidden} class="badge badge-ghost badge-sm">
@@ -476,7 +481,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         <div class="divide-y rounded-box border border-base-300 bg-base-100 shadow-sm">
           <div :for={div <- @divisions} class="p-3">
             <span class="font-medium">{div.title || div.type}</span>
-            <span class="ml-2 text-sm text-base-content/60">{div.type} {div.number}</span>
+            <span class="ml-2 text-sm text-base-content/70">{div.type} {div.number}</span>
             <div :if={div.children != []} class="ml-6 mt-1">
               <div :for={child <- div.children} class="text-sm text-base-content/70">
                 {child.title || child.type} {child.number}
@@ -494,7 +499,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
             <.icon name="hero-arrow-path-mini" class="size-4" /> {gettext("Recompute")}
           </button>
         </div>
-        <div :if={@statistic} class="mb-4 text-xs text-base-content/60">
+        <div :if={@statistic} class="mb-4 text-xs text-base-content/70">
           {gettext("Last computed:")} {Calendar.strftime(@statistic.computed_at, "%Y-%m-%d %H:%M")}
         </div>
         <.stats_panel :if={@statistic} statistic={@statistic} play={@play} />
