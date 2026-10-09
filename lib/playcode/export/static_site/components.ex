@@ -524,6 +524,11 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
+  # A piece of an inline stage direction, a note's number among them: in a span the
+  # "Stage directions" toggle hides.
+  defp part(%{stage: %{}} = part),
+    do: [~s(<span class="sdi">), part(%{part | stage: nil}), "</span>"]
+
   # A note's marker: its number, a button that opens the note (endnotes/1) as a popover.
   defp part(%{note: note}) do
     number = Integer.to_string(note.number)

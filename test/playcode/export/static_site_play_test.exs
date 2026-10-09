@@ -231,6 +231,45 @@ defmodule Playcode.Export.StaticSitePlayTest do
              ["Tester, Structured Play, ACT I"]
   end
 
+  describe "an inline stage direction" do
+    setup do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>CHIMÈNE</speaker>
+            <l n="1"><stage type="exit">(A Léonor.)</stage>Allez l'entretenir.</l>
+            <p>Dijo <stage>(bajo<note n="1" type="editor"><p>Glosa.</p></note> y rápido)</stage> y salió.</p>
+          </sp>
+        </div1>
+        """)
+
+      %{act: page(dir, play, "act-1.html"), dir: dir}
+    end
+
+    # The class is the contract between the template and style.css; the last test here
+    # holds the stylesheet to it.
+    test "is set apart from the spoken words and stays in its line", %{act: act} do
+      line = LazyHTML.query(act, "#l1")
+
+      assert line |> LazyHTML.query(".sdi") |> Enum.map(&LazyHTML.text/1) == ["(A Léonor.)"]
+      assert squish(LazyHTML.text(line)) =~ "(A Léonor.) Allez l'entretenir."
+      refute LazyHTML.text(act) =~ "<stage"
+    end
+
+    test "is wrapped piece by piece when a note splits it, the note's number inside", %{act: act} do
+      prose = LazyHTML.query(act, "p.pr")
+
+      assert prose |> LazyHTML.query(".sdi") |> Enum.map(&LazyHTML.text/1) |> Enum.join() ==
+               "(bajo1 y rápido)"
+
+      assert prose |> LazyHTML.query(".sdi button.nref") |> Enum.count() == 1
+    end
+
+    test "is hidden by the rule the stage directions toggle sets", %{dir: dir} do
+      assert read!(dir, "assets/style.css") =~ ~s(body[data-sd="off"] .sdi)
+    end
+  end
+
   describe "a division too long for one page" do
     setup do
       # 72,000 bytes of text per scene: 144,000 in the act, over the 120,000 threshold.
