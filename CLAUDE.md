@@ -174,6 +174,7 @@ lib/
     │       ├── play_compare_live.ex  # Admin: /admin/plays/:id/compare - side-by-side comparison
     │       ├── play_bibliography_live.ex # Admin: /admin/plays/:id/bibliography - a play's bibliography
     │       ├── notes_component.ex        # The note editor inside the content editor's modals
+    │       ├── play_notes_live.ex        # Admin: /admin/plays/:id/notes - a play's notes, edited in place
     │       └── user_list_live.ex     # Admin: /admin/users - user management
     ├── controllers/
     │   ├── user_session_controller.ex # Login/logout session handling
@@ -242,7 +243,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 - **An id in a LiveView event came from the browser.** On a play's tabs, resolve it with a
   getter scoped to the play (`Catalogue.get_play_editor/2`, `get_play_source/2`,
   `get_play_editorial_note/2`, `Places.get_play_place/2`, `Bibliography.get_link/2`,
-  `PlayContent.get_character/2`, `get_division/2`, `get_element/2`), never `Repo.get!(id)`.
+  `PlayContent.get_character/2`, `get_division/2`, `get_element/2`, `get_note/2`), never `Repo.get!(id)`.
   Each returns nil for another play's row, a deleted one or a malformed id; the tab then
   reloads its list and calls `PlaycodeWeb.Admin.LiveHelpers.put_gone_flash/1`. A selection
   or a list of character ids from the browser is filtered to the play's own rows before a
@@ -293,6 +294,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 - `GET /admin/filemaker` - Sync the FileMaker export: upload, preview the diff, apply (`:import_filemaker`)
 - `GET /admin/places` - Corpus-global gazetteer: places, their names, hierarchy and authority links (`:manage_places`)
 - `GET /admin/plays/:id/places` - The play's place index: role, order, notes (`:manage_places`)
+- `GET /admin/plays/:id/notes` - A play's in-text notes in reading order: filter by type, words or no term; edit type, word, term and text in place; delete; open the line in Content (`?element=`/`?division=` opens its modal), where notes are added (`:edit_content`)
 - `GET /admin/plays/:id/bibliography` - A play's bibliography: new, edit (with a warning on a shared entry), add an existing entry, remove, filter (`:manage_bibliography`)
 - `GET /admin/plays/compare/export/html` - Comparison HTML export
 - `GET /admin/plays/:id/export/tei` - Download TEI-XML
@@ -590,6 +592,7 @@ Each is pinned by a test as it behaves today, not endorsed.
   - `search.js` classifies a line by the first query word's flag, so a line holding a stage-only word and another queried word counts as a stage hit or as spoken by word order.
   - `Metrics.words/1` now counts a letter touching an italic boundary (`<<a>>b`) as one word, with a stage in the line or not, where it counted two; a few lines in the tracked fixtures move.
   - The Word importer produces no inline stages and is not touched.
+- [x] **A Notes tab in the play admin** - `/admin/plays/:id/notes` lists a play's notes (number, type, glossed word, place, the text it hangs on, the note) and edits each where it is listed; adding stays in Content, which each note links to. A note of a type with no label keeps it through an edit (`PlayLabels.note_type_options/1`), here and in the content editor. Spec: `docs/superpowers/specs/2026-10-10-admin-notes-tab-design.md`
 - [x] **Notes in search and a Notes page** - a note's text is found by the static site's search (Text facet value "Notes", counted under All), and a play with notes has `notes.html` on the static site and a Notes view on `/plays/:code`: number, type, glossed word, where it is (back to its marker: `#nref-<n>` on the site, `show_note` and a `scroll-to` event on the live page) and text, filterable by type. Spec: `docs/superpowers/specs/2026-10-09-notes-search-and-page-design.md`
 - [x] **In-text `<note>` is pasted into the line** - now stored in `play_notes` and written back by the TEI export, speaker labels included (52 speeches in 23 plays of the dev corpus carried a note in their label, "BELISA BELISA El nombre de Belisa…"); shown as numbered pop-ups on the static site and `/plays/:code`, as endnotes in the downloads, edited in the content editor. Spec: `docs/superpowers/specs/2026-10-08-in-text-notes-design.md`. One limit remains: Hamlet's 16 notes nested inside another note's `<p>` are still pasted into the outer note's body, and the real-fixture checks do not see them
 - [x] **Activity-log order was unstable within one second** - `activity_logs.inserted_at` is now microsecond precision (migration `20260926120000`), so a burst of entries lists newest first; the `to:` date filter ends at `23:59:59.999999`

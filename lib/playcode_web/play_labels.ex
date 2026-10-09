@@ -47,9 +47,18 @@ defmodule PlaycodeWeb.PlayLabels do
   """
   def note_type_key(type), do: if(type in Note.types(), do: type, else: "other")
 
-  @doc "`{label, type}` pairs for a select: an untyped note first, then the corpus's types."
-  def note_type_options,
-    do: [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]
+  @doc """
+  `{label, type}` pairs for a select: an untyped note first, then the corpus's types; and
+  `current`, a type with no label of its own (`latinismo`, …), as itself, so saving a note's
+  other fields does not drop its type.
+  """
+  def note_type_options(current \\ nil) do
+    options = [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]
+
+    if current in [nil, ""] or current in Note.types(),
+      do: options,
+      else: options ++ [{current, current}]
+  end
 
   @doc "The name of a play's form, as `Play.form/1` gives it."
   def form_label("verse"), do: gettext("Verse")

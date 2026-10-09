@@ -15,7 +15,6 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Division, Note}
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Statistics
@@ -44,7 +43,7 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:characters, characters)
      |> assign(:statistic, statistic)
      |> assign(:bibliography, bibliography)
-     |> assign(:notes, notes(divisions))
+     |> assign(:notes, note_entries(divisions))
      |> assign(:note_type, nil)
      |> assign(:metadata_sections, metadata_sections)
      |> assign(:play_sections, play_sections)
@@ -499,26 +498,6 @@ defmodule PlaycodeWeb.PlayShowLive do
       </div>
     </div>
     """
-  end
-
-  # Each note with the word it glosses and where it is: the division's and the scene's
-  # titles, and the line's number when it has one.
-  defp notes(divisions) do
-    for %{note: note, anchor: anchor, division: division, scene: scene} <-
-          Note.with_anchors(divisions) do
-      line = if match?(%Division{}, anchor), do: nil, else: anchor.line_number
-
-      where =
-        [
-          division.title || String.capitalize(division.type),
-          scene && scene.title,
-          line && gettext("line %{n}", n: line)
-        ]
-        |> Enum.reject(&is_nil/1)
-        |> Enum.join(", ")
-
-      %{note: note, glossed: Note.glossed(note, PlayContent.anchor_text(anchor)), where: where}
-    end
   end
 
   defp build_sections_navigation(play, divisions, bibliography) do

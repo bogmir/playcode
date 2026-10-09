@@ -4421,6 +4421,68 @@ msgstr ""
 msgid "line %{n}"
 msgstr ""
 
+#: lib/playcode_web/live/admin/play_notes_live.ex:237
+#, elixir-autogen, elixir-format
+msgid "%{shown} of %{total} notes"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:300
+#, elixir-autogen, elixir-format
+msgid "A blank line starts a new paragraph; <<…>> marks italics."
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:201
+#, elixir-autogen, elixir-format
+msgid "All types"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:183
+#, elixir-autogen, elixir-format
+msgid "No notes yet. Add them to a line in Content."
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:73
+#, elixir-autogen, elixir-format
+msgid "Note deleted."
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:60
+#, elixir-autogen, elixir-format
+msgid "Note saved."
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:185
+#, elixir-autogen, elixir-format
+msgid "Open Content"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:327
+#, elixir-autogen, elixir-format
+msgid "Open in Content"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:217
+#, elixir-autogen, elixir-format
+msgid "Search the notes"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:231
+#, elixir-autogen, elixir-format
+msgid "Without a term"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:173
+#, elixir-autogen, elixir-format
+msgid "Every note in the play's text, in reading order. Edit a note where it is listed; add notes to a line in Content."
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_notes_live.ex:235
+#, elixir-autogen, elixir-format
+msgid "1 note"
+msgid_plural "%{count} notes"
+msgstr[0] ""
+msgstr[1] ""
+
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2236
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2847
 #, elixir-autogen, elixir-format

@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext
 
+  alias Playcode.PlayContent
   alias Playcode.PlayContent.{Division, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
@@ -321,6 +322,34 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   defp note_label(note), do: "#{PlayLabels.note_type_label(note.type)} #{note.number}"
+
+  @doc """
+  The play's notes in reading order, each with what it hangs on (`anchor`), the word it
+  glosses and where it is: the division's and the scene's titles, and the line's number
+  when it has one. The public Notes view and the admin's Notes tab both list these.
+  """
+  def note_entries(divisions) do
+    for %{note: note, anchor: anchor, division: division, scene: scene} <-
+          Note.with_anchors(divisions) do
+      line = if match?(%Division{}, anchor), do: nil, else: anchor.line_number
+
+      where =
+        [
+          division.title || String.capitalize(division.type),
+          scene && scene.title,
+          line && gettext("line %{n}", n: line)
+        ]
+        |> Enum.reject(&is_nil/1)
+        |> Enum.join(", ")
+
+      %{
+        note: note,
+        anchor: anchor,
+        glossed: Note.glossed(note, PlayContent.anchor_text(anchor)),
+        where: where
+      }
+    end
+  end
 
   attr :notes, :list, required: true, doc: "`%{note, glossed, where}`, in reading order"
   attr :type, :string, default: nil, doc: "the one type shown, or nil for all"

@@ -366,6 +366,12 @@ defmodule Playcode.PlayContent do
 
   # --- Notes ---
 
+  @doc """
+  As `get_character/2`, for a note: nil for another play's note, a deleted one or a
+  malformed id.
+  """
+  def get_note(play_id, id), do: get_play_row(Note, play_id, id)
+
   @doc "The notes on an element or a division, in text order."
   def list_notes(%Element{id: id}), do: notes_query() |> where(element_id: ^id) |> Repo.all()
   def list_notes(%Division{id: id}), do: notes_query() |> where(division_id: ^id) |> Repo.all()

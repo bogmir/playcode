@@ -115,10 +115,13 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
     end
   end
 
-  # After each word; plus where the note is now when that is not after a word (an imported
-  # note after punctuation), so saving its text alone does not move it; or the end of an
-  # empty text.
-  defp offset_options(anchor, %Note{offset: offset}) do
+  @doc """
+  Where `note` can go in `anchor`'s text, for a select: after each word; plus where the
+  note is now when that is not after a word (an imported note after punctuation), so
+  saving its text alone does not move it; or the end of an empty text. The admin's Notes
+  tab offers the same choice.
+  """
+  def offset_options(anchor, %Note{offset: offset}) do
     ends = anchor |> PlayContent.anchor_text() |> Note.word_ends()
 
     cond do
@@ -197,7 +200,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
           field={@form[:type]}
           type="select"
           label={gettext("Type")}
-          options={PlayLabels.note_type_options()}
+          options={PlayLabels.note_type_options(@editing.type)}
         />
         <.input
           field={@form[:offset]}
