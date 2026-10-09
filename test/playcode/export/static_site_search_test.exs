@@ -217,6 +217,31 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     {:ok, _} = Playcode.PlayContent.update_element(line, %{content: text})
   end
 
+  test "a word only an inline stage direction holds is a stage direction hit; a spoken word keeps its flag" do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="jornada" n="1"><head>Jornada I</head>
+            <sp><speaker>Segismundo</speaker><l n="12">Decir que sueño es engaño <stage>(vase, sueño)</stage></l></sp>
+          </div1>
+          """
+        )
+      )
+
+    dir = generate!([play], all: true)
+
+    {"index", "va", va} = load_js!(dir, "search/index/va.js")
+    {"index", "su", su} = load_js!(dir, "search/index/su.js")
+    {"index", "en", en} = load_js!(dir, "search/index/en.js")
+
+    # Play 0, one line (0), delta = line * 2 + flag.
+    assert va["vase"] == [0, 1, 1]
+    # In the stage and spoken in the same line: one posting, spoken.
+    assert su["sueño"] == [0, 1, 0]
+    assert en["engaño"] == [0, 1, 0]
+  end
+
   describe "updating a generated site" do
     setup do
       # Distinct titles fix the catalogue order: "Alfa" (second) sorts before "Zeta"

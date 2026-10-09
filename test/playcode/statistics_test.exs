@@ -38,6 +38,25 @@ defmodule Playcode.StatisticsTest do
     assert [%{"name" => "ALFA", "speeches" => 1}] = stat.data["character_appearances"]
   end
 
+  test "an inline stage direction is counted as a stage direction, and its words are not spoken" do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="jornada" n="1"><head>Jornada I</head>
+            <stage>Sale ANA</stage>
+            <sp><speaker>ANA</speaker><l n="1">Dulce <stage type="exit">(bajo)</stage> sueño mío</l></sp>
+          </div1>
+          """
+        )
+      )
+
+    data = Statistics.get_statistics(play.id).data
+
+    assert data["total_stage_directions"] == 2
+    assert data["words"] == 3
+  end
+
   test "a row cached by an older version is recomputed on read" do
     %{play: play} = TestFixtures.play_with_structure_fixture()
     stat = Statistics.get_statistics(play.id)

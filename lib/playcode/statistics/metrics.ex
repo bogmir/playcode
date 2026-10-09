@@ -8,7 +8,7 @@ defmodule Playcode.Statistics.Metrics do
   labels in the margin, so the pages and the statistics follow the same rules.
   """
 
-  alias Playcode.PlayContent.Element
+  alias Playcode.PlayContent.{Element, InlineMarkup}
 
   @act_types ~w(acto act acte jornada)
   @unmarked [nil, "", "free", "nil"]
@@ -198,9 +198,12 @@ defmodule Playcode.Statistics.Metrics do
     [current | rest]
   end
 
-  @doc "Number of words in element content; the `<<`/`>>` markers are not words."
+  @doc """
+  Number of spoken words in element content: the `<<`/`>>` markers and the words of an
+  inline stage direction are not spoken.
+  """
   def words(nil), do: 0
-  def words(text), do: length(Regex.scan(~r/[\p{L}\p{N}]+/u, text))
+  def words(text), do: length(Regex.scan(~r/[\p{L}\p{N}]+/u, InlineMarkup.spoken(text)))
 
   @doc """
   Presence columns: the play's scenes if it has any, else its metrical passages, else

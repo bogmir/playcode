@@ -87,7 +87,8 @@ defmodule Playcode.Export.StaticSite.Search do
           ref: edition.refs[item.element.id],
           speaker: speaker(item),
           kind: @kinds[item.kind],
-          text: InlineMarkup.plain(item.element.content)
+          text: InlineMarkup.plain(item.element.content),
+          stage_only: stage_only_words(item.element.content)
         }
       end
 
@@ -110,8 +111,14 @@ defmodule Playcode.Export.StaticSite.Search do
     entries
     |> Enum.with_index()
     |> Enum.flat_map(fn {entry, line} ->
-      flag = if entry.kind == "s", do: 1, else: 0
-      entry.text |> words() |> Enum.uniq() |> Enum.map(&{&1, {line, flag}})
+      stage_line? = entry.kind == "s"
+
+      entry.text
+      |> words()
+      |> Enum.uniq()
+      |> Enum.map(fn word ->
+        {word, {line, if(stage_line? or word in entry.stage_only, do: 1, else: 0)}}
+      end)
     end)
     |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
     |> Enum.group_by(fn {word, _lines} -> shard_key(word) end)
@@ -119,6 +126,17 @@ defmodule Playcode.Export.StaticSite.Search do
       {key,
        Enum.map_join(words, "\n", fn {word, lines} -> word <> " " <> group(deltas(lines)) end)}
     end)
+  end
+
+  # The words of a line that occur in its inline stage directions and nowhere in what is
+  # spoken: those, and no others, are stage direction hits. Most lines hold no stage.
+  defp stage_only_words(content) do
+    if is_binary(content) and String.contains?(content, "</stage>") do
+      spoken = content |> InlineMarkup.spoken() |> words() |> MapSet.new()
+      content |> InlineMarkup.staged() |> words() |> Enum.reject(&MapSet.member?(spoken, &1))
+    else
+      []
+    end
   end
 
   # One play's postings for one word as a shard prints them: `n, d1 … dn`.
