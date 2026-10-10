@@ -17,7 +17,7 @@ source and variant tables received).
 | S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays |
 | S6–S8 | scoped below, each gets its own plan when it comes up |
 | S4 — bibliography | **done** 2026-10-07 (`e82c968..369a077`; designed the same day, after the project answered the research's questions: shared entries, a one-time import) — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
-| S9 — places | **Phase 1 done** (the app, no FileMaker code) — `CLAUDE.md` |
+| S9 — places | **Phase 1 done** (the app, no FileMaker code) — `docs/history.md` |
 | S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; unblocked: the rest of EMOTHE is in (371 plays on dev, 2026-10-08) |
 
 Completed plans live in `archive/`, with exactly what shipped, the commit list, and what each
@@ -492,7 +492,7 @@ Jodelle attributions are corrected in FileMaker before the import or here after 
   `EditorCanon60`, language, `Referencia`, and a distributor on 160; `T07.532` the 45 distributors
   (Biblioteca Virtual Miguel de Cervantes, Gallica, Universitat de València…). Our files' `<sourceDesc>`
   was generated from these, so the TEI already holds them and `play_sources` stays TEI-fed. The
-  distributor the parser drops (CLAUDE.md, *Other losses*, 152 plays) is fixable from the TEI
+  distributor the parser drops (`docs/backlog.md`, *Other losses*, 152 plays) is fixable from the TEI
   alone, with `T07.532` as its vocabulary.
 - **`T04.1.EdiMod_Referencia`** (84 modern editions, found during S4's design) is answered by the
   same tables: it reads like the base edition of a digital text
@@ -615,7 +615,7 @@ replace parsing `bus_personaje` for the check below. See "The master database, m
 Not an import: TEI stays the source of truth for characters. `T01.bus_personaje` (one name per
 line, 18 of our 22 plays) is a completeness check — flag characters present in FileMaker but
 missing from the imported cast list, and vice versa. Feeds the "review character in text" UI
-already on the roadmap in `CLAUDE.md`.
+already on the roadmap in `docs/backlog.md`.
 
 **Scale changes what this has to be.** 18 plays and 712 names today; **308 plays and 8450 names**
 once the ~300 land. At 712 a curator reads the report; at 8450 they cannot, so the output has to be
@@ -771,14 +771,14 @@ five-language place names are research work we would otherwise redo.
 and turned out to be a feature rather than a column: a corpus-global gazetteer with a three-layer
 place / place-name / mention model, Wikidata as a swappable authority, and TEI `<listPlace>` +
 `<setting>` in both directions. **Phase 1 shipped no FileMaker code**, on purpose, and
-`plays.place_of_action` was never created. See `Playcode.Places` in `CLAUDE.md`.
+`plays.place_of_action` was never created. See `Playcode.Places` in `docs/history.md`.
 
 Two things were called "Phase 2" and they are not the same work, so they are split here:
 
 - **In-text mentions and the rest of the app work** — `<placeName ref>` in the body, an
   `element_places` table, the tagging UI, map rendering from the stored coordinates,
   catalogue browse-by-place, multiple authority links per place. **Not a FileMaker slice at all**;
-  it touches no export field and belongs in its own spec. Scope is recorded in `CLAUDE.md` under
+  it touches no export field and belongs in its own spec. Scope is recorded in `docs/backlog.md` under
   "Places Phase 2". Not planned as of 2026-08-04, deliberately.
 - **S9b, the `pub_LugAccion` import** — what this roadmap promised. **Scoped, build it, see below**,
   after the ~300-play import and ideally after `bus_lugAccion` arrives.

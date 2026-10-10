@@ -3,7 +3,7 @@
 Analysis of 2026-10-10, from the 370 production TEI files (`doc/tei_corpus/`, git-ignored), the
 dev database after a full re-import, and the old EMOTHE pages
 (`https://emothe.uv.es/biblioteca/textosEMOTHE/<file>.php`) with their stylesheet. Both are
-listed in `CLAUDE.md`, *Found by the corpus round trip*. The questions only the project can
+listed in `backlog.md`, *Found by the corpus round trip*. The questions only the project can
 answer are in `stakeholder/variantes-y-codigo.html`.
 
 ## `<app>`: the critical apparatus

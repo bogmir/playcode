@@ -2656,18 +2656,18 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ### Task 7: Docs and the full check
 
 **Files:**
-- Modify: `CLAUDE.md`
+- Modify: `CLAUDE.md`, `docs/architecture.md`, `docs/backlog.md`, `docs/history.md`
 - Modify: `docs/superpowers/plans/2026-08-01-filemaker-import-slices.md`
 - Modify: `docs/superpowers/specs/2026-10-10-s3-witnesses-design.md` (status, and "Expected result" if Task 4 Step 7 measured different figures)
 
-- [ ] **Step 1: CLAUDE.md** — make these edits, each a line or two in the house style:
-  - *Project Structure*: under `lib/playcode/`, `witnesses.ex  # A play's witnesses (S3): CRUD, order, the printed line, TEI id and type` and `witnesses/witness.ex  # One manuscript or early printing, with its siglum`; under `import/`, `witnesses.ex  # S3's one-time FileMaker witness import`; under `live/admin/`, `play_witnesses_live.ex  # Admin: /admin/plays/:id/witnesses - a play's witnesses`.
-  - *Database Schema*: a `play_witnesses` bullet — the columns, `position`, `origin`, unique `(play_id, siglum)`, the trigger, "printed as emothe.uv.es prints *Testimonios*; siglum and type are never public".
-  - *Routes / Admin*: `GET /admin/plays/:id/witnesses` - A play's witnesses: add, edit, reorder, delete, previewed as printed (`:view_admin`).
-  - *TEI-XML Format*: `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum; `bibl@type`/`@subtype` the type); a siglum the play already has is skipped.
-  - *Found by the corpus round trip*: tick the `sourceDesc/listWit/witness` item, pointing at the spec.
-  - *Getting Started*: after the bibliography block, `mix playcode.import.witnesses --dry-run` / `mix playcode.import.witnesses` (S3, `T03` and `T03.2` under `doc/ctce_dades/`; on Fly `Playcode.Release.import_witnesses/2`).
-  - *FileMaker import (S3, S5-S8)*: S3 done; the rest stays.
+- [ ] **Step 1: CLAUDE.md and `docs/`** — make these edits, each a line or two in the house style (CLAUDE.md keeps the schema, the TEI mapping and the commands; the file map and routes are in `docs/architecture.md`, open work in `docs/backlog.md`, done work in `docs/history.md`):
+  - `docs/architecture.md`, *Project Structure*: under `lib/playcode/`, `witnesses.ex  # A play's witnesses (S3): CRUD, order, the printed line, TEI id and type` and `witnesses/witness.ex  # One manuscript or early printing, with its siglum`; under `import/`, `witnesses.ex  # S3's one-time FileMaker witness import`; under `live/admin/`, `play_witnesses_live.ex  # Admin: /admin/plays/:id/witnesses - a play's witnesses`.
+  - CLAUDE.md, *Database Schema*: a `play_witnesses` bullet — the columns, `position`, `origin`, unique `(play_id, siglum)`, the trigger, "printed as emothe.uv.es prints *Testimonios*; siglum and type are never public".
+  - `docs/architecture.md`, *Routes / Admin*: `GET /admin/plays/:id/witnesses` - A play's witnesses: add, edit, reorder, delete, previewed as printed (`:view_admin`).
+  - CLAUDE.md, *TEI-XML Format*: `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum; `bibl@type`/`@subtype` the type); a siglum the play already has is skipped.
+  - `docs/backlog.md`, *Found by the corpus round trip*: move the `sourceDesc/listWit/witness` item to `docs/history.md`, ticked, pointing at the spec.
+  - CLAUDE.md, *Getting Started*: after the bibliography block, `mix playcode.import.witnesses --dry-run` / `mix playcode.import.witnesses` (S3, `T03` and `T03.2` under `doc/ctce_dades/`; on Fly `Playcode.Release.import_witnesses/2`).
+  - `docs/backlog.md`, *FileMaker import (S3, S5-S8)*: S3 done (a line in `docs/history.md`); the rest stays.
 
 - [ ] **Step 2: The roadmap** — S3's status row: `**done** 2026-10-1x — ../specs/2026-10-10-s3-witnesses-design.md`, with the commit range (`git log --oneline main..s3-witnesses`).
 
@@ -2685,8 +2685,8 @@ Expected: all green; paste the summary lines into the final report.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add CLAUDE.md docs/superpowers/plans/2026-08-01-filemaker-import-slices.md docs/superpowers/specs/2026-10-10-s3-witnesses-design.md
-git commit -m "docs: S3 witnesses in CLAUDE.md, the roadmap and the spec
+git add CLAUDE.md docs/architecture.md docs/backlog.md docs/history.md docs/superpowers/plans/2026-08-01-filemaker-import-slices.md docs/superpowers/specs/2026-10-10-s3-witnesses-design.md
+git commit -m "docs: S3 witnesses in CLAUDE.md, docs/, the roadmap and the spec
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```

@@ -385,8 +385,9 @@ Existing guards this slice must satisfy:
 4. **Admin page.**
 5. **Public pages:** `/plays/:code` and the static site.
 
-Then CLAUDE.md (schema, routes, implemented list, the `listWit` line under *Data dropped on
-import*) and the roadmap's S3 row.
+Then the docs: CLAUDE.md (schema), `docs/architecture.md` (files, routes), the `listWit` line
+under *Data dropped on import* moved from `docs/backlog.md` to `docs/history.md`, and the
+roadmap's S3 row.
 
 ## Out of scope
 
