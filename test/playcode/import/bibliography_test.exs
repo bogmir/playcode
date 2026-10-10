@@ -114,4 +114,21 @@ defmodule Playcode.Import.BibliographyTest do
     assert %{volume: "5", pages: "2366-2466"} = link.(hamlet)
     assert %{volume: "7", pages: "100-200"} = link.(antony)
   end
+
+  # T04:34 is Frenk Alatorre's Comedias (1982), a real edition: only its siglum, "TES2", is
+  # FileMaker test data (docs/superpowers/specs/2026-10-10-s3-witnesses-design.md).
+  test "FileMaker's test siglum on a real edition is dropped, and a real one is kept" do
+    no_lookups = %{cities: %{}, publishers: %{}}
+
+    row = %{
+      "_kp_IdEdicionModerna" => "34",
+      "EdiMod_Titulo" => "Comedias",
+      "EdiMod_Siglas" => "TES2"
+    }
+
+    assert %{siglum: nil, monogr_title: "Comedias"} = Bibliography.edition_attrs(row, no_lookups)
+
+    assert %{siglum: "RSC"} =
+             Bibliography.edition_attrs(%{row | "EdiMod_Siglas" => "RSC"}, no_lookups)
+  end
 end
