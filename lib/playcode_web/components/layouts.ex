@@ -103,7 +103,7 @@ defmodule PlaycodeWeb.Layouts do
   attr :active_tab, :atom,
     default: nil,
     doc:
-      "which tab is active (:overview, :metadata, :editors, :sources, :bibliography, :places, :content, :notes, :public)"
+      "which tab is active (:overview, :metadata, :editors, :sources, :witnesses, :bibliography, :places, :content, :notes, :public)"
 
   def play_context_bar(assigns) do
     ~H"""
@@ -147,6 +147,12 @@ defmodule PlaycodeWeb.Layouts do
             class={ctx_tab_class(@active_tab == :sources)}
           >
             {gettext("Sources")}
+          </.link>
+          <.link
+            navigate={~p"/admin/plays/#{@play.id}/witnesses"}
+            class={ctx_tab_class(@active_tab == :witnesses)}
+          >
+            {gettext("Witnesses")}
           </.link>
           <.link
             navigate={~p"/admin/plays/#{@play.id}/bibliography"}

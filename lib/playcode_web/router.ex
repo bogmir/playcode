@@ -161,6 +161,7 @@ defmodule PlaycodeWeb.Router do
       live "/plays/:id", PlayDetailLive, :show
       live "/plays/:id/editors", PlayEditorsLive, :index
       live "/plays/:id/sources", PlaySourcesLive, :index
+      live "/plays/:id/witnesses", PlayWitnessesLive, :index
       live "/plays/:id/places", PlayPlacesLive, :index
       live "/plays/:id/bibliography", PlayBibliographyLive, :index
       live "/plays/:id/content", PlayContentEditorLive, :index
