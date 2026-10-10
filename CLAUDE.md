@@ -45,7 +45,7 @@ Rules that follow from this:
 
 - **Never claim "done", "fixed" or "working" without the command output that proves it.** Evidence first, assertion second.
 - **A failing test is information, not an obstacle.** If a test fails, read the failure before changing anything. If the failure means the *test's* expectation was wrong, fix the test and say so — but check the implementation first.
-- **An existing test that contradicts a deliberate behaviour change gets updated, with a comment saying why.** See `test/playcode/import/tei_parser_test.exs`, "the play it returns is the play as stored": it used to assert the stale value `import_file/1` returned.
+- **An existing test that contradicts a deliberate behaviour change gets updated, with a comment saying why.** See `test/playcode/import/tei_import_test.exs`, "the play it returns is the play as stored": it used to assert the stale value `import_file/1` returned.
 - **Bugfixes get a regression test** that fails before the fix.
 - **`mix format` after every task.** The repo is formatted; a noisy diff hides the real change.
 - **`mix compile --warnings-as-errors` before committing.**
@@ -54,7 +54,7 @@ Rules that follow from this:
 tested through its route: a LiveView with `live/2`, `form/3` and `render_submit/1`, a
 controller with `get`/`post`, a mix task with `Mix.Task.rerun/2`. Test an internal only
 where the outer path is much slower or clumsier to set up: the TEI and Word importers
-through `TeiParser.import_file/1` / `WordParser.import_content/2`, the FileMaker sync
+through `TeiImport.import_file/1` / `WordParser.import_content/2`, the FileMaker sync
 rules through `FilemakerSync.plan/3`, the account token rules through `Accounts`. Even
 then, assert on what someone outside can observe, never on how rows are stored:
 
@@ -141,8 +141,8 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 
 - `plays.deleted_at` — archiving, not deletion. `Catalogue.delete_play/1` sets it, `restore_play/1` clears it, `purge_play/1` is the destructive path (wired to no button). Every Catalogue read hides archived plays; pass `include_deleted: true` for both or `archived: true` for only the archived ones. The unique index on `plays.code` is deliberately global, so an archived play keeps its code reserved.
 - `play_editors.origin`, `play_sources.origin`, `play_editorial_notes.origin` — `"tei" | "manual" | "filemaker"`, default `"manual"`. A TEI re-import deletes only its own `"tei"` rows, so hand-entered records survive.
-- **Re-importing a TEI file whose code exists updates that play in place** (same `id`, same history, un-archived). It does *not* write `language`, `relationship_type`, `parent_play_id`, `is_complete`, `historical_time`, `historical_time_note`, `composition_date_from`, `composition_date_to`, `composition_date_note` or `form` — those are `@platform_owned` in `lib/playcode/import/tei_parser.ex`. Any new curated column must be added to that list: for a column the TEI parser emits, the list is what stops the re-import overwriting it; for one it does not emit, the list is what makes the import preview report it as preserved.
-- `TeiParser.preview_import/1` reports what an import would replace and keep, without writing. Used by the admin import page and `mix playcode.import.tei --dry-run`.
+- **Re-importing a TEI file whose code exists updates that play in place** (same `id`, same history, un-archived). It does *not* write `language`, `relationship_type`, `parent_play_id`, `is_complete`, `historical_time`, `historical_time_note`, `composition_date_from`, `composition_date_to`, `composition_date_note` or `form` — those are `@platform_owned` in `lib/playcode/import/tei_import.ex`. Any new curated column must be added to that list: for a column the TEI parser emits, the list is what stops the re-import overwriting it; for one it does not emit, the list is what makes the import preview report it as preserved.
+- `TeiImport.preview_import/1` reports what an import would replace and keep, without writing. Used by the admin import page and `mix playcode.import.tei --dry-run`.
 
 ### Access control
 

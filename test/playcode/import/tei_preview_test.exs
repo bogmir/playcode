@@ -2,7 +2,7 @@ defmodule Playcode.Import.TeiPreviewTest do
   use Playcode.DataCase, async: true
 
   alias Playcode.Catalogue
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
 
   @tei """
   <?xml version="1.0" encoding="UTF-8"?>
@@ -43,7 +43,7 @@ defmodule Playcode.Import.TeiPreviewTest do
   end
 
   test "an unknown code previews as a new play", %{path: path} do
-    assert {:ok, preview} = TeiParser.preview_import(path)
+    assert {:ok, preview} = TeiImport.preview_import(path)
 
     assert preview.code == "EMOTHE9401_PreviewPlay"
     assert preview.title == "Preview Play"
@@ -66,11 +66,11 @@ defmodule Playcode.Import.TeiPreviewTest do
   end
 
   test "an existing play reports what is replaced and what is kept", %{path: path} do
-    {:ok, play} = TeiParser.import_file(path)
+    {:ok, play} = TeiImport.import_file(path)
     {:ok, _} = Catalogue.create_play_source(%{play_id: play.id, title: "Typed by hand"})
     {:ok, _} = Catalogue.update_play(play, %{language: "en", form: "mixed"})
 
-    assert {:ok, preview} = TeiParser.preview_import(path)
+    assert {:ok, preview} = TeiImport.preview_import(path)
 
     assert preview.existing.id == play.id
     refute preview.archived
@@ -83,7 +83,7 @@ defmodule Playcode.Import.TeiPreviewTest do
   end
 
   test "a hand-linked place counts as kept, a TEI one as replaced", %{path: path} do
-    {:ok, play} = TeiParser.import_file(path)
+    {:ok, play} = TeiImport.import_file(path)
 
     # Unique names, not "Roma" — place_fixture derives the slug from the name, and the
     # slug index is global, so two async tests inserting the same slug inside their
@@ -93,23 +93,23 @@ defmodule Playcode.Import.TeiPreviewTest do
     {:ok, _} = Playcode.Places.link_place(play.id, hand.id, %{"origin" => "manual"})
     {:ok, _} = Playcode.Places.link_place(play.id, from_tei.id, %{"origin" => "tei"})
 
-    assert {:ok, preview} = TeiParser.preview_import(path)
+    assert {:ok, preview} = TeiImport.preview_import(path)
 
     assert preview.replaces.places == 1
     assert preview.preserves.places == 1
   end
 
   test "an archived play is flagged so the UI can say it will be restored", %{path: path} do
-    {:ok, play} = TeiParser.import_file(path)
+    {:ok, play} = TeiImport.import_file(path)
     {:ok, _} = Catalogue.delete_play(play)
 
-    assert {:ok, preview} = TeiParser.preview_import(path)
+    assert {:ok, preview} = TeiImport.preview_import(path)
     assert preview.archived
     assert preview.existing.id == play.id
   end
 
   test "preview writes nothing", %{path: path} do
-    {:ok, _} = TeiParser.preview_import(path)
+    {:ok, _} = TeiImport.preview_import(path)
 
     assert Catalogue.list_plays(include_deleted: true) == []
   end

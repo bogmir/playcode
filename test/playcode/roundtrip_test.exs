@@ -593,7 +593,7 @@ defmodule Playcode.RoundtripTest do
       original_xml = read_original(@path)
       orig_counts = structural_counts(original_xml)
 
-      assert {:ok, play} = Playcode.Import.TeiParser.import_file(@path),
+      assert {:ok, play} = Playcode.Import.TeiImport.import_file(@path),
              "Failed to import #{@path}"
 
       play_full = Playcode.Catalogue.get_play_with_all!(play.id)
@@ -706,7 +706,7 @@ defmodule Playcode.RoundtripTest do
       File.write!(path, first)
       on_exit(fn -> File.rm(path) end)
 
-      {:ok, reimported} = Playcode.Import.TeiParser.import_file(path)
+      {:ok, reimported} = Playcode.Import.TeiImport.import_file(path)
 
       second =
         Playcode.Export.TeiXml.generate(Playcode.Catalogue.get_play_with_all!(reimported.id))

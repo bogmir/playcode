@@ -2,7 +2,7 @@ defmodule Playcode.TeiRoundtripTest do
   @moduledoc """
   What a TEI file says survives import and comes back out of the export.
 
-  Each test feeds a small TEI document through `TeiParser.import_file/1`, exports
+  Each test feeds a small TEI document through `TeiImport.import_file/1`, exports
   the play with `TeiXml.generate/1`, and asserts on the exported XML. How the
   importer stores things is free to change; what a TEI consumer reads is not.
   Real corpus files get the same treatment in test/playcode/roundtrip_test.exs.
@@ -733,8 +733,8 @@ defmodule Playcode.TeiRoundtripTest do
         )
         |> write_tmp!()
 
-      {:ok, _} = Playcode.Import.TeiParser.import_file(path)
-      {:ok, play} = Playcode.Import.TeiParser.import_file(path)
+      {:ok, _} = Playcode.Import.TeiImport.import_file(path)
+      {:ok, play} = Playcode.Import.TeiImport.import_file(path)
 
       assert [%{after: "uno"}] = play |> export_tei() |> xml_notes()
     end
@@ -936,8 +936,8 @@ defmodule Playcode.TeiRoundtripTest do
         )
         |> write_tmp!()
 
-      {:ok, _} = Playcode.Import.TeiParser.import_file(path)
-      {:ok, play} = Playcode.Import.TeiParser.import_file(path)
+      {:ok, _} = Playcode.Import.TeiImport.import_file(path)
+      {:ok, play} = Playcode.Import.TeiImport.import_file(path)
 
       assert [%{text: "(x)"}] = play |> export_tei() |> xml_inline_stages()
     end

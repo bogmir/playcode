@@ -1,4 +1,4 @@
-defmodule Playcode.Import.TeiParser do
+defmodule Playcode.Import.TeiImport do
   @moduledoc """
   Parses TEI-XML files into database records.
 

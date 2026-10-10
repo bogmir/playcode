@@ -1,4 +1,4 @@
-defmodule Playcode.Import.TeiParserTest do
+defmodule Playcode.Import.TeiImportTest do
   @moduledoc """
   What the TEI importer does that its export cannot show: how it fails, which
   encodings it reads, and the rules it applies to the gazetteer and to editor
@@ -10,29 +10,29 @@ defmodule Playcode.Import.TeiParserTest do
   import Playcode.ImportHelpers
 
   alias Playcode.Catalogue
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
   alias Playcode.Places
   alias Playcode.Statistics
 
   describe "a file that cannot become a play" do
     test "a missing file is reported as such" do
-      assert {:error, :enoent} = TeiParser.import_file("/nonexistent/file.xml")
+      assert {:error, :enoent} = TeiImport.import_file("/nonexistent/file.xml")
     end
 
     test "malformed XML is a parse error" do
-      assert {:error, {:xml_parse_error, _}} = TeiParser.import_file(write_tmp!("<not valid>>>"))
+      assert {:error, {:xml_parse_error, _}} = TeiImport.import_file(write_tmp!("<not valid>>>"))
     end
 
     test "XML without a teiHeader is refused" do
       for xml <- ["<TEI><text><body></body></text></TEI>", "<html><body><p>Hi</p></body></html>"] do
-        assert {:error, :missing_tei_header} = TeiParser.import_file(write_tmp!(xml))
+        assert {:error, :missing_tei_header} = TeiImport.import_file(write_tmp!(xml))
       end
     end
 
     test "a teiHeader with no title fails validation" do
       xml = "<TEI><teiHeader></teiHeader><text><body></body></text></TEI>"
 
-      assert {:error, %Ecto.Changeset{} = changeset} = TeiParser.import_file(write_tmp!(xml))
+      assert {:error, %Ecto.Changeset{} = changeset} = TeiImport.import_file(write_tmp!(xml))
       assert "can't be blank" in errors_on(changeset).title
     end
   end
@@ -41,7 +41,7 @@ defmodule Playcode.Import.TeiParserTest do
     xml = tei(title: "UTF16 Test", code: "UTF16LE")
     utf16 = <<0xFF, 0xFE>> <> :unicode.characters_to_binary(xml, :utf8, {:utf16, :little})
 
-    assert {:ok, play} = TeiParser.import_file(write_tmp!(utf16))
+    assert {:ok, play} = TeiImport.import_file(write_tmp!(utf16))
     assert Catalogue.get_play!(play.id).title == "UTF16 Test"
   end
 
@@ -57,7 +57,7 @@ defmodule Playcode.Import.TeiParserTest do
     </TEI>
     """
 
-    assert {:ok, play} = TeiParser.import_file(write_tmp!(xml))
+    assert {:ok, play} = TeiImport.import_file(write_tmp!(xml))
     assert Catalogue.get_play_by_code!("HEADERONLY01").title == "Header Only"
     assert play.id == Catalogue.get_play_by_code!("HEADERONLY01").id
   end
@@ -68,7 +68,7 @@ defmodule Playcode.Import.TeiParserTest do
   test "the play it returns is the play as stored" do
     xml = tei(file_desc: "<extent>3500 versos</extent>")
 
-    assert {:ok, returned} = TeiParser.import_file(write_tmp!(xml))
+    assert {:ok, returned} = TeiImport.import_file(write_tmp!(xml))
     stored = Catalogue.get_play!(returned.id)
 
     assert {returned.verse_count, returned.is_verse} == {stored.verse_count, stored.is_verse}
@@ -147,7 +147,7 @@ defmodule Playcode.Import.TeiParserTest do
     """
 
     defp import_places! do
-      {:ok, play} = TeiParser.import_file(write_tmp!(@places_tei))
+      {:ok, play} = TeiImport.import_file(write_tmp!(@places_tei))
       play
     end
 
@@ -236,12 +236,12 @@ defmodule Playcode.Import.TeiParserTest do
     end
 
     {:ok, play} =
-      TeiParser.import_file(write_tmp!(tei(code: code, body: body.(~s(<l n="1">Uno</l>)))))
+      TeiImport.import_file(write_tmp!(tei(code: code, body: body.(~s(<l n="1">Uno</l>)))))
 
     assert Statistics.get_statistics(play.id).data["total_verses"] == 1
 
     {:ok, _} =
-      TeiParser.import_file(
+      TeiImport.import_file(
         write_tmp!(tei(code: code, body: body.(~s(<l n="1">Uno</l><l n="2">Dos</l>))))
       )
 

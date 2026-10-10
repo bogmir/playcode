@@ -98,7 +98,7 @@ The existing DB schema fully supports this:
 ### Technical approach
 
 - `.docx` files are ZIP archives containing `word/document.xml` — Elixir can unzip and parse the inner XML with the same Saxy library used for TEI
-- The parser creates divisions + elements in a DB transaction (same pattern as `tei_parser.ex`)
+- The parser creates divisions + elements in a DB transaction (same pattern as `tei_import.ex`)
 - The bulk character assignment page lists all speeches grouped by division, with multi-select batch assignment
 
 ## Example files

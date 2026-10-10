@@ -8,7 +8,7 @@ defmodule Playcode.Import.TeiReimportTest do
   import Playcode.ImportHelpers
 
   alias Playcode.Catalogue
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
 
   @tei tei(
          code: "EMOTHE9301",
@@ -34,26 +34,26 @@ defmodule Playcode.Import.TeiReimportTest do
   end
 
   test "re-importing updates the same play, and brings an archived one back", %{path: path} do
-    {:ok, play} = TeiParser.import_file(path)
+    {:ok, play} = TeiImport.import_file(path)
     {:ok, _} = Catalogue.delete_play(play)
 
-    assert {:ok, reimported} = TeiParser.import_file(path)
+    assert {:ok, reimported} = TeiImport.import_file(path)
     assert reimported.id == play.id
     refute Catalogue.get_play!(play.id).deleted_at
   end
 
   test "re-importing the same file changes nothing a reader can see", %{path: path} do
-    {:ok, play} = TeiParser.import_file(path)
+    {:ok, play} = TeiImport.import_file(path)
     before = export_tei(play)
 
-    {:ok, _} = TeiParser.import_file(path)
+    {:ok, _} = TeiImport.import_file(path)
 
     assert export_tei(play) == before
   end
 
-  # The platform-owned columns in lib/playcode/import/tei_parser.ex (@platform_owned).
+  # The platform-owned columns in lib/playcode/import/tei_import.ex (@platform_owned).
   test "curated columns survive a re-import", %{path: path} do
-    {:ok, play} = TeiParser.import_file(path)
+    {:ok, play} = TeiImport.import_file(path)
 
     curated = %{
       language: "en",
@@ -67,14 +67,14 @@ defmodule Playcode.Import.TeiReimportTest do
     }
 
     {:ok, _} = Catalogue.update_play(play, curated)
-    {:ok, _} = TeiParser.import_file(path)
+    {:ok, _} = TeiImport.import_file(path)
 
     assert Map.take(Catalogue.get_play!(play.id), Map.keys(curated)) == curated
   end
 
   test "hand-entered sources, editors and notes survive; the file's own are replaced",
        %{path: path} do
-    {:ok, play} = TeiParser.import_file(path)
+    {:ok, play} = TeiImport.import_file(path)
 
     {:ok, _} = Catalogue.create_play_source(%{play_id: play.id, title: "Typed by hand"})
 
@@ -92,7 +92,7 @@ defmodule Playcode.Import.TeiReimportTest do
         content: "Typed"
       })
 
-    {:ok, _} = TeiParser.import_file(path)
+    {:ok, _} = TeiImport.import_file(path)
     play = Catalogue.get_play_with_all!(play.id)
 
     assert Enum.map(play.sources, & &1.title) |> Enum.sort() == ["Primera parte", "Typed by hand"]

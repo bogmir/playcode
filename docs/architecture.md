@@ -45,7 +45,7 @@ lib/
 │   │   └── user_notifier.ex          # Email notification templates
 │   ├── authz.ex                      # The only place that answers "may this user do that?"
 │   ├── import/
-│   │   ├── tei_parser.ex             # TEI-XML importer (handles UTF-16 files)
+│   │   ├── tei_import.ex             # TEI-XML importer (handles UTF-16 files)
 │   │   ├── filemaker_xml.ex          # FMPXMLRESULT reader (one FileMaker table)
 │   │   ├── bibliography.ex           # S4's one-time FileMaker bibliography import
 │   │   └── witnesses.ex              # S3's one-time FileMaker witness import
