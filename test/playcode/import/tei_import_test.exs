@@ -35,6 +35,21 @@ defmodule Playcode.Import.TeiImportTest do
       assert {:error, %Ecto.Changeset{} = changeset} = TeiImport.import_file(write_tmp!(xml))
       assert "can't be blank" in errors_on(changeset).title
     end
+
+    # Nothing of a file is kept when one of its rows is refused: not the play, not the
+    # rows written before it. A stage direction is a stage already, so the changeset
+    # refuses a <stage> marker in one.
+    test "a row the database refuses rolls the whole import back" do
+      code = "TROLLBACK#{System.unique_integer([:positive])}"
+
+      body =
+        ~s(<div1 type="acto" n="1"><head>I</head><stage>&lt;stage&gt;Sale.&lt;/stage&gt;</stage></div1>)
+
+      assert {:error, {:element_create_failed, :stage_direction, %Ecto.Changeset{}}} =
+               TeiImport.import_file(write_tmp!(tei(code: code, body: body)))
+
+      assert_raise Ecto.NoResultsError, fn -> Catalogue.get_play_by_code!(code) end
+    end
   end
 
   test "a UTF-16 LE file with a BOM imports" do

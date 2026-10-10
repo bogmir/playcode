@@ -1,6 +1,8 @@
 defmodule Playcode.Import.TeiPreviewTest do
   use Playcode.DataCase, async: true
 
+  import Playcode.ImportHelpers, only: [write_tmp!: 1]
+
   alias Playcode.Catalogue
   alias Playcode.Import.TeiImport
 
@@ -112,5 +114,12 @@ defmodule Playcode.Import.TeiPreviewTest do
     {:ok, _} = TeiImport.preview_import(path)
 
     assert Catalogue.list_plays(include_deleted: true) == []
+  end
+
+  test "a file the import would refuse, the preview refuses the same way" do
+    assert {:error, :missing_tei_header} =
+             TeiImport.preview_import(write_tmp!("<TEI><text><body/></text></TEI>"))
+
+    assert {:error, {:xml_parse_error, _}} = TeiImport.preview_import(write_tmp!("<not valid>>>"))
   end
 end
