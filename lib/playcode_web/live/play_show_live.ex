@@ -18,6 +18,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Statistics
+  alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -419,6 +420,27 @@ defmodule PlaycodeWeb.PlayShowLive do
             </dl>
           </section>
 
+          <%!-- Witnesses: emothe.uv.es's Testimonios, laid out like the bibliography --%>
+          <section
+            :if={@play.witnesses != []}
+            id="meta-witnesses"
+            class="mb-8 max-w-2xl mx-auto scroll-mt-20 text-sm"
+          >
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">
+              <dt class="text-base-content/70">{gettext("Witnesses")}</dt>
+              <dd class="min-w-0">
+                <ul class="space-y-2">
+                  <li
+                    :for={witness <- @play.witnesses}
+                    class="pl-6 -indent-6 font-serif leading-relaxed"
+                  >
+                    {Witnesses.html(witness)}
+                  </li>
+                </ul>
+              </dd>
+            </dl>
+          </section>
+
           <%!-- Bibliography: laid out like Study and Places, a hanging indent per citation --%>
           <section
             :if={@bibliography != []}
@@ -520,6 +542,7 @@ defmodule PlaycodeWeb.PlayShowLive do
     |> maybe_add_section(play.play_places != [], "meta-places", gettext("Places"))
     |> maybe_add_section(play.sources != [], "meta-sources", gettext("Source"))
     |> maybe_add_section(play.editors != [], "meta-editors", gettext("Editors"))
+    |> maybe_add_section(play.witnesses != [], "meta-witnesses", gettext("Witnesses"))
     |> maybe_add_section(bibliography != [], "meta-bibliography", gettext("Bibliography"))
     |> Kernel.++(build_editorial_note_sections(play.editorial_notes))
   end

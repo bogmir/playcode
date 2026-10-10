@@ -568,4 +568,42 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
     assert "index.html#bibliography" in rail
   end
+
+  test "the title page lists the witnesses in order, linked from the contents, without siglum or type" do
+    play = import_tei!(tei(body: @two_acts))
+
+    {:ok, _} =
+      Playcode.Witnesses.create_witness(%{
+        "play_id" => play.id,
+        "siglum" => "Q1",
+        "witness_type" => "loose",
+        "title" => "THE Tragicall Historie of HAMLET",
+        "date" => "1603"
+      })
+
+    {:ok, _} =
+      Playcode.Witnesses.create_witness(%{
+        "play_id" => play.id,
+        "title" => "COMEDIES, HISTORIES, & TRAGEDIES",
+        "date" => "1623"
+      })
+
+    dir = generate!([play], all: true)
+    title = page(dir, play, "index.html")
+
+    assert texts(title, "#witnesses li") == [
+             "THE Tragicall Historie of HAMLET. 1603.",
+             "COMEDIES, HISTORIES, & TRAGEDIES. 1623."
+           ]
+
+    refute LazyHTML.text(title) =~ "Q1"
+
+    rail =
+      dir
+      |> page(play, "act-1.html")
+      |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+      |> LazyHTML.attribute("href")
+
+    assert "index.html#witnesses" in rail
+  end
 end
