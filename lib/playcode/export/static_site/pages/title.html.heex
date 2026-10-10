@@ -37,6 +37,7 @@
         <li :for={source <- @edition.play.sources}>{Components.source_text(source)}</li>
       </ul>
     </section>
+    <Components.witnesses play={@edition.play} />
     <Components.bibliography groups={@edition.bibliography} />
     <section :for={note <- @edition.play.editorial_notes}>
       <h2>{note.heading || Components.note_heading(note.section_type)}</h2>

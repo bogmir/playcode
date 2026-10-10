@@ -132,6 +132,7 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
       "user" -> gettext("user")
       "bibliography_entry" -> gettext("bibliography entry")
       "play_bibliography" -> gettext("bibliography link")
+      "play_witness" -> gettext("witness")
       other -> other
     end
   end

@@ -58,6 +58,9 @@ defmodule Playcode.Import.Bibliography do
   # T04.1 rows that are FileMaker's own tests, not editions.
   @test_editions ~w(9 147)
 
+  # T04.1 sigla that are FileMaker's test data on a real edition, by edition id.
+  @test_sigla %{"34" => "TES2"}
+
   @no_lookups %{cities: %{}, publishers: %{}}
 
   def default_dir, do: @default_dir
@@ -297,7 +300,7 @@ defmodule Playcode.Import.Bibliography do
       year_text: value(row, "EdiMod_Ano"),
       url: value(row, "EdiMod_URL"),
       url_accessed_on: value(row, "EdiMod_URL_FechaAcceso"),
-      siglum: value(row, "EdiMod_Siglas"),
+      siglum: siglum(row),
       public_note: value(row, "EdiMod_Nota"),
       # T04.1 has none of these: the play's volume is on the link, and EdiMod_Nota is printed.
       volume: nil,
@@ -426,6 +429,11 @@ defmodule Playcode.Import.Bibliography do
 
   # One publisher "key" in T12.1 is a name typed into the key field: a key that is not a
   # number is the name itself.
+  defp siglum(row) do
+    siglum = value(row, "EdiMod_Siglas")
+    if @test_sigla[row["_kp_IdEdicionModerna"]] == siglum, do: nil, else: siglum
+  end
+
   defp place_and_publisher(row, lookups) do
     publisher = value(row, "_k_IdEditorial")
 

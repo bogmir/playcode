@@ -50,6 +50,7 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert preview.existing == nil
     refute preview.archived
 
+    # Witnesses (S3) are a fifth table of mixed ownership, so the preview counts them too.
     assert preview.replaces == %{
              divisions: 0,
              elements: 0,
@@ -57,10 +58,11 @@ defmodule Playcode.Import.TeiPreviewTest do
              editors: 0,
              sources: 0,
              notes: 0,
-             places: 0
+             places: 0,
+             witnesses: 0
            }
 
-    assert preview.preserves == %{editors: 0, sources: 0, notes: 0, places: 0}
+    assert preview.preserves == %{editors: 0, sources: 0, notes: 0, places: 0, witnesses: 0}
   end
 
   test "an existing play reports what is replaced and what is kept", %{path: path} do

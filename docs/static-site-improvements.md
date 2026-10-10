@@ -27,7 +27,7 @@ never compares a line's text against the source.
 - Rendering: the redesign reserves the slot (margin note on wide screens, pop-up on narrow),
   so the static site only needs a template change. The live page needs its own.
 
-**Same root cause**: the "Inline `<stage>` is flattened" gap in CLAUDE.md is `text_content/1`
+**Same root cause**: the "Inline `<stage>` is flattened" gap (now in `history.md`) is `text_content/1`
 flattening a child too. The project fixed the notes only. Done (2026-10-09), see
 `superpowers/specs/2026-10-09-inline-stage-design.md`.
 

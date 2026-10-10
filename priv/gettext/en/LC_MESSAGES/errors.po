@@ -163,3 +163,9 @@ msgstr ""
 
 msgid "needs an author, an editor or a title"
 msgstr ""
+
+msgid "needs a title, a normalised title or a note"
+msgstr ""
+
+msgid "is already used by another witness of this play"
+msgstr ""

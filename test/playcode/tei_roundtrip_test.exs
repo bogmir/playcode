@@ -10,6 +10,7 @@ defmodule Playcode.TeiRoundtripTest do
   use Playcode.DataCase, async: true
 
   import Playcode.ImportHelpers
+  import Playcode.TestFixtures, only: [bibliography_fixture: 2]
 
   @rich_header [
     title: "Ricardo III",
@@ -962,6 +963,181 @@ defmodule Playcode.TeiRoundtripTest do
 
   # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
   # re-importing that copy made a second editor: one more per round trip.
+  describe "witnesses" do
+    @list_wit """
+    <listWit>
+      <witness xml:id="Q1" n="Q1">
+        <bibl type="edicion_antigua" subtype="suelta">
+          <title>THE Tragicall Historie of HAMLET</title>
+          <title type="normalized">The Tragical History of Hamlet</title>
+          <author>Shakespeare, William</author>
+          <pubPlace>London</pubPlace>
+          <publisher>Ling, Nicholas</publisher>
+          <date when="1603">1603</date>
+          <extent>4º</extent>
+          <idno type="shelfmark">C.34.k.1</idno>
+          <note>Usual abbreviation: Q1.</note>
+        </bibl>
+      </witness>
+      <listWit>
+        <witness xml:id="wit-1623b" n="1623b">
+          <bibl type="edicion_antigua" subtype="coleccion"><title>Œuvres</title></bibl>
+        </witness>
+      </listWit>
+      <witness><bibl type="manuscrito" subtype="autografo"><title>El bastardo Mudarra</title></bibl></witness>
+    </listWit>
+    """
+
+    test "every field of a witness comes back, in order, with no empty paragraph before them" do
+      xml = roundtrip(tei(source_desc: @list_wit))
+
+      assert [
+               {%{"n" => "Q1", "xml:id" => "Q1"}, _},
+               {%{"n" => "1623b", "xml:id" => "wit-1623b"}, _},
+               {unnamed, _}
+             ] = xml_elements(xml, "witness")
+
+      refute Map.has_key?(unnamed, "xml:id")
+      assert xml_texts(xml, "p", within: "sourceDesc") == []
+
+      assert xml_elements(xml, "title", within: "witness") == [
+               {%{}, "THE Tragicall Historie of HAMLET"},
+               {%{"type" => "normalized"}, "The Tragical History of Hamlet"},
+               {%{}, "Œuvres"},
+               {%{}, "El bastardo Mudarra"}
+             ]
+
+      for {tag, text} <- [
+            {"author", "Shakespeare, William"},
+            {"pubPlace", "London"},
+            {"publisher", "Ling, Nicholas"},
+            {"extent", "4º"},
+            {"note", "Usual abbreviation: Q1."}
+          ] do
+        assert xml_texts(xml, tag, within: "witness") == [text], tag
+      end
+
+      assert xml_elements(xml, "date", within: "witness") == [{%{"when" => "1603"}, "1603"}]
+
+      assert xml_elements(xml, "idno", within: "witness") == [
+               {%{"type" => "shelfmark"}, "C.34.k.1"}
+             ]
+
+      assert for(
+               {attrs, _} <- xml_elements(xml, "bibl", within: "witness"),
+               do: {attrs["type"], attrs["subtype"]}
+             ) == [
+               {"edicion_antigua", "suelta"},
+               {"edicion_antigua", "coleccion"},
+               {"manuscrito", "autografo"}
+             ]
+    end
+
+    test "a witness described in plain words keeps its words, as its note" do
+      words = "anon. [no title page]. London: printed by Richard Pynson, [1518-19?]. STC 10604."
+
+      xml =
+        roundtrip(
+          tei(
+            source_desc:
+              ~s(<listWit><witness xml:id="Q1"><bibl>#{words}</bibl></witness></listWit>)
+          )
+        )
+
+      assert xml_elements(xml, "witness") == [{%{"n" => "Q1", "xml:id" => "Q1"}, words}]
+      assert xml_texts(xml, "note", within: "witness") == [words]
+    end
+
+    test "a siglum repeated in the file comes in once" do
+      xml =
+        roundtrip(
+          tei(
+            source_desc:
+              ~s(<listWit><witness xml:id="Q1"><bibl>Uno</bibl></witness>) <>
+                ~s(<witness n="Q1"><bibl>Otro</bibl></witness></listWit>)
+          )
+        )
+
+      assert xml_elements(xml, "witness") == [{%{"n" => "Q1", "xml:id" => "Q1"}, "Uno"}]
+    end
+
+    # EMOTHE0460's listWit lists its early quartos and the modern editions its apparatus
+    # cites; the editions live in the bibliography, with their siglum.
+    test "a re-import keeps hand-typed witnesses and skips a siglum one of them or an edition holds" do
+      code = "WIT#{System.unique_integer([:positive])}"
+      play = import_tei!(tei(code: code))
+
+      bibliography_fixture(play, %{
+        "kind" => "modern_edition",
+        "monogr_title" => "Chief Pre-Shakespearean Dramas",
+        "siglum" => "ADA"
+      })
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{
+          "play_id" => play.id,
+          "siglum" => "Q2",
+          "title" => "Typed by hand"
+        })
+
+      file =
+        tei(
+          code: code,
+          source_desc: """
+          <listWit>
+            <witness xml:id="ADA"><bibl>Adams, Joseph Quincy, ed. Chief Pre-Shakespearean Dramas. 1924.</bibl></witness>
+            <witness xml:id="Q1"><bibl>anon. London: Pynson, [1518-19?].</bibl></witness>
+            <witness xml:id="Q2"><bibl>anon. London: Pynson, [1526-28?].</bibl></witness>
+          </listWit>
+          """
+        )
+
+      expected = [{"Q2", "Typed by hand"}, {"Q1", "anon. London: Pynson, [1518-19?]."}]
+
+      listed = fn xml ->
+        for {%{"n" => n}, text} <- xml_elements(xml, "witness"), do: {n, text}
+      end
+
+      assert listed.(roundtrip(file)) == expected
+      assert listed.(roundtrip(file)) == expected
+    end
+
+    # Most FileMaker witnesses have no siglum, and they are not the file's own rows, so the
+    # re-import keeps them: the file's copy of each must not come in beside it.
+    test "re-importing its own export keeps a play's witnesses without siglum, once" do
+      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(
+          %{
+            "play_id" => play.id,
+            "title" => "COMEDIES, HISTORIES, & TRAGEDIES",
+            "origin" => "filemaker"
+          },
+          %Playcode.Witnesses.Witness{filemaker_id: "T03:36"}
+        )
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{"play_id" => play.id, "note" => "Typed by hand"})
+
+      first = export_tei(play)
+      listed = fn xml -> for {_, text} <- xml_elements(xml, "witness"), do: text end
+
+      assert listed.(roundtrip(first)) == listed.(first)
+      assert listed.(roundtrip(first)) == listed.(first)
+    end
+
+    test "exporting, re-importing and exporting again changes nothing" do
+      first =
+        tei(code: "WIT1", source_desc: "<bibl><title>Base</title></bibl>" <> @list_wit)
+        |> roundtrip()
+
+      second = first |> String.replace("WIT1", "WIT2") |> roundtrip()
+
+      assert String.replace(second, "WIT2", "WIT1") == first
+    end
+  end
+
   test "exporting, re-importing and exporting again changes nothing" do
     body = """
     <div1 type="acto" n="1"><head>ACTO I</head><div2 type="escena" n="1"><head>ESCENA I</head>

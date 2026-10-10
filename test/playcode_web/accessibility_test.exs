@@ -76,6 +76,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
     /admin/plays/:id/edit
     /admin/plays/:id/editors
     /admin/plays/:id/sources
+    /admin/plays/:id/witnesses
     /admin/plays/:id/places
     /admin/plays/:id/bibliography
     /admin/plays/:id/content
@@ -113,6 +114,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
     for {path, clicks} <- [
           {"/admin/plays/:id/editors", [{"button", t("Add editor")}]},
           {"/admin/plays/:id/sources", [{"button", t("Add source")}]},
+          {"/admin/plays/:id/witnesses", [{"button", t("Add witness")}]},
           {"/admin/plays/:id/bibliography", [{"button", t("New entry")}]},
           {"/admin/plays/:id/bibliography", [{"button", t("Add existing")}]},
           {"/admin/plays/:id/places", [{"button", t("New place")}]},

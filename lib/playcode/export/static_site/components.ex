@@ -10,6 +10,7 @@ defmodule Playcode.Export.StaticSite.Components do
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Edition, Search}
   alias Playcode.PlayContent.{Element, InlineMarkup, Note}
+  alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
   attr :root, :string,
@@ -160,6 +161,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <li :if={@edition.notes != []}>
         <a href="notes.html" aria-current={@current == "notes" && "page"}>Notes</a>
       </li>
+      <li :if={@edition.play.witnesses != []}>
+        <a href="index.html#witnesses">Witnesses</a>
+      </li>
       <li :if={@edition.bibliography != []}>
         <a href="index.html#bibliography">Bibliography</a>
       </li>
@@ -220,6 +224,20 @@ defmodule Playcode.Export.StaticSite.Components do
           <a href={"../#{translation.code}/index.html"}><cite>{translation.title}</cite></a>
           <span class="role">{Play.language_name(translation.language)}</span>
         </li>
+      </ul>
+    </section>
+    """
+  end
+
+  attr :play, :map, required: true
+
+  # The bibliography's class gives the hanging indent; no CSS of its own.
+  def witnesses(assigns) do
+    ~H"""
+    <section :if={@play.witnesses != []} id="witnesses" class="bibliography">
+      <h2>Witnesses</h2>
+      <ul>
+        <li :for={witness <- @play.witnesses}>{Witnesses.html(witness)}</li>
       </ul>
     </section>
     """

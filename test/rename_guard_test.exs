@@ -41,9 +41,10 @@ defmodule RenameGuardTest do
   ]
 
   # Corpus data, third-party samples, the legacy Fly config that is *supposed*
-  # to still say "emothe", and this test, which names the old identity on
-  # purpose.
-  @excluded ~w(test/fixtures test/rename_guard_test.exs fly.emothe.toml)
+  # to still say "emothe", this test, which names the old identity on purpose,
+  # and docs/history.md, which like docs/superpowers/ records work done, the
+  # pre-rename Fly app (`fly.emothe.toml`, `-a emothe`) included.
+  @excluded ~w(test/fixtures test/rename_guard_test.exs fly.emothe.toml docs/history.md)
 
   describe "the corpus keeps its identity" do
     test "the tracked TEI fixtures are still named for their play codes" do

@@ -73,6 +73,9 @@ defmodule Playcode.ContentVersionTest do
       end,
       place: fn -> play_place_fixture(play, place) end,
       bibliography: fn -> bibliography_fixture(play) end,
+      witness: fn ->
+        Playcode.Witnesses.create_witness(%{play_id: play.id, siglum: "Q1", title: "Q1"})
+      end,
       deletion: fn -> PlayContent.delete_element(line) end
     ]
 

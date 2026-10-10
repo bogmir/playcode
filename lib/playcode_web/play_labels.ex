@@ -190,6 +190,33 @@ defmodule PlaycodeWeb.PlayLabels do
     ]
   end
 
+  @doc "The witness types for a form's select, grouped as FileMaker's tree: manuscripts, then early editions."
+  def witness_type_options do
+    [
+      {gettext("Manuscript"),
+       [
+         {gettext("Manuscript"), "manuscript"},
+         {gettext("Autograph"), "autograph"},
+         {gettext("Copy"), "copy"}
+       ]},
+      {gettext("Early edition"),
+       [
+         {gettext("Early edition"), "early_edition"},
+         {gettext("Collection"), "collection"},
+         {gettext("Collection of one author"), "collection_single_author"},
+         {gettext("Collection of several authors"), "collection_several_authors"},
+         {gettext("Suelta"), "loose"}
+       ]}
+    ]
+  end
+
+  @doc "A witness type's label, as the admin list shows it beside the siglum. Never public."
+  def witness_type_label(type) do
+    witness_type_options()
+    |> Enum.flat_map(fn {_group, options} -> options end)
+    |> Enum.find_value("", fn {label, value} -> if value == type, do: label end)
+  end
+
   def pub_type_label("article"), do: gettext("Journal article")
   def pub_type_label("book_section"), do: gettext("Book chapter")
   def pub_type_label("scholarly_edition"), do: gettext("Scholarly edition")

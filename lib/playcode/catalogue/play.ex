@@ -84,6 +84,7 @@ defmodule Playcode.Catalogue.Play do
     has_many :divisions, Playcode.PlayContent.Division
     has_many :elements, Playcode.PlayContent.Element
     has_many :play_places, Playcode.Places.PlayPlace
+    has_many :witnesses, Playcode.Witnesses.Witness
     has_one :statistic, Playcode.Statistics.PlayStatistic
 
     timestamps(type: :utc_datetime)

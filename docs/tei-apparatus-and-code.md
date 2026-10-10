@@ -3,7 +3,7 @@
 Analysis of 2026-10-10, from the 370 production TEI files (`doc/tei_corpus/`, git-ignored), the
 dev database after a full re-import, and the old EMOTHE pages
 (`https://emothe.uv.es/biblioteca/textosEMOTHE/<file>.php`) with their stylesheet. Both are
-listed in `CLAUDE.md`, *Found by the corpus round trip*. The questions only the project can
+listed in `backlog.md`, *Found by the corpus round trip*. The questions only the project can
 answer are in `stakeholder/variantes-y-codigo.html`.
 
 ## `<app>`: the critical apparatus
@@ -40,6 +40,9 @@ answer are in `stakeholder/variantes-y-codigo.html`.
   faltan en *PXXIV*", with no readings.
 - Witnesses are sigla as the editor wrote them: `#Q2`, `#F1`, `#Aut.`, `#PXXIV`, `#H`, `#P3`,
   `#MP`, `#Dyce`. Only EMOTHE0460 lists its witnesses (`sourceDesc/listWit`, FileMaker slice S3).
+  Every siglum resolves in FileMaker (2026-10-10): 21 to a witness in `T03_ObraTestimonio`, 21 to
+  a modern edition's `bibliography_entries.siglum`, none to nothing. S3 gives them rows to point
+  at; see `superpowers/plans/2026-08-01-filemaker-import-slices.md`, S3.
 
 ### What Playcode does today
 

@@ -113,6 +113,55 @@ defmodule Playcode.Export.TeiValidatorTest do
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
+    # Every witness type, a siglum that is no XML name, a witness with no siglum, and no
+    # sources: the sourceDesc then holds the listWit alone. Under a code of its own, for the
+    # same reason as the bibliography test.
+    test "witnesses of every type export as schema-valid TEI" do
+      play =
+        @fixture_file
+        |> File.read!()
+        |> String.replace(
+          ~s(<title key="archivo">EMOTHE0759_AutoDeLaBarcaDelInfierno</title>),
+          ~s(<title key="archivo">WIT#{System.unique_integer([:positive])}</title>)
+        )
+        |> Playcode.ImportHelpers.import_tei!()
+
+      for source <- play.sources, do: {:ok, _} = Catalogue.delete_play_source(source)
+
+      for {type, i} <- Enum.with_index(Playcode.Witnesses.Witness.types()) do
+        {:ok, _} =
+          Playcode.Witnesses.create_witness(%{
+            "play_id" => play.id,
+            "siglum" => "S#{i}",
+            "title" => "Título",
+            "normalized_title" => "Título normalizado",
+            "attribution" => "Autor, Ana",
+            "pub_place" => "Madrid",
+            "publisher" => "Imprenta",
+            "date" => "1603",
+            "format" => "4º",
+            "witness_type" => type,
+            "shelfmark" => "BN 16630",
+            "note" => "Nota"
+          })
+      end
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{
+          "play_id" => play.id,
+          "siglum" => "1623b",
+          "title" => "Œuvres",
+          "date" => "s. a."
+        })
+
+      {:ok, _} = Playcode.Witnesses.create_witness(%{"play_id" => play.id, "note" => "Sin sigla"})
+
+      xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
+
+      assert xml =~ "<listWit>"
+      assert TeiValidator.validate(xml) == {:ok, :valid}
+    end
+
     test "returns errors for malformed XML" do
       invalid_xml =
         ~s(<?xml version="1.0"?>\n<TEI xmlns="http://www.tei-c.org/ns/1.0"><bad></TEI>)

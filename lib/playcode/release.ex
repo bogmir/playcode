@@ -1,7 +1,7 @@
 defmodule Playcode.Release do
   @moduledoc false
 
-  alias Playcode.Import.{Bibliography, FilemakerSync}
+  alias Playcode.Import.{Bibliography, FilemakerSync, Witnesses}
 
   @app :playcode
 
@@ -57,6 +57,35 @@ defmodule Playcode.Release do
         else
           {:ok, written} = Bibliography.apply_plan(plan)
           IO.puts("created #{written.entries} entries and #{written.links} links")
+        end
+
+      {:error, {file, reason}} ->
+        IO.puts("cannot read #{Path.join(dir, file)}: #{inspect(reason)}")
+    end
+  end
+
+  @doc """
+  S3's one-time witness import, for a release, which has no mix tasks. Copy
+  `T03_ObraTestimonio.xml` and `T03.2_Atribucion.xml` onto the machine first
+  (`fly ssh sftp shell`), then:
+
+      bin/playcode rpc 'Playcode.Release.import_witnesses("/tmp/ctce", dry_run: true)'
+      bin/playcode rpc 'Playcode.Release.import_witnesses("/tmp/ctce")'
+  """
+  def import_witnesses(dir, opts \\ []) do
+    load_app()
+    {:ok, _} = Application.ensure_all_started(:playcode)
+
+    case Witnesses.load(dir) do
+      {:ok, data} ->
+        plan = Witnesses.plan(data, FilemakerSync.all_plays())
+        Enum.each(Witnesses.report(plan), &IO.puts/1)
+
+        if opts[:dry_run] do
+          IO.puts("dry run, nothing written")
+        else
+          {:ok, written} = Witnesses.apply_plan(plan)
+          IO.puts("created #{written.witnesses} witnesses")
         end
 
       {:error, {file, reason}} ->

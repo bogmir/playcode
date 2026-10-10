@@ -5,6 +5,7 @@ defmodule Playcode.Export.TeiXml do
 
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.Witnesses
   import XmlBuilder, except: [element: 2, element: 3]
 
   # Attributes in alphabetical order. An atom-keyed map lists its keys in the order the
@@ -31,6 +32,7 @@ defmodule Playcode.Export.TeiXml do
         :editors,
         :sources,
         :editorial_notes,
+        :witnesses,
         play_places: [place: :names]
       ])
 
@@ -289,7 +291,48 @@ defmodule Playcode.Export.TeiXml do
         element(:bibl, children)
       end)
 
-    element(:sourceDesc, if(bibls == [], do: [element(:p, "")], else: bibls))
+    # The schema takes paragraphs, or bibls and lists, never both: the empty <p/> stands in
+    # only when there is nothing else.
+    children = Enum.reject(bibls ++ [build_list_wit(play)], &is_nil/1)
+    element(:sourceDesc, if(children == [], do: [element(:p, "")], else: children))
+  end
+
+  # The play's witnesses (S3). @n is the siglum verbatim and @xml:id what an apparatus
+  # points at (Witnesses.xml_id/1). The modern editions a reading may also cite stay in
+  # <back>, with their siglum.
+  defp build_list_wit(%{witnesses: []}), do: nil
+
+  defp build_list_wit(play) do
+    element(:listWit, play.witnesses |> Enum.sort_by(& &1.position) |> Enum.map(&build_witness/1))
+  end
+
+  defp build_witness(w) do
+    attrs = Map.reject(%{"n" => w.siglum, "xml:id" => Witnesses.xml_id(w)}, &is_nil(elem(&1, 1)))
+    {type, subtype} = Witnesses.tei_type(w.witness_type) || {nil, nil}
+    bibl_attrs = Map.reject(%{type: type, subtype: subtype}, &is_nil(elem(&1, 1)))
+    date = if filled?(w.date), do: String.trim(w.date)
+
+    children =
+      Enum.reject(
+        [
+          if(filled?(w.title), do: element(:title, build_inline_content(w.title))),
+          if(filled?(w.normalized_title),
+            do: element(:title, %{type: "normalized"}, build_inline_content(w.normalized_title))
+          ),
+          if(filled?(w.attribution), do: element(:author, w.attribution)),
+          if(filled?(w.pub_place), do: element(:pubPlace, w.pub_place)),
+          if(filled?(w.publisher), do: element(:publisher, w.publisher)),
+          if(date,
+            do: element(:date, if(date =~ ~r/^\d{4}$/, do: %{when: date}, else: %{}), date)
+          ),
+          if(filled?(w.format), do: element(:extent, w.format)),
+          if(filled?(w.shelfmark), do: element(:idno, %{type: "shelfmark"}, w.shelfmark)),
+          if(filled?(w.note), do: element(:note, build_inline_content(w.note)))
+        ],
+        &is_nil/1
+      )
+
+    element(:witness, attrs, [element(:bibl, bibl_attrs, children)])
   end
 
   defp build_encoding_desc(play) do

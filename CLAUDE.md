@@ -4,6 +4,20 @@ The backend behind the EMOTHE and ARTELOPE public sites. It manages, catalogues 
 
 EMOTHE and ARTELOPE stay the public brands; Playcode is the internal platform they both run on. Reference site: https://emothe.uv.es
 
+## Where Things Are Written Down
+
+This file holds the rules every session needs. The rest is in `docs/`:
+
+- `docs/architecture.md` - the file map and the routes
+- `docs/static-site.md` - the static site export in full: architecture, measurements, output, publishing on emothe.uv.es
+- `docs/backlog.md` - open work, the TEI corpus gaps among it
+- `docs/history.md` - what has been built, and what each audit found and fixed
+- `docs/static-site-improvements.md` - deferred static-site and exporter work, written up at length
+- `docs/superpowers/specs/` and `docs/superpowers/plans/` - one design and one plan per project
+
+Finishing a project moves its item from `docs/backlog.md` to `docs/history.md`. This file
+changes only when a rule, an invariant or a command changes.
+
 ## How To Work In This Repo
 
 **Naming.** The application was renamed `Emothe` -> `Playcode` on 2026-09-21, because a
@@ -24,7 +38,8 @@ its slices are still to be built, so it uses the new names.
 2. **Run it and watch it fail.** Paste-worthy proof that the test exercises the thing you are about to build. A test that passes before the implementation exists is testing nothing.
 3. **Write the smallest implementation that passes.**
 4. **Run the test again.** It must pass.
-5. **Run `mix test`** — the whole suite, not just the new file — before claiming anything works.
+5. **Refactor while green.** Clean what you just wrote and what it touches: clear names, no duplication, a helper the code already has instead of a new one, the surrounding idiom (Saša Jurić's clear code). Behaviour stays the same; run the test after each change.
+6. **Run `mix test`** — the whole suite, not just the new file — before claiming anything works.
 
 Rules that follow from this:
 
@@ -82,6 +97,14 @@ its control through `for={@form[:x].id}` or by wrapping it.
 git-ignored `test/fixtures/tei_files/`, a few minutes. The default run covers two of those
 files.
 
+**Two async tests creating the same place deadlock.** `places.slug` is unique across the whole
+corpus, so two async tests creating a place with the same name take the same index lock inside
+their own transactions — a pair of those acquired in opposite order deadlocks Postgres.
+`place_fixture/1` therefore derives a *unique* slug unless you pass `"slug"`. Pass one only when
+the test asserts on the literal value, and then give it a per-file prefix (`tx-roma`, `sch-roma`).
+A test about slug derivation itself should call `Places.create_place/1` directly and use a
+toponym no other test uses.
+
 ## Tech Stack
 
 - Elixir 1.19.5 / Erlang/OTP 28.1 (via asdf, see `.tool-versions`)
@@ -90,100 +113,7 @@ files.
 - OpenTelemetry (Phoenix, Ecto, Bandit auto-instrumented; stdout exporter in dev)
 - Saxy for TEI-XML parsing, xml_builder for TEI-XML generation
 - ChromicPDF (headless Chrome) for PDF generation
-- Deployment target: Fly.io (later)
-
-## Project Structure
-
-```
-lib/
-├── playcode/
-│   ├── catalogue.ex                  # Play CRUD, search, listing context
-│   ├── catalogue/
-│   │   ├── play.ex                   # Core play schema (UUID PK)
-│   │   ├── play_editor.ex            # Editors/reviewers
-│   │   ├── play_source.ex            # Bibliographic sources
-│   │   └── play_editorial_note.ex    # Front matter notes (dedications, editorial notes)
-│   ├── play_content.ex               # Content management context (divisions, elements, characters)
-│   ├── play_content/
-│   │   ├── character.ex              # Dramatis personae
-│   │   ├── division.ex               # Acts, scenes, prologues (self-referencing tree)
-│   │   ├── element.ex                # Speeches, verse lines, stage directions, prose (self-referencing tree)
-│   │   ├── element_character.ex      # Join table: element ↔ character (multi-speaker support)
-│   │   ├── inline_markup.ex          # The <<…>> italics and <stage> markers
-│   │   └── note.ex                   # In-text notes: a gloss anchored at an offset in a line, speaker or heading
-│   ├── statistics.ex                 # Compute & cache play statistics
-│   ├── bibliography.ex               # Corpus-wide bibliography: entries, links, grouping and order
-│   ├── bibliography/
-│   │   ├── entry.ex                  # One work cited, shared by every play that cites it
-│   │   ├── link.ex                   # A play's link to an entry (its volume, pages, note)
-│   │   └── citation.ex               # The one renderer: segments, plain text, safe HTML
-│   ├── activity_log.ex                   # Activity log context (log, list, count)
-│   ├── activity_log/
-│   │   └── entry.ex                  # Activity log entry schema
-│   ├── statistics/
-│   │   ├── metrics.ex                # Passages, characters, presence, divisions (pure)
-│   │   └── play_statistic.ex         # Cached JSONB statistics per play
-│   ├── accounts.ex                   # Invitations, login, sessions, deactivation
-│   ├── accounts/
-│   │   ├── user.ex                   # User schema (email, hashed_password, role, deactivated_at)
-│   │   ├── user_token.ex             # Session and email tokens (session, invite, reset, change)
-│   │   ├── admin_bootstrap.ex        # Reconciles ADMIN_EMAILS at boot
-│   │   └── user_notifier.ex          # Email notification templates
-│   ├── authz.ex                      # The only place that answers "may this user do that?"
-│   ├── import/
-│   │   ├── tei_parser.ex             # TEI-XML importer (handles UTF-16 files)
-│   │   ├── filemaker_xml.ex          # FMPXMLRESULT reader (one FileMaker table)
-│   │   └── bibliography.ex           # S4's one-time FileMaker bibliography import
-│   └── export/
-│       ├── tei_xml.ex                # Generate TEI-XML from DB
-│       ├── html.ex                   # Standalone HTML document export
-│       ├── pdf.ex                    # PDF via ChromicPDF (headless Chrome)
-│       ├── pdf_cache.ex              # Each play's PDF rendered once per version, kept on the volume
-│       ├── epub.ex                   # EPUB 3 generation via BUPE
-│       ├── note_markup.ex            # Italics and note references for the HTML/PDF and EPUB downloads
-│       ├── compare_html.ex           # Standalone comparison HTML with sync scroll
-│       ├── site_builder.ex           # The one process that writes and ships the admin's site
-│       ├── play_change_listener.ex   # Relays Postgres's play_changed notifications to the export page and the play's topic
-│       └── static_site.ex            # Static site orchestrator
-│           ├── edition.ex            # One play prepared: pages, anchors, refs, split-verse ghosts
-│           ├── pages.ex              # embed_templates "pages/*" → HTML strings
-│           ├── components.ex         # Shell, rail, play text, charts, catalogue entry
-│           ├── search.ex             # Normaliser + full-text index writer
-│           ├── fingerprint.ex        # One hash of the code, assets and settings the pages are built with
-│           └── deployer.ex           # Pushes the site to a git branch, then tells the publish server to fetch it
-└── playcode_web/
-    ├── router.ex
-    ├── user_auth.ex                  # Auth plugs & LiveView on_mount hooks (delegates to Authz)
-    ├── play_labels.ex                # Translated play metadata vocabularies (historical_time, …)
-    ├── live/
-    │   ├── play_catalogue_live.ex    # Public: /plays - searchable catalogue
-    │   ├── play_show_live.ex         # Public: /plays/:code - play text, stats, notes
-    │   ├── current_path_hook.ex      # Assigns :current_path for sidebar highlighting
-    │   ├── user_accept_invite_live.ex # /users/accept-invite/:token
-    │   ├── user_login_live.ex        # /users/log-in
-    │   ├── user_settings_live.ex     # /users/settings (email, password, active sessions)
-    │   ├── user_forgot_password_live.ex
-    │   ├── user_reset_password_live.ex
-    │   └── admin/
-    │       ├── play_list_live.ex     # Admin: /admin/plays - manage plays
-    │       ├── play_form_live.ex     # Admin: /admin/plays/new|:id/edit
-    │       ├── play_detail_live.ex   # Admin: /admin/plays/:id - detail + exports
-    │       ├── import_live.ex        # Admin: /admin/plays/import - TEI file import
-    │       ├── activity_log_live.ex  # Admin: /admin/activity-log - activity audit log
-    │       ├── export_site_live.ex   # Admin: /admin/export - static site generation UI
-    │       ├── play_compare_live.ex  # Admin: /admin/plays/:id/compare - side-by-side comparison
-    │       ├── play_bibliography_live.ex # Admin: /admin/plays/:id/bibliography - a play's bibliography
-    │       ├── notes_component.ex        # The note editor inside the content editor's modals
-    │       ├── play_notes_live.ex        # Admin: /admin/plays/:id/notes - a play's notes, edited in place
-    │       └── user_list_live.ex     # Admin: /admin/users - user management
-    ├── controllers/
-    │   ├── user_session_controller.ex # Login/logout session handling
-    │   └── admin/
-    │       └── export_controller.ex  # Download endpoints for TEI/HTML/PDF/EPUB
-    └── components/
-        ├── play_text.ex              # Play text rendering (speeches, verses, stage dirs)
-        └── statistics_panel.ex       # Modern stats visualization (cards, bar charts)
-```
+- Deployed on Fly.io (see *Production*)
 
 ## Database Schema
 
@@ -197,10 +127,11 @@ All tables use UUID primary keys. Key relationships:
 - `play_elements` self-references via `parent_id` (speeches contain line_groups contain verse_lines)
 - `play_elements.content` holds an inline stage direction as `<stage type="…">…</stage>` next to the `<<…>>` italics, written by the TEI importer from a `<stage>` child of an `<l>`, `<p>` or `<seg>` and written back by the export; `Element.changeset` refuses a malformed marker, and any marker in an element that is not a verse line or a paragraph (a stage direction or trailer is a stage already). `/api/v1` returns `content` raw, markers included
 - `element_characters` join table links `play_elements` to `characters` (many-to-many, supports multi-speaker speeches like `who="#ALB #COR"`)
-- `play_notes` - in-text notes (TEI `<note>` in the body): on one element (a line, paragraph, stage direction, trailer, or a speech's speaker label) or one division's heading, at `offset` graphemes into that text's plain form (`PlayContent.anchor_text/1`); `position` orders notes at one offset (set by `PlayContent.create_note/1` and `update_note/2`, never passed by a caller); `n`, `type`, `term`, `body` (paragraphs split by a blank line). `update_element/2` and `update_division/2` carry offsets through an edit. Numbered in reading order (`Note.reading_order/1`) by `load_play_content/1`. A re-import replaces them with the file's notes. **Rollout:** deploying this does not move any note out of a line; every play already in the database still has its notes pasted into its lines until its TEI file is re-imported (`mix playcode.import.tei --force` in dev; on Fly `Playcode.Release` has no TEI import, so re-upload the files at `/admin/plays/import`, which updates the play in place). Re-import every TEI file whose `<body>` holds a `<note>`, or a `<stage>` inside an `<l>`, `<p>` or `<seg>` (20 and 59 plays in the fixture corpus; production may hold more; simplest: every file), and do it before the first Generate, whose full rebuild the changed site fingerprint forces anyway. The same re-import carries the inline stage directions (`play_elements.content`), so one re-upload of the TEI files does both, and a play with stages that is not re-imported keeps their words pasted into its lines; the dev command is unchanged, and `--force` is run only with the project owner's go-ahead. **A re-import replaces the play's elements, divisions and notes: hand edits to its lines and hand-added notes are lost** (`play_notes` has no `origin` column, unlike editors, sources and editorial notes, so nothing marks a note as hand-entered)
+- `play_notes` - in-text notes (TEI `<note>` in the body): on one element (a line, paragraph, stage direction, trailer, or a speech's speaker label) or one division's heading, at `offset` graphemes into that text's plain form (`PlayContent.anchor_text/1`); `position` orders notes at one offset (set by `PlayContent.create_note/1` and `update_note/2`, never passed by a caller); `n`, `type`, `term`, `body` (paragraphs split by a blank line). `update_element/2` and `update_division/2` carry offsets through an edit. Numbered in reading order (`Note.reading_order/1`) by `load_play_content/1`. A re-import replaces them with the file's notes. **Not rolled out to every play yet:** a play imported before 2026-10-08 keeps its notes and inline stages pasted into its lines until its TEI file is re-imported (`docs/backlog.md`, *Production rollout*). **A re-import replaces the play's elements, divisions and notes: hand edits to its lines and hand-added notes are lost** (`play_notes` has no `origin` column, unlike editors, sources and editorial notes, so nothing marks a note as hand-entered)
 - `play_statistics` stores computed JSONB data per play
 - `bibliography_entries` - corpus-wide, one row per work cited, shared by every play that cites it, so one correction reaches them all (S4). Two levels, `analytic_*` (article, chapter) and `monogr_*` (book, journal); `kind` (`modern_edition`/`criticism`/`translation`/`adaptation`), `pub_type`, `language`, imprint text columns, `filemaker_id` (`"T12:<id>"`/`"T04:<id>"`, unique). `public_note` is printed with the citation; `note` is for researchers only and never leaves the admin pages, not even into the TEI file. An update moves every linked play's `content_version` (`bibliography_entry_changed()`)
 - `play_bibliography` - a play's link to an entry: `volume` and `pages` (where the play sits in a modern edition; they win over the entry's when printed), an internal `note`, `origin` (`manual`/`filemaker`). Unique per play and entry. `Bibliography.unlink/1` deletes the entry with its last link, so there are no orphan entries
+- `play_witnesses` - a play's witnesses (S3), the manuscripts and early printings its text survives in: `siglum`, `title`, `normalized_title`, `attribution`, `pub_place`, `publisher`, `date`, `format`, `witness_type` (a leaf of FileMaker's T03.1 tree, `Witness.types/0`), `shelfmark`, `note`, `position` (set only by `Playcode.Witnesses`), `origin`, `filemaker_id` (`"T03:<id>"`). `siglum` is unique per play; the table has the content trigger. Printed as emothe.uv.es prints *Testimonios* (`Witnesses.html/1`); siglum and type are never public
 - `activity_logs` tracks admin actions with user_id, play_id, action, resource_type, resource_id, changes (JSONB), metadata (JSONB)
 
 Element types: `speech`, `stage_direction`, `verse_line`, `prose`, `line_group`, `trailer` (a division's closing formula, "FIN DEL PRIMER ACTO"; exported last in its division). A `prose` or `line_group` with no parent is text nobody speaks: a dumb show, a stanza opening a prologue
@@ -263,49 +194,11 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   logout from `/admin/users`. Login throttling has two ETS keys: 20/minute per IP and
   10/15 minutes per email address, and a successful login clears the email counter.
 
-## Routes
-
-### Public
-- `GET /` - Home page
-- `GET /plays` - Public play catalogue with search
-- `GET /plays/:code` - Public play presentation (text, statistics and, for a play with notes, notes views); a draft is a 404 except for staff
-
-### Authentication
-- `GET /users/accept-invite/:token` - Set a password on an invited account, then log in
-- `GET /users/log-in` - Login (redirects if already logged in)
-- `POST /users/log-in` - Create session
-- `DELETE /users/log-out` - Destroy session
-- `GET /users/settings` - Password and active sessions (requires an active account). The email address is shown read-only: only an admin can change it
-- `GET /users/reset-password` - Forgot password
-- `GET /users/reset-password/:token` - Reset password form
-
-### Admin (requires `:view_admin`, i.e. any active researcher or admin)
-- `GET /admin/plays` - Play management list
-- `GET /admin/plays/new` - Create play
-- `GET /admin/plays/:id/edit` - Edit play metadata
-- `GET /admin/plays/:id` - Play detail (structure, stats, export buttons)
-- `GET /admin/plays/import` - Import TEI-XML files (file upload; bulk server-side import is `mix playcode.import.tei`)
-- `GET /admin/activity-log` - Activity audit log with filters (`:view_activity_log`)
-- `GET /admin/users` - Invite, deactivate, reactivate, force logout, change role (`:manage_users`)
-- `GET /admin/export` - Static site generation UI (`:deploy_site`)
-- `GET /admin/export/download-zip` - Download generated static site as .zip (`:deploy_site`)
-- `GET /admin/export/preview/*path` - Browse the built `_site/` before downloading or deploying; redirects to `/admin/export` when nothing is built (`:deploy_site`)
-- `GET /admin/dashboard` - LiveDashboard (`:view_dashboard`)
-- `GET /admin/filemaker` - Sync the FileMaker export: upload, preview the diff, apply (`:import_filemaker`)
-- `GET /admin/places` - Corpus-global gazetteer: places, their names, hierarchy and authority links (`:manage_places`)
-- `GET /admin/plays/:id/places` - The play's place index: role, order, notes (`:manage_places`)
-- `GET /admin/plays/:id/notes` - A play's in-text notes in reading order: filter by type, words or no term; edit type, word, term and text in place; delete; open the line in Content (`?element=`/`?division=` opens its modal), where notes are added (`:edit_content`)
-- `GET /admin/plays/:id/bibliography` - A play's bibliography: new, edit (with a warning on a shared entry), add an existing entry, remove, filter (`:manage_bibliography`)
-- `GET /admin/plays/compare/export/html` - Comparison HTML export
-- `GET /admin/plays/:id/export/tei` - Download TEI-XML
-- `GET /admin/plays/:id/export/html` - Download HTML
-- `GET /admin/plays/:id/export/pdf` - Download PDF
-- `GET /admin/plays/:id/export/epub` - Download EPUB
-
 ## TEI-XML Format
 
 The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/fileDesc` -> play metadata, editors, sources
+- `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept
 - `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note); read on first import only, since the columns are `@platform_owned`
 - `text/front/div[@type="elenco"]/castList` -> characters
 - `text/front/div[@type="dedicatoria|introduccion_editor"]` -> editorial notes
@@ -322,90 +215,17 @@ TEI fixture files are at `test/fixtures/tei_files/` (UTF-16 encoded, ~37 files c
 
 ## Static Site Export
 
-Generates an Endings Project-compliant static website — pure HTML/CSS/JS, no server required. Only plays marked as **complete** (`is_complete: true`) are included by default.
+An Endings-compliant static archive of the complete plays (`is_complete: true`): pure
+HTML/CSS/JS, no third-party requests, and everything, search included, works from the unzipped
+archive opened as `file://`. Built and shipped from `/admin/export` or `mix playcode.export.site`.
+The full write-up is `docs/static-site.md`; the rules that bite when you change it:
 
-Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`. No third-party requests, and everything, search included, works from the unzipped archive opened as `file://`.
-
-### Architecture
-
-- `Playcode.Export.StaticSite` — orchestrator: loads plays, writes pages, copies `priv/static_site/` to `assets/`, builds the search index. `generate/1` builds into `<dir>.new` beside the site and swaps it in only when done, so a build cut short (out of memory, a restart) leaves the previous site whole; the next build clears what it left (`<dir>.new`, `<dir>.old`). Switches (`apply_changes/2`) still write in place. Every path built from a play code goes through `StaticSite.safe_code!/1` (an allow-list `[A-Za-z0-9_-]+`), because `apply_changes/2` takes a removed play's code from a socket event (through `SiteBuilder.remove/2`) and play codes have no format validation
-- `StaticSite.Edition` — one play prepared once: pages (`act-N`, or the division type), line anchors (`#l<n>`; `#l<act>-<scene>-<n>` when numbering restarts per scene; `#p<n>` otherwise), citation refs, split-verse ghost text, passage starts
-- A division with more than 120,000 bytes of text and two or more scenes with text also gets a page per scene (`act-1-s3.html`); `generate/1` builds plays concurrently (`Task.async_stream`, at most the number of cores or the pool size minus two, whichever is smaller)
-- `StaticSite.Pages` (`pages/*.html.heex`) and `StaticSite.Components` — HEEx rendered to strings with `Phoenix.HTML.Safe.to_iodata/1`; dev's HEEx annotations are stripped
-- `StaticSite.Search` — the normaliser (must agree with `EMOTHE.normalise` in `site.js`: `test/fixtures/search_normalisation.json` runs against both) and the index: `search/plays.js`, `search/index/<shard>.js` (per play `[play, n, deltas…]`, `delta = (line − previous) × 2 + stage flag`) and `search/lines/<CODE>/<k>.js` (100 lines each), all calling `EMOTHE.search.load`. A play's notes are entries of their own after its lines, note `i` numbered `Search.note_base() + i` (1,000,000, the same in `search.js`, both pinned by `search_normalisation.json`), so the search page tells a note hit, and counts the Text facet's Notes, from the shard alone; their rows are in `search/lines/<CODE>/n<k>.js`, kind `"n"`, linking to the note's marker on the first page that shows it. `write_index/3` carries every play's postings over from the shards on disk, so adding or removing a play reloads no other; an index older than chunked lines is rebuilt in full. It writes one shard at a time, reading each old one only in its turn, and `write_play/2` hands back a play's postings as one string per shard (`"sueño 2,6,9"` lines), so a build never holds more than the index's own size: as tuples and lists, the 371 plays' 6.3 million postings took 455 MB and their index peaked at 1.7 GB
-- In-text notes: a `<button id="nref-<n>" popovertarget>` after the word, each page's notes as a `doc-endnotes` list of `popover` items (endnotes in print). `Playcode.PlayContent.Note` is in the fingerprint. `Edition.notes` decides once, for the search index and `notes.html`, each note's first page, citation, speakers and glossed word (`Note.glossed/2`: the `<term>`, else the word before the note). `notes.html` lists them, filterable by type (`PlayLabels.note_type_key/1`: a type with no label is filed under one plain Note) with a few lines of `site.js`
-- `Playcode.Statistics.Metrics` — metrical passages, characters, presence, divisions; cached by `Playcode.Statistics` (bump `@version` when what it stores changes)
-- `priv/static_site/` — `style.css`, `site.js` (reading tools, catalogue filter, normaliser), `search.js`, `fonts/` (Source Serif 4 and Inter, OFL)
-- `StaticSite.Deployer` — pushes `_site/` to the `gh-pages` branch of the repository in `:static_site_deploy` (the GitHub token reaches git as an HTTP header for that repository only, through `GIT_CONFIG_*` environment variables, so it is never in a command line or URL, and is scrubbed from errors), then, when a publish URL is set, POSTs to it with the key in `X-Deploy-Token` and answers the published site's address. See *Publishing on emothe.uv.es* below
-- `Playcode.Export.SiteBuilder` — the one process that writes and ships the admin's site (`StaticSite.output_dir/0`): generate, add a play, remove one, deploy. It runs one job at a time under `SiteBuilder.Tasks`, because two builds at once drop a play from the incremental index and a deploy during a build pushes half a site. A request that arrives meanwhile is queued (`:queued`), not refused. When the job ends, the adds and removes at the front of the queue run as one batch through `StaticSite.apply_changes/2`: pages and catalogue first, then one search-index write. Generate brings the plays on disk up to date when it runs. It broadcasts `:queued`, `:started`, `:progress`, `:published`, `:done` and `:failed` on `"static_site"`, so every admin's export page shows the same state. `mix playcode.export.site` runs in its own VM and calls `StaticSite.generate/1` directly, unserialised: its default `_site` is also the admin page's directory in dev, so pass `-o` while a server is building
-- **Change tracking.** Every build writes `build.json` at the site root: the site fingerprint (`StaticSite.Fingerprint`: the export's code by `module_info(:md5)`, the English translations, the rendering libraries' versions and the `:version` option; not `PlaycodeWeb.Gettext`'s code, which every Spanish edit of the admin pages changes, though the site is in English), the `:version` that went into it, and each published play's `content_version`; the export page prefills its Version field from it (`StaticSite.built_version/1`), so a site is current for the version it was built with. `priv/static_site` (styles, scripts, fonts) has its own hash in `build.json` (`Fingerprint.assets/0`): no page embeds anything of those files but their paths, so when only they changed Generate copies them and rebuilds no play, and the export page says so (`StaticSite.assets_changed?/1`, `update_assets/1`). `StaticSite.changed_plays/1` lists the published plays whose version moved since, `site_changed?/2` says whether the fingerprint did (or there is no `build.json`), and `outdated/1` is the batch that brings the site up to date. `Playcode.Export.PlayChangeListener` relays Postgres's `play_changed` notifications, coalesced per play over 200 ms, to `"static_site"`, so the export page flags a changed play (an amber dot, and an icon-only Refresh) as soon as the edit commits, and to the play's own topic (`PlayContent.notify_changed/1`), so the content editor and the play list reload whoever made the change. Generate (`SiteBuilder.generate/1`) rebuilds every play only when the site changed or holds no play; otherwise it writes the changed plays and takes out the archived or incomplete ones in one batch, and writes nothing when nothing changed. There is no forced full rebuild: tracking covers everything the pages show, so a play Generate misses is a tracking bug. `test/playcode/export/static_site/fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access
-
-`generate/1` returns `{:ok, %{plays, size, output_dir, largest_page_gzip, index_bytes, largest_shard_bytes}}` and the mix task prints the last three. Size budgets: `style.css` 25 KB, `site.js` and `search.js` 15 KB each, and the fonts 300 KB are asserted in `static_site_test.exs`; an act page at most 80 KB gzipped and a first search at most 300 KB gzipped are only reported by the build (`generate/1`'s return and the mix task's printed line), not asserted. On the full dev corpus (83 plays, `--all`) the largest act page is 43.1 KB gzipped (EMOTHE0084, 0254 and 0648 are split into scene pages). A first single-word search costs at most ~166 KB gzipped (*sueño* 148 KB, *honneur* 166 KB, *de* 137 KB), under the 300 KB budget; a phrase over common words does not (*"vida es"* 954 KB, *"la vida es"* 691 KB), because the postings hold no word positions and every candidate line's chunk must load (`docs/static-site-improvements.md`, item 5). Builds, measured on the 83 plays at `9b37335`: 45.2 s sequential, 17.0 s parallel; removing one play 2.8 s, adding one 4.3 s. On the dev corpus's 371 complete plays with one scheduler, as on Fly's shared-cpu-1x (2026-10-08): a full build takes about 200-225 s of CPU on a laptop core and peaks at 217 MB (1.7 GB before the index was written shard by shard); switching one play on in the full site takes 9.4 s and peaks at 151 MB (733 MB before).
-
-### Output structure
-
-```
-_site/
-├── index.html  search.html  about.html
-├── build.json                 the fingerprint and version it was built with, and each play's content_version
-├── assets/                    style.css, site.js, search.js, fonts/
-├── search/                    plays.js, index/<shard>.js, lines/<CODE>/<k>.js and n<k>.js (its notes)
-└── plays/
-    ├── <CODE>.html            redirect stub to the old address
-    └── <CODE>/
-        ├── index.html         title page
-        ├── act-1.html …       one per act (act-1-s3.html … per scene for a very long act); prologue.html etc.
-        ├── text.html          full text
-        ├── statistics.html
-        ├── notes.html         every note, filterable by type; only for a play with notes
-        └── <CODE>.xml         TEI-XML
-```
-
-`node --test test/js/*.test.mjs` runs the browser halves of search and of the comparison's scroll sync; CI runs it after `mix test`.
-
-**Comparison scroll sync.** `assets/js/sync_scroll.mjs` is the one implementation: the compare pages' `SyncScroll` hook imports it and `Export.CompareHtml` inlines it at compile time with its `export` keywords stripped (the downloaded page opens from disk). Speeches carry `data-sync-act`, their act's key from `Division.sync_keys/1` (kind and place among siblings, so `acto n="1"` and `act` with no `n` pair up); a speech pairs with the one as far through the same act in the other panel, or through the whole play when the other edition has no such act. Keys from each file's own `type`/`number` left 40 of the 152 original/translation pairs with no speech in common.
-
-### Publishing on emothe.uv.es
-
-Deploy pushes the site to `bogmir/emothe-static` (branch `gh-pages`), then POSTs to
-`https://emothe.uv.es/playcode-deploy.php`, which downloads that branch from GitHub and
-swaps it into `emothe.uv.es/edicion_estatica/` (https://emothe.uv.es/edicion_estatica/). The script lives in
-`deploy/`: `playcode-deploy.php`, its settings template `playcode-deploy.config.example.php`
-(the live `playcode-deploy.config.php` holds the key's SHA-256 and is git-ignored), and
-`test.sh`, which runs it under PHP 7.2, the server's version, against a mock of the site's
-folder (docker and python3; `PHP_IMAGE=wordpress:cli-php7.4 deploy/test.sh` for another).
-
-- **It never touches WordPress or the older sections** in the same folder: it writes only
-  into its target folder, refuses to replace a folder without its `.playcode-site` marker,
-  and refuses a download holding PHP, `.htaccess` or a path leaving the folder.
-- **`POST …/playcode-deploy.php?check=1`** with the key reports PHP, zip, curl, write access
-  and whether GitHub is reachable, and changes nothing.
-- **Updating the script** needs the UV VPN (eduVPN) and the SMB share
-  `smb://entresiglosvm.uv.es/html/emothe.uv.es/`; the server itself needs neither, since
-  Playcode reaches it over HTTPS.
-- **The four Fly secrets**: `STATIC_SITE_REPO` (`bogmir/emothe-static`),
-  `GITHUB_DEPLOY_TOKEN` (fine-grained, that repository only, Contents read and write),
-  `STATIC_SITE_PUBLISH_URL` (`https://emothe.uv.es/playcode-deploy.php`) and
-  `STATIC_SITE_PUBLISH_TOKEN` (the key whose hash the server's config holds). In dev, the
-  same environment variables apply; without `GITHUB_DEPLOY_TOKEN`, git pushes with your own
-  login.
-
-### Usage
-
-**Admin UI**: `GET /admin/export` (`PlaycodeWeb.Admin.ExportSiteLive`) — configure the version; Generate, the one build button, brings the site up to date (only the changed plays, unless the site's code or settings changed); the play count and size above Preview, Deploy and Download are read from `_site/` (`StaticSite.dir_size/1`, which skips the `.git` Deploy leaves), so a switch changes them too; each play in the site shows a green dot when up to date and an amber dot plus an icon-only Refresh button when changed, except while the whole site changed, when only the banner shows; a play still in the site but now a draft or archived keeps a muted row with a hollow dot until its switch takes it out (or Generate does), and the switch can only add published plays; the list follows `play_changed`, so a play set to draft or marked complete moves at once; download as .zip, or Deploy: the target is server config (`STATIC_SITE_REPO`), named under the button, never typed in, because the GitHub token goes to it; with no repository configured there is no Deploy button.
-
-**Mix task**:
-```bash
-mix playcode.export.site                              # complete plays → _site/
-mix playcode.export.site -o /tmp/archive              # custom output dir
-mix playcode.export.site --plays AL0001,AL0002        # specific plays only
-mix playcode.export.site --all                        # include incomplete plays
-mix playcode.export.site --version 2.0
-```
-
-### Completeness gate
-
-The `plays.is_complete` boolean (default `false`) controls which plays are exported. Toggle it in the play edit form. The export site page shows "X of Y plays marked as complete". Pass `--all` to the mix task or `all: true` to `StaticSite.generate/1` to override.
+- **Every path built from a play code goes through `StaticSite.safe_code!/1`.** Play codes have no format validation, and `apply_changes/2` takes a removed play's code from a socket event.
+- **Every build and deploy goes through `Playcode.Export.SiteBuilder`, one job at a time.** Two builds at once drop a play from the incremental index; a deploy during a build pushes half a site. `mix playcode.export.site` runs in its own VM, unserialised: pass `-o` while a server is building.
+- **The search normaliser has two halves that must agree**: `StaticSite.Search` and `EMOTHE.normalise` in `site.js`, both run against `test/fixtures/search_normalisation.json`. `node --test test/js/*.test.mjs` runs the browser halves; CI runs it after `mix test`.
+- **Generate rebuilds only what changed** (`build.json`, `StaticSite.Fingerprint`). There is no forced full rebuild: a play Generate misses is a tracking bug. `fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access.
+- **Size budgets** for `style.css` (25 KB), `site.js` and `search.js` (15 KB each) and the fonts (300 KB) are asserted in `static_site_test.exs`.
+- **`assets/js/sync_scroll.mjs` is the comparison's one scroll-sync implementation**: the compare pages' hook imports it and `Export.CompareHtml` inlines it at compile time.
 
 ## Running Commands
 
@@ -484,6 +304,14 @@ mix playcode.import.bibliography --dry-run   # the plan, per play and per skip r
 mix playcode.import.bibliography             # write it
 ```
 
+Its witnesses likewise (S3; `T03` and `T03.2` under `doc/ctce_dades/`); on Fly,
+`Playcode.Release.import_witnesses/2`:
+
+```bash
+mix playcode.import.witnesses --dry-run   # the plan, per play and per skip reason
+mix playcode.import.witnesses             # write it
+```
+
 The TEI header is not authoritative for language — every EMOTHE file carries `xml:lang="es"` for
 the editorial platform. The index's `[EN]`/`[FR]` tag is.
 
@@ -493,182 +321,17 @@ Then visit:
 - http://localhost:4000/admin/plays/import to import TEI files
 - http://localhost:4000/plays to browse the catalogue
 
-## What Has Been Implemented
+## Production
 
-- [x] Phoenix 1.8.3 project scaffold with all dependencies
-- [x] OpenTelemetry configuration (Phoenix, Ecto, Bandit auto-instrumentation)
-- [x] 7 database migrations (plays, editors, sources, notes, characters, divisions, elements, statistics)
-- [x] All Ecto schemas with changesets and associations
-- [x] `Playcode.Catalogue` context - play CRUD with search (title, author, code)
-- [x] `Playcode.PlayContent` context - characters, divisions, elements; full content tree loading
-- [x] `Playcode.Statistics` context - computes acts, scenes, verse distribution, split verses, prose fragments, stage directions, asides, character appearances; caches as JSONB
-- [x] `Playcode.Import.TeiParser` - parses UTF-16 TEI-XML files into DB (handles BOM, encoding detection, full TEI structure mapping)
-- [x] `Playcode.Export.TeiXml` - reconstructs TEI-XML from DB using xml_builder
-- [x] `Playcode.Export.Html` - standalone HTML document with CSS styling
-- [x] `Playcode.Export.Pdf` - PDF generation via ChromicPDF (reuses HTML export)
-- [x] `Playcode.Export.Epub` - EPUB 3 generation via BUPE (chapters per division, embedded CSS)
-- [x] `Playcode.Export.CompareHtml` - standalone comparison HTML with synchronized scrolling between panels
-- [x] `Playcode.Export.StaticSite` - static archive on HEEx: title page, one page per act, full text, statistics page (metrical synopsis, characters, who shares the stage), catalogue of works with facets, full-text search that works from `file://`, reading tools. Spec: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`; deferred work: `docs/static-site-improvements.md`
-- [x] `Playcode.Export.StaticSite.Deployer` - pushes the site to a git branch with a GitHub token, then has emothe.uv.es publish it (`deploy/playcode-deploy.php`)
-- [x] Public catalogue page (`/plays`) with search
-- [x] Public play presentation page (`/plays/:code`) with Text/Characters/Statistics tabs, line number and stage direction toggles
-- [x] Statistics panel with modern cards and CSS bar charts
-- [x] Admin play list with search and delete
-- [x] Admin play create/edit form
-- [x] Admin play detail page with structure overview and export buttons
-- [x] Admin TEI import page (file upload)
-- [x] Export controller (TEI-XML, HTML, PDF download endpoints)
-- [x] Authentication with bcrypt (invite-only accounts, login, password reset). Public registration and the account-confirmation flow are deleted; accepting an invitation is what sets `confirmed_at`
-- [x] `Playcode.Authz.can?/3` - single authorization predicate consulted by the router, the LiveView mount hooks and the admin sidebar
-- [x] Account state enforced - the three auth gates require `confirmed_at` set and `deactivated_at` nil. This is the claim that was previously false in this file
-- [x] `ADMIN_EMAILS` reconciled at boot by `Playcode.Accounts.AdminBootstrap`; those admins are protected from UI demotion/deactivation
-- [x] Visible, revocable sessions - `/users/settings` lists IP and browser per session, revokes one or all others; 30-day tokens; admins force logout from `/admin/users`
-- [x] Self-service email change removed - the address identifies the invited account, so `/users/settings` shows it read-only. `change_user_email/2`, `apply_user_email/3`, `update_user_email/2`, `User.email_changeset/3`, `User.confirm_changeset/1` and the `change:` token context are all deleted
-- [x] Admin sidebar shell - three permission-filtered groups, collapsible at every breakpoint, hidden by default on play pages; breadcrumbs removed from the admin layout
-- [x] Compile & fix errors (all modules compile cleanly)
-- [x] TEI round-trip test suite (`tei_roundtrip_test.exs`) - every feature a TEI file carries, imported and exported: header fields, language, composition date, cast list, front-matter notes, divisions, speeches (including multi-character `who`), split verses, asides, emphasis, stage directions and their types, extent, and an export → import → export fixpoint. `tei_parser_test.exs` keeps what the export cannot show: failure modes, encodings, the gazetteer rules
-- [x] TEI XML export test suite (`tei_xml_test.exs`) - exports of data no TEI import produces: gazetteer-built places and a dating note with no years
-- [x] Real-fixture roundtrip test (`RoundtripTest`) - imports real TEI files, exports, and verifies: 14 structural count fields (acts, scenes, characters, speeches, verses, line_groups, stage_dirs, asides, split_parts, verse_type_attrs, hidden_chars, heads, notes, inline_stages), ordering preservation (characters, sources, verse line attrs, where each note sits and that none is pasted into the text), metadata fidelity (title, author, code, original_title, pub_place, publication_date, licence_url, edition_title, author_attribution, editors, principals, sponsor, funder, sources), derived fields (verse_count, is_verse, extent), and warn-only speaker_refs (multi-character `who` limitation) Three tracked fixtures (`EMOTHE0746`, verse, 54 inline stages in `<l>` and 17 in aside lines; `EMOTHE0776`, prose, 1 in `<p>`; `EMOTHE0705`, 17 in-text notes) run on every `mix test`; `mix test --include slow` sweeps every tracked `test/fixtures/*.xml` plus the git-ignored `test/fixtures/tei_files/` (a few minutes). The sweep is green: 83 fixtures, 0 failures
-- [x] Duplicate character xml_id handling in TEI importer (`create_character_unless_exists`)
-- [x] Manual play content editor at `/admin/plays/:id/content` - characters, divisions, elements with modal forms
-- [x] Navigation overhaul: two layouts (public app + admin sidebar shell), play context bar for admin play pages; breadcrumbs remain on public pages only
-- [x] Collapsible sidebar with scroll spy (IntersectionObserver) on public play page
-- [x] Theme toggle (system/light/dark) in navbar
-- [x] EMOTHE home page with catalogue CTA
-- [x] "Edit in Admin" link on public play page for logged-in users
-- [x] DaisyUI component migration (catalogue, play show, admin pages)
-- [x] Bibliographic sources admin page (`/admin/plays/:id/sources`) - add/edit/delete sources with modal forms
-- [x] Play text visual markers in sidebar: line numbers, stage directions, asides, split verses, verse type toggles
-- [x] i18n: full Spanish translations for all UI strings (public + admin); `mix gettext.extract/merge` workflow established
-- [x] Statistics panel act label i18n fix - stores raw division type (`"acto"`, `"jornada"`) and translates at display time
-- [x] `Playcode.Places` — corpus-global gazetteer on a three-layer model: `places` (referent, self-referencing containment, coordinates, one authority link), `place_names` (surface forms, one preferred per language), `play_places` (per-play index with `role`, `position`, `note`, `origin`). `/admin/places` for the gazetteer, `/admin/plays/:id/places` as a peer context-bar tab, `#meta-places` on `/plays/:code`, and TEI `<settingDesc>` with nested `<listPlace>` plus `<setting>` in both directions. Wikidata behind a swappable `Places.Authority` behaviour, stubbed in test so no test touches the network. Spec: `docs/superpowers/specs/2026-08-04-s9-places-design.md`
+Fly.io, app `playcode` (`playcode.fly.dev`), deployed by `.github/workflows/deploy-fly.yml` on
+every green CI run on `main`. The pre-rename app (`fly.emothe.toml`, `emothe.fly.dev`) is
+hand-deployed only and scaled to zero. History and numbers: `docs/history.md` (Fly.io
+deployment, Fly volume, PDF downloads); publishing the site: `docs/static-site.md`.
 
-  **Testing gotcha:** `places.slug` is unique across the whole corpus, so two async tests
-  creating a place with the same name take the same index lock inside their own
-  transactions — a pair of those acquired in opposite order deadlocks Postgres.
-  `place_fixture/1` therefore derives a *unique* slug unless you pass `"slug"`. Pass one
-  only when the test asserts on the literal value, and then give it a per-file prefix
-  (`tx-roma`, `sch-roma`). A test about slug derivation itself should call
-  `Places.create_place/1` directly and use a toponym no other test uses.
-
-## What Still Needs To Be Done
-
-### High Priority
-- [x] **Create initial admin user** - set `ADMIN_EMAILS` (comma-separated); `Playcode.Accounts.AdminBootstrap` reconciles it at boot and mails each address an invitation. Break-glass with SMTP down: `mix playcode.invite EMAIL --admin --print-url`
-- [x] **Fly.io deployment** — live. `fly.toml` deploys the `playcode` app (`playcode.fly.dev`) and `.github/workflows/deploy-fly.yml` deploys it on every green CI run on `main`. The pre-rename app survives as `fly.emothe.toml` (`emothe.fly.dev`), hand-deployed only (`fly deploy --config fly.emothe.toml`) and switched off with `fly scale count 0 -a emothe`. Both configs run `/app/bin/playcode` — the release binary follows the code, not the app name. Secrets required per app: `DATABASE_URL`, `SECRET_KEY_BASE`, `ADMIN_EMAILS` (**unset means zero admins**), `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`. With `SMTP_HOST` unset the mailer falls back to the Local adapter and **every invitation is silently dropped** — use `bin/playcode rpc 'Playcode.Release.invite_url("...")'` to get the link instead. Fly secrets cannot be read back: `fly secrets list` shows names only. Deploy needs four more, `STATIC_SITE_REPO`, `GITHUB_DEPLOY_TOKEN`, `STATIC_SITE_PUBLISH_URL` and `STATIC_SITE_PUBLISH_TOKEN` (see *Publishing on emothe.uv.es*); the runtime image carries `git` for it. `Playcode.Export.PlayChangeListener` holds one extra Postgres connection for LISTEN, so `DATABASE_URL` must be a direct or session-mode connection — a transaction-mode pooler silently drops the notifications (pages then update only on reload)
-- [ ] **Render** — `render.yaml` and `Dockerfile.render` exist but the blueprint has never been applied
-- [x] **Email delivery** - SMTP adapter via `gen_smtp`; configure `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD` (+ optional `SMTP_PORT`, `MAIL_FROM`) as Fly.io secrets
-- [x] **Account state enforced** - `require_authenticated_user`, `require_permission` and the `{:ensure_can, action}` LiveView hook all require `Accounts.active?/1` (confirmed and not deactivated); an inactive session is destroyed with an explanatory flash rather than looping
-- [x] **Login rate limiting** - 20/minute per IP plus 10/15 minutes per email address via ETS-backed `PlaycodeWeb.RateLimit`; a successful login calls `RateLimit.reset/1` so only failures consume the email budget
-- [x] **User management admin UI** - `/admin/users` invites by email with a role, resends invitations, deactivates, reactivates, forces logout and changes roles; state badges are Protected/Deactivated/Invited/Active
-
-### Medium Priority
-- [x] **Aside detection** in TEI importer (detects `<stage type="delivery">[Aparte.]</stage>` and `<seg type="aside">` patterns)
-- [x] **Verse type statistics** - distribution of verse types (redondilla, romance, etc.) in statistics panel
-- [x] **Pagination** on catalogue pages (25/page public, 50/page admin) with URL-based navigation (`?page=N&search=query`); parent play field is now an autocomplete combobox
-- [x] ~~Install Typst~~ PDF export now uses ChromicPDF (requires Chrome/Chromium on the system)
-- [ ] **Stage direction navigator** (`« N / M »`) - client-side JS hook to scroll between stage directions in play text
-- [x] **Recompute statistics** - a cached `play_statistics` row stores the play's `content_version` it was computed at, and `Statistics.get_statistics/1` recomputes when the play's version has moved, so every edit invalidates it with nothing to call (lazy recompute on next access); one-time refresh: `Playcode.Repo.all(Playcode.Catalogue.Play) |> Enum.each(&Playcode.Statistics.recompute(&1.id))`
-
-### Known Roundtrip Gaps
-- [x] **`Play.language` imported** from `<profileDesc><langUsage><language ident="xx-XX">` (e.g. "it-IT" → "it"); exported back as `<profileDesc><langUsage><language ident="...">` with label. Note: `xml:lang` on the root `<TEI>` element is always "es" in EMOTHE files (editorial platform language), NOT the play language — the play language lives in `profileDesc/langUsage`.
-- [x] **`PlaySource.publisher/pub_place/pub_date`** — now imported from `<publisher>`, `<pubPlace>`, `<date>` inside `<bibl>`; exported back to same elements; editable in admin UI. Fields are optional — most EMOTHE corpus `<bibl>` elements use a freeform `<note>` citation instead.
-- [x] **PlayEditors admin UI** — `/admin/plays/:id/editors` (new tab in context bar between Metadata and Sources); full CRUD with role dropdown (principal/translator/researcher/editor/digital_editor/reviewer)
-- [x] **PlayEditorialNotes admin UI** — first tab ("Editorial Notes") inside `/admin/plays/:id/content`; full CRUD with section_type dropdown (introduccion_editor/dedicatoria/argumento/prologo/nota); uses same modal pattern as characters/divisions/elements. NOTE: plays imported with older parser versions will have empty notes — delete and re-import to populate from TEI.
-- [x] **`front_notes` roundtrip check** — roundtrip test now verifies that front-matter `<div>` elements (prologo/dedicatoria/introduccion_editor/argumento/nota with non-empty `<p>` content) survive import→export
-- [x] **`project_description`/`editorial_declaration`** — imported, exported, and edited in the play form (`/admin/plays/:id/edit`)
-- [x] **Multi-character `who` attrs** (`who="#ALB #COR"`) — replaced single `character_id` FK with `element_characters` join table (many-to-many). Parser splits space-separated `who` refs and resolves each independently. Export reconstructs multi-character `who` attribute. Character Review UI supports multi-select assignment. `speaker_refs` promoted to strict roundtrip assertion.
-
-### Found by the test rework (2026-09-26)
-Each is pinned by a test as it behaves today, not endorsed.
-- [x] **`ImportLive` `import_directory`** - any researcher's socket could push it and make the server import every `.xml` under any path. Handler deleted; `import_live_test.exs` asserts the pushed event imports nothing
-- [x] **Drafts are public** - an incomplete play was hidden from `/plays` but served by `/plays/:code`, `/api/v1` (whose index listed every draft) and `/export/:id/*`. Now a 404 for visitors and visible to staff (`:view_drafts`); see *Access control*. The comparison page also stopped adding a panel for any id the browser sent: only the family it offers
-- [x] **Inline `<stage>` is flattened** - a `<stage>` inside a verse line or prose paragraph (3,148 in 59 plays of the corpus) became part of the line's text on import. Now 2,232 of them (49 plays) are kept as `<stage type="…">…</stage>` markers in `play_elements.content` (`InlineMarkup`), written back by the TEI export inside the `<l>` or `<p>`, shown in italics and hidden by the "Stage directions" toggle on the static site and `/plays/:code`, italic in the HTML, PDF and EPUB downloads and the comparison page, counted in statistics (`total_stage_directions` includes them, `words` counts spoken words only, `Statistics @version` 3) and in search (a word found only in a stage is a "Stage directions" hit), and edited as text in the content editor (a hint on the form; a malformed marker is refused, before any renumbering, with the message in the modal and in the inline edit). Spec: `docs/superpowers/specs/2026-10-09-inline-stage-design.md`. Limits:
-  - The other 916 stages (49 plays) sit in aside lines and paragraphs, which drop every stage they hold (the aside flag carries them), so they are still dropped on import and export. In the whole production corpus that is 7,377 stages: 5,149 are the aside marker itself ("[Aside]", "(Ap.)", "(Aparte)"), but about 2,200 in 179 plays are real directions ("(Haut.)", "[A DON DIEGO.]", "(de même)"), lost with the line's aside flag. See *Found by the corpus round trip* below.
-  - An inline stage's `xml:id` is not kept.
-  - A note at the end of a stage exports after it; two or more notes at the very start of a stage that follows text are not an export/import fixpoint (the adjacent-spaced-notes limit of `take_notes/2`).
-  - Content search in the editor also matches the marker text, and `/api/v1` returns `content` raw, markers included.
-  - A hidden stage that holds a note leaves a gap in the visible note numbers.
-  - `search.js` classifies a line by the first query word's flag, so a line holding a stage-only word and another queried word counts as a stage hit or as spoken by word order.
-  - `Metrics.words/1` now counts a letter touching an italic boundary (`<<a>>b`) as one word, with a stage in the line or not, where it counted two; a few lines in the tracked fixtures move.
-  - The Word importer produces no inline stages and is not touched.
-- [x] **A Notes tab in the play admin** - `/admin/plays/:id/notes` lists a play's notes (number, type, glossed word, place, the text it hangs on, the note) and edits each where it is listed; adding stays in Content, which each note links to. A note of a type with no label keeps it through an edit (`PlayLabels.note_type_options/1`), here and in the content editor. Spec: `docs/superpowers/specs/2026-10-10-admin-notes-tab-design.md`
-- [x] **Notes in search and a Notes page** - a note's text is found by the static site's search (Text facet value "Notes", counted under All), and a play with notes has `notes.html` on the static site and a Notes view on `/plays/:code`: number, type, glossed word, where it is (back to its marker: `#nref-<n>` on the site, `show_note` and a `scroll-to` event on the live page) and text, filterable by type. Spec: `docs/superpowers/specs/2026-10-09-notes-search-and-page-design.md`
-- [x] **In-text `<note>` is pasted into the line** - now stored in `play_notes` and written back by the TEI export, speaker labels included (52 speeches in 23 plays of the dev corpus carried a note in their label, "BELISA BELISA El nombre de Belisa…"); shown as numbered pop-ups on the static site and `/plays/:code`, as endnotes in the downloads, edited in the content editor. Spec: `docs/superpowers/specs/2026-10-08-in-text-notes-design.md`. One limit remains: Hamlet's 16 notes nested inside another note's `<p>` are still pasted into the outer note's body, and the real-fixture checks do not see them
-- [x] **Activity-log order was unstable within one second** - `activity_logs.inserted_at` is now microsecond precision (migration `20260926120000`), so a burst of entries lists newest first; the `to:` date filter ends at `23:59:59.999999`
-- [x] **`ExportSiteLive` hardcoded `_site`** and a shared temporary zip path - the output directory now comes from `StaticSite.output_dir/0` (`:static_site_dir`, a temporary directory under test), so `export_site_live_test.exs` drives Generate. The zip still goes to one shared temporary path, so that test file is `async: false`
-- [x] **Custom changeset messages had no Spanish translation** - all 15, not just "must be given together with the end year". `gettext.extract` cannot see a plain string in `add_error`/`message:`, so they are hand-added to `errors.pot` and the PO files; `test/playcode_web/error_translations_test.exs` finds them in `lib/` and fails on any without Spanish
-- [x] **`mix playcode.import.filemaker` included archived plays** (and crashed applying to one: `Catalogue.get_play!/1` hides them); `/admin/filemaker` excluded them. Both now skip archived plays, through `FilemakerSync.all_plays/0`
-- [x] **`Places.Authority.Stub` shipped in `lib/`** - now `test/support/place_authority_stub.ex`, compiled only in test
-
-### Found by the Groxio audit (2026-10-08)
-The code read against Bruce Tate's Groxio articles (functional core, boundaries, explicit over implicit, automatic correction). Already done from it: dead public functions deleted, the TEI importer aborting on any failed element insert, moduledocs on the four core schemas, drafts made private, and the admin tabs acting only on the play's own rows (see *Access control*).
-- [x] **Word import mangled accented character ids** - `WordParser` replaced everything outside `[a-z0-9]` with `_`, so "ABSALÓN" became `absal_n`, a leading number made an invalid XML id (`1_dama`), and a label with no ASCII letter derived `""` and crashed the upload. Now accents are dropped (`absalon`), a leading number moves last as the corpus's editors write it (`dama_1`), and a label with neither letter nor digit is numbered (`character_6`); over the corpus's 7,462 speaker labels, 9 fall back to a number
-- [x] **FileMaker upload rescued every exception** - `FilemakerSyncLive.read_plan/1` wrapped reading and planning in `rescue e -> {:error, e}` for one malformed record, so the admin saw an inspected `ArgumentError` and any bug in `FilemakerSync.plan/3` passed as an unreadable file. `Filemaker.load_index/1` and `load_versions/1` now return `{:error, {:malformed_record, record_id}}` for a record with no play code or no fields object, the page and `mix playcode.import.filemaker` name it, and the rescue is gone
-- [x] **29 Spanish translations were fuzzy** - gettext ignores a fuzzy entry, so those strings showed in English, and several were wrong guesses left by `gettext.extract --merge` ("Add the first editor" as "Añadir la primera fuente"). All 29 are translated, and `test/playcode_web/spanish_translations_test.exs` fails on any fuzzy Spanish entry, so the next merge cannot leave one. The fuzzy English entries (145 on 2026-10-08) are harmless: each has an empty msgstr and falls back to its msgid
-- [x] **The authorization table was kept by hand** - nothing failed when a new gated route had no row. `authorization_test.exs` now reads `PlaycodeWeb.Router.__routes__()` and fails, naming the route, for any route behind `:require_authenticated_user` or under `/admin` (which catches the site preview's own pipeline) that no row matches; LiveDashboard's internal routes are excused. The PDF route, left out while it needed Chrome in test, has its row
-- [x] **The slow suite never runs in CI** - left out by decision (2026-10-08): TEI schema validation, the corpus round trip and the bibliography oracle stay a local `mix test --include slow`
-- [x] **`Catalogue` and `PlayContent` were mostly undocumented** - every public function of both now has a `@doc` saying what a caller cannot see from its name: the read options, ordering, nil against raise, what a delete takes with it; `Catalogue`'s moduledoc states the read options once. `change_play/2`, which nothing called, is deleted. Every module now has a moduledoc: a short one for the schemas, controllers and pages, `@moduledoc false` for plumbing (`Repo`, `Endpoint`, `Router`, `Telemetry`, `Mailer`) and the standard log-in pages
-- [x] **PDF downloads timed out, and any visitor could start one** - measured with one Chrome session, as production runs: the median complete play rendered in 4.6 s, the largest in 40-44 s, the time growing with the square of the play's length, against ChromicPDF's 5-second default print timeout; `Export.Pdf` raised and the download answered 500. Without adding compute: `Export.PdfCache` renders each play's PDF once per `content_version` (and per export code) in a task of its own, one render per play, keeps it under `PDF_CACHE_DIR` and serves the file from then on. A request waits at most 50 s, inside Fly's 60-second idle cut, then answers 503 "being prepared" with `Retry-After` while the render finishes; while one play renders, another play answers busy. ChromicPDF waits 5 minutes for a print and 2 for Chrome to start (`config/config.exs`). Chrome runs only while a PDF prints (`on_demand`), one at a time: kept running, it left a renderer behind for every session start that timed out, and on 2026-10-08 the throttled machine held 89 Chrome processes, swap full, with nothing printing. `test/playcode/production_config_test.exs` reads the release's config and pins both Every render is logged with its duration (`PDF <code>: rendered in 40.0 s, 2730 KB`) and charted at `/admin/dashboard` (`chromic_pdf.print_to_pdf.stop.duration`): the numbers for more compute. The download links are `rel="nofollow"` and `robots.txt` disallows `/export/`
-- [x] **Read the production PDF timings** - the first, on 2026-10-08: EMOTHE0283 (3,730 elements) rendered in 3.8 s, about twice as fast as the local measurements predicted, so even the largest play should take about 20 s, well inside the 50-second wait, and the "being prepared" answer should be rare. The same download showed the error panel on `/plays`: LiveView takes a click on a plain link for leaving the page and closes its socket, and a download never leaves. The catalogue's download links now carry `download`; the admin play page's already open in a new tab
-
-### Found by the corpus round trip (2026-10-09)
-Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode_dev`, the 360 whose code matches their file name exported again with `TeiXml.generate/1`, and every element and attribute counted in both (per section, `parent>child`). Counts below are source totals over the 360 unless they say otherwise. Nothing here is fixed yet; each is a decision or a project of its own.
-
-**Text corrupted on import (readers see it)**
-- [ ] **`<app>` (critical apparatus) is pasted into the line** - 604 entries in 6 plays (EMOTHE0560 212, 0460 127, 0187 98, 0010 94, 0530 63, 0435 10), `type` substantive or orthographical, each a `<lem wit>`, `<rdg wit>`s and often a `<note>`. `text_content/2` reads all of it, so "Barnardo.<app><lem>Barnardo.</lem><rdg>Barnardo?</rdg></app>" exports as "Barnardo. Barnardo. Barnardo?". In most entries the lemma repeats the word just before the `<app>` (the base text stands outside it); in some the `<lem>` is the only copy of the word, and a few have readings only. Likely fix, the same shape as notes: take the `<app>` out of the text, keep a `<lem>` that is the only copy in the line, and store the entry anchored at its offset (a note of type `apparatus` with its readings and witnesses as data, shown as a pop-up and written back as `<app>`). The witnesses it cites are `listWit` (S3). Analysis and the design agreed so far: `docs/tei-apparatus-and-code.md`; questions for the project: `docs/stakeholder/variantes-y-codigo.html`
-- [ ] **`<code>` holds literal HTML, shown as text** - 1,211 in 7 plays (EMOTHE0010 Hamlet 1,022; EMOTHE0503 80; the Spanish Tragedy family 0111, 0112, 0307, 0218 about 108; 0239 1), only four strings: `<sup>`, `</sup>`, `<span class="folio">`, `</span>`. An ad hoc apparatus: superscript witness sigla (F, Q2, Q4) and Folio-only passages, as in `O God, <code>&lt;span class="folio"&gt;</code><code>&lt;sup&gt;</code>F<code>&lt;/sup&gt;</code>O…`. Stored as text, so 236 lines in 8 plays read "`<sup> Q4 </sup> [Draws his sword.]`". Stripping the tags alone would glue the sigla to the words ("FOF God"). Options: turn the four strings into inline markup on import (a superscript marker like `<<…>>`, and a class for the Folio span), or have the editors re-encode the 7 files in TEI (`<hi rend="sup">`, `<app>`). Undecided. Four uses, each its own choice (Hamlet's Folio-only text, which the old site hid; *The Spanish Tragedy*'s Q4 Additions; *The Rover*'s Aside/Exit labels; a typo in *Mariamne*): `docs/tei-apparatus-and-code.md` and `docs/stakeholder/variantes-y-codigo.html`
-- [ ] **`<lb/>` is flattened to a space** - 26,571 inside body paragraphs in 178 plays, 3,936 in front matter, 634 in the back. Two uses. (1) Prose lineation, 40 plays: `<p n="4">` carries the number of the paragraph's first printed line and each `<lb n="5"/>` marks where the next line of the printed edition starts (EMOTHE0313 *The Way of the World*), the prose equivalent of verse numbers, for citing prose by line; together with `p@n` (49,423 lost in 81 plays) it is lost, so prose has no edition line numbers. (2) Real line breaks, about 10,800 bare `<lb/>`: letters, songs and verse quoted in prose, verse quoted in notes, dedications in front matter; these should render as a break. A fix keeps both in `content`, like the stage markers: a break as a marker rendered `<br>`, a numbered `<lb n>` as a line start with its number in the margin
-
-**Data dropped on import, to recover from the TEI** (none of the FileMaker exports in `doc/` holds it)
-- [ ] **`teiHeader/fileDesc/notesStmt/note`** - an editor's note on the edition, 16 notes in 15 plays ("El epílogo figura en la edición de Ferrara de 1581…")
-- [ ] **`front/set`** - the scene of the action, 15 plays (`<set><head>SCENE:</head><p>An English wood and Clunch's house…</p></set>`)
-- [ ] **`castItem/actor`** - the original cast, 14 actors in 3 plays ("Mr. Betterton")
-
-**Data dropped on import, belonging to a FileMaker slice**
-- [ ] **`revisionDesc/change`** - who revised the TEI and when, 341 plays (`<change><date>2021</date><persName>Muñoz Pons, Carlos</persName> Revisión de la obra en formato TEI-XML</change>`): credits, S7
-- [ ] **`sourceDesc/listWit/witness`** - 10 witnesses in 1 play (EMOTHE0460, with `variantEncoding`): S3
-
-**Other losses**
-- [ ] **`sourceDesc/bibl/distributor`** - who supplied the digital text the edition was made from, 152 plays: *Canon 60* 30, *Gallica* 15, *Internet Shakespeare Editions* 6, the TC/12 groups (PROLOPE, DICAT, ROJAS ZORRILLA…), *Project Gutenberg*, *Biblioteca Virtual Miguel de Cervantes*…, and a placeholder *Texto base* in 59. Provenance of the source text; a `distributor` column on `play_sources` would hold it
-- [ ] **`sp@who` that names no cast role** - 2,508 references in 29 plays, errors in the source files: case or spelling variants (`#D’Amville` against `#D’AMVILLE`, 369), comma-joined lists (`#ERPINGHAM,GOWER,FLUELLEN,MACMORRIS,JAMY`). The speech keeps its label but loses its character, and with it the statistics. The "Review character in text" page (Low Priority) is where they get fixed
-- [ ] **`castItem@ana` groups** - `ana="grupo"` 92 and `ana="grupo oculto"` 468 (a role that is a group: soldiers, servants) are imported as hidden or nothing, so the group is lost. Character reconciliation, S6
-- [ ] **The cast list's own heading** - "PERSONNAGES", "INTERLOCUTORI", "Le persone che parlano": 323 lost
-- [ ] **Front matter flattened** - italics in editorial notes and roles (about 950 `<emph>`), and their unnumbered `<note>`s (about 270)
-- [ ] **Back matter other than the bibliography** - 16 plays: two cast lists, some verse, headed sections
-- [ ] **`xml:id` on speeches, paragraphs, stages, scenes, segments and `lb`** - about 460,000 dropped; only verse lines (`line_id`) keep theirs. `seg@next` (9,257), which links the halves of a split segment, goes with them. `stage@n` (375), `seg@type` other than aside (352) and `trailer@xml:id` (194) too
-- [ ] **Admin: `stage_type` and `line_id`** - imported and exported but no control in the content editor (a stage direction's type: entrance, exit, delivery…; a verse line's `xml:id`)
-- Dropped on purpose, fine as is: `classCode` (the CDU number, which follows the language), `encodingDesc/appInfo` (FileMaker and Oxygen versions), `editionStmt/edition` and `titlePage` (derived from title and author), empty act `<head/>`s (220)
-
-### Awaiting the project (static site)
-Questions only the stakeholders can answer, recorded in `docs/static-site-improvements.md`, "Awaiting the project":
-- [ ] **Adaptations are labelled "translation"** - `Components.kind/1` calls every `relationship_type` a translation, `adaptacion` and `refundicion` included
-- [ ] **Verse-form families** - the romance / Spanish stanzas / Italianate grouping in `Metrics` `@families` needs the philologists' confirmation
-- [ ] **Labels for the other note types** - 11 of the dev corpus's 17 note types (`falta_tipo`, `latinismo`, `toponimo_accion`, …) have no label, read "Note", and share one option in the Notes pages' type filter
-
-### Low Priority / Future
-- [ ] **"Review character in text" UI** — admin page to review and assign/reassign `character_id` (the `who` attribute) on speeches across an entire play. Researchers need to: (1) define character identifiers (`xml_id`, the "acrónimo" e.g. `don_diego`) in the dramatis personae, (2) associate each `<speaker>` with a character to generate `<sp who="#don_diego">`, and (3) bulk-review all speech-character associations throughout the play. Character CRUD and import-time `who` resolution already exist; what's missing is the review/bulk-assign UI.
-- [x] **Soft delete & re-importable plays (S0b)** — `plays.deleted_at`, `origin` on the three mixed-ownership child tables, re-import updates in place, import preview + `--dry-run`, admin archive filter and restore. Archived plan: `docs/superpowers/plans/archive/README.md`
-- [ ] **Places Phase 2** — in-text mentions (`<placeName ref>` in the body, an `element_places` table and the tagging UI), map rendering from the stored coordinates, catalogue browse-by-place, multiple authority links per place, and the FileMaker `pub_LugAccion` import
-- [x] **FileMaker version metadata (S2)** — taken one field at a time, each its own migration + import + admin control + row in the public panel. **S2a `historical_time` and S2c `composition_date` are done** (see below). S2d `collection` is **dropped** (2026-10-08): not a category in use, and the code prefix already says EMOTHE, ARTELOPE or HIE. S2b `place_of_action` was split out as **S9** — it is a toponym gazetteer, not a text column; Phase 1 is done, see `Playcode.Places` above. S2e `legacy_url` and S2f `original_title`/`title_sort` are **dropped**: the first is derivable from code + filename, and the second is already imported from TEI on 82/82 plays. Anything drawing on `T01` is capped at the 22 plays with such a record; S2c is the exception, since its from/to come from the published index instead. The admin sync page at `/admin/filemaker` renders whatever `sets` and `conflicts` contain, so each of these slices needs no change to it
-- [x] **FileMaker historical time (S2a)** — `plays.historical_time` (nine-term vocabulary, `Play.historical_times/0`) and `plays.historical_time_note`. `Filemaker.load_versions/1` reads the `T01_tituloEM` layout keyed by the code in the `pub_edicionWeb` href; `FilemakerSync` writes curated fields **fill-only** — blank columns filled, disagreements reported under `:conflicts` and left alone, overwritten only with `mix playcode.import.filemaker --force` or, per conflict, from `/admin/filemaker`. Edited in the admin form's Research Metadata fieldset, shown in the `#meta-study` section on `/plays/:code`. Labels live in `PlaycodeWeb.PlayLabels`. Applied to `playcode_dev`: 11 plays, 4 with a note. Archived plan: `docs/superpowers/plans/archive/README.md`
-- [x] **FileMaker composition date (S2c)** — `plays.composition_date_from`/`_to`/`_note`. From/to come from `T00_indiceEM`'s index header (the *accepted* dating), the note from `pub_datacion`'s competing datings joined with `"; "`, falling back to the header verbatim when blank. Written only to the family head (`relationship_type` nil) — a translation does not inherit the original's composition date. Round-trips through TEI's `<profileDesc><creation><date>` (`when` or `notBefore`/`notAfter`), fill-only sync, same Research Metadata fieldset and `#meta-study` section as S2a. Spec: `docs/superpowers/specs/2026-08-05-s2c-composition-date-design.md`. Applied to `playcode_dev`: `updated 7, failed 0` — EMOTHE0010, 0038, 0281, 0337, 0346, 0777 from the index plus EMOTHE0341 note-only (no index entry, so from/to stayed nil); zero conflicts; a second run reports `0 to change`.
-- [x] **FileMaker bibliography (S4)** — `Playcode.Bibliography`: corpus-wide entries linked to plays, grouped by kind (modern editions, criticism, translations by language, adaptations) and sorted alphabetically by the printed citation. One renderer, `Bibliography.Citation`, prints FileMaker's form on the admin tab (`/admin/plays/:id/bibliography`, live preview, shared-entry warning, accent-blind filter), on `/plays/:code` (`#meta-bibliography`), on the static site's title page (with a rail entry) and in TEI `<back><div type="bibliografia">`. Imported once by `mix playcode.import.bibliography`: on `playcode_dev`, 2,723 entries and 2,795 links on 114 plays. `test/playcode/bibliography/oracle_test.exs` checks every word FileMaker printed is in ours (a committed sample; the whole dump under `--include slow`). Spec: `docs/superpowers/specs/2026-10-07-s4-bibliography-design.md`
-- [ ] **FileMaker import (S3, S5-S8)** — witnesses, historical performances, character reconciliation, credits, genre. Roadmap: `docs/superpowers/plans/2026-08-01-filemaker-import-slices.md`. Governing rule: the export is a bootstrap, not a dependency — every field it carries gets a permanent column *and* an admin form. As with S2, `/admin/filemaker` needs no change for these — it already renders whatever `sets` and `conflicts` contain
-- [x] **FileMaker work families and language (S1)** — `Playcode.Import.Filemaker` parses the published index out of the NDJSON export; `Playcode.Import.FilemakerSync` diffs it against the database and writes `language`, `relationship_type` and `parent_play_id`. `mix playcode.import.filemaker [--dry-run] [--path ...]`. Creates nothing; codes absent from the index (every `AL####`) are reported, not failed. Applied to `playcode_dev`: 15 plays corrected, 11 work families linked. Archived plan: `docs/superpowers/plans/archive/README.md`
-- [ ] **TEI import improvements** - handle more TEI variants, better error reporting
-- [ ] **Full-text search** with PostgreSQL tsvector
-- [x] **Activity log** - `activity_logs` table tracks all admin actions (create/update/delete/import/export/role_change) with user, play, resource type, changes, and metadata; admin UI at `/admin/activity-log` with filters (action, resource, user, date range) and pagination
-- [ ] **TEI validation** - validate exported XML against TEI schema
-**- [ ] **Responsive mobile design** refinements**
-- [ ] **API endpoints** for programmatic access
-- [ ] **Batch export** - export multiple plays at once
-- [ ] **Custom OTel spans** for TEI import, export, statistics computation
-- [ ] **Line number frequency control** - "show every N lines" option (original Artelope had "Mostrar cada 5")
-- [ ] **HTML email templates** - replace plain-text bodies in `user_notifier.ex` with `html_body/1` using `Phoenix.Swoosh` for branded transactional emails
-- [ ] **Login audit log** - store failed/successful login attempts in a DB table for security review
-- [ ] **Session activity tracking** - add `last_active_at` to users table, update on each request
-- [x] **Fly volume for the static site** - `_site` lives on the `playcode_site` volume (3 GB since 2026-10-07, `cdg`, mounted at `/data`), through `STATIC_SITE_DIR=/data/site` in `fly.toml` (read in the prod block of `config/runtime.exs`), so the site and its `build.json` survive a stopped machine and a deploy. A volume belongs to one machine, so the app runs **one** machine: with two, each built and deployed a site of its own, and the export page showed every switch off whenever it landed on the other. The volume root is owned by `nobody`, the image's user, as Fly mounts it. The same volume holds `Export.PdfCache`'s PDFs under `/data/pdf` (`PDF_CACHE_DIR`), about 350 MB if every published play were downloaded. Extend it with `fly vol extend` before the site outgrows it (371 plays measured 465 MB on 2026-10-07, plus the deploy's `.git`); a volume cannot shrink
+- **One machine.** `_site` (`STATIC_SITE_DIR=/data/site`) and the PDF cache (`/data/pdf`) live on the `playcode_site` volume, which belongs to one machine; with two, each built and deployed a site of its own.
+- **`ADMIN_EMAILS` unset means zero admins** (see *Access control*), and **`SMTP_HOST` unset silently drops every invitation**: use `bin/playcode rpc 'Playcode.Release.invite_url("...")'`.
+- **`DATABASE_URL` must be a direct or session-mode connection.** `PlayChangeListener` holds a LISTEN connection that a transaction-mode pooler silently breaks; pages then update only on reload.
+- Secrets: `DATABASE_URL`, `SECRET_KEY_BASE`, `ADMIN_EMAILS`, `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and the four deploy secrets in `docs/static-site.md`. `fly secrets list` shows names only.
 
 ## Key Decisions
 

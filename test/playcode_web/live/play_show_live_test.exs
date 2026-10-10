@@ -641,6 +641,47 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     end
   end
 
+  describe "the witnesses panel" do
+    test "is absent when the play has none", %{conn: conn} do
+      play = TestFixtures.mark_complete!(TestFixtures.play_fixture())
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      refute has_element?(view, "#meta-witnesses")
+      refute has_element?(view, ~s(a[href="#meta-witnesses"]))
+    end
+
+    test "lists the witnesses as emothe.uv.es prints them, with a sidebar entry, no siglum or type",
+         %{conn: conn} do
+      play = TestFixtures.play_fixture()
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{
+          "play_id" => play.id,
+          "siglum" => "Q1",
+          "witness_type" => "loose",
+          "title" => "THE Tragicall Historie of HAMLET",
+          "date" => "1603"
+        })
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{
+          "play_id" => play.id,
+          "title" => "El conde de Sex",
+          "shelfmark" => "16722"
+        })
+
+      TestFixtures.mark_complete!(play)
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      section = view |> element("#meta-witnesses") |> render()
+
+      assert section =~ "<em>THE Tragicall Historie of HAMLET</em>. 1603."
+      assert section =~ "<em>El conde de Sex</em>. Archivo: 16722."
+      refute section =~ "Q1"
+      refute section =~ PlaycodeWeb.PlayLabels.witness_type_label("loose")
+      assert has_element?(view, ~s(a[href="#meta-witnesses"]), t("Witnesses"))
+    end
+  end
+
   describe "related plays" do
     test "a draft translation is not linked from its original, except for staff", %{
       conn: conn

@@ -14,6 +14,8 @@ defmodule Playcode.Import.TeiParser do
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element}
   alias Playcode.Places
+  alias Playcode.Witnesses
+  alias Playcode.Witnesses.Witness
 
   require Logger
 
@@ -125,17 +127,28 @@ defmodule Playcode.Import.TeiParser do
   @doc """
   Sums the mixed-ownership counts in one half of a `preview_import/1` result.
 
-  Those four tables — editors, sources, notes and places — hold both TEI-imported and
+  Those five tables — editors, sources, notes, places and witnesses — hold both TEI-imported and
   hand-entered rows, so `:replaces` and `:preserves` split each one by `origin`. Both
   the admin import page and the `--dry-run` output report the totals, and adding a
   fifth such table must not mean remembering two more addition sites.
   """
   def mixed_ownership_total(counts) do
-    [:editors, :sources, :notes, :places] |> Enum.map(&Map.fetch!(counts, &1)) |> Enum.sum()
+    [:editors, :sources, :notes, :places, :witnesses]
+    |> Enum.map(&Map.fetch!(counts, &1))
+    |> Enum.sum()
   end
 
   defp replaced_counts(nil),
-    do: %{divisions: 0, elements: 0, characters: 0, editors: 0, sources: 0, notes: 0, places: 0}
+    do: %{
+      divisions: 0,
+      elements: 0,
+      characters: 0,
+      editors: 0,
+      sources: 0,
+      notes: 0,
+      places: 0,
+      witnesses: 0
+    }
 
   defp replaced_counts(%Play{id: id}) do
     %{
@@ -145,18 +158,20 @@ defmodule Playcode.Import.TeiParser do
       editors: count_rows(PlayEditor, id, "tei"),
       sources: count_rows(PlaySource, id, "tei"),
       notes: count_rows(PlayEditorialNote, id, "tei"),
-      places: count_rows(Places.PlayPlace, id, "tei")
+      places: count_rows(Places.PlayPlace, id, "tei"),
+      witnesses: count_rows(Witness, id, "tei")
     }
   end
 
-  defp preserved_counts(nil), do: %{editors: 0, sources: 0, notes: 0, places: 0}
+  defp preserved_counts(nil), do: %{editors: 0, sources: 0, notes: 0, places: 0, witnesses: 0}
 
   defp preserved_counts(%Play{id: id}) do
     %{
       editors: count_rows(PlayEditor, id) - count_rows(PlayEditor, id, "tei"),
       sources: count_rows(PlaySource, id) - count_rows(PlaySource, id, "tei"),
       notes: count_rows(PlayEditorialNote, id) - count_rows(PlayEditorialNote, id, "tei"),
-      places: count_rows(Places.PlayPlace, id) - count_rows(Places.PlayPlace, id, "tei")
+      places: count_rows(Places.PlayPlace, id) - count_rows(Places.PlayPlace, id, "tei"),
+      witnesses: count_rows(Witness, id) - count_rows(Witness, id, "tei")
     }
   end
 
@@ -269,7 +284,7 @@ defmodule Playcode.Import.TeiParser do
       Repo.delete_all(from(r in schema, where: r.play_id == ^id))
     end
 
-    for schema <- [PlayEditor, PlaySource, PlayEditorialNote] do
+    for schema <- [PlayEditor, PlaySource, PlayEditorialNote, Witness] do
       Repo.delete_all(from(r in schema, where: r.play_id == ^id and r.origin == "tei"))
     end
 
@@ -322,6 +337,7 @@ defmodule Playcode.Import.TeiParser do
     if file_desc do
       import_editors(file_desc, play)
       import_sources(file_desc, play)
+      import_witnesses(file_desc, play)
     end
 
     import_places(profile_desc, play)
@@ -765,6 +781,87 @@ defmodule Playcode.Import.TeiParser do
       end)
     end
   end
+
+  # --- Witnesses ---
+
+  # `sourceDesc/listWit`, nested lists read in order (S3). A siglum the play already has —
+  # a witness typed by hand, a modern edition in its bibliography, or one earlier in the
+  # same file — is left out (Witnesses.taken_sigla/1, after reset_tei_content/1 removed the
+  # file's own). So is a witness printing the same line as one the play kept: most
+  # FileMaker witnesses have no siglum, and the play's own export lists them. A witness
+  # with nothing to print fails its changeset and is left out too.
+  defp import_witnesses(file_desc, play) do
+    with {_, _, desc_children} <- find_child(elem(file_desc, 2), "sourceDesc"),
+         {_, _, _} = list_wit <- find_child(desc_children, "listWit") do
+      kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&Witnesses.plain/1)
+
+      list_wit
+      |> witness_elements()
+      |> Enum.reduce(Witnesses.taken_sigla(play.id), fn witness, taken ->
+        attrs = witness |> witness_attrs() |> Map.merge(%{play_id: play.id, origin: "tei"})
+
+        if attrs.siglum in taken or Witnesses.plain(struct(Witness, attrs)) in kept do
+          taken
+        else
+          _ = Witnesses.create_witness(attrs)
+          if attrs.siglum, do: MapSet.put(taken, attrs.siglum), else: taken
+        end
+      end)
+    end
+
+    :ok
+  end
+
+  defp witness_elements({_name, _attrs, children}) do
+    Enum.flat_map(children, fn
+      {"witness", _, _} = witness -> [witness]
+      {"listWit", _, _} = nested -> witness_elements(nested)
+      _other -> []
+    end)
+  end
+
+  # A <bibl> written field by field, as the export writes one, maps back to its columns.
+  # Plain words (EMOTHE0460's "anon. [no title page]. London: printed by Richard Pynson…")
+  # are kept whole as the note rather than guessed into fields.
+  defp witness_attrs({"witness", attrs, children}) do
+    {bibl_attrs, parts} =
+      case find_child(children, "bibl") do
+        {_, bibl_attrs, bibl_children} -> {bibl_attrs, bibl_children}
+        nil -> {[], children}
+      end
+
+    base = %{
+      siglum: attr_value(attrs, "n") || attr_value(attrs, "xml:id"),
+      witness_type:
+        Witnesses.type_from_tei(attr_value(bibl_attrs, "type"), attr_value(bibl_attrs, "subtype"))
+    }
+
+    if Enum.any?(
+         parts,
+         &match?(
+           {name, _, _} when name in ~w(title author pubPlace publisher date extent idno),
+           &1
+         )
+       ) do
+      Map.merge(base, %{
+        title: parts |> typed("title", nil) |> safe_text(),
+        normalized_title: parts |> typed("title", "normalized") |> safe_text(),
+        attribution: safe_text(find_child(parts, "author")),
+        pub_place: safe_text(find_child(parts, "pubPlace")),
+        publisher: safe_text(find_child(parts, "publisher")),
+        date: safe_text(find_child(parts, "date")),
+        format: safe_text(find_child(parts, "extent")),
+        shelfmark: parts |> typed("idno", "shelfmark") |> safe_text(),
+        note: safe_text(find_child(parts, "note"))
+      })
+    else
+      Map.put(base, :note, text_content({"bibl", [], parts}))
+    end
+  end
+
+  # The first `name` child whose @type is `type` (nil: no @type).
+  defp typed(children, name, type),
+    do: children |> find_children(name) |> Enum.find(&(attr_value(elem(&1, 1), "type") == type))
 
   # --- Places ---
 
