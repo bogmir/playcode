@@ -14,6 +14,7 @@ defmodule Playcode.Catalogue do
   alias Playcode.Repo
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
   alias Playcode.Places.{PlaceName, PlayPlace}
+  alias Playcode.Witnesses.Witness
 
   # --- Plays ---
 
@@ -451,6 +452,7 @@ defmodule Playcode.Catalogue do
       derived_plays: Play |> scope(opts) |> order_by([d], asc: d.title_sort, asc: d.title),
       editors: from(e in PlayEditor, order_by: e.position),
       sources: from(s in PlaySource, order_by: s.position),
+      witnesses: from(w in Witness, order_by: [asc: w.position, asc: w.inserted_at]),
       editorial_notes: from(n in PlayEditorialNote, order_by: n.position),
       play_places:
         {from(pp in PlayPlace, order_by: pp.position),

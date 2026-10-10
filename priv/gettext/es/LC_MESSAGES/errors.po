@@ -151,3 +151,9 @@ msgstr "ya está vinculado a esta obra"
 
 msgid "needs an author, an editor or a title"
 msgstr "necesita un autor, un editor o un título"
+
+msgid "needs a title, a normalised title or a note"
+msgstr "necesita un título, un título normalizado o una observación"
+
+msgid "is already used by another witness of this play"
+msgstr "ya lo usa otro testimonio de esta obra"
