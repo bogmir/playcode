@@ -14,6 +14,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
   alias Playcode.Accounts
   alias Playcode.Bibliography
   alias Playcode.Catalogue
+  alias Playcode.Witnesses
 
   setup do
     Mix.shell(Mix.Shell.Process)
@@ -39,6 +40,9 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     on_exit(fn -> File.rm_rf(dir) end)
     dir
   end
+
+  defp witness_lines(play),
+    do: play.id |> Witnesses.list_for_play() |> Enum.map(&Witnesses.plain/1)
 
   defp citations(play) do
     play.id
@@ -298,6 +302,90 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     test "a missing dump is refused" do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.bibliography", ["--path", "test/fixtures/filemaker/nope"])
+      end
+    end
+  end
+
+  describe "playcode.import.witnesses" do
+    @witnesses "test/fixtures/filemaker/witnesses"
+
+    setup do
+      %{
+        hamlet: play_fixture(%{"code" => "EMOTHE0010_Hamlet"}),
+        mudarra:
+          play_fixture(%{
+            "code" => "EMOTHE0435_ElBastardoMudarra",
+            "author_name" => "Félix Lope de Vega y Carpio"
+          })
+      }
+    end
+
+    test "--dry-run prints the plan and writes nothing", %{hamlet: hamlet} do
+      out = run("playcode.import.witnesses", ["--path", @witnesses, "--dry-run"])
+
+      assert out =~ "EMOTHE0010_Hamlet  2 witnesses"
+      assert out =~ "witnesses: 4 on 2 plays"
+
+      assert out =~
+               "attribution dropped: 2  T03:77 on EMOTHE0435_ElBastardoMudarra, " <>
+                 "T03:79 on EMOTHE0435_ElBastardoMudarra"
+
+      assert out =~ "skipped, empty: 1  T03:15"
+      assert out =~ "skipped, test_record: 1  T03:32"
+      assert out =~ "witnesses on versions not held: 10"
+      assert out =~ "dry run, nothing written"
+      assert witness_lines(hamlet) == []
+    end
+
+    test "writes each play's witnesses in FileMaker's order, as emothe.uv.es prints them", %{
+      hamlet: hamlet,
+      mudarra: mudarra
+    } do
+      assert run("playcode.import.witnesses", ["--path", @witnesses]) =~ "created 4 witnesses"
+
+      assert witness_lines(hamlet) == [
+               "THE Tragicall Historie of HAMLET Prince of Denmarke. " <>
+                 "[The Tragical History of Hamlet, Prince of Denmark]. Shakespeare, William. " <>
+                 "London. Ling, Nicholas; Trundell, John. 1603. 4º. Usual abbreviation: Q1. " <>
+                 "Often referred to as “bad quarto”. Printer: Simmes, Valentine.",
+               "COMEDIES, HISTORIES, & TRAGEDIES. Shakespeare, William. London. " <>
+                 "Blount, Edward; Smethwick, John; Jaggard, Isaac; Aspley, William. 1623. 2º. " <>
+                 "Usual abbreviation: F1. Also referred to as First Folio."
+             ]
+
+      assert witness_lines(mudarra) == [
+               "Veinticuatro parte perfeta de las comedias del Fénix de España Frey Lope Félix de Vega Carpio.",
+               "El bastardo Mudarra: tragicomedia."
+             ]
+
+      assert [%{origin: "filemaker", filemaker_id: "T03:33"} | _] =
+               Witnesses.list_for_play(hamlet.id)
+    end
+
+    # As S4 learned: the play's filemaker rows alone are no marker, since a curator may
+    # delete every one of them.
+    test "a re-run skips a play already imported, even with every witness deleted", %{
+      hamlet: hamlet
+    } do
+      run("playcode.import.witnesses", ["--path", @witnesses])
+      for w <- Witnesses.list_for_play(hamlet.id), do: {:ok, _} = Witnesses.delete_witness(w)
+
+      out = run("playcode.import.witnesses", ["--path", @witnesses])
+
+      assert out =~ "already imported: 2 plays"
+      assert out =~ "created 0 witnesses"
+      assert witness_lines(hamlet) == []
+    end
+
+    test "an archived play is left out", %{mudarra: mudarra} do
+      {:ok, _} = Catalogue.delete_play(mudarra)
+      run("playcode.import.witnesses", ["--path", @witnesses])
+      assert witness_lines(mudarra) == []
+    end
+
+    test "a missing dump is refused" do
+      assert_raise Mix.Error, ~r/cannot read/, fn ->
+        Mix.Task.rerun("playcode.import.witnesses", ["--path", "test/fixtures/filemaker/nope"])
       end
     end
   end
