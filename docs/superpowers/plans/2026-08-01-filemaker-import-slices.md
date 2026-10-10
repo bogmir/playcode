@@ -1,6 +1,7 @@
 # FileMaker Import — Feature Slices (roadmap)
 
-**Status:** written 2026-08-01, revised 2026-09-25.
+**Status:** written 2026-08-01, revised 2026-09-25 and 2026-10-10 (witness, performance,
+source and variant tables received).
 
 | Slice | State |
 |---|---|
@@ -12,7 +13,9 @@
 | S2d — collection | **dropped** 2026-10-08: not a category in use; the code prefix already says EMOTHE, ARTELOPE or HIE — see below |
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import, folded into S7's cross-check |
-| S3, S5–S8 | scoped below, each gets its own plan when it comes up |
+| S3 — witnesses | **next**: data received 2026-10-10 (`T03*`), 512 witnesses on 107 plays we hold — `../specs/2026-10-10-s3-witnesses-design.md` |
+| S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays |
+| S6–S8 | scoped below, each gets its own plan when it comes up |
 | S4 — bibliography | **done** 2026-10-07 (`e82c968..369a077`; designed the same day, after the project answered the research's questions: shared entries, a one-time import) — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
 | S9 — places | **Phase 1 done** (the app, no FileMaker code) — `CLAUDE.md` |
 | S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; unblocked: the rest of EMOTHE is in (371 plays on dev, 2026-10-08) |
@@ -74,7 +77,11 @@ the master database, `ctce_dades.fmp12`. Its bibliography tables were exported a
 day (see S7), then the city, publisher and information-source tables (`T13*`; see S4 and S5).
 **The same request is worth making for S3 and S5**:
 witnesses and performances are probably structured tables there too, and the dump would beat
-parsing their rendered HTML in the same way.
+parsing their rendered HTML in the same way. **Answered 2026-10-10:** a second dump brought the
+witnesses (`T03*`), the performances (`T11*`), the TEI sources and distributors (`T07.53*`), the
+critical-apparatus variants (`T07.7`, `T07.71`) and the verse-part labels (`T07.25`), into the same
+`doc/ctce_dades/`. The six tables it repeated (`T04*`, `T07.51*`) are byte-identical to the ones
+already there.
 
 ### The master database, mapped *(2026-10-02)*
 
@@ -91,16 +98,19 @@ códigos TEI-XML…`), which means **our TEI fixtures are FileMaker output** bui
 |---|---|---|
 | S2a historical time | `T09` (version ↔ `_k_IdTiempoHistorico`), `T09.1` (vocabulary) | done from the web export; not needed |
 | S2c dating | `T06` (`_k_IdIntervaloFechaA` / `_Z`) → `T06.1` (date intervals) | done from the web export; `T06` would give structured intervals if wanted |
-| S3 witnesses | not visible in the five screenshots | **ask** where the testimonios live |
+| S3 witnesses | `T03` (witness ↔ version), `T03.1` type tree, `T03.2` attribution, `T03.3` holding library, `T13` information source | **received, complete** 2026-10-10; see S3 |
 | S4 bibliography | `T12` (links), `T12.1` (records), `T12.11` type, `T12.12` category, `T12.13` language, `T13.1` city, `T13.2` publisher | **received, complete** — `T12.1` with all 41 fields since 2026-10-02 |
 | S4 modern editions | `T04` (version ↔ `_k_IdEdicionModerna`, with the play's volume and pages), `T04.1` (editions: city, publisher, language, type, siglum), `T04.11` types, `T04.12` languages | **received, complete** 2026-10-02 |
-| S5 performances | `T11` (performance: company, `_k_IdCirEscenica`, information source, place, version), `T11.1` cast (actor, role), `T11.11` actor names, `T11.12` actor sex, `T11.22` actor roles, `T11.2` stage circumstance, `T11.3` company names, `T13` sources | `T13` (+`T13.3`) **received**; **ask** for the other seven. `T11.2` is probably the value list behind `bus_repCircunstancia` |
+| S5 performances | `T11` (performance: company, `_k_IdCirEscenica`, information source, place, version), `T11.1` cast (actor, role), `T11.11` actor names, `T11.12` actor sex, `T11.22` actor roles, `T11.2` stage circumstance, `T11.3` company names, `T13` sources **received** 2026-10-10, all seven, plus `T13` (+`T13.3`) since 2026-10-01. `T11.2` is the value list behind `bus_repCircunstancia`, in Spanish and English. **Ask** for the place table `T11._k_IdObraAccionLugar` points at; see S5 |
 | S6 characters | `T07.31` (`_kp_IdPersonajeObra`, the speaker codes), `T07.311` (group ↔ member) | optional: would replace parsing `bus_personaje` for the completeness check; TEI stays the source |
 | S7 credits | `T07.5`, `T07.51`, `T07.511`–`.514` | **received**; see S7 |
 | S7 authors | `T02` (version ↔ author, with `_k_IdAutorFiabilidad`, `_k_IdAutorRol`), `T02.1` authors, `T02.2` attribution reliability, `T02.3` author roles | **ask** if attribution reliability is wanted; TEI carries `author_attribution` already |
 | S8 genre | `T01.42_GeneroHier…` (name cut off at the screenshot's edge) | **ask**: the genre table replaces the request for the `bus_genero` value lists |
 | S9b places | `T10` (version ↔ city, continent, vague location, country, region), `T10.11_Ciudad` / `_Continente` / `_Vaga` / `_Pais` / `_Region`, `T10.3_Region` (with ISO code and a language selector) | **ask**: replaces the request for a language-tagged `bus_lugAccion` |
-| Text, licence, paratexts | `T07.x` (text rows, divisions, variants, speakers, stage-direction and metre types), `T07.3` paratexts, `T07.52`/`.521` header notes (with `TeiLicencia_Xml`), `T07.53`/`.531`/`.532` sources and distributor, `T07.54` licence | not needed: TEI stays the source of truth for the text |
+| Text, licence, paratexts | `T07.x` (text rows, divisions, variants, speakers, stage-direction and metre types), `T07.3` paratexts, `T07.52`/`.521` header notes (with `TeiLicencia_Xml`), `T07.54` licence | not needed: TEI stays the source of truth for the text |
+| TEI sources and distributor | `T07.53` (one row per TEI header, `TeiFuentes_Xml` = the generated `<sourceDesc>`), `T07.531` (the source: title, author, editor, translator, language, `Referencia`, distributor), `T07.532` (45 distributors) | **received** 2026-10-10. No import: FileMaker generated our files' `<sourceDesc>` from these, so the TEI already holds them. See "Sources, distributor, variants" under S3 |
+| Critical apparatus | `T07.7` (1,102 variants: lemma, type, comment, range end), `T07.71` (2,131 readings with their sigla) | **received** 2026-10-10. No import: anchored to text-markup rows we do not hold. Cross-check for the `<app>` work; see "Sources, distributor, variants" under S3 |
+| Verse-part labels | `T07.25` (`V`, `Ti`, `Tm`, `Tf`…) | **received** 2026-10-10. Not needed: TEI's `part="I|M|F"` carries it |
 | In-text notes | `T07.26` (text markup ↔ `_k_IdTipoTextNota`), `T07.261` note types (`TipTexNot_Categoria`, `TipTexNot_Descripcion`), `T07.262` note placement (`UbiTexNot_Descripcion`); a markup table with `_g_MarTex_Nota`, `_g_MarTex_TipoNota`, `_g_MarTex_Lema`; `T07.8_Anotacion` (`_g_IdTipoNota`, `_g_Posicion`, `_g_Texto`) | not needed for the notes themselves: they come from TEI into `play_notes` (2026-10-08). **Ask** for `T07.261` only if the per-play Notes page (`docs/static-site-improvements.md`, item 7) wants FileMaker's labels for the type filter; TEI carries the code only (`traductor`, `editor`, `editor_digital`, `editor_critico`, `autor`, plus one `lines` and one `comment`). Not cross-checked: we hold none of these tables, only the screenshots |
 
 **How to ask.** FileMaker's XML export writes only the fields chosen in the export dialog. Ask
@@ -386,27 +396,116 @@ Two findings from that check that outlive S2f:
   a sort-title handling defect in the TEI import, worth fixing at the source rather than papering
   over per play.
 
-### S3 — Witnesses (testimonios)
+### S3 — Witnesses (testimonios) *(data received 2026-10-10; the next slice to build)*
 
-- **From:** `T01.pub_testimonio` — one `<li>` per witness: `<i>Title</i>. Author. City. Publisher.
-  Year. Format. Notes.`
-- **Into:** existing `play_sources` (title, author, pub_place, publisher, pub_date already fit),
-  plus new `source_type` (from `bus_testSoporte`) and `format` columns
-- **Scale:** 7 plays, 27 witness records **today; 105 plays and 450 records** once the ~300 land.
-  Build it after that import, not before (question 5)
-- **Cross-check:** `bus_testCiudad` / `bus_testAnyo` / `bus_testFormato` line counts match the
-  `<li>` count on 75 of 105 rows across the whole export — use them to validate the parse, not as
-  the source
-- **Done when:** witnesses appear in the existing sources admin page and on the public page
-- **FileMaker:** the witnesses' master table is not in the five relationship screenshots. Ask
-  where the testimonios live before building, because a structured table would beat parsing
-  `pub_testimonio`, as it did for S4. See "The master database, mapped"
-- **Also check `T04.1.EdiMod_Referencia`** (84 modern editions, found during S4's design,
-  2026-10-07). It reads like the edition a digital text was based on, for example
-  `Lope de Vega: Los locos de Valencia, Hélène Tropé (ed.), Madrid, Castalia, 2003.`, which is
-  `play_sources`' job rather than the bibliography's. Edition 44, the Oxford *Complete Works* on 9
-  versions, holds nothing else, and FileMaker never prints it in the modern-editions list. S4 does
-  not import the field, so read it from `T04.1` when building this slice
+The earlier draft parsed `T01.pub_testimonio` into `play_sources`. Both halves are superseded: the
+master tables arrived, and witnesses are not sources (below).
+
+**From:** `doc/ctce_dades/T03*`, dumped 2026-10-10. Join `_k_IdObraTitulo` = `T01._IdTituloEmothe`
+→ `EMOTHE%04d`, as everywhere.
+
+| Table | Rows | What it holds |
+|---|---|---|
+| `T03_ObraTestimonio` | 601 witnesses on 134 versions | title as printed (`TituloTestimonio`), normalised title, year, city, printer or publisher (`Editorial`), format (`2º` `4º` `8º` `12º`), siglum, shelfmark (`SignaturaFI`), a free observation, three type levels, links to the next three tables, and `w3_ObrTes_Composicion`, FileMaker's rendered `<li>` |
+| `T03.1_TestimonioTipo` | 10 types in 3 levels | manuscrito > no consta, autógrafo, copia; ediciones antiguas > no consta, colección (> de autor, de diversos autores), sueltas |
+| `T03.2_Atribucion` | 109 | the author the witness bears (`Apellidos`, `Nombre`) |
+| `T03.3_Localizacion` | 97 | the holding library or city, free text: "Biblioteca Nacional de España", "Parma, Biblioteca Palatina" |
+| `T13_FuenteInformacion` | held since 2026-10-01 (S5) | where the record came from: DEEP 75, Greg's *Bibliography* 60, ESTC 31, Wiggins 11… |
+
+**Measured against `playcode_dev` (392 plays), 2026-10-10:**
+
+- **512 witnesses on 107 plays we hold**, all 107 complete. The other 89 sit on 27 versions we do
+  not hold. At most 27 on one play (EMOTHE0231).
+- Filled, of those 512: title 506, attribution 463, publisher 429, year 422, city 418, information
+  source 297, format 268, observation 193, normalised title 137, shelfmark 49, siglum 44, holding
+  library 32.
+- **Order is the record id.** On the 94 versions where the web export and the master table hold
+  the same witnesses, sorting by `_kp_IdObraTestimonio` gives the published order on all 94. Import
+  `position` from it; no ordering rule.
+- **Test oracle:** `w3_ObrTes_Composicion`, as `T12.1`'s rendering was for S4. It equals the web
+  export's `pub_testimonio` on 94 of 105 versions; the other 11 were edited after the web export, and
+  the master table is the newer.
+- **The witnesses are what the apparatus cites.** Every `wit` siglum in the six plays with an
+  `<app>` resolves: 21 to a witness here (`Q1`–`Q6`, `F1`, `MP`, `P3`, `Aut.`, `PXXIV`, `1623b`…), 21
+  to a modern edition's siglum S4 already stored in `bibliography_entries.siglum` (`Bevington`,
+  `Dyce`, `ARD2`, `ADA`, `H`…), none to nothing. So S3 comes before the `<app>` work
+  (`docs/tei-apparatus-and-code.md`): with it, a reading's witness is a row, not a string. No
+  siglum repeats within a play.
+- **Attribution belongs to the witness, not the play.** A suelta of Rojas Zorrilla's play printed
+  under Calderón's name (EMOTHE0390) is a fact about that print. But 11 witnesses of six Spanish
+  plays (EMOTHE0013, 0204, 0358, 0382, 0435, 0560) are attributed to `Jodelle, Étienne`, which looks
+  like a slip in FileMaker: report them, do not import a guess.
+- **Test data in the dump:** 1 test witness (record 32, `TituloTestimonio`, EMOTHE0203, not held)
+  and 5 empty ones (14, 15, 62, 67, 600; 4 on plays we hold); `CiudadPrueba`, `BibliotecaPrueba`
+  and `ciudad test` in `T03.3`. The import reports and skips them.
+- **A siglum is not always a valid `xml:id`.** EMOTHE0530's `1623b`, `1626a`, `1626b`, `1632` start
+  with a digit. The file's `wit="#1623b"` is a legal pointer, but `<witness xml:id="1623b">` fails
+  the schema, so the export needs a rule (a prefix, or `@n` with no id).
+
+**Not `play_sources`.** `play_sources` is `sourceDesc/bibl`, the edition the digital text was made
+from; `T07.531_Fuente`, which arrived the same day, is that table in FileMaker ("Antonio y
+Cleopatra. Editado por Miguel Teruel Pozas…"). A witness documents the text's transmission and has
+a siglum, a type, a format, a shelfmark and a holding library. It gets a table of its own.
+
+**Spec: `../specs/2026-10-10-s3-witnesses-design.md`**, which supersedes the proposal below where
+they differ: fields as emothe.uv.es prints them plus siglum and type, no holding library or
+information source, `listWit` without the modern editions, Jodelle attributions dropped.
+
+**Proposed round trip** (as first drafted):
+
+- **Store:** `play_witnesses`: `play_id`, `siglum`, `title`, `title_normalized`, `attribution`,
+  `pub_place`, `publisher`, `date` (text: `1603`, `[1521-8?]`), `format`, `witness_type` (the leaf of
+  the type tree, `autografo`, `sueltas`, `coleccion_de_autor`…), `repository`, `shelfmark`,
+  `information_source` (T13's short form as text until S5 makes sources a table), `note`,
+  `position`, `origin`, `filemaker_id`. Unique `(play_id, siglum)` when a siglum is set. It shows on
+  the play's pages, so its migration adds the `play_row_changed()` trigger.
+- **FileMaker import:** one-time, as S4: `mix playcode.import.witnesses [--dry-run]` and a
+  `Playcode.Release` function, skipping a play that already has witnesses, so a curator's edits
+  stay. The dry run lists the Jodelle rows and the test rows.
+- **Admin:** a `Witnesses` tab, `/admin/plays/:id/witnesses`, beside Sources and Bibliography: the
+  list in order, modal add/edit/delete, reorder, the citation previewed as typed. A row in
+  `authorization_test.exs`, the path in `accessibility_test.exs`, the type labels in `PlayLabels`.
+- **TEI export:** `sourceDesc/listWit/witness[@xml:id = siglum]`, each with a structured `<bibl>`
+  (`title`, `author`, `pubPlace`, `publisher`, `date`, `note`…). The list also carries each linked
+  modern edition that has a siglum, so every apparatus `wit` has a target; EMOTHE0460's `listWit`
+  today is exactly that mix (`Q1`–`Q4` and six editions).
+- **TEI import:** `listWit/witness` (dropped today) becomes `play_witnesses` with
+  `origin: "tei"`, skipping a siglum that names a linked bibliography entry or a witness of another
+  origin. A re-import replaces only `tei` rows (S0b). `tei_roundtrip_test.exs` proves export →
+  import → export is a fixpoint; the slow suite's schema check covers the new header.
+- **Public:** one renderer, as `Bibliography.Citation`, for the admin preview, `/plays/:code`
+  (`#meta-witnesses`) and the static site's title page (a Witnesses section with a rail entry):
+  manuscripts, then early editions, siglum first.
+- **Done when:** the 107 plays' witnesses are imported; a researcher can add, edit, reorder and
+  delete one by hand; they are in the TEI header, on `/plays/:code` and on the static site; and
+  EMOTHE0460's `listWit` round-trips.
+
+**For the project, in the spec:** whether the observation (193 filled, editorial prose and
+catalogue lore together), the shelfmark and the holding library are public; and whether the 11
+Jodelle attributions are corrected in FileMaker before the import or here after it.
+
+#### Sources, distributor, variants *(received with S3, 2026-10-10; nothing to import)*
+
+- **`T07.53`/`.531`/`.532`, the TEI sources.** `T07.53` holds one row per TEI header
+  (`_k_Metadatos`, to a version through `T07.51_Responsables`), with `TeiFuentes_Xml`, the
+  generated `<sourceDesc>`; `T07.531` (467) the source itself: title, author, editor, translator,
+  `EditorCanon60`, language, `Referencia`, and a distributor on 160; `T07.532` the 45 distributors
+  (Biblioteca Virtual Miguel de Cervantes, Gallica, Universitat de València…). Our files' `<sourceDesc>`
+  was generated from these, so the TEI already holds them and `play_sources` stays TEI-fed. The
+  distributor the parser drops (CLAUDE.md, *Other losses*, 152 plays) is fixable from the TEI
+  alone, with `T07.532` as its vocabulary.
+- **`T04.1.EdiMod_Referencia`** (84 modern editions, found during S4's design) is answered by the
+  same tables: it reads like the base edition of a digital text
+  (`Lope de Vega: Los locos de Valencia, Hélène Tropé (ed.), Madrid, Castalia, 2003.`), and
+  `T07.531.TeiFuente_Referencia` is where FileMaker keeps that. Not a witness, not imported.
+- **`T07.7`/`T07.71`, the apparatus.** 1,102 variants (lemma, `substantive`/`orthographical`, a
+  comment on 221, a range end on 34 as `Var_XmlIdFin`, and `Var_ComposicionTEI`, the `<app>` as
+  FileMaker wrote it) and 2,131 readings (text, a lemma flag, a comment on 201, the siglum, split
+  into a witness and a modern-edition siglum on a few). Each variant hangs on `_k_IdMarcacionTexto`,
+  a text-markup row we do not hold, so it cannot be placed in our text: TEI stays the source of
+  `<app>`. Use them as that work's cross-check; they confirm its model (a comment per reading and
+  per variant, readings citing witnesses and editions alike). They carry test rows too (`Juan
+  test`, `PRU`, `TES2`).
 
 ### S4 — Bibliography *(done 2026-10-07, `e82c968..369a077` — `../specs/2026-10-07-s4-bibliography-design.md`)*
 
@@ -466,12 +565,14 @@ lacks, the proposed table, TEI mapping. Headlines:
 
 ### S5 — Historical performances
 
-- **From:** `T01.pub_RepAntiguas` — labelled `<b>Company</b>`, `<b>Venue</b>`, `<b>Date</b>`,
-  `<b>Cast</b>` (nested `<ul>`, one `<li>` per actor), `<b>Location</b>`, `<b>Venue type</b>`,
-  `<b>Note</b>`, `<b>Information source</b>`
-- **Into:** new `play_performances` + `play_performance_cast` tables
-- **Scale:** 5 plays, 12 performances **today; 77 plays and 265 performances** once the ~300 land,
-  plus their cast rows. Build it after that import (question 5)
+- **From:** the master tables `T11*` (2026-10-10, below), replacing `T01.pub_RepAntiguas` —
+  labelled `<b>Company</b>`, `<b>Venue</b>`, `<b>Date</b>`, `<b>Cast</b>` (nested `<ul>`, one
+  `<li>` per actor), `<b>Location</b>`, `<b>Venue type</b>`, `<b>Note</b>`,
+  `<b>Information source</b>`, now only the oracle
+- **Into:** new `play_performances` + `play_performance_cast` tables; the information source
+  probably as a shared table from `T13` (378 records), as S4 shared its entries
+- **Scale:** 243 performances on 59 plays we hold, 38 cast rows (2026-10-10; the web export's
+  estimate was 77 plays and 265)
 - **Sources:** CATCOM and Wiggins, *British Drama 1533-1642* — keep the attribution text, it is
   a licensing requirement of CATCOM
 - **The source table has arrived** (2026-10-01, `doc/ctce_dades/T13_FuenteInformacion.xml`).
@@ -483,9 +584,24 @@ lacks, the proposed table, TEI mapping. Headlines:
     Chambers, Child's *Stage-History of Hamlet*, CATCOM.
   - **Model:** so the performance's source becomes a reference to a source record, not a
     string.
-  - **Still needed:** the performances table itself, with its link to `FuenteInformacion` and
-    its cast, which has not been exported yet. Ask for it in the same message as S4's
-    remaining tables
+  - ~~**Still needed:** the performances table itself, with its link to `FuenteInformacion` and
+    its cast~~ — received 2026-10-10, see below
+- **The performance tables arrived 2026-10-10** (`doc/ctce_dades/T11*`), measured against
+  `playcode_dev` the same day:
+  - `T11_ObraRepresentacion`: 317 performances on 89 versions, **243 on 59 plays we hold**. Date
+    (text, 299 filled), venue name (`NombreCircunstancia`, 260), note (201), company (245, to
+    `T11.3`'s 88 names), venue type (280, to `T11.2`), information source (252, to `T13`), and
+    `w3_RepAntiguaHieronimo`, the published `<li>`, as the renderer's oracle. The `z_new*`,
+    `g_Filtro*` and `_kz_Picker*` fields are FileMaker form scratch, empty
+  - `T11.2_CircumstanciaEscenica`: the 8 venue types in Spanish and English (public theatre,
+    palace / court, street, private theatre, university / inns of court, commercial theatre,
+    other, unknown). This is `bus_repCircunstancia`'s value list, so S8 no longer asks for it
+  - The cast is thin: `T11.1` holds 54 cast rows on 17 performances, 38 on plays we hold; actors in
+    `T11.11` (46, with a nickname such as *Molière* or *Gros-René*, and sex coded in `T11.12`:
+    1 man, 2 woman, 3 unknown), the role played in `T11.22` (10 names: *Cléopâtre*, *Argan*)
+  - **The place is missing.** `_k_IdObraAccionLugar` is set on 142 performances (18 distinct) and
+    points at a place table not in the dump, and the published `Topónimo:` line is blank on every
+    row. Ask for it with S9b's `T10` tables, which it probably is
 - **Done when:** performances render per play with their source attribution, **and** admins can add
   a performance and its cast by hand — the 12 rows FileMaker holds are a seed, not the ceiling
 - **S0b:** both new tables stay outside the importer's reach
@@ -552,8 +668,9 @@ different relation, still unrequested on the FileMaker side.
 has its own, see the end of this section.
 
 `bus_genero` and `bus_generoAnnals` are bare numeric codes with **no text counterpart anywhere in
-either table**. Send the value lists for `bus_genero`, `bus_generoAnnals` and
-`bus_repCircunstancia`. Everything else the CSV was missing, the JSON supplied.
+either table**. Send the value lists for `bus_genero` and `bus_generoAnnals`. Everything else the
+CSV was missing, the JSON supplied. (`bus_repCircunstancia`'s list arrived 2026-10-10 as
+`T11.2`; see S5.)
 
 **Artelope has its own FileMaker database, `al_dades` (Artelope FMS)**, seen 2026-10-02 in three
 screenshots kept in `doc/al_dades/`:
@@ -814,10 +931,14 @@ Ordered by what is actually blocking work.
    exactly; see "The master database, mapped". One message should carry all of it:
    - ~~**S4:** `T12.1` with every field~~ — received 2026-10-02, all 41
    - ~~**S4 modern editions:** `T04`, `T04.1`, `T04.11`, `T04.12`~~ — received 2026-10-02
-   - **S5:** `T11`, `T11.1`, `T11.11`, `T11.12`, `T11.2`, `T11.22`, `T11.3`
+   - ~~**S5:** `T11`, `T11.1`, `T11.11`, `T11.12`, `T11.2`, `T11.22`, `T11.3`~~ — received
+     2026-10-10; still missing, the place table behind `T11._k_IdObraAccionLugar`
    - **S8:** the genre table (`T01.42_GeneroHier…`), instead of the value lists
-   - **S9b:** `T10`, `T10.11_*`, `T10.3_Region`, instead of a language-tagged `bus_lugAccion`
-   - **S3:** where the testimonios live; not in the screenshots
+   - **S9b:** `T10`, `T10.11_*`, `T10.3_Region`, instead of a language-tagged `bus_lugAccion`;
+     probably also S5's missing place table
+   - ~~**S3:** where the testimonios live~~ — `T03*`, received 2026-10-10
+   - **S3 questions** for the project: the 11 witnesses of Spanish plays attributed to Jodelle,
+     and the test rows in `T03`, `T03.3`, `T07.7`/`.71` and `T12` (`TES2` on EMOTHE0013)
    - **S6 (optional):** `T07.31`, `T07.311`
    - **When asking, name the fields or say *Mover todo*:** the export dialog reuses the previous
      field selection, which is how `T12.1` first arrived with 26 of its 41 fields
