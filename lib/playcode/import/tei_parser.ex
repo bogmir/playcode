@@ -787,16 +787,20 @@ defmodule Playcode.Import.TeiParser do
   # `sourceDesc/listWit`, nested lists read in order (S3). A siglum the play already has —
   # a witness typed by hand, a modern edition in its bibliography, or one earlier in the
   # same file — is left out (Witnesses.taken_sigla/1, after reset_tei_content/1 removed the
-  # file's own). A witness with nothing to print fails its changeset and is left out too.
+  # file's own). So is a witness printing the same line as one the play kept: most
+  # FileMaker witnesses have no siglum, and the play's own export lists them. A witness
+  # with nothing to print fails its changeset and is left out too.
   defp import_witnesses(file_desc, play) do
     with {_, _, desc_children} <- find_child(elem(file_desc, 2), "sourceDesc"),
          {_, _, _} = list_wit <- find_child(desc_children, "listWit") do
+      kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&Witnesses.plain/1)
+
       list_wit
       |> witness_elements()
       |> Enum.reduce(Witnesses.taken_sigla(play.id), fn witness, taken ->
         attrs = witness |> witness_attrs() |> Map.merge(%{play_id: play.id, origin: "tei"})
 
-        if attrs.siglum in taken do
+        if attrs.siglum in taken or Witnesses.plain(struct(Witness, attrs)) in kept do
           taken
         else
           _ = Witnesses.create_witness(attrs)

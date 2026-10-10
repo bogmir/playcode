@@ -1102,6 +1102,31 @@ defmodule Playcode.TeiRoundtripTest do
       assert listed.(roundtrip(file)) == expected
     end
 
+    # Most FileMaker witnesses have no siglum, and they are not the file's own rows, so the
+    # re-import keeps them: the file's copy of each must not come in beside it.
+    test "re-importing its own export keeps a play's witnesses without siglum, once" do
+      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(
+          %{
+            "play_id" => play.id,
+            "title" => "COMEDIES, HISTORIES, & TRAGEDIES",
+            "origin" => "filemaker"
+          },
+          %Playcode.Witnesses.Witness{filemaker_id: "T03:36"}
+        )
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{"play_id" => play.id, "note" => "Typed by hand"})
+
+      first = export_tei(play)
+      listed = fn xml -> for {_, text} <- xml_elements(xml, "witness"), do: text end
+
+      assert listed.(roundtrip(first)) == listed.(first)
+      assert listed.(roundtrip(first)) == listed.(first)
+    end
+
     test "exporting, re-importing and exporting again changes nothing" do
       first =
         tei(code: "WIT1", source_desc: "<bibl><title>Base</title></bibl>" <> @list_wit)
