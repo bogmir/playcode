@@ -1,15 +1,42 @@
 defmodule Playcode.Import.TeiParserTest do
   @moduledoc """
-  Reading a TEI file, on its own. These tests check out no database connection, so a
-  reader that reached for the database would fail them: reading is pure, and
-  `TeiImport` does all the writing. What the reading means for a stored play is asserted
-  through the import, in tei_import_test.exs and tei_roundtrip_test.exs.
+  Reading a TEI file, on its own. Reading is pure, and `TeiImport` does all the writing:
+  these tests check out no database connection, and the compiled reader may call nothing
+  of the app but a few pure helpers, so a database call on any of its paths fails them.
+  What the reading means for a stored play is asserted through the import, in
+  tei_import_test.exs and tei_roundtrip_test.exs.
   """
   use ExUnit.Case, async: true
 
   import Playcode.ImportHelpers, only: [tei: 1, write_tmp!: 1]
 
   alias Playcode.Import.TeiParser
+
+  # The app functions the reader may call: none of them reads a row. A new one is a
+  # decision, made here.
+  @pure_helpers [
+    {Playcode.Catalogue.Play, :composition_year_range, 0},
+    {Playcode.Catalogue.Play, :valid_languages, 0},
+    {Playcode.Places, :slugify, 1},
+    {Playcode.Places.Place, :authorities, 0},
+    {Playcode.Witnesses, :type_from_tei, 2}
+  ]
+
+  test "the reader calls nothing of the app but pure helpers, on any of its paths" do
+    {:ok, {TeiParser, [imports: imports]}} =
+      :beam_lib.chunks(:code.which(TeiParser), [:imports])
+
+    app_calls =
+      Enum.filter(imports, fn {module, _function, _arity} ->
+        module
+        |> Atom.to_string()
+        |> String.starts_with?(
+          ~w(Elixir.Playcode. Elixir.Ecto Elixir.DBConnection Elixir.Postgrex)
+        )
+      end)
+
+    assert app_calls -- @pure_helpers == []
+  end
 
   test "a play is read without the database" do
     xml =
