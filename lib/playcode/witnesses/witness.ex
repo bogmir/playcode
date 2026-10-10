@@ -19,6 +19,9 @@ defmodule Playcode.Witnesses.Witness do
   @fields ~w(play_id siglum title normalized_title attribution pub_place publisher date
              format witness_type shelfmark note origin)a
 
+  @text ~w(siglum title normalized_title attribution pub_place publisher date format
+           shelfmark note)a
+
   schema "play_witnesses" do
     field :siglum, :string
     field :title, :string
@@ -46,6 +49,7 @@ defmodule Playcode.Witnesses.Witness do
   def changeset(witness, attrs) do
     witness
     |> cast(attrs, @fields)
+    |> trim(@text)
     |> validate_required([:play_id])
     |> validate_inclusion(:witness_type, @types)
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
@@ -54,6 +58,16 @@ defmodule Playcode.Witnesses.Witness do
       error_key: :siglum,
       message: "is already used by another witness of this play"
     )
+  end
+
+  # The spec's "All values are trimmed": a pasted " Q1 " is Q1, and blank is nothing.
+  defp trim(changeset, fields) do
+    Enum.reduce(fields, changeset, fn field, changeset ->
+      update_change(changeset, field, fn
+        nil -> nil
+        value -> if String.trim(value) == "", do: nil, else: String.trim(value)
+      end)
+    end)
   end
 
   defp validate_described(changeset) do

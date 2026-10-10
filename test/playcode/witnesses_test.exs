@@ -84,6 +84,24 @@ defmodule Playcode.WitnessesTest do
                })
     end
 
+    # The spec: "All values are trimmed". A pasted " Q1 " is Q1, taken or not.
+    test "values are trimmed, so a padded siglum is the same siglum" do
+      play = play_fixture()
+      witness!(play, %{"siglum" => "Q1", "title" => "Uno"})
+
+      assert {:error, changeset} =
+               Witnesses.create_witness(%{
+                 "play_id" => play.id,
+                 "siglum" => " Q1 ",
+                 "title" => "Otro"
+               })
+
+      assert "is already used by another witness of this play" in errors_on(changeset).siglum
+
+      witness!(play, %{"siglum" => "Q2\n", "title" => "  Dos  ", "note" => "   "})
+      assert [_, %{siglum: "Q2", title: "Dos", note: nil}] = Witnesses.list_for_play(play.id)
+    end
+
     test "a witness id from the browser resolves only to this play's" do
       play = play_fixture()
       mine = witness!(play, %{"title" => "Mío"})
