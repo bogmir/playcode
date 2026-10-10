@@ -127,4 +127,79 @@ defmodule Playcode.WitnessesTest do
                ["Q2", "Q1"]
     end
   end
+
+  describe "the printed line" do
+    alias Playcode.Witnesses.Witness
+
+    test "every field, in emothe.uv.es's order" do
+      witness = %Witness{
+        title: "THE Tragicall Historie of HAMLET Prince of Denmarke.",
+        normalized_title: "The Tragical History of Hamlet, Prince of Denmark",
+        attribution: "Shakespeare, William",
+        pub_place: "London",
+        publisher: "Ling, Nicholas; Trundell, John",
+        date: "1603",
+        format: "4º",
+        note: "Printer: Simmes, Valentine",
+        shelfmark: "C.34.k.1"
+      }
+
+      assert Witnesses.plain(witness) ==
+               "THE Tragicall Historie of HAMLET Prince of Denmarke. " <>
+                 "[The Tragical History of Hamlet, Prince of Denmark]. Shakespeare, William. " <>
+                 "London. Ling, Nicholas; Trundell, John. 1603. 4º. " <>
+                 "Printer: Simmes, Valentine. Archivo: C.34.k.1."
+    end
+
+    test "an empty field drops out with its full stop, and one ending in a stop gets no second" do
+      assert Witnesses.plain(%Witness{title: "El conde de Sex", shelfmark: "16722"}) ==
+               "El conde de Sex. Archivo: 16722."
+
+      assert Witnesses.plain(%Witness{
+               normalized_title: "Ralph Roister Doister",
+               date: "1566 ?",
+               note: "[1566 ?] No title page."
+             }) == "[Ralph Roister Doister]. 1566 ? [1566 ?] No title page."
+    end
+
+    test "line breaks and doubled spaces collapse, the whole title is italic, the rest escaped" do
+      witness = %Witness{
+        title: "Oeuvres <<et>> meslanges,  &\nLimodin\n",
+        note: "edición de Charles de la\nMothe\n"
+      }
+
+      assert Witnesses.plain(witness) ==
+               "Oeuvres et meslanges, & Limodin. edición de Charles de la Mothe."
+
+      assert witness |> Witnesses.html() |> Phoenix.HTML.safe_to_string() ==
+               "<em>Oeuvres et meslanges, &amp; Limodin</em>. edición de Charles de la Mothe."
+    end
+  end
+
+  describe "in TEI" do
+    alias Playcode.Witnesses.Witness
+
+    test "the xml:id is the siglum when XML allows it, prefixed and cleaned when not" do
+      for {siglum, id} <- [
+            {"Q1", "Q1"},
+            {"Aut.", "Aut."},
+            {"PXXIV", "PXXIV"},
+            {"1623b", "wit-1623b"},
+            {"Q 1", "wit-Q_1"},
+            {nil, nil}
+          ] do
+        assert Witnesses.xml_id(%Witness{siglum: siglum}) == id, inspect(siglum)
+      end
+    end
+
+    test "every type has its TEI pair, and the pair names the type back" do
+      for type <- Witness.types() do
+        {tei_type, subtype} = Witnesses.tei_type(type)
+        assert Witnesses.type_from_tei(tei_type, subtype) == type
+      end
+
+      assert Witnesses.tei_type(nil) == nil
+      assert Witnesses.type_from_tei("libro", nil) == nil
+    end
+  end
 end
