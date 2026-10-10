@@ -130,8 +130,9 @@ As S4:
 
 Both call `Playcode.Import.Witnesses`:
 
-- `load(dir)` reads `T03_ObraTestimonio`, `T03.1_TestimonioTipo` (to check the type ids below
-  against it) and `T03.2_Atribucion` with `Playcode.Import.FilemakerXml.read/1`.
+- `load(dir)` reads `T03_ObraTestimonio` and `T03.2_Atribucion` with
+  `Playcode.Import.FilemakerXml.read/1`. The type tree (`T03.1`, ten rows) is a module
+  attribute, as S4's small code tables were.
 - `plan(data, plays)` is pure.
 - `apply_plan(plan, opts)` writes in one transaction and logs one activity entry per play.
 - `report(plan)` returns lines of text for the mix task and the release.
@@ -164,7 +165,8 @@ path as text) and `w3_ObrTes_Composicion` (FileMaker's rendering; the test oracl
 
 ### Skipped, and counted by reason
 
-`--dry-run` lists the FileMaker ids for each:
+Checked in this order, before the version is matched, so a test or empty record is reported
+whichever play it names. `--dry-run` lists the FileMaker ids for each:
 
 - **test record:** 32 (`TituloTestimonio`, siglum `TES`, EMOTHE0203), a module attribute as S4's
   `@test_editions`
@@ -183,9 +185,9 @@ fill. The rule: an attribution naming Jodelle on a play whose `author_name` does
 ### What a re-run does
 
 - **A play the import has written to is skipped whole**, reported as "already imported", so a
-  curator's edits and deletions stay. The marker is the per-play activity log entry
-  `apply_plan` writes (`metadata.source` `"filemaker_witnesses"`), which survives a curator
-  deleting every witness, as S4 learned.
+  curator's edits and deletions stay. The marker is the play's `filemaker` witnesses or the
+  per-play activity log entry `apply_plan` writes (action `import`, resource type
+  `play_witness`), which survives a curator deleting every witness, as S4 learned.
 - Plays imported into Playcode later get their witnesses on the next run.
 
 ### Expected result
@@ -195,8 +197,8 @@ On dev's 392 plays, measured 2026-10-10 on the dump:
 - **508 witnesses on 106 plays**: the 512 on plays we hold, less 4 empty (15, 62, 67, 600).
   EMOTHE0020's only witness is empty, so it gets none.
 - 44 with a siglum; 11 attributions dropped.
-- The test record (32) and one empty record (14) sit on versions we do not hold; with them, 89
-  FileMaker witnesses on 27 versions are counted as not held.
+- The test record (32) and one empty record (14) sit on versions we do not hold and are reported
+  as skipped; the other 87 FileMaker witnesses, on 25 versions, are counted as not held.
 
 The dry run in task 3 confirms these before anything is written.
 
@@ -218,6 +220,10 @@ As in S4, deliberate differences from FileMaker's output:
 
 - **An empty field drops out with its punctuation**: no `<i></i>. .`, no `. .` where the
   attribution is blank.
+- **Whitespace is collapsed**: FileMaker's values carry line breaks (`Sieur du\nLimodin`) and
+  doubled spaces, which a browser collapses anyway.
+- **The whole title is italic**, so `<<`/`>>` inside a stored title are dropped rather than
+  nested.
 - **No second full stop** after a value that ends in `.`, `?` or `!` (`… Denmarke.</i>.`,
   `First Folio..`, `s. a..`).
 - **`Archivo:` is FileMaker's label and is not translated**, like S4's `Ed.` and `Tra.`.
@@ -241,15 +247,16 @@ Not printed, as on emothe.uv.es: `siglum`, `witness_type`.
 
 - **The tab:** "Witnesses" ("Testimonios"), in the play context bar after Sources, before
   Bibliography; `active_tab: :witnesses`.
-- **The gate:** `:manage_sources`, which researchers already have. Witnesses are the same kind
-  of work as sources, and a new action would add a line to `Authz` for no difference in who may
-  do it. A row in `authorization_test.exs`; the path in `accessibility_test.exs`.
+- **The gate:** the admin area's, `:view_admin`, as the Sources tab: any active researcher or
+  admin. Witnesses are the same kind of work as sources, and a new action would add a line to
+  `Authz` for no difference in who may do it. A row in `authorization_test.exs`; the path in
+  `accessibility_test.exs`.
 
 ### What the page does
 
 - **The list,** in order, each row through `Witnesses.html/1`, with the siglum as a badge when
   set, and icon-only Edit, Move up, Move down and Delete buttons, each with an `aria-label`.
-- **New witness** and **Edit** open one modal: siglum, title, normalised title, attribution,
+- **New witness** and **Edit** open one form, inline above the list as on the Sources tab: siglum, title, normalised title, attribution,
   place, publisher, date, format, type (a select grouped Manuscript / Early edition), shelfmark,
   note. Under the form, the line as it will print, from `apply_changes/1` and `Witnesses.parts/1`.
 - **Move up / down** swaps `position` with the neighbour, as `Places.move_play_place/2`.
@@ -309,6 +316,9 @@ title, a normalised title or a note") is hand-added to `errors.pot` and the Span
   `<idno type="siglum">`; how an apparatus reading points at one is the `<app>` work's decision.
 - `<witness>` takes no `@type` (checked against `priv/schemas/tei_all.rng`), which is why the type
   sits on its `<bibl>`.
+- **`<sourceDesc><p/></sourceDesc>` only when the play has neither sources nor witnesses.** The
+  schema allows paragraphs or a list of bibls and lists, not both, so the empty `<p/>` written
+  today for a play with no sources must not precede a `listWit`.
 
 ### Import
 
