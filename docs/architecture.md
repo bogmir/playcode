@@ -28,6 +28,9 @@ lib/
 │   │   ├── entry.ex                  # One work cited, shared by every play that cites it
 │   │   ├── link.ex                   # A play's link to an entry (its volume, pages, note)
 │   │   └── citation.ex               # The one renderer: segments, plain text, safe HTML
+│   ├── witnesses.ex                  # A play's witnesses (S3): CRUD, order, the printed line, TEI id and type
+│   ├── witnesses/
+│   │   └── witness.ex                # One manuscript or early printing, with its siglum
 │   ├── activity_log.ex                   # Activity log context (log, list, count)
 │   ├── activity_log/
 │   │   └── entry.ex                  # Activity log entry schema
@@ -44,7 +47,8 @@ lib/
 │   ├── import/
 │   │   ├── tei_parser.ex             # TEI-XML importer (handles UTF-16 files)
 │   │   ├── filemaker_xml.ex          # FMPXMLRESULT reader (one FileMaker table)
-│   │   └── bibliography.ex           # S4's one-time FileMaker bibliography import
+│   │   ├── bibliography.ex           # S4's one-time FileMaker bibliography import
+│   │   └── witnesses.ex              # S3's one-time FileMaker witness import
 │   └── export/
 │       ├── tei_xml.ex                # Generate TEI-XML from DB
 │       ├── html.ex                   # Standalone HTML document export
@@ -86,6 +90,7 @@ lib/
     │       ├── play_bibliography_live.ex # Admin: /admin/plays/:id/bibliography - a play's bibliography
     │       ├── notes_component.ex        # The note editor inside the content editor's modals
     │       ├── play_notes_live.ex        # Admin: /admin/plays/:id/notes - a play's notes, edited in place
+    │       ├── play_witnesses_live.ex    # Admin: /admin/plays/:id/witnesses - a play's witnesses
     │       └── user_list_live.ex     # Admin: /admin/users - user management
     ├── controllers/
     │   ├── user_session_controller.ex # Login/logout session handling
@@ -129,6 +134,7 @@ lib/
 - `GET /admin/plays/:id/places` - The play's place index: role, order, notes (`:manage_places`)
 - `GET /admin/plays/:id/notes` - A play's in-text notes in reading order: filter by type, words or no term; edit type, word, term and text in place; delete; open the line in Content (`?element=`/`?division=` opens its modal), where notes are added (`:edit_content`)
 - `GET /admin/plays/:id/bibliography` - A play's bibliography: new, edit (with a warning on a shared entry), add an existing entry, remove, filter (`:manage_bibliography`)
+- `GET /admin/plays/:id/witnesses` - A play's witnesses: add, edit, reorder, delete, previewed as printed (`:view_admin`)
 - `GET /admin/plays/compare/export/html` - Comparison HTML export
 - `GET /admin/plays/:id/export/tei` - Download TEI-XML
 - `GET /admin/plays/:id/export/html` - Download HTML

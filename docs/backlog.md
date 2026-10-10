@@ -46,7 +46,6 @@ Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode
 
 **Data dropped on import, belonging to a FileMaker slice**
 - [ ] **`revisionDesc/change`** - who revised the TEI and when, 341 plays (`<change><date>2021</date><persName>Muñoz Pons, Carlos</persName> Revisión de la obra en formato TEI-XML</change>`): credits, S7
-- [ ] **`sourceDesc/listWit/witness`** - 10 witnesses in 1 play (EMOTHE0460, with `variantEncoding`): S3
 
 **Other losses**
 - [ ] **`sourceDesc/bibl/distributor`** - who supplied the digital text the edition was made from, 152 plays: *Canon 60* 30, *Gallica* 15, *Internet Shakespeare Editions* 6, the TC/12 groups (PROLOPE, DICAT, ROJAS ZORRILLA…), *Project Gutenberg*, *Biblioteca Virtual Miguel de Cervantes*…, and a placeholder *Texto base* in 59. Provenance of the source text; a `distributor` column on `play_sources` would hold it
@@ -69,7 +68,7 @@ Questions only the stakeholders can answer, recorded in `docs/static-site-improv
 
 - [ ] **"Review character in text" UI** — admin page to review and assign/reassign `character_id` (the `who` attribute) on speeches across an entire play. Researchers need to: (1) define character identifiers (`xml_id`, the "acrónimo" e.g. `don_diego`) in the dramatis personae, (2) associate each `<speaker>` with a character to generate `<sp who="#don_diego">`, and (3) bulk-review all speech-character associations throughout the play. Character CRUD and import-time `who` resolution already exist; what's missing is the review/bulk-assign UI.
 - [ ] **Places Phase 2** — in-text mentions (`<placeName ref>` in the body, an `element_places` table and the tagging UI), map rendering from the stored coordinates, catalogue browse-by-place, multiple authority links per place, and the FileMaker `pub_LugAccion` import
-- [ ] **FileMaker import (S3, S5-S8)** — witnesses, historical performances, character reconciliation, credits, genre. Roadmap: `docs/superpowers/plans/2026-08-01-filemaker-import-slices.md`. Governing rule: the export is a bootstrap, not a dependency — every field it carries gets a permanent column *and* an admin form. As with S2, `/admin/filemaker` needs no change for these — it already renders whatever `sets` and `conflicts` contain
+- [ ] **FileMaker import (S5-S8)** — historical performances, character reconciliation, credits, genre (S3, witnesses, is done: `docs/history.md`). Roadmap: `docs/superpowers/plans/2026-08-01-filemaker-import-slices.md`. Governing rule: the export is a bootstrap, not a dependency — every field it carries gets a permanent column *and* an admin form. As with S2, `/admin/filemaker` needs no change for these — it already renders whatever `sets` and `conflicts` contain
 - [ ] **TEI import improvements** - handle more TEI variants, better error reporting
 - [ ] **Full-text search** with PostgreSQL tsvector
 - [ ] **TEI validation** - validate exported XML against TEI schema

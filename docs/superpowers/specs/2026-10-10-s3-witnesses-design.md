@@ -1,6 +1,6 @@
 # S3 — Witnesses (testimonios)
 
-**Status:** design, 2026-10-10. Slice S3 of `../plans/2026-08-01-filemaker-import-slices.md`,
+**Status:** implemented, 2026-10-10 (`7e76c8f..0593021`). Slice S3 of `../plans/2026-08-01-filemaker-import-slices.md`,
 which holds the measurements this design rests on (S3 section). Modelled on S4,
 `2026-10-07-s4-bibliography-design.md`: same import shape, same renderer pattern, same surfaces.
 
@@ -332,7 +332,10 @@ title, a normalised title or a note") is hand-added to `errors.pot` and the Span
 - **Skipped:** a siglum the play already has under another origin, and a siglum that names a
   modern edition linked to the play (EMOTHE0460's `ADA`, `BEV`, `BRA`, `CAW`, `COL`, `LES`, which
   S4 imported). In a fresh database with no bibliography those six come in as witnesses; that is
-  S4's accepted "fresh database" loss in reverse, and harmless.
+  S4's accepted "fresh database" loss in reverse, and harmless. Also skipped: a witness
+  printing the same line (`Witnesses.plain/1`) as one the play kept. Most FileMaker
+  witnesses have no siglum, and without this the play's own export brought a copy of each
+  back on every re-import (found by the final review, fixed with a round-trip test).
 - **Rows are `origin: "tei"`.** `reset_tei_content/1` deletes this play's `tei` witnesses before a
   re-import, like sources; the import preview's `replaces` and `preserves` gain a `witnesses`
   count, and `mixed_ownership_total/1` sums it.

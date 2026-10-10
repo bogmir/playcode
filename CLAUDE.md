@@ -131,6 +131,7 @@ All tables use UUID primary keys. Key relationships:
 - `play_statistics` stores computed JSONB data per play
 - `bibliography_entries` - corpus-wide, one row per work cited, shared by every play that cites it, so one correction reaches them all (S4). Two levels, `analytic_*` (article, chapter) and `monogr_*` (book, journal); `kind` (`modern_edition`/`criticism`/`translation`/`adaptation`), `pub_type`, `language`, imprint text columns, `filemaker_id` (`"T12:<id>"`/`"T04:<id>"`, unique). `public_note` is printed with the citation; `note` is for researchers only and never leaves the admin pages, not even into the TEI file. An update moves every linked play's `content_version` (`bibliography_entry_changed()`)
 - `play_bibliography` - a play's link to an entry: `volume` and `pages` (where the play sits in a modern edition; they win over the entry's when printed), an internal `note`, `origin` (`manual`/`filemaker`). Unique per play and entry. `Bibliography.unlink/1` deletes the entry with its last link, so there are no orphan entries
+- `play_witnesses` - a play's witnesses (S3), the manuscripts and early printings its text survives in: `siglum`, `title`, `normalized_title`, `attribution`, `pub_place`, `publisher`, `date`, `format`, `witness_type` (a leaf of FileMaker's T03.1 tree, `Witness.types/0`), `shelfmark`, `note`, `position` (set only by `Playcode.Witnesses`), `origin`, `filemaker_id` (`"T03:<id>"`). `siglum` is unique per play; the table has the content trigger. Printed as emothe.uv.es prints *Testimonios* (`Witnesses.html/1`); siglum and type are never public
 - `activity_logs` tracks admin actions with user_id, play_id, action, resource_type, resource_id, changes (JSONB), metadata (JSONB)
 
 Element types: `speech`, `stage_direction`, `verse_line`, `prose`, `line_group`, `trailer` (a division's closing formula, "FIN DEL PRIMER ACTO"; exported last in its division). A `prose` or `line_group` with no parent is text nobody speaks: a dumb show, a stanza opening a prologue
@@ -197,6 +198,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 
 The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/fileDesc` -> play metadata, editors, sources
+- `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept
 - `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note); read on first import only, since the columns are `@platform_owned`
 - `text/front/div[@type="elenco"]/castList` -> characters
 - `text/front/div[@type="dedicatoria|introduccion_editor"]` -> editorial notes
@@ -300,6 +302,14 @@ so a curator's edits stay; on Fly, `Playcode.Release.import_bibliography/2`:
 ```bash
 mix playcode.import.bibliography --dry-run   # the plan, per play and per skip reason
 mix playcode.import.bibliography             # write it
+```
+
+Its witnesses likewise (S3; `T03` and `T03.2` under `doc/ctce_dades/`); on Fly,
+`Playcode.Release.import_witnesses/2`:
+
+```bash
+mix playcode.import.witnesses --dry-run   # the plan, per play and per skip reason
+mix playcode.import.witnesses             # write it
 ```
 
 The TEI header is not authoritative for language — every EMOTHE file carries `xml:lang="es"` for

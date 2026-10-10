@@ -13,7 +13,7 @@ source and variant tables received).
 | S2d — collection | **dropped** 2026-10-08: not a category in use; the code prefix already says EMOTHE, ARTELOPE or HIE — see below |
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import, folded into S7's cross-check |
-| S3 — witnesses | **next**: data received 2026-10-10 (`T03*`), 512 witnesses on 107 plays we hold — `../specs/2026-10-10-s3-witnesses-design.md` |
+| S3 — witnesses | **done** 2026-10-10 (`7e76c8f..0593021`): 508 witnesses on 106 plays imported on dev — `../specs/2026-10-10-s3-witnesses-design.md` |
 | S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays |
 | S6–S8 | scoped below, each gets its own plan when it comes up |
 | S4 — bibliography | **done** 2026-10-07 (`e82c968..369a077`; designed the same day, after the project answered the research's questions: shared entries, a one-time import) — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
