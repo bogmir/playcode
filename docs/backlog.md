@@ -4,21 +4,6 @@ Open work, moved here from `CLAUDE.md` on 2026-10-10. Done work is in `docs/hist
 item here is done, move it there with `[x]` and say what was built. Static-site and exporter
 items with a longer write-up live in `docs/static-site-improvements.md`.
 
-## Code health
-
-- [ ] **Separate parsing from writing in `TeiParser`** - from the Groxio audit (2026-10-08), never
-  recorded until now. `lib/playcode/import/tei_parser.ex` (1,768 lines) creates rows while it walks
-  the XML: about 48 `Repo`/context calls between `import_file/1`'s transaction (line 78) and the
-  end of the file, so no part of the import can be run or tested without a database, and
-  `preview_import/1` reads the tree a second way instead of reusing the parse. The audit's advice
-  was to do it together with the inline `<stage>`/`<note>` work, which rewrote the same code; that
-  work shipped (2026-10-08/09) without it. Shape to copy: `FilemakerSync.plan/3` (pure) against
-  `apply_plan/2` (writes), and `Bibliography.Citation` (`parts/2` feeding `plain/2` and `html/2`):
-  a pure `parse` from the Saxy tree to plain data (play attrs, characters, divisions, elements,
-  notes, places, bibliography), then one function that writes it. The TEI round-trip tests are the
-  net: they go through `import_file/1` and stay green across the split. Worth doing before the
-  next importer feature (`<app>`, `<lb/>`, `<code>` below)
-
 ## Production rollout
 
 - [ ] **Re-import the TEI files for notes and inline stages** - deploying this does not move any note out of a line; every play already in the database still has its notes pasted into its lines until its TEI file is re-imported (`mix playcode.import.tei --force` in dev; on Fly `Playcode.Release` has no TEI import, so re-upload the files at `/admin/plays/import`, which updates the play in place). Re-import every TEI file whose `<body>` holds a `<note>`, or a `<stage>` inside an `<l>`, `<p>` or `<seg>` (20 and 59 plays in the fixture corpus; production may hold more; simplest: every file), and do it before the first Generate, whose full rebuild the changed site fingerprint forces anyway. The same re-import carries the inline stage directions (`play_elements.content`), so one re-upload of the TEI files does both, and a play with stages that is not re-imported keeps their words pasted into its lines; the dev command is unchanged, and `--force` is run only with the project owner's go-ahead.
