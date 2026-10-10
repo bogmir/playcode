@@ -37,6 +37,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.Places,
     Playcode.Places.Place,
     Playcode.Places.PlayPlace,
+    Playcode.Witnesses,
     PlaycodeWeb.PlayLabels
   ]
 
