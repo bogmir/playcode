@@ -97,8 +97,10 @@ xml_ids; the writer turns them into character ids.
 1. **Rename commit**, no logic: `TeiParser` becomes `TeiImport` (`git mv` of the module and of
    `test/playcode/import/tei_parser_test.exs` to `tei_import_test.exs`), every reference
    updated: `import_live.ex`, `tei_corpus.ex`, the mix task, `play.ex`'s moduledoc, the test
-   files and `import_helpers.ex`, CLAUDE.md, `docs/architecture.md`, `docs/backlog.md`,
-   `docs/static-site-improvements.md`, `docs/word-import-feature.md`. `mix test` green.
+   files and `import_helpers.ex`, CLAUDE.md, `docs/architecture.md`,
+   `docs/word-import-feature.md`. Not `docs/backlog.md` (its item is retired in step 6) nor
+   `docs/static-site-improvements.md` (it names `tei_parser.ex` for how text is read, still
+   true after the split). `mix test` green.
 2. **Golden master, before the split**, in a scratch database (`MIX_ENV=test
    MIX_TEST_PARTITION=_golden`), never `playcode_dev`. Import the 370 `doc/tei_corpus` files and
    the fixtures as `mix playcode.import.tei` does, and dump every play: its
