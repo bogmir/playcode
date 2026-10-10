@@ -13,6 +13,11 @@ defmodule PlaycodeWeb.Admin.PlayWitnessesLive do
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
+  # What the form edits. The play comes from the page and the origin is "manual" or what an
+  # import set, never from the browser: see form_params/1.
+  @editable ~w(siglum title normalized_title attribution pub_place publisher date format
+               witness_type shelfmark note)
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     play = Catalogue.get_play!(id)
@@ -40,12 +45,17 @@ defmodule PlaycodeWeb.Admin.PlayWitnessesLive do
 
   def handle_event("validate_witness", %{"witness" => params}, socket) do
     changeset =
-      socket |> editing_base() |> Witnesses.change_witness(params) |> Map.put(:action, :validate)
+      socket
+      |> editing_base()
+      |> Witnesses.change_witness(form_params(params))
+      |> Map.put(:action, :validate)
 
     {:noreply, assign(socket, :form, to_form(changeset))}
   end
 
   def handle_event("save_witness", %{"witness" => params}, socket) do
+    params = form_params(params)
+
     {action, result} =
       case socket.assigns.editing do
         :new ->
@@ -87,6 +97,8 @@ defmodule PlaycodeWeb.Admin.PlayWitnessesLive do
       reload(socket)
     end)
   end
+
+  defp form_params(params), do: Map.take(params, @editable)
 
   defp edit(socket, editing, witness),
     do: assign(socket, editing: editing, form: to_form(Witnesses.change_witness(witness)))

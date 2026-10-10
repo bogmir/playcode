@@ -69,6 +69,25 @@ defmodule PlaycodeWeb.Admin.PlayWitnessesLiveTest do
     assert Witnesses.list_for_play(play.id) == []
   end
 
+  # The form's own fields only: a play_id or origin sent with it would move the witness to
+  # another play, or mark it "tei" for the next TEI re-import to delete.
+  test "a saved form cannot move a witness to another play or change its origin",
+       %{conn: conn, play: play} do
+    other = play_fixture()
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/witnesses")
+    add(lv, %{"siglum" => "M", "title" => "El conde de Sex"})
+    [m] = Witnesses.list_for_play(play.id)
+
+    lv |> button(m, "Edit") |> render_click()
+
+    lv
+    |> form("#witness-form", witness: %{"date" => "1638"})
+    |> render_submit(%{"witness" => %{"play_id" => other.id, "origin" => "tei"}})
+
+    assert [%{siglum: "M", date: "1638", origin: "manual"}] = Witnesses.list_for_play(play.id)
+    assert Witnesses.list_for_play(other.id) == []
+  end
+
   # As for sources: an id from the browser that is not this play's witness changes
   # nothing, crashes nothing, and says so.
   test "a witness that is not this play's is neither edited, moved nor deleted",
