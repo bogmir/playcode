@@ -13,6 +13,7 @@ This file holds the rules every session needs. The rest is in `docs/`:
 - `docs/backlog.md` - open work, the TEI corpus gaps among it
 - `docs/history.md` - what has been built, and what each audit found and fixed
 - `docs/static-site-improvements.md` - deferred static-site and exporter work, written up at length
+- `docs/stakeholder/ida-y-vuelta.html` - which part of a play reaches which output (admin, TEI export, TEI import, HTML/PDF/EPUB, the play page, the static site), and every gap: the one table, written for the project
 - `docs/stakeholder/preguntas.html` - the project's open questions, one running list (numbers never change; new ones go at the end), plus the FileMaker tables still to ask for. A question for the stakeholders goes here, with its background in a page of its own beside it
 - `docs/superpowers/specs/` and `docs/superpowers/plans/` - one design and one plan per project
 
@@ -83,6 +84,15 @@ Where the tests live: `test/playcode/` for contexts, importers and exporters
 routes, LiveViews and controllers; `test/mix/tasks_test.exs` for the mix tasks;
 `test/support/fixtures.ex` for `play_fixture/1` and friends (users are made through the
 invite flow); `test/fixtures/` for TEI, Word and FileMaker sample files.
+
+**The TEI file is a complete copy of a play.** Export a play, import the file into an empty
+database, and every row comes back: the text and notes, the bibliography and witnesses, the curated
+columns. An export the import does not read back is a bug, not a deferral.
+`docs/stakeholder/ida-y-vuelta.html` tables each part of a play against the admin, the TEI export,
+the TEI import, HTML/PDF/EPUB, the play page and the static site, in words the project reads; it is
+the only copy. A change that adds data to a play fills its row, and a cell short of "yes" is an
+item in `docs/backlog.md`, *Round trip*, with the technical detail, or an exception the page
+explains (a researcher's note never leaves Playcode: the file is published with the static site).
 
 **Accessibility** is held by `test/playcode_web/accessibility_test.exs`, which renders
 every page, the content editor's tabs and the modal forms, and fails on an unnamed control,
@@ -211,6 +221,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `stage` -> stage directions
 - `stage` inside `l`, `p` or `seg` -> a `<stage>` marker in the line's text (aside lines and paragraphs drop theirs)
 - `note` in the play text -> `play_notes`, at its offset in the line, speaker label or heading it sits in (not part of the text)
+- `back/div[@type="bibliografia"]/listBibl/biblStruct` <- the bibliography, written by the export and **not read back yet**; nor are completeness, historical time or the original a translation belongs to (`docs/stakeholder/ida-y-vuelta.html`)
 
 TEI fixture files are at `test/fixtures/tei_files/` (UTF-16 encoded, ~37 files covering Spanish/Italian/English/French plays). The whole production corpus, the 370 files the live site was loaded from, is at `doc/tei_corpus/` (git-ignored, like the FileMaker exports beside it); 17 of its plays are newer than their copies under `test/fixtures/`.
 

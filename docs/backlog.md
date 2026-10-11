@@ -8,6 +8,22 @@ items with a longer write-up live in `docs/static-site-improvements.md`.
 
 - [ ] **Re-import the TEI files for notes and inline stages** - deploying this does not move any note out of a line; every play already in the database still has its notes pasted into its lines until its TEI file is re-imported (`mix playcode.import.tei --force` in dev; on Fly, copy the files to the machine with `flyctl ssh sftp put` and run `Playcode.Release.import_tei(dir, dry_run: true, force: true)`, then without `dry_run`. The dry run counts, per play, the hand edits to its text since its last import that the forced re-import would undo). Re-import every TEI file whose `<body>` holds a `<note>`, or a `<stage>` inside an `<l>`, `<p>` or `<seg>` (20 and 59 plays in the fixture corpus; production may hold more; simplest: every file), and do it before the first Generate, whose full rebuild the changed site fingerprint forces anyway. The same re-import carries the inline stage directions (`play_elements.content`), so one re-upload of the TEI files does both, and a play with stages that is not re-imported keeps their words pasted into its lines; the dev command is unchanged, and `--force` is run only with the project owner's go-ahead.
 
+## Round trip (2026-10-11)
+
+A play exported to TEI and imported into an empty database must come back whole (`CLAUDE.md`, *The
+TEI file is a complete copy of a play*). Measured on all 394 plays in dev by exporting each one and
+importing the file as a new play; the table, for the project, is `docs/stakeholder/ida-y-vuelta.html`,
+and the technical detail is here.
+
+- [ ] **The bibliography is not read back** - the export writes `<back>` as `listBibl/biblStruct` and the import ignores it: 2,804 links on 115 plays lost (S4 deferred it). Open questions: matching shared entries, a `tei` origin for links, where volume and pages land. The seven original files with a prose bibliography (EMOTHE0310, 0451, 0488, 0489, 0644, 0652, 0686) must not become entries
+- [ ] **Curated play columns are not in the file** - a fresh import comes back as a draft (373 plays), with no original for a translation (153), no historical time (109, 38 with a note) and no dating that is only a note (18). Each needs a TEI home: completeness, `historical_time`, `parent_play_id` and the other relationship types, `<creation><date>` without years
+- [ ] **The cast list's heading and a second cast list** - one `<div type="elenco">` with no `<head>` is written: 319 plays lose the heading, and 5 plays with a cast list per act or part (EMOTHE0112, 0283, 0555, 0714, fixture 0277) come back with one and their characters reordered
+- [ ] **Witnesses lose their FileMaker key** - `filemaker_id` and `origin: "filemaker"` are not in the file (510 witnesses, 107 plays); line breaks in their fields come back as spaces (25 fields)
+- [ ] **Small losses** - two digital editors come back as `editor` (6 rows, 3 plays), a source's `editor_role` "canon60" (EMOTHE0727), the attribution "fiable" (EMOTHE0653), adjacent italics merged (6 elements) and an empty `<<>>` in 4 notes
+- [ ] **Trailers are on no page** - the static site, HTML, PDF, EPUB and the comparison have no clause for `trailer` and print nothing: 224 trailers in 131 plays, in the `.xml` but on no page. Only `/plays/:code` shows them
+- [ ] **A test that holds the round trip** - the fixpoint test (`tei_roundtrip_test.exs`, "exporting, re-importing and exporting again changes nothing") compares XML, so data the export never writes passes it. Wanted: a play with every feature filled, exported, imported as a new play, and read back through the contexts' public functions; it fails on each gap above until it is closed
+- [ ] **`mix playcode.import.tei` reads the FileMaker fixtures as TEI** - `test/fixtures/**/*.xml` includes `test/fixtures/filemaker/ctce_dades/`, the "8 unreadable" of every run
+
 ## High Priority
 
 - [ ] **Render** — `render.yaml` and `Dockerfile.render` exist but the blueprint has never been applied
