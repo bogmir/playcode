@@ -42,11 +42,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     wait_for(fn -> render(lv) =~ t("Generation Complete") end)
   end
 
-  defp wait_for(fun, tries \\ 100) do
+  defp wait_for(fun, tries \\ 500) do
     cond do
       fun.() -> :ok
       tries == 0 -> flunk("timed out waiting for the build")
-      true -> Process.sleep(50) && wait_for(fun, tries - 1)
+      true -> Process.sleep(10) && wait_for(fun, tries - 1)
     end
   end
 

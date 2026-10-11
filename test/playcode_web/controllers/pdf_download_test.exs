@@ -15,9 +15,16 @@ defmodule PlaycodeWeb.PdfDownloadTest do
     File.rm_rf!(PdfCache.dir())
     stub(mode: :ok)
 
+    # A blocked render answers only once the wait is up, and these tests block several.
+    # The suite's 500 ms is for the async tests rendering under load; nothing runs
+    # beside this module.
+    wait = Application.fetch_env!(:playcode, :pdf_wait)
+    Application.put_env(:playcode, :pdf_wait, 100)
+
     on_exit(fn ->
       Application.delete_env(:playcode, Playcode.PdfRendererStub)
       Application.delete_env(:playcode, :pdf_max_renders)
+      Application.put_env(:playcode, :pdf_wait, wait)
     end)
 
     %{play: play_fixture(%{"is_complete" => true})}
