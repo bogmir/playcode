@@ -1,7 +1,7 @@
 # FileMaker Import — Feature Slices (roadmap)
 
-**Status:** written 2026-08-01, revised 2026-09-25 and 2026-10-10 (witness, performance,
-source and variant tables received).
+**Status:** written 2026-08-01, revised 2026-09-25, 2026-10-10 (witness, performance,
+source and variant tables received) and 2026-10-11 (S3 done, S7 started).
 
 | Slice | State |
 |---|---|
@@ -12,13 +12,15 @@ source and variant tables received).
 | S2 — version metadata | **done** 2026-10-08: S2a and S2c shipped, S2d dropped — `archive/README.md`, `../specs/2026-08-05-s2c-composition-date-design.md` |
 | S2d — collection | **dropped** 2026-10-08: not a category in use; the code prefix already says EMOTHE, ARTELOPE or HIE — see below |
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
-| S2f — titles | **dropped as an import** — nothing to import, folded into S7's cross-check |
+| S2f — titles | **dropped as an import** — nothing to import; its one defect, four all-capitals sort titles, is in `docs/backlog.md` |
 | S3 — witnesses | **done** 2026-10-10 (`7e76c8f..0593021`): 508 witnesses on 106 plays imported on dev — `../specs/2026-10-10-s3-witnesses-design.md` |
-| S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays |
-| S6–S8 | scoped below, each gets its own plan when it comes up |
+| S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays. **Waits on questions 11 and 12** in `docs/stakeholder/preguntas.html` (is a performance's source a bibliography entry), which decide its source model |
+| S6 — characters | **blocked** by open question 7 (a TEI re-import replaces the cast list) |
+| S7 — credits | **done** 2026-10-11: no import; the cross-check found 18 credits our TEI import dropped (fixed) and 7 disagreements, asked as questions 18–21 — see below |
+| S8 — genre | **blocked**: the genre table (`T01.42_GeneroHier…`) has not arrived |
 | S4 — bibliography | **done** 2026-10-07 (`e82c968..369a077`; designed the same day, after the project answered the research's questions: shared entries, a one-time import) — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
 | S9 — places | **Phase 1 done** (the app, no FileMaker code) — `docs/history.md` |
-| S9b — `pub_LugAccion` import | **scoped, build it** — 138 links / ~94 places at full corpus; unblocked: the rest of EMOTHE is in (371 plays on dev, 2026-10-08) |
+| S9b — `pub_LugAccion` import | **scoped, waits on the `T10*` tables** (asked at the end of `docs/stakeholder/preguntas.html`) — 138 links / ~94 places at full corpus; the rest of EMOTHE is in (371 plays on dev, 2026-10-08). Tier 1 is buildable without them, but only once they are refused — see S9b, *Ordering* |
 
 Completed plans live in `archive/`, with exactly what shipped, the commit list, and what each
 slice learned that its plan did not say. Read that before starting a new slice.
@@ -383,8 +385,9 @@ migration, and it is still wrong. Measured against `playcode_dev` on 2026-08-04:
   row anywhere the import could legitimately fill.
 
 The fill-only policy points the wrong way for both fields: the one that is safe to write is never
-blank, and the one that is blank must stay blank. So this becomes a report, not a migration — folded
-into **S7**, which is already a cross-check slice.
+blank, and the one that is blank must stay blank. So this becomes a report, not a migration. It was
+folded into S7 as a second cross-check, and taken out again on 2026-10-11: titles have nothing to do
+with credits, and the report had nothing left to find (below).
 
 Two findings from that check that outlive S2f:
 
@@ -392,11 +395,20 @@ Two findings from that check that outlive S2f:
   Not fixable from this export and not fixable from our own data either: all 21 originals were
   title-matched against the corpus and **none of them is a play we hold**. Real gap in the work
   families, no cheap fix, tracked as open question 9.
-- The lost punctuation on EMOTHE0341 and EMOTHE0211 (`Cortigiana 1525`, missing the parentheses) is
-  a sort-title handling defect in the TEI import, worth fixing at the source rather than papering
-  over per play.
+- ~~The lost punctuation on EMOTHE0341 and EMOTHE0211 (`Cortigiana 1525`, missing the parentheses) is
+  a sort-title handling defect in the TEI import.~~ **Wrong, checked 2026-10-11:** every one of the
+  392 files writes its `title[@key="orden"]` with no punctuation and the article after the title
+  (`Cid Le`, `Cortigiana 1525 La`, `Eastward Ho`), and the import copies it faithfully. The sort title
+  is only a sort key: no page shows it, and the static site lowercases it before sorting.
+  emothe.uv.es shows FileMaker's work heading instead (`ALCALDE DE ZALAMEA, EL`), in the same order
+  ours sorts. The one real defect is four sort titles in capitals (EMOTHE0252, EMOTHE0254, AL0590,
+  AL0711), which the import title-cases in the title but not in the sort title. Cosmetic, since
+  sorting ignores case: `docs/backlog.md`.
 
-### S3 — Witnesses (testimonios) *(data received 2026-10-10; the next slice to build)*
+### S3 — Witnesses (testimonios) *(done 2026-10-10, `7e76c8f..0593021` — `../specs/2026-10-10-s3-witnesses-design.md`)*
+
+What shipped: `docs/history.md`, *FileMaker witnesses (S3)*. The research below is as it stood
+before the spec.
 
 The earlier draft parsed `T01.pub_testimonio` into `play_sources`. Both halves are superseded: the
 master tables arrived, and witnesses are not sources (below).
@@ -643,16 +655,37 @@ per-play, sorted by how bad the mismatch is, and dismissible — a reconciliatio
 printout. Also still blocked by question 7: a TEI re-import replaces the whole cast list, so any fix
 a curator makes here is lost on the next import.
 
-### S7 — Editor & translator credits
+### S7 — Editor & translator credits *(done 2026-10-11)*
+
+**What it came to.** No import and no report screen: FileMaker's credits are a one-time export, so
+the comparison was run once, on 2026-10-11, against every TEI file of the 392-play corpus. Of
+FileMaker's 413 credits on plays we hold, 343 name the same person the TEI does, 63 differ only by
+the TEI's "Tronch Pérez, Jesus" for "Jesús", 2 name nobody where the TEI names someone, and 5 name
+someone the TEI does not. Research groups differ only in form (`Artelope` against the TEI's long
+`orgName`), and are left alone.
+
+- **A TEI import bug, fixed:** a `respStmt` with two `<persName>`s kept only the first, so 18
+  people on 18 EMOTHE plays were missing from `play_editors`, the pages and the export. FileMaker
+  credits all 18. The first measurement, against `play_editors`, read them as 21 disagreements;
+  measured against the files themselves, 16 of those were this bug. They return with the
+  re-import in `docs/backlog.md`, *Production rollout*.
+- **Disagreements, asked as questions 18–20** in `docs/stakeholder/preguntas.html`, background in
+  `docs/stakeholder/creditos.html`: EMOTHE0148/0175 (Eva Soler Sasera in the TEI, Victoria Soler
+  Sánchez in FileMaker), EMOTHE0745 (Jesús Tronch Pérez against Rosa Durá Celma), EMOTHE0471 (the
+  TEI adds Elena Ramírez Sáenz).
+- **Corrections, going ahead unless the project objects (question 21):** the 63 accents, "Ramírez
+  Sánez" on EMOTHE0278, EMOTHE0372's template placeholders `Editor1`/`Editor2` (FileMaker and the
+  file's source note: Jesús Tronch Pérez), and EMOTHE0724/0737 keep the TEI's names where
+  FileMaker's credit is blank. Made after the re-import, or the re-import undoes them.
+- **Not S7 after all:** `revisionDesc/change` (who revised the TEI and when). FileMaker's credits
+  tables hold no revisions, so it is TEI-only data; `docs/backlog.md` lists it with the other TEI
+  losses. The titles cross-check S2f had parked here was dropped, see S2f.
+
+The research below is as it stood before the comparison.
 
 Cross-check `play_editors` against the credits printed in the index (`Tronch, Jesús, ed.`,
 `Hugo, François-Victor, tra.`). Same parse as S1, kept separate so S1 stays small.
 `bus_autorAdaptacion` supplies the sort form of each name, `bus_traductor` the display form.
-
-**Carries the dropped S2f with it:** report where our `title_sort` / `original_title` disagree with
-`T01.pub_TituloOrden` / `pub_TituloObra`, same as the credits comparison and for the same reason —
-a difference is a question for a curator, not a write. Two known hits already: EMOTHE0254 and
-EMOTHE0341, see S2f.
 
 **The master credits tables arrived 2026-10-01** (`doc/ctce_dades/T07.51*`, measured the same day).
 They are the source FileMaker generated each TEI header's `<respStmt>` from:
