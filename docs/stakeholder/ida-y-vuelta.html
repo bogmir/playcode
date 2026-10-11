@@ -7,7 +7,8 @@
 <!-- The one table of what reaches which output (CLAUDE.md, "The TEI file is a complete copy of a play").
      A change that adds data to a play fills its row here, and building a part listed as "Not yet"
      turns its row into a real one and updates the tally; the technical detail of each gap is in
-     docs/backlog.md, "Round trip" and "Found by the corpus round trip". -->
+     docs/backlog.md, "Round trip" and "Found by the corpus round trip". The Imported data column
+     counts production: recount it after an import runs there (witnesses, the TEI re-import). -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -156,7 +157,7 @@
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.875rem;
-    min-width: 46rem;
+    min-width: 54rem;
     width: 100%;
   }
   .matrix th, .matrix td {
@@ -212,6 +213,9 @@
   .s.part { color: var(--part); background: var(--part-bg); }
   .s.no { color: var(--no); background: var(--no-bg); font-weight: 600; }
   .s.na { color: var(--muted); }
+  .matrix .imp { box-shadow: inset -1px 0 0 var(--rule); min-width: 8.5rem; }
+  .matrix .imp .n { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .matrix .imp .src { display: block; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
   .s.todo { color: var(--muted); border: 1px dashed var(--rule); background: transparent; }
   .where { display: block; font-size: 0.78rem; font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 0.15rem; }
   sup.fn { font-size: 0.7rem; line-height: 0; }
@@ -238,7 +242,7 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. Measured on 11 October 2026 on the 394 plays of the development copy.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October.</p>
   </header>
 
   <section aria-labelledby="h-why">
@@ -263,6 +267,8 @@
         <tr class="lost"><td>Plays with a cast list per act that come back with one</td><td class="num">4</td></tr>
         <tr class="lost"><td>Witnesses that lose their FileMaker record number (107 plays)</td><td class="num">510</td></tr>
         <tr class="lost"><td>Closing formulas (“FIN DEL PRIMER ACTO”) missing from the published site and the downloads</td><td class="num">224</td></tr>
+        <tr class="todo"><td>Witnesses ready from FileMaker, not yet imported on production</td><td class="num">510</td></tr>
+        <tr class="todo"><td>Plays whose notes wait on production for the TEI re-import</td><td class="num">84</td></tr>
         <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">14</td></tr>
         <tr class="todo"><td>Parts of a play in FileMaker or planned, not built yet</td><td class="num">3</td></tr>
       </tbody>
@@ -270,8 +276,9 @@
   </section>
 
   <section aria-labelledby="h-places">
-    <h2 id="h-places">The six places</h2>
+    <h2 id="h-places">The columns</h2>
     <dl class="places">
+      <dt>Imported data</dt><dd>How many of production’s 373 plays hold it today, and where it came from: the TEI files, FileMaker, or Playcode itself.</dd>
       <dt>Edited</dt><dd>A form in Playcode’s admin pages where the team can change it.</dd>
       <dt>Written to TEI</dt><dd>In the XML file Playcode exports, the one published with the site.</dd>
       <dt>Read from TEI</dt><dd>Back in Playcode when that file is imported into an installation that does not have the play.</dd>
@@ -295,6 +302,7 @@
         <thead>
           <tr>
             <th scope="col" class="feature">Part of the play</th>
+            <th scope="col" class="imp">Imported data<span class="where">plays on production, of 373</span></th>
             <th scope="col">Edited</th>
             <th scope="col">Written to TEI</th>
             <th scope="col">Read from TEI</th>
@@ -304,9 +312,10 @@
           </tr>
         </thead>
         <tbody>
-          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">About the play</th></tr>
+          <tr class="group"><th scope="rowgroup" colspan="8" class="feature">About the play</th></tr>
           <tr>
             <th scope="row" class="feature">Title, author, publication details, licence</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span><sup class="fn"><a href="#n1" aria-label="note 1">1</a></sup></td>
@@ -316,6 +325,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Language</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI, corrected from FileMaker</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -325,6 +335,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Which play a translation translates</th>
+            <td class="imp"><span class="n">153</span><span class="src">of 168 translations; FileMaker</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
             <td><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
@@ -334,6 +345,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Complete or draft</th>
+            <td class="imp"><span class="n">373</span><span class="src">all complete; set in Playcode</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s no">No</span></td>
             <td><span class="s no">No</span><sup class="fn"><a href="#n4" aria-label="note 4">4</a></sup></td>
@@ -343,6 +355,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Date of composition</th>
+            <td class="imp"><span class="n">76</span><span class="src">FileMaker</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s part">Partly</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
             <td><span class="s yes">Yes</span></td>
@@ -352,6 +365,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Historical time of the action</th>
+            <td class="imp"><span class="n">108</span><span class="src">FileMaker</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s no">No</span><sup class="fn"><a href="#n6" aria-label="note 6">6</a></sup></td>
             <td><span class="s no">No</span></td>
@@ -361,6 +375,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Verse, prose or mixed</th>
+            <td class="imp"><span class="s na">—</span><span class="src">none set by hand</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s no">No</span><sup class="fn"><a href="#n7" aria-label="note 7">7</a></sup></td>
             <td><span class="s no">No</span></td>
@@ -370,6 +385,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Editors and their roles</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
@@ -379,6 +395,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Sources of the text</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
@@ -388,6 +405,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Witnesses: manuscripts and early printings</th>
+            <td class="imp"><span class="s part">Waiting</span><sup class="fn"><a href="#n17" aria-label="note 17">17</a></sup><span class="src">ready from FileMaker: 510 on 107 plays</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s part">Partly</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
@@ -397,6 +415,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Bibliography</th>
+            <td class="imp"><span class="n">114</span><span class="src">FileMaker; 2,803 references</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s no">No</span><sup class="fn"><a href="#n10" aria-label="note 10">10</a></sup></td>
@@ -406,6 +425,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Places of the action</th>
+            <td class="imp"><span class="s no">None</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup><span class="src">FileMaker holds 138 links</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
@@ -414,9 +434,10 @@
             <td><span class="s yes">Yes</span></td>
           </tr>
 
-          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">Front matter and cast</th></tr>
+          <tr class="group"><th scope="rowgroup" colspan="8" class="feature">Front matter and cast</th></tr>
           <tr>
             <th scope="row" class="feature">Dedications and editors’ introductions</th>
+            <td class="imp"><span class="n">227</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -426,6 +447,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Cast list: characters, descriptions, hidden roles</th>
+            <td class="imp"><span class="n">368</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -435,6 +457,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">The cast list’s heading; a second cast list</th>
+            <td class="imp"><span class="n">312</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
             <td><span class="s no">No</span></td>
@@ -443,9 +466,10 @@
             <td><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
           </tr>
 
-          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">The text</th></tr>
+          <tr class="group"><th scope="rowgroup" colspan="8" class="feature">The text</th></tr>
           <tr>
             <th scope="row" class="feature">Acts, scenes, prologues, interludes</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -455,6 +479,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Speeches, verses, prose, stage directions</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -464,6 +489,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Verse forms: redondilla, romance…</th>
+            <td class="imp"><span class="n">255</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -473,6 +499,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Split verses, indentation, asides, verse numbers</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -482,6 +509,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Kind of stage direction; a verse’s identifier</th>
+            <td class="imp"><span class="n">84</span><span class="src">TEI</span></td>
             <td><span class="s no">No</span><sup class="fn"><a href="#n13" aria-label="note 13">13</a></sup></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -491,6 +519,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Closing formulas: “FIN DEL PRIMER ACTO”</th>
+            <td class="imp"><span class="n">127</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -500,6 +529,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">A stage direction inside a verse</th>
+            <td class="imp"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 275 plays in development</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -509,6 +539,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Italics</th>
+            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span><sup class="fn"><a href="#n15" aria-label="note 15">15</a></sup></td>
@@ -518,6 +549,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Notes in the text</th>
+            <td class="imp"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 3,832 notes in 84 plays in development</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
@@ -527,6 +559,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Statistics</th>
+            <td class="imp"><span class="n">373</span><span class="src">worked out from the text</span></td>
             <td><span class="s na">—</span></td>
             <td><span class="s na">—</span><sup class="fn"><a href="#n16" aria-label="note 16">16</a></sup></td>
             <td><span class="s na">—</span></td>
@@ -534,9 +567,10 @@
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
           </tr>
-          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">In the source TEI files, not read yet</th></tr>
+          <tr class="group"><th scope="rowgroup" colspan="8" class="feature">In the source TEI files, not read yet</th></tr>
           <tr>
             <th scope="row" class="feature">Variant readings (critical apparatus)<span class="where">In 6 plays, 604 entries; today pasted into the line · <a href="preguntas.html#t-variants">questions 1–4</a></span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -546,6 +580,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">HTML typed into the text<span class="where">In 7 plays, 1,211 fragments; today shown as text · <a href="preguntas.html#t-html">questions 5–8</a></span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -555,6 +590,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Line breaks in prose, letters and songs<span class="where">In 178 plays, 26,571 breaks · <a href="preguntas.html#t-lines">questions 9–10</a></span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -564,6 +600,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Line numbers of prose<span class="where">In 40 plays · <a href="preguntas.html#t-lines">questions 9–10</a></span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -573,6 +610,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">The heading inside the cast list (“PERSONNAGES”)<span class="where">323 headings</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -582,6 +620,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Groups in the cast list: soldiers, servants<span class="where">560 roles</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -591,6 +630,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">The original cast (“Mr. Betterton”)<span class="where">In 3 plays, 14 actors</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -600,6 +640,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">The scene of the action (“SCENE: An English wood…”)<span class="where">In 15 plays</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -609,6 +650,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">The editor’s note on the edition<span class="where">In 15 plays, 16 notes</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -618,6 +660,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Italics and notes in dedications and introductions<span class="where">About 950 italics and 270 notes</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -627,6 +670,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Back matter other than the bibliography<span class="where">In 16 plays: cast lists, verse, headed sections</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -636,6 +680,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Revision history: who revised the TEI, and when<span class="where">In 341 plays</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -645,6 +690,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Who supplied the digital text: Canon 60, Gallica…<span class="where">In 152 plays</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -654,6 +700,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Identifiers of speeches, paragraphs and stage directions<span class="where">About 460,000</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -661,9 +708,10 @@
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
           </tr>
-          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">In FileMaker, or planned</th></tr>
+          <tr class="group"><th scope="rowgroup" colspan="8" class="feature">In FileMaker, or planned</th></tr>
           <tr>
             <th scope="row" class="feature">Historical performances: company, venue, date, cast<span class="where">In FileMaker, 243 performances on 59 plays, received · <a href="preguntas.html#t-performances">questions 11–12</a></span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -673,6 +721,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Genre<span class="where">In FileMaker for 82 plays; waiting for its genre table</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -682,6 +731,7 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Places named in the text, and a map<span class="where">Planned</span></th>
+            <td class="imp"><span class="s todo">Not imported</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
             <td><span class="s todo">Not yet</span></td>
@@ -714,6 +764,8 @@
       <li id="n14">The formula that closes an act or a play (“FIN DEL PRIMER ACTO”, “Terminat hora diem; terminat author opus”) is in the file and on the play page, but on no page of the published site and in none of the downloads: 224 of them in 131 plays.</li>
       <li id="n15">Two italic passages side by side come back as one, and an empty one in a note is dropped. The text reads the same (10 places).</li>
       <li id="n16">Worked out from the text each time, so not part of the file.</li>
+      <li id="n17">Imported into the development copy from FileMaker (510 witnesses on 107 plays), and a trial run on production found the same plays. The import itself has not been run on production yet.</li>
+      <li id="n18">Production still has its notes, and the stage directions inside verses, pasted into the lines, as the first import left them. They move out when the TEI files are re-imported on production, which waits for the fixes to the TEI import listed above, so that the files are read once.</li>
     </ol>
   </section>
 
