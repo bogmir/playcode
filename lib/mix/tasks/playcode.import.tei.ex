@@ -18,7 +18,7 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
   use Mix.Task
 
   alias Playcode.Import.TeiCorpus
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
 
   @switches [force: :boolean, dry_run: :boolean, dir: :keep]
 
@@ -46,7 +46,7 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
   defp dry_run(files, force) do
     {new, existing, unreadable} =
       Enum.reduce(files, {0, 0, 0}, fn {code, path}, {new, existing, unreadable} ->
-        case TeiParser.preview_import(path) do
+        case TeiImport.preview_import(path) do
           {:ok, %{existing: nil}} ->
             Mix.shell().info("  #{code}  new")
             {new + 1, existing, unreadable}
@@ -61,7 +61,7 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
               "  #{code}  replaces #{preview.replaces.divisions} division(s), " <>
                 "#{preview.replaces.elements} element(s), " <>
                 "#{preview.replaces.characters} character(s), " <>
-                "#{TeiParser.mixed_ownership_total(preview.replaces)} TEI record(s)" <>
+                "#{TeiImport.mixed_ownership_total(preview.replaces)} TEI record(s)" <>
                 keeps(preview)
             )
 
@@ -79,7 +79,7 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
   end
 
   defp keeps(preview) do
-    kept = TeiParser.mixed_ownership_total(preview.preserves)
+    kept = TeiImport.mixed_ownership_total(preview.preserves)
     restored = if preview.archived, do: ", restores it from the archive", else: ""
 
     case kept do

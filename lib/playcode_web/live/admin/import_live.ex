@@ -1,12 +1,12 @@
 defmodule PlaycodeWeb.Admin.ImportLive do
   @moduledoc """
   /admin/plays/import: upload TEI files. A file whose code already exists is previewed
-  first (`TeiParser.preview_import/1`): what the re-import replaces and what it keeps.
+  first (`TeiImport.preview_import/1`): what the re-import replaces and what it keeps.
   """
 
   use PlaycodeWeb, :live_view
 
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
   alias PlaycodeWeb.Admin.LiveHelpers
 
   @impl true
@@ -69,7 +69,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   defp start_or_confirm(socket, pending) do
     previews =
       for {path, filename} <- pending,
-          {:ok, preview} <- [TeiParser.preview_import(path)],
+          {:ok, preview} <- [TeiImport.preview_import(path)],
           preview.existing,
           do: Map.put(preview, :filename, filename)
 
@@ -137,7 +137,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
 
   def handle_info({:import_next, [{path, filename} | rest]}, socket) do
     socket =
-      case TeiParser.import_file(path) do
+      case TeiImport.import_file(path) do
         {:ok, play} ->
           LiveHelpers.log_activity(socket, "import", "play", play.id, %{
             filename: filename,
@@ -394,8 +394,8 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     """
   end
 
-  defp tei_total(preview), do: TeiParser.mixed_ownership_total(preview.replaces)
-  defp preserved_total(preview), do: TeiParser.mixed_ownership_total(preview.preserves)
+  defp tei_total(preview), do: TeiImport.mixed_ownership_total(preview.replaces)
+  defp preserved_total(preview), do: TeiImport.mixed_ownership_total(preview.preserves)
 
   defp field_label(:language), do: gettext("language")
   defp field_label(:relationship_type), do: gettext("relationship")

@@ -16,7 +16,7 @@ defmodule Playcode.Catalogue.Play do
   Who writes which column:
 
     * The TEI importer owns most of them. A re-import overwrites them in place.
-    * The curators own the columns in `TeiParser`'s `@platform_owned`, which a
+    * The curators own the columns in `TeiImport`'s `@platform_owned`, which a
       re-import never touches.
     * `verse_count` and `is_verse` are derived from the verse lines by
       `Catalogue.update_verse_count/1`. Read the play's form through `form/1`.

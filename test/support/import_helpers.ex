@@ -13,7 +13,7 @@ defmodule Playcode.ImportHelpers do
 
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
 
   @doc """
   A TEI document. Every option is a raw XML fragment dropped into place, except
@@ -95,7 +95,7 @@ defmodule Playcode.ImportHelpers do
 
   @doc "Imports `xml` and returns the play as stored, with its associations."
   def import_tei!(xml) do
-    {:ok, play} = xml |> write_tmp!() |> TeiParser.import_file()
+    {:ok, play} = xml |> write_tmp!() |> TeiImport.import_file()
     Catalogue.get_play_with_all!(play.id)
   end
 

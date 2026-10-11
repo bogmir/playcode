@@ -6,7 +6,7 @@ defmodule Playcode.Export.TeiValidatorTest do
   @moduletag :slow
 
   alias Playcode.Export.TeiValidator
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue
 
@@ -85,7 +85,7 @@ defmodule Playcode.Export.TeiValidatorTest do
     end
 
     test "an imported corpus play exports as schema-valid TEI" do
-      {:ok, play} = TeiParser.import_file(@fixture_file)
+      {:ok, play} = TeiImport.import_file(@fixture_file)
 
       xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
 

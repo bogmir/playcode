@@ -1,40 +1,36 @@
 defmodule Playcode.Import.TeiParser do
   @moduledoc """
-  Parses TEI-XML files into database records.
+  Reads a TEI-XML file into a plain description of a play, touching no database.
 
-  Handles UTF-16 encoded files (common in the EMOTHE corpus) by converting
-  them to UTF-8 before parsing with Saxy.
+  `parse_file/1` returns everything `Playcode.Import.TeiImport` writes, in document order
+  and with every position already counted:
+
+      %{
+        play: %{code: "EMOTHE0010", title: "…", …},
+        editors: [%{person_name, role, organization, position}],
+        sources: [%{title, author, editor, editor_role, publisher, pub_place, pub_date,
+                    note, language, position}],
+        witnesses: [%{siglum, witness_type, title, …}],
+        places: [%{attrs: %{"slug" => …, …}, slug_declared: boolean, places: [place]}],
+        settings: [%{slug, role, position, note}],
+        characters: [%{xml_id, name, description, is_hidden, position}],
+        editorial_notes: [%{section_type, heading, content, position}],
+        divisions: [%{type, number, title, position, notes, elements, divisions}]
+      }
+
+  An element is `%{type, position, notes, elements}` plus its columns, and a speech's
+  `who` the xml_ids it names. A note is `%{offset, n, type, term, body}`. Nothing here
+  knows a row: ids, `play_id` and `origin` are the writer's.
+
+  Handles UTF-16 encoded files (common in the EMOTHE corpus) by converting them to UTF-8
+  before parsing with Saxy.
   """
 
-  import Ecto.Query
-
-  alias Playcode.Repo
-  alias Playcode.Catalogue
-  alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
-  alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Character, Division, Element}
+  alias Playcode.Catalogue.Play
   alias Playcode.Places
   alias Playcode.Witnesses
-  alias Playcode.Witnesses.Witness
 
   require Logger
-
-  # Columns the platform owns, not the TEI file. `language` in particular: every EMOTHE
-  # file carries xml:lang="es" for the editorial platform, so a re-import would undo the
-  # FileMaker sync (docs/superpowers/plans/2026-08-01-s1-work-families-and-language.md).
-  # New research columns added by later slices belong on this list.
-  @platform_owned [
-    :language,
-    :relationship_type,
-    :parent_play_id,
-    :is_complete,
-    :historical_time,
-    :historical_time_note,
-    :composition_date_from,
-    :composition_date_to,
-    :composition_date_note,
-    :form
-  ]
 
   @title_small_words MapSet.new([
                        "a",
@@ -69,128 +65,20 @@ defmodule Playcode.Import.TeiParser do
                      ])
 
   @doc """
-  Imports a TEI-XML file from the given path into the database.
-  Returns {:ok, play} or {:error, reason}.
+  Reads the play at `path`: `{:ok, tei}` (see the moduledoc) or `{:error, reason}`, the
+  reason `File.read/1`'s, `{:xml_parse_error, _}`, `:encoding_error` or
+  `:missing_tei_header`.
   """
-  def import_file(path) do
-    Logger.info("Importing TEI file: #{path}")
+  def parse_file(path) do
+    with {:ok, {_name, _attrs, children}} <- read_tree(path) do
+      case find_child(children, "teiHeader") do
+        nil ->
+          {:error, :missing_tei_header}
 
-    case read_tree(path) do
-      {:ok, tree} ->
-        Repo.transaction(fn -> import_tree(tree) end)
-
-      {:error, reason} ->
-        Logger.error("Import failed for #{path}: #{inspect(reason)}")
-        {:error, reason}
+        {_name, _attrs, header} ->
+          {:ok, Map.merge(header(header), text(find_child(children, "text")))}
+      end
     end
-  end
-
-  @doc """
-  Reports what importing `path` would do, without writing anything.
-
-  A re-import replaces the play's whole text and the editors, sources and notes the
-  importer created itself; everything a researcher typed is kept, as are the columns
-  the platform owns. This is what the admin import page and `--dry-run` print so that
-  nobody discovers the replacement afterwards.
-  """
-  def preview_import(path) do
-    with {:ok, {_name, _attrs, children}} <- read_tree(path),
-         header when not is_nil(header) <- find_child(children, "teiHeader") do
-      {:ok, preview_for(header)}
-    else
-      nil -> {:error, :missing_tei_header}
-      {:error, reason} -> {:error, reason}
-    end
-  end
-
-  defp preview_for({_name, _attrs, children}) do
-    attrs =
-      extract_play_attrs(
-        find_child(children, "fileDesc"),
-        find_child(children, "encodingDesc"),
-        find_child(children, "profileDesc")
-      )
-
-    existing = Repo.get_by(Play, code: attrs.code)
-
-    %{
-      code: attrs.code,
-      title: attrs.title,
-      existing: existing,
-      archived: not is_nil(existing) and not is_nil(existing.deleted_at),
-      replaces: replaced_counts(existing),
-      preserves: preserved_counts(existing),
-      preserves_fields: preserved_fields(existing)
-    }
-  end
-
-  @doc """
-  Sums the mixed-ownership counts in one half of a `preview_import/1` result.
-
-  Those five tables — editors, sources, notes, places and witnesses — hold both TEI-imported and
-  hand-entered rows, so `:replaces` and `:preserves` split each one by `origin`. Both
-  the admin import page and the `--dry-run` output report the totals, and adding a
-  fifth such table must not mean remembering two more addition sites.
-  """
-  def mixed_ownership_total(counts) do
-    [:editors, :sources, :notes, :places, :witnesses]
-    |> Enum.map(&Map.fetch!(counts, &1))
-    |> Enum.sum()
-  end
-
-  defp replaced_counts(nil),
-    do: %{
-      divisions: 0,
-      elements: 0,
-      characters: 0,
-      editors: 0,
-      sources: 0,
-      notes: 0,
-      places: 0,
-      witnesses: 0
-    }
-
-  defp replaced_counts(%Play{id: id}) do
-    %{
-      divisions: count_rows(Division, id),
-      elements: count_rows(Element, id),
-      characters: count_rows(Character, id),
-      editors: count_rows(PlayEditor, id, "tei"),
-      sources: count_rows(PlaySource, id, "tei"),
-      notes: count_rows(PlayEditorialNote, id, "tei"),
-      places: count_rows(Places.PlayPlace, id, "tei"),
-      witnesses: count_rows(Witness, id, "tei")
-    }
-  end
-
-  defp preserved_counts(nil), do: %{editors: 0, sources: 0, notes: 0, places: 0, witnesses: 0}
-
-  defp preserved_counts(%Play{id: id}) do
-    %{
-      editors: count_rows(PlayEditor, id) - count_rows(PlayEditor, id, "tei"),
-      sources: count_rows(PlaySource, id) - count_rows(PlaySource, id, "tei"),
-      notes: count_rows(PlayEditorialNote, id) - count_rows(PlayEditorialNote, id, "tei"),
-      places: count_rows(Places.PlayPlace, id) - count_rows(Places.PlayPlace, id, "tei"),
-      witnesses: count_rows(Witness, id) - count_rows(Witness, id, "tei")
-    }
-  end
-
-  defp preserved_fields(nil), do: []
-
-  defp preserved_fields(%Play{} = play) do
-    Enum.filter(@platform_owned, fn field -> Map.get(play, field) not in [nil, false] end)
-  end
-
-  defp count_rows(schema, play_id) do
-    Repo.aggregate(from(r in schema, where: r.play_id == ^play_id), :count, :id)
-  end
-
-  defp count_rows(schema, play_id, origin) do
-    Repo.aggregate(
-      from(r in schema, where: r.play_id == ^play_id and r.origin == ^origin),
-      :count,
-      :id
-    )
   end
 
   defp read_tree(path) do
@@ -250,99 +138,20 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  # --- Import Logic ---
-
-  defp import_tree({_name, _attrs, children} = _tei) do
-    header = find_child(children, "teiHeader")
-    text = find_child(children, "text")
-
-    if is_nil(header) do
-      Repo.rollback(:missing_tei_header)
-    end
-
-    play = import_header(header)
-
-    if text do
-      import_text(text, play)
-    end
-
-    # Recompute verse_count from actual verse_line elements (the TEI header
-    # <extent> value is often inaccurate or includes non-verse lines), and return
-    # the play as that left it rather than the stale struct from before.
-    {:ok, play} = Playcode.Catalogue.update_verse_count(play.id)
-    play
-  end
-
   # --- Header ---
 
-  # A re-import replaces the text wholesale, but only the editors, sources and notes the
-  # importer created itself. Anything a researcher typed — and every table later slices
-  # add — stays. Deleting elements first lets the element_characters FK cascade handle
-  # the join rows.
-  defp reset_tei_content(%Play{id: id}) do
-    for schema <- [Element, Division, Character] do
-      Repo.delete_all(from(r in schema, where: r.play_id == ^id))
-    end
-
-    for schema <- [PlayEditor, PlaySource, PlayEditorialNote, Witness] do
-      Repo.delete_all(from(r in schema, where: r.play_id == ^id and r.origin == "tei"))
-    end
-
-    # Only the links, never the places: the gazetteer is corpus-global authority data,
-    # and an orphaned place shows in the admin list with a play count of 0.
-    Places.delete_tei_play_places(id)
-  end
-
-  # Every editor, source and note the importer creates is stamped `origin: "tei"`, so a
-  # re-import can replace its own rows and leave hand-entered ones alone. Rows created
-  # anywhere else default to "manual".
-  defp create_editor(attrs), do: Catalogue.create_play_editor(Map.put(attrs, :origin, "tei"))
-  defp create_source(attrs), do: Catalogue.create_play_source(Map.put(attrs, :origin, "tei"))
-
-  defp create_note(attrs),
-    do: Catalogue.create_play_editorial_note(Map.put(attrs, :origin, "tei"))
-
-  defp import_header({_name, _attrs, children}) do
+  defp header(children) do
     file_desc = find_child(children, "fileDesc")
-    encoding_desc = find_child(children, "encodingDesc")
     profile_desc = find_child(children, "profileDesc")
 
-    play_attrs = extract_play_attrs(file_desc, encoding_desc, profile_desc)
-
-    play =
-      case Repo.get_by(Play, code: play_attrs.code) do
-        %Play{} = existing_play ->
-          reset_tei_content(existing_play)
-
-          case Catalogue.update_play(existing_play, Map.drop(play_attrs, @platform_owned)) do
-            {:ok, play} ->
-              # An import of an archived play brings it back — the file is the reason it
-              # is wanted again.
-              play |> Ecto.Changeset.change(deleted_at: nil) |> Repo.update!()
-
-            {:error, changeset} ->
-              Repo.rollback(changeset)
-          end
-
-        nil ->
-          case Catalogue.create_play(play_attrs) do
-            {:ok, play} ->
-              play
-
-            {:error, changeset} ->
-              Repo.rollback(changeset)
-          end
-      end
-
-    if file_desc do
-      import_editors(file_desc, play)
-      import_sources(file_desc, play)
-      import_witnesses(file_desc, play)
-    end
-
-    import_places(profile_desc, play)
-
-    play
+    %{
+      play: extract_play_attrs(file_desc, find_child(children, "encodingDesc"), profile_desc),
+      editors: editors(file_desc),
+      sources: sources(file_desc),
+      witnesses: witnesses(file_desc),
+      places: places(profile_desc),
+      settings: settings(profile_desc)
+    }
   end
 
   defp extract_play_attrs(file_desc, encoding_desc, profile_desc) do
@@ -463,8 +272,8 @@ defmodule Playcode.Import.TeiParser do
   # Anything the changeset would reject is dropped here instead — a lone endpoint, an
   # inverted range, a year outside `Play.composition_year_range/0`. The changeset's
   # strictness is right for curator input, but an unusable attribute in a TEI file must
-  # not roll back the import: `import_tree` rollbacks discard the text, the characters
-  # and the acts too. Per the S2c spec, a file that carries no machine dating is the
+  # not roll back the import: a rollback discards the text, the characters and the acts
+  # too. Per the S2c spec, a file that carries no machine dating is the
   # file's problem, not an import failure.
   defp extract_creation(nil), do: {nil, nil, nil}
 
@@ -614,44 +423,42 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Editors ---
 
-  defp import_editors(file_desc, play) do
-    title_stmt = find_child(elem(file_desc, 2), "titleStmt")
-    edition_stmt = find_child(elem(file_desc, 2), "editionStmt")
+  # The principal investigator, the titleStmt's <editor>s, then the respStmts of the
+  # titleStmt (from position 100) and of the editionStmt (from 200).
+  defp editors(nil), do: []
 
-    # Principal investigator and titleStmt editors
-    if title_stmt do
-      title_stmt_children = elem(title_stmt, 2)
+  defp editors({_name, _attrs, children}) do
+    title_stmt = find_child(children, "titleStmt")
 
-      principal = find_child(title_stmt_children, "principal")
+    principal(title_stmt) ++
+      title_editors(title_stmt) ++
+      resp_stmt_editors(title_stmt, 100) ++
+      resp_stmt_editors(find_child(children, "editionStmt"), 200)
+  end
 
-      if principal do
-        create_editor(%{
-          play_id: play.id,
-          person_name: text_content(principal),
-          role: "principal",
-          position: 0
-        })
-      end
+  defp principal(nil), do: []
 
-      # <editor role="…"> in titleStmt: translators, researchers and the editor of the
-      # critical edition the text is based on. Any other role (canon60) is skipped.
-      title_editors = find_children(title_stmt_children, "editor")
+  defp principal({_name, _attrs, children}) do
+    case find_child(children, "principal") do
+      nil -> []
+      principal -> [%{person_name: text_content(principal), role: "principal", position: 0}]
+    end
+  end
 
-      title_editors
-      |> Enum.with_index(1)
-      |> Enum.each(fn {{_, attrs, ed_children}, idx} ->
-        role = attr_value(attrs, "role")
+  # <editor role="…"> in titleStmt: translators, researchers and the editor of the
+  # critical edition the text is based on. Any other role (canon60) is skipped.
+  defp title_editors(nil), do: []
 
-        normalized_role =
-          case role do
-            "translator" -> "translator"
-            "traductor" -> "translator"
-            "researcher" -> "researcher"
-            "edicion_critica" -> "critical_editor"
-            _ -> nil
-          end
+  defp title_editors({_name, _attrs, children}) do
+    children
+    |> find_children("editor")
+    |> Enum.with_index(1)
+    |> Enum.flat_map(fn {{_, attrs, ed_children}, idx} ->
+      case editor_role(attr_value(attrs, "role")) do
+        nil ->
+          []
 
-        if normalized_role do
+        role ->
           # Name may be in <persName> or direct text
           person_name =
             case find_child(ed_children, "persName") do
@@ -659,157 +466,110 @@ defmodule Playcode.Import.TeiParser do
               el -> text_content(el)
             end
 
-          create_editor(%{
-            play_id: play.id,
-            person_name: person_name,
-            role: normalized_role,
-            organization: safe_text(find_child(ed_children, "orgName")),
-            position: idx
-          })
-        end
-      end)
+          [
+            %{
+              person_name: person_name,
+              role: role,
+              organization: safe_text(find_child(ed_children, "orgName")),
+              position: idx
+            }
+          ]
+      end
+    end)
+  end
 
-      # respStmt elements in titleStmt (common in EMOTHE files)
-      resp_stmts_in_title = find_children(title_stmt_children, "respStmt")
+  defp editor_role("translator"), do: "translator"
+  defp editor_role("traductor"), do: "translator"
+  defp editor_role("researcher"), do: "researcher"
+  defp editor_role("edicion_critica"), do: "critical_editor"
+  defp editor_role(_role), do: nil
 
-      resp_stmts_in_title
-      |> Enum.with_index(100)
-      |> Enum.each(fn {{_name, _attrs, children}, idx} ->
-        person = find_child(children, "persName")
-        org = find_child(children, "orgName")
-        resp = find_child(children, "resp")
+  # A respStmt with a <persName>, numbered from `first`; one without still takes its number.
+  defp resp_stmt_editors(nil, _first), do: []
 
-        role =
-          case safe_text(resp) do
-            text when is_binary(text) ->
-              cond do
-                String.contains?(text, "Edición") -> "editor"
-                String.contains?(text, "Revisión") -> "reviewer"
-                true -> "digital_editor"
-              end
+  defp resp_stmt_editors({_name, _attrs, children}, first) do
+    children
+    |> find_children("respStmt")
+    |> Enum.with_index(first)
+    |> Enum.flat_map(fn {{_name, _attrs, resp_children}, idx} ->
+      case find_child(resp_children, "persName") do
+        nil ->
+          []
 
-            _ ->
-              "digital_editor"
-          end
+        person ->
+          [
+            %{
+              person_name: text_content(person),
+              role: resp_role(safe_text(find_child(resp_children, "resp"))),
+              organization: safe_text(find_child(resp_children, "orgName")),
+              position: idx
+            }
+          ]
+      end
+    end)
+  end
 
-        if person do
-          create_editor(%{
-            play_id: play.id,
-            person_name: text_content(person),
-            role: role,
-            organization: safe_text(org),
-            position: idx
-          })
-        end
-      end)
-    end
-
-    # Edition editors (from editionStmt)
-    if edition_stmt do
-      resp_stmts = find_children(elem(edition_stmt, 2), "respStmt")
-
-      resp_stmts
-      |> Enum.with_index(200)
-      |> Enum.each(fn {{_name, _attrs, children}, idx} ->
-        person = find_child(children, "persName")
-        org = find_child(children, "orgName")
-        resp = find_child(children, "resp")
-
-        role =
-          case safe_text(resp) do
-            text when is_binary(text) ->
-              cond do
-                String.contains?(text, "Edición") -> "editor"
-                String.contains?(text, "Revisión") -> "reviewer"
-                true -> "digital_editor"
-              end
-
-            _ ->
-              "digital_editor"
-          end
-
-        if person do
-          create_editor(%{
-            play_id: play.id,
-            person_name: text_content(person),
-            role: role,
-            organization: safe_text(org),
-            position: idx
-          })
-        end
-      end)
+  defp resp_role(resp) when is_binary(resp) do
+    cond do
+      String.contains?(resp, "Edición") -> "editor"
+      String.contains?(resp, "Revisión") -> "reviewer"
+      true -> "digital_editor"
     end
   end
 
+  defp resp_role(nil), do: "digital_editor"
+
   # --- Sources ---
 
-  defp import_sources(file_desc, play) do
-    source_desc = find_child(elem(file_desc, 2), "sourceDesc")
+  # <bibl> directly under <sourceDesc>, or inside <listBibl>.
+  defp sources(nil), do: []
 
-    if source_desc do
-      # Look for <bibl> directly under <sourceDesc>, or inside <listBibl>
-      bibls =
-        case find_child(elem(source_desc, 2), "listBibl") do
-          nil -> find_children(elem(source_desc, 2), "bibl")
-          list_bibl -> find_children(elem(list_bibl, 2), "bibl")
-        end
+  defp sources({_name, _attrs, children}) do
+    case find_child(children, "sourceDesc") do
+      nil ->
+        []
 
-      bibls
-      |> Enum.with_index()
-      |> Enum.each(fn {{_name, _attrs, children}, idx} ->
-        editor_el = find_child(children, "editor")
-
-        editor_role =
-          case editor_el do
-            {_, attrs, _} -> attr_value(attrs, "role")
-            _ -> nil
+      {_name, _attrs, desc_children} ->
+        bibls =
+          case find_child(desc_children, "listBibl") do
+            nil -> find_children(desc_children, "bibl")
+            {_name, _attrs, list_children} -> find_children(list_children, "bibl")
           end
 
-        create_source(%{
-          play_id: play.id,
-          title: safe_text(find_child(children, "title")),
-          author: safe_text(find_child(children, "author")),
-          editor: safe_text(editor_el),
-          editor_role: editor_role,
-          publisher: safe_text(find_child(children, "publisher")),
-          pub_place: safe_text(find_child(children, "pubPlace")),
-          pub_date: safe_text(find_child(children, "date")),
-          note: safe_text(find_child(children, "note")),
-          language: safe_text(find_child(children, "lang")),
-          position: idx
-        })
-      end)
+        bibls |> Enum.with_index() |> Enum.map(&source/1)
     end
+  end
+
+  defp source({{_name, _attrs, children}, position}) do
+    editor_el = find_child(children, "editor")
+
+    %{
+      title: safe_text(find_child(children, "title")),
+      author: safe_text(find_child(children, "author")),
+      editor: safe_text(editor_el),
+      editor_role: editor_el && attr_value(elem(editor_el, 1), "role"),
+      publisher: safe_text(find_child(children, "publisher")),
+      pub_place: safe_text(find_child(children, "pubPlace")),
+      pub_date: safe_text(find_child(children, "date")),
+      note: safe_text(find_child(children, "note")),
+      language: safe_text(find_child(children, "lang")),
+      position: position
+    }
   end
 
   # --- Witnesses ---
 
-  # `sourceDesc/listWit`, nested lists read in order (S3). A siglum the play already has —
-  # a witness typed by hand, a modern edition in its bibliography, or one earlier in the
-  # same file — is left out (Witnesses.taken_sigla/1, after reset_tei_content/1 removed the
-  # file's own). So is a witness printing the same line as one the play kept: most
-  # FileMaker witnesses have no siglum, and the play's own export lists them. A witness
-  # with nothing to print fails its changeset and is left out too.
-  defp import_witnesses(file_desc, play) do
-    with {_, _, desc_children} <- find_child(elem(file_desc, 2), "sourceDesc"),
-         {_, _, _} = list_wit <- find_child(desc_children, "listWit") do
-      kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&Witnesses.plain/1)
+  # `sourceDesc/listWit`, nested lists read in order (S3). Which of them the play keeps
+  # depends on the sigla it already has, so that is the writer's call.
+  defp witnesses(nil), do: []
 
-      list_wit
-      |> witness_elements()
-      |> Enum.reduce(Witnesses.taken_sigla(play.id), fn witness, taken ->
-        attrs = witness |> witness_attrs() |> Map.merge(%{play_id: play.id, origin: "tei"})
-
-        if attrs.siglum in taken or Witnesses.plain(struct(Witness, attrs)) in kept do
-          taken
-        else
-          _ = Witnesses.create_witness(attrs)
-          if attrs.siglum, do: MapSet.put(taken, attrs.siglum), else: taken
-        end
-      end)
+  defp witnesses({_name, _attrs, children}) do
+    with {_name, _attrs, desc_children} <- find_child(children, "sourceDesc"),
+         {_name, _attrs, _children} = list_wit <- find_child(desc_children, "listWit") do
+      list_wit |> witness_elements() |> Enum.map(&witness_attrs/1)
+    else
+      nil -> []
     end
-
-    :ok
   end
 
   defp witness_elements({_name, _attrs, children}) do
@@ -868,40 +628,41 @@ defmodule Playcode.Import.TeiParser do
   # `listPlace` supplies the places and their containment; `setting` supplies this
   # play's links. Reading them separately is what keeps a pure container — Italia in
   # `<place xml:id="italia">…<place xml:id="roma">` — from becoming a setting.
-  defp import_places(nil, _play), do: :ok
-
-  defp import_places({_name, _attrs, children}, play) do
-    case find_child(children, "settingDesc") do
-      nil ->
-        :ok
-
-      {_n, _a, setting_children} ->
-        list_place = find_child(setting_children, "listPlace")
-        setting = find_child(setting_children, "setting")
-
-        if list_place, do: import_list_place(list_place, nil)
-        if setting, do: import_setting(setting, play)
-
-        :ok
+  defp places(profile_desc) do
+    case setting_desc_child(profile_desc, "listPlace") do
+      nil -> []
+      list_place -> list_places(list_place)
     end
   end
 
-  defp import_list_place({_name, _attrs, children}, parent_id) do
-    children
-    |> Enum.filter(&match?({"place", _, _}, &1))
-    |> Enum.each(&import_place(&1, parent_id))
+  defp settings(profile_desc) do
+    case setting_desc_child(profile_desc, "setting") do
+      nil -> []
+      setting -> setting_links(setting)
+    end
   end
 
-  defp import_place({_name, attrs, children} = place_el, parent_id) do
+  defp setting_desc_child(nil, _name), do: nil
+
+  defp setting_desc_child({_name, _attrs, children}, name) do
+    with {_n, _a, setting_children} <- find_child(children, "settingDesc"),
+         do: find_child(setting_children, name)
+  end
+
+  defp list_places({_name, _attrs, children}) do
+    for {"place", _, _} = place <- children, do: place(place)
+  end
+
+  # A place and the places nested in it. `slug_declared` is false when the slug was
+  # derived from the name, which the writer warns about if it finds that slug taken.
+  defp place({_name, attrs, children} = place_el) do
     declared_slug = attr_value(attrs, "xml:id")
-    slug = declared_slug || Places.slugify(first_place_name(children))
     {latitude, longitude} = place_geo(children)
 
     place_attrs =
       %{
-        "slug" => slug,
+        "slug" => declared_slug || Places.slugify(first_place_name(children)),
         "type" => attr_value(attrs, "type") || "other",
-        "parent_place_id" => parent_id,
         "is_fictional" => attr_value(attrs, "subtype") == "fictional",
         "latitude" => latitude,
         "longitude" => longitude,
@@ -910,31 +671,7 @@ defmodule Playcode.Import.TeiParser do
       }
       |> Map.merge(place_idno(children))
 
-    case Places.find_or_create_by_slug(place_attrs) do
-      {:ok, place, outcome} ->
-        cond do
-          outcome != :existing ->
-            :ok
-
-          # No xml:id means the slug was derived from the name, so two distinct
-          # referents that happen to share a name silently become one row. Our own
-          # exporter always writes xml:id; a hand-authored file may not.
-          is_nil(declared_slug) ->
-            Logger.warning(
-              "TEI import: <place> without xml:id resolved to existing place #{inspect(slug)} " <>
-                "by name — if these are different places, give each an xml:id"
-            )
-
-          true ->
-            Logger.info("TEI import: place #{slug} already exists, left unchanged")
-        end
-
-        # Nested <place> elements are this place's children.
-        import_list_place(place_el, place.id)
-
-      {:error, changeset} ->
-        Logger.warning("TEI import: could not create place #{slug}: #{inspect(changeset.errors)}")
-    end
+    %{attrs: place_attrs, slug_declared: declared_slug != nil, places: list_places(place_el)}
   end
 
   defp place_names(children) do
@@ -1027,45 +764,17 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  defp import_setting({_name, _attrs, children}, play) do
+  defp setting_links({_name, _attrs, children}) do
     children
     |> Enum.filter(&match?({"placeName", _, _}, &1))
     |> Enum.with_index()
-    |> Enum.each(fn {{_n, attrs, name_children}, index} ->
-      slug = attrs |> attr_value("ref") |> to_string() |> String.trim_leading("#")
-
-      case Repo.get_by(Places.Place, slug: slug) do
-        nil ->
-          Logger.warning("TEI import: setting references unknown place #{inspect(slug)}")
-
-        place ->
-          link_attrs = %{
-            "role" => attr_value(attrs, "ana") || "setting",
-            "position" => index,
-            "note" => setting_note(name_children),
-            "origin" => "tei"
-          }
-
-          # A hand-linked place (origin "manual") surviving from before this file ever
-          # mentioned it collides with the (play_id, place_id) unique index on a blind
-          # insert — reset_tei_content only clears this play's own "tei" links, on
-          # purpose. Leave the curated row alone: writing "tei" over its origin would
-          # hand it to reset_tei_content, and the next re-import would delete it along
-          # with its note. Only a link this importer already owns gets refreshed.
-          case Repo.get_by(Places.PlayPlace, play_id: play.id, place_id: place.id) do
-            nil ->
-              Places.link_place(play.id, place.id, link_attrs)
-
-            %{origin: "tei"} = existing ->
-              Places.update_play_place(existing, link_attrs)
-
-            existing ->
-              Logger.info(
-                "TEI import: <setting> names #{inspect(slug)}, already linked with " <>
-                  "origin #{inspect(existing.origin)} — left untouched"
-              )
-          end
-      end
+    |> Enum.map(fn {{_n, attrs, name_children}, index} ->
+      %{
+        slug: attrs |> attr_value("ref") |> to_string() |> String.trim_leading("#"),
+        role: attr_value(attrs, "ana") || "setting",
+        position: index,
+        note: setting_note(name_children)
+      }
     end)
   end
 
@@ -1078,368 +787,271 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  # --- Text content (front, body, back) ---
+  # --- Text (front, body) ---
 
-  defp import_text({_name, _attrs, children}, play) do
-    front = find_child(children, "front")
-    body = find_child(children, "body")
+  defp text(nil), do: %{characters: [], editorial_notes: [], divisions: []}
 
-    position = 0
+  defp text({_name, _attrs, children}) do
+    front = front(find_child(children, "front"))
+    body = body(find_child(children, "body"), front.next_position)
 
-    position =
-      if front do
-        import_front(front, play, position)
-      else
-        position
-      end
-
-    if body do
-      import_body(body, play, position)
-    end
+    %{
+      characters: front.characters,
+      editorial_notes: front.editorial_notes,
+      divisions: front.divisions ++ body
+    }
   end
 
   # --- Front matter ---
 
-  defp import_front({_name, _attrs, children}, play, start_pos) do
-    # Import cast list and front matter divs
-    pos = start_pos
+  # Each <div> of the front takes a position, which the body's divisions continue; the
+  # title page and anything else take none. A cast list is the play's characters and an
+  # `elenco` division; any other div is an editorial note.
+  defp front(nil), do: %{characters: [], editorial_notes: [], divisions: [], next_position: 0}
 
-    Enum.reduce(children, pos, fn
-      {"titlePage", _attrs, _children}, acc ->
-        # Skip title page, it's metadata we already have
-        acc
+  defp front({_name, _attrs, children}) do
+    divs =
+      for(
+        {"div", attrs, div_children} <- children,
+        do: {attr_value(attrs, "type") || "front", div_children}
+      )
+      |> Enum.with_index()
 
-      {"div", attrs, div_children} = _div, acc ->
-        type = attr_value(attrs, "type") || "front"
-        import_front_div(type, div_children, play, acc)
-
-      _, acc ->
-        acc
-    end)
+    %{
+      characters:
+        Enum.flat_map(divs, fn
+          {{"elenco", div_children}, _pos} -> cast_list(find_child(div_children, "castList"))
+          _other -> []
+        end),
+      divisions:
+        for({{"elenco", div_children}, pos} <- divs, do: elenco_division(div_children, pos)),
+      editorial_notes:
+        Enum.flat_map(divs, fn
+          {{"elenco", _div_children}, _pos} -> []
+          {{type, div_children}, pos} -> editorial_note(type, div_children, pos)
+        end),
+      next_position: length(divs)
+    }
   end
 
-  defp import_front_div("elenco", children, play, pos) do
-    # Cast list
-    cast_list = find_child(children, "castList")
-
-    if cast_list do
-      import_cast_list(cast_list, play)
-    end
-
-    # Create a division for the elenco
-    case PlayContent.create_division(%{
-           play_id: play.id,
-           type: "elenco",
-           title: safe_text(find_child(children, "head")),
-           position: pos
-         }) do
-      {:ok, _div} -> :ok
-      {:error, cs} -> Repo.rollback({:division_create_failed, cs})
-    end
-
-    pos + 1
+  defp elenco_division(children, pos) do
+    %{
+      type: "elenco",
+      number: nil,
+      title: safe_text(find_child(children, "head")),
+      position: pos,
+      notes: [],
+      elements: [],
+      divisions: []
+    }
   end
 
-  defp import_front_div(type, children, play, pos) do
-    # Generic front matter div (dedication, editorial note, etc.)
-    heading = safe_text(find_child(children, "head"))
-
-    # Store as editorial note
+  # Generic front matter div (dedication, editor's introduction, …), kept when it has
+  # paragraphs.
+  defp editorial_note(type, children, pos) do
     paragraphs =
       children
       |> find_children("p")
       |> Enum.map(&text_content/1)
       |> Enum.join("\n\n")
 
-    if paragraphs != "" do
-      section_type =
-        case type do
-          "introduccion_editor" -> "introduccion_editor"
-          "dedicatoria" -> "dedicatoria"
-          "argumento" -> "argumento"
-          "prologo" -> "prologo"
-          _ -> "nota"
-        end
-
-      create_note(%{
-        play_id: play.id,
-        section_type: section_type,
-        heading: heading,
-        content: paragraphs,
-        position: pos
-      })
+    if paragraphs == "" do
+      []
+    else
+      [
+        %{
+          section_type: section_type(type),
+          heading: safe_text(find_child(children, "head")),
+          content: paragraphs,
+          position: pos
+        }
+      ]
     end
-
-    pos + 1
   end
+
+  defp section_type(type) when type in ~w(introduccion_editor dedicatoria argumento prologo),
+    do: type
+
+  defp section_type(_type), do: "nota"
 
   # --- Cast list ---
 
-  defp import_cast_list({_name, _attrs, children}, play) do
-    cast_items = find_children(children, "castItem")
+  defp cast_list(nil), do: []
 
-    cast_items
+  defp cast_list({_name, _attrs, children}) do
+    children
+    |> find_children("castItem")
     |> Enum.with_index()
-    |> Enum.each(fn {{_name, attrs, item_children}, idx} ->
-      role = find_child(item_children, "role")
-      role_desc = find_child(item_children, "roleDesc")
-      is_hidden = attr_value(attrs, "ana") == "oculto"
+    |> Enum.flat_map(fn {{_name, attrs, item_children}, idx} ->
+      case find_child(item_children, "role") do
+        nil ->
+          []
 
-      if role do
-        {_role_name, role_attrs, _role_children} = role
-        xml_id = attr_value(role_attrs, "xml:id") || attr_value(role_attrs, "id")
-        name = text_content(role) |> String.trim()
+        {_role_name, role_attrs, _role_children} = role ->
+          name = role |> text_content() |> String.trim()
+          xml_id = attr_value(role_attrs, "xml:id") || attr_value(role_attrs, "id")
 
-        # Clean xml_id (some have newlines)
-        xml_id = if xml_id, do: String.trim(xml_id), else: name
-
-        PlayContent.create_character_unless_exists(%{
-          play_id: play.id,
-          xml_id: xml_id,
-          name: name,
-          description: safe_text(role_desc),
-          is_hidden: is_hidden,
-          position: idx
-        })
+          [
+            %{
+              # Clean xml_id (some have newlines)
+              xml_id: if(xml_id, do: String.trim(xml_id), else: name),
+              name: name,
+              description: safe_text(find_child(item_children, "roleDesc")),
+              is_hidden: attr_value(attrs, "ana") == "oculto",
+              position: idx
+            }
+          ]
       end
     end)
   end
 
   # --- Body (acts, scenes, speeches, etc.) ---
 
-  defp import_body({_name, _attrs, children}, play, start_pos) do
+  defp body(nil, _first), do: []
+
+  defp body({_name, _attrs, children}, first) do
     children
-    |> Enum.filter(fn
-      {name, _, _} -> name in ["div1", "div"]
-      _ -> false
-    end)
-    |> Enum.with_index(start_pos)
-    |> Enum.each(fn {{_name, attrs, act_children}, pos} ->
-      type = (attr_value(attrs, "type") || "acto") |> String.downcase()
-      number = parse_int(attr_value(attrs, "n"))
-      {heading, head_notes} = text_and_notes(find_child(act_children, "head"))
+    |> Enum.filter(&match?({name, _, _} when name in ["div1", "div"], &1))
+    |> Enum.with_index(first)
+    |> Enum.map(fn {{_name, attrs, act_children}, pos} ->
+      {heading, notes} = text_and_notes(find_child(act_children, "head"))
+      {elements, scenes} = act_content(act_children)
 
-      act_div =
-        case PlayContent.create_division(%{
-               play_id: play.id,
-               type: type,
-               number: number,
-               title: heading,
-               position: pos
-             }) do
-          {:ok, div} -> div
-          {:error, cs} -> Repo.rollback({:division_create_failed, cs})
-        end
-
-      create_text_notes(%{division_id: act_div.id}, head_notes, play)
-
-      import_act_content(act_children, play, act_div)
+      %{
+        type: (attr_value(attrs, "type") || "acto") |> String.downcase(),
+        number: parse_int(attr_value(attrs, "n")),
+        title: heading,
+        position: pos,
+        notes: notes,
+        elements: elements,
+        divisions: scenes
+      }
     end)
   end
 
-  defp import_act_content(children, play, act_div) do
-    # Process children sequentially, tracking element position
-    {_pos, _scene_pos} =
-      Enum.reduce(children, {0, 0}, fn
-        {"head", _, _}, acc ->
-          # Already handled as division title
-          acc
+  # An act's own elements and its scenes. The act's elements and its scenes' share one
+  # position counter: a scene's first element follows the last element before it.
+  defp act_content(children) do
+    {_el_pos, _scene_pos, elements, scenes} =
+      Enum.reduce(children, {0, 0, [], []}, fn
+        {"div2", attrs, scene_children}, {el_pos, scene_pos, elements, scenes} ->
+          {heading, notes} = text_and_notes(find_child(scene_children, "head"))
+          scene_elements = scene_content(scene_children, el_pos)
 
-        {"div2", attrs, scene_children}, {el_pos, scene_pos} ->
-          # Scene subdivision
-          scene_type = (attr_value(attrs, "type") || "escena") |> String.downcase()
-          number = parse_int(attr_value(attrs, "n"))
-          {heading, head_notes} = text_and_notes(find_child(scene_children, "head"))
+          scene = %{
+            type: (attr_value(attrs, "type") || "escena") |> String.downcase(),
+            number: parse_int(attr_value(attrs, "n")),
+            title: heading,
+            position: scene_pos,
+            notes: notes,
+            elements: scene_elements,
+            divisions: []
+          }
 
-          scene_div =
-            case PlayContent.create_division(%{
-                   play_id: play.id,
-                   parent_id: act_div.id,
-                   type: scene_type,
-                   number: number,
-                   title: heading,
-                   position: scene_pos
-                 }) do
-              {:ok, div} -> div
-              {:error, cs} -> Repo.rollback({:division_create_failed, cs})
-            end
+          {el_pos + length(scene_elements), scene_pos + 1, elements, [scene | scenes]}
 
-          create_text_notes(%{division_id: scene_div.id}, head_notes, play)
-
-          new_el_pos = import_scene_content(scene_children, play, scene_div, el_pos)
-          {new_el_pos, scene_pos + 1}
-
-        {"sp", attrs, sp_children}, {el_pos, scene_pos} ->
-          new_pos = import_speech(attrs, sp_children, play, act_div, el_pos)
-          {new_pos, scene_pos}
-
-        {"stage", _attrs, _} = stage, {el_pos, scene_pos} ->
-          import_stage_direction(stage, play, act_div, nil, el_pos)
-          {el_pos + 1, scene_pos}
-
-        {"p", _, _} = para, {el_pos, scene_pos} ->
-          import_prose(para, play, act_div, nil, el_pos)
-          {el_pos + 1, scene_pos}
-
-        {"lg", attrs, lg_children}, {el_pos, scene_pos} ->
-          {import_line_group(attrs, lg_children, play, act_div, nil, el_pos), scene_pos}
-
-        {"trailer", _, _} = trailer, {el_pos, scene_pos} ->
-          import_trailer(trailer, play, act_div, el_pos)
-          {el_pos + 1, scene_pos}
-
-        _, acc ->
-          acc
+        child, {el_pos, scene_pos, elements, scenes} = acc ->
+          case act_element(child, el_pos) do
+            nil -> acc
+            element -> {el_pos + 1, scene_pos, [element | elements], scenes}
+          end
       end)
+
+    {Enum.reverse(elements), Enum.reverse(scenes)}
   end
 
-  defp import_scene_content(children, play, scene_div, start_pos) do
-    Enum.reduce(children, start_pos, fn
-      {"head", _, _}, pos ->
-        pos
+  # An element directly in an act; nil for anything else (the head is the act's title).
+  defp act_element({"sp", attrs, children}, pos), do: speech(attrs, children, pos)
+  defp act_element({"stage", _, _} = stage, pos), do: stage_direction(stage, pos)
+  defp act_element({"p", _, _} = para, pos), do: prose(para, pos)
+  defp act_element({"lg", attrs, children}, pos), do: line_group(attrs, children, pos)
+  defp act_element({"trailer", _, _} = trailer, pos), do: trailer(trailer, pos)
+  defp act_element(_other, _pos), do: nil
 
-      {"sp", attrs, sp_children}, pos ->
-        import_speech(attrs, sp_children, play, scene_div, pos)
-
-      {"stage", _, _} = stage, pos ->
-        import_stage_direction(stage, play, scene_div, nil, pos)
-        pos + 1
-
-      {"trailer", _, _} = trailer, pos ->
-        import_trailer(trailer, play, scene_div, pos)
-        pos + 1
-
-      _, pos ->
-        pos
-    end)
+  # A scene's speeches, stage directions and trailer, numbered from `first`. Nothing else
+  # in a scene is read.
+  defp scene_content(children, first) do
+    children
+    |> Enum.filter(&match?({name, _, _} when name in ~w(sp stage trailer), &1))
+    |> Enum.with_index(first)
+    |> Enum.map(fn {child, pos} -> act_element(child, pos) end)
   end
 
   # --- Speech ---
 
-  defp import_speech(attrs, children, play, division, start_pos) do
-    who = attr_value(attrs, "who")
-    speaker_elem = find_child(children, "speaker")
-    {speaker_label, speaker_notes} = text_and_notes(speaker_elem)
+  defp speech(attrs, children, pos) do
+    {speaker_label, notes} = text_and_notes(find_child(children, "speaker"))
 
-    # Resolve characters from who attribute (supports multi-character who="#ALB #COR")
-    character_ids = resolve_characters(play.id, who)
+    %{
+      type: "speech",
+      position: pos,
+      speaker_label: speaker_label,
+      who: who(attr_value(attrs, "who")),
+      notes: notes,
+      elements: speech_content(children)
+    }
+  end
 
-    speech =
-      case PlayContent.create_element(%{
-             play_id: play.id,
-             division_id: division.id,
-             type: "speech",
-             speaker_label: speaker_label,
-             position: start_pos
-           }) do
-        {:ok, el} -> el
-        {:error, cs} -> Repo.rollback({:element_create_failed, :speech, cs})
-      end
+  # A speech's line groups, lines, stage directions and paragraphs.
+  defp speech_content(children) do
+    children
+    |> Enum.filter(&match?({name, _, _} when name in ~w(lg l stage p), &1))
+    |> Enum.with_index()
+    |> Enum.map(fn
+      {{"lg", attrs, lg_children}, pos} -> line_group(attrs, lg_children, pos)
+      {{"l", _, _} = line, pos} -> verse_line(line, pos)
+      {{"stage", _, _} = stage, pos} -> stage_direction(stage, pos)
+      {{"p", _, _} = para, pos} -> prose(para, pos)
+    end)
+  end
 
-    create_text_notes(%{element_id: speech.id}, speaker_notes, play)
+  # who can be "#ALFONSO" (single) or "#ALB #COR" (multi-character, space-separated)
+  defp who(nil), do: []
 
-    # Associate characters with the speech
-    if character_ids != [] do
-      PlayContent.set_element_characters(speech.id, character_ids)
-    end
-
-    # Import child elements (lg groups, individual l elements, stage directions, p elements)
-    _child_pos =
-      Enum.reduce(children, 0, fn
-        {"speaker", _, _}, pos ->
-          pos
-
-        {"lg", attrs, lg_children}, pos ->
-          import_line_group(attrs, lg_children, play, division, speech.id, pos)
-
-        {"l", _, _} = line, pos ->
-          import_verse_line(line, play, division, speech, pos)
-          pos + 1
-
-        {"stage", _, _} = stage, pos ->
-          import_stage_direction(stage, play, division, speech.id, pos)
-          pos + 1
-
-        {"p", _, _} = para, pos ->
-          import_prose(para, play, division, speech.id, pos)
-          pos + 1
-
-        _, pos ->
-          pos
-      end)
-
-    start_pos + 1
+  defp who(who) do
+    who
+    |> String.split(~r/\s+/, trim: true)
+    |> Enum.map(&(&1 |> String.replace("#", "") |> String.trim()))
   end
 
   # --- Line group ---
 
-  defp import_line_group(attrs, children, play, division, parent_id, start_pos) do
-    verse_type = attr_value(attrs, "type")
-    part = attr_value(attrs, "part")
-
-    lg =
-      case PlayContent.create_element(%{
-             play_id: play.id,
-             division_id: division.id,
-             parent_id: parent_id,
-             type: "line_group",
-             verse_type: verse_type,
-             part: part,
-             position: start_pos
-           }) do
-        {:ok, el} -> el
-        {:error, cs} -> Repo.rollback({:element_create_failed, :line_group, cs})
-      end
-
-    Enum.reduce(children, 0, fn
-      {"l", _, _} = line, pos ->
-        import_verse_line(line, play, division, lg, pos)
-        pos + 1
-
-      {"stage", _, _} = stage, pos ->
-        import_stage_direction(stage, play, division, lg.id, pos)
-        pos + 1
-
-      _, pos ->
-        pos
-    end)
-
-    start_pos + 1
+  defp line_group(attrs, children, pos) do
+    %{
+      type: "line_group",
+      position: pos,
+      verse_type: attr_value(attrs, "type"),
+      part: attr_value(attrs, "part"),
+      notes: [],
+      elements:
+        children
+        |> Enum.filter(&match?({name, _, _} when name in ~w(l stage), &1))
+        |> Enum.with_index()
+        |> Enum.map(fn
+          {{"l", _, _} = line, line_pos} -> verse_line(line, line_pos)
+          {stage, stage_pos} -> stage_direction(stage, stage_pos)
+        end)
+    }
   end
 
   # --- Verse line ---
 
-  defp import_verse_line(
-         {name, attrs, children},
-         play,
-         division,
-         parent,
-         pos
-       ) do
-    line_id = attr_value(attrs, "xml:id") || attr_value(attrs, "id")
-    line_number = parse_int(attr_value(attrs, "n"))
-    part = attr_value(attrs, "part")
-    rend = attr_value(attrs, "rend")
+  defp verse_line({_name, attrs, children} = line, pos) do
     is_aside = aside_delivery?(children)
-    line = {name, attrs, children}
     {content, notes} = line |> verse_line_content(is_aside) |> take_notes(line)
 
-    case PlayContent.create_element(%{
-           play_id: play.id,
-           division_id: division.id,
-           parent_id: parent.id,
-           type: "verse_line",
-           content: content,
-           line_number: line_number,
-           line_id: line_id,
-           part: part,
-           rend: rend,
-           is_aside: is_aside,
-           position: pos
-         }) do
-      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
-      {:error, cs} -> Repo.rollback({:element_create_failed, :verse_line, cs})
-    end
+    %{
+      type: "verse_line",
+      position: pos,
+      content: content,
+      line_number: parse_int(attr_value(attrs, "n")),
+      line_id: attr_value(attrs, "xml:id") || attr_value(attrs, "id"),
+      part: attr_value(attrs, "part"),
+      rend: attr_value(attrs, "rend"),
+      is_aside: is_aside,
+      notes: notes,
+      elements: []
+    }
   end
 
   # Returns true if the children of an <l> element indicate an aside, either via:
@@ -1483,61 +1095,39 @@ defmodule Playcode.Import.TeiParser do
   defp aside_seg?({"seg", attrs, _}), do: attr_value(attrs, "type") == "aside"
   defp aside_seg?(_), do: false
 
-  # --- Stage direction ---
+  # --- Stage direction, trailer, prose ---
 
-  defp import_stage_direction({_name, attrs, _children} = stage, play, division, parent_id, pos) do
+  defp stage_direction({_name, attrs, _children} = stage, pos) do
     {content, notes} = text_and_notes(stage)
 
-    case PlayContent.create_element(%{
-           play_id: play.id,
-           division_id: division.id,
-           parent_id: parent_id,
-           type: "stage_direction",
-           content: content,
-           stage_type: attr_value(attrs, "type"),
-           position: pos
-         }) do
-      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
-      {:error, cs} -> Repo.rollback({:element_create_failed, :stage_direction, cs})
-    end
+    %{
+      type: "stage_direction",
+      position: pos,
+      content: content,
+      stage_type: attr_value(attrs, "type"),
+      notes: notes,
+      elements: []
+    }
   end
 
-  # --- Trailer ---
-
-  defp import_trailer(trailer, play, division, pos) do
+  defp trailer(trailer, pos) do
     {content, notes} = text_and_notes(trailer)
-
-    case PlayContent.create_element(%{
-           play_id: play.id,
-           division_id: division.id,
-           type: "trailer",
-           content: content,
-           position: pos
-         }) do
-      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
-      {:error, cs} -> Repo.rollback({:element_create_failed, :trailer, cs})
-    end
+    %{type: "trailer", position: pos, content: content, notes: notes, elements: []}
   end
 
-  # --- Prose ---
-
-  defp import_prose({_name, _attrs, children} = para, play, division, parent_id, pos) do
+  defp prose({_name, _attrs, children} = para, pos) do
     is_aside = aside_in_children?(children)
     marked = if is_aside, do: aside_content(children), else: text_content(para, :mark)
     {content, notes} = take_notes(marked, para)
 
-    case PlayContent.create_element(%{
-           play_id: play.id,
-           division_id: division.id,
-           parent_id: parent_id,
-           type: "prose",
-           content: content,
-           is_aside: is_aside,
-           position: pos
-         }) do
-      {:ok, el} -> create_text_notes(%{element_id: el.id}, notes, play)
-      {:error, cs} -> Repo.rollback({:element_create_failed, :prose, cs})
-    end
+    %{
+      type: "prose",
+      position: pos,
+      content: content,
+      is_aside: is_aside,
+      notes: notes,
+      elements: []
+    }
   end
 
   # Check if children contain a <seg type="aside"> element
@@ -1551,25 +1141,6 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.filter(&(aside_seg?(&1) or match?({"note", _, _}, &1)))
     |> pieces(:mark, &text_content(&1, :mark))
     |> squeeze()
-  end
-
-  # --- Character resolution ---
-
-  defp resolve_characters(_play_id, nil), do: []
-
-  defp resolve_characters(play_id, who) do
-    # who can be "#ALFONSO" (single) or "#ALB #COR" (multi-character, space-separated)
-    who
-    |> String.split(~r/\s+/, trim: true)
-    |> Enum.map(fn ref ->
-      xml_id = ref |> String.replace("#", "") |> String.trim()
-      PlayContent.find_character_by_xml_id(play_id, xml_id)
-    end)
-    |> Enum.reject(&is_nil/1)
-    |> Enum.map(& &1.id)
-    # A who attribute may repeat the same ref (e.g. "#horatio #barnardo #marcellus #barnardo")
-    # which would otherwise violate the element_characters unique index.
-    |> Enum.uniq()
   end
 
   # --- XML helpers ---
@@ -1683,9 +1254,10 @@ defmodule Playcode.Import.TeiParser do
   @note_mark ~r/ ?\x{E000}(\d+)([sn])\x{E001} ?/u
 
   # Takes the note marks out of `marked`, text `element` was read into with :mark.
-  # Returns the text and `[{offset, note}]`, the offset counting graphemes of the text
+  # Returns the text and its notes (parse_note/2), each offset counting graphemes of the text
   # without its << and >> markers and stage tags, as InlineMarkup.plain/1 does. A note
   # whose mark the reading dropped (inside a stripped aside <stage>) is dropped with it.
+  # So is a note with no text.
   # ponytail: two adjacent notes each with whitespace beside them ("a <note/><note/> b")
   # store "a  b" and the second note one grapheme later; the corpus has no note after a
   # space. Carry a pending space to the next text if one turns up.
@@ -1710,7 +1282,9 @@ defmodule Playcode.Import.TeiParser do
     last = plain_length(text)
 
     {text,
-     found |> Enum.reverse() |> Enum.map(fn {offset, note} -> {min(offset, last), note} end)}
+     found
+     |> Enum.reverse()
+     |> Enum.flat_map(fn {offset, note} -> parse_note(note, min(offset, last)) end)}
   end
 
   @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>/
@@ -1729,14 +1303,14 @@ defmodule Playcode.Import.TeiParser do
     end)
   end
 
-  # An element of the play text read with its notes taken out: `{text, [{offset, note}]}`,
-  # or `{nil, []}` for no element.
+  # An element of the play text read with its notes taken out: `{text, [note]}`, or
+  # `{nil, []}` for no element.
   defp text_and_notes(nil), do: {nil, []}
   defp text_and_notes(element), do: element |> text_content(:mark) |> take_notes(element)
 
-  # A note's own fields, or nil when it has no text: there is nothing to show (the
-  # empty notes of the EMOTHE0010 test file).
-  defp parse_note({"note", attrs, children}) do
+  # A note's own fields at `offset`, as a list: empty when the note has no text, since
+  # there is nothing to show (the empty notes of the EMOTHE0010 test file).
+  defp parse_note({"note", attrs, children}, offset) do
     body =
       case find_children(children, "p") do
         [] ->
@@ -1751,33 +1325,19 @@ defmodule Playcode.Import.TeiParser do
 
     term = safe_text(find_child(children, "term"))
 
-    if body != "" do
-      %{
-        n: attr_value(attrs, "n"),
-        type: attr_value(attrs, "type"),
-        term: if(term in [nil, ""], do: nil, else: term),
-        body: body
-      }
+    if body == "" do
+      []
+    else
+      [
+        %{
+          offset: offset,
+          n: attr_value(attrs, "n"),
+          type: attr_value(attrs, "type"),
+          term: if(term in [nil, ""], do: nil, else: term),
+          body: body
+        }
+      ]
     end
-  end
-
-  # Stores the notes take_notes/2 found on `anchor`, %{element_id: id} or
-  # %{division_id: id}, in document order: `create_note/1` puts each after the notes
-  # already at its offset.
-  defp create_text_notes(anchor, notes, play) do
-    Enum.each(notes, fn {offset, note} ->
-      with %{} = fields <- parse_note(note) do
-        attrs =
-          fields
-          |> Map.merge(anchor)
-          |> Map.merge(%{play_id: play.id, offset: offset})
-
-        case PlayContent.create_note(attrs) do
-          {:ok, _note} -> :ok
-          {:error, cs} -> Repo.rollback({:note_create_failed, cs})
-        end
-      end
-    end)
   end
 
   defp safe_text(nil), do: nil

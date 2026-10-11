@@ -9,7 +9,7 @@ defmodule Playcode.Import.TeiCorpus do
   import Ecto.Query
 
   alias Playcode.Catalogue.Play
-  alias Playcode.Import.TeiParser
+  alias Playcode.Import.TeiImport
   alias Playcode.Repo
 
   require Logger
@@ -52,7 +52,7 @@ defmodule Playcode.Import.TeiCorpus do
   # The parser raises on some malformed files (over-long fields, Postgrex errors);
   # one bad file must not abort the whole corpus run.
   defp import_one(code, path) do
-    case TeiParser.import_file(path) do
+    case TeiImport.import_file(path) do
       {:ok, play} -> {:ok, code, play}
       {:error, reason} -> failure(code, reason)
     end

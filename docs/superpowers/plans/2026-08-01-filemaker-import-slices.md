@@ -207,7 +207,7 @@ Corpus baseline, soft delete and re-importable plays, work families and language
 the commit list, and the traps each one hit: **`archive/README.md`**.
 
 The one rule they leave behind that binds everything below: **a new curated `plays` column gets
-appended to `@platform_owned` in `lib/playcode/import/tei_parser.ex`, or the next TEI re-import
+appended to `@platform_owned` in `lib/playcode/import/tei_import.ex`, or the next TEI re-import
 erases it.** A new child table either carries `origin` or stays outside the importer's reach.
 
 ### S2 — Version metadata panel *(in progress, one field at a time)*
@@ -910,7 +910,7 @@ Fixed once here so every slice looks the same:
   conflict when they differ, overwritten only under `--force`. Introduced in S2a. This is the
   "bootstrap, not a dependency" rule made operational; without it the second import undoes a
   researcher's afternoon.
-- **New curated column ⇒ `@platform_owned`.** Append it in `lib/playcode/import/tei_parser.ex`, or
+- **New curated column ⇒ `@platform_owned`.** Append it in `lib/playcode/import/tei_import.ex`, or
   the next TEI re-import erases it. Add the regression test in the same commit.
 
 ## Open questions
