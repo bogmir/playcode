@@ -87,7 +87,13 @@ invite flow); `test/fixtures/` for TEI, Word and FileMaker sample files.
 
 **The TEI file is a complete copy of a play.** Export a play, import the file into an empty
 database, and every row comes back: the text and notes, the bibliography and witnesses, the curated
-columns. An export the import does not read back is a bug, not a deferral.
+columns. An export the import does not read back is a bug, not a deferral. **If TEI has an element
+or attribute for a piece of data, the export writes it there, wherever the data came from**: the
+file, a form, or FileMaker. FileMaker is imported once and not gone back to, so FileMaker data
+held only in the database cannot be recovered from the TEI files (`FilemakerSync` and the S3/S4
+imports write rows, not files); a new slice writes its data to the TEI from the start. The
+reverse holds too: what TEI can say and Playcode cannot store (which cast list a character is
+in) is a gap in Playcode.
 `docs/stakeholder/ida-y-vuelta.html` tables each part of a play against the admin, the TEI export,
 the TEI import, HTML/PDF/EPUB, the play page and the static site, in words the project reads; it is
 the only copy. A change that adds data to a play fills its row, and a cell short of "yes" is an
