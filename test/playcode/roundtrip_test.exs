@@ -12,8 +12,6 @@ defmodule Playcode.RoundtripTest do
   test/fixtures/tei_files/ when present (UTF-16 encoded TEI P5 XML).
   """
 
-  @tracked_dir Path.expand("../fixtures", __DIR__)
-  @corpus_dir Path.expand("../fixtures/tei_files", __DIR__)
   @fields ~w(acts scenes characters speeches verses line_groups stage_dirs asides
              split_parts verse_type_attrs hidden_chars heads front_notes speaker_refs notes
              inline_stages)a
@@ -563,94 +561,73 @@ defmodule Playcode.RoundtripTest do
     end
   end
 
-  # Three tracked fixtures run on every `mix test`, so CI exercises real corpus
-  # files end to end: one verse play with scenes, heads, asides, split lines and
-  # verse types, one prose play, and one with in-text notes (17: on lines and
-  # speakers). The rest of the tracked fixtures, plus the git-ignored
-  # corpus under test/fixtures/tei_files/ when present, run with
-  # `mix test --include slow`.
-  @default_fixtures ~w(
-    EMOTHE0746_LesOccasionsPerdues.xml
-    EMOTHE0776_LosRivales.xml
-    EMOTHE0705_LaVirginie.xml
-  )
+  @doc """
+  Imports the TEI file at `path`, exports it again and asserts the export lost nothing:
+  the structure's counts, the metadata, and the order of notes, characters, sources and
+  verse lines. Each corpus file's module, at the end of this file, calls it.
+  """
+  def assert_roundtrip(path) do
+    code = Path.basename(path, ".xml")
+    original_xml = read_original(path)
+    orig_counts = structural_counts(original_xml)
 
-  @fixture_paths (Path.wildcard(Path.join(@tracked_dir, "*.xml")) ++
-                    Path.wildcard(Path.join(@corpus_dir, "*.xml")))
-                 |> Enum.uniq_by(&Path.basename/1)
-                 |> Enum.sort_by(&Path.basename/1)
+    assert {:ok, play} = Playcode.Import.TeiImport.import_file(path),
+           "Failed to import #{path}"
 
-  for path <- @fixture_paths do
-    @path path
-    @code Path.basename(path, ".xml")
+    play_full = Playcode.Catalogue.get_play_with_all!(play.id)
+    exported_xml = Playcode.Export.TeiXml.generate(play_full)
+    export_counts = structural_counts(exported_xml)
 
-    if Path.basename(path) not in @default_fixtures do
-      @tag :slow
-    end
-
-    @tag timeout: 120_000
-    test "roundtrip: #{@code}" do
-      original_xml = read_original(@path)
-      orig_counts = structural_counts(original_xml)
-
-      assert {:ok, play} = Playcode.Import.TeiImport.import_file(@path),
-             "Failed to import #{@path}"
-
-      play_full = Playcode.Catalogue.get_play_with_all!(play.id)
-      exported_xml = Playcode.Export.TeiXml.generate(play_full)
-      export_counts = structural_counts(exported_xml)
-
-      mismatches =
-        for field <- @fields,
-            orig_val = Map.fetch!(orig_counts, field),
-            export_val = Map.fetch!(export_counts, field),
-            orig_val != export_val do
-          "  #{field}: original=#{orig_val} exported=#{export_val}"
-        end
-
-      assert mismatches == [],
-             "#{@code} structural mismatches:\n#{Enum.join(mismatches, "\n")}" <>
-               "\n\noriginal=#{inspect(orig_counts)}\nexported=#{inspect(export_counts)}"
-
-      assert_metadata_roundtrip(@code, play_full, exported_xml)
-
-      assert_order_preserved(
-        @code,
-        "notes (where each sits)",
-        note_anchors(original_xml),
-        note_anchors(exported_xml)
-      )
-
-      assert_no_pasted_notes(@code, original_xml, exported_xml)
-
-      assert_order_preserved(
-        @code,
-        "characters (castList role text)",
-        character_roles_in_order(original_xml),
-        character_roles_in_order(exported_xml)
-      )
-
-      assert_order_preserved(
-        @code,
-        "sources (sourceDesc/bibl/title)",
-        source_titles_in_order(original_xml),
-        source_titles_in_order(exported_xml)
-      )
-
-      assert_order_preserved(
-        @code,
-        "verse lines (<l> attrs)",
-        verse_line_tokens_in_order(original_xml),
-        verse_line_tokens_in_order(exported_xml)
-      )
-
-      assert_derived_verse_fields(@code, play_full, original_xml, exported_xml)
-
-      # The corpus predates <settingDesc>: a file without one must leave the
-      # gazetteer empty, or the places branch of the parser fired on nothing.
-      unless original_xml =~ "<settingDesc" do
-        assert Playcode.Places.list_places() == []
+    mismatches =
+      for field <- @fields,
+          orig_val = Map.fetch!(orig_counts, field),
+          export_val = Map.fetch!(export_counts, field),
+          orig_val != export_val do
+        "  #{field}: original=#{orig_val} exported=#{export_val}"
       end
+
+    assert mismatches == [],
+           "#{code} structural mismatches:\n#{Enum.join(mismatches, "\n")}" <>
+             "\n\noriginal=#{inspect(orig_counts)}\nexported=#{inspect(export_counts)}"
+
+    assert_metadata_roundtrip(code, play_full, exported_xml)
+
+    assert_order_preserved(
+      code,
+      "notes (where each sits)",
+      note_anchors(original_xml),
+      note_anchors(exported_xml)
+    )
+
+    assert_no_pasted_notes(code, original_xml, exported_xml)
+
+    assert_order_preserved(
+      code,
+      "characters (castList role text)",
+      character_roles_in_order(original_xml),
+      character_roles_in_order(exported_xml)
+    )
+
+    assert_order_preserved(
+      code,
+      "sources (sourceDesc/bibl/title)",
+      source_titles_in_order(original_xml),
+      source_titles_in_order(exported_xml)
+    )
+
+    assert_order_preserved(
+      code,
+      "verse lines (<l> attrs)",
+      verse_line_tokens_in_order(original_xml),
+      verse_line_tokens_in_order(exported_xml)
+    )
+
+    assert_derived_verse_fields(code, play_full, original_xml, exported_xml)
+
+    # The corpus predates <settingDesc>: a file without one must leave the
+    # gazetteer empty, or the places branch of the parser fired on nothing.
+    unless original_xml =~ "<settingDesc" do
+      assert Playcode.Places.list_places() == []
     end
   end
 
@@ -720,5 +697,50 @@ defmodule Playcode.RoundtripTest do
 
     defp settings(xml), do: Regex.scan(~r/ref="#([^"]+)" ana="([^"]+)"/, xml)
     defp place_ids(xml), do: Regex.scan(~r/<place xml:id="([^"]+)"/, xml)
+  end
+end
+
+# One module per corpus file, because a module's tests run one after another: the three
+# default plays in one module took 3-5 s and were the tail of the async run. Apart, they
+# run side by side, and so does the sweep under `--include slow`.
+#
+# Three tracked fixtures run on every `mix test`, so CI exercises real corpus files end
+# to end: one verse play with scenes, heads, asides, split lines and verse types, one
+# prose play, and one with in-text notes (17: on lines and speakers). The rest of the
+# tracked fixtures, plus the git-ignored corpus under test/fixtures/tei_files/ when
+# present, run with `mix test --include slow`.
+default_fixtures = ~w(
+  EMOTHE0746_LesOccasionsPerdues.xml
+  EMOTHE0776_LosRivales.xml
+  EMOTHE0705_LaVirginie.xml
+)
+
+{default_paths, slow_paths} =
+  (Path.wildcard(Path.expand("../fixtures/*.xml", __DIR__)) ++
+     Path.wildcard(Path.expand("../fixtures/tei_files/*.xml", __DIR__)))
+  |> Enum.uniq_by(&Path.basename/1)
+  |> Enum.sort_by(&Path.basename/1)
+  |> Enum.split_with(&(Path.basename(&1) in default_fixtures))
+
+# A whole play is imported in one transaction, which may hold its connection 15 s. Two
+# dozen imports at once on six cores outlast that, so at most `lanes` run side by side:
+# modules in one group never run together. The default fixtures come first, a lane each.
+lanes = max(div(System.schedulers_online(), 2), 1)
+
+for {path, i} <- Enum.with_index(default_paths ++ slow_paths) do
+  code = Path.basename(path, ".xml")
+  lane = :"roundtrip_#{rem(i, lanes)}"
+
+  defmodule Module.concat(Playcode.RoundtripTest, code) do
+    use Playcode.DataCase, async: true, group: lane
+
+    if path in slow_paths do
+      @moduletag :slow
+    end
+
+    @moduletag timeout: 120_000
+    @path path
+
+    test "roundtrip: #{code}", do: Playcode.RoundtripTest.assert_roundtrip(@path)
   end
 end
