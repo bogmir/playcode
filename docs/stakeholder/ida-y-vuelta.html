@@ -1,0 +1,570 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Playcode Round Trip</title>
+<!-- The one table of what reaches which output (CLAUDE.md, "The TEI file is a complete copy of a play").
+     A change that adds data to a play fills its row here; the technical detail of each gap is in
+     docs/backlog.md, "Round trip". -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: one reading column, the same family as preguntas.html; the table may scroll sideways
+     inside its own frame, with the feature column pinned. */
+  :root {
+    color-scheme: light;
+    --paper: #F4F6F3;
+    --surface: #FFFFFF;
+    --ink: #1A2130;
+    --muted: #586171;
+    --rule: #D6DBD4;
+    --accent: #27487A;
+    --accent-soft: #E4EBF5;
+    --yes: #1E6340;
+    --yes-bg: #E2F0E7;
+    --part: #7A4E0B;
+    --part-bg: #FBEFD6;
+    --no: #9B2C24;
+    --no-bg: #F8E1DE;
+    --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #12161B;
+      --surface: #1A1F26;
+      --ink: #E4E7EA;
+      --muted: #9AA3AE;
+      --rule: #2C333C;
+      --accent: #9DB9E8;
+      --accent-soft: #1F2B3D;
+      --yes: #8FD3A8;
+      --yes-bg: #17301F;
+      --part: #F0C677;
+      --part-bg: #33270F;
+      --no: #F2A39A;
+      --no-bg: #3A1C19;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #12161B;
+    --surface: #1A1F26;
+    --ink: #E4E7EA;
+    --muted: #9AA3AE;
+    --rule: #2C333C;
+    --accent: #9DB9E8;
+    --accent-soft: #1F2B3D;
+    --yes: #8FD3A8;
+    --yes-bg: #17301F;
+    --part: #F0C677;
+    --part-bg: #33270F;
+    --no: #F2A39A;
+    --no-bg: #3A1C19;
+  }
+
+  [hidden] { display: none !important; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+  }
+  main {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 3rem 5rem;
+    display: grid;
+    gap: 3.25rem;
+  }
+  main > * { min-width: 0; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  header { display: grid; gap: 1rem; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .lede { font-size: 1.125rem; max-width: 62ch; }
+  .meta { font-size: 0.875rem; color: var(--muted); }
+
+  section { display: grid; gap: 1.1rem; }
+  section > h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  .note { font-size: 0.9375rem; color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.85em; }
+
+  /* The six places a play reaches */
+  .places {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(8.5rem, auto) minmax(0, 1fr);
+    gap: 0.45rem 1.25rem;
+    font-size: 0.9375rem;
+  }
+  .places dt { font-weight: 600; }
+  .places dd { margin: 0; color: var(--muted); }
+  @media (max-width: 30rem) {
+    .places { grid-template-columns: minmax(0, 1fr); gap: 0.1rem; }
+    .places dd { margin-bottom: 0.55rem; }
+  }
+
+  /* In short: what comes back and what does not */
+  .tally { width: 100%; border-collapse: collapse; font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  .tally td { padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .tally td.num { text-align: right; white-space: nowrap; padding-right: 0; font-weight: 600; }
+  .tally tr.ok td.num { color: var(--yes); }
+  .tally tr.lost td.num { color: var(--no); }
+
+  /* The table */
+  .matrix-wrap {
+    overflow-x: auto;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+  }
+  .matrix-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .matrix {
+    border-collapse: separate;
+    border-spacing: 0;
+    font-size: 0.875rem;
+    min-width: 46rem;
+    width: 100%;
+  }
+  .matrix th, .matrix td {
+    padding: 0.5rem 0.6rem;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+    text-align: left;
+  }
+  .matrix thead th {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+    vertical-align: bottom;
+    line-height: 1.3;
+  }
+  .matrix tbody th {
+    font-weight: 500;
+    width: 15rem;
+    min-width: 12rem;
+  }
+  .matrix .feature {
+    position: sticky;
+    left: 0;
+    background: var(--surface);
+    box-shadow: 1px 0 0 var(--rule);
+    z-index: 1;
+  }
+  .matrix tr.group th {
+    font-family: var(--serif);
+    font-size: 1.05rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ink);
+    padding-top: 1rem;
+    background: var(--surface);
+  }
+  .matrix tbody tr:last-child > * { border-bottom: 0; }
+
+  .s {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.2rem;
+    padding: 0.05rem 0.45rem;
+    border-radius: 3px;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .s.yes { color: var(--yes); background: var(--yes-bg); }
+  .s.part { color: var(--part); background: var(--part-bg); }
+  .s.no { color: var(--no); background: var(--no-bg); font-weight: 600; }
+  .s.na { color: var(--muted); }
+  sup.fn { font-size: 0.7rem; line-height: 0; }
+  sup.fn a { text-decoration: none; font-weight: 600; }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.875rem; color: var(--muted); }
+  .legend span.s { margin-right: 0.3rem; }
+
+  ol.notes { margin: 0; padding-left: 1.6rem; display: grid; gap: 0.7rem; font-size: 0.9375rem; }
+  ol.notes li { padding-left: 0.2rem; scroll-margin-top: 1rem; }
+  ol.notes li:target { background: var(--accent-soft); border-radius: 4px; }
+
+  ol.next { margin: 0; padding-left: 1.4rem; display: grid; gap: 0.6rem; }
+  ol.next strong { font-weight: 600; }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
+    <h1>Where each part of a play goes</h1>
+    <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, and where something is lost on the way, above all between a play and its TEI file.</p>
+    <p class="meta">Prepared by Bogdan. Measured on 11 October 2026 on the 394 plays of the development copy.</p>
+  </header>
+
+  <section aria-labelledby="h-why">
+    <h2 id="h-why">Why the TEI file matters</h2>
+    <p>The TEI file is meant to be a complete copy of a play. It is published with the site as the edition's long-term archive, and it is how a play moves: a backup restored, a play loaded into another installation. If a play is exported and its file imported into an empty Playcode, everything should come back.</p>
+    <p>To check, every play was exported and its file imported again as a new play, then the two were compared field by field. The text comes back whole. Several things around it do not.</p>
+    <p class="note">Importing a file over the play it came from is a different case. That keeps what the team has set in Playcode (whether the play is complete, its family, its historical time) and everything brought in from FileMaker, so it loses much less. What it replaces is the text itself.</p>
+  </section>
+
+  <section aria-labelledby="h-short">
+    <h2 id="h-short">In short</h2>
+    <table class="tally">
+      <tbody>
+        <tr class="ok"><td>Lines, speeches, stage directions and prose: identical</td><td class="num">1,308,522</td></tr>
+        <tr class="ok"><td>Notes, editors, sources, dedications and introductions: identical</td><td class="num">5,789</td></tr>
+        <tr class="lost"><td>Bibliography references lost (115 plays)</td><td class="num">2,804</td></tr>
+        <tr class="lost"><td>Complete plays that come back as drafts</td><td class="num">373</td></tr>
+        <tr class="lost"><td>Plays whose cast list loses its heading</td><td class="num">319</td></tr>
+        <tr class="lost"><td>Translations that lose the play they translate</td><td class="num">153</td></tr>
+        <tr class="lost"><td>Plays that lose their historical time</td><td class="num">109</td></tr>
+        <tr class="lost"><td>Datings given only in words, lost</td><td class="num">18</td></tr>
+        <tr class="lost"><td>Plays with a cast list per act that come back with one</td><td class="num">4</td></tr>
+        <tr class="lost"><td>Witnesses that lose their FileMaker record number (107 plays)</td><td class="num">510</td></tr>
+        <tr class="lost"><td>Closing formulas (“FIN DEL PRIMER ACTO”) missing from the published site and the downloads</td><td class="num">224</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="h-places">
+    <h2 id="h-places">The six places</h2>
+    <dl class="places">
+      <dt>Edited</dt><dd>A form in Playcode’s admin pages where the team can change it.</dd>
+      <dt>Written to TEI</dt><dd>In the XML file Playcode exports, the one published with the site.</dd>
+      <dt>Read from TEI</dt><dd>Back in Playcode when that file is imported into an installation that does not have the play.</dd>
+      <dt>Downloads</dt><dd>The HTML, PDF and EPUB a reader can download.</dd>
+      <dt>Play page</dt><dd>The play’s page in Playcode itself.</dd>
+      <dt>Published site</dt><dd>The static edition published on emothe.uv.es.</dd>
+    </dl>
+  </section>
+
+  <section aria-labelledby="h-table">
+    <h2 id="h-table">The table</h2>
+    <div class="legend">
+      <span><span class="s yes">Yes</span>reaches it in full</span>
+      <span><span class="s part">Partly</span>reaches it with losses</span>
+      <span><span class="s no">No</span>does not reach it</span>
+      <span><span class="s na">—</span>has no place there</span>
+    </div>
+    <div class="matrix-wrap" tabindex="0" role="region" aria-label="Where each part of a play goes, scrollable table">
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th scope="col" class="feature">Part of the play</th>
+            <th scope="col">Edited</th>
+            <th scope="col">Written to TEI</th>
+            <th scope="col">Read from TEI</th>
+            <th scope="col">Downloads</th>
+            <th scope="col">Play page</th>
+            <th scope="col">Published site</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">About the play</th></tr>
+          <tr>
+            <th scope="row" class="feature">Title, author, publication details, licence</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n1" aria-label="note 1">1</a></sup></td>
+            <td><span class="s part">Partly</span><sup class="fn"><a href="#n2" aria-label="note 2">2</a></sup></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Language</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s na">—</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Which play a translation translates</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
+            <td><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Complete or draft</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n4" aria-label="note 4">4</a></sup></td>
+            <td><span class="s na">—</span></td>
+            <td><span class="s na">—</span></td>
+            <td><span class="s na">—</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Date of composition</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s part">Partly</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Historical time of the action</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n6" aria-label="note 6">6</a></sup></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Verse, prose or mixed</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n7" aria-label="note 7">7</a></sup></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Editors and their roles</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Sources of the text</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Witnesses: manuscripts and early printings</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s part">Partly</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Bibliography</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n10" aria-label="note 10">10</a></sup></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Places of the action</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+
+          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">Front matter and cast</th></tr>
+          <tr>
+            <th scope="row" class="feature">Dedications and editors’ introductions</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Cast list: characters, descriptions, hidden roles</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">The cast list’s heading; a second cast list</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+          </tr>
+
+          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">The text</th></tr>
+          <tr>
+            <th scope="row" class="feature">Acts, scenes, prologues, interludes</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Speeches, verses, prose, stage directions</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Verse forms: redondilla, romance…</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s part">Statistics only</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Split verses, indentation, asides, verse numbers</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Kind of stage direction; a verse’s identifier</th>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n13" aria-label="note 13">13</a></sup></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s na">—</span></td>
+            <td><span class="s na">—</span></td>
+            <td><span class="s na">—</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Closing formulas: “FIN DEL PRIMER ACTO”</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">A stage direction inside a verse</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Italics</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n15" aria-label="note 15">15</a></sup></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Notes in the text</th>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Statistics</th>
+            <td><span class="s na">—</span></td>
+            <td><span class="s na">—</span><sup class="fn"><a href="#n16" aria-label="note 16">16</a></sup></td>
+            <td><span class="s na">—</span></td>
+            <td><span class="s no">No</span></td>
+            <td><span class="s yes">Yes</span></td>
+            <td><span class="s yes">Yes</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">“Downloads” are one renderer for HTML and PDF and another, with the same sections, for EPUB.</p>
+  </section>
+
+  <section aria-labelledby="h-notes">
+    <h2 id="h-notes">Notes</h2>
+    <ol class="notes">
+      <li id="n1">One attribution, “fiable” on <i>The Shy Courtier</i> (EMOTHE0653), does not come back.</li>
+      <li id="n2">The downloads print the title, author, editors, sources, dedications and cast list; the EPUB also the original title and the licence. The publication details, the project and editorial statements and the identifiers are not printed.</li>
+      <li id="n3">The file says a play is a translation, but not which play it translates: 153 plays come back without their original. An adaptation or a <i>refundición</i> would lose even the kind of relationship (none is recorded yet).</li>
+      <li id="n4">Whether a play is complete is not in the file, so an imported play arrives as a draft. All 373 complete plays would be hidden from visitors and left off the published site until someone marked them complete again.</li>
+      <li id="n5">The date is written only when it has years. A dating given only in words, such as “posterior 1590 y anterior 1595”, is left out: 18 plays.</li>
+      <li id="n6">109 plays, 38 of them with an explanatory note.</li>
+      <li id="n7">No play has its form set by hand yet. Playcode works it out from the text, which does come back.</li>
+      <li id="n8">They come back marked as coming from the file, whatever their origin. Two digital editors of the same play come back as “editor” (3 plays), and one source loses its role “canon60” (EMOTHE0727).</li>
+      <li id="n9">All 510 witnesses of 107 plays come back, but without the FileMaker record number that ties each one to FileMaker, and line breaks inside a title or a note become spaces (25 fields in 9 plays).</li>
+      <li id="n10">The bibliography is written to the file in full, as structured TEI, but Playcode does not read it back: 2,804 references on 115 plays are lost. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
+      <li id="n11">Checked by an automated test. No play in the development copy has places yet, so the measurement could not count them.</li>
+      <li id="n12">The file holds one cast list, with no heading. 319 plays lose the heading (“Hablan en ella las personas siguientes”, “DRAMATIS PERSONAE”), and the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back with a single list. The play page and the downloads print each cast list with its heading, but every one lists all the characters; the published site prints one list without a heading.</li>
+      <li id="n13">Not editable in Playcode yet; both come from the TEI files.</li>
+      <li id="n14">The formula that closes an act or a play (“FIN DEL PRIMER ACTO”, “Terminat hora diem; terminat author opus”) is in the file and on the play page, but on no page of the published site and in none of the downloads: 224 of them in 131 plays.</li>
+      <li id="n15">Two italic passages side by side come back as one, and an empty one in a note is dropped. The text reads the same (10 places).</li>
+      <li id="n16">Worked out from the text each time, so not part of the file.</li>
+    </ol>
+  </section>
+
+  <section aria-labelledby="h-next">
+    <h2 id="h-next">What happens next</h2>
+    <ol class="next">
+      <li><strong>Read the bibliography back from the file.</strong> The largest loss, and the next piece of work.</li>
+      <li><strong>Write the rest into the file:</strong> complete or draft, the play a translation translates, the historical time, a dating given in words, the cast list’s heading and a play’s several cast lists, and each witness’s FileMaker record number.</li>
+      <li><strong>Show the closing formulas</strong> on the published site and in the downloads.</li>
+      <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
+    </ol>
+    <p class="note">None of this needs a decision from the team. What the source TEI files hold that Playcode does not read at all (the critical apparatus, line breaks, HTML typed into the text) is a separate list, in the <a href="preguntas.html">questions for the project</a>.</p>
+  </section>
+</main>
+</body>
+</html>
