@@ -152,6 +152,28 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # 18 corpus files credit two people in one respStmt (EMOTHE0211, 0679, 0718…); the
+  # second used to be dropped, though FileMaker's credits name them both.
+  test "a respStmt naming two people credits both, in order" do
+    xml =
+      roundtrip(
+        tei(
+          title_stmt: """
+          <respStmt>
+            <resp>Electronic edition: text adapted, edited for XML and encoded by</resp>
+            <persName>Tronch Pérez, Jesús</persName>
+            <persName>Zafra Alarcón, Sonia</persName>
+          </respStmt>
+          """
+        )
+      )
+
+    for xml <- [xml, roundtrip(xml)] do
+      assert xml_texts(xml, "persName", within: "respStmt") ==
+               ["Tronch Pérez, Jesús", "Zafra Alarcón, Sonia"]
+    end
+  end
+
   test "an all-capitals title is title-cased, a mixed-case one is left alone" do
     for {given, expected} <- [
           {"LOS RAMILLETES DE MADRID", "Los Ramilletes de Madrid"},
