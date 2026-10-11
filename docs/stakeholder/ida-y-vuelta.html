@@ -228,6 +228,12 @@
   ol.notes li { padding-left: 0.2rem; scroll-margin-top: 1rem; }
   ol.notes li:target { background: var(--accent-soft); border-radius: 4px; }
 
+  .homes { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+  .homes th, .homes td { text-align: left; padding: 0.5rem 0.75rem 0.5rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  .homes thead th { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+  .homes tbody th { font-weight: 500; }
+  .homes td code { white-space: normal; overflow-wrap: anywhere; }
+  .homes-wrap { overflow-x: auto; }
   ol.next { margin: 0; padding-left: 1.4rem; display: grid; gap: 0.6rem; }
   ol.next strong { font-weight: 600; }
 
@@ -248,6 +254,7 @@
   <section aria-labelledby="h-why">
     <h2 id="h-why">Why the TEI file matters</h2>
     <p>The TEI file is meant to be a complete copy of a play. It is published with the site as the edition's long-term archive, and it is how a play moves: a backup restored, a play loaded into another installation. If a play is exported and its file imported into an empty Playcode, everything should come back.</p>
+    <p>So the rule is: <strong>if TEI has a way to say it, it goes into the file</strong>, wherever it came from: the TEI file itself, a form in Playcode, or FileMaker. FileMaker’s data was imported once; whatever of it lives only in Playcode’s database cannot be recovered from the TEI files. That is why the table says where each part’s data came from.</p>
     <p>To check, every play was exported and its file imported again as a new play, then the two were compared field by field. The text comes back whole. Several things around it do not.</p>
     <p class="note">Importing a file over the play it came from is a different case. That keeps what the team has set in Playcode (whether the play is complete, its family, its historical time) and everything brought in from FileMaker, so it loses much less. What it replaces is the text itself.</p>
   </section>
@@ -769,11 +776,37 @@
     </ol>
   </section>
 
+  <section aria-labelledby="h-tei">
+    <h2 id="h-tei">Into the TEI</h2>
+    <p>Where each part that is not in the file today would go. These are proposals in the encoding the EMOTHE files already use; if the team encodes any of them differently, tell us and Playcode will follow the team’s practice.</p>
+    <div class="homes-wrap" tabindex="0" role="region" aria-label="Proposed TEI homes, scrollable table">
+      <table class="homes">
+        <thead><tr><th scope="col">Part of the play</th><th scope="col">Kept today in</th><th scope="col">Proposed TEI home</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Complete or draft</th><td>Playcode</td><td><code>revisionDesc/@status</code>: “published” or “draft”</td></tr>
+          <tr><th scope="row">Which play a translation translates</th><td>Playcode, from FileMaker</td><td><code>notesStmt/relatedItem type="original"</code>, pointing at the original’s code</td></tr>
+          <tr><th scope="row">An adaptation or a <i>refundición</i></th><td>Playcode</td><td><code>title type="adaptacion"</code>, <code>"refundicion"</code>, as <code>"traduccion"</code> is today</td></tr>
+          <tr><th scope="row">Historical time of the action</th><td>Playcode, from FileMaker</td><td><code>settingDesc/setting/time</code>, its note as the text</td></tr>
+          <tr><th scope="row">A dating given only in words</th><td>Playcode, from FileMaker</td><td><code>creation/date</code> with the words and no year attributes</td></tr>
+          <tr><th scope="row">Verse, prose or mixed, when set by hand</th><td>Playcode</td><td><code>textClass/keywords</code></td></tr>
+          <tr><th scope="row">The cast list’s heading</th><td>The TEI files</td><td><code>div type="elenco"/head</code>, written back as it was read</td></tr>
+          <tr><th scope="row">A cast list per act or part</th><td>The TEI files only: Playcode does not record which list a character is in</td><td>one <code>div type="elenco"/castList</code> per list, once Playcode keeps the link</td></tr>
+          <tr><th scope="row">A witness’s FileMaker record number</th><td>Playcode, from FileMaker</td><td><code>witness/bibl/idno type="filemaker"</code></td></tr>
+          <tr><th scope="row">A bibliography entry’s FileMaker record number</th><td>Playcode, from FileMaker</td><td><code>idno type="filemaker"</code> in the entry’s <code>monogr</code></td></tr>
+          <tr><th scope="row">Historical performances</th><td>FileMaker</td><td><code>front/performance</code>, the cast as <code>castList/castItem/actor</code>, the source as a <code>bibl</code></td></tr>
+          <tr><th scope="row">Genre</th><td>FileMaker</td><td><code>textClass/keywords</code> or <code>catRef</code></td></tr>
+          <tr><th scope="row">Places of the action</th><td>FileMaker</td><td><code>settingDesc/listPlace</code> and <code>setting/placeName</code>, as Playcode already writes them</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">Two things stay out of the file on purpose: the researchers’ private notes, because the file is published with the site, and the statistics, which are worked out from the text.</p>
+  </section>
+
   <section aria-labelledby="h-next">
     <h2 id="h-next">What happens next</h2>
     <ol class="next">
       <li><strong>Read the bibliography back from the file.</strong> The largest loss, and the next piece of work.</li>
-      <li><strong>Write the rest into the file:</strong> complete or draft, the play a translation translates, the historical time, a dating given in words, the cast list’s heading and a play’s several cast lists, and each witness’s FileMaker record number.</li>
+      <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: complete or draft, the play a translation translates, the historical time, a dating given in words, the cast list’s heading and a play’s several cast lists, and the FileMaker record numbers. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
       <li><strong>Show the closing formulas</strong> on the published site and in the downloads.</li>
       <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
     </ol>
