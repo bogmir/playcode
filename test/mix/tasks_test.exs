@@ -12,6 +12,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
   import Playcode.ImportHelpers
 
   alias Playcode.Accounts
+  alias Playcode.ActivityLog
   alias Playcode.Bibliography
   alias Playcode.Catalogue
   alias Playcode.Witnesses
@@ -104,6 +105,34 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
       assert run("playcode.import.tei", ["--dir", dir, "--force"]) =~ "imported 1"
       assert [%{title: "Segunda"}] = Catalogue.list_plays()
+    end
+
+    # A forced re-import replaces a play's text, so the dry run names the plays whose text
+    # was edited by hand after their last import. The edit is logged here the way the
+    # content editor logs it; the editor itself is tested on its own page.
+    test "--dry-run --force counts the hand edits a re-import would undo", %{dir: dir} do
+      run("playcode.import.tei", ["--dir", dir])
+      [play] = Catalogue.list_plays()
+      refute run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"]) =~ "hand edit"
+
+      for type <- ~w(element note) do
+        ActivityLog.log!(%{play_id: play.id, action: "update", resource_type: type})
+      end
+
+      out = run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"])
+
+      assert out =~ ~r/TASK0001  replaces .*, undoes 2 hand edit\(s\) to its text/
+      assert out =~ "1 with hand edits since their last import"
+    end
+
+    test "an import logs itself, so edits made before it are not counted again", %{dir: dir} do
+      run("playcode.import.tei", ["--dir", dir])
+      [play] = Catalogue.list_plays()
+      ActivityLog.log!(%{play_id: play.id, action: "update", resource_type: "element"})
+
+      run("playcode.import.tei", ["--dir", dir, "--force"])
+
+      refute run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"]) =~ "hand edit"
     end
 
     test "one unreadable file does not stop the rest", %{dir: dir} do

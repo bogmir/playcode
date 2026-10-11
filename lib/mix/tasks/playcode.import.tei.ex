@@ -12,13 +12,14 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
 
   A re-import replaces a play's text and the records the importer created; anything
   entered by hand is kept, as are language, relationship, parent play and completeness.
-  `--dry-run` prints that per file before anything is written.
+  `--dry-run` prints that per file before anything is written, and with `--force` it
+  counts the hand edits to each play's text that the re-import would undo. On Fly, use
+  `Playcode.Release.import_tei/2`.
   """
 
   use Mix.Task
 
   alias Playcode.Import.TeiCorpus
-  alias Playcode.Import.TeiImport
 
   @switches [force: :boolean, dry_run: :boolean, dir: :keep]
 
@@ -36,69 +37,15 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
     files = TeiCorpus.collect_files(dirs)
     Mix.shell().info("#{length(files)} file(s) in #{Enum.join(dirs, ", ")}")
 
+    report = fn
+      {:info, line} -> Mix.shell().info(line)
+      {:error, line} -> Mix.shell().error(line)
+    end
+
     if opts[:dry_run] do
-      dry_run(files, opts[:force] || false)
+      files |> TeiCorpus.dry_run(force: opts[:force] || false) |> Enum.each(report)
     else
-      run_import(files, opts)
+      TeiCorpus.run(files, [force: opts[:force] || false], report)
     end
-  end
-
-  defp dry_run(files, force) do
-    {new, existing, unreadable} =
-      Enum.reduce(files, {0, 0, 0}, fn {code, path}, {new, existing, unreadable} ->
-        case TeiImport.preview_import(path) do
-          {:ok, %{existing: nil}} ->
-            Mix.shell().info("  #{code}  new")
-            {new + 1, existing, unreadable}
-
-          {:ok, preview} when not force ->
-            Mix.shell().info("  #{code}  already imported, would be skipped")
-            _ = preview
-            {new, existing + 1, unreadable}
-
-          {:ok, preview} ->
-            Mix.shell().info(
-              "  #{code}  replaces #{preview.replaces.divisions} division(s), " <>
-                "#{preview.replaces.elements} element(s), " <>
-                "#{preview.replaces.characters} character(s), " <>
-                "#{TeiImport.mixed_ownership_total(preview.replaces)} TEI record(s)" <>
-                keeps(preview)
-            )
-
-            {new, existing + 1, unreadable}
-
-          {:error, reason} ->
-            Mix.shell().error("  #{code}: #{inspect(reason)}")
-            {new, existing, unreadable + 1}
-        end
-      end)
-
-    Mix.shell().info(
-      "\ndry run, nothing written — #{new} new, #{existing} already imported, #{unreadable} unreadable"
-    )
-  end
-
-  defp keeps(preview) do
-    kept = TeiImport.mixed_ownership_total(preview.preserves)
-    restored = if preview.archived, do: ", restores it from the archive", else: ""
-
-    case kept do
-      0 -> restored
-      n -> ", keeps #{n} hand-entered record(s)" <> restored
-    end
-  end
-
-  defp run_import(files, opts) do
-    results = TeiCorpus.import_all(files, force: opts[:force] || false)
-
-    imported = Enum.count(results, &match?({:ok, _, _}, &1))
-    skipped = Enum.count(results, &match?({:skipped, _}, &1))
-    failed = for {:error, code, reason} <- results, do: {code, reason}
-
-    Enum.each(failed, fn {code, reason} ->
-      Mix.shell().error("  #{code}: #{inspect(reason)}")
-    end)
-
-    Mix.shell().info("imported #{imported}, skipped #{skipped}, failed #{length(failed)}")
   end
 end
