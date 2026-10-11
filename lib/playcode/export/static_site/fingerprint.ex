@@ -101,17 +101,35 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   end
 
   # The English translations that say something, by message: not the files, whose
-  # source-line references move with every edit of the code.
+  # source-line references move with every edit of the code. Parsing them takes ~35 ms and
+  # the export page asks on every mount and form change, so the result is kept by the
+  # files' contents: an edit is a new key, never a stale answer.
+  # ponytail: never evicted, one entry per contents seen; a dev .po edit leaves the old one
+  # until restart.
   defp english(gettext_dir) do
-    gettext_dir
-    |> Path.join("en/LC_MESSAGES/*.po")
-    |> Path.wildcard()
-    |> Enum.sort()
-    |> Enum.flat_map(fn path ->
-      for message <- Expo.PO.parse_file!(path).messages,
+    files =
+      gettext_dir
+      |> Path.join("en/LC_MESSAGES/*.po")
+      |> Path.wildcard()
+      |> Enum.sort()
+      |> Enum.map(&{Path.basename(&1), File.read!(&1)})
+
+    key = {__MODULE__, :english, hash(files)}
+
+    with nil <- :persistent_term.get(key, nil) do
+      english = parse_english(files)
+      :persistent_term.put(key, english)
+      english
+    end
+  end
+
+  defp parse_english(files) do
+    files
+    |> Enum.flat_map(fn {name, po} ->
+      for message <- Expo.PO.parse_string!(po).messages,
           translation = translation(message),
           translation != [],
-          do: {Path.basename(path), Expo.Message.key(message), translation}
+          do: {name, Expo.Message.key(message), translation}
     end)
     |> Enum.sort()
   end
