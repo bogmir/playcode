@@ -80,13 +80,14 @@
     padding-inline: 20px;
   }
   main {
-    max-width: 46rem;
+    max-width: 72rem;
     margin-inline: auto;
     padding-block: 3rem 5rem;
     display: grid;
     gap: 3.25rem;
   }
-  main > * { min-width: 0; }
+  main > * { min-width: 0; width: 100%; max-width: 46rem; justify-self: center; }
+  main > .wide { max-width: 72rem; }
   h1, h2, h3 { text-wrap: balance; margin: 0; }
   p { margin: 0; }
   a { color: var(--accent); }
@@ -147,17 +148,14 @@
 
   /* The table */
   .matrix-wrap {
-    overflow-x: auto;
     background: var(--surface);
     border: 1px solid var(--rule);
     border-radius: 6px;
   }
-  .matrix-wrap:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .matrix {
     border-collapse: separate;
     border-spacing: 0;
     font-size: 0.875rem;
-    min-width: 54rem;
     width: 100%;
   }
   .matrix th, .matrix td {
@@ -177,15 +175,7 @@
   }
   .matrix tbody th {
     font-weight: 500;
-    width: 15rem;
-    min-width: 12rem;
-  }
-  .matrix .feature {
-    position: sticky;
-    left: 0;
-    background: var(--surface);
-    box-shadow: 1px 0 0 var(--rule);
-    z-index: 1;
+    width: 22%;
   }
   .matrix tr.group th {
     font-family: var(--serif);
@@ -213,7 +203,7 @@
   .s.part { color: var(--part); background: var(--part-bg); }
   .s.no { color: var(--no); background: var(--no-bg); font-weight: 600; }
   .s.na { color: var(--muted); }
-  .matrix .imp { box-shadow: inset -1px 0 0 var(--rule); min-width: 8.5rem; }
+  .matrix .imp { box-shadow: inset -1px 0 0 var(--rule); }
   .matrix .imp .n { font-weight: 600; font-variant-numeric: tabular-nums; }
   .matrix .imp .src { display: block; font-size: 0.78rem; color: var(--muted); line-height: 1.4; }
   .s.todo { color: var(--muted); border: 1px dashed var(--rule); background: transparent; }
@@ -224,6 +214,53 @@
   .legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.875rem; color: var(--muted); }
   .legend span.s { margin-right: 0.3rem; }
 
+  @media (max-width: 62rem) {
+    .matrix, .matrix tbody { display: block; }
+    .matrix thead {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+    .matrix tbody tr {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr));
+      gap: 0.6rem 0.75rem;
+      padding: 0.8rem 0.9rem;
+      border-bottom: 1px solid var(--rule);
+    }
+    .matrix tbody tr:last-child { border-bottom: 0; }
+    .matrix tbody tr > * { border-bottom: 0; padding: 0; }
+    .matrix tbody th { grid-column: 1 / -1; width: auto; }
+    .matrix tr.group { padding-bottom: 0.1rem; }
+    .matrix tr.group th { padding-top: 0.6rem; }
+    .matrix td::before {
+      content: attr(data-label);
+      display: block;
+      font-size: 0.66rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.2rem;
+    }
+    .matrix .imp { box-shadow: none; }
+  }
+  @media (max-width: 40rem) {
+    .homes, .homes tbody, .homes tr, .homes th, .homes td { display: block; }
+    .homes thead { display: none; }
+    .homes tbody tr { padding: 0.6rem 0; border-bottom: 1px solid var(--rule); }
+    .homes tbody th, .homes td { border-bottom: 0; padding: 0.1rem 0; }
+    .homes td::before {
+      content: attr(data-label) ": ";
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--muted);
+    }
+  }
+
   ol.notes { margin: 0; padding-left: 1.6rem; display: grid; gap: 0.7rem; font-size: 0.9375rem; }
   ol.notes li { padding-left: 0.2rem; scroll-margin-top: 1rem; }
   ol.notes li:target { background: var(--accent-soft); border-radius: 4px; }
@@ -233,7 +270,6 @@
   .homes thead th { font-size: 0.7rem; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
   .homes tbody th { font-weight: 500; }
   .homes td code { white-space: normal; overflow-wrap: anywhere; }
-  .homes-wrap { overflow-x: auto; }
   ol.next { margin: 0; padding-left: 1.4rem; display: grid; gap: 0.6rem; }
   ol.next strong { font-weight: 600; }
 
@@ -295,7 +331,7 @@
     </dl>
   </section>
 
-  <section aria-labelledby="h-table">
+  <section aria-labelledby="h-table" class="wide">
     <h2 id="h-table">The table</h2>
     <div class="legend">
       <span><span class="s yes">Yes</span>reaches it in full</span>
@@ -304,7 +340,7 @@
       <span><span class="s na">—</span>has no place there</span>
       <span><span class="s todo">Not yet</span>not built yet</span>
     </div>
-    <div class="matrix-wrap" tabindex="0" role="region" aria-label="Where each part of a play goes, scrollable table">
+    <div class="matrix-wrap">
       <table class="matrix">
         <thead>
           <tr>
@@ -322,429 +358,429 @@
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">About the play</th></tr>
           <tr>
             <th scope="row" class="feature">Title, author, publication details, licence</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n1" aria-label="note 1">1</a></sup></td>
-            <td><span class="s part">Partly</span><sup class="fn"><a href="#n2" aria-label="note 2">2</a></sup></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n1" aria-label="note 1">1</a></sup></td>
+            <td data-label="Downloads"><span class="s part">Partly</span><sup class="fn"><a href="#n2" aria-label="note 2">2</a></sup></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Language</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI, corrected from FileMaker</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s na">—</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI, corrected from FileMaker</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s na">—</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Which play a translation translates</th>
-            <td class="imp"><span class="n">153</span><span class="src">of 168 translations; FileMaker</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
-            <td><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">153</span><span class="src">of 168 translations; FileMaker</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
+            <td data-label="Read from TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Complete or draft</th>
-            <td class="imp"><span class="n">373</span><span class="src">all complete; set in Playcode</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n4" aria-label="note 4">4</a></sup></td>
-            <td><span class="s na">—</span></td>
-            <td><span class="s na">—</span></td>
-            <td><span class="s na">—</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">all complete; set in Playcode</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s no">No</span></td>
+            <td data-label="Read from TEI"><span class="s no">No</span><sup class="fn"><a href="#n4" aria-label="note 4">4</a></sup></td>
+            <td data-label="Downloads"><span class="s na">—</span></td>
+            <td data-label="Play page"><span class="s na">—</span></td>
+            <td data-label="Published site"><span class="s na">—</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Date of composition</th>
-            <td class="imp"><span class="n">76</span><span class="src">FileMaker</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s part">Partly</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">76</span><span class="src">FileMaker</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Historical time of the action</th>
-            <td class="imp"><span class="n">108</span><span class="src">FileMaker</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n6" aria-label="note 6">6</a></sup></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">108</span><span class="src">FileMaker</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s no">No</span><sup class="fn"><a href="#n6" aria-label="note 6">6</a></sup></td>
+            <td data-label="Read from TEI"><span class="s no">No</span></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Verse, prose or mixed</th>
-            <td class="imp"><span class="s na">—</span><span class="src">none set by hand</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n7" aria-label="note 7">7</a></sup></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="s na">—</span><span class="src">none set by hand</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s no">No</span><sup class="fn"><a href="#n7" aria-label="note 7">7</a></sup></td>
+            <td data-label="Read from TEI"><span class="s no">No</span></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Editors and their roles</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Sources of the text</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Witnesses: manuscripts and early printings</th>
-            <td class="imp"><span class="s part">Waiting</span><sup class="fn"><a href="#n17" aria-label="note 17">17</a></sup><span class="src">ready from FileMaker: 510 on 107 plays</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s part">Partly</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n17" aria-label="note 17">17</a></sup><span class="src">ready from FileMaker: 510 on 107 plays</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Bibliography</th>
-            <td class="imp"><span class="n">114</span><span class="src">FileMaker; 2,803 references</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n10" aria-label="note 10">10</a></sup></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">114</span><span class="src">FileMaker; 2,803 references</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s no">No</span><sup class="fn"><a href="#n10" aria-label="note 10">10</a></sup></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Places of the action</th>
-            <td class="imp"><span class="s no">None</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup><span class="src">FileMaker holds 138 links</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="s no">None</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup><span class="src">FileMaker holds 138 links</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
 
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">Front matter and cast</th></tr>
           <tr>
             <th scope="row" class="feature">Dedications and editors’ introductions</th>
-            <td class="imp"><span class="n">227</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">227</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Cast list: characters, descriptions, hidden roles</th>
-            <td class="imp"><span class="n">368</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">368</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">The cast list’s heading; a second cast list</th>
-            <td class="imp"><span class="n">312</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
-            <td><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td class="imp" data-label="Imported data"><span class="n">312</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td data-label="Read from TEI"><span class="s no">No</span></td>
+            <td data-label="Downloads"><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td data-label="Play page"><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
           </tr>
 
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">The text</th></tr>
           <tr>
             <th scope="row" class="feature">Acts, scenes, prologues, interludes</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Speeches, verses, prose, stage directions</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Verse forms: redondilla, romance…</th>
-            <td class="imp"><span class="n">255</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s part">Statistics only</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">255</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s part">In statistics</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Split verses, indentation, asides, verse numbers</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Kind of stage direction; a verse’s identifier</th>
-            <td class="imp"><span class="n">84</span><span class="src">TEI</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n13" aria-label="note 13">13</a></sup></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s na">—</span></td>
-            <td><span class="s na">—</span></td>
-            <td><span class="s na">—</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">84</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s no">No</span><sup class="fn"><a href="#n13" aria-label="note 13">13</a></sup></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s na">—</span></td>
+            <td data-label="Play page"><span class="s na">—</span></td>
+            <td data-label="Published site"><span class="s na">—</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Closing formulas: “FIN DEL PRIMER ACTO”</th>
-            <td class="imp"><span class="n">127</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
+            <td class="imp" data-label="Imported data"><span class="n">127</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
           </tr>
           <tr>
             <th scope="row" class="feature">A stage direction inside a verse</th>
-            <td class="imp"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 275 plays in development</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 275 plays in development</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Italics</th>
-            <td class="imp"><span class="n">373</span><span class="src">TEI</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span><sup class="fn"><a href="#n15" aria-label="note 15">15</a></sup></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n15" aria-label="note 15">15</a></sup></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Notes in the text</th>
-            <td class="imp"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 3,832 notes in 84 plays in development</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 3,832 notes in 84 plays in development</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Statistics</th>
-            <td class="imp"><span class="n">373</span><span class="src">worked out from the text</span></td>
-            <td><span class="s na">—</span></td>
-            <td><span class="s na">—</span><sup class="fn"><a href="#n16" aria-label="note 16">16</a></sup></td>
-            <td><span class="s na">—</span></td>
-            <td><span class="s no">No</span></td>
-            <td><span class="s yes">Yes</span></td>
-            <td><span class="s yes">Yes</span></td>
+            <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">worked out from the text</span></td>
+            <td data-label="Edited"><span class="s na">—</span></td>
+            <td data-label="Written to TEI"><span class="s na">—</span><sup class="fn"><a href="#n16" aria-label="note 16">16</a></sup></td>
+            <td data-label="Read from TEI"><span class="s na">—</span></td>
+            <td data-label="Downloads"><span class="s no">No</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">In the source TEI files, not read yet</th></tr>
           <tr>
             <th scope="row" class="feature">Variant readings (critical apparatus)<span class="where">In 6 plays, 604 entries; today pasted into the line · <a href="preguntas.html#t-variants">questions 1–4</a></span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">HTML typed into the text<span class="where">In 7 plays, 1,211 fragments; today shown as text · <a href="preguntas.html#t-html">questions 5–8</a></span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Line breaks in prose, letters and songs<span class="where">In 178 plays, 26,571 breaks · <a href="preguntas.html#t-lines">questions 9–10</a></span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Line numbers of prose<span class="where">In 40 plays · <a href="preguntas.html#t-lines">questions 9–10</a></span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">The heading inside the cast list (“PERSONNAGES”)<span class="where">323 headings</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Groups in the cast list: soldiers, servants<span class="where">560 roles</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">The original cast (“Mr. Betterton”)<span class="where">In 3 plays, 14 actors</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">The scene of the action (“SCENE: An English wood…”)<span class="where">In 15 plays</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">The editor’s note on the edition<span class="where">In 15 plays, 16 notes</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Italics and notes in dedications and introductions<span class="where">About 950 italics and 270 notes</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Back matter other than the bibliography<span class="where">In 16 plays: cast lists, verse, headed sections</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Revision history: who revised the TEI, and when<span class="where">In 341 plays</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Who supplied the digital text: Canon 60, Gallica…<span class="where">In 152 plays</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Identifiers of speeches, paragraphs and stage directions<span class="where">About 460,000</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">In FileMaker, or planned</th></tr>
           <tr>
             <th scope="row" class="feature">Historical performances: company, venue, date, cast<span class="where">In FileMaker, 243 performances on 59 plays, received · <a href="preguntas.html#t-performances">questions 11–12</a></span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Genre<span class="where">In FileMaker for 82 plays; waiting for its genre table</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Places named in the text, and a map<span class="where">Planned</span></th>
-            <td class="imp"><span class="s todo">Not imported</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
-            <td><span class="s todo">Not yet</span></td>
+            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
+            <td data-label="Play page"><span class="s todo">Not yet</span></td>
+            <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
         </tbody>
       </table>
@@ -779,23 +815,23 @@
   <section aria-labelledby="h-tei">
     <h2 id="h-tei">Into the TEI</h2>
     <p>Where each part that is not in the file today would go. These are proposals in the encoding the EMOTHE files already use; if the team encodes any of them differently, tell us and Playcode will follow the team’s practice.</p>
-    <div class="homes-wrap" tabindex="0" role="region" aria-label="Proposed TEI homes, scrollable table">
+    <div class="homes-wrap">
       <table class="homes">
         <thead><tr><th scope="col">Part of the play</th><th scope="col">Kept today in</th><th scope="col">Proposed TEI home</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Complete or draft</th><td>Playcode</td><td><code>revisionDesc/@status</code>: “published” or “draft”</td></tr>
-          <tr><th scope="row">Which play a translation translates</th><td>Playcode, from FileMaker</td><td><code>notesStmt/relatedItem type="original"</code>, pointing at the original’s code</td></tr>
-          <tr><th scope="row">An adaptation or a <i>refundición</i></th><td>Playcode</td><td><code>title type="adaptacion"</code>, <code>"refundicion"</code>, as <code>"traduccion"</code> is today</td></tr>
-          <tr><th scope="row">Historical time of the action</th><td>Playcode, from FileMaker</td><td><code>settingDesc/setting/time</code>, its note as the text</td></tr>
-          <tr><th scope="row">A dating given only in words</th><td>Playcode, from FileMaker</td><td><code>creation/date</code> with the words and no year attributes</td></tr>
-          <tr><th scope="row">Verse, prose or mixed, when set by hand</th><td>Playcode</td><td><code>textClass/keywords</code></td></tr>
-          <tr><th scope="row">The cast list’s heading</th><td>The TEI files</td><td><code>div type="elenco"/head</code>, written back as it was read</td></tr>
-          <tr><th scope="row">A cast list per act or part</th><td>The TEI files only: Playcode does not record which list a character is in</td><td>one <code>div type="elenco"/castList</code> per list, once Playcode keeps the link</td></tr>
-          <tr><th scope="row">A witness’s FileMaker record number</th><td>Playcode, from FileMaker</td><td><code>witness/bibl/idno type="filemaker"</code></td></tr>
-          <tr><th scope="row">A bibliography entry’s FileMaker record number</th><td>Playcode, from FileMaker</td><td><code>idno type="filemaker"</code> in the entry’s <code>monogr</code></td></tr>
-          <tr><th scope="row">Historical performances</th><td>FileMaker</td><td><code>front/performance</code>, the cast as <code>castList/castItem/actor</code>, the source as a <code>bibl</code></td></tr>
-          <tr><th scope="row">Genre</th><td>FileMaker</td><td><code>textClass/keywords</code> or <code>catRef</code></td></tr>
-          <tr><th scope="row">Places of the action</th><td>FileMaker</td><td><code>settingDesc/listPlace</code> and <code>setting/placeName</code>, as Playcode already writes them</td></tr>
+          <tr><th scope="row">Complete or draft</th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>revisionDesc/@status</code>: “published” or “draft”</td></tr>
+          <tr><th scope="row">Which play a translation translates</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>notesStmt/relatedItem type="original"</code>, pointing at the original’s code</td></tr>
+          <tr><th scope="row">An adaptation or a <i>refundición</i></th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>title type="adaptacion"</code>, <code>"refundicion"</code>, as <code>"traduccion"</code> is today</td></tr>
+          <tr><th scope="row">Historical time of the action</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>settingDesc/setting/time</code>, its note as the text</td></tr>
+          <tr><th scope="row">A dating given only in words</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>creation/date</code> with the words and no year attributes</td></tr>
+          <tr><th scope="row">Verse, prose or mixed, when set by hand</th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>textClass/keywords</code></td></tr>
+          <tr><th scope="row">The cast list’s heading</th><td data-label="Kept today in">The TEI files</td><td data-label="Proposed TEI home"><code>div type="elenco"/head</code>, written back as it was read</td></tr>
+          <tr><th scope="row">A cast list per act or part</th><td data-label="Kept today in">The TEI files only: Playcode does not record which list a character is in</td><td data-label="Proposed TEI home">one <code>div type="elenco"/castList</code> per list, once Playcode keeps the link</td></tr>
+          <tr><th scope="row">A witness’s FileMaker record number</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>witness/bibl/idno type="filemaker"</code></td></tr>
+          <tr><th scope="row">A bibliography entry’s FileMaker record number</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>idno type="filemaker"</code> in the entry’s <code>monogr</code></td></tr>
+          <tr><th scope="row">Historical performances</th><td data-label="Kept today in">FileMaker</td><td data-label="Proposed TEI home"><code>front/performance</code>, the cast as <code>castList/castItem/actor</code>, the source as a <code>bibl</code></td></tr>
+          <tr><th scope="row">Genre</th><td data-label="Kept today in">FileMaker</td><td data-label="Proposed TEI home"><code>textClass/keywords</code> or <code>catRef</code></td></tr>
+          <tr><th scope="row">Places of the action</th><td data-label="Kept today in">FileMaker</td><td data-label="Proposed TEI home"><code>settingDesc/listPlace</code> and <code>setting/placeName</code>, as Playcode already writes them</td></tr>
         </tbody>
       </table>
     </div>
