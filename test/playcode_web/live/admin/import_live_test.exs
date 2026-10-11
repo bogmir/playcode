@@ -37,12 +37,17 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
   test "an uploaded corpus file becomes a play, readable on its public page", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
 
+    # The slow corpus sweep (roundtrip_test.exs) imports this file at the same time. Under
+    # its own code the upload never waits on the sweep's uncommitted plays.code, which it
+    # did until the sandbox cancelled it.
     path = "test/fixtures/EMOTHE0759_AutoDeLaBarcaDelInfierno.xml"
-    html = import_tei(lv, Path.basename(path), File.read!(path))
+    code = "LIVE0759_AutoDeLaBarcaDelInfierno"
+    xml = path |> File.read!() |> String.replace("EMOTHE0759_AutoDeLaBarcaDelInfierno", code)
+    html = import_tei(lv, Path.basename(path), xml)
 
     assert html =~ t("Successfully imported %{count} play(s).", count: 1)
 
-    play = Catalogue.get_play_by_code!("EMOTHE0759_AutoDeLaBarcaDelInfierno")
+    play = Catalogue.get_play_by_code!(code)
     assert html =~ play.title
 
     [%{action: "import", play_id: play_id}] = Playcode.ActivityLog.list_entries(action: "import")
