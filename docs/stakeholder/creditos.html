@@ -1,0 +1,423 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credits in TEI and FileMaker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #F4F6F3;
+    --surface: #FFFFFF;
+    --ink: #1A2130;
+    --muted: #586171;
+    --rule: #D6DBD4;
+    --accent: #27487A;
+    --accent-soft: #E4EBF5;
+    --on-accent: #FFFFFF;
+    --mark-bg: #F7E37C;
+    --mark-ink: #3A2F00;
+    --code-bg: #ECEFEA;
+    --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --paper: #12161B;
+      --surface: #1A1F26;
+      --ink: #E4E7EA;
+      --muted: #9AA3AE;
+      --rule: #2C333C;
+      --accent: #9DB9E8;
+      --accent-soft: #1F2B3D;
+      --on-accent: #0F1620;
+      --mark-bg: #5B4C10;
+      --mark-ink: #F8EBB0;
+      --code-bg: #161B21;
+    }
+  }
+
+  [hidden] { display: none !important; }
+  img { max-width: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+  }
+  main {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 3rem 5rem;
+    display: grid;
+    gap: 3.25rem;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  header { display: grid; gap: 1rem; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .lede { font-size: 1.125rem; max-width: 62ch; }
+  .meta { font-size: 0.875rem; color: var(--muted); }
+
+  section { display: grid; gap: 1.1rem; }
+  section > h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  .note { font-size: 0.9375rem; color: var(--muted); }
+  code, .field {
+    font-family: var(--mono);
+    font-size: 0.85em;
+  }
+
+  /* Citations set as a bibliography: hanging indent, period face */
+  .bib {
+    list-style: none;
+    margin: 0;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    display: grid;
+    gap: 0.6rem;
+  }
+  .bib li {
+    font-family: var(--serif);
+    font-size: 1.1rem;
+    line-height: 1.45;
+    padding-left: 2em;
+    text-indent: -2em;
+  }
+  .bib .from {
+    display: block;
+    text-indent: 0;
+    font-family: var(--sans);
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.15rem;
+  }
+  mark {
+    background: var(--mark-bg);
+    color: var(--mark-ink);
+    font-family: var(--mono);
+    font-size: 0.8em;
+    padding: 0.05em 0.25em;
+    border-radius: 2px;
+  }
+
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td.num, th.num { text-align: right; padding-right: 0; }
+  tfoot td { font-weight: 600; border-bottom: none; }
+
+  .fields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 0.75rem 1.5rem;
+    margin: 0;
+  }
+  .fields div { display: grid; gap: 0.1rem; }
+  .fields dt {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .fields dd { margin: 0; }
+
+  .losses { display: grid; gap: 1.5rem; }
+  .loss { display: grid; gap: 0.5rem; }
+  .loss h3 { font-size: 1.0625rem; font-weight: 600; }
+
+  .callout {
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.1rem 1.25rem;
+    display: grid;
+    gap: 0.75rem;
+  }
+  .callout h3 { font-size: 1.0625rem; font-weight: 600; }
+  .callout table th, .callout table td { border-bottom-color: color-mix(in srgb, var(--accent) 30%, transparent); }
+
+  .plan { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.6rem; }
+
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+
+  /* Questions */
+  .group { display: grid; gap: 1rem; }
+  .group > h3 {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 0.5rem;
+  }
+  .q {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1.25rem 1.25rem 1.1rem;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
+    gap: 0 0.75rem;
+  }
+  .q-num {
+    font-family: var(--serif);
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--accent);
+    font-variant-numeric: lining-nums;
+  }
+  .q-body { display: grid; gap: 0.8rem; min-width: 0; }
+  .q h4 { margin: 0; font-size: 1.125rem; font-weight: 600; line-height: 1.35; text-wrap: balance; }
+  .why { font-size: 0.9375rem; color: var(--muted); }
+  .codes { font-size: 0.9375rem; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 0.5rem; }
+  legend, .label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0;
+    margin-bottom: 0.4rem;
+  }
+  .options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem 0.35rem 0.6rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: var(--paper);
+  }
+  .options input { accent-color: var(--accent); margin: 0; }
+  .options label:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .options label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 5.5rem;
+    resize: vertical;
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.6rem 0.7rem;
+  }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .status { font-size: 0.8125rem; color: var(--muted); min-height: 1.2em; }
+
+  .send {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.25rem;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .send-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--on-accent);
+    background: var(--accent);
+    border: 0;
+    border-radius: 4px;
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .count { font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  #answers-out { min-height: 12rem; font-family: var(--mono); font-size: 0.8125rem; }
+
+  @media (max-width: 480px) {
+    .q { grid-template-columns: 1fr; gap: 0.5rem; }
+    .bib { padding: 0.9rem 1rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1.5rem; }
+  .muted { color: var(--muted); }
+  .plan strong { font-weight: 600; }
+  .record { display: grid; grid-template-columns: minmax(0, 16rem) minmax(0, 1fr); gap: 1rem; align-items: start; }
+  .record-fields {
+    margin: 0;
+    display: grid;
+    gap: 0.35rem;
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    font-size: 0.875rem;
+  }
+  .record-fields div { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.5rem; }
+  .record-fields dt { font-family: var(--mono); font-size: 0.75rem; color: var(--muted); padding-top: 0.1rem; }
+  .record-fields dd { margin: 0; overflow-wrap: anywhere; }
+  .fieldlist { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0; }
+  .fieldlist .field { background: var(--code-bg); border: 1px solid var(--rule); border-radius: 3px; padding: 0.1rem 0.4rem; font-size: 0.8rem; }
+  mark.gap { font-family: inherit; font-size: inherit; padding: 0 0.15em; }
+  @media (max-width: 640px) { .record { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Playcode · Credits · For review</p>
+    <h1>Who prepared each digital edition: the TEI files against FileMaker</h1>
+    <p class="lede">Each TEI file names the people who prepared its digital edition, and FileMaker keeps the same credits in a table of its own. We compared the two for every play Playcode publishes. They mostly agree. This page lists where they don’t, a mistake of ours we have fixed, and the corrections we plan. The questions it raises are on the project’s list of questions.</p>
+    <p class="meta">Prepared by Bogdan, 11 October 2026, from the TEI files of the published corpus and FileMaker’s credits tables (<code>T07.51</code>), exported on 10 October 2026.</p>
+  </header>
+
+  <section aria-labelledby="h-compared">
+    <h2 id="h-compared">What we compared</h2>
+    <p>FileMaker holds 462 credits, almost all of them “Edición digital”. 413 belong to plays Playcode publishes. Set against the names in each play’s TEI file:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>FileMaker’s credit</th><th class="num">Credits</th></tr></thead>
+        <tbody>
+          <tr><td>Names the same person, written the same way</td><td class="num">343</td></tr>
+          <tr><td>Names the same person, but the file writes “Tronch Pérez, Jesus” without the accent</td><td class="num">63</td></tr>
+          <tr><td>Names nobody; the file names someone</td><td class="num">2</td></tr>
+          <tr><td>Names someone the file does not</td><td class="num">5</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">The research groups differ only in how they are written: FileMaker’s “Artelope” against a file’s “Grupo de investigación ARTELOPE, Universitat de València”, or no group in one of the two. Nothing to decide there.</p>
+  </section>
+
+  <section aria-labelledby="h-fixed">
+    <h2 id="h-fixed">A mistake of ours, now fixed</h2>
+    <p>18 files credit two people in one statement. Playcode read only the first, so the second was missing from the play’s page, the static site and the TEI file it exports. FileMaker credits all of them. Playcode now reads both; they return when the TEI files are next imported.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Play</th><th>Credited, and shown</th><th>Credited, and missing until now</th></tr></thead>
+        <tbody>
+          <tr><td><i>La Cortigiana, 1525</i> (EMOTHE0211)</td><td>Luis María Romeu Guallart</td><td>Jesús Tronch Pérez</td></tr>
+          <tr><td><i>The Revenger’s Tragedy</i> (EMOTHE0278)</td><td>Jesús Tronch Pérez</td><td>Elena Ramírez Sáenz</td></tr>
+          <tr><td><i>Le berger fidelle</i> (EMOTHE0286)</td><td>Eva Soler Sasera</td><td>Rodrigo Carmen Cerdán</td></tr>
+          <tr><td><i>El alquimista</i> (EMOTHE0305)</td><td>Almudena Ortíz Ramírez</td><td>Jesús Tronch Pérez</td></tr>
+          <tr><td><i>Bartholomew Fair</i> (EMOTHE0346)</td><td>Víctor Huertas Martín</td><td>Jesús Tronch Pérez</td></tr>
+          <tr><td><i>El lacayo fingido</i> (EMOTHE0359)</td><td>Violeta Ros Ferrer</td><td>Carme Tronch Valls</td></tr>
+          <tr><td><i>Every Man In His Humor</i> (EMOTHE0471)</td><td>Jesús Tronch Pérez</td><td>Elena Ramírez Sáenz</td></tr>
+          <tr><td><i>El gran teatro del mundo</i> (EMOTHE0660)</td><td>Jesús Tronch Pérez</td><td>María Morcillo Aparicio</td></tr>
+          <tr><td><i>Las mocedades del Cid: comedia segunda</i> (EMOTHE0670)</td><td>Carme Tronch Valls</td><td>Jesús Tronch Pérez</td></tr>
+          <tr><td><i>A Game at Chess</i> (EMOTHE0672)</td><td>Jesús Tronch Pérez</td><td>Elena Ramírez Sáenz</td></tr>
+          <tr><td><i>Una partida de ajédrez</i> (EMOTHE0673)</td><td>Jesús Tronch Pérez</td><td>Elena Ramírez Sáenz</td></tr>
+          <tr><td><i>The Phantom Lady</i> (EMOTHE0679)</td><td>Jesús Tronch Pérez</td><td>Sonia Zafra Alarcón</td></tr>
+          <tr><td><i>No hay burlas con el amor</i> (EMOTHE0680)</td><td>Jesús Tronch Pérez</td><td>Sonia Zafra Alarcón</td></tr>
+          <tr><td><i>Gilita, comedia bufa</i> (EMOTHE0692)</td><td>Jesús Tronch Pérez</td><td>Sonia Zafra Alarcón</td></tr>
+          <tr><td><i>The Tragedy of Othello, the Moor of Venice</i> (EMOTHE0697)</td><td>Jesús Tronch Pérez</td><td>Víctor Huertas Martín</td></tr>
+          <tr><td><i>Love’s Victory</i> (EMOTHE0700)</td><td>Jesús Tronch Pérez</td><td>Sonia Zafra Alarcón</td></tr>
+          <tr><td><i>Farsa de Inês Pereira, 1523</i> (EMOTHE0718)</td><td>José Camões</td><td>Helena Reis Silva</td></tr>
+          <tr><td><i>La villana de Getafe</i> (EMOTHE0766)</td><td>Jesús Tronch Pérez</td><td>Eva Soler Sasera</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-corrections">
+    <h2 id="h-corrections">Corrections we plan</h2>
+    <p>Where one side is plainly right, we will correct Playcode to match it. These go ahead unless you tell us otherwise (question 21):</p>
+    <ul class="plan">
+      <li><strong>“Tronch Pérez, Jesus” becomes “Tronch Pérez, Jesús”</strong> in the 63 credits that lack the accent, as FileMaker and his other credits write it.</li>
+      <li><strong><i>The Revenger’s Tragedy</i> (EMOTHE0278):</strong> “Ramírez Sánez, Elena” becomes “Ramírez Sáenz, Elena”, as FileMaker and the three other files that credit her write it.</li>
+      <li><strong><i>Timon of Athens</i> (EMOTHE0372):</strong> the file credits “Editor1” and “Editor2”, as roles “Rol1” and “Rol2”, left over from a template. FileMaker credits Jesús Tronch Pérez, and the file’s own source reads “Edited by Jesús Tronch for the Internet Shakespeare Editions”. We will credit him alone.</li>
+      <li><strong><i>Marta la Pieuse</i> (EMOTHE0724) and <i>La sortija del olvido</i> (EMOTHE0737):</strong> FileMaker’s credit names nobody. We keep the files’ María Teresa Lajoinie Domínguez and Laura Ferrer Blé.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-disagree">
+    <h2 id="h-disagree">Where the two disagree</h2>
+    <p>Three cases where we cannot tell which side is right:</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Play</th><th>The TEI file credits</th><th>FileMaker credits</th></tr></thead>
+        <tbody>
+          <tr><td><i>El diablo blanco</i> (EMOTHE0148) and <i>Il diavolo bianco o Vittoria Corombona</i> (EMOTHE0175), translations of <i>The White Devil</i></td><td>Eva Soler Sasera</td><td>Victoria Soler Sánchez, who is credited on <i>The White Devil</i> itself (EMOTHE0147) in both</td></tr>
+          <tr><td><i>La ocasión perdida</i> (EMOTHE0745)</td><td>Jesús Tronch Pérez</td><td>Rosa Durá Celma</td></tr>
+          <tr><td><i>Every Man In His Humor</i> (EMOTHE0471)</td><td>Jesús Tronch Pérez and Elena Ramírez Sáenz</td><td>Jesús Tronch Pérez</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-questions">
+    <h2 id="h-questions">Questions</h2>
+    <p>The decisions this page raises are questions 18 to 21 of the project’s running list, <a href="preguntas.html#t-credits">Questions for the project</a>: 18 to 20 on the three disagreements, 21 on the corrections we plan. Answer them there, with the others.</p>
+  </section>
+</main>
+
+</body>
+</html>

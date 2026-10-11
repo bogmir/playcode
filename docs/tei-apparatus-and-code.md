@@ -1,6 +1,6 @@
 # Critical apparatus (`<app>`) and literal HTML (`<code>`) in the TEI corpus
 
-Analysis of 2026-10-10, from the 370 production TEI files (`doc/tei_corpus/`, git-ignored), the
+Analysis of 2026-10-10, corrected 2026-10-11, from the 370 production TEI files (`doc/tei_corpus/`, git-ignored), the
 dev database after a full re-import, and the old EMOTHE pages
 (`https://emothe.uv.es/biblioteca/textosEMOTHE/<file>.php`) with their stylesheet. Both are
 listed in `backlog.md`, *Found by the corpus round trip*. The questions only the project can
@@ -66,7 +66,15 @@ a reading's own note in brackets, then the entry's note:
 
 Counts on the old pages: 59 entries for 0187, 200 for 0560, 10 for 0435, and only 4 for
 Hamlet, whose 94 entries were otherwise not shown (its Folio readings went through `<code>`,
-below).
+below). The 4 are the prose entries at v. 1319 and vv. 3256-3257.
+
+Hamlet's apparatus looks unfinished (checked 2026-10-11). 4 of the 94 are copies of an entry
+inside the editor's own `<note>` (v. 19's sits in the note's `<term>` and its `<p>` too, and so
+does v. 313's); of the 90 in the text, 81 are in the first 313 lines (1.1 and 1.2). Damage: at
+v. 189 the entry for "an ... a" was inserted after every letter "a" of the line
+(`With a<app/>n a<app/>uspicious a<app/>nd a<app/> dropping eye`); v. 313's and one at
+v. 240 are empty `<app>`s; three readings carry `wit="#"`; one `to` points at
+`#em0010-en-0000`, which does not exist. Question 2.
 
 ### Proposed design (agreed so far)
 
@@ -103,20 +111,27 @@ it was. Four different uses:
 | Use | Plays | Example |
 |---|---|---|
 | **Folio-only text** in Hamlet: words found in the 1623 Folio and not in Q2, between two superscript F's | EMOTHE0010 (1,022 `<code>`, 247 spans) | `O God, <span class="folio"><sup>F</sup>O<sup>F</sup></span> God,` (v. 316) |
-| **The Q4 Additions** of *The Spanish Tragedy*: the passages added in the 1602 quarto, a superscript Q4 at each end; several closings are written backwards, and the Spanish version numbers them (Q4.1…) | EMOTHE0111 (en), 0112 (fr), 0218 (it), 0307 (es), 108 in all | `<sup>Q4</sup> [Draws his sword.] </sup>Q4<sup>` |
-| **Stage words set apart** with the Folio class | EMOTHE0503 *The Rover* (40 spans) | `<span class="folio">Aside</span>`, `<span class="folio">Exit</span>` |
+| **The Q4 Additions** of *The Spanish Tragedy*: the passages added in the 1602 quarto, a superscript Q4 at each end; the closings are written backwards in English and Italian (all) and French (4 of 7); the Spanish version numbers only the first (Q4.1), writes its closings correctly, and wraps Additions 2-5 in the Folio class | EMOTHE0111 (en), 0112 (fr), 0218 (it), 0307 (es), 108 in all | `<sup>Q4</sup> [Draws his sword.] </sup>Q4<sup>` |
+| **Stage directions set apart** with the Folio class, each inside a TEI `<stage>`: "Aside" 28, "Aside to Hellena", "within" 5, "Exit" 2, "To Hellena", "To Willmore", and the names "Diego" and "Boy" inside two entrances | EMOTHE0503 *The Rover* (40 spans) | `<stage type="delivery"><span class="folio">Aside</span></stage>` |
 | **A typo**: one stray `<sup>` | EMOTHE0239 *Mariamne*, v. 623 | `tr<sup>ne du Dieu qui tonne`, for "trône" |
 
 ### What the old site did
 
 It printed the strings as HTML, and its stylesheet (`visualizacion_comun.css`) has
-`.folio { color: #777; display: none; }`, with no control to show it:
+`.folio { color: #777; display: none; }`. Only Hamlet's page has a control to show it: the side
+panel's "Folio interpolations: Show" (`funcionFolio()` in `js/libreriaFunciones.js`).
 
-- **Hamlet**: the Folio-only words were hidden, so readers saw the Q2 text ("O God, God,").
-- **The Rover**: the "Aside" and "Exit" labels were hidden; asides were marked by their own
-  style.
-- **The Spanish Tragedy**: the superscript Q4 labels were shown. Where a closing tag is
-  written backwards, a `<sup>` stays open and the following text runs on in superscript.
+- **Hamlet**: the Folio-only words were hidden by default, so readers saw the Q2 text ("O God,
+  God,"); the switch showed them in grey.
+- **The Rover**: the 40 directions were hidden, with no switch. Little was lost with the asides,
+  marked by their own style; the rest was missing ("Enter Antonio and his page ; Antonio
+  knocks…").
+- **The Spanish Tragedy**: the opening Q4 was printed in superscript. A backwards closing
+  (`</sup>Q4<sup>`) printed "Q4" full size; its stray `<sup>` mostly fell at the end of the
+  line, so only once did text run on in superscript (French, after the third Addition: "Bon
+  voyage, Messieurs !…"). The Spanish version's Folio spans open inside a line and are closed
+  by the browser at its end, so the first line of Additions 2-5 was hidden, with its Q4 and the
+  translator's note announcing it.
 - **Mariamne**: the stray `<sup>` sets the rest of the line in superscript.
 
 ### What Playcode does today
@@ -129,15 +144,16 @@ direction of *The Spanish Tragedy* reads "`<sup>` Q4 `</sup>` [Draws his sword.]
 
 ### Options, per use
 
-- **Hamlet's Folio-only text** (question 5): hide it as before (the reading text is Q2); show
-  it set apart (grey, between superscript F's) with a toggle, like the stage directions; or
+- **Hamlet's Folio-only text** (question 5): hidden with a switch to show it, as before (the
+  reading text is Q2); shown set apart (grey, between superscript F's) with a switch to hide it; or
   turn each passage into a textual variant entry (`F1: O God, O God`), which the `<app>` work
   above already provides and which exports as proper TEI.
 - **The Q4 Additions** (question 6): keep the superscript Q4 labels at each end, with the
   backwards closings repaired on import; or mark the whole added passage, which often spans
-  several speeches.
-- **The Rover's labels** (question 7): make them inline stage directions, or drop them as the
-  old site hid them.
+  several speeches, with a line in the margin; or both. The Spanish Folio spans are dropped
+  either way.
+- **The Rover's directions** (question 7): show them as the stage directions they already are,
+  shown in grey, or drop them as the old site hid them.
 - **Mariamne** (question 8): correct the source to "trône".
 
 Whatever is chosen, the importer stops storing these strings as text: an unknown `<code>`

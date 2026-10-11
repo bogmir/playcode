@@ -337,7 +337,7 @@
     <p class="eyebrow">Playcode · TEI import · For review</p>
     <h1>Variant readings and HTML fragments in the TEI files</h1>
     <p class="lede">Six plays carry a critical apparatus, the readings of other witnesses beside the edited text, and seven have pieces of HTML typed into the text. Playcode currently pastes both into the lines, so readers see them as words. This page shows what the old site did with them and what we plan. The questions they raise are on the project’s list of questions.</p>
-    <p class="meta">Prepared by Bogdan, 10 October 2026, from the 370 TEI files of the published corpus and the pages of emothe.uv.es.</p>
+    <p class="meta">Prepared by Bogdan, 10 October 2026, revised 11 October, from the 370 TEI files of the published corpus and the pages of emothe.uv.es.</p>
   </header>
 
   <section aria-labelledby="h-variants">
@@ -367,7 +367,7 @@
       <li><strong>Researchers can edit the readings</strong> in the content editor, like any note.</li>
       <li><strong>The TEI file comes back as it was</strong>: the export writes each entry back where it stood.</li>
     </ul>
-    <p class="note">The old site showed only 4 of Hamlet’s 94 entries; its Folio readings went through the HTML fragments below.</p>
+    <p class="note">The old site showed only 4 of Hamlet’s 94 entries, and its Folio readings went through the HTML fragments below. Of the 94, 4 are copies inside the editor’s notes; 81 of the other 90 sit in the first 313 lines, and some are damaged (question 2).</p>
   </section>
 
   <section aria-labelledby="h-html">
@@ -377,9 +377,9 @@
       <table>
         <thead><tr><th>What</th><th>Plays</th><th>Old site</th><th>Playcode today</th></tr></thead>
         <tbody>
-          <tr><td>Words found only in the 1623 Folio, between two superscript F’s (247)</td><td><i>Hamlet</i></td><td>Hidden: readers saw “O God, God,”</td><td>“O God, &lt;span class="folio"&gt; &lt;sup&gt; F &lt;/sup&gt; O … God,”</td></tr>
-          <tr><td>The Q4 Additions, a superscript Q4 at each end; some ends are written backwards</td><td><i>The Spanish Tragedy</i> in English, French, Italian and Spanish</td><td>Superscript Q4; after a backwards end, the text runs on in superscript</td><td>“&lt;sup&gt; Q4 &lt;/sup&gt; [Draws his sword.] &lt;/sup&gt; Q4 &lt;sup&gt;”</td></tr>
-          <tr><td>The labels “Aside” and “Exit” (40)</td><td><i>The Rover</i></td><td>Hidden</td><td>The tags show in 11 lines</td></tr>
+          <tr><td>Words found only in the 1623 Folio, between two superscript F’s (247)</td><td><i>Hamlet</i></td><td>Hidden by default: readers saw “O God, God,”. A switch in the side panel, “Folio interpolations: Show”, brought them back in grey</td><td>“O God, &lt;span class="folio"&gt; &lt;sup&gt; F &lt;/sup&gt; O … God,”</td></tr>
+          <tr><td>The Q4 Additions, a superscript Q4 at each end. Most ends are written backwards (all in English and Italian, 4 of 7 in French); the Spanish version numbers only the first (Q4.1) and wraps Additions 2 to 5 in the Folio code</td><td><i>The Spanish Tragedy</i> in English, French, Italian and Spanish</td><td>Superscript Q4 at the start; a backwards end printed full size, and once (French) set the rest of a paragraph in superscript. In the Spanish version the first line of Additions 2 to 5 was hidden</td><td>“&lt;sup&gt; Q4 &lt;/sup&gt; [Draws his sword.] &lt;/sup&gt; Q4 &lt;sup&gt;”</td></tr>
+          <tr><td>40 short stage directions wrapped in the Folio code: “Aside” (29), “within” (5), “Exit” (2), “To Hellena”, “To Willmore”, and the names Diego and Boy inside two entrances</td><td><i>The Rover</i></td><td>Hidden, with no switch to show them</td><td>The tags show in 11 lines</td></tr>
           <tr><td>One stray superscript tag, v. 623</td><td><i>Mariamne</i></td><td>The rest of the line in superscript</td><td>“tr &lt;sup&gt; ne du Dieu qui tonne,”</td></tr>
         </tbody>
       </table>

@@ -484,29 +484,23 @@ defmodule Playcode.Import.TeiParser do
   defp editor_role("edicion_critica"), do: "critical_editor"
   defp editor_role(_role), do: nil
 
-  # A respStmt with a <persName>, numbered from `first`; one without still takes its number.
+  # Every <persName> of every respStmt, one editor each, numbered from `first`. The people
+  # of one respStmt share its resp and orgName.
   defp resp_stmt_editors(nil, _first), do: []
 
   defp resp_stmt_editors({_name, _attrs, children}, first) do
     children
     |> find_children("respStmt")
-    |> Enum.with_index(first)
-    |> Enum.flat_map(fn {{_name, _attrs, resp_children}, idx} ->
-      case find_child(resp_children, "persName") do
-        nil ->
-          []
+    |> Enum.flat_map(fn {_name, _attrs, resp_children} ->
+      role = resp_role(safe_text(find_child(resp_children, "resp")))
+      organization = safe_text(find_child(resp_children, "orgName"))
 
-        person ->
-          [
-            %{
-              person_name: text_content(person),
-              role: resp_role(safe_text(find_child(resp_children, "resp"))),
-              organization: safe_text(find_child(resp_children, "orgName")),
-              position: idx
-            }
-          ]
-      end
+      resp_children
+      |> find_children("persName")
+      |> Enum.map(&%{person_name: text_content(&1), role: role, organization: organization})
     end)
+    |> Enum.with_index(first)
+    |> Enum.map(fn {editor, position} -> Map.put(editor, :position, position) end)
   end
 
   defp resp_role(resp) when is_binary(resp) do
