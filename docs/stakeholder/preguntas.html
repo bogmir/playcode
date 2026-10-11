@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Playcode Project Questions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: one reading column; questions as numbered answer cards, grouped by topic, a running list. */
+  :root {
+    color-scheme: light;
+    --paper: #F4F6F3;
+    --surface: #FFFFFF;
+    --ink: #1A2130;
+    --muted: #586171;
+    --rule: #D6DBD4;
+    --accent: #27487A;
+    --accent-soft: #E4EBF5;
+    --on-accent: #FFFFFF;
+    --code-bg: #ECEFEA;
+    --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #12161B;
+      --surface: #1A1F26;
+      --ink: #E4E7EA;
+      --muted: #9AA3AE;
+      --rule: #2C333C;
+      --accent: #9DB9E8;
+      --accent-soft: #1F2B3D;
+      --on-accent: #0F1620;
+      --code-bg: #161B21;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #12161B;
+    --surface: #1A1F26;
+    --ink: #E4E7EA;
+    --muted: #9AA3AE;
+    --rule: #2C333C;
+    --accent: #9DB9E8;
+    --accent-soft: #1F2B3D;
+    --on-accent: #0F1620;
+    --code-bg: #161B21;
+  }
+
+  [hidden] { display: none !important; }
+  img { max-width: 100%; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 20px;
+  }
+  main {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 3rem 5rem;
+    display: grid;
+    gap: 3.25rem;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  header { display: grid; gap: 1rem; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .lede { font-size: 1.125rem; max-width: 62ch; }
+  .meta { font-size: 0.875rem; color: var(--muted); }
+
+  /* Contents: the topics, with the question numbers each holds */
+  .toc {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0;
+    border-top: 1px solid var(--rule);
+  }
+  .toc li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 1rem;
+    padding: 0.55rem 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: 0.9375rem;
+  }
+  .toc .nums { font-variant-numeric: tabular-nums; color: var(--muted); white-space: nowrap; }
+
+  section { display: grid; gap: 1.1rem; }
+  section > h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  .note { font-size: 0.9375rem; color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.85em; }
+
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td.num, th.num { text-align: right; padding-right: 0; }
+
+  .plan { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.6rem; }
+  .plan strong { font-weight: 600; }
+
+  /* Questions */
+  .q {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 1.25rem 1.25rem 1.1rem;
+    display: grid;
+    grid-template-columns: 2.25rem 1fr;
+    gap: 0 0.75rem;
+  }
+  .q-num {
+    font-family: var(--serif);
+    font-size: 2rem;
+    line-height: 1;
+    color: var(--accent);
+    font-variant-numeric: lining-nums;
+  }
+  .q-body { display: grid; gap: 0.8rem; min-width: 0; }
+  .q h3 { margin: 0; font-size: 1.125rem; font-weight: 600; line-height: 1.35; }
+  .why { font-size: 0.9375rem; color: var(--muted); }
+  .q .table-wrap table { font-size: 0.875rem; }
+  fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 0.5rem; }
+  legend, .label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0;
+    margin-bottom: 0.4rem;
+  }
+  .options { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .options label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    border: 1px solid var(--rule);
+    border-radius: 999px;
+    padding: 0.35rem 0.85rem 0.35rem 0.6rem;
+    font-size: 0.9rem;
+    cursor: pointer;
+    background: var(--paper);
+  }
+  .options input { accent-color: var(--accent); margin: 0; }
+  .options label:has(input:checked) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+  .options label:has(input:focus-visible) {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  textarea {
+    width: 100%;
+    box-sizing: border-box;
+    min-height: 5.5rem;
+    resize: vertical;
+    font: inherit;
+    font-size: 0.9375rem;
+    color: var(--ink);
+    background: var(--paper);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 0.6rem 0.7rem;
+  }
+  textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+  .status { font-size: 0.8125rem; color: var(--muted); min-height: 1.2em; }
+
+  .send {
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    padding: 1.25rem;
+    display: grid;
+    gap: 0.9rem;
+  }
+  .send-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+  button {
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    color: var(--on-accent);
+    background: var(--accent);
+    border: 0;
+    border-radius: 4px;
+    padding: 0.6rem 1.1rem;
+    cursor: pointer;
+  }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  .count { font-size: 0.9375rem; font-variant-numeric: tabular-nums; }
+  #answers-out { min-height: 12rem; font-family: var(--mono); font-size: 0.8125rem; }
+
+  .requests { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.75rem; }
+
+  @media (max-width: 480px) {
+    .q { grid-template-columns: 1fr; gap: 0.5rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Playcode · For the EMOTHE team · A running list</p>
+    <h1>Questions for the project</h1>
+    <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
+    <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 10 October 2026. 17 questions, and a short list of FileMaker tables we still need.</p>
+  </header>
+
+  <nav aria-label="Topics">
+    <ul class="toc">
+      <li><a href="#t-variants">Variant readings</a><span class="nums">1–4</span></li>
+      <li><a href="#t-html">HTML typed into the text</a><span class="nums">5–8</span></li>
+      <li><a href="#t-lines">Line breaks and prose line numbers</a><span class="nums">9–10</span></li>
+      <li><a href="#t-performances">Historical performances</a><span class="nums">11–12</span></li>
+      <li><a href="#t-witnesses">Witnesses</a><span class="nums">13</span></li>
+      <li><a href="#t-catalogue">The catalogue</a><span class="nums">14</span></li>
+      <li><a href="#t-site">The public site</a><span class="nums">15–17</span></li>
+      <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
+    </ul>
+  </nav>
+
+  <section id="t-variants" aria-labelledby="h-variants">
+    <h2 id="h-variants">Variant readings</h2>
+    <p>Six plays carry a critical apparatus: 604 entries, each after the word it is about, listing which witness reads what. The old site showed the edited text with an asterisk that opened the readings. Playcode currently pastes the readings into the line, so <i>La discreta enamorada</i>, v. 72 reads “mucho la hermosura llama llamafalta infama ,”. We plan to keep only the edited text in the line and make each entry a note of its own kind, “Textual variant”.</p>
+    <p class="note">The full background, with the six plays and examples: <a href="variantes-y-codigo.html">Variant readings and HTML fragments in the TEI files</a>.</p>
+
+    <div class="q" data-q="q1" data-n="1">
+      <span class="q-num" aria-hidden="true">1</span>
+      <div class="q-body">
+        <h3>Should a variant be marked with a number, like the notes, or with an asterisk as before?</h3>
+        <p class="why">The old site marked a variant with an asterisk and listed it apart from the notes, which carry numbers. Playcode numbers the notes 1, 2, 3 through the play. A variant could take the next number, so a page has one sequence and one list, or keep a sign of its own.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q1-o1"><input type="radio" id="q1-o1" name="q1-choice" value="A number, in the same sequence as the notes">A number, in the same sequence as the notes</label>
+            <label for="q1-o2"><input type="radio" id="q1-o2" name="q1-choice" value="An asterisk, as on the old site">An asterisk, as on the old site</label>
+            <label for="q1-o3"><input type="radio" id="q1-o3" name="q1-choice" value="A numbering of its own (a, b, c…)">A numbering of its own (a, b, c…)</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q1-text">Notes</label>
+          <textarea id="q1-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q2" data-n="2">
+      <span class="q-num" aria-hidden="true">2</span>
+      <div class="q-body">
+        <h3>Should Hamlet show all 94 entries in its TEI file?</h3>
+        <p class="why">The old site showed 4 of them. The others include, at v. 8, “Barnardo.” where the Folio reads “Barnardo?”, and readings with the original spelling, such as F1 “euen” (mod. “even”).</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q2-o1"><input type="radio" id="q2-o1" name="q2-choice" value="Yes, all 94">Yes, all 94</label>
+            <label for="q2-o2"><input type="radio" id="q2-o2" name="q2-choice" value="Only the 4 shown before">Only the 4 shown before</label>
+            <label for="q2-o3"><input type="radio" id="q2-o3" name="q2-choice" value="Not sure: ask the play’s editor">Not sure: ask the play’s editor</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q2-text">Notes</label>
+          <textarea id="q2-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q3" data-n="3">
+      <span class="q-num" aria-hidden="true">3</span>
+      <div class="q-body">
+        <h3>How should the witnesses be named?</h3>
+        <p class="why">The files name them with the editor’s sigla: Q2, F1, Aut., PXXIV, H, P3, MP, Dyce. Only <i>Everyman</i> lists its witnesses in full; for the others the files do not say which edition H or MP is. Playcode now lists each play’s witnesses as FileMaker holds them, so a siglum can point at one.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q3-o1"><input type="radio" id="q3-o1" name="q3-choice" value="The sigla as written are enough">The sigla as written are enough</label>
+            <label for="q3-o2"><input type="radio" id="q3-o2" name="q3-choice" value="Sigla, with a list of the witnesses on the play’s title page (we will send the lists)">Sigla, with a list of the witnesses on the play’s title page (we will send the lists)</label>
+            <label for="q3-o3"><input type="radio" id="q3-o3" name="q3-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q3-text">Notes</label>
+          <textarea id="q3-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q4" data-n="4">
+      <span class="q-num" aria-hidden="true">4</span>
+      <div class="q-body">
+        <h3>Should readers see the variants by default?</h3>
+        <p class="why">The reading pages have switches for line numbers, stage directions and asides. Variants could be shown with a switch to hide them, hidden with a switch to show them, or always shown.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q4-o1"><input type="radio" id="q4-o1" name="q4-choice" value="Shown, with a switch to hide them">Shown, with a switch to hide them</label>
+            <label for="q4-o2"><input type="radio" id="q4-o2" name="q4-choice" value="Hidden, with a switch to show them">Hidden, with a switch to show them</label>
+            <label for="q4-o3"><input type="radio" id="q4-o3" name="q4-choice" value="Always shown">Always shown</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q4-text">Notes</label>
+          <textarea id="q4-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-html" aria-labelledby="h-html">
+    <h2 id="h-html">HTML typed into the text</h2>
+    <p>Seven plays hold 1,211 fragments of HTML written as text inside the TEI. The old site printed them as HTML, and its stylesheet hid one kind. Playcode stores them as text, so 236 lines show the tags themselves. Whatever you choose, these tags will no longer reach the page as text.</p>
+    <p class="note">Background and examples: <a href="variantes-y-codigo.html#h-html">HTML typed into the text</a>.</p>
+
+    <div class="q" data-q="q5" data-n="5">
+      <span class="q-num" aria-hidden="true">5</span>
+      <div class="q-body">
+        <h3>What should readers of Hamlet see of the words found only in the Folio?</h3>
+        <p class="why">There are 247 such passages, from a single word (“O God, <i>O</i> God,”) to whole speeches. The old site hid them, so its text was Q2’s.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q5-o1"><input type="radio" id="q5-o1" name="q5-choice" value="Hide them, as before">Hide them, as before</label>
+            <label for="q5-o2"><input type="radio" id="q5-o2" name="q5-choice" value="Show them in grey between superscript F’s, with a switch">Show them in grey between superscript F’s, with a switch</label>
+            <label for="q5-o3"><input type="radio" id="q5-o3" name="q5-choice" value="Turn each into a variant entry, “F1: O God, O God”">Turn each into a variant entry, “F1: O God, O God”</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q5-text">Notes</label>
+          <textarea id="q5-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q6" data-n="6">
+      <span class="q-num" aria-hidden="true">6</span>
+      <div class="q-body">
+        <h3>How should the Q4 Additions of The Spanish Tragedy be marked?</h3>
+        <p class="why">The English, French, Italian and Spanish versions mark where each addition starts and ends with a superscript Q4; the Spanish one numbers them (Q4.1…). Some ends are written backwards, which on the old site set the following text in superscript.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q6-o1"><input type="radio" id="q6-o1" name="q6-choice" value="A superscript Q4 at each end, as before, repaired">A superscript Q4 at each end, as before, repaired</label>
+            <label for="q6-o2"><input type="radio" id="q6-o2" name="q6-choice" value="Shade the whole added passage, with a switch">Shade the whole added passage, with a switch</label>
+            <label for="q6-o3"><input type="radio" id="q6-o3" name="q6-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q6-text">Notes</label>
+          <textarea id="q6-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q7" data-n="7">
+      <span class="q-num" aria-hidden="true">7</span>
+      <div class="q-body">
+        <h3>Should the “Aside” and “Exit” labels of The Rover appear in the text?</h3>
+        <p class="why">There are 40. The old site hid them; asides are marked anyway.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q7-o1"><input type="radio" id="q7-o1" name="q7-choice" value="Show them, as stage directions">Show them, as stage directions</label>
+            <label for="q7-o2"><input type="radio" id="q7-o2" name="q7-choice" value="Leave them out, as before">Leave them out, as before</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q7-text">Notes</label>
+          <textarea id="q7-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q8" data-n="8">
+      <span class="q-num" aria-hidden="true">8</span>
+      <div class="q-body">
+        <h3>Is v. 623 of Mariamne “Devant le Ciel voûté, trône du Dieu qui tonne,”?</h3>
+        <p class="why">The file has “tr”, a stray superscript tag, then “ne”. On the old site the rest of the line ran on in superscript.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q8-o1"><input type="radio" id="q8-o1" name="q8-choice" value="Yes: trône">Yes: trône</label>
+            <label for="q8-o2"><input type="radio" id="q8-o2" name="q8-choice" value="No, see my note">No, see my note</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q8-text">Notes</label>
+          <textarea id="q8-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-lines" aria-labelledby="h-lines">
+    <h2 id="h-lines">Line breaks and prose line numbers</h2>
+    <p>The TEI files mark a line break inside a paragraph with <code>&lt;lb/&gt;</code>. They use it in three ways. The old site honoured all three. Playcode currently turns every one into a space.</p>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Use</th><th class="num">How many</th><th>Old site</th><th>Playcode today</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>A numbered break: where a printed line of the source edition starts. The numbers run on from the verse, so Hamlet’s prose is lines 942, 943, 944 between two verse passages.</td>
+            <td class="num">11,677 in 40 plays</td>
+            <td>The number printed inline where each line starts; the prose runs on</td>
+            <td>The numbers are lost; prose cannot be cited by line</td>
+          </tr>
+          <tr>
+            <td>A plain break: letters, songs and verse quoted in prose, notes, dedications and prologues</td>
+            <td class="num">14,840 in the text of 144 plays; 3,988 in the front matter of 191</td>
+            <td>A new line</td>
+            <td>A space</td>
+          </tr>
+          <tr>
+            <td>Two breaks together: an empty line, mostly before a signature</td>
+            <td class="num">640 in the front matter of 140 plays</td>
+            <td>An empty line: “…como deseo.” then, after a gap, “Frey Lope Félix de Vega Carpio”</td>
+            <td>“…como deseo. Frey Lope Félix de Vega Carpio”</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="q" data-q="q9" data-n="9">
+      <span class="q-num" aria-hidden="true">9</span>
+      <div class="q-body">
+        <h3>How should prose line numbers be shown?</h3>
+        <p class="why">40 plays number their prose lines as the source edition prints them: Hamlet, <i>The Way of the World</i>, <i>Endymion</i>, <i>The Malcontent</i>, <i>King Lear</i> among them. The numbers would follow the “Line numbers” switch, as verse numbers do.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q9-o1"><input type="radio" id="q9-o1" name="q9-choice" value="Inline where each printed line starts, as the old site did">Inline where each printed line starts, as the old site did</label>
+            <label for="q9-o2"><input type="radio" id="q9-o2" name="q9-choice" value="Each printed line on a line of its own, numbered in the margin like verse">Each printed line on a line of its own, numbered in the margin like verse</label>
+            <label for="q9-o3"><input type="radio" id="q9-o3" name="q9-choice" value="Not on the page, only in the TEI file">Not on the page, only in the TEI file</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q9-text">Notes</label>
+          <textarea id="q9-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q10" data-n="10">
+      <span class="q-num" aria-hidden="true">10</span>
+      <div class="q-body">
+        <h3>Should the plain line breaks and the empty lines show, as on the old site?</h3>
+        <p class="why">They shape letters, songs and quoted verse inside speeches, and set a dedication’s signature apart. Running them on, as Playcode does now, joins lines that were meant to stand apart.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q10-o1"><input type="radio" id="q10-o1" name="q10-choice" value="Yes, both, as before">Yes, both, as before</label>
+            <label for="q10-o2"><input type="radio" id="q10-o2" name="q10-choice" value="The line breaks, but not the empty lines">The line breaks, but not the empty lines</label>
+            <label for="q10-o3"><input type="radio" id="q10-o3" name="q10-choice" value="Neither: run the text on">Neither: run the text on</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q10-text">Notes</label>
+          <textarea id="q10-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-performances" aria-labelledby="h-performances">
+    <h2 id="h-performances">Historical performances</h2>
+    <p>Next on the list is bringing over FileMaker’s historical performances, which emothe.uv.es prints under “Representaciones antiguas”: company, venue, date, cast, venue type, a note and the information source. FileMaker holds 317 performances, 243 of them on 59 plays Playcode publishes.</p>
+    <ul class="plan">
+      <li><strong>252 performances cite one of 104 sources.</strong> Wiggins’s <i>British Drama 1533–1642</i> alone is 81 of them, cited 152 times: a record per citation, most with their own pages, under ten spellings of the title (“1532-1642”, “1533+1642”, “Volume IX”…).</li>
+      <li><strong>CATCOM is cited 44 times</strong>, and its licence asks for its credit line wherever it is cited.</li>
+      <li><strong>The performance’s place is not in the tables we have</strong>; it is in the request at the end of this page.</li>
+    </ul>
+
+    <div class="q" data-q="q11" data-n="11">
+      <span class="q-num" aria-hidden="true">11</span>
+      <div class="q-body">
+        <h3>Should a performance’s information source be a work from the bibliography?</h3>
+        <p class="why">If it is, there is one list of works: <i>British Drama</i>, volume 6, is one entry, and each performance gives its own pages, as a play’s bibliography already gives its own volume and pages. Correcting the entry corrects every performance that cites it, and the citation prints the same everywhere. A separate list of sources keeps performances apart from the bibliography but holds a second copy of the same works. Free text is what FileMaker prints, and a correction then means editing each performance. We recommend the first.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q11-o1"><input type="radio" id="q11-o1" name="q11-choice" value="A work from the bibliography, with its own pages">A work from the bibliography, with its own pages</label>
+            <label for="q11-o2"><input type="radio" id="q11-o2" name="q11-choice" value="A separate list of sources">A separate list of sources</label>
+            <label for="q11-o3"><input type="radio" id="q11-o3" name="q11-choice" value="Free text, as FileMaker prints it">Free text, as FileMaker prints it</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q11-text">Notes</label>
+          <textarea id="q11-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q12" data-n="12">
+      <span class="q-num" aria-hidden="true">12</span>
+      <div class="q-body">
+        <h3>Should a work cited only for a performance also appear in the play’s bibliography?</h3>
+        <p class="why">For example, a play whose only mention of Wiggins is as the source of a performance. It could be listed beside the performance alone, or also among the play’s critical studies.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q12-o1"><input type="radio" id="q12-o1" name="q12-choice" value="Only beside the performance">Only beside the performance</label>
+            <label for="q12-o2"><input type="radio" id="q12-o2" name="q12-choice" value="Also among the critical studies">Also among the critical studies</label>
+            <label for="q12-o3"><input type="radio" id="q12-o3" name="q12-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q12-text">Notes</label>
+          <textarea id="q12-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-witnesses" aria-labelledby="h-witnesses">
+    <h2 id="h-witnesses">Witnesses</h2>
+    <p>Playcode now lists each play’s witnesses, the manuscripts and early printings, as emothe.uv.es prints its “Testimonios”: 508 witnesses on 106 plays, brought over from FileMaker.</p>
+
+    <div class="q" data-q="q13" data-n="13">
+      <span class="q-num" aria-hidden="true">13</span>
+      <div class="q-body">
+        <h3>Are the 11 witnesses FileMaker attributes to Étienne Jodelle mistakes?</h3>
+        <p class="why">They belong to six Spanish plays: <i>La verdad sospechosa</i>, <i>Los locos de Valencia</i>, <i>El anzuelo de Fenisa</i>, <i>Adonis y Venus</i>, <i>El bastardo Mudarra</i> and <i>La discreta enamorada</i>. Jodelle is the first name in FileMaker’s list of attributions, so a form left at its first choice would name him. Playcode prints these 11 with no attribution; on Jodelle’s own plays his name stays.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q13-o1"><input type="radio" id="q13-o1" name="q13-choice" value="Mistakes: leave them without attribution">Mistakes: leave them without attribution</label>
+            <label for="q13-o2"><input type="radio" id="q13-o2" name="q13-choice" value="They need another attribution, see my note">They need another attribution, see my note</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q13-text">Notes</label>
+          <textarea id="q13-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-catalogue" aria-labelledby="h-catalogue">
+    <h2 id="h-catalogue">The catalogue</h2>
+
+    <div class="q" data-q="q14" data-n="14">
+      <span class="q-num" aria-hidden="true">14</span>
+      <div class="q-body">
+        <h3>Ten plays have a web edition in FileMaker but no TEI file in the corpus. Were they withdrawn, or were their files missed?</h3>
+        <p class="why">EMOTHE0202, 0203, 0288, 0355, 0391, 0428, 0448, 0514, 0515 and 0551. FileMaker marks each as having a web edition, and Playcode holds no TEI file for any of them.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q14-o1"><input type="radio" id="q14-o1" name="q14-choice" value="Withdrawn: leave them out">Withdrawn: leave them out</label>
+            <label for="q14-o2"><input type="radio" id="q14-o2" name="q14-choice" value="Missed: we will send the files">Missed: we will send the files</label>
+            <label for="q14-o3"><input type="radio" id="q14-o3" name="q14-choice" value="Some of each, see my note">Some of each, see my note</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q14-text">Notes</label>
+          <textarea id="q14-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-site" aria-labelledby="h-site">
+    <h2 id="h-site">The public site</h2>
+
+    <div class="q" data-q="q15" data-n="15">
+      <span class="q-num" aria-hidden="true">15</span>
+      <div class="q-body">
+        <h3>How should adaptations and refundiciones be labelled?</h3>
+        <p class="why">The catalogue’s Kind filter, a play’s “translation” tag and the search page’s Originals / Translations filter call every play made from another a translation, adaptations and refundiciones included.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q15-o1"><input type="radio" id="q15-o1" name="q15-choice" value="Each by its own name: adaptation, refundición">Each by its own name: adaptation, refundición</label>
+            <label for="q15-o2"><input type="radio" id="q15-o2" name="q15-choice" value="As translations, as now">As translations, as now</label>
+            <label for="q15-o3"><input type="radio" id="q15-o3" name="q15-choice" value="As originals">As originals</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q15-text">Notes</label>
+          <textarea id="q15-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q16" data-n="16">
+      <span class="q-num" aria-hidden="true">16</span>
+      <div class="q-body">
+        <h3>Is this grouping of verse forms into families right?</h3>
+        <p class="why">A play’s statistics page colours its metrical synopsis by family. The grouping is ours, not a philologist’s. The forms we were least sure of are cuarteto, verso suelto, copla de arte mayor and the pareados.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Family</th><th>Verse forms</th></tr></thead>
+            <tbody>
+              <tr><td>Romance</td><td>romance, romance (tirada), romancillo o endecha</td></tr>
+              <tr><td>Spanish stanzas</td><td>redondilla, quintilla, décima, copla de arte mayor, copla de estructura abierta</td></tr>
+              <tr><td>Italianate</td><td>terceto, octava real, soneto, lira, sexteto-lira, silva, silva (tirada), canción, canción (canzone), endecasílabos sueltos (tirada), pareados endecasílabos, cuarteto, verso suelto</td></tr>
+              <tr><td>Other</td><td>every other form</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q16-o1"><input type="radio" id="q16-o1" name="q16-choice" value="Right as it is">Right as it is</label>
+            <label for="q16-o2"><input type="radio" id="q16-o2" name="q16-choice" value="Needs changes, see my note">Needs changes, see my note</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q16-text">Notes</label>
+          <textarea id="q16-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q17" data-n="17">
+      <span class="q-num" aria-hidden="true">17</span>
+      <div class="q-body">
+        <h3>What should these eleven kinds of note be called?</h3>
+        <p class="why">Six kinds have a name: translator’s, editor’s, critical editor’s, digital editor’s, author’s, and a plain note. These eleven all show as a plain “Note”, and the Notes page’s filter lumps them together. Most are subjects rather than who wrote the note. Give each a name, or say which should merge into another (the digital editor’s note into “Digital editor’s note”, say).</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Kind, as written in the files</th><th class="num">Notes</th></tr></thead>
+            <tbody>
+              <tr><td><code>falta_tipo</code></td><td class="num">132, in 10 plays</td></tr>
+              <tr><td><code>latinismo</code></td><td class="num">46</td></tr>
+              <tr><td><code>toponimo_accion</code></td><td class="num">24</td></tr>
+              <tr><td><code>toponimo_aludido</code></td><td class="num">8</td></tr>
+              <tr><td><code>variantes</code></td><td class="num">3</td></tr>
+              <tr><td><code>atrezzo</code>, <code>oficio</code>, <code>vestuario</code></td><td class="num">2 each</td></tr>
+              <tr><td><code>gesto_movimiento</code>, <code>video</code>, <code>nota_editor_digital</code></td><td class="num">1 each</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <label class="label" for="q17-text">Your names, one per kind</label>
+          <textarea id="q17-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-requests" aria-labelledby="h-requests">
+    <h2 id="h-requests">FileMaker tables we still need</h2>
+    <p>Not questions, but they unblock the next pieces of work. One export can carry all of them.</p>
+    <ul class="requests">
+      <li><strong>The places tables:</strong> <code>T10</code>, the <code>T10.11</code> tables (city, continent, vague location, country, region) and <code>T10.3_Region</code>. They give each play its places of action, and very likely the place of a performance: 142 performances point at a place table that is not in the export.</li>
+      <li><strong>The genre table</strong>, <code>T01.42</code>, the genre hierarchy, instead of the value lists.</li>
+      <li><strong>When exporting, choose every field</strong> (“Mover todo”). The export dialog remembers the previous selection, which is how one table first arrived with 26 of its 41 fields.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-send">
+    <h2 id="h-send">Send your answers</h2>
+    <div class="send">
+      <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
+      <div class="send-row">
+        <button type="button" id="copy-answers">Copy answers</button>
+        <span class="count" id="answered-count">0 of 17 answered</span>
+      </div>
+      <p class="status" id="copy-status" aria-live="polite"></p>
+      <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
+      <textarea id="answers-out" readonly hidden></textarea>
+    </div>
+  </section>
+</main>
+
+<script>
+(function () {
+  var KEY = "playcode-project-questions-v1";
+  var questions = Array.prototype.slice.call(document.querySelectorAll(".q"));
+  var storage = null;
+  try {
+    storage = window.localStorage;
+    storage.getItem(KEY);
+  } catch (e) {
+    storage = null;
+  }
+
+  var answers = {};
+  try {
+    answers = JSON.parse((storage && storage.getItem(KEY)) || "{}") || {};
+  } catch (e) {
+    answers = {};
+  }
+
+  function read(q) {
+    var checked = q.querySelector('input[type="radio"]:checked');
+    return {
+      choice: checked ? checked.value : "",
+      text: q.querySelector("textarea").value
+    };
+  }
+
+  function isAnswered(a) {
+    return !!(a.choice || (a.text && a.text.trim()));
+  }
+
+  function updateCount() {
+    var n = questions.filter(function (q) { return isAnswered(read(q)); }).length;
+    document.getElementById("answered-count").textContent = n + " of " + questions.length + " answered";
+  }
+
+  var timers = {};
+  function save(q) {
+    var id = q.dataset.q;
+    var status = q.querySelector(".status");
+    answers[id] = read(q);
+    var ok = false;
+    if (storage) {
+      try {
+        storage.setItem(KEY, JSON.stringify(answers));
+        ok = true;
+      } catch (e) {
+        ok = false;
+      }
+    }
+    status.textContent = ok
+      ? "Saved in this browser."
+      : "Not saved: this browser blocks local storage. Copy your answers before you close the page.";
+    updateCount();
+  }
+
+  questions.forEach(function (q) {
+    var saved = answers[q.dataset.q] || {};
+    if (saved.choice) {
+      q.querySelectorAll('input[type="radio"]').forEach(function (r) {
+        if (r.value === saved.choice) r.checked = true;
+      });
+    }
+    if (saved.text) q.querySelector("textarea").value = saved.text;
+    function schedule() {
+      clearTimeout(timers[q.dataset.q]);
+      timers[q.dataset.q] = setTimeout(function () { save(q); }, 400);
+    }
+    q.addEventListener("input", schedule);
+    q.addEventListener("change", schedule);
+  });
+  updateCount();
+
+  function compile() {
+    var lines = ["Questions for the project: answers", ""];
+    questions.forEach(function (q) {
+      var a = read(q);
+      var hasOptions = !!q.querySelector('input[type="radio"]');
+      if (!isAnswered(a)) return;
+      lines.push(q.dataset.n + ". " + q.querySelector("h3").textContent.trim());
+      if (hasOptions) lines.push("   Answer: " + (a.choice || "(none chosen)"));
+      var text = a.text.trim();
+      if (text) lines.push("   Notes: " + text.replace(/\n/g, "\n          "));
+      lines.push("");
+    });
+    if (lines.length === 2) lines.push("(no answers yet)");
+    return lines.join("\n");
+  }
+
+  document.getElementById("copy-answers").addEventListener("click", function () {
+    var text = compile();
+    var out = document.getElementById("answers-out");
+    var status = document.getElementById("copy-status");
+    out.value = text;
+    out.hidden = false;
+    document.getElementById("answers-out-label").hidden = false;
+    function fallback() {
+      out.focus();
+      out.select();
+      status.textContent = "Copying was blocked by the browser. The answers are selected in the box below: press Ctrl+C, or ⌘C on a Mac.";
+    }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        status.textContent = "Copied. Paste them into your reply to Bogdan. The same text is in the box below.";
+      }, fallback);
+    } catch (e) {
+      fallback();
+    }
+  });
+})();
+</script>
+</body>
+</html>

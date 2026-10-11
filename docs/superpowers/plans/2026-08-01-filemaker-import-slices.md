@@ -937,8 +937,14 @@ Ordered by what is actually blocking work.
    - **S9b:** `T10`, `T10.11_*`, `T10.3_Region`, instead of a language-tagged `bus_lugAccion`;
      probably also S5's missing place table
    - ~~**S3:** where the testimonios live~~ — `T03*`, received 2026-10-10
-   - **S3 questions** for the project: the 11 witnesses of Spanish plays attributed to Jodelle,
-     and the test rows in `T03`, `T03.3`, `T07.7`/`.71` and `T12` (`TES2` on EMOTHE0013)
+   - **S3 questions** for the project: the 11 witnesses of Spanish plays attributed to Jodelle
+     (question 13 in `docs/stakeholder/preguntas.html`; the test rows were settled by skipping
+     them, and `TES2` was cleared)
+   - **S5 questions** for the project: whether a performance's information source is a
+     bibliography entry, and whether such a work also joins the play's bibliography (questions
+     11 and 12)
+   - **The tables still missing** (`T10*`, the genre table, S5's place table) are listed at the
+     end of `docs/stakeholder/preguntas.html`
    - **S6 (optional):** `T07.31`, `T07.311`
    - **When asking, name the fields or say *Mover todo*:** the export dialog reuses the previous
      field selection, which is how `T12.1` first arrived with 26 of its 41 fields
@@ -949,7 +955,7 @@ Ordered by what is actually blocking work.
    ARTELOPE ones (2026-10-08), so S3, S5, S6 and S9b can run against the full corpus. Of FileMaker's
    413 EMOTHE version records, 279 match a play we hold. Ten of the rest are marked as having a web
    edition (`bus_edicionWeb: 1`) and are not in the corpus: EMOTHE0202, 0203, 0288, 0355, 0391,
-   0428, 0448, 0514, 0515, 0551. Worth asking whether they were withdrawn or their files missed
+   0428, 0448, 0514, 0515, 0551. Asked as question 14 in `docs/stakeholder/preguntas.html`: whether they were withdrawn or their files missed
    the import; the other 124 have no web edition. Of the two checks this item set: unlinked
    derived plays are now 28 (question 9), and `AL####` stayed at 19.
 6. **`bus_publicada` vs `is_complete`.** 61 rows are flagged published, but 301 have a real

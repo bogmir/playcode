@@ -13,6 +13,7 @@ This file holds the rules every session needs. The rest is in `docs/`:
 - `docs/backlog.md` - open work, the TEI corpus gaps among it
 - `docs/history.md` - what has been built, and what each audit found and fixed
 - `docs/static-site-improvements.md` - deferred static-site and exporter work, written up at length
+- `docs/stakeholder/preguntas.html` - the project's open questions, one running list (numbers never change; new ones go at the end), plus the FileMaker tables still to ask for. A question for the stakeholders goes here, with its background in a page of its own beside it
 - `docs/superpowers/specs/` and `docs/superpowers/plans/` - one design and one plan per project
 
 Finishing a project moves its item from `docs/backlog.md` to `docs/history.md`. This file

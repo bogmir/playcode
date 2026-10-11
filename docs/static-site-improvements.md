@@ -145,7 +145,8 @@ the note's paragraphs, filterable by type when the play uses two or more.
 
 ## Awaiting the project
 
-Questions only the project can answer. Nothing here is built; each stays as it is until
+Questions only the project can answer, asked as questions 15-17 in `docs/stakeholder/preguntas.html`.
+Nothing here is built; each stays as it is until
 someone with the authority decides.
 
 ### Adaptations are labelled "translation"
