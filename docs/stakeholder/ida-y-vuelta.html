@@ -5,8 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Playcode Round Trip</title>
 <!-- The one table of what reaches which output (CLAUDE.md, "The TEI file is a complete copy of a play").
-     A change that adds data to a play fills its row here; the technical detail of each gap is in
-     docs/backlog.md, "Round trip". -->
+     A change that adds data to a play fills its row here, and building a part listed as "Not yet"
+     turns its row into a real one and updates the tally; the technical detail of each gap is in
+     docs/backlog.md, "Round trip" and "Found by the corpus round trip". -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
@@ -141,6 +142,7 @@
   .tally td.num { text-align: right; white-space: nowrap; padding-right: 0; font-weight: 600; }
   .tally tr.ok td.num { color: var(--yes); }
   .tally tr.lost td.num { color: var(--no); }
+  .tally tr.todo td.num { color: var(--muted); }
 
   /* The table */
   .matrix-wrap {
@@ -210,6 +212,8 @@
   .s.part { color: var(--part); background: var(--part-bg); }
   .s.no { color: var(--no); background: var(--no-bg); font-weight: 600; }
   .s.na { color: var(--muted); }
+  .s.todo { color: var(--muted); border: 1px dashed var(--rule); background: transparent; }
+  .where { display: block; font-size: 0.78rem; font-weight: 400; color: var(--muted); line-height: 1.4; margin-top: 0.15rem; }
   sup.fn { font-size: 0.7rem; line-height: 0; }
   sup.fn a { text-decoration: none; font-weight: 600; }
 
@@ -233,7 +237,7 @@
   <header>
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
-    <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, and where something is lost on the way, above all between a play and its TEI file.</p>
+    <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
     <p class="meta">Prepared by Bogdan. Measured on 11 October 2026 on the 394 plays of the development copy.</p>
   </header>
 
@@ -259,6 +263,8 @@
         <tr class="lost"><td>Plays with a cast list per act that come back with one</td><td class="num">4</td></tr>
         <tr class="lost"><td>Witnesses that lose their FileMaker record number (107 plays)</td><td class="num">510</td></tr>
         <tr class="lost"><td>Closing formulas (“FIN DEL PRIMER ACTO”) missing from the published site and the downloads</td><td class="num">224</td></tr>
+        <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">14</td></tr>
+        <tr class="todo"><td>Parts of a play in FileMaker or planned, not built yet</td><td class="num">3</td></tr>
       </tbody>
     </table>
   </section>
@@ -282,6 +288,7 @@
       <span><span class="s part">Partly</span>reaches it with losses</span>
       <span><span class="s no">No</span>does not reach it</span>
       <span><span class="s na">—</span>has no place there</span>
+      <span><span class="s todo">Not yet</span>not built yet</span>
     </div>
     <div class="matrix-wrap" tabindex="0" role="region" aria-label="Where each part of a play goes, scrollable table">
       <table class="matrix">
@@ -527,6 +534,161 @@
             <td><span class="s yes">Yes</span></td>
             <td><span class="s yes">Yes</span></td>
           </tr>
+          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">In the source TEI files, not read yet</th></tr>
+          <tr>
+            <th scope="row" class="feature">Variant readings (critical apparatus)<span class="where">In 6 plays, 604 entries; today pasted into the line · <a href="preguntas.html#t-variants">questions 1–4</a></span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">HTML typed into the text<span class="where">In 7 plays, 1,211 fragments; today shown as text · <a href="preguntas.html#t-html">questions 5–8</a></span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Line breaks in prose, letters and songs<span class="where">In 178 plays, 26,571 breaks · <a href="preguntas.html#t-lines">questions 9–10</a></span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Line numbers of prose<span class="where">In 40 plays · <a href="preguntas.html#t-lines">questions 9–10</a></span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">The heading inside the cast list (“PERSONNAGES”)<span class="where">323 headings</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Groups in the cast list: soldiers, servants<span class="where">560 roles</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">The original cast (“Mr. Betterton”)<span class="where">In 3 plays, 14 actors</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">The scene of the action (“SCENE: An English wood…”)<span class="where">In 15 plays</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">The editor’s note on the edition<span class="where">In 15 plays, 16 notes</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Italics and notes in dedications and introductions<span class="where">About 950 italics and 270 notes</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Back matter other than the bibliography<span class="where">In 16 plays: cast lists, verse, headed sections</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Revision history: who revised the TEI, and when<span class="where">In 341 plays</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Who supplied the digital text: Canon 60, Gallica…<span class="where">In 152 plays</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Identifiers of speeches, paragraphs and stage directions<span class="where">About 460,000</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr class="group"><th scope="rowgroup" colspan="7" class="feature">In FileMaker, or planned</th></tr>
+          <tr>
+            <th scope="row" class="feature">Historical performances: company, venue, date, cast<span class="where">In FileMaker, 243 performances on 59 plays, received · <a href="preguntas.html#t-performances">questions 11–12</a></span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Genre<span class="where">In FileMaker for 82 plays; waiting for its genre table</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Places named in the text, and a map<span class="where">Planned</span></th>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+            <td><span class="s todo">Not yet</span></td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -546,7 +708,7 @@
       <li id="n8">They come back marked as coming from the file, whatever their origin. Two digital editors of the same play come back as “editor” (3 plays), and one source loses its role “canon60” (EMOTHE0727).</li>
       <li id="n9">All 510 witnesses of 107 plays come back, but without the FileMaker record number that ties each one to FileMaker, and line breaks inside a title or a note become spaces (25 fields in 9 plays).</li>
       <li id="n10">The bibliography is written to the file in full, as structured TEI, but Playcode does not read it back: 2,804 references on 115 plays are lost. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
-      <li id="n11">Checked by an automated test. No play in the development copy has places yet, so the measurement could not count them.</li>
+      <li id="n11">Checked by an automated test. No play in the development copy has places yet, so the measurement could not count them. FileMaker records the places of the action of its plays (138 links to about 94 places), still to be imported.</li>
       <li id="n12">The file holds one cast list, with no heading. 319 plays lose the heading (“Hablan en ella las personas siguientes”, “DRAMATIS PERSONAE”), and the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back with a single list. The play page and the downloads print each cast list with its heading, but every one lists all the characters; the published site prints one list without a heading.</li>
       <li id="n13">Not editable in Playcode yet; both come from the TEI files.</li>
       <li id="n14">The formula that closes an act or a play (“FIN DEL PRIMER ACTO”, “Terminat hora diem; terminat author opus”) is in the file and on the play page, but on no page of the published site and in none of the downloads: 224 of them in 131 plays.</li>
@@ -563,7 +725,7 @@
       <li><strong>Show the closing formulas</strong> on the published site and in the downloads.</li>
       <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
     </ol>
-    <p class="note">None of this needs a decision from the team. What the source TEI files hold that Playcode does not read at all (the critical apparatus, line breaks, HTML typed into the text) is a separate list, in the <a href="preguntas.html">questions for the project</a>.</p>
+    <p class="note">None of these four needs a decision from the team. The parts not in Playcode yet, at the end of the table, are projects of their own: the variant readings, the HTML in the text, the line breaks and the performances wait on the team’s answers in the <a href="preguntas.html">questions for the project</a>, and the genre on FileMaker’s genre table.</p>
   </section>
 </main>
 </body>
