@@ -101,9 +101,10 @@ defmodule Playcode.Export.PlayChangeListenerTest do
 
     # Well past the window: no id arrives a second time. Pinned to ours, because the
     # purge in another test's cleanup may relay its own play just after that test ends.
-    for id <- [bulk, other] do
-      refute_receive {:play_changed, ^id}, 500
-      refute_receive {:play_content_changed, ^id}, 100
-    end
+    # One wait covers all four: a second relay would come a window (200 ms) after the first.
+    refute_receive {:play_changed, ^bulk}, 300
+    refute_received {:play_changed, ^other}
+    refute_received {:play_content_changed, ^bulk}
+    refute_received {:play_content_changed, ^other}
   end
 end

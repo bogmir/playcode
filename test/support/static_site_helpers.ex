@@ -31,11 +31,11 @@ defmodule Playcode.StaticSiteHelpers do
   job running, or requests waiting, into the next test, whose requests would queue behind
   them while they used that test's sandbox.
   """
-  def await_idle_builder(tries \\ 100) do
+  def await_idle_builder(tries \\ 500) do
     cond do
       SiteBuilder.status() == %{job: nil, queue: []} -> :ok
       tries == 0 -> flunk("the site builder is still busy")
-      true -> Process.sleep(50) && await_idle_builder(tries - 1)
+      true -> Process.sleep(10) && await_idle_builder(tries - 1)
     end
   end
 
