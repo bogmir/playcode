@@ -167,6 +167,12 @@
   .q-body { display: grid; gap: 0.8rem; min-width: 0; }
   .q h3 { margin: 0; font-size: 1.125rem; font-weight: 600; line-height: 1.35; }
   .why { font-size: 0.9375rem; color: var(--muted); }
+  .sample { display: grid; gap: 0.9rem; padding: 0.9rem 1rem; background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; }
+  .sample p { margin: 0; font-family: var(--serif); font-size: 1.0625rem; }
+  .sample .label { display: block; margin-bottom: 0.2rem; font-family: var(--sans); }
+  .sample sup { font-family: var(--sans); font-size: 0.6rem; color: var(--muted); }
+  .sample .printed { display: grid; grid-template-columns: 1fr auto; gap: 0 1rem; font-family: var(--serif); font-size: 1.0625rem; }
+  .sample .printed span:nth-child(even) { font-family: var(--sans); font-size: 0.75rem; color: var(--muted); align-self: center; }
   .q .table-wrap table { font-size: 0.875rem; }
   fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 0.5rem; }
   legend, .label {
@@ -253,7 +259,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 10 October 2026. 17 questions, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 11 October 2026. 17 questions, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -298,14 +304,18 @@
     <div class="q" data-q="q2" data-n="2">
       <span class="q-num" aria-hidden="true">2</span>
       <div class="q-body">
-        <h3>Should Hamlet show all 94 entries in its TEI file?</h3>
-        <p class="why">The old site showed 4 of them. The others include, at v. 8, “Barnardo.” where the Folio reads “Barnardo?”, and readings with the original spelling, such as F1 “euen” (mod. “even”).</p>
+        <h3>Should readers see Hamlet’s variant readings?</h3>
+        <p class="why">Hamlet’s text mostly follows the Second Quarto (Q2, 1604). Its TEI file records 90 places where the First Quarto (Q1, 1603) or the Folio (F1, 1623) reads differently, as at v. 19: Q2 “ho! Who is”, F1 “who’s”, Q1 “who goes”. Most are small: at v. 8, “Barnardo.” where F1 reads “Barnardo?”. (The file counts 94 entries, but 4 are copies sitting inside the editor’s notes.)</p>
+        <p class="why">The old site showed 4 of the 90, at v. 1319 and vv. 3256–3257. The other 86 never appeared: their lines were printed with no marker, so readers never knew they were there.</p>
+        <p class="why">They look unfinished. 81 of the 90 sit in the first 313 lines (Act 1, scenes 1 and 2) of a play of about 3,900. Some are damaged: at v. 189 the entry for “an … a” was put after every letter “a” in the line, so it would appear four times, three of them in the middle of a word; at v. 313 (“too too sullied”) the entry is empty and the readings were typed into a note instead; three readings name no witness.</p>
+        <p class="why">Whatever you choose, the entries stay in the TEI file. This is only about what readers of the site see.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q2-o1"><input type="radio" id="q2-o1" name="q2-choice" value="Yes, all 94">Yes, all 94</label>
-            <label for="q2-o2"><input type="radio" id="q2-o2" name="q2-choice" value="Only the 4 shown before">Only the 4 shown before</label>
-            <label for="q2-o3"><input type="radio" id="q2-o3" name="q2-choice" value="Not sure: ask the play’s editor">Not sure: ask the play’s editor</label>
+            <label for="q2-o1"><input type="radio" id="q2-o1" name="q2-choice" value="Show all 90, once we have mended the damaged ones">Show all 90, once we have mended the damaged ones</label>
+            <label for="q2-o2"><input type="radio" id="q2-o2" name="q2-choice" value="Show only the 4 shown before">Show only the 4 shown before</label>
+            <label for="q2-o3"><input type="radio" id="q2-o3" name="q2-choice" value="Show none until the play’s editor has finished them">Show none until the play’s editor has finished them</label>
+            <label for="q2-o4"><input type="radio" id="q2-o4" name="q2-choice" value="Not sure: ask the play’s editor">Not sure: ask the play’s editor</label>
           </div>
         </fieldset>
         <div>
@@ -319,14 +329,18 @@
     <div class="q" data-q="q3" data-n="3">
       <span class="q-num" aria-hidden="true">3</span>
       <div class="q-body">
-        <h3>How should the witnesses be named?</h3>
-        <p class="why">The files name them with the editor’s sigla: Q2, F1, Aut., PXXIV, H, P3, MP, Dyce. Only <i>Everyman</i> lists its witnesses in full; for the others the files do not say which edition H or MP is. Playcode now lists each play’s witnesses as FileMaker holds them, so a siglum can point at one.</p>
+        <h3>How will readers know what a siglum such as “P3” or “H” stands for?</h3>
+        <p class="why">In a variant, each reading is labelled with the editor’s siglum. <i>La discreta enamorada</i>, v. 72, reads “– <i>H</i> llama – <i>P3</i> falta – <i>MP</i> infama”. A reader who does not know the edition cannot tell what H, P3 or MP are. The six plays use 42 sigla between them.</p>
+        <p class="why">They name two kinds of source. 21 are early printings or manuscripts, the play’s witnesses: P3 is the <i>Parte tercera de comedias de los mejores ingenios de España</i> (Madrid, 1653), MP a printing of 1735. The other 21 are modern editions from the play’s bibliography: H is Hartzenbusch’s <i>Comedias escogidas</i> (1860). Playcode now holds all 42, taken from FileMaker, so every siglum points at a known witness or edition.</p>
+        <p class="why">The old site printed the sigla and nothing more. Its list of witnesses and its bibliography did not show them, so a reader had no way to match “P3” to a book. Playcode’s play page does the same today.</p>
+        <p class="why">The second and third answers can go together; say so in the notes.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q3-o1"><input type="radio" id="q3-o1" name="q3-choice" value="The sigla as written are enough">The sigla as written are enough</label>
-            <label for="q3-o2"><input type="radio" id="q3-o2" name="q3-choice" value="Sigla, with a list of the witnesses on the play’s title page (we will send the lists)">Sigla, with a list of the witnesses on the play’s title page (we will send the lists)</label>
-            <label for="q3-o3"><input type="radio" id="q3-o3" name="q3-choice" value="Not sure">Not sure</label>
+            <label for="q3-o1"><input type="radio" id="q3-o1" name="q3-choice" value="Sigla only, as before">Sigla only, as before</label>
+            <label for="q3-o2"><input type="radio" id="q3-o2" name="q3-choice" value="Each siglum followed by a short name in the variant: “P3 (Madrid, 1653)”, “H (Hartzenbusch, 1860)”">Each siglum followed by a short name in the variant: “P3 (Madrid, 1653)”, “H (Hartzenbusch, 1860)”</label>
+            <label for="q3-o3"><input type="radio" id="q3-o3" name="q3-choice" value="The play’s list of witnesses and its bibliography print each one’s siglum, so readers can look it up">The play’s list of witnesses and its bibliography print each one’s siglum, so readers can look it up</label>
+            <label for="q3-o4"><input type="radio" id="q3-o4" name="q3-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -368,13 +382,15 @@
       <span class="q-num" aria-hidden="true">5</span>
       <div class="q-body">
         <h3>What should readers of Hamlet see of the words found only in the Folio?</h3>
-        <p class="why">There are 247 such passages, from a single word (“O God, <i>O</i> God,”) to whole speeches. The old site hid them, so its text was Q2’s.</p>
+        <p class="why">Hamlet’s text follows the Second Quarto (Q2, 1604). The editor also added the words that only the Folio (F1, 1623) prints, each passage between two superscript F’s: 247 passages over 155 lines, from a single word to runs of 14 lines. At v. 316, Q2 reads “O God, God,” and the Folio “O God, <i>O</i> God,”.</p>
+        <p class="why">The old site hid them by default, so its text was Q2’s. A switch in its side panel, “Folio interpolations: Show”, brought them back in grey between their F’s. Playcode today shows the code itself: “O God, &lt;span class="folio"&gt; &lt;sup&gt; F &lt;/sup&gt; O …”.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q5-o1"><input type="radio" id="q5-o1" name="q5-choice" value="Hide them, as before">Hide them, as before</label>
-            <label for="q5-o2"><input type="radio" id="q5-o2" name="q5-choice" value="Show them in grey between superscript F’s, with a switch">Show them in grey between superscript F’s, with a switch</label>
+            <label for="q5-o1"><input type="radio" id="q5-o1" name="q5-choice" value="Hidden, with a switch to show them in grey, as before">Hidden, with a switch to show them in grey, as before</label>
+            <label for="q5-o2"><input type="radio" id="q5-o2" name="q5-choice" value="Shown in grey between superscript F’s, with a switch to hide them">Shown in grey between superscript F’s, with a switch to hide them</label>
             <label for="q5-o3"><input type="radio" id="q5-o3" name="q5-choice" value="Turn each into a variant entry, “F1: O God, O God”">Turn each into a variant entry, “F1: O God, O God”</label>
+            <label for="q5-o4"><input type="radio" id="q5-o4" name="q5-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -388,14 +404,17 @@
     <div class="q" data-q="q6" data-n="6">
       <span class="q-num" aria-hidden="true">6</span>
       <div class="q-body">
-        <h3>How should the Q4 Additions of The Spanish Tragedy be marked?</h3>
-        <p class="why">The English, French, Italian and Spanish versions mark where each addition starts and ends with a superscript Q4; the Spanish one numbers them (Q4.1…). Some ends are written backwards, which on the old site set the following text in superscript.</p>
+        <h3>How should the Q4 Additions of <i>The Spanish Tragedy</i> be marked?</h3>
+        <p class="why">The Additions are the five passages first printed in the fourth quarto (Q4, 1602). They run from a few lines to a whole scene: the Painter scene is about 130 lines and 45 speeches. All four versions of the play, English, French, Italian and Spanish, mark where each one starts and ends with a superscript “Q4”. The English and Italian versions also set the Additions in italics; the French and Spanish do not, although the Spanish translator’s notes say they are printed “con un tipo de letra distinto”.</p>
+        <p class="why">The marks were typed as pieces of HTML, and on the old site several went wrong. Most ends are written backwards, so the closing “Q4” came out full size. In the French version, one backwards end set the rest of a paragraph in superscript (“Bon voyage, Messieurs !…”). In the Spanish version, Additions 2 to 5 were wrapped in the code that hid Hamlet’s Folio text, so the first line of each disappeared, together with its “Q4” and the translator’s note announcing it. Playcode today shows the code itself: “&lt;sup&gt; Q4 &lt;/sup&gt; [Draws his sword.] &lt;/sup&gt; Q4 &lt;sup&gt;”.</p>
+        <p class="why">Whatever you choose, we mend the broken marks and every line is shown. The question is how a reader sees where an Addition begins and ends, especially a long one.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q6-o1"><input type="radio" id="q6-o1" name="q6-choice" value="A superscript Q4 at each end, as before, repaired">A superscript Q4 at each end, as before, repaired</label>
-            <label for="q6-o2"><input type="radio" id="q6-o2" name="q6-choice" value="Shade the whole added passage, with a switch">Shade the whole added passage, with a switch</label>
-            <label for="q6-o3"><input type="radio" id="q6-o3" name="q6-choice" value="Not sure">Not sure</label>
+            <label for="q6-o1"><input type="radio" id="q6-o1" name="q6-choice" value="A superscript Q4 at each end, as before">A superscript Q4 at each end, as before</label>
+            <label for="q6-o2"><input type="radio" id="q6-o2" name="q6-choice" value="A line in the margin beside the whole passage, with Q4 at its start, in all four versions">A line in the margin beside the whole passage, with Q4 at its start, in all four versions</label>
+            <label for="q6-o3"><input type="radio" id="q6-o3" name="q6-choice" value="Both: the line in the margin and a Q4 at each end">Both: the line in the margin and a Q4 at each end</label>
+            <label for="q6-o4"><input type="radio" id="q6-o4" name="q6-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -409,13 +428,17 @@
     <div class="q" data-q="q7" data-n="7">
       <span class="q-num" aria-hidden="true">7</span>
       <div class="q-body">
-        <h3>Should the “Aside” and “Exit” labels of The Rover appear in the text?</h3>
-        <p class="why">There are 40. The old site hid them; asides are marked anyway.</p>
+        <h3>Should readers of <i>The Rover</i> see the 40 short stage directions the old site hid?</h3>
+        <p class="why">In <i>The Rover</i>, 40 short stage directions are wrapped in the same code as Hamlet’s Folio-only words (question 5), so the old site hid them; unlike Hamlet’s page, this one had no switch to show them. They are “Aside” (28 times, and once “Aside to Hellena”), “within” (5 times: a character speaking from offstage), “Exit” (twice, closing a scene), “To Hellena” and “To Willmore” (who a speech is addressed to), and two names inside entrances: “Enter Antonio and his page Diego” and “… and Belvile’s page Boy”.</p>
+        <p class="why">Readers lost little with the asides, because the aside itself is set in its own style. The rest was simply missing: the old site printed “Enter Antonio and his page ; Antonio knocks on the hilt of his sword”, and nothing told the reader that Belvile’s lines at the door are spoken from offstage. Playcode today shows the code itself around them.</p>
+        <p class="why">The play has the same kinds of direction elsewhere, shown normally: “(Aside)” 53 times, “(To Willmore)” 4 times, “Exit” 5 times. We do not know why these 40 were set apart. The edition’s note says Summers’ additions to the 1677 quarto are in brackets and the digital editor’s in double brackets; these have neither.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q7-o1"><input type="radio" id="q7-o1" name="q7-choice" value="Show them, as stage directions">Show them, as stage directions</label>
-            <label for="q7-o2"><input type="radio" id="q7-o2" name="q7-choice" value="Leave them out, as before">Leave them out, as before</label>
+            <label for="q7-o1"><input type="radio" id="q7-o1" name="q7-choice" value="Show all 40, like the play’s other stage directions">Show all 40, like the play’s other stage directions</label>
+            <label for="q7-o2"><input type="radio" id="q7-o2" name="q7-choice" value="Show them, but in grey, to keep them apart from the others">Show them, but in grey, to keep them apart from the others</label>
+            <label for="q7-o3"><input type="radio" id="q7-o3" name="q7-choice" value="Hide them, as before">Hide them, as before</label>
+            <label for="q7-o4"><input type="radio" id="q7-o4" name="q7-choice" value="Not sure: ask the play’s editor why they were marked">Not sure: ask the play’s editor why they were marked</label>
           </div>
         </fieldset>
         <div>
@@ -429,13 +452,15 @@
     <div class="q" data-q="q8" data-n="8">
       <span class="q-num" aria-hidden="true">8</span>
       <div class="q-body">
-        <h3>Is v. 623 of Mariamne “Devant le Ciel voûté, trône du Dieu qui tonne,”?</h3>
-        <p class="why">The file has “tr”, a stray superscript tag, then “ne”. On the old site the rest of the line ran on in superscript.</p>
+        <h3>Is v. 623 of <i>Mariamne</i> “Devant le Ciel voûté, trône du Dieu qui tonne,”?</h3>
+        <p class="why">A letter is missing from this line in the file. It reads “tr”, then a piece of HTML that starts superscript, then “ne”. The tag stands exactly where an “ô” would be, so the letter seems to have turned into the tag when the file was made. On the old site the rest of the line, “ne du Dieu qui tonne,”, came out in superscript; Playcode today shows the tag as text.</p>
+        <p class="why">Elsewhere the play spells the word “trône” (vv. 208, 466, 835) and “thrône” (vv. 8, 387). What is left here, “tr…ne”, fits “trône”, or the old spelling “trosne”, which the play never uses. The text follows Alan Howe’s edition (Exeter, 1989), which would settle it.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q8-o1"><input type="radio" id="q8-o1" name="q8-choice" value="Yes: trône">Yes: trône</label>
-            <label for="q8-o2"><input type="radio" id="q8-o2" name="q8-choice" value="No, see my note">No, see my note</label>
+            <label for="q8-o2"><input type="radio" id="q8-o2" name="q8-choice" value="No: Howe’s edition reads otherwise (see my note)">No: Howe’s edition reads otherwise (see my note)</label>
+            <label for="q8-o3"><input type="radio" id="q8-o3" name="q8-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -449,7 +474,7 @@
 
   <section id="t-lines" aria-labelledby="h-lines">
     <h2 id="h-lines">Line breaks and prose line numbers</h2>
-    <p>The TEI files mark a line break inside a paragraph with <code>&lt;lb/&gt;</code>. They use it in three ways. The old site honoured all three. Playcode currently turns every one into a space.</p>
+    <p>Verse needs no line breaks: each verse line stands on its own, with its own number. Prose is one block per speech, and the TEI files mark a new line inside it with <code>&lt;lb/&gt;</code>. They use it in four ways. The old site turned every one into a new line. Playcode currently turns every one into a space, and leaves them out of the TEI file it exports; we will keep them in the file whatever you choose.</p>
     <div class="table-wrap">
       <table>
         <thead><tr><th>Use</th><th class="num">How many</th><th>Old site</th><th>Playcode today</th></tr></thead>
@@ -461,10 +486,16 @@
             <td>The numbers are lost; prose cannot be cited by line</td>
           </tr>
           <tr>
-            <td>A plain break: letters, songs and verse quoted in prose, notes, dedications and prologues</td>
-            <td class="num">14,840 in the text of 144 plays; 3,988 in the front matter of 191</td>
+            <td>A break that sets something apart: a letter’s greeting, a song or verse quoted in prose, a new line after a stage direction, the lines of a dedication or a note</td>
+            <td class="num">758 in the text of 41 plays; about 1,000 in notes; about 3,200 in the front matter of 190 plays</td>
             <td>A new line</td>
-            <td>A space</td>
+            <td>A space: “My Lord, Whether the world will arraign me…”</td>
+          </tr>
+          <tr>
+            <td>A break that copies where a line ended in the book the text was taken from, mid-sentence and without a number</td>
+            <td class="num">8,725 in the text of 8 plays; some 750 in a few dedications</td>
+            <td>A new line, so the prose came out in the book’s lines: “Y demasiado pronto ajadas están / aquellas que tan precozmente han sido / madres.”</td>
+            <td>A space: the prose runs on</td>
           </tr>
           <tr>
             <td>Two breaks together: an empty line, mostly before a signature</td>
@@ -480,13 +511,32 @@
       <span class="q-num" aria-hidden="true">9</span>
       <div class="q-body">
         <h3>How should prose line numbers be shown?</h3>
-        <p class="why">40 plays number their prose lines as the source edition prints them: Hamlet, <i>The Way of the World</i>, <i>Endymion</i>, <i>The Malcontent</i>, <i>King Lear</i> among them. The numbers would follow the “Line numbers” switch, as verse numbers do.</p>
+        <p class="why">40 plays number their prose as well as their verse: Hamlet, <i>The Way of the World</i>, <i>Endymion</i>, <i>The Malcontent</i> and <i>King Lear</i> among them. Each number marks where a printed line of the source edition starts, and the count runs through verse and prose alike, so every line of the play has an address: Hamlet’s “Beggar that I am, I am ever poor in thanks” is line 1319.</p>
+        <p class="why">Playcode loses these numbers when it imports a file, so readers see the verse numbers jump. In Hamlet 2.2, verse line 1208 is followed by prose, and the next number shown is 1454: some 245 lines with nothing to cite them by. The TEI file Playcode exports loses them too. We will keep the numbers whatever you choose; the question is only how readers see them. They would follow the “Line numbers” switch, as verse numbers do.</p>
+        <div class="sample" role="group" aria-label="The three ways, on Hamlet 2.2">
+          <div>
+            <span class="label">1. Inline, as the old site did</span>
+            <p><sup>1319</sup>Beggar that I am, I am ever poor in thanks, <sup>1320</sup>but I thank you, and sure, dear friends, my thanks <sup>1321</sup>are too dear a halfpenny. Were you not sent for? …</p>
+          </div>
+          <div>
+            <span class="label">2. The printed lines, numbered like verse (on a phone, a long line wraps)</span>
+            <div class="printed">
+              <span>Beggar that I am, I am ever poor in thanks,</span><span>1319</span>
+              <span>but I thank you, and sure, dear friends, my thanks</span><span>1320</span>
+              <span>are too dear a halfpenny. Were you not sent for? Is it</span><span>1321</span>
+            </div>
+          </div>
+          <div>
+            <span class="label">3. Only in the TEI file</span>
+            <p>Beggar that I am, I am ever poor in thanks, but I thank you, and sure, dear friends, my thanks are too dear a halfpenny. Were you not sent for? …</p>
+          </div>
+        </div>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q9-o1"><input type="radio" id="q9-o1" name="q9-choice" value="Inline where each printed line starts, as the old site did">Inline where each printed line starts, as the old site did</label>
-            <label for="q9-o2"><input type="radio" id="q9-o2" name="q9-choice" value="Each printed line on a line of its own, numbered in the margin like verse">Each printed line on a line of its own, numbered in the margin like verse</label>
-            <label for="q9-o3"><input type="radio" id="q9-o3" name="q9-choice" value="Not on the page, only in the TEI file">Not on the page, only in the TEI file</label>
+            <label for="q9-o1"><input type="radio" id="q9-o1" name="q9-choice" value="Inline where each printed line starts, as the old site did">1. Inline where each printed line starts, as the old site did</label>
+            <label for="q9-o2"><input type="radio" id="q9-o2" name="q9-choice" value="Each printed line on a line of its own, numbered in the margin like verse">2. Each printed line on a line of its own, numbered in the margin like verse</label>
+            <label for="q9-o3"><input type="radio" id="q9-o3" name="q9-choice" value="Not on the page, only in the TEI file">3. Not on the page, only in the TEI file</label>
           </div>
         </fieldset>
         <div>
@@ -500,14 +550,16 @@
     <div class="q" data-q="q10" data-n="10">
       <span class="q-num" aria-hidden="true">10</span>
       <div class="q-body">
-        <h3>Should the plain line breaks and the empty lines show, as on the old site?</h3>
-        <p class="why">They shape letters, songs and quoted verse inside speeches, and set a dedication’s signature apart. Running them on, as Playcode does now, joins lines that were meant to stand apart.</p>
+        <h3>Which line breaks without a number should readers see?</h3>
+        <p class="why">Most of them set something apart: a letter’s greeting, a song or verse quoted in a speech, a new line after a stage direction, the lines of a dedication, and, with an empty line, a dedication’s signature. Running them on, as Playcode does now, joins lines that were meant to stand apart: “…como deseo. Frey Lope Félix de Vega Carpio”.</p>
+        <p class="why">In eight plays they do something else. They copy where each line ended in the book the text was taken from, mid-sentence, like the numbered breaks of question 9 but with no numbers: <i>Romeo y Julieta</i> (3,390), <i>Le Soir des rois</i> (1,658), <i>Le Mardi gras du cordonnier</i> (1,334), <i>Enrique IV, primera parte</i> (961), <i>The Shoemaker’s Holiday</i> (784), <i>La trágica historia del Doctor Fausto</i> (277), <i>The Duchess of Malfi</i> (242) and <i>The Spanish Tragedy</i> (79). The old site showed these too, so Capuleto’s speech came out in the book’s short lines: “Y demasiado pronto ajadas están / aquellas que tan precozmente han sido / madres.” A few dedications do the same, Congreve’s in <i>The Way of the World</i> among them. In these eight plays a song or a letter may hide among the book’s line ends; only reading them would tell.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q10-o1"><input type="radio" id="q10-o1" name="q10-choice" value="Yes, both, as before">Yes, both, as before</label>
-            <label for="q10-o2"><input type="radio" id="q10-o2" name="q10-choice" value="The line breaks, but not the empty lines">The line breaks, but not the empty lines</label>
-            <label for="q10-o3"><input type="radio" id="q10-o3" name="q10-choice" value="Neither: run the text on">Neither: run the text on</label>
+            <label for="q10-o1"><input type="radio" id="q10-o1" name="q10-choice" value="Show the breaks that set something apart; run on the book’s line ends in the eight plays">Show the breaks that set something apart; run on the book’s line ends in the eight plays</label>
+            <label for="q10-o2"><input type="radio" id="q10-o2" name="q10-choice" value="Show every break, as before, the eight plays’ line ends included">Show every break, as before, the eight plays’ line ends included</label>
+            <label for="q10-o3"><input type="radio" id="q10-o3" name="q10-choice" value="Show none: run the text on, as Playcode does now">Show none: run the text on, as Playcode does now</label>
+            <label for="q10-o4"><input type="radio" id="q10-o4" name="q10-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -523,22 +575,29 @@
     <h2 id="h-performances">Historical performances</h2>
     <p>Next on the list is bringing over FileMaker’s historical performances, which emothe.uv.es prints under “Representaciones antiguas”: company, venue, date, cast, venue type, a note and the information source. FileMaker holds 317 performances, 243 of them on 59 plays Playcode publishes.</p>
     <ul class="plan">
-      <li><strong>252 performances cite one of 104 sources.</strong> Wiggins’s <i>British Drama 1533–1642</i> alone is 81 of them, cited 152 times: a record per citation, most with their own pages, under ten spellings of the title (“1532-1642”, “1533+1642”, “Volume IX”…).</li>
-      <li><strong>CATCOM is cited 44 times</strong>, and its licence asks for its credit line wherever it is cited.</li>
+      <li><strong>FileMaker keeps a source record for nearly every volume and page cited</strong>: the 252 performances that cite a source point at 104 records, which hold about 16 works. Wiggins’s <i>British Drama 1533–1642</i> alone is 81 records, cited 152 times, under ten spellings of its title (“1532-1642”, “1533+1642”, “A Catalgue”…); Mora Sena’s <i>Restoration Comedy, 1671–1682</i> is 7 records under five spellings of its authors.</li>
+      <li><strong>The pages never reached readers.</strong> 74 of those 81 Wiggins records hold the page, but the old site printed only the volume and year: “Wiggins, Martin. British Drama 1533-1642: A Catalogue. Volume 5: 1603-1608. 2015.”</li>
+      <li><strong>Missing details show as FileMaker’s placeholders</strong>: 55 published performances read “{Falta año pub}” or the like.</li>
+      <li><strong>CATCOM is cited 46 times</strong>, under two records, and its licence asks for its credit line wherever it is cited. The old site printed the credit once, typed into a venue’s name.</li>
       <li><strong>The performance’s place is not in the tables we have</strong>; it is in the request at the end of this page.</li>
     </ul>
 
     <div class="q" data-q="q11" data-n="11">
       <span class="q-num" aria-hidden="true">11</span>
       <div class="q-body">
-        <h3>Should a performance’s information source be a work from the bibliography?</h3>
-        <p class="why">If it is, there is one list of works: <i>British Drama</i>, volume 6, is one entry, and each performance gives its own pages, as a play’s bibliography already gives its own volume and pages. Correcting the entry corrects every performance that cites it, and the citation prints the same everywhere. A separate list of sources keeps performances apart from the bibliography but holds a second copy of the same works. Free text is what FileMaker prints, and a correction then means editing each performance. We recommend the first.</p>
+        <h3>Where should a performance’s source be recorded?</h3>
+        <p class="why">Take the 39 performances that cite volume 5 of Wiggins: FileMaker reaches it through 15 separate records. There are three ways to hold such citations:</p>
+        <p class="why"><strong>1. As a work in the bibliography.</strong> <i>British Drama 1533–1642</i> becomes one entry, and each performance adds its own volume and page (“vol. 5, p. 330”), as a play’s bibliography already says where the play sits in a modern edition. A correction to the entry reaches every performance that cites it, the citation prints the same everywhere, and the pages finally show.</p>
+        <p class="why"><strong>2. As a separate list of sources</strong>, built the same way. Performances stay apart from the bibliography, but a work cited by both is entered and corrected twice.</p>
+        <p class="why"><strong>3. As free text on each performance</strong>, as FileMaker prints it. Simplest, but a correction to Wiggins means editing each of the 152 citations by hand.</p>
+        <p class="why">The same FileMaker table also gives the sources of 365 witnesses (DEEP, Greg’s <i>Bibliography</i>, ESTC…), which are not imported yet; whatever you choose here would serve them too. We recommend the first.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q11-o1"><input type="radio" id="q11-o1" name="q11-choice" value="A work from the bibliography, with its own pages">A work from the bibliography, with its own pages</label>
-            <label for="q11-o2"><input type="radio" id="q11-o2" name="q11-choice" value="A separate list of sources">A separate list of sources</label>
-            <label for="q11-o3"><input type="radio" id="q11-o3" name="q11-choice" value="Free text, as FileMaker prints it">Free text, as FileMaker prints it</label>
+            <label for="q11-o1"><input type="radio" id="q11-o1" name="q11-choice" value="A work from the bibliography, with its own pages">1. A work from the bibliography, with its own pages</label>
+            <label for="q11-o2"><input type="radio" id="q11-o2" name="q11-choice" value="A separate list of sources">2. A separate list of sources</label>
+            <label for="q11-o3"><input type="radio" id="q11-o3" name="q11-choice" value="Free text, as FileMaker prints it">3. Free text, as FileMaker prints it</label>
+            <label for="q11-o4"><input type="radio" id="q11-o4" name="q11-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -552,14 +611,15 @@
     <div class="q" data-q="q12" data-n="12">
       <span class="q-num" aria-hidden="true">12</span>
       <div class="q-body">
-        <h3>Should a work cited only for a performance also appear in the play’s bibliography?</h3>
-        <p class="why">For example, a play whose only mention of Wiggins is as the source of a performance. It could be listed beside the performance alone, or also among the play’s critical studies.</p>
+        <h3>Should a work cited for a performance also appear in the play’s bibliography?</h3>
+        <p class="why">This arises if the answer to question 11 is the first. None of these works is in any play’s bibliography today. If they joined, Wiggins would appear in the bibliography of 33 plays and CATCOM in 3; 50 plays would gain at least one entry. They are catalogues and databases, which fit none of the bibliography’s four groups (modern editions, criticism, translations, adaptations).</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q12-o1"><input type="radio" id="q12-o1" name="q12-choice" value="Only beside the performance">Only beside the performance</label>
-            <label for="q12-o2"><input type="radio" id="q12-o2" name="q12-choice" value="Also among the critical studies">Also among the critical studies</label>
-            <label for="q12-o3"><input type="radio" id="q12-o3" name="q12-choice" value="Not sure">Not sure</label>
+            <label for="q12-o2"><input type="radio" id="q12-o2" name="q12-choice" value="Also in the bibliography, among the critical studies">Also in the bibliography, among the critical studies</label>
+            <label for="q12-o3"><input type="radio" id="q12-o3" name="q12-choice" value="Also in the bibliography, in a group of their own (catalogues and databases)">Also in the bibliography, in a group of their own (catalogues and databases)</label>
+            <label for="q12-o4"><input type="radio" id="q12-o4" name="q12-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -578,13 +638,34 @@
     <div class="q" data-q="q13" data-n="13">
       <span class="q-num" aria-hidden="true">13</span>
       <div class="q-body">
-        <h3>Are the 11 witnesses FileMaker attributes to Étienne Jodelle mistakes?</h3>
-        <p class="why">They belong to six Spanish plays: <i>La verdad sospechosa</i>, <i>Los locos de Valencia</i>, <i>El anzuelo de Fenisa</i>, <i>Adonis y Venus</i>, <i>El bastardo Mudarra</i> and <i>La discreta enamorada</i>. Jodelle is the first name in FileMaker’s list of attributions, so a form left at its first choice would name him. Playcode prints these 11 with no attribution; on Jodelle’s own plays his name stays.</p>
+        <h3>Whom should the 11 witnesses FileMaker attributes to Étienne Jodelle name instead?</h3>
+        <p class="why">Eleven witnesses of six Spanish plays carry Jodelle as their attribution, and the old site printed “Jodelle, Étienne” after each of them. It is a slip of the form: FileMaker’s list of attributions has no entry for Lope de Vega, and Jodelle is its first entry, so a form left at its first choice named him. FileMaker makes the same slip on six witnesses of Sir Robert Howard’s <i>The Duke of Lerma</i>, a play Playcode does not hold. Playcode prints the 11 with no attribution for now; on Jodelle’s own plays his name stays.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Play</th><th>Witness</th><th>Author it names</th></tr></thead>
+            <tbody>
+              <tr><td><i>La verdad sospechosa</i></td><td><i>El mentiroso</i>, in the <i>Parte veintidós de las comedias de Lope de Vega Carpio</i> (Zaragoza, 1630)</td><td>Lope de Vega</td></tr>
+              <tr><td><i>La verdad sospechosa</i></td><td><i>El mentiroso: comedia famosa en tres jornadas</i>, manuscript (BNE, MSS/15646)</td><td>None</td></tr>
+              <tr><td><i>Los locos de Valencia</i></td><td>“Los locos de Zaragoza”, in Paz y Meliá’s <i>Catálogo</i></td><td>None</td></tr>
+              <tr><td><i>Los locos de Valencia</i></td><td><i>Los locos de Valencia: Comedia</i>, a suelta (BNE, T/14809/18)</td><td>None</td></tr>
+              <tr><td><i>El anzuelo de Fenisa</i></td><td><i>Octava parte de comedias de Lope de Vega</i> (Madrid, 1617)</td><td>Lope de Vega</td></tr>
+              <tr><td><i>El anzuelo de Fenisa</i></td><td><i>El anzuelo de Fenisa</i> (Biblioteca Palatina, Parma)</td><td>None</td></tr>
+              <tr><td><i>Adonis y Venus</i></td><td><i>Décima sexta parte de las comedias de Lope de Vega Carpio</i> (Madrid, 1621)</td><td>Lope de Vega</td></tr>
+              <tr><td><i>El bastardo Mudarra</i></td><td><i>Veinticuatro parte perfeta de las comedias del Fénix de España Frey Lope Félix de Vega Carpio</i> (PXXIV)</td><td>Lope de Vega</td></tr>
+              <tr><td><i>El bastardo Mudarra</i></td><td><i>El bastardo Mudarra: tragicomedia</i>, the autograph (Aut.)</td><td>Lope de Vega, in his own hand</td></tr>
+              <tr><td><i>La discreta enamorada</i></td><td><i>Parte tercera de comedias de los mejores ingenios de España</i> (Madrid, 1653): “Comedia famosa de Lope de Vega Carpio” (P3)</td><td>Lope de Vega</td></tr>
+              <tr><td><i>La discreta enamorada</i></td><td><i>La discreta enamorada</i> (1735, MP)</td><td>None</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="why">The answer turns on what an attribution means. <i>La verdad sospechosa</i> is Ruiz de Alarcón’s, and FileMaker attributes his own <i>Parte segunda</i> (1634) to him; but the <i>Parte veintidós</i> of 1630 printed the play as Lope’s. If an attribution records whom the witness names, that witness says Lope de Vega; if it records whom scholars credit, Ruiz de Alarcón.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q13-o1"><input type="radio" id="q13-o1" name="q13-choice" value="Mistakes: leave them without attribution">Mistakes: leave them without attribution</label>
-            <label for="q13-o2"><input type="radio" id="q13-o2" name="q13-choice" value="They need another attribution, see my note">They need another attribution, see my note</label>
+            <label for="q13-o1"><input type="radio" id="q13-o1" name="q13-choice" value="The author each witness names, as in the table; none where it names none">The author each witness names, as in the table; none where it names none</label>
+            <label for="q13-o2"><input type="radio" id="q13-o2" name="q13-choice" value="The play’s author on all 11: Lope de Vega, and Ruiz de Alarcón for La verdad sospechosa">The play’s author on all 11: Lope de Vega, and Ruiz de Alarcón for <i>La verdad sospechosa</i></label>
+            <label for="q13-o3"><input type="radio" id="q13-o3" name="q13-choice" value="None on all 11, as Playcode prints them now">None on all 11, as Playcode prints them now</label>
+            <label for="q13-o4"><input type="radio" id="q13-o4" name="q13-choice" value="Not sure, or see my notes">Not sure, or see my notes</label>
           </div>
         </fieldset>
         <div>
@@ -602,13 +683,30 @@
     <div class="q" data-q="q14" data-n="14">
       <span class="q-num" aria-hidden="true">14</span>
       <div class="q-body">
-        <h3>Ten plays have a web edition in FileMaker but no TEI file in the corpus. Were they withdrawn, or were their files missed?</h3>
-        <p class="why">EMOTHE0202, 0203, 0288, 0355, 0391, 0428, 0448, 0514, 0515 and 0551. FileMaker marks each as having a web edition, and Playcode holds no TEI file for any of them.</p>
+        <h3>Nine plays have a web edition in FileMaker but no TEI file in Playcode. Which of them should it have?</h3>
+        <p class="why">FileMaker marks ten versions as having a web edition for which the 370 TEI files we were given hold nothing. One, EMOTHE0203, is FileMaker’s test record (“ZZZ_OBRA_DE_PRUEBA”), so we leave it out. The other nine fall into two groups.</p>
+        <p class="why"><strong>Five can be read on emothe.uv.es today</strong>, but the site’s own “[xml]” link fails for each of them, which is why their files did not reach us. <strong>Four have no page on the site at all</strong>: they look unfinished, or replaced by another version.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Play</th><th>On emothe.uv.es</th><th>What else we know</th></tr></thead>
+            <tbody>
+              <tr><td>EMOTHE0202 <i>Le démon blanc (Vittoria Corombona)</i>, Webster, tr. Camille Cè</td><td>Yes</td><td>Playcode holds the English, Spanish and Italian versions</td></tr>
+              <tr><td>EMOTHE0391 <i>El condenado por desconfiado</i>, Tirso de Molina / Andrés de Claramonte, ed. Luis Galván</td><td>Yes</td><td></td></tr>
+              <tr><td>EMOTHE0514 <i>La belle Égyptienne</i>, Alexandre Hardy</td><td>Yes</td><td></td></tr>
+              <tr><td>EMOTHE0515 <i>Felismena</i>, the Spanish version of Hardy’s <i>Félismène</i></td><td>Yes</td><td>Playcode holds the French original, EMOTHE0489</td></tr>
+              <tr><td>EMOTHE0551 <i>La paloma de Toledo</i>, Lope de Vega, ed. Cristina Barreda</td><td>Yes</td><td>Playcode holds ARTELOPE’s AL0790, also edited by Cristina Barreda, as a draft: perhaps the same text</td></tr>
+              <tr><td>EMOTHE0288 <i>Edward II</i>, Marlowe</td><td>No</td><td></td></tr>
+              <tr><td>EMOTHE0355 <i>The Spanish Bawd</i>, James Mabbe</td><td>No</td><td></td></tr>
+              <tr><td>EMOTHE0428 <i>Auto da Índia</i>, Gil Vicente</td><td>No</td><td>FileMaker files it under Massinger’s <i>The Renegado</i>, with that play’s performances. Playcode holds the Spanish version, EMOTHE0432</td></tr>
+              <tr><td>EMOTHE0448 <i>Les amours tragiques de Pyrame et Thisbé</i>, Théophile de Viau</td><td>No</td><td>A second version of EMOTHE0530, which Playcode holds</td></tr>
+            </tbody>
+          </table>
+        </div>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q14-o1"><input type="radio" id="q14-o1" name="q14-choice" value="Withdrawn: leave them out">Withdrawn: leave them out</label>
-            <label for="q14-o2"><input type="radio" id="q14-o2" name="q14-choice" value="Missed: we will send the files">Missed: we will send the files</label>
+            <label for="q14-o1"><input type="radio" id="q14-o1" name="q14-choice" value="We will send the five on the site; leave out the four without a page">We will send the five on the site; leave out the four without a page</label>
+            <label for="q14-o2"><input type="radio" id="q14-o2" name="q14-choice" value="We will send all nine">We will send all nine</label>
             <label for="q14-o3"><input type="radio" id="q14-o3" name="q14-choice" value="Some of each, see my note">Some of each, see my note</label>
           </div>
         </fieldset>
@@ -627,18 +725,36 @@
     <div class="q" data-q="q15" data-n="15">
       <span class="q-num" aria-hidden="true">15</span>
       <div class="q-body">
-        <h3>How should adaptations and refundiciones be labelled?</h3>
-        <p class="why">The catalogue’s Kind filter, a play’s “translation” tag and the search page’s Originals / Translations filter call every play made from another a translation, adaptations and refundiciones included.</p>
+        <h3>Eleven plays are adaptations. How should the public site label them?</h3>
+        <p class="why">Their TEI files call them adaptations of another play (<code>&lt;title type="adaptacion"&gt;</code>). Playcode has room for three kinds of play made from another, translation, adaptation and refundición, but its import reads only translations. So ten of the eleven show on the public site as originals, each linked to the play it adapts, and <i>The Shy Courtier</i> as a translation. The public site would not tell them apart anyway: its catalogue filter, a play’s tag and the search page know only originals and translations. No play in Playcode is a refundición yet; FileMaker’s two, the <i>Abre el ojo</i> “refundidas” by Enciso Castrillón (EMOTHE0563, 0564), have no TEI file.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Adaptation</th><th>Of</th><th>In Playcode today</th></tr></thead>
+            <tbody>
+              <tr><td>EMOTHE0030 <i>Le Menteur</i>, Corneille</td><td><i>La verdad sospechosa</i></td><td>Original, linked</td></tr>
+              <tr><td>EMOTHE0049 <i>Le véritable Saint Genest</i>, Rotrou</td><td><i>Lo fingido verdadero</i></td><td>Original, linked</td></tr>
+              <tr><td>EMOTHE0090 <i>Los engañados</i>, Lope de Rueda</td><td><i>Gl’Ingannati</i></td><td>Original, linked</td></tr>
+              <tr><td>EMOTHE0120 <i>Il bugiardo</i>, Goldoni</td><td><i>La verdad sospechosa</i></td><td>Original, linked</td></tr>
+              <tr><td>EMOTHE0121 <i>El Hipócrita</i>, José Marchena</td><td><i>Tartuffe</i></td><td>Original, linked</td></tr>
+              <tr><td>EMOTHE0192 <i>Dom Juan</i>, Molière</td><td><i>El burlador de Sevilla</i></td><td>Original, linked</td></tr>
+              <tr><td>EMOTHE0687 <i>Don Lope de Cardone</i>, Rotrou</td><td><i>Don Lope de Cardona</i></td><td>Original, linked</td></tr>
+              <tr><td>EMOTHE0653 <i>The Shy Courtier</i></td><td><i>El vergonzoso en palacio</i></td><td>Translation, linked</td></tr>
+              <tr><td>EMOTHE0317 <i>Annabella</i>, Maeterlinck</td><td><i>’Tis Pity She’s a Whore</i></td><td>Original, not linked, though Playcode holds Ford’s play (EMOTHE0283)</td></tr>
+              <tr><td>EMOTHE0298 <i>El pastor fido</i>, Solís, Coello and Calderón</td><td>Guarini’s <i>Il pastor fido</i> (EMOTHE0006)</td><td>Original, linked instead to Calderón’s auto sacramental <i>El pastor fido</i> (EMOTHE0165)</td></tr>
+              <tr><td>EMOTHE0141 <i>Las mocedades del Cid</i>, Guillén de Castro</td><td><i>Le Cid</i>, says its file</td><td>Original, linked to <i>Le Cid</i>; but Corneille’s play (1637) adapts Guillén de Castro’s (c. 1618), not the reverse</td></tr>
+            </tbody>
+          </table>
+        </div>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q15-o1"><input type="radio" id="q15-o1" name="q15-choice" value="Each by its own name: adaptation, refundición">Each by its own name: adaptation, refundición</label>
-            <label for="q15-o2"><input type="radio" id="q15-o2" name="q15-choice" value="As translations, as now">As translations, as now</label>
-            <label for="q15-o3"><input type="radio" id="q15-o3" name="q15-choice" value="As originals">As originals</label>
+            <label for="q15-o1"><input type="radio" id="q15-o1" name="q15-choice" value="Each by its own name: adaptation, refundición">Each by its own name: adaptation, and refundición when one comes</label>
+            <label for="q15-o2"><input type="radio" id="q15-o2" name="q15-choice" value="As translations">As translations</label>
+            <label for="q15-o3"><input type="radio" id="q15-o3" name="q15-choice" value="As originals">As originals, as now</label>
           </div>
         </fieldset>
         <div>
-          <label class="label" for="q15-text">Notes</label>
+          <label class="label" for="q15-text">Notes, and any link in the table that is wrong</label>
           <textarea id="q15-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
@@ -649,15 +765,16 @@
       <span class="q-num" aria-hidden="true">16</span>
       <div class="q-body">
         <h3>Is this grouping of verse forms into families right?</h3>
-        <p class="why">A play’s statistics page colours its metrical synopsis by family. The grouping is ours, not a philologist’s. The forms we were least sure of are cuarteto, verso suelto, copla de arte mayor and the pareados.</p>
+        <p class="why">A play’s statistics page colours its metrical synopsis by family. The grouping is ours, not a philologist’s. The four forms we were least sure of are rare: cuarteto (7 lines in the corpus), verso suelto (21), copla de arte mayor (8) and pareados endecasílabos (56). The bigger question is the forms that fall into “Other” because we did not place them, some of which plainly belong to a family. Line counts are from the 394 plays in Playcode.</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Family</th><th>Verse forms</th></tr></thead>
+            <thead><tr><th>Family</th><th>Verse forms (lines)</th></tr></thead>
             <tbody>
-              <tr><td>Romance</td><td>romance, romance (tirada), romancillo o endecha</td></tr>
-              <tr><td>Spanish stanzas</td><td>redondilla, quintilla, décima, copla de arte mayor, copla de estructura abierta</td></tr>
-              <tr><td>Italianate</td><td>terceto, octava real, soneto, lira, sexteto-lira, silva, silva (tirada), canción, canción (canzone), endecasílabos sueltos (tirada), pareados endecasílabos, cuarteto, verso suelto</td></tr>
-              <tr><td>Other</td><td>every other form</td></tr>
+              <tr><td>Romance</td><td>romance (tirada) 17,200; romancillo o endecha 238</td></tr>
+              <tr><td>Spanish stanzas</td><td>redondilla 54,989; quintilla 18,319; décima 5,416; copla de estructura abierta 43; copla de arte mayor 8</td></tr>
+              <tr><td>Italianate</td><td>octava real 5,514; terceto 4,534; endecasílabos sueltos (tirada) 3,827; soneto 1,046; lira 699; canción (canzone) 597; sexteto-lira 371; silva (tirada) 329; pareados endecasílabos 56; canción 28; verso suelto 21; cuarteto 7</td></tr>
+              <tr><td>Other, but perhaps not</td><td>nona 490; oitava 355; pareado 285; silva de pareados 134; sestina 97; redondilla-quintilla de pie quebrado 87; copla 56; pareados de pie quebrado 39; canción tradicional 38; ovillejo 38; seguidilla 36; zéjel 28; seguidilla con estribillo 24; pareados 23; villancico 21; quadra 21; soneto con estrambote 20; octosílabos con estribillo 18; oncena 12; cantiga 10; romance heroico 9; cuarteta asonantada 8; pareado hexasílabo 8; cuarteta 4; and a few more of 1 to 6 lines</td></tr>
+              <tr><td>Other</td><td>free verse 431,281, as the English, French and Italian plays are marked; blank verse 17; heroic couplet 8; skeltonic 12; lines with no form 3,467</td></tr>
             </tbody>
           </table>
         </div>
@@ -669,7 +786,7 @@
           </div>
         </fieldset>
         <div>
-          <label class="label" for="q16-text">Notes</label>
+          <label class="label" for="q16-text">Notes: say where the forms of the fourth row belong</label>
           <textarea id="q16-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
@@ -679,24 +796,39 @@
     <div class="q" data-q="q17" data-n="17">
       <span class="q-num" aria-hidden="true">17</span>
       <div class="q-body">
-        <h3>What should these eleven kinds of note be called?</h3>
-        <p class="why">Six kinds have a name: translator’s, editor’s, critical editor’s, digital editor’s, author’s, and a plain note. These eleven all show as a plain “Note”, and the Notes page’s filter lumps them together. Most are subjects rather than who wrote the note. Give each a name, or say which should merge into another (the digital editor’s note into “Digital editor’s note”, say).</p>
+        <h3>What should these thirteen kinds of note be called?</h3>
+        <p class="why">Five kinds of note have a name: translator’s, editor’s, critical editor’s, digital editor’s and author’s, and a note with no kind shows as a plain “Note”. Thirteen more kinds in the files show as a plain “Note” too, and the Notes page’s filter lumps them together. Counts are from the 370 files.</p>
+        <p class="why">They are of three sorts. <strong><code>falta_tipo</code> means “type missing”</strong>: the kind was never chosen. 100 of its 132 notes are glosses of old French words in <i>Félismène</i>, from Furetière and Nicot; the rest are notes by the editor or translator of nine other plays. <strong>Nine kinds name a subject</strong> rather than who wrote the note, and come almost all from <i>Friar Bacon and Friar Bungay</i>, its Spanish version and Hamlet. <strong>Three are slips</strong>.</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Kind, as written in the files</th><th class="num">Notes</th></tr></thead>
+            <thead><tr><th>Kind, as written in the files</th><th class="num">Notes</th><th>Where</th><th>Our suggestion</th></tr></thead>
             <tbody>
-              <tr><td><code>falta_tipo</code></td><td class="num">132, in 10 plays</td></tr>
-              <tr><td><code>latinismo</code></td><td class="num">46</td></tr>
-              <tr><td><code>toponimo_accion</code></td><td class="num">24</td></tr>
-              <tr><td><code>toponimo_aludido</code></td><td class="num">8</td></tr>
-              <tr><td><code>variantes</code></td><td class="num">3</td></tr>
-              <tr><td><code>atrezzo</code>, <code>oficio</code>, <code>vestuario</code></td><td class="num">2 each</td></tr>
-              <tr><td><code>gesto_movimiento</code>, <code>video</code>, <code>nota_editor_digital</code></td><td class="num">1 each</td></tr>
+              <tr><td><code>falta_tipo</code></td><td class="num">132</td><td>10 plays, 100 in <i>Félismène</i></td><td>See the answer below</td></tr>
+              <tr><td><code>latinismo</code></td><td class="num">54</td><td><i>Friar Bacon</i>, <i>Fray Bacon</i>, Hamlet</td><td>Latinism</td></tr>
+              <tr><td><code>toponimo_aludido</code></td><td class="num">38</td><td><i>Friar Bacon</i>, Hamlet, <i>La verdad sospechosa</i></td><td>Place mentioned</td></tr>
+              <tr><td><code>toponimo_accion</code></td><td class="num">30</td><td><i>Friar Bacon</i>, Hamlet, <i>El bastardo Mudarra</i></td><td>Place of the action</td></tr>
+              <tr><td><code>atrezzo</code></td><td class="num">9</td><td>Hamlet, <i>Friar Bacon</i>, <i>El bastardo Mudarra</i></td><td>Props</td></tr>
+              <tr><td><code>oficio</code></td><td class="num">3</td><td>Hamlet, <i>Friar Bacon</i></td><td>Trades and offices</td></tr>
+              <tr><td><code>vestuario</code></td><td class="num">2</td><td><i>Friar Bacon</i>, <i>El bastardo Mudarra</i></td><td>Costume</td></tr>
+              <tr><td><code>espacio</code></td><td class="num">2</td><td>Hamlet</td><td>Stage space</td></tr>
+              <tr><td><code>gesto_movimiento</code></td><td class="num">1</td><td>Hamlet</td><td>Gesture and movement</td></tr>
+              <tr><td><code>efectos_especiales</code></td><td class="num">1</td><td>Hamlet</td><td>Special effects</td></tr>
+              <tr><td><code>variantes</code></td><td class="num">3</td><td><i>La discreta enamorada</i></td><td>Textual variant, the kind of question 1</td></tr>
+              <tr><td><code>video</code></td><td class="num">1</td><td><i>La tragedia española</i></td><td>A slip: it glosses “Belona”, so a translator’s note</td></tr>
+              <tr><td><code>nota_editor_digital</code></td><td class="num">1</td><td><i>Marta la piadosa</i></td><td>A slip for <code>editor_digital</code>: digital editor’s note</td></tr>
             </tbody>
           </table>
         </div>
+        <fieldset>
+          <legend>Answer for <code>falta_tipo</code></legend>
+          <div class="options">
+            <label for="q17-o1"><input type="radio" id="q17-o1" name="q17-choice" value="The play’s usual kind: editor’s note in an original, translator’s note in a translation">The play’s usual kind: editor’s note in an original, translator’s note in a translation</label>
+            <label for="q17-o2"><input type="radio" id="q17-o2" name="q17-choice" value="A plain “Note”, as now">A plain “Note”, as now</label>
+            <label for="q17-o3"><input type="radio" id="q17-o3" name="q17-choice" value="See my note">See my note</label>
+          </div>
+        </fieldset>
         <div>
-          <label class="label" for="q17-text">Your names, one per kind</label>
+          <label class="label" for="q17-text">Your names for the other kinds, or “yes” to ours</label>
           <textarea id="q17-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>

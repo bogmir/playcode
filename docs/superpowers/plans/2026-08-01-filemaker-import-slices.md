@@ -434,7 +434,12 @@ master tables arrived, and witnesses are not sources (below).
 - **Attribution belongs to the witness, not the play.** A suelta of Rojas Zorrilla's play printed
   under Calderón's name (EMOTHE0390) is a fact about that print. But 11 witnesses of six Spanish
   plays (EMOTHE0013, 0204, 0358, 0382, 0435, 0560) are attributed to `Jodelle, Étienne`, which looks
-  like a slip in FileMaker: report them, do not import a guess.
+  like a slip in FileMaker: report them, do not import a guess. Confirmed 2026-10-11: `T03.2`
+  has no Lope de Vega (nor Howard) to pick, and Jodelle is its first record (id 13), so the form's
+  default named him; the old site printed it. Six witnesses of EMOTHE0463 (Howard's *The Duke of
+  Lerma*, not held) carry the same slip. 5 of the 11 name Lope in their title and one is his
+  autograph; question 13 now asks whether an attribution is whom the witness names or whom
+  scholars credit (they differ for EMOTHE0013's *Parte veintidós*).
 - **Test data in the dump:** 1 test witness (record 32, `TituloTestimonio`, EMOTHE0203, not held)
   and 5 empty ones (14, 15, 62, 67, 600; 4 on plays we hold); `CiudadPrueba`, `BibliotecaPrueba`
   and `ciudad test` in `T03.3`. The import reports and skips them.
@@ -602,6 +607,21 @@ lacks, the proposed table, TEI mapping. Headlines:
   - **The place is missing.** `_k_IdObraAccionLugar` is set on 142 performances (18 distinct) and
     points at a place table not in the dump, and the published `Topónimo:` line is blank on every
     row. Ask for it with S9b's `T10` tables, which it probably is
+- **The sources, measured 2026-10-11** (questions 11 and 12):
+  - the 252 sourced performances point at 104 `T13` records (one, `105`, is missing from `T13`),
+    which hold about 16 works: Wiggins is 81 records under ten title spellings, one per volume
+    and page (`FueInf_NumVolTomo`, `FueInf_Pag`; 189 and 190 are the same vol. 3, p. 366); Mora
+    Sena's *Restoration Comedy, 1671-1682* is 7 records; CATCOM is 2 (`119`, `468`)
+  - the published `Information source` is `_tc_FueInf_ComposicionBreve`, which leaves out the
+    page: 74 of the 81 Wiggins records hold one that readers never saw
+  - 55 published rows show FileMaker's placeholders (`{Falta año pub}` 46,
+    `{Falta autor pub. electrónica}` 7…); the renderer must not
+  - the CATCOM credit line is in the record's `FueInf_Nota`, and appears in one published row
+    only, typed into that performance's venue name (`ObrRep_NombreCircunstancia`); strip it there
+  - `T13` also serves `T03`: 365 witnesses cite 62 records (DEEP, Greg, ESTC; 5 shared with
+    performances), which S3 did not import. Whatever model question 11 picks serves them too
+  - on plays we hold: Wiggins backs 110 performances on 33 plays, CATCOM 46 on 3; 50 plays have
+    a sourced performance. None of these works is in any play's bibliography
 - **Done when:** performances render per play with their source attribution, **and** admins can add
   a performance and its cast by hand — the 12 rows FileMaker holds are a seed, not the ceiling
 - **S0b:** both new tables stay outside the importer's reach
@@ -956,7 +976,11 @@ Ordered by what is actually blocking work.
    413 EMOTHE version records, 279 match a play we hold. Ten of the rest are marked as having a web
    edition (`bus_edicionWeb: 1`) and are not in the corpus: EMOTHE0202, 0203, 0288, 0355, 0391,
    0428, 0448, 0514, 0515, 0551. Asked as question 14 in `docs/stakeholder/preguntas.html`: whether they were withdrawn or their files missed
-   the import; the other 124 have no web edition. Of the two checks this item set: unlinked
+   the import; the other 124 have no web edition. Checked 2026-10-11: 0203 is FileMaker's test
+   record; 0202, 0391, 0514, 0515 and 0551 have live pages on emothe.uv.es whose `textosXML/`
+   link 404s, which is why the corpus lacks them (0551 is Barreda's edition, as is AL0790, held
+   as a draft); 0288, 0355, 0428 and 0448 have no page (0428, *Auto da Índia*, is filed under
+   Massinger's *The Renegado*; 0448 is a second version of 0530). Of the two checks this item set: unlinked
    derived plays are now 28 (question 9), and `AL####` stayed at 19.
 6. **`bus_publicada` vs `is_complete`.** 61 rows are flagged published, but 301 have a real
    web-edition href. Our `is_complete` gates the static-site export, so nothing should write to it
