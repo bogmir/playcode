@@ -1,7 +1,7 @@
 defmodule Playcode.Release do
   @moduledoc false
 
-  alias Playcode.Import.{Bibliography, FilemakerSync, Witnesses}
+  alias Playcode.Import.{Bibliography, FilemakerSync, TeiCorpus, Witnesses}
 
   @app :playcode
 
@@ -90,6 +90,31 @@ defmodule Playcode.Release do
 
       {:error, {file, reason}} ->
         IO.puts("cannot read #{Path.join(dir, file)}: #{inspect(reason)}")
+    end
+  end
+
+  @doc """
+  `mix playcode.import.tei` for a release: imports every TEI file under `dir`, one play
+  per code. Copy the files onto the machine first (`fly ssh sftp put`), then:
+
+      bin/playcode rpc 'Playcode.Release.import_tei("/tmp/tei", dry_run: true, force: true)'
+      bin/playcode rpc 'Playcode.Release.import_tei("/tmp/tei", force: true)'
+
+  Without `force: true` a play already imported is skipped. A forced re-import replaces a
+  play's text and loses hand edits to it, which the dry run counts per play.
+  """
+  def import_tei(dir, opts \\ []) do
+    load_app()
+    {:ok, _} = Application.ensure_all_started(:playcode)
+
+    files = TeiCorpus.collect_files([dir])
+    IO.puts("#{length(files)} file(s) in #{dir}")
+    report = fn {_level, line} -> IO.puts(line) end
+
+    if opts[:dry_run] do
+      files |> TeiCorpus.dry_run(force: opts[:force] || false) |> Enum.each(report)
+    else
+      TeiCorpus.run(files, [force: opts[:force] || false], report)
     end
   end
 
