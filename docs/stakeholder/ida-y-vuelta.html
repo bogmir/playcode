@@ -284,12 +284,12 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading and a dating given only in words now come back.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back.</p>
   </header>
 
   <section aria-labelledby="h-why">
     <h2 id="h-why">Why the TEI file matters</h2>
-    <p>The TEI file is meant to be a complete copy of a play. It is published with the site as the edition's long-term archive, and it is how a play moves: a backup restored, a play loaded into another installation. If a play is exported and its file imported into an empty Playcode, everything should come back.</p>
+    <p>The TEI file is meant to be a complete copy of a play. It is published with the site as the edition's long-term archive, and it is how a play moves: a backup restored, a play loaded into another installation. If a play is exported and its file imported into an empty Playcode, everything should come back, but for the three things kept out on purpose (see <a href="#h-tei">Into the TEI</a>).</p>
     <p>So the rule is: <strong>if TEI has a way to say it, it goes into the file</strong>, wherever it came from: the TEI file itself, a form in Playcode, or FileMaker. FileMaker’s data was imported once; whatever of it lives only in Playcode’s database cannot be recovered from the TEI files. That is why the table says where each part’s data came from.</p>
     <p>To check, every play was exported and its file imported again as a new play, then the two were compared field by field. The text comes back whole. Several things around it do not.</p>
     <p class="note">Importing a file over the play it came from is a different case. That keeps what the team has set in Playcode (whether the play is complete, its family, its historical time) and everything brought in from FileMaker, so it loses much less. What it replaces is the text itself.</p>
@@ -302,15 +302,13 @@
         <tr class="ok"><td>Lines, speeches, stage directions and prose: identical</td><td class="num">1,308,522</td></tr>
         <tr class="ok"><td>Notes, editors, sources, dedications and introductions: identical</td><td class="num">5,789</td></tr>
         <tr class="lost"><td>Bibliography references lost (115 plays)</td><td class="num">2,804</td></tr>
-        <tr class="lost"><td>Complete plays that come back as drafts</td><td class="num">373</td></tr>
         <tr class="lost"><td>Translations that lose the play they translate</td><td class="num">153</td></tr>
-        <tr class="lost"><td>Plays that lose their historical time</td><td class="num">109</td></tr>
         <tr class="lost"><td>Plays with a cast list per act that come back with one</td><td class="num">4</td></tr>
         <tr class="lost"><td>Witnesses that lose their FileMaker record number (107 plays)</td><td class="num">510</td></tr>
         <tr class="lost"><td>Closing formulas (“FIN DEL PRIMER ACTO”) missing from the published site and the downloads</td><td class="num">224</td></tr>
         <tr class="todo"><td>Witnesses ready from FileMaker, not yet imported on production</td><td class="num">510</td></tr>
         <tr class="todo"><td>Plays whose notes wait on production for the TEI re-import</td><td class="num">84</td></tr>
-        <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">14</td></tr>
+        <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">13</td></tr>
         <tr class="todo"><td>Parts of a play in FileMaker or planned, not built yet</td><td class="num">3</td></tr>
       </tbody>
     </table>
@@ -359,8 +357,8 @@
             <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n1" aria-label="note 1">1</a></sup></td>
-            <td data-label="Downloads"><span class="s part">Partly</span><sup class="fn"><a href="#n2" aria-label="note 2">2</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s part">Partly</span><sup class="fn"><a href="#n1" aria-label="note 1">1</a></sup></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
@@ -378,8 +376,8 @@
             <th scope="row" class="feature">Which play a translation translates</th>
             <td class="imp" data-label="Imported data"><span class="n">153</span><span class="src">of 168 translations; FileMaker</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
-            <td data-label="Written to TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
-            <td data-label="Read from TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
+            <td data-label="Written to TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n2" aria-label="note 2">2</a></sup></td>
+            <td data-label="Read from TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n2" aria-label="note 2">2</a></sup></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
@@ -388,8 +386,8 @@
             <th scope="row" class="feature">Complete or draft</th>
             <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">all complete; set in Playcode</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
-            <td data-label="Written to TEI"><span class="s no">No</span></td>
-            <td data-label="Read from TEI"><span class="s no">No</span><sup class="fn"><a href="#n4" aria-label="note 4">4</a></sup></td>
+            <td data-label="Written to TEI"><span class="s na">—</span><sup class="fn"><a href="#n3" aria-label="note 3">3</a></sup></td>
+            <td data-label="Read from TEI"><span class="s na">—</span></td>
             <td data-label="Downloads"><span class="s na">—</span></td>
             <td data-label="Play page"><span class="s na">—</span></td>
             <td data-label="Published site"><span class="s na">—</span></td>
@@ -398,7 +396,7 @@
             <th scope="row" class="feature">Date of composition</th>
             <td class="imp" data-label="Imported data"><span class="n">76</span><span class="src">FileMaker</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
-            <td data-label="Written to TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n4" aria-label="note 4">4</a></sup></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
@@ -408,8 +406,8 @@
             <th scope="row" class="feature">Historical time of the action</th>
             <td class="imp" data-label="Imported data"><span class="n">108</span><span class="src">FileMaker</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
-            <td data-label="Written to TEI"><span class="s no">No</span><sup class="fn"><a href="#n6" aria-label="note 6">6</a></sup></td>
-            <td data-label="Read from TEI"><span class="s no">No</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
@@ -418,7 +416,7 @@
             <th scope="row" class="feature">Verse, prose or mixed</th>
             <td class="imp" data-label="Imported data"><span class="s na">—</span><span class="src">none set by hand</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
-            <td data-label="Written to TEI"><span class="s no">No</span><sup class="fn"><a href="#n7" aria-label="note 7">7</a></sup></td>
+            <td data-label="Written to TEI"><span class="s no">No</span><sup class="fn"><a href="#n6" aria-label="note 6">6</a></sup></td>
             <td data-label="Read from TEI"><span class="s no">No</span></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
@@ -429,7 +427,7 @@
             <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n7" aria-label="note 7">7</a></sup></td>
             <td data-label="Downloads"><span class="s yes">Yes</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
@@ -439,17 +437,17 @@
             <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n7" aria-label="note 7">7</a></sup></td>
             <td data-label="Downloads"><span class="s yes">Yes</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Witnesses: manuscripts and early printings</th>
-            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n17" aria-label="note 17">17</a></sup><span class="src">ready from FileMaker: 510 on 107 plays</span></td>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n16" aria-label="note 16">16</a></sup><span class="src">ready from FileMaker: 510 on 107 plays</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
+            <td data-label="Read from TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n8" aria-label="note 8">8</a></sup></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
@@ -459,17 +457,17 @@
             <td class="imp" data-label="Imported data"><span class="n">114</span><span class="src">FileMaker; 2,803 references</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s no">No</span><sup class="fn"><a href="#n10" aria-label="note 10">10</a></sup></td>
+            <td data-label="Read from TEI"><span class="s no">No</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Places of the action</th>
-            <td class="imp" data-label="Imported data"><span class="s no">None</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup><span class="src">FileMaker holds 138 links</span></td>
+            <td class="imp" data-label="Imported data"><span class="s no">None</span><sup class="fn"><a href="#n10" aria-label="note 10">10</a></sup><span class="src">FileMaker holds 138 links</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n10" aria-label="note 10">10</a></sup></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
@@ -497,14 +495,24 @@
             <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
-            <th scope="row" class="feature">The cast list’s heading; a second cast list</th>
+            <th scope="row" class="feature">The cast list’s heading: “PERSONNAGES”, “DRAMATIS PERSONAE”</th>
             <td class="imp" data-label="Imported data"><span class="n">312</span><span class="src">TEI</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
-            <td data-label="Written to TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
-            <td data-label="Read from TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
-            <td data-label="Downloads"><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
-            <td data-label="Play page"><span class="s part">Partly</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
-            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">A cast list per act or part</th>
+            <td class="imp" data-label="Imported data"><span class="n">4</span><span class="src">TEI</span></td>
+            <td data-label="Edited"><span class="s no">No</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td data-label="Written to TEI"><span class="s no">No</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td data-label="Read from TEI"><span class="s no">No</span></td>
+            <td data-label="Downloads"><span class="s part">Partly</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td data-label="Play page"><span class="s part">Partly</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
           </tr>
 
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">The text</th></tr>
@@ -551,7 +559,7 @@
           <tr>
             <th scope="row" class="feature">Kind of stage direction; a verse’s identifier</th>
             <td class="imp" data-label="Imported data"><span class="n">84</span><span class="src">TEI</span></td>
-            <td data-label="Edited"><span class="s no">No</span><sup class="fn"><a href="#n13" aria-label="note 13">13</a></sup></td>
+            <td data-label="Edited"><span class="s no">No</span><sup class="fn"><a href="#n12" aria-label="note 12">12</a></sup></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
             <td data-label="Downloads"><span class="s na">—</span></td>
@@ -564,13 +572,13 @@
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Downloads"><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
+            <td data-label="Downloads"><span class="s no">No</span><sup class="fn"><a href="#n13" aria-label="note 13">13</a></sup></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
-            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
+            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n13" aria-label="note 13">13</a></sup></td>
           </tr>
           <tr>
             <th scope="row" class="feature">A stage direction inside a verse</th>
-            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 275 plays in development</span></td>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n17" aria-label="note 17">17</a></sup><span class="src">the TEI re-import; 275 plays in development</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
@@ -583,14 +591,14 @@
             <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n15" aria-label="note 15">15</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n14" aria-label="note 14">14</a></sup></td>
             <td data-label="Downloads"><span class="s yes">Yes</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Notes in the text</th>
-            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup><span class="src">the TEI re-import; 3,832 notes in 84 plays in development</span></td>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n17" aria-label="note 17">17</a></sup><span class="src">the TEI re-import; 3,832 notes in 84 plays in development</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
@@ -602,7 +610,7 @@
             <th scope="row" class="feature">Statistics</th>
             <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">worked out from the text</span></td>
             <td data-label="Edited"><span class="s na">—</span></td>
-            <td data-label="Written to TEI"><span class="s na">—</span><sup class="fn"><a href="#n16" aria-label="note 16">16</a></sup></td>
+            <td data-label="Written to TEI"><span class="s na">—</span><sup class="fn"><a href="#n15" aria-label="note 15">15</a></sup></td>
             <td data-label="Read from TEI"><span class="s na">—</span></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
@@ -641,16 +649,6 @@
           </tr>
           <tr>
             <th scope="row" class="feature">Line numbers of prose<span class="where">In 40 plays · <a href="preguntas.html#t-lines">questions 9–10</a></span></th>
-            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
-            <td data-label="Edited"><span class="s todo">Not yet</span></td>
-            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
-            <td data-label="Play page"><span class="s todo">Not yet</span></td>
-            <td data-label="Published site"><span class="s todo">Not yet</span></td>
-          </tr>
-          <tr>
-            <th scope="row" class="feature">The heading inside the cast list (“PERSONNAGES”)<span class="where">323 headings</span></th>
             <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
             <td data-label="Edited"><span class="s todo">Not yet</span></td>
             <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
@@ -789,24 +787,23 @@
   <section aria-labelledby="h-notes">
     <h2 id="h-notes">Notes</h2>
     <ol class="notes">
-      <li id="n1">One attribution, “fiable” on <i>The Shy Courtier</i> (EMOTHE0653), does not come back.</li>
-      <li id="n2">The downloads print the title, author, editors, sources, dedications and cast list; the EPUB also the original title and the licence. The publication details, the project and editorial statements and the identifiers are not printed.</li>
-      <li id="n3">The file says a play is a translation, but not which play it translates: 153 plays come back without their original. An adaptation or a <i>refundición</i> would lose even the kind of relationship (none is recorded yet).</li>
-      <li id="n4">Whether a play is complete is not in the file, so an imported play arrives as a draft. All 373 complete plays would be hidden from visitors and left off the published site until someone marked them complete again.</li>
-      <li id="n5">The years are written as numbers the file can be searched by, the words beside them as they were entered. A dating given only in words, such as “posterior 1590 y anterior 1595”, is written as words alone (18 plays).</li>
-      <li id="n6">109 plays, 38 of them with an explanatory note.</li>
-      <li id="n7">No play has its form set by hand yet. Playcode works it out from the text, which does come back.</li>
-      <li id="n8">They come back marked as coming from the file, whatever their origin. Two digital editors of the same play come back as “editor” (3 plays), and one source loses its role “canon60” (EMOTHE0727).</li>
-      <li id="n9">All 510 witnesses of 107 plays come back, but without the FileMaker record number that ties each one to FileMaker, and line breaks inside a title or a note become spaces (25 fields in 9 plays).</li>
-      <li id="n10">The bibliography is written to the file in full, as structured TEI, but Playcode does not read it back: 2,804 references on 115 plays are lost. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
-      <li id="n11">Checked by an automated test. No play in the development copy has places yet, so the measurement could not count them. FileMaker records the places of the action of its plays (138 links to about 94 places), still to be imported.</li>
-      <li id="n12">The file holds one cast list, with its heading (“Hablan en ella las personas siguientes”, “DRAMATIS PERSONAE”). The plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back with a single list, under the first heading. The play page and the downloads print each cast list with its heading, but every one lists all the characters; the published site prints one list without a heading.</li>
-      <li id="n13">Not editable in Playcode yet; both come from the TEI files.</li>
-      <li id="n14">The formula that closes an act or a play (“FIN DEL PRIMER ACTO”, “Terminat hora diem; terminat author opus”) is in the file and on the play page, but on no page of the published site and in none of the downloads: 224 of them in 131 plays.</li>
-      <li id="n15">Two italic passages side by side come back as one, and an empty one in a note is dropped. The text reads the same (10 places).</li>
-      <li id="n16">Worked out from the text each time, so not part of the file.</li>
-      <li id="n17">Imported into the development copy from FileMaker (510 witnesses on 107 plays), and a trial run on production found the same plays. The import itself has not been run on production yet.</li>
-      <li id="n18">Production still has its notes, and the stage directions inside verses, pasted into the lines, as the first import left them. They move out when the TEI files are re-imported on production, which waits for the fixes to the TEI import listed above, so that the files are read once.</li>
+      <li id="n1">The downloads print the title, author, editors, sources, dedications and cast list; the EPUB also the original title and the licence. The publication details, the project and editorial statements and the identifiers are not printed.</li>
+      <li id="n2">The file says a play is a translation, but not which play it translates: 153 plays come back without their original. An adaptation or a <i>refundición</i> would lose even the kind of relationship (none is recorded yet).</li>
+      <li id="n3">Kept out of the file on purpose. Whether a play is complete is Playcode’s own switch for what visitors see, not part of the edition: every file on the published site is a complete play, and a play imported from a file arrives as a draft, to be checked before visitors see it. A whole installation is restored from a backup of its database, not from the files.</li>
+      <li id="n4">The years are written as numbers the file can be searched by, the words beside them as they were entered. A dating given only in words, such as “posterior 1590 y anterior 1595”, is written as words alone (18 plays).</li>
+      <li id="n5">The period and its explanatory note are both written: 109 plays, 38 of them with a note.</li>
+      <li id="n6">No play has its form set by hand yet. Playcode works it out from the text, which does come back.</li>
+      <li id="n7">They come back marked as coming from the file, whatever their origin. Two digital editors of the same play come back as “editor” (3 plays).</li>
+      <li id="n8">All 510 witnesses of 107 plays come back, but without the FileMaker record number that ties each one to FileMaker, and line breaks inside a title or a note become spaces (25 fields in 9 plays).</li>
+      <li id="n9">The bibliography is written to the file in full, as structured TEI, but Playcode does not read it back: 2,804 references on 115 plays are lost. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
+      <li id="n10">Checked by an automated test. No play in the development copy has places yet, so the measurement could not count them. FileMaker records the places of the action of its plays (138 links to about 94 places), still to be imported.</li>
+      <li id="n11">The published site heads the cast list with a fixed “Dramatis personae”, not the play’s own heading. Playcode does not record which list a character is in, so the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back from the file with a single list, under the first heading; the play page and the downloads print each list with its heading, but every one lists all the characters, and the published site prints one list.</li>
+      <li id="n12">Not editable in Playcode yet; both come from the TEI files.</li>
+      <li id="n13">The formula that closes an act or a play (“FIN DEL PRIMER ACTO”, “Terminat hora diem; terminat author opus”) is in the file and on the play page, but on no page of the published site and in none of the downloads: 224 of them in 131 plays.</li>
+      <li id="n14">Two italic passages side by side come back as one, and an empty one in a note is dropped. The text reads the same (10 places).</li>
+      <li id="n15">Worked out from the text each time, so not part of the file.</li>
+      <li id="n16">Imported into the development copy from FileMaker (510 witnesses on 107 plays), and a trial run on production found the same plays. The import itself has not been run on production yet.</li>
+      <li id="n17">Production still has its notes, and the stage directions inside verses, pasted into the lines, as the first import left them. They move out when the TEI files are re-imported on production, which waits for the fixes to the TEI import listed above, so that the files are read once.</li>
     </ol>
   </section>
 
@@ -817,10 +814,8 @@
       <table class="homes">
         <thead><tr><th scope="col">Part of the play</th><th scope="col">Kept today in</th><th scope="col">Proposed TEI home</th></tr></thead>
         <tbody>
-          <tr><th scope="row">Complete or draft</th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>revisionDesc/@status</code>: “published” or “draft”</td></tr>
           <tr><th scope="row">Which play a translation translates</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>notesStmt/relatedItem type="original"</code>, pointing at the original’s code</td></tr>
           <tr><th scope="row">An adaptation or a <i>refundición</i></th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>title type="adaptacion"</code>, <code>"refundicion"</code>, as <code>"traduccion"</code> is today</td></tr>
-          <tr><th scope="row">Historical time of the action</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>settingDesc/setting/time</code>, its note as the text</td></tr>
           <tr><th scope="row">Verse, prose or mixed, when set by hand</th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>textClass/keywords</code></td></tr>
           <tr><th scope="row">A cast list per act or part</th><td data-label="Kept today in">The TEI files only: Playcode does not record which list a character is in</td><td data-label="Proposed TEI home">one <code>div type="elenco"/castList</code> per list, once Playcode keeps the link</td></tr>
           <tr><th scope="row">A witness’s FileMaker record number</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>witness/bibl/idno type="filemaker"</code></td></tr>
@@ -831,15 +826,15 @@
         </tbody>
       </table>
     </div>
-    <p class="note">Two things stay out of the file on purpose: the researchers’ private notes, because the file is published with the site, and the statistics, which are worked out from the text.</p>
+    <p class="note">Three things stay out of the file on purpose: whether a play is complete or a draft, which is Playcode’s own switch for what visitors see; the researchers’ private notes, because the file is published with the site; and the statistics, which are worked out from the text.</p>
   </section>
 
   <section aria-labelledby="h-next">
     <h2 id="h-next">What happens next</h2>
     <ol class="next">
       <li><strong>Read the bibliography back from the file.</strong> The largest loss, and the next piece of work.</li>
-      <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: complete or draft, the play a translation translates, the historical time, a play’s several cast lists, and the FileMaker record numbers. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
-      <li><strong>Show the closing formulas</strong> on the published site and in the downloads.</li>
+      <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: the play a translation translates, a play’s several cast lists, and the FileMaker record numbers. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
+      <li><strong>Show the closing formulas</strong> on the published site and in the downloads, and the cast list’s own heading on the published site.</li>
       <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
     </ol>
     <p class="note">None of these four needs a decision from the team. The parts not in Playcode yet, at the end of the table, are projects of their own: the variant readings, the HTML in the text, the line breaks and the performances wait on the team’s answers in the <a href="preguntas.html">questions for the project</a>, and the genre on FileMaker’s genre table.</p>

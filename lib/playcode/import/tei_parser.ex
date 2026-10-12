@@ -214,6 +214,7 @@ defmodule Playcode.Import.TeiParser do
     language = extract_language_code(profile_desc)
 
     {composition_from, composition_to, composition_note} = extract_creation(profile_desc)
+    {historical_time, historical_time_note} = extract_historical_time(profile_desc)
 
     attribution =
       if main_author do
@@ -247,7 +248,9 @@ defmodule Playcode.Import.TeiParser do
       language: language || "es",
       composition_date_from: composition_from,
       composition_date_to: composition_to,
-      composition_date_note: composition_note
+      composition_date_note: composition_note,
+      historical_time: historical_time,
+      historical_time_note: historical_time_note
     }
   end
 
@@ -284,8 +287,8 @@ defmodule Playcode.Import.TeiParser do
       {from, to} = creation_years(elem(date, 1))
 
       if usable_creation_years?(from, to),
-        do: {from, to, creation_note(date)},
-        else: {nil, nil, creation_note(date)}
+        do: {from, to, non_blank_text(date)},
+        else: {nil, nil, non_blank_text(date)}
     else
       _ -> {nil, nil, nil}
     end
@@ -316,10 +319,22 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  defp creation_note(date) do
-    case date |> text_content() |> String.trim() do
+  defp non_blank_text(element) do
+    case element |> text_content() |> String.trim() do
       "" -> nil
       text -> text
+    end
+  end
+
+  # settingDesc/setting/time: the period as @type, its note as the text. A period the
+  # changeset would reject is dropped, as an unusable creation year is, and the words kept.
+  defp extract_historical_time(profile_desc) do
+    with {_name, _attrs, children} <- setting_desc_child(profile_desc, "setting"),
+         {_name, attrs, _children} = time <- find_child(children, "time") do
+      period = attr_value(attrs, "type")
+      {if(period in Play.historical_times(), do: period), non_blank_text(time)}
+    else
+      nil -> {nil, nil}
     end
   end
 

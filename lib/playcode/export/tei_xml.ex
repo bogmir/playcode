@@ -401,14 +401,23 @@ defmodule Playcode.Export.TeiXml do
     [element(:creation, [date])]
   end
 
+  # The places are a `listPlace` and their links in `<setting>`; the historical time is a
+  # `<time>` in the same `<setting>`, the period as @type and its note as the text.
+  defp build_setting_desc(play) do
+    {list_place, setting_refs} = build_places(play)
+
+    case setting_refs ++ build_historical_time(play) do
+      [] -> []
+      setting -> [element(:settingDesc, list_place ++ [element(:setting, setting)])]
+    end
+  end
+
   # Two elements, on purpose. `listPlace` nests every place the play needs *plus every
   # ancestor*, so containment is complete — which means a `<place>` may be a pure
   # container. `setting` is therefore what says which of them the play actually
   # references, because "the leaves are the settings" is wrong: a play can be set in
   # Italy itself.
-  defp build_setting_desc(%{play_places: []}), do: []
-
-  defp build_setting_desc(%{play_places: links}) when is_list(links) do
+  defp build_places(%{play_places: [_ | _] = links}) do
     gazetteer = Playcode.Places.gazetteer()
     ordered = Enum.sort_by(links, fn link -> {link.role != "setting", link.position} end)
 
@@ -427,15 +436,22 @@ defmodule Playcode.Export.TeiXml do
       |> Enum.flat_map(fn place -> [place | Playcode.Places.ancestors(place, gazetteer)] end)
       |> MapSet.new(& &1.id)
 
-    [
-      element(:settingDesc, [
-        element(:listPlace, Enum.map(roots, &build_place(&1, gazetteer, wanted))),
-        element(:setting, Enum.map(ordered, &build_setting_ref/1))
-      ])
-    ]
+    {[element(:listPlace, Enum.map(roots, &build_place(&1, gazetteer, wanted)))],
+     Enum.map(ordered, &build_setting_ref/1)}
   end
 
-  defp build_setting_desc(_play), do: []
+  defp build_places(_play), do: {[], []}
+
+  defp build_historical_time(%{historical_time: nil, historical_time_note: nil}), do: []
+
+  defp build_historical_time(play) do
+    attrs = if play.historical_time, do: %{type: play.historical_time}, else: %{}
+
+    case play.historical_time_note do
+      nil -> [element(:time, attrs)]
+      note -> [element(:time, attrs, note)]
+    end
+  end
 
   defp build_place(place, gazetteer, wanted) do
     attrs =

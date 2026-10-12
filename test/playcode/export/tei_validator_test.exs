@@ -162,6 +162,30 @@ defmodule Playcode.Export.TeiValidatorTest do
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
+    # A play with no places: its settingDesc holds a <setting> with the <time> alone. Under
+    # a code of its own, for the same reason as the bibliography test.
+    test "a historical time exports as schema-valid TEI" do
+      play =
+        @fixture_file
+        |> File.read!()
+        |> String.replace(
+          ~s(<title key="archivo">EMOTHE0759_AutoDeLaBarcaDelInfierno</title>),
+          ~s(<title key="archivo">HT#{System.unique_integer([:positive])}</title>)
+        )
+        |> Playcode.ImportHelpers.import_tei!()
+
+      {:ok, _} =
+        Catalogue.update_play(play, %{
+          "historical_time" => "siglo_xvi",
+          "historical_time_note" => "reinado de Felipe II"
+        })
+
+      xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
+
+      assert xml =~ ~s(<time type="siglo_xvi">)
+      assert TeiValidator.validate(xml) == {:ok, :valid}
+    end
+
     test "returns errors for malformed XML" do
       invalid_xml =
         ~s(<?xml version="1.0"?>\n<TEI xmlns="http://www.tei-c.org/ns/1.0"><bad></TEI>)
