@@ -284,7 +284,7 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading and a dating given only in words now come back.</p>
   </header>
 
   <section aria-labelledby="h-why">
@@ -305,7 +305,6 @@
         <tr class="lost"><td>Complete plays that come back as drafts</td><td class="num">373</td></tr>
         <tr class="lost"><td>Translations that lose the play they translate</td><td class="num">153</td></tr>
         <tr class="lost"><td>Plays that lose their historical time</td><td class="num">109</td></tr>
-        <tr class="lost"><td>Datings given only in words, lost</td><td class="num">18</td></tr>
         <tr class="lost"><td>Plays with a cast list per act that come back with one</td><td class="num">4</td></tr>
         <tr class="lost"><td>Witnesses that lose their FileMaker record number (107 plays)</td><td class="num">510</td></tr>
         <tr class="lost"><td>Closing formulas (“FIN DEL PRIMER ACTO”) missing from the published site and the downloads</td><td class="num">224</td></tr>
@@ -399,7 +398,7 @@
             <th scope="row" class="feature">Date of composition</th>
             <td class="imp" data-label="Imported data"><span class="n">76</span><span class="src">FileMaker</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
-            <td data-label="Written to TEI"><span class="s part">Partly</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n5" aria-label="note 5">5</a></sup></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
             <td data-label="Downloads"><span class="s no">No</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
@@ -794,7 +793,7 @@
       <li id="n2">The downloads print the title, author, editors, sources, dedications and cast list; the EPUB also the original title and the licence. The publication details, the project and editorial statements and the identifiers are not printed.</li>
       <li id="n3">The file says a play is a translation, but not which play it translates: 153 plays come back without their original. An adaptation or a <i>refundición</i> would lose even the kind of relationship (none is recorded yet).</li>
       <li id="n4">Whether a play is complete is not in the file, so an imported play arrives as a draft. All 373 complete plays would be hidden from visitors and left off the published site until someone marked them complete again.</li>
-      <li id="n5">The date is written only when it has years. A dating given only in words, such as “posterior 1590 y anterior 1595”, is left out: 18 plays.</li>
+      <li id="n5">The years are written as numbers the file can be searched by, the words beside them as they were entered. A dating given only in words, such as “posterior 1590 y anterior 1595”, is written as words alone (18 plays).</li>
       <li id="n6">109 plays, 38 of them with an explanatory note.</li>
       <li id="n7">No play has its form set by hand yet. Playcode works it out from the text, which does come back.</li>
       <li id="n8">They come back marked as coming from the file, whatever their origin. Two digital editors of the same play come back as “editor” (3 plays), and one source loses its role “canon60” (EMOTHE0727).</li>
@@ -822,7 +821,6 @@
           <tr><th scope="row">Which play a translation translates</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>notesStmt/relatedItem type="original"</code>, pointing at the original’s code</td></tr>
           <tr><th scope="row">An adaptation or a <i>refundición</i></th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>title type="adaptacion"</code>, <code>"refundicion"</code>, as <code>"traduccion"</code> is today</td></tr>
           <tr><th scope="row">Historical time of the action</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>settingDesc/setting/time</code>, its note as the text</td></tr>
-          <tr><th scope="row">A dating given only in words</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>creation/date</code> with the words and no year attributes</td></tr>
           <tr><th scope="row">Verse, prose or mixed, when set by hand</th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>textClass/keywords</code></td></tr>
           <tr><th scope="row">A cast list per act or part</th><td data-label="Kept today in">The TEI files only: Playcode does not record which list a character is in</td><td data-label="Proposed TEI home">one <code>div type="elenco"/castList</code> per list, once Playcode keeps the link</td></tr>
           <tr><th scope="row">A witness’s FileMaker record number</th><td data-label="Kept today in">Playcode, from FileMaker</td><td data-label="Proposed TEI home"><code>witness/bibl/idno type="filemaker"</code></td></tr>
@@ -840,7 +838,7 @@
     <h2 id="h-next">What happens next</h2>
     <ol class="next">
       <li><strong>Read the bibliography back from the file.</strong> The largest loss, and the next piece of work.</li>
-      <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: complete or draft, the play a translation translates, the historical time, a dating given in words, a play’s several cast lists, and the FileMaker record numbers. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
+      <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: complete or draft, the play a translation translates, the historical time, a play’s several cast lists, and the FileMaker record numbers. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
       <li><strong>Show the closing formulas</strong> on the published site and in the downloads.</li>
       <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
     </ol>

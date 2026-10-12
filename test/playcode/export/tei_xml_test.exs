@@ -156,10 +156,12 @@ defmodule Playcode.Export.TeiXmlTest do
     end
   end
 
-  test "a dating note with no years does not produce a creation element" do
+  # This used to assert no <creation> at all, which lost the 18 plays FileMaker dates only
+  # in words on a round trip. If TEI can say it, it goes into the file.
+  test "a dating note with no years is a date with no attributes" do
     play = play_fixture(%{"composition_date_note" => "sin fecha"})
 
-    assert xml_elements(export_tei(play), "creation") == []
+    assert xml_elements(export_tei(play), "date", within: "creation") == [{%{}, "sin fecha"}]
   end
 
   test "a place's names are exported in their order" do

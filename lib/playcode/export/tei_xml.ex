@@ -370,21 +370,26 @@ defmodule Playcode.Export.TeiXml do
     element(:profileDesc, children ++ build_setting_desc(play))
   end
 
-  # <creation> is where TEI records when the text *in this file* was composed. Emitted
-  # only when we hold machine-readable years, so a note with no dating stays out of the
-  # XML rather than arriving as an undated <date>. The note is the element's text — the
-  # human-readable form of the machine attributes.
-  defp build_creation(%{composition_date_from: nil}), do: []
+  # <creation> is where TEI records when the text *in this file* was composed. The years
+  # are the attributes and the note is the element's text, the human-readable form of
+  # them; a dating only in words ("posterior 1590 y anterior 1595") is a <date> with no
+  # attributes.
+  defp build_creation(%{composition_date_from: nil, composition_date_note: nil}), do: []
 
   defp build_creation(play) do
     attrs =
-      if play.composition_date_from == play.composition_date_to do
-        %{when: to_string(play.composition_date_from)}
-      else
-        %{
-          notBefore: to_string(play.composition_date_from),
-          notAfter: to_string(play.composition_date_to)
-        }
+      cond do
+        is_nil(play.composition_date_from) ->
+          %{}
+
+        play.composition_date_from == play.composition_date_to ->
+          %{when: to_string(play.composition_date_from)}
+
+        true ->
+          %{
+            notBefore: to_string(play.composition_date_from),
+            notAfter: to_string(play.composition_date_to)
+          }
       end
 
     date =

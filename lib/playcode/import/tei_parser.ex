@@ -274,15 +274,18 @@ defmodule Playcode.Import.TeiParser do
   # strictness is right for curator input, but an unusable attribute in a TEI file must
   # not roll back the import: a rollback discards the text, the characters and the acts
   # too. Per the S2c spec, a file that carries no machine dating is the
-  # file's problem, not an import failure.
+  # file's problem, not an import failure. The date's words are the note either way: with
+  # no usable year they are a dating in words.
   defp extract_creation(nil), do: {nil, nil, nil}
 
   defp extract_creation({_name, _attrs, children}) do
     with creation when not is_nil(creation) <- find_child(children, "creation"),
-         date when not is_nil(date) <- find_child(elem(creation, 2), "date"),
-         {from, to} <- creation_years(elem(date, 1)),
-         true <- usable_creation_years?(from, to) do
-      {from, to, creation_note(date)}
+         date when not is_nil(date) <- find_child(elem(creation, 2), "date") do
+      {from, to} = creation_years(elem(date, 1))
+
+      if usable_creation_years?(from, to),
+        do: {from, to, creation_note(date)},
+        else: {nil, nil, creation_note(date)}
     else
       _ -> {nil, nil, nil}
     end
