@@ -270,6 +270,57 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # FileMaker gave 108 plays a historical time. In the file it is settingDesc/setting/time,
+  # the period as @type and its note as the text.
+  describe "the historical time" do
+    defp setting(content),
+      do: tei(profile_desc: "<settingDesc><setting>#{content}</setting></settingDesc>")
+
+    test "keeps the period, its note, or both" do
+      for {time, expected} <- [
+            {~s(<time type="siglo_xvi">reinado de Felipe II</time>),
+             {%{"type" => "siglo_xvi"}, "reinado de Felipe II"}},
+            {~s(<time type="edad_media"/>), {%{"type" => "edad_media"}, ""}},
+            {"<time>tras la batalla de Lepanto</time>", {%{}, "tras la batalla de Lepanto"}}
+          ] do
+        assert xml_elements(roundtrip(setting(time)), "time", within: "setting") == [expected],
+               time
+      end
+    end
+
+    # A period Playcode does not know would fail the play's changeset and roll back the
+    # whole import, so it is dropped; its words are kept.
+    test "an unknown period is dropped, its words are not" do
+      xml = roundtrip(setting(~s(<time type="siglo_xx">la guerra civil</time>)))
+      assert xml_elements(xml, "time", within: "setting") == [{%{}, "la guerra civil"}]
+    end
+
+    test "sits beside the play's places" do
+      xml =
+        roundtrip(
+          tei(
+            profile_desc: """
+            <settingDesc>
+              <listPlace>
+                <place xml:id="rt-ht-sevilla" type="city"><placeName>Sevilla</placeName></place>
+              </listPlace>
+              <setting><placeName ref="#rt-ht-sevilla" ana="setting"/><time type="siglo_xvii"/></setting>
+            </settingDesc>
+            """
+          )
+        )
+
+      assert [{%{"ref" => "#rt-ht-sevilla"}, _}] =
+               xml_elements(xml, "placeName", within: "setting")
+
+      assert xml_elements(xml, "time", within: "setting") == [{%{"type" => "siglo_xvii"}, ""}]
+    end
+
+    test "no time, no setting" do
+      assert xml_elements(roundtrip(tei()), "settingDesc") == []
+    end
+  end
+
   describe "the cast list" do
     test "keeps ids, names, descriptions and hidden characters, in order" do
       xml =

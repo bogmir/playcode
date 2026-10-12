@@ -16,6 +16,7 @@ defmodule Playcode.Import.TeiParserTest do
   # decision, made here.
   @pure_helpers [
     {Playcode.Catalogue.Play, :composition_year_range, 0},
+    {Playcode.Catalogue.Play, :historical_times, 0},
     {Playcode.Catalogue.Play, :valid_languages, 0},
     {Playcode.Places, :slugify, 1},
     {Playcode.Places.Place, :authorities, 0},
