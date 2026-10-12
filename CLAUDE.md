@@ -99,6 +99,9 @@ the TEI import, HTML/PDF/EPUB, the play page and the static site, in words the p
 the only copy. A change that adds data to a play fills its row, and a cell short of "yes" is an
 item in `docs/backlog.md`, *Round trip*, with the technical detail, or an exception the page
 explains (a researcher's note never leaves Playcode: the file is published with the static site).
+**Whether a play is complete is the one curated column kept out of the file on purpose**: it is
+Playcode's switch for what visitors see, not part of the edition, so a play imported from a file
+arrives as a draft (decided 2026-10-13).
 
 **Accessibility** is held by `test/playcode_web/accessibility_test.exs`, which renders
 every page, the content editor's tabs and the modal forms, and fails on an unnamed control,
@@ -216,8 +219,9 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/fileDesc` -> play metadata, editors, sources
 - `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept
-- `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note); read on first import only, since the columns are `@platform_owned`
-- `text/front/div[@type="elenco"]/castList` -> characters
+- `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note; words with no year are a note alone); read on first import only, since the columns are `@platform_owned`
+- `teiHeader/profileDesc/settingDesc/setting/time` -> historical time (`@type` the period, the text its note), beside the place links in the same `setting`; first import only, like the dating
+- `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading
 - `text/front/div[@type="dedicatoria|introduccion_editor"]` -> editorial notes
 - `text/body/div1[@type="acto"]` -> act divisions
 - `text/body/div1/div2[@type="escena"]` -> scene subdivisions
@@ -227,7 +231,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `stage` -> stage directions
 - `stage` inside `l`, `p` or `seg` -> a `<stage>` marker in the line's text (aside lines and paragraphs drop theirs)
 - `note` in the play text -> `play_notes`, at its offset in the line, speaker label or heading it sits in (not part of the text)
-- `back/div[@type="bibliografia"]/listBibl/biblStruct` <- the bibliography, written by the export and **not read back yet**; nor are completeness, historical time or the original a translation belongs to (`docs/stakeholder/ida-y-vuelta.html`)
+- `back/div[@type="bibliografia"]/listBibl/biblStruct` <- the bibliography, written by the export and **not read back yet**; nor is the original a translation belongs to (`docs/stakeholder/ida-y-vuelta.html`). Completeness is never written (see *The TEI file is a complete copy of a play*)
 
 TEI fixture files are at `test/fixtures/tei_files/` (UTF-16 encoded, ~37 files covering Spanish/Italian/English/French plays). The whole production corpus, the 370 files the live site was loaded from, is at `doc/tei_corpus/` (git-ignored, like the FileMaker exports beside it); 17 of its plays are newer than their copies under `test/fixtures/`.
 
