@@ -47,6 +47,24 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert attachment(conn) == ~s(attachment; filename="#{play.code}.epub")
   end
 
+  # A division's closing formula, printed after its text as the TEI file and the play page
+  # carry it.
+  test "the HTML and EPUB downloads print the closing formula", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp><trailer>FIN DEL PRIMER ACTO</trailer></div1>)
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    assert response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "FIN DEL PRIMER ACTO"
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    assert Enum.any?(files, fn {_name, content} -> content =~ "FIN DEL PRIMER ACTO" end)
+  end
+
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.delete_play(play)
 

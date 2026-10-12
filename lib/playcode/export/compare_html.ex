@@ -195,6 +195,8 @@ defmodule Playcode.Export.CompareHtml do
 
         .stage { font-style: italic; color: #555; }
 
+        .trailer { text-align: center; margin: 1rem 0 0.5rem; }
+
         /* Prose */
         .prose-block {
           margin-left: 0.5rem;
@@ -404,6 +406,10 @@ defmodule Playcode.Export.CompareHtml do
 
   defp render_element(%{type: "prose"} = el, _key) do
     "        <div class=\"prose-block\">#{NoteMarkup.inline(el.content, [], :html)}</div>\n"
+  end
+
+  defp render_element(%{type: "trailer"} = el, _key) do
+    "        <div class=\"trailer\">#{NoteMarkup.inline(el.content, [], :html)}</div>\n"
   end
 
   defp render_element(_, _key), do: ""

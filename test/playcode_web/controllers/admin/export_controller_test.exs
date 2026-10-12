@@ -54,6 +54,20 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
              ~s(attachment; filename="compare_#{play.code}_vs_#{other.code}.html")
   end
 
+  test "a downloaded comparison prints the closing formulas", %{conn: conn, play: play} do
+    trailed =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp><trailer>FIN DEL PRIMER ACTO</trailer></div1>)
+        )
+      )
+
+    conn = get(conn, ~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{trailed.id}"]}")
+
+    assert response(conn, 200) =~ "FIN DEL PRIMER ACTO"
+  end
+
   # The page is opened from disk, so its sync script must carry the matcher inline and
   # its speeches the act keys the matcher reads, as on the live compare page.
   test "a downloaded comparison keys speeches by act, and its sync script runs alone",
