@@ -284,7 +284,7 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading.</p>
   </header>
 
   <section aria-labelledby="h-why">
@@ -502,7 +502,7 @@
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
             <td data-label="Downloads"><span class="s yes">Yes</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
-            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n11" aria-label="note 11">11</a></sup></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
           <tr>
             <th scope="row" class="feature">A cast list per act or part</th>
@@ -797,7 +797,7 @@
       <li id="n8">All 510 witnesses of 107 plays come back, but without the FileMaker record number that ties each one to FileMaker, and line breaks inside a title or a note become spaces (25 fields in 9 plays).</li>
       <li id="n9">The bibliography is written to the file in full, as structured TEI, but Playcode does not read it back: 2,804 references on 115 plays are lost. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
       <li id="n10">Checked by an automated test. No play in the development copy has places yet, so the measurement could not count them. FileMaker records the places of the action of its plays (138 links to about 94 places), still to be imported.</li>
-      <li id="n11">The published site heads the cast list with a fixed “Dramatis personae”, not the play’s own heading. Playcode does not record which list a character is in, so the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back from the file with a single list, under the first heading; the play page and the downloads print each list with its heading, but every one lists all the characters, and the published site prints one list.</li>
+      <li id="n11">Playcode does not record which list a character is in, so the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back from the file with a single list, under the first heading; the play page and the downloads print each list with its heading, but every one lists all the characters, and the published site prints one list.</li>
       <li id="n12">Not editable in Playcode yet; both come from the TEI files.</li>
       <li id="n13">The formula that closes an act or a play (“FIN DEL PRIMER ACTO”, “Terminat hora diem; terminat author opus”) is in the file and on the play page, but on no page of the published site and in none of the downloads: 224 of them in 131 plays.</li>
       <li id="n14">Two italic passages side by side come back as one, and an empty one in a note is dropped. The text reads the same (10 places).</li>
@@ -834,7 +834,7 @@
     <ol class="next">
       <li><strong>Read the bibliography back from the file.</strong> The largest loss, and the next piece of work.</li>
       <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: the play a translation translates, a play’s several cast lists, and the FileMaker record numbers. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
-      <li><strong>Show the closing formulas</strong> on the published site and in the downloads, and the cast list’s own heading on the published site.</li>
+      <li><strong>Show the closing formulas</strong> on the published site and in the downloads.</li>
       <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
     </ol>
     <p class="note">None of these four needs a decision from the team. The parts not in Playcode yet, at the end of the table, are projects of their own: the variant readings, the HTML in the text, the line breaks and the performances wait on the team’s answers in the <a href="preguntas.html">questions for the project</a>, and the genre on FileMaker’s genre table.</p>

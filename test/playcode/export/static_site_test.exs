@@ -87,6 +87,33 @@ defmodule Playcode.Export.StaticSiteTest do
     assert "statistics.html" in hrefs(page)
   end
 
+  # The play's own heading, as the TEI file, the play page and the downloads carry it.
+  test "the cast list carries the play's own heading" do
+    play =
+      tei(
+        front: """
+        <div type="elenco">
+          <head>Hablan en ella las personas siguientes</head>
+          <castList><castItem><role xml:id="DON">Don Juan</role></castItem></castList>
+        </div>
+        """
+      )
+      |> import_tei!()
+
+    {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
+    page = title_page(generate!([play]), play)
+
+    assert "Hablan en ella las personas siguientes" in texts(page, "h2")
+    refute "Dramatis personae" in texts(page, "h2")
+  end
+
+  test "a cast list with no heading of its own is the Dramatis personae" do
+    %{play: play} = play_with_structure_fixture()
+    page = title_page(generate!([play], all: true), play)
+
+    assert "Dramatis personae" in texts(page, "h2")
+  end
+
   test "an original's title page links its published translations, and only those" do
     %{original: original, translation: translation} = translation_family_fixture()
 

@@ -297,6 +297,10 @@ defmodule Playcode.Export.StaticSite.Components do
   @doc "The cast as published: every character not marked hidden."
   def cast(characters), do: Enum.reject(characters, & &1.is_hidden)
 
+  @doc "The cast list's heading: the play's own, as its TEI file carries it, or the Latin."
+  def cast_heading(divisions),
+    do: Enum.find_value(divisions, &(&1.type == "elenco" && &1.title)) || "Dramatis personae"
+
   @doc "What the title page says about the play's form."
   def form_summary(play, stats) do
     verses = stats["verses"] || 0
