@@ -235,11 +235,27 @@ defmodule Playcode.TeiRoundtripTest do
                xml_elements(xml, "date", within: "creation")
     end
 
+    # FileMaker gave 18 plays a dating only in words ("posterior 1590 y anterior 1595"),
+    # and the file is where it is kept: the words come back with no year, and an
+    # unusable year beside them is dropped, the words are not.
+    test "a dating in words, with no usable year, keeps the words" do
+      for {date, words} <- [
+            {"<date>posterior 1590 y anterior 1595</date>", "posterior 1590 y anterior 1595"},
+            {~s(<date notBefore="1607" notAfter="1606">entre 1606 y 1607</date>),
+             "entre 1606 y 1607"}
+          ] do
+        assert xml_elements(roundtrip(creation(date)), "date", within: "creation") == [
+                 {%{}, words}
+               ],
+               date
+      end
+    end
+
     # An unusable date is the file's problem, not an import failure: the play still
-    # imports, only without a dating.
+    # imports, only without a dating. "<date>c. 1600</date>" used to be here; words with
+    # no year are now a dating in words (the test above).
     test "an unusable date imports as no dating" do
       for date <- [
-            "<date>c. 1600</date>",
             ~s(<date notAfter="1601"/>),
             ~s(<date notBefore="1607" notAfter="1606"/>),
             ~s(<date when="850"/>),
@@ -281,6 +297,24 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert [{%{}, _}, {%{}, _}, {%{"ana" => "oculto"}, "Criado"}] =
                xml_elements(xml, "castItem")
+    end
+
+    test "keeps its heading" do
+      xml =
+        roundtrip(
+          tei(
+            front: """
+            <div type="elenco">
+              <head>Hablan en ella las personas siguientes</head>
+              <castList><castItem><role xml:id="DON">Don Juan</role></castItem></castList>
+            </div>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "head", within: "front") == [
+               "Hablan en ella las personas siguientes"
+             ]
     end
 
     test "a repeated id with a different name is kept apart; an exact repeat is one character" do
