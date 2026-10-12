@@ -283,6 +283,24 @@ defmodule Playcode.TeiRoundtripTest do
                xml_elements(xml, "castItem")
     end
 
+    test "keeps its heading" do
+      xml =
+        roundtrip(
+          tei(
+            front: """
+            <div type="elenco">
+              <head>Hablan en ella las personas siguientes</head>
+              <castList><castItem><role xml:id="DON">Don Juan</role></castItem></castList>
+            </div>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "head", within: "front") == [
+               "Hablan en ella las personas siguientes"
+             ]
+    end
+
     test "a repeated id with a different name is kept apart; an exact repeat is one character" do
       xml =
         roundtrip(

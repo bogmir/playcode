@@ -657,15 +657,16 @@ defmodule Playcode.Export.TeiXml do
 
   defp build_text(play, characters, divisions) do
     body_divisions = Enum.filter(divisions, fn d -> d.type in @body_types end)
+    cast_heading = Enum.find_value(divisions, &(&1.type == "elenco" && &1.title))
 
     element(:text, [
-      build_front(play, characters),
+      build_front(play, characters, cast_heading),
       build_body(body_divisions),
       build_back(Playcode.Bibliography.list_for_play(play.id))
     ])
   end
 
-  defp build_front(play, characters) do
+  defp build_front(play, characters, cast_heading) do
     title_page =
       element(
         :titlePage,
@@ -709,7 +710,8 @@ defmodule Playcode.Export.TeiXml do
             element(:castItem, item_attrs, children)
           end)
 
-        [element(:div, %{type: "elenco"}, [element(:castList, cast_items)])]
+        head = if cast_heading, do: [element(:head, cast_heading)], else: []
+        [element(:div, %{type: "elenco"}, head ++ [element(:castList, cast_items)])]
       else
         []
       end
