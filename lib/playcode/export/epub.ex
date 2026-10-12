@@ -289,6 +289,10 @@ defmodule Playcode.Export.Epub do
     "<div class=\"prose-block\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</div>\n"
   end
 
+  defp render_element(%{type: "trailer"} = el) do
+    "<div class=\"trailer\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</div>\n"
+  end
+
   defp render_element(_), do: ""
 
   # --- CSS (adapted from Html export for EPUB readers) ---
@@ -437,6 +441,8 @@ defmodule Playcode.Export.Epub do
     }
 
     .stage { font-style: italic; color: #555; }
+
+    .trailer { text-align: center; margin: 1.5em 0 0.5em; }
 
     .prose-block {
       margin-left: 1em;

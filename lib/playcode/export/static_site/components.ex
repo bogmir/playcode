@@ -527,6 +527,12 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
+  defp el(%{el: %{type: "trailer"}} = assigns) do
+    ~H"""
+    <p class="tr" id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
+    """
+  end
+
   defp el(assigns), do: ~H""
 
   defp who(speech) do

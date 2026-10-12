@@ -39,6 +39,17 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
   defp links(html), do: html |> LazyHTML.query("main a") |> LazyHTML.attribute("href")
 
+  test "an act's closing formula ends its page and its part of the full text" do
+    {play, dir} =
+      publish!(
+        ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp><trailer>FIN DEL PRIMER ACTO</trailer></div1>)
+      )
+
+    for file <- ["act-1.html", "text.html"] do
+      assert dir |> page(play, file) |> LazyHTML.text() =~ "FIN DEL PRIMER ACTO", file
+    end
+  end
+
   # Regression: WordParser puts a stanza straight under the division when {m} opens
   # with no speaker; its verses used to get no item, no anchor, and the build raised.
   test "a Word-imported stanza with no speaker is published, and counted" do

@@ -215,6 +215,12 @@ defmodule Playcode.Export.Html do
           margin: 0.75rem 2rem;
         }
 
+        /* A division's closing formula */
+        .trailer {
+          text-align: center;
+          margin: 1.5rem 0 0.5rem;
+        }
+
         /* Prose */
         .prose-block {
           margin-left: 1rem;
@@ -407,6 +413,10 @@ defmodule Playcode.Export.Html do
 
   defp render_element(%{type: "prose"} = el) do
     "        <div class=\"prose-block\">#{NoteMarkup.inline(el.content, el.notes, :html)}</div>\n"
+  end
+
+  defp render_element(%{type: "trailer"} = el) do
+    "        <div class=\"trailer\">#{NoteMarkup.inline(el.content, el.notes, :html)}</div>\n"
   end
 
   defp render_element(_), do: ""
