@@ -65,6 +65,28 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert Enum.any?(files, fn {_name, content} -> content =~ "FIN DEL PRIMER ACTO" end)
   end
 
+  # As the published site prints them, in the downloads' English.
+  test "the HTML and EPUB downloads print the dating and the historical time",
+       %{conn: conn, play: play} do
+    {:ok, play} =
+      Playcode.Catalogue.update_play(play, %{
+        "composition_date_from" => 1600,
+        "composition_date_to" => 1601,
+        "composition_date_note" => "¿1600? y ¿1601?",
+        "historical_time" => "siglo_xvi",
+        "historical_time_note" => "reinado de Felipe II"
+      })
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    for {format, text} <- [html: html, epub: epub],
+        expected <- ["1600–1601", "¿1600? y ¿1601?", "16th century", "reinado de Felipe II"] do
+      assert text =~ expected, "#{format} lacks #{expected}"
+    end
+  end
+
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.delete_play(play)
 

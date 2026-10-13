@@ -4,7 +4,7 @@ defmodule Playcode.Export.Epub do
   Reuses rendering patterns from `Playcode.Export.Html`.
   """
 
-  alias Playcode.Export.NoteMarkup
+  alias Playcode.Export.{Html, NoteMarkup}
   alias Playcode.PlayContent
   alias Playcode.PlayContent.Note
 
@@ -129,6 +129,7 @@ defmodule Playcode.Export.Epub do
     #{render_sources(play.sources)}
     #{render_editors(play.editors)}
     #{render_verse_info(play)}
+    #{render_dating(play)}
     </div>
     #{render_editorial_notes(play.editorial_notes)}
     #{render_cast_list(characters)}
@@ -145,6 +146,9 @@ defmodule Playcode.Export.Epub do
     |> Enum.reject(&(&1 == ""))
     |> Enum.join("\n")
   end
+
+  defp render_dating(play),
+    do: play |> Html.dating() |> Enum.map_join("\n", &"  <p class=\"dating\">#{escape(&1)}</p>")
 
   defp render_editors([]), do: ""
 
@@ -345,7 +349,8 @@ defmodule Playcode.Export.Epub do
       color: rgba(51, 51, 51, 0.35);
     }
 
-    .header .verse-info {
+    .header .verse-info,
+    .header .dating {
       margin-top: 0.5em;
       font-size: 0.75em;
       color: rgba(51, 51, 51, 0.5);

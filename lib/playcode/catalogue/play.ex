@@ -132,6 +132,16 @@ defmodule Playcode.Catalogue.Play do
   def form(%__MODULE__{is_verse: true}), do: "verse"
   def form(%__MODULE__{}), do: "prose"
 
+  @doc "The composition years as printed: `1614`, `1600–1601`, or nil with none."
+  def composition_years(%{composition_date_from: nil}), do: nil
+
+  def composition_years(%{composition_date_from: from, composition_date_to: to})
+      when to in [nil, from],
+      do: "#{from}"
+
+  def composition_years(%{composition_date_from: from, composition_date_to: to}),
+    do: "#{from}–#{to}"
+
   # The bounds on each composition year, deliberately wide — the corpus is 16th–17th
   # century, but the column is a year and a curator fixing a typo should not fight the
   # validator. Public so the TEI importer can reject an out-of-range attribute before

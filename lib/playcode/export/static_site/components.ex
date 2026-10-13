@@ -194,7 +194,7 @@ defmodule Playcode.Export.StaticSite.Components do
     <%= if @play.composition_date_from || @play.composition_date_note do %>
       <dt>Composition</dt>
       <dd>
-        {composition_years(@play)}
+        {Play.composition_years(@play)}
         <span :if={@play.composition_date_note} class="note">{@play.composition_date_note}</span>
       </dd>
     <% end %>
@@ -357,15 +357,6 @@ defmodule Playcode.Export.StaticSite.Components do
     |> Enum.join(". ")
     |> Kernel.<>(".")
   end
-
-  def composition_years(%{composition_date_from: nil}), do: nil
-
-  def composition_years(%{composition_date_from: from, composition_date_to: to})
-      when to in [nil, from],
-      do: "#{from}"
-
-  def composition_years(%{composition_date_from: from, composition_date_to: to}),
-    do: "#{from}–#{to}"
 
   attr :play, :map, required: true
 
@@ -933,6 +924,6 @@ defmodule Playcode.Export.StaticSite.Components do
           "Verse"
       end
 
-    [composition_years(play), form] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+    [Play.composition_years(play), form] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
   end
 end
