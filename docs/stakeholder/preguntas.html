@@ -259,7 +259,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 13 October 2026. 24 questions, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 13 October 2026. 25 questions, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -274,6 +274,7 @@
       <li><a href="#t-credits">Credits</a><span class="nums">18–21</span></li>
       <li><a href="#t-form">Verse, prose or both</a><span class="nums">22–23</span></li>
       <li><a href="#t-downloads">The downloads</a><span class="nums">24</span></li>
+      <li><a href="#t-ids">Verse identifiers</a><span class="nums">25</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
   </nav>
@@ -1004,6 +1005,34 @@
         <div>
           <label class="label" for="q24-text">Notes</label>
           <textarea id="q24-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-ids" aria-labelledby="h-ids">
+    <h2 id="h-ids">Verse identifiers</h2>
+    <p>Every verse line in the files carries an identifier of its own beside its number: <code>&lt;l xml:id="em0010-en-0001" n="3-4"&gt;Who’s there?&lt;/l&gt;</code>, the first line of <i>Hamlet</i>. There are two shapes: “em”, the play’s EMOTHE number, the language and a running number (<code>em0010-en-0001</code>, 239 plays), or the language and a running number alone (<code>es-0001</code>, 113 plays). The running number counts the lines in the order of the file, and no two lines of a play share one. Playcode reads them and writes them back unchanged, and shows them in its editor without letting anyone change them.</p>
+    <p>The number of a line cannot do this job. A verse split between speakers is one number on two or three lines (9,851 numbers are shared this way), 59,347 verse lines have no number at all (songs, plays whose lines are not numbered), and some numbers follow a printed edition (“3-4” in <i>Hamlet</i>). The identifier names exactly one line. Within the files only <i>Hamlet</i>’s variant readings point at lines by it (<code>&lt;app to="#em0010-en-0136"&gt;</code>, 11 readings); outside them, anyone may use it to link to or cite a line of a published file. Nothing in Playcode or on the site uses it.</p>
+
+    <div class="q" data-q="q25" data-n="25">
+      <span class="q-num" aria-hidden="true">25</span>
+      <div class="q-body">
+        <h3>What identifier should a verse line added in Playcode get?</h3>
+        <p class="why">Today it gets none, and the file Playcode writes gives that line none. Playcode could give it the next free number in the play’s own shape (<code>es-3679</code> in a play of 3,678 lines): never used before, so no link breaks, but out of order when the line is added in the first act. Numbering every line again in order would keep the running number true, but every link to a line after the new one would then point at the wrong line.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q25-o1"><input type="radio" id="q25-o1" name="q25-choice" value="The next free number in the play’s shape">The next free number in the play’s shape</label>
+            <label for="q25-o2"><input type="radio" id="q25-o2" name="q25-choice" value="Number every line again in order">Number every line again in order</label>
+            <label for="q25-o3"><input type="radio" id="q25-o3" name="q25-choice" value="None: we do not use the identifiers">None: we do not use the identifiers</label>
+            <label for="q25-o4"><input type="radio" id="q25-o4" name="q25-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q25-text">Notes</label>
+          <textarea id="q25-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>

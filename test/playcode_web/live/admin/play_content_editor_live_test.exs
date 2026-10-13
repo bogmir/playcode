@@ -463,6 +463,67 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  describe "a stage direction's kind and a verse's identifier" do
+    setup %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <stage type="exit">Sale don Pedro solo.</stage>
+                <stage type="trick">Vuela.</stage>
+                <sp><speaker>ANA</speaker><lg><l n="1" xml:id="es-0001">Primera línea</l></lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: play}
+    end
+
+    defp edit(lv, content) do
+      lv |> element("#{card(lv, content)} button[aria-label='#{t("Edit")}']") |> render_click()
+      lv
+    end
+
+    # "Sale" is an entrance in a Spanish stage direction: AL0731's file calls it an exit.
+    test "is chosen in the stage direction's form", %{conn: conn, play: play} do
+      conn
+      |> open_scene(play)
+      |> edit("Sale don Pedro solo.")
+      |> form("#element-form", element: %{"stage_type" => "entrance"})
+      |> render_submit()
+
+      assert {%{"type" => "entrance"}, "Sale don Pedro solo."} in xml_elements(
+               export_tei(play),
+               "stage"
+             )
+    end
+
+    test "a kind the list does not have survives an edit", %{conn: conn, play: play} do
+      conn
+      |> open_scene(play)
+      |> edit("Vuela.")
+      |> form("#element-form", element: %{"content" => "Vuela alto."})
+      |> render_submit()
+
+      assert {%{"type" => "trick"}, "Vuela alto."} in xml_elements(export_tei(play), "stage")
+    end
+
+    test "a verse's identifier is shown and kept, not edited", %{conn: conn, play: play} do
+      lv = conn |> open_scene(play) |> edit("Primera línea")
+
+      assert lv |> element("#element-form") |> render() =~ "es-0001"
+      refute has_element?(lv, "#element-form [name='element[line_id]']")
+
+      lv |> form("#element-form", element: %{"content" => "Línea primera"}) |> render_submit()
+
+      assert [{%{"xml:id" => "es-0001"}, "Línea primera"}] = xml_elements(export_tei(play), "l")
+    end
+  end
+
   describe "a stage direction's type, changed in a line that has a note" do
     setup %{conn: conn} do
       play =

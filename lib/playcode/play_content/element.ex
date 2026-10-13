@@ -24,6 +24,9 @@ defmodule Playcode.PlayContent.Element do
     * `part` (`I`, `M`, `F`) marks a verse split between speakers.
     * `verse_type` (redondilla, romance…) sits on the `line_group`.
 
+  On a stage direction, `stage_type` is `@type`, the kind: one of `stage_types/0`, or
+  any other word a file gives.
+
   `content` is plain text with italics as `<<…>>` markers and a stage direction inside a
   line or paragraph as `<stage type="…">…</stage>` (see `InlineMarkup`).
   `position` orders an element among its siblings.
@@ -31,6 +34,8 @@ defmodule Playcode.PlayContent.Element do
 
   use Ecto.Schema
   import Ecto.Changeset
+
+  @stage_types ~w(setting entrance exit business novelistic delivery modifier location mixed)
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -61,6 +66,9 @@ defmodule Playcode.PlayContent.Element do
 
     timestamps(type: :utc_datetime)
   end
+
+  @doc "The kinds of stage direction TEI suggests for `<stage type>`, in its order."
+  def stage_types, do: @stage_types
 
   @doc """
   Returns the ordered list of characters from preloaded element_characters.
