@@ -980,19 +980,24 @@
 
   <section id="t-downloads" aria-labelledby="h-downloads">
     <h2 id="h-downloads">The downloads</h2>
-    <p>A reader can download each play as HTML, PDF or EPUB, to read or print away from the site. The downloads print the title, the editors, the sources of the text, the dating, the dedications, the cast list and the text.</p>
+    <p>A reader can download each play as HTML, PDF or EPUB, to read or print away from the site. The downloads print the title, the author, the editors, the sources of the text, the dating, the dedications, the cast list and the text, and the EPUB also the original title and the licence. The play page and the published site show more.</p>
 
     <div class="q" data-q="q24" data-n="24">
       <span class="q-num" aria-hidden="true">24</span>
       <div class="q-body">
-        <h3>Should the downloads list the play’s witnesses?</h3>
-        <p class="why">The play page and the published site list each play’s witnesses, the manuscripts and early printings its text survives in, as emothe.uv.es prints its “Testimonios”: 510 witnesses on 107 plays, from FileMaker. The downloads do not. A reader of the edition may want them beside the text; or the downloads may be meant for reading the play, with the witnesses left to the site.</p>
+        <h3>Which of these should the downloads print as well?</h3>
+        <p class="why">Each is on the play page and the published site, and in none of the downloads. A download may be meant to carry what the edition holds, or only the play, with the rest left to the site. Tick any.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q24-o1"><input type="radio" id="q24-o1" name="q24-choice" value="Yes, after the sources of the text, as the site lists them">Yes, after the sources of the text, as the site lists them</label>
-            <label for="q24-o2"><input type="radio" id="q24-o2" name="q24-choice" value="No: the downloads are for reading the play">No: the downloads are for reading the play</label>
-            <label for="q24-o3"><input type="radio" id="q24-o3" name="q24-choice" value="Not sure">Not sure</label>
+            <label for="q24-o1"><input type="checkbox" id="q24-o1" name="q24-choice" value="The witnesses: manuscripts and early printings (510 on 107 plays)">The witnesses: manuscripts and early printings (510 on 107 plays)</label>
+            <label for="q24-o2"><input type="checkbox" id="q24-o2" name="q24-choice" value="The bibliography (2,804 references on 115 plays)">The bibliography (2,804 references on 115 plays)</label>
+            <label for="q24-o3"><input type="checkbox" id="q24-o3" name="q24-choice" value="The places of the action">The places of the action</label>
+            <label for="q24-o4"><input type="checkbox" id="q24-o4" name="q24-choice" value="For a translation, the play it translates">For a translation, the play it translates</label>
+            <label for="q24-o5"><input type="checkbox" id="q24-o5" name="q24-choice" value="The verse forms: redondilla, romance…">The verse forms: redondilla, romance…</label>
+            <label for="q24-o6"><input type="checkbox" id="q24-o6" name="q24-choice" value="The statistics">The statistics</label>
+            <label for="q24-o7"><input type="checkbox" id="q24-o7" name="q24-choice" value="The publication details, the licence, the project and editorial statements and the identifiers">The publication details, the licence, the project and editorial statements and the identifiers</label>
+            <label for="q24-o8"><input type="checkbox" id="q24-o8" name="q24-choice" value="None: the downloads are for reading the play">None: the downloads are for reading the play</label>
           </div>
         </fieldset>
         <div>
@@ -1048,10 +1053,12 @@
     answers = {};
   }
 
+  // A question takes one answer (radio buttons) or several (checkboxes), kept as one string.
+  var SEP = " | ";
   function read(q) {
-    var checked = q.querySelector('input[type="radio"]:checked');
+    var checked = q.querySelectorAll('input[type="radio"]:checked, input[type="checkbox"]:checked');
     return {
-      choice: checked ? checked.value : "",
+      choice: Array.prototype.map.call(checked, function (i) { return i.value; }).join(SEP),
       text: q.querySelector("textarea").value
     };
   }
@@ -1088,8 +1095,9 @@
   questions.forEach(function (q) {
     var saved = answers[q.dataset.q] || {};
     if (saved.choice) {
-      q.querySelectorAll('input[type="radio"]').forEach(function (r) {
-        if (r.value === saved.choice) r.checked = true;
+      var chosen = saved.choice.split(SEP);
+      q.querySelectorAll('input[type="radio"], input[type="checkbox"]').forEach(function (r) {
+        if (r.type === "radio" ? r.value === saved.choice : chosen.indexOf(r.value) >= 0) r.checked = true;
       });
     }
     if (saved.text) q.querySelector("textarea").value = saved.text;
@@ -1106,7 +1114,7 @@
     var lines = ["Questions for the project: answers", ""];
     questions.forEach(function (q) {
       var a = read(q);
-      var hasOptions = !!q.querySelector('input[type="radio"]');
+      var hasOptions = !!q.querySelector('input[type="radio"], input[type="checkbox"]');
       if (!isAnswered(a)) return;
       lines.push(q.dataset.n + ". " + q.querySelector("h3").textContent.trim());
       if (hasOptions) lines.push("   Answer: " + (a.choice || "(none chosen)"));
