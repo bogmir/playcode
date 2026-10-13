@@ -969,10 +969,11 @@ defmodule Playcode.Export.TeiXml do
   defp inline_nodes([part | rest]), do: [inline_node(part) | inline_nodes(rest)]
   defp inline_nodes([]), do: []
 
-  # An italic piece and the italic pieces that follow it, with any notes between them:
-  # adjacent italic runs (`<<a>><<b>>`, or one a note split) merge into a single <emph>.
+  # An italic piece and the italic pieces that follow it: adjacent italic runs
+  # (`<<a>><<b>>`, which the importer would part with a space) and the halves of one a
+  # note split merge into a single <emph>. A note after an italic run ends it.
   defp italic_run([piece | rest]) do
-    case Enum.split_while(rest, &is_map_key(&1, :note)) do
+    case Enum.split_while(rest, &match?(%{note: _, italic: true}, &1)) do
       {notes, [%{italic: true, stage: nil} | _] = more} ->
         {run, rest} = italic_run(more)
         {[piece | notes] ++ run, rest}
