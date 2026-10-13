@@ -23,7 +23,6 @@ and the technical detail is here.
 - [ ] **A second cast list** - one `<div type="elenco">` is written, under the first list's heading, so 5 plays with a cast list per act or part (EMOTHE0112, 0283, 0555, 0714, fixture 0277) come back with one and their characters reordered. The second list is a gap in Playcode itself: the parser flattens every `castList` into the play's characters and keeps the `elenco` divisions empty, so no row records which list a character is in, and the play page prints every character under each heading. Fix the model (a character's `elenco` division) before the export
 - [ ] **New FileMaker slices go into the TEI from the start** - S5 performances as `front/performance` (its cast as `castList/castItem/actor`, the information source as a `bibl`), S8 genre as `textClass/keywords` or `catRef`, S9b places as the `settingDesc` Playcode already writes; each slice's export and import ship together, and its row goes into `docs/stakeholder/ida-y-vuelta.html`
 - [ ] **A test that holds the round trip** - the fixpoint test (`tei_roundtrip_test.exs`, "exporting, re-importing and exporting again changes nothing") compares XML, so data the export never writes passes it. Wanted: a play with every feature filled, exported, imported as a new play, and read back through the contexts' public functions; it fails on each gap above until it is closed
-- [ ] **`mix playcode.import.tei` reads the FileMaker fixtures as TEI** - `test/fixtures/**/*.xml` includes `test/fixtures/filemaker/ctce_dades/`, the "8 unreadable" of every run
 
 ## High Priority
 

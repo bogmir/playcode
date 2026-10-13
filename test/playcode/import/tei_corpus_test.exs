@@ -42,5 +42,17 @@ defmodule Playcode.Import.TeiCorpusTest do
 
       assert [{"EMOTHE0050", _}] = TeiCorpus.collect_files([dir, "/nonexistent/path"])
     end
+
+    # test/fixtures/filemaker/ holds FileMaker's XML exports, which every run reported as
+    # 8 unreadable plays; the TEI fixtures below test/fixtures are listed by name.
+    test "reads the directories it is given, not the ones inside them" do
+      dir = tmp_dir("nested")
+      File.mkdir_p!(Path.join(dir, "filemaker"))
+      File.write!(Path.join([dir, "filemaker", "T12_ObraBibliografiaSelecta.xml"]), "<x/>")
+      File.write!(Path.join(dir, "EMOTHE0050_Amleto.xml"), "<TEI/>")
+
+      assert [{"EMOTHE0050", _}] = TeiCorpus.collect_files([dir])
+      assert "test/fixtures/tei_files" in TeiCorpus.default_dirs()
+    end
   end
 end

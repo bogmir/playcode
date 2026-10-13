@@ -21,10 +21,13 @@ defmodule Playcode.Import.TeiCorpus do
 
   def default_dirs, do: @default_dirs
 
-  @doc "Every .xml file under the given directories, one per code, sorted by code."
+  @doc """
+  Every .xml file in the given directories, one per code, sorted by code. Their
+  subdirectories are not read: `test/fixtures/filemaker/` holds FileMaker's exports.
+  """
   def collect_files(dirs) do
     dirs
-    |> Enum.flat_map(&Path.wildcard(Path.join(&1, "**/*.xml")))
+    |> Enum.flat_map(&Path.wildcard(Path.join(&1, "*.xml")))
     |> Enum.reduce(%{}, fn path, acc ->
       Map.put_new(acc, path |> Path.basename(".xml") |> Play.short_code(), path)
     end)
