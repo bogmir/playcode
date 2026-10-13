@@ -10,6 +10,8 @@ defmodule Playcode.Bibliography.Entry do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Playcode.PlayContent.InlineMarkup
+
   @primary_key {:id, :binary_id, autogenerate: true}
 
   # Also the order a play's bibliography is shown in.
@@ -83,6 +85,17 @@ defmodule Playcode.Bibliography.Entry do
   }
 
   @described @fields -- [:note]
+
+  # The fields the export writes through InlineMarkup, as italics.
+  @inline [
+    :analytic_author,
+    :analytic_title,
+    :monogr_author,
+    :monogr_title,
+    :original_title,
+    :series,
+    :public_note
+  ]
 
   def kinds, do: @kinds
   def pub_types, do: @pub_types
@@ -173,20 +186,36 @@ defmodule Playcode.Bibliography.Entry do
 
   @doc """
   The reference as a TEI file carries it: every public field, whitespace collapsed, blank
-  as nil, the URL only as `tei_url/1` gives it. It is all a file says of a reference, so it
-  is what a file's reference is matched on; researchers' `note` never leaves Playcode and
-  is not in it.
+  as nil, the URL only as `tei_url/1` gives it, and the italics as the export writes them
+  (`as_written/1`). It is all a file says of a reference, so it is what a file's reference
+  is matched on; researchers' `note` never leaves Playcode and is not in it.
   """
   def description(%__MODULE__{} = entry) do
     @described
-    |> Map.new(&{&1, entry |> Map.fetch!(&1) |> collapse()})
+    |> Map.new(fn field ->
+      value = Map.fetch!(entry, field)
+      {field, collapse(if field in @inline, do: as_written(value), else: value)}
+    end)
     |> Map.update!(:url, &tei_url/1)
   end
 
-  @doc "A field as a description writes it: whitespace collapsed, blank as nil."
-  def collapse(nil), do: nil
+  # A field's italics as the export writes them and the parser reads them back: the
+  # pieces InlineMarkup makes of it, an empty <<>> gone, touching italic runs as one.
+  defp as_written(nil), do: nil
 
-  def collapse(text) do
+  defp as_written(text) do
+    text
+    |> InlineMarkup.parts()
+    |> Enum.chunk_by(& &1.italic)
+    |> Enum.map_join(fn
+      [%{italic: true} | _] = run -> "<<" <> Enum.map_join(run, & &1.text) <> ">>"
+      run -> Enum.map_join(run, & &1.text)
+    end)
+  end
+
+  defp collapse(nil), do: nil
+
+  defp collapse(text) do
     case text |> String.replace(~r/\s+/u, " ") |> String.trim() do
       "" -> nil
       text -> text

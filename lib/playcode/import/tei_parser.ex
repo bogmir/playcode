@@ -926,9 +926,11 @@ defmodule Playcode.Import.TeiParser do
 
   defp run(text) when is_binary(text), do: text
 
+  # The italics keep their spaces: the export wrote them on one line, so a space inside
+  # an <emph> is the curator's ("<<Foo >>bar"), not indentation.
   defp run({name, attrs, children}) do
     text = Enum.map_join(children, &run/1)
-    if emph_element?(name, attrs), do: "<<" <> String.trim(text) <> ">>", else: text
+    if emph_element?(name, attrs), do: "<<" <> text <> ">>", else: text
   end
 
   defp run(_other), do: ""

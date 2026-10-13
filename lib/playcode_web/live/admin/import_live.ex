@@ -279,6 +279,14 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                   <li :for={citation <- p.bibliography_adds}>{citation}</li>
                 </ul>
               </div>
+              <div :if={p.bibliography_skips != []} class="mt-1 text-xs text-warning">
+                {gettext("Skips %{count} reference(s) Playcode cannot store:",
+                  count: length(p.bibliography_skips)
+                )}
+                <ul class="ml-4 list-disc">
+                  <li :for={citation <- p.bibliography_skips}>{citation}</li>
+                </ul>
+              </div>
             </li>
           </ul>
 

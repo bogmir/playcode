@@ -113,6 +113,25 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert out =~ ~r/\n\s+\+ Autor, Ana\. Libro nuevo/
     end
 
+    test "--dry-run lists the references an import would skip", %{dir: dir} do
+      File.write!(
+        Path.join(dir, "TASK0004_Cuarta.xml"),
+        tei(
+          code: "TASK0004",
+          title: "Cuarta",
+          back:
+            ~s(<div type="bibliografia"><listBibl type="critica"><biblStruct type="libro" xml:lang="la">) <>
+              ~s(<monogr><author>Autor, Ana</author><title level="m">Liber</title><imprint><date/></imprint>) <>
+              ~s(</monogr></biblStruct></listBibl></div>)
+        )
+      )
+
+      out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
+
+      assert out =~ "TASK0004  new, skips 1 reference(s)"
+      assert out =~ ~r/\n\s+- Autor, Ana\. Liber/
+    end
+
     test "imports once, skips on the next run, and re-imports under --force", %{dir: dir} do
       assert run("playcode.import.tei", ["--dir", dir]) =~ "imported 1, skipped 0, failed 0"
       assert [%{title: "Primera"}] = Catalogue.list_plays()
@@ -295,6 +314,22 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert out =~ "already imported: 2 plays"
       assert out =~ "created 0 entries and 0 links"
       assert length(Bibliography.list_links(hamlet.id)) == 4
+    end
+
+    # Its references came with its TEI file: FileMaker's copies would come in beside them.
+    test "a play whose bibliography came from its TEI file is left alone", %{hamlet: hamlet} do
+      {:ok, _} =
+        Bibliography.create_entry_for_play(
+          hamlet.id,
+          %{"kind" => "criticism", "monogr_title" => "Del fichero"},
+          %{},
+          "tei"
+        )
+
+      out = run("playcode.import.bibliography", ["--path", @dump])
+
+      assert out =~ "already imported: 1 plays"
+      assert [%{origin: "tei"}] = Bibliography.list_links(hamlet.id)
     end
 
     test "a play added later shares the entries already imported" do

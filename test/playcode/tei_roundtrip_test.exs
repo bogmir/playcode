@@ -1184,15 +1184,13 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
-  # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
-  # re-importing that copy made a second editor: one more per round trip.
   # A reference is matched on its description as the file carries it
-  # (Bibliography.Entry.description/1), so what the parser reads back from an entry's
-  # biblStruct must be exactly that description, with the play's own place in it.
+  # (Bibliography.Entry.description/1), so a play's references must come back from its
+  # file with exactly the description they went in with, and the play's own place in each.
   describe "the bibliography" do
     alias Playcode.Bibliography
     alias Playcode.Bibliography.Entry
-    alias Playcode.Import.TeiParser
+    alias Playcode.Import.TeiImport
 
     @every_field %{
       "language" => "es",
@@ -1239,10 +1237,13 @@ defmodule Playcode.TeiRoundtripTest do
         )
       end
 
+      # Italics as a curator may type them: two runs touching, an empty one, a space
+      # inside. The export merges, drops and keeps them as InlineMarkup reads them, and
+      # the reference must still be recognised from its file.
       bibliography_fixture(play, %{
         "kind" => "adaptation",
         "pub_type" => nil,
-        "monogr_title" => "Solo un título",
+        "monogr_title" => "<<Solo>><<un>> título<<>> y <<Foo >>bar",
         "url" => ". http://emothe.uv.es/x.php"
       })
 
@@ -1275,24 +1276,6 @@ defmodule Playcode.TeiRoundtripTest do
       |> Enum.sort()
     end
 
-    test "the parser reads back each reference's description and the play's place in it" do
-      play = fill_bibliography(import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}")))
-
-      {:ok, tei} = TeiParser.parse_file(write_tmp!(export_tei(play)))
-
-      expected =
-        for link <- Bibliography.list_links(play.id),
-            do: %{
-              description: Entry.description(link.entry),
-              volume: link.volume,
-              pages: link.pages
-            }
-
-      assert length(tei.bibliography) == 11
-      assert Enum.sort(tei.bibliography) == Enum.sort(expected)
-      refute Enum.any?(tei.bibliography, &Map.has_key?(&1.description, :note))
-    end
-
     test "a play rebuilt from its file gets every reference back, as the file's" do
       n = System.unique_integer([:positive])
       play = fill_bibliography(import_tei!(tei(code: "BIB#{n}")))
@@ -1313,6 +1296,31 @@ defmodule Playcode.TeiRoundtripTest do
                Bibliography.list_links(copy.id),
                &(is_nil(&1.note) and is_nil(&1.entry.note))
              )
+    end
+
+    test "importing a play's own export again adds nothing" do
+      play = fill_bibliography(import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}")))
+      xml = export_tei(play)
+
+      assert {:ok, %{bibliography_adds: []}} = TeiImport.preview_import(write_tmp!(xml))
+
+      import_tei!(xml)
+      assert length(Bibliography.list_links(play.id)) == 11
+    end
+
+    # Seven source files (EMOTHE0310, 0451, 0488…) give their bibliography as prose: those
+    # paragraphs must not become references.
+    test "a bibliography in prose gives no references" do
+      play =
+        import_tei!(
+          tei(
+            back:
+              ~s(<div type="bibliografia"><p><emph>Autoridades</emph>: Real Academia Española. ) <>
+                ~s(<emph>Diccionario de Autoridades</emph>. Madrid: Gredos, 1963.</p></div>)
+          )
+        )
+
+      assert Bibliography.list_links(play.id) == []
     end
 
     test "one reference in two plays' files is one entry with two links" do
@@ -1612,6 +1620,8 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
+  # re-importing that copy made a second editor: one more per round trip.
   test "exporting, re-importing and exporting again changes nothing" do
     body = """
     <div1 type="acto" n="1"><head>ACTO I</head><div2 type="escena" n="1"><head>ESCENA I</head>

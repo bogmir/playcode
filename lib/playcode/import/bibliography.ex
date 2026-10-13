@@ -468,7 +468,8 @@ defmodule Playcode.Import.Bibliography do
 
   # A play is done once the import has written to it. Its filemaker links alone are no
   # marker: a curator may remove every one of them, and the next run must not bring them
-  # back. The activity-log row apply_plan/2 writes per play survives that.
+  # back. The activity-log row apply_plan/2 writes per play survives that. A play whose
+  # links came with its TEI file is done too: FileMaker's copies would sit beside them.
   defp imported_play_ids do
     logged =
       ActivityLog.Entry
@@ -476,7 +477,7 @@ defmodule Playcode.Import.Bibliography do
       |> select([a], a.play_id)
 
     Link
-    |> where([l], l.origin == "filemaker")
+    |> where([l], l.origin in ["filemaker", "tei"])
     |> select([l], l.play_id)
     |> union(^logged)
     |> Repo.all()

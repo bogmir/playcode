@@ -83,30 +83,28 @@ defmodule Playcode.Import.TeiImport do
       archived: not is_nil(existing) and not is_nil(existing.deleted_at),
       replaces: replaced_counts(existing),
       preserves: preserved_counts(existing),
-      preserves_fields: preserved_fields(existing),
-      bibliography_adds: bibliography_adds(tei.bibliography, existing)
+      preserves_fields: preserved_fields(existing)
+    }
+    |> Map.merge(bibliography_preview(tei.bibliography, existing))
+  end
+
+  # The import's bibliography plan as it prints: the references the play would gain, and
+  # those it would skip. A stale one, an older file's version of a reference corrected
+  # since, shows among the first before it is imported.
+  defp bibliography_preview(references, existing) do
+    steps = bibliography_plan(references, existing && existing.id)
+
+    %{
+      bibliography_adds: for({step, _, ref} <- steps, step != :skip, do: citation(ref)),
+      bibliography_skips: for({:skip, _, ref} <- steps, do: citation(ref))
     }
   end
 
-  # The references the import would give the play, as they print: those of the file it
-  # does not link yet, whether they would link an entry Playcode has or make a new one,
-  # once each, leaving out what write_bibliography/2 would skip. A stale one, an older
-  # file's version of a reference corrected since, shows here before it is imported.
-  defp bibliography_adds(references, existing) do
-    play_id = existing && existing.id
-    found = Bibliography.identical_entries(Enum.map(references, & &1.description), play_id)
-    linked = Bibliography.linked_entry_ids(play_id)
-
-    references
-    |> Enum.reject(&(found[&1.description] in linked))
-    |> Enum.uniq_by(& &1.description)
-    |> Enum.filter(&valid_reference?/1)
-    |> Enum.map(fn reference ->
-      Citation.plain(
-        struct(Entry, reference.description),
-        %Link{volume: reference.volume, pages: reference.pages}
-      )
-    end)
+  defp citation(reference) do
+    Citation.plain(
+      struct(Entry, reference.description),
+      %Link{volume: reference.volume, pages: reference.pages}
+    )
   end
 
   @doc """
@@ -288,43 +286,60 @@ defmodule Playcode.Import.TeiImport do
 
   # --- Bibliography ---
 
-  # On every import, the first and every re-import: each reference of the file is linked
-  # to the entry Playcode already has with its description (Bibliography.identical_entries/2),
-  # or made into a new one. Nothing is changed or removed: an entry a curator corrected
-  # stays corrected, and the play's links stay as they are. A reference that is no valid
-  # entry is skipped, before it is written, since a failed write inside this transaction
-  # would roll the whole play back.
-  defp write_bibliography([], _play), do: :ok
+  # What an import does with a file's references, decided once for the import and its
+  # preview: `{:link, entry_id, ref}` for an entry Playcode has with the reference's
+  # description (Bibliography.identical_entries/2) that the play does not link yet,
+  # `{:create, nil, ref}` for one it has not, and `{:skip, nil, ref}` for one that is no
+  # valid entry (a language or a list Playcode does not know). A reference the play links
+  # already, or that the file gives twice, has no step. Nothing is ever changed or removed.
+  defp bibliography_plan([], _play_id), do: []
 
+  defp bibliography_plan(references, play_id) do
+    found = Bibliography.identical_entries(Enum.map(references, & &1.description), play_id)
+    linked = MapSet.new(Bibliography.linked_entry_ids(play_id))
+
+    {steps, _seen} =
+      Enum.flat_map_reduce(references, MapSet.new(), fn reference, seen ->
+        if reference.description in seen do
+          {[], seen}
+        else
+          {step(reference, found[reference.description], linked),
+           MapSet.put(seen, reference.description)}
+        end
+      end)
+
+    steps
+  end
+
+  defp step(reference, nil, _linked) do
+    if valid_reference?(reference),
+      do: [{:create, nil, reference}],
+      else: [{:skip, nil, reference}]
+  end
+
+  defp step(reference, entry_id, linked) do
+    if entry_id in linked, do: [], else: [{:link, entry_id, reference}]
+  end
+
+  # On every import, the first and every re-import. A write the database refuses (an
+  # entry removed while the import ran) rolls the play back with a reason, not a crash.
   defp write_bibliography(references, play) do
-    found = Bibliography.identical_entries(Enum.map(references, & &1.description), play.id)
-    linked = play.id |> Bibliography.list_links() |> MapSet.new(& &1.entry_id)
-
-    Enum.reduce(references, {found, linked}, fn reference, {found, linked} ->
-      place = %{volume: reference.volume, pages: reference.pages}
-
-      case Map.fetch(found, reference.description) do
-        {:ok, entry_id} ->
-          if entry_id not in linked,
-            do: {:ok, _} = Bibliography.link_entry(play.id, entry_id, place, "tei")
-
-          {found, MapSet.put(linked, entry_id)}
-
-        :error ->
-          if valid_reference?(reference) do
-            {:ok, link} =
-              Bibliography.create_entry_for_play(play.id, reference.description, place, "tei")
-
-            {Map.put(found, reference.description, link.entry_id),
-             MapSet.put(linked, link.entry_id)}
-          else
-            Logger.warning("Skipped a reference that is no valid entry: #{inspect(reference)}")
-            {found, linked}
-          end
-      end
-    end)
-
+    for step <- bibliography_plan(references, play.id), do: write_step(step, play)
     :ok
+  end
+
+  defp write_step({:skip, nil, reference}, _play),
+    do: Logger.warning("Skipped a reference that is no valid entry: #{inspect(reference)}")
+
+  defp write_step({step, entry_id, reference}, play) do
+    place = %{volume: reference.volume, pages: reference.pages}
+
+    result =
+      if step == :link,
+        do: Bibliography.link_entry(play.id, entry_id, place, "tei"),
+        else: Bibliography.create_entry_for_play(play.id, reference.description, place, "tei")
+
+    with {:error, reason} <- result, do: Repo.rollback({:bibliography, reason})
   end
 
   defp valid_reference?(reference),

@@ -96,9 +96,9 @@ confirmed, and unlinking it deletes it (`Bibliography.unlink/1`, no orphans).
 ## What a rebuild from files gives up
 
 - Researchers' notes on entries (137 in dev) and links (15), as on purpose.
-- FileMaker numbers: they stay in the installation that imported them. A rebuilt installation must
-  not run `mix playcode.import.bibliography` again: its links are `tei`, so the run would take every
-  play as not yet imported and add FileMaker's entries beside the file's.
+- FileMaker numbers: they stay in the installation that imported them. The FileMaker
+  bibliography import counts a play with `tei` links as imported (`imported_play_ids/0`), so
+  a run on a rebuilt installation does not bring FileMaker's copies in beside the file's.
 - FileMaker's identical copies merge: 72 entries in dev are word-for-word copies of another, in 32
   groups (*The Chief British Dramatists Excluding Shakespeare*, 1924, six times, once per play). A
   rebuild makes each group one shared entry; in 4 cases a play links two copies of one and comes back

@@ -61,7 +61,7 @@ defmodule Playcode.Import.TeiCorpus do
   summary. Writes nothing. Under `force: true` a play already imported would be
   re-imported, and its line says what that replaces and keeps, and how many hand edits
   to its text since its last import it would undo. A play that would be imported lists
-  the references it would gain, one line each.
+  the references it would gain and those it would skip, one line each.
   """
   def dry_run(files, opts \\ []) do
     force = Keyword.get(opts, :force, false)
@@ -116,11 +116,16 @@ defmodule Playcode.Import.TeiCorpus do
     )
   end
 
-  defp adds(%{bibliography_adds: []}), do: ""
-  defp adds(%{bibliography_adds: adds}), do: ", adds #{length(adds)} reference(s)"
+  defp adds(preview) do
+    [adds: preview.bibliography_adds, skips: preview.bibliography_skips]
+    |> Enum.reject(&(elem(&1, 1) == []))
+    |> Enum.map_join(fn {verb, refs} -> ", #{verb} #{length(refs)} reference(s)" end)
+  end
 
-  defp added(preview),
-    do: for(citation <- preview.bibliography_adds, do: {:info, "      + #{citation}"})
+  defp added(preview) do
+    for(citation <- preview.bibliography_adds, do: {:info, "      + #{citation}"}) ++
+      for(citation <- preview.bibliography_skips, do: {:info, "      - #{citation}"})
+  end
 
   defp replaces(preview, edits) do
     "replaces #{preview.replaces.divisions} division(s), " <>

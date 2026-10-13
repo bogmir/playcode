@@ -94,6 +94,23 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
       assert html =~ "Libro nuevo"
     end
 
+    test "lists the references a re-import would skip", %{lv: lv, code: code} do
+      html =
+        upload(lv, [
+          {"again.xml",
+           tei(
+             code: code,
+             back:
+               ~s(<div type="bibliografia"><listBibl type="critica"><biblStruct type="libro" xml:lang="la">) <>
+                 ~s(<monogr><author>Autor, Ana</author><title level="m">Liber</title><imprint><date/></imprint>) <>
+                 ~s(</monogr></biblStruct></listBibl></div>)
+           )}
+        ])
+
+      assert html =~ t("Skips %{count} reference(s) Playcode cannot store:", count: 1)
+      assert html =~ "Liber"
+    end
+
     test "leaves it alone when cancelled", %{lv: lv, code: code} do
       upload(lv, [{"again.xml", tei(code: code, title: "Segunda versión")}])
 

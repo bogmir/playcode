@@ -141,6 +141,24 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert dos =~ "Dos"
   end
 
+  # A reference Playcode cannot store (here a language it does not list) is skipped by the
+  # import; the preview says so rather than let it vanish.
+  test "lists the references an import would skip" do
+    xml =
+      tei(
+        back:
+          ~s(<div type="bibliografia"><listBibl type="critica">) <>
+            ~s(<biblStruct type="libro" xml:lang="la"><monogr><author>Autor, Ana</author>) <>
+            ~s(<title level="m">Liber</title><imprint><date/></imprint></monogr></biblStruct>) <>
+            ~s(</listBibl></div>)
+      )
+
+    assert {:ok, %{bibliography_adds: [], bibliography_skips: [skipped]}} =
+             TeiImport.preview_import(write_tmp!(xml))
+
+    assert skipped =~ "Liber"
+  end
+
   test "preview writes nothing", %{path: path} do
     {:ok, _} = TeiImport.preview_import(path)
 

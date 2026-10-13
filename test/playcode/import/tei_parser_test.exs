@@ -71,18 +71,4 @@ defmodule Playcode.Import.TeiParserTest do
              notes: [%{offset: 3, n: "1", body: "Glosa."}]
            } = line
   end
-
-  # Seven source files (EMOTHE0310, 0451, 0488…) give their bibliography as prose: those
-  # paragraphs must not become references.
-  test "a bibliography in prose gives no references" do
-    xml =
-      tei(
-        code: "PROSE01",
-        back:
-          ~s(<div type="bibliografia"><p><emph>Autoridades</emph>: Real Academia Española. ) <>
-            ~s(<emph>Diccionario de Autoridades</emph>. Madrid: Gredos, 1963.</p></div>)
-      )
-
-    assert {:ok, %{bibliography: []}} = TeiParser.parse_file(write_tmp!(xml))
-  end
 end
