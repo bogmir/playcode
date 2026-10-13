@@ -21,15 +21,12 @@ defmodule Playcode.Import.TeiCorpus do
 
   def default_dirs, do: @default_dirs
 
-  @doc "The FileMaker code hiding at the front of a play code or filename stem."
-  def base_code(code), do: code |> String.split("_") |> List.first()
-
   @doc "Every .xml file under the given directories, one per code, sorted by code."
   def collect_files(dirs) do
     dirs
     |> Enum.flat_map(&Path.wildcard(Path.join(&1, "**/*.xml")))
     |> Enum.reduce(%{}, fn path, acc ->
-      Map.put_new(acc, path |> Path.basename(".xml") |> base_code(), path)
+      Map.put_new(acc, path |> Path.basename(".xml") |> Play.short_code(), path)
     end)
     |> Enum.sort()
   end
@@ -195,7 +192,7 @@ defmodule Playcode.Import.TeiCorpus do
     Play
     |> select([p], p.code)
     |> Repo.all()
-    |> Enum.map(&base_code/1)
+    |> Enum.map(&Play.short_code/1)
     |> MapSet.new()
   end
 end

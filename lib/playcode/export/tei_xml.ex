@@ -3,6 +3,7 @@ defmodule Playcode.Export.TeiXml do
   Generates TEI-XML from a play record and its content.
   """
 
+  alias Playcode.Catalogue
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{InlineMarkup, Note}
   alias Playcode.Witnesses
@@ -67,13 +68,24 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp build_file_desc(play) do
-    element(:fileDesc, [
-      build_title_stmt(play),
-      build_edition_stmt(play),
-      build_extent(play),
-      build_publication_stmt(play),
-      build_source_desc(play)
-    ])
+    element(
+      :fileDesc,
+      [
+        build_title_stmt(play),
+        build_edition_stmt(play),
+        build_extent(play),
+        build_publication_stmt(play)
+      ] ++ build_notes_stmt(play) ++ [build_source_desc(play)]
+    )
+  end
+
+  # The play this one translates, adapts or reworks, by its short code, so an import can
+  # link the two whichever arrives first (Catalogue.link_waiting_translations/0).
+  defp build_notes_stmt(play) do
+    case Catalogue.original_code(play) do
+      nil -> []
+      code -> [element(:notesStmt, [element(:relatedItem, %{type: "original", target: code})])]
+    end
   end
 
   defp build_title_stmt(play) do
