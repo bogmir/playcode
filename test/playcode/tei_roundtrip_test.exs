@@ -1267,6 +1267,60 @@ defmodule Playcode.TeiRoundtripTest do
       assert listed.(roundtrip(first)) == listed.(first)
     end
 
+    # The record number ties a witness to the FileMaker record S3 brought it from: an
+    # installation restored from the files must still know which witnesses those are.
+    test "a FileMaker witness comes back with its record number, as FileMaker's" do
+      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(
+          %{"play_id" => play.id, "title" => "Octava parte", "origin" => "filemaker"},
+          %Playcode.Witnesses.Witness{filemaker_id: "T03:36"}
+        )
+
+      xml = export_tei(play)
+
+      assert xml_elements(xml, "idno", within: "witness") == [
+               {%{"type" => "filemaker"}, "T03:36"}
+             ]
+
+      copy =
+        import_tei!(String.replace(xml, play.code, "WIT#{System.unique_integer([:positive])}"))
+
+      assert [%{filemaker_id: "T03:36", origin: "filemaker"}] =
+               Playcode.Witnesses.list_for_play(copy.id)
+    end
+
+    # FileMaker's line breaks, kept as \r: the lines of a title page, a note's paragraphs.
+    # Stored as \n with no spaces around them, and a run of spaces or a tab as one space
+    # (which is all any page prints), so the file gives back what it was given.
+    test "a witness's line breaks come back, its runs of spaces as one" do
+      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{
+          "play_id" => play.id,
+          "title" => "ORBECCHE TRAGEDIA \rDI M. GIOVANBATTISTA",
+          "note" => "Esemplare\tconsultato.\r\n\r\nBIBL.:  ADAMS 1967"
+        })
+
+      expected = %{
+        title: "ORBECCHE TRAGEDIA\nDI M. GIOVANBATTISTA",
+        note: "Esemplare consultato.\n\nBIBL.: ADAMS 1967"
+      }
+
+      xml = export_tei(play)
+      assert length(xml_elements(xml, "lb", within: "witness")) == 3
+
+      copy =
+        import_tei!(String.replace(xml, play.code, "WIT#{System.unique_integer([:positive])}"))
+
+      for p <- [play, copy] do
+        assert [witness] = Playcode.Witnesses.list_for_play(p.id)
+        assert Map.take(witness, [:title, :note]) == expected
+      end
+    end
+
     test "exporting, re-importing and exporting again changes nothing" do
       first =
         tei(code: "WIT1", source_desc: "<bibl><title>Base</title></bibl>" <> @list_wit)
