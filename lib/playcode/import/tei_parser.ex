@@ -249,6 +249,7 @@ defmodule Playcode.Import.TeiParser do
       edition_title: safe_text(edition_title_el),
       relationship_type: relationship_type,
       pending_original_code: original_code(file_desc),
+      edition_notes: edition_notes(file_desc),
       language: language || "es",
       composition_date_from: composition_from,
       composition_date_to: composition_to,
@@ -359,6 +360,16 @@ defmodule Playcode.Import.TeiParser do
       Enum.find(idnos, fn {_, attrs, _} -> attr_value(attrs, "type") == "EMOTHE" end)
 
     if emothe_idno, do: text_content(emothe_idno), else: nil
+  end
+
+  # <notesStmt><note>: the notes on the edition, a <lb/> a line break in one.
+  defp edition_notes(nil), do: []
+
+  defp edition_notes({_name, _attrs, children}) do
+    case find_child(children, "notesStmt") do
+      {_, _, notes} -> notes |> find_children("note") |> Enum.map(&lines_text/1)
+      nil -> []
+    end
   end
 
   # <notesStmt><relatedItem type="original" target="EMOTHE0530"/>: the play this one

@@ -259,7 +259,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 13 October 2026. 25 questions, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 14 October 2026. 26 questions, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -275,6 +275,7 @@
       <li><a href="#t-form">Verse, prose or both</a><span class="nums">22–23</span></li>
       <li><a href="#t-downloads">The downloads</a><span class="nums">24</span></li>
       <li><a href="#t-ids">Verse identifiers</a><span class="nums">25</span></li>
+      <li><a href="#t-edition-notes">Notes on the edition</a><span class="nums">26</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
   </nav>
@@ -1033,6 +1034,41 @@
         <div>
           <label class="label" for="q25-text">Notes</label>
           <textarea id="q25-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-edition-notes" aria-labelledby="h-edition-notes">
+    <h2 id="h-edition-notes">Notes on the edition</h2>
+    <p>Fourteen files carry a note on the edition as a whole in their header, fifteen notes in all: <code>&lt;notesStmt&gt;&lt;note&gt;El epílogo figura en la edición de Ferrara de 1581, que no es la edición princeps.&lt;/note&gt;&lt;/notesStmt&gt;</code> (<i>L’Aminta</i>, EMOTHE0005). They are of five kinds:</p>
+    <ul class="plan">
+      <li>Remarks for readers: the epilogue above; the translations <i>La mandrágora</i>’s text was fixed from, and a song taken from another (EMOTHE0161, two notes); “Con correcciones a cargo de Guillermo Carrascón” (EMOTHE0090); the full translated title of <i>Arden of Faversham</i> (EMOTHE0179).</li>
+      <li>How the digital edition follows the printed one: “He seguido al pie de la letra las decisiones de la editora, entre ellas las que afectan a los apartes…” (<i>La vida es sueño</i>, EMOTHE0020; <i>Life is a Dream</i>, EMOTHE0022).</li>
+      <li>Lists of the witnesses and editions used, of 1,200 to 2,400 characters (<i>La dama duende</i>, <i>La dama boba</i>, <i>A secreto agravio, secreta venganza</i>, <i>El anzuelo de Fenisa</i>). The witnesses are in Playcode now, from FileMaker.</li>
+      <li>An editor’s reminders: “¡¡¡CUIDADO, REVISAR QUE SÍ HAY APARTES QUE NO SE MARCAN!!!” (<i>La vita è un sogno</i>, EMOTHE0021), “HABLAR DE LO QUE HAS RESPETADO, OPERO PROBLEMAS CON LAS NEGRITAS…” (<i>La vie est un songe</i>, EMOTHE0023), “Ojo en el acto V porque al final se confunde el coro con el semicoro. Repásalo con las fotocopias originales…” (<i>Orbecche</i>, EMOTHE0163).</li>
+      <li>A licence, “Atribución-SinDerivadas 4.0 Internacional (CC BY-ND 4.0)” (<i>Timón de Atenas</i>, EMOTHE0486).</li>
+    </ul>
+    <p>emothe.uv.es shows none of them. Playcode now keeps them, in the play’s form and in the file it writes, and, like emothe.uv.es, shows them to no reader.</p>
+
+    <div class="q" data-q="q26" data-n="26">
+      <span class="q-num" aria-hidden="true">26</span>
+      <div class="q-body">
+        <h3>Should readers see the notes on the edition?</h3>
+        <p class="why">If they should, the reminders above would be printed too unless they are rewritten or removed first, and the witness lists would repeat what the witnesses already say. Tell us in the notes what to do with those, if anything. The file keeps every note whatever the answer, since the file is a complete copy of the edition.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q26-o1"><input type="radio" id="q26-o1" name="q26-choice" value="No, as on emothe.uv.es: they stay in Playcode and the file">No, as on emothe.uv.es: they stay in Playcode and the file</label>
+            <label for="q26-o2"><input type="radio" id="q26-o2" name="q26-choice" value="In the downloads only">In the downloads only</label>
+            <label for="q26-o3"><input type="radio" id="q26-o3" name="q26-choice" value="On the play page and the published site, and in the downloads">On the play page and the published site, and in the downloads</label>
+            <label for="q26-o4"><input type="radio" id="q26-o4" name="q26-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q26-text">Notes</label>
+          <textarea id="q26-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>

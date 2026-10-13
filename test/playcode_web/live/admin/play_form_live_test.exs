@@ -153,6 +153,46 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
              {1606, 1607, "1606; 1607"}
   end
 
+  # One box per note and an empty one for a new note; a note emptied is removed.
+  test "the notes on the edition are changed, removed and added", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(file_desc: "<notesStmt><note>Primera.</note><note>Segunda.</note></notesStmt>")
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+    save(view, %{"edition_notes" => ["Primera, corregida.", "", "Tercera.\r\nOtra línea."]})
+
+    assert Catalogue.get_play!(play.id).edition_notes ==
+             ["Primera, corregida.", "Tercera.\nOtra línea."]
+  end
+
+  test "while typing, a new note adds one empty box and an emptied one keeps its box",
+       %{conn: conn} do
+    play = import_tei!(tei(file_desc: "<notesStmt><note>Primera.</note></notesStmt>"))
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+    boxes = fn -> Enum.count(0..3, &has_element?(view, "#play_edition_notes_#{&1}")) end
+
+    assert boxes.() == 2
+
+    # The browser sends every box, the new empty one too.
+    for typed <- ["N", "Nu", "Nueva"] do
+      view
+      |> form("#play-form", play: %{"edition_notes" => ["Primera.", typed, ""]})
+      |> render_change()
+
+      assert boxes.() == 3
+    end
+
+    view |> form("#play-form", play: %{"edition_notes" => ["", ""]}) |> render_change()
+    assert boxes.() == 2
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play_fixture().id}/edit")
+    assert has_element?(view, "#play_edition_notes_0")
+    refute has_element?(view, "#play_edition_notes_1")
+  end
+
   test "half a composition date is refused", %{conn: conn} do
     play = play_fixture()
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")

@@ -148,7 +148,7 @@ msgstr ""
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2814
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:3013
 #: lib/playcode_web/live/admin/play_editors_live.ex:231
-#: lib/playcode_web/live/admin/play_form_live.ex:803
+#: lib/playcode_web/live/admin/play_form_live.ex:825
 #: lib/playcode_web/live/admin/play_notes_live.ex:304
 #: lib/playcode_web/live/admin/play_sources_live.ex:244
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:176
@@ -847,7 +847,7 @@ msgstr ""
 msgid "Save"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:800
+#: lib/playcode_web/live/admin/play_form_live.ex:822
 #, elixir-autogen, elixir-format
 msgid "Save Play"
 msgstr ""
@@ -1302,7 +1302,7 @@ msgstr ""
 msgid "Front matter"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:768
+#: lib/playcode_web/live/admin/play_form_live.ex:790
 #, elixir-autogen, elixir-format
 msgid "Funder"
 msgstr ""
@@ -1312,12 +1312,12 @@ msgstr ""
 msgid "Funder:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:754
+#: lib/playcode_web/live/admin/play_form_live.ex:776
 #, elixir-autogen, elixir-format
 msgid "Funding & Licence"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:773
+#: lib/playcode_web/live/admin/play_form_live.ex:795
 #, elixir-autogen, elixir-format
 msgid "Funding organization(s) and grant references"
 msgstr ""
@@ -1334,12 +1334,12 @@ msgstr ""
 msgid "Jornada"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:788
+#: lib/playcode_web/live/admin/play_form_live.ex:810
 #, elixir-autogen, elixir-format
 msgid "Licence Text"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:778
+#: lib/playcode_web/live/admin/play_form_live.ex:800
 #, elixir-autogen, elixir-format
 msgid "Licence URL"
 msgstr ""
@@ -1469,7 +1469,7 @@ msgstr ""
 msgid "Split verses"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:758
+#: lib/playcode_web/live/admin/play_form_live.ex:780
 #, elixir-autogen, elixir-format
 msgid "Sponsor"
 msgstr ""
@@ -1479,7 +1479,7 @@ msgstr ""
 msgid "Sponsor:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:763
+#: lib/playcode_web/live/admin/play_form_live.ex:785
 #, elixir-autogen, elixir-format
 msgid "Sponsoring organization"
 msgstr ""
@@ -1516,7 +1516,7 @@ msgstr ""
 msgid "e.g. 0703"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_form_live.ex:793
+#: lib/playcode_web/live/admin/play_form_live.ex:815
 #, elixir-autogen, elixir-format
 msgid "e.g. CC BY-NC-ND 4.0"
 msgstr ""
@@ -4756,4 +4756,19 @@ msgstr ""
 #: lib/playcode_web/play_labels.ex:64
 #, elixir-autogen, elixir-format
 msgid "Stage business"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_form_live.ex:763
+#, elixir-autogen, elixir-format
+msgid "Note %{n}"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_form_live.ex:754
+#, elixir-autogen, elixir-format
+msgid "Notes on the edition"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_form_live.ex:757
+#, elixir-autogen, elixir-format
+msgid "Written in the TEI file's header, not shown to readers. Empty a box to remove its note."
 msgstr ""

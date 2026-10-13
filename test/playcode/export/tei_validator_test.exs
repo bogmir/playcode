@@ -194,8 +194,9 @@ defmodule Playcode.Export.TeiValidatorTest do
     end
 
     # The original a translation translates, as a notesStmt between publicationStmt and
-    # sourceDesc. Under a code of its own, for the same reason as the bibliography test.
-    test "a translation names its original in schema-valid TEI" do
+    # sourceDesc, after the notes on the edition. Under a code of its own, for the same
+    # reason as the bibliography test.
+    test "a translation names its original in schema-valid TEI, after the edition's notes" do
       play =
         @fixture_file
         |> File.read!()
@@ -207,10 +208,16 @@ defmodule Playcode.Export.TeiValidatorTest do
 
       n = System.unique_integer([:positive])
       original = Playcode.TestFixtures.play_fixture(%{"code" => "ORIG#{n}_Barca"})
-      {:ok, _} = Catalogue.update_play(play, %{"parent_play_id" => original.id})
+
+      {:ok, _} =
+        Catalogue.update_play(play, %{
+          "parent_play_id" => original.id,
+          "edition_notes" => ["Impresos\nMadrid, 1637."]
+        })
 
       xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
 
+      assert xml =~ "<note>Impresos<lb/>Madrid, 1637.</note>"
       assert xml =~ ~s(<relatedItem target="ORIG#{n}" type="original"/>)
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end

@@ -284,7 +284,7 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time. The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team. The exported file carries the CDU number again; the witnesses come back from it whole, with their line breaks; a translation’s file names its original, so the two are linked again whichever is imported first; the bibliography comes back from the file, with each play’s own place in an edition; a digital editor comes back as one, not as an editor; two italic passages side by side come back as two; and the kind of a stage direction can be corrected in Playcode. The files carry no FileMaker or Playcode record numbers.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time. The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team. The exported file carries the CDU number again; the witnesses come back from it whole, with their line breaks; a translation’s file names its original, so the two are linked again whichever is imported first; the bibliography comes back from the file, with each play’s own place in an edition; a digital editor comes back as one, not as an editor; two italic passages side by side come back as two; the kind of a stage direction can be corrected in Playcode; and the notes on the edition are read from the file and written back. The files carry no FileMaker or Playcode record numbers.</p>
   </header>
 
   <section aria-labelledby="h-why">
@@ -477,6 +477,16 @@
             <td data-label="Downloads"><span class="s no">No</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Notes on the edition<span class="where">15 notes in 14 plays · <a href="preguntas.html#t-edition-notes">question 26</a></span></th>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n19" aria-label="note 19">19</a></sup><span class="src">the TEI re-import; 14 plays</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s no">No</span><sup class="fn"><a href="#n19" aria-label="note 19">19</a></sup></td>
+            <td data-label="Play page"><span class="s no">No</span><sup class="fn"><a href="#n19" aria-label="note 19">19</a></sup></td>
+            <td data-label="Published site"><span class="s no">No</span><sup class="fn"><a href="#n19" aria-label="note 19">19</a></sup></td>
           </tr>
 
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">Front matter and cast</th></tr>
@@ -694,16 +704,6 @@
             <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
-            <th scope="row" class="feature">The editor’s note on the edition<span class="where">In 15 plays, 16 notes</span></th>
-            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
-            <td data-label="Edited"><span class="s todo">Not yet</span></td>
-            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
-            <td data-label="Play page"><span class="s todo">Not yet</span></td>
-            <td data-label="Published site"><span class="s todo">Not yet</span></td>
-          </tr>
-          <tr>
             <th scope="row" class="feature">Italics and notes in dedications and introductions<span class="where">About 950 italics and 270 notes</span></th>
             <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
             <td data-label="Edited"><span class="s todo">Not yet</span></td>
@@ -811,6 +811,7 @@
       <li id="n16">Production still has its notes, and the stage directions inside verses, pasted into the lines, as the first import left them. They move out when the TEI files are re-imported on production, which waits for the fixes to the TEI import listed above, so that the files are read once.</li>
       <li id="n17">The CDU number of the source files follows the play’s language one for one: 821.134.2-2 for Spanish (151 files), 821.133-2 for French (84), 821.111-2 for English (82), 821.131-2 for Italian (45); the 8 Portuguese plays leave it empty. Playcode holds the language, so it loses nothing by not reading the number, and writes it back from the language.</li>
       <li id="n18">The play page and the published site show it; whether the downloads should print it too is <a href="preguntas.html#t-downloads">question 24</a>, with the other parts they leave out.</li>
+      <li id="n19">A note on the edition as a whole, in the file’s header: “El epílogo figura en la edición de Ferrara de 1581, que no es la edición princeps” (<i>L’Aminta</i>). Some are remarks for readers, four list the witnesses and editions used, and three are an editor’s reminders (“¡¡¡CUIDADO, REVISAR QUE SÍ HAY APARTES QUE NO SE MARCAN!!!”). emothe.uv.es shows none of them, so Playcode keeps them in its play form and in the file only; whether readers should see them is <a href="preguntas.html#t-edition-notes">question 26</a>. The plays already in Playcode get theirs when their files are imported again.</li>
     </ol>
   </section>
 
