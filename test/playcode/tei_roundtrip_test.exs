@@ -218,6 +218,39 @@ defmodule Playcode.TeiRoundtripTest do
     test "is Spanish when the file does not say" do
       assert xml_elements(roundtrip(tei()), "language") == [{%{"ident" => "es-ES"}, "Español"}]
     end
+
+    # The library classification (CDU) of the source files follows the language one for
+    # one, so it comes back from the language: Playcode does not store it.
+    test "brings back the CDU number, which follows it" do
+      for {ident, cdu} <- [
+            {"es-ES", "821.134.2-2"},
+            {"fr-FR", "821.133-2"},
+            {"en-EN", "821.111-2"},
+            {"it-IT", "821.131-2"}
+          ] do
+        xml =
+          roundtrip(
+            tei(
+              profile_desc:
+                ~s(<langUsage><language ident="#{ident}">x</language></langUsage>) <>
+                  ~s(<textClass><classCode scheme="#CDU">#{cdu}</classCode></textClass>)
+            )
+          )
+
+        assert xml_elements(xml, "classCode") == [{%{"scheme" => "#CDU"}, cdu}]
+        assert [{%{"xml:id" => "CDU"}, _}] = xml_elements(xml, "taxonomy", within: "classDecl")
+      end
+    end
+
+    test "has no CDU number in Portuguese, as the source files have none" do
+      xml =
+        roundtrip(
+          tei(profile_desc: ~s(<langUsage><language ident="pt-PT">x</language></langUsage>))
+        )
+
+      assert xml_elements(xml, "classCode") == []
+      assert xml_elements(xml, "classDecl") == []
+    end
   end
 
   describe "the composition date" do

@@ -221,6 +221,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept
 - `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note; words with no year are a note alone); read on first import only, since the columns are `@platform_owned`
 - `teiHeader/profileDesc/settingDesc/setting/time` -> historical time (`@type` the period, the text its note), beside the place links in the same `setting`; first import only, like the dating
+- `teiHeader/profileDesc/textClass/classCode[@scheme="#CDU"]` <- written from the language (with `encodingDesc/classDecl/taxonomy[@xml:id="CDU"]`), never read: the CDU number follows the language one for one, and Portuguese has none
 - `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading
 - `text/front/div[@type="dedicatoria|introduccion_editor"]` -> editorial notes
 - `text/body/div1[@type="acto"]` -> act divisions
