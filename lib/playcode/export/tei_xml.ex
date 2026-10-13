@@ -622,7 +622,7 @@ defmodule Playcode.Export.TeiXml do
       attrs,
       [
         build_analytic(e),
-        build_monogr(e, link),
+        build_monogr(e),
         if(filled?(e.series),
           do: element(:series, [element(:title, %{level: "s"}, build_inline_content(e.series))])
         ),
@@ -631,7 +631,10 @@ defmodule Playcode.Export.TeiXml do
         # (". http://…") stay in the database for curators to clean.
         if(filled?(e.url) and String.trim(e.url) =~ ~r{\Ahttps?://\S+\z}i,
           do: element(:ptr, %{target: String.trim(e.url)})
-        )
+        ),
+        # Where this play sits in the edition, apart from the edition's own volume and pages.
+        cited_range("volume", link.volume),
+        cited_range("page", link.pages)
       ]
       |> List.flatten()
       |> Enum.reject(&is_nil/1)
@@ -658,9 +661,7 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
-  defp build_monogr(e, link) do
-    volume = if filled?(link.volume), do: link.volume, else: e.volume
-    pages = if filled?(link.pages), do: link.pages, else: e.pages
+  defp build_monogr(e) do
     level = if e.pub_type == "article", do: "j", else: "m"
 
     element(
@@ -676,9 +677,9 @@ defmodule Playcode.Export.TeiXml do
             if(filled?(e.edition), do: element(:edition, e.edition)),
             build_imprint(e),
             if(filled?(e.volumes_total), do: element(:extent, "#{e.volumes_total} vols.")),
-            bibl_scope("volume", volume),
+            bibl_scope("volume", e.volume),
             bibl_scope("issue", e.issue),
-            bibl_scope("page", pages)
+            bibl_scope("page", e.pages)
           ],
         &is_nil/1
       )
@@ -717,6 +718,9 @@ defmodule Playcode.Export.TeiXml do
 
   defp bibl_scope(unit, value),
     do: if(filled?(value), do: element(:biblScope, %{unit: unit}, value))
+
+  defp cited_range(unit, value),
+    do: if(filled?(value), do: element(:citedRange, %{unit: unit}, value))
 
   defp filled?(value), do: is_binary(value) and String.trim(value) != ""
 

@@ -81,6 +81,7 @@ defmodule Playcode.Export.TeiValidatorTest do
 
       xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
 
+      assert xml =~ ~s(<citedRange unit="volume">5</citedRange>)
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 

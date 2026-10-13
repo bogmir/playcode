@@ -42,10 +42,10 @@ Pure refactor; the export's output does not change.
 
 ### Task 2: The play's own volume and pages in `citedRange`
 
-- [ ] Reverse the test "a modern edition: the play's own volume and pages…" in `export/tei_xml_test.exs`, with a comment saying why: the link's `volume` 5 and `pages` 2366-2466 are `citedRange`s at the end of the `biblStruct`, and the entry's `volume` 1 is a `biblScope` again. Watch it fail.
-- [ ] `build_monogr/2` writes only the entry's `biblScope`s; `build_bibl_struct/1` appends `citedRange[@unit="volume"|"page"]` from the link, after `series`, `note` and `ptr`.
-- [ ] Schema: the bibliography test in `tei_validator_test.exs` already links a modern edition with its own volume and pages; run it with `--include slow`.
-- [ ] Commit: `feat(tei): a play's own volume and pages in an edition are a citedRange`
+- [x] Reverse the test "a modern edition: the play's own volume and pages…" in `export/tei_xml_test.exs`, with a comment saying why: the link's `volume` 5 and `pages` 2366-2466 are `citedRange`s at the end of the `biblStruct`, and the entry's `volume` 1 is a `biblScope` again. Watch it fail.
+- [x] `build_monogr/1` writes only the entry's `biblScope`s; `build_bibl_struct/1` appends `citedRange[@unit="volume"|"page"]` from the link, after `series`, `note` and `ptr`.
+- [x] Schema: the bibliography test in `tei_validator_test.exs` links a modern edition with its own volume and pages, and now asserts its `citedRange`; run with `--include slow`.
+- [x] Commit: `feat(tei): a play's own volume and pages in an edition are a citedRange`. Only files with such a link change: 136 links on 43 plays in dev.
 
 ### Task 3: `Bibliography.description/1`
 

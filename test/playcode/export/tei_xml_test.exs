@@ -266,10 +266,18 @@ defmodule Playcode.Export.TeiXmlTest do
     test "a modern edition: the play's own volume and pages, siglum, volumes, note and URL", %{
       xml: xml
     } do
+      # This used to assert the play's own volume 5 and pages written as biblScopes in place
+      # of the edition's volume 1, which was lost: a reader could not tell whose they were.
+      # The play's place in the edition is a citedRange now; the edition's stays a biblScope.
+      assert xml_elements(xml, "citedRange") == [
+               {%{"unit" => "volume"}, "5"},
+               {%{"unit" => "page"}, "2366-2466"}
+             ]
+
       scopes = xml_elements(xml, "biblScope")
-      assert {%{"unit" => "volume"}, "5"} in scopes
-      assert {%{"unit" => "page"}, "2366-2466"} in scopes
-      refute {%{"unit" => "volume"}, "1"} in scopes
+      assert {%{"unit" => "volume"}, "1"} in scopes
+      refute {%{"unit" => "volume"}, "5"} in scopes
+      refute {%{"unit" => "page"}, "2366-2466"} in scopes
 
       assert {%{"type" => "siglum"}, "ROWE1"} in xml_elements(xml, "idno", within: "back")
       assert xml_texts(xml, "extent", within: "back") == ["6 vols."]
