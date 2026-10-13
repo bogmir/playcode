@@ -11,6 +11,8 @@ defmodule Playcode.Import.TeiImport do
 
   import Ecto.Query
 
+  alias Playcode.Bibliography
+  alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
   alias Playcode.Import.TeiParser
@@ -176,6 +178,7 @@ defmodule Playcode.Import.TeiImport do
 
     cast = Map.new(PlayContent.list_characters(play.id), &{&1.xml_id, &1.id})
     Enum.each(tei.divisions, &write_division(&1, play, nil, cast))
+    write_bibliography(tei.bibliography, play)
 
     # Recompute verse_count from actual verse_line elements (the TEI header
     # <extent> value is often inaccurate or includes non-verse lines), and return
@@ -255,6 +258,47 @@ defmodule Playcode.Import.TeiImport do
       else
         _ = Witnesses.create_witness(attrs)
         if attrs.siglum, do: MapSet.put(taken, attrs.siglum), else: taken
+      end
+    end)
+
+    :ok
+  end
+
+  # --- Bibliography ---
+
+  # On every import, the first and every re-import: each reference of the file is linked
+  # to the entry Playcode already has with its description (Bibliography.identical_entries/2),
+  # or made into a new one. Nothing is changed or removed: an entry a curator corrected
+  # stays corrected, and the play's links stay as they are. A reference that is no valid
+  # entry is skipped, before it is written, since a failed write inside this transaction
+  # would roll the whole play back.
+  defp write_bibliography([], _play), do: :ok
+
+  defp write_bibliography(references, play) do
+    found = Bibliography.identical_entries(Enum.map(references, & &1.description), play.id)
+    linked = play.id |> Bibliography.list_links() |> MapSet.new(& &1.entry_id)
+
+    Enum.reduce(references, {found, linked}, fn reference, {found, linked} ->
+      place = %{volume: reference.volume, pages: reference.pages}
+
+      case Map.fetch(found, reference.description) do
+        {:ok, entry_id} ->
+          if entry_id not in linked,
+            do: {:ok, _} = Bibliography.link_entry(play.id, entry_id, place, "tei")
+
+          {found, MapSet.put(linked, entry_id)}
+
+        :error ->
+          if Bibliography.change_entry(%Entry{}, reference.description).valid? do
+            {:ok, link} =
+              Bibliography.create_entry_for_play(play.id, reference.description, place, "tei")
+
+            {Map.put(found, reference.description, link.entry_id),
+             MapSet.put(linked, link.entry_id)}
+          else
+            Logger.warning("Skipped a reference that is no valid entry: #{inspect(reference)}")
+            {found, linked}
+          end
       end
     end)
 

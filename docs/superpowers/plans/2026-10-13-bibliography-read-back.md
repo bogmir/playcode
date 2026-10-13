@@ -65,21 +65,22 @@ In `Entry`, not the `Bibliography` context: it is pure, and the parser builds an
 
 ### Task 5: Importing it
 
-Tests first, all through `import_tei!/1` and `Playcode.Bibliography`:
+Tests first, all through `import_tei!/1` and `Playcode.Bibliography` (all red first):
 
-- [ ] Every publication type comes back: entries' fields, the link's volume and pages, `origin: "tei"`. (Fails: nothing is imported yet.)
-- [ ] Two plays' files with the same reference give one entry with two links.
-- [ ] A re-import adds a reference new to the file, and changes nothing else: an entry corrected in Playcode is not undone, a link typed by hand stays, the order of the play's links is unchanged.
-- [ ] An older file's version of a corrected reference is added as a new entry (the known gap, asserted so a change of rule is a decision).
-- [ ] A `biblStruct` that cannot become an entry (no kind, nothing to name it) is skipped, and the rest of the play imports.
-- [ ] Researchers' notes stay out of the file and come back nil.
+- [x] A play rebuilt from its file (its entries gone with their last links) gets every reference back: descriptions, the link's volume and pages, `origin: "tei"`, no researchers' notes.
+- [x] Two plays' files with the same reference give one entry with two links.
+- [x] A re-import adds a reference new to the file and changes nothing else: a link typed by hand stays, an identical reference is not added twice.
+- [x] An older file's version of a corrected reference comes in beside the corrected entry, which stays (the known gap, asserted so a change of rule is a decision).
+- [x] A `biblStruct` that cannot become an entry (an unknown `listBibl` type, nothing to name it) is skipped, a reference twice in one file is linked once, and the play imports.
 
 Then:
 
-- [ ] `Bibliography.find_identical(description, play_id)`: the play's own links first, then any entry with the same `monogr_title` (else `analytic_title`) in SQL, compared in full with `description/1`; the oldest of several.
-- [ ] `TeiImport.write_bibliography(refs, play)`, after the text, on first import and re-import alike: link (`Bibliography.link_entry/3`, `origin: "tei"`, set on the struct) when found and not yet linked, else `create_entry_for_play/3`; a changeset error is logged and skipped, never `Repo.rollback`.
-- [ ] Refactor while green: one place decides "same reference".
-- [ ] Commit: `feat(tei): a play's bibliography comes back from its file`
+- [x] `Bibliography.identical_entries(descriptions, play_id)`: candidates by title in SQL (whitespace collapsed as `description/1` collapses it; entries with no title always), compared in full with `description/1`; the play's own entry first, else the oldest. One query per import, not per reference.
+- [x] `create_entry_for_play/4` and `link_entry/4` take the link's `origin` (default `"manual"`).
+- [x] `TeiImport.write_bibliography/2`, after the text, on first import and re-import alike: link the identical entry when the play does not link it yet, else create entry and link; a reference that fails `Entry.changeset` is logged and skipped before any write, because a failed write in the import's transaction would roll the play back.
+- [x] Links list by insertion second then id, so the tests compare them sorted. Matching off breaks sharing and the re-import test; no validity check breaks the skipping test.
+- [x] `mix test --include slow`: 1,027 tests, the corpus sweep included.
+- [x] Commit: `feat(tei): a play's bibliography comes back from its file`
 
 ### Task 6: The preview lists what would be added
 

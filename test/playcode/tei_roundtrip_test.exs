@@ -1219,9 +1219,9 @@ defmodule Playcode.TeiRoundtripTest do
       "note" => "Solo para investigadores"
     }
 
-    test "the parser reads back each reference's description and the play's place in it" do
-      play = import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}"))
-
+    # Every publication type with every field, the play's own volume and pages, and an
+    # entry with no type and a URL that is no address: 11 references.
+    defp fill_bibliography(play) do
       for {type, i} <- Enum.with_index(Entry.pub_types()) do
         bibliography_fixture(
           play,
@@ -1235,13 +1235,44 @@ defmodule Playcode.TeiRoundtripTest do
         )
       end
 
-      # No type, and a URL that is no address: the export leaves it out.
       bibliography_fixture(play, %{
         "kind" => "adaptation",
         "pub_type" => nil,
         "monogr_title" => "Solo un título",
         "url" => ". http://emothe.uv.es/x.php"
       })
+
+      play
+    end
+
+    defp bibl_struct(title, cited \\ "") do
+      ~s(<biblStruct type="libro"><monogr><author>Autor, Ana</author>) <>
+        ~s(<title level="m">#{title}</title><imprint><date/></imprint></monogr>#{cited}</biblStruct>)
+    end
+
+    defp with_bibliography(code, lists) do
+      lists =
+        for {type, structs} <- lists,
+            do: ~s(<listBibl type="#{type}">#{Enum.join(structs)}</listBibl>)
+
+      tei(code: code, back: ~s(<div type="bibliografia">#{Enum.join(lists)}</div>))
+    end
+
+    defp references(play) do
+      for link <- Bibliography.list_links(play.id),
+          do: {Entry.description(link.entry), link.volume, link.pages, link.origin}
+    end
+
+    # Sorted: links made in the same second list in no fixed order.
+    defp titles(play) do
+      play.id
+      |> Bibliography.list_links()
+      |> Enum.map(&{&1.entry.monogr_title, &1.pages, &1.origin})
+      |> Enum.sort()
+    end
+
+    test "the parser reads back each reference's description and the play's place in it" do
+      play = fill_bibliography(import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}")))
 
       {:ok, tei} = TeiParser.parse_file(write_tmp!(export_tei(play)))
 
@@ -1256,6 +1287,94 @@ defmodule Playcode.TeiRoundtripTest do
       assert length(tei.bibliography) == 11
       assert Enum.sort(tei.bibliography) == Enum.sort(expected)
       refute Enum.any?(tei.bibliography, &Map.has_key?(&1.description, :note))
+    end
+
+    test "a play rebuilt from its file gets every reference back, as the file's" do
+      n = System.unique_integer([:positive])
+      play = fill_bibliography(import_tei!(tei(code: "BIB#{n}")))
+      xml = export_tei(play)
+
+      before =
+        for {description, volume, pages, _} <- references(play),
+            do: {description, volume, pages, "tei"}
+
+      # The entries go with their last link, as in an installation that never had them.
+      for link <- Bibliography.list_links(play.id), do: {:ok, _} = Bibliography.unlink(link)
+
+      copy = import_tei!(String.replace(xml, "BIB#{n}", "BIC#{n}"))
+
+      assert Enum.sort(references(copy)) == Enum.sort(before)
+
+      assert Enum.all?(
+               Bibliography.list_links(copy.id),
+               &(is_nil(&1.note) and is_nil(&1.entry.note))
+             )
+    end
+
+    test "one reference in two plays' files is one entry with two links" do
+      n = System.unique_integer([:positive])
+      play = fill_bibliography(import_tei!(tei(code: "BIB#{n}")))
+
+      copy = import_tei!(String.replace(export_tei(play), "BIB#{n}", "BIC#{n}"))
+
+      entry_ids =
+        &(&1.id
+          |> Bibliography.list_links()
+          |> Enum.map(fn link -> link.entry_id end)
+          |> Enum.sort())
+
+      assert entry_ids.(copy) == entry_ids.(play)
+    end
+
+    test "a re-import adds a reference new to its file and changes nothing else" do
+      code = "BIR#{System.unique_integer([:positive])}"
+      play = import_tei!(with_bibliography(code, critica: [bibl_struct("Uno")]))
+      bibliography_fixture(play, %{"monogr_title" => "A mano"})
+
+      import_tei!(
+        with_bibliography(code,
+          critica: [
+            bibl_struct("Uno"),
+            bibl_struct("Dos", ~s(<citedRange unit="page">3-4</citedRange>))
+          ]
+        )
+      )
+
+      assert titles(play) == [
+               {"A mano", nil, "manual"},
+               {"Dos", "3-4", "tei"},
+               {"Uno", nil, "tei"}
+             ]
+    end
+
+    # The one way a duplicate gets in: the file's old version no longer matches the
+    # corrected entry. The import preview lists it before the import is confirmed.
+    test "an older file brings back the old version of a corrected reference, beside it" do
+      code = "BIR#{System.unique_integer([:positive])}"
+      file = with_bibliography(code, critica: [bibl_struct("Uno")])
+      play = import_tei!(file)
+      [link] = Bibliography.list_links(play.id)
+      {:ok, _} = Bibliography.update_entry(link.entry, %{"monogr_title" => "Uno, corregido"})
+
+      import_tei!(file)
+
+      assert titles(play) == [{"Uno", nil, "tei"}, {"Uno, corregido", nil, "tei"}]
+    end
+
+    test "a reference that cannot be an entry, or comes twice, does not stop the import" do
+      play =
+        import_tei!(
+          with_bibliography("BIR#{System.unique_integer([:positive])}",
+            desconocida: [bibl_struct("Sin tipo")],
+            critica: [
+              bibl_struct("Uno"),
+              bibl_struct("Uno"),
+              ~s(<biblStruct><monogr><imprint><date/></imprint></monogr></biblStruct>)
+            ]
+          )
+        )
+
+      assert titles(play) == [{"Uno", nil, "tei"}]
     end
   end
 

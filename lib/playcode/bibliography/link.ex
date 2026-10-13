@@ -4,7 +4,7 @@ defmodule Playcode.Bibliography.Link do
   sits in a modern edition (`volume`, `pages`) and a `note` for researchers.
 
   `origin` is `"filemaker"` on a link the import made, which is how a re-run of the import
-  knows the play is done, and `"manual"` otherwise.
+  knows the play is done, `"tei"` on one read from a TEI file, and `"manual"` otherwise.
   """
   use Ecto.Schema
   import Ecto.Changeset

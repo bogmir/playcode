@@ -99,12 +99,15 @@ defmodule Playcode.Bibliography do
     |> String.trim()
   end
 
-  @doc "A new entry and the play's link to it, in one transaction. Returns the link, entry loaded."
-  def create_entry_for_play(play_id, entry_attrs, link_attrs \\ %{}) do
+  @doc """
+  A new entry and the play's link to it, in one transaction. Returns the link, entry
+  loaded. `origin` is the link's: `"manual"` from a form, `"tei"` from a file.
+  """
+  def create_entry_for_play(play_id, entry_attrs, link_attrs \\ %{}, origin \\ "manual") do
     Multi.new()
     |> Multi.insert(:entry, Entry.changeset(%Entry{}, entry_attrs))
     |> Multi.insert(:link, fn %{entry: entry} ->
-      Link.changeset(%Link{play_id: play_id, entry_id: entry.id}, link_attrs)
+      Link.changeset(%Link{play_id: play_id, entry_id: entry.id, origin: origin}, link_attrs)
     end)
     |> Repo.transaction()
     |> case do
@@ -113,11 +116,50 @@ defmodule Playcode.Bibliography do
     end
   end
 
-  @doc "Links an entry another play already has."
-  def link_entry(play_id, entry_id, attrs \\ %{}) do
-    %Link{play_id: play_id, entry_id: entry_id}
+  @doc "Links an entry another play already has; `origin` as for `create_entry_for_play/4`."
+  def link_entry(play_id, entry_id, attrs \\ %{}, origin \\ "manual") do
+    %Link{play_id: play_id, entry_id: entry_id, origin: origin}
     |> Link.changeset(attrs)
     |> Repo.insert()
+  end
+
+  @doc """
+  The entries Playcode already has for a TEI file's references, as
+  `%{description => entry_id}`: an entry whose `Entry.description/1` is identical to one of
+  `descriptions`. Of identical entries, the one `play_id` links wins, else the oldest.
+  Candidates are found by title in SQL, whitespace collapsed as the description collapses
+  it, then compared in full; an entry with no title at all is always a candidate.
+  """
+  def identical_entries([], _play_id), do: %{}
+
+  def identical_entries(descriptions, play_id) do
+    wanted = MapSet.new(descriptions)
+
+    titles =
+      descriptions
+      |> Enum.flat_map(&[&1.monogr_title, &1.analytic_title])
+      |> Enum.reject(&is_nil/1)
+      |> Enum.uniq()
+
+    linked = from(l in Link, where: l.play_id == ^play_id, select: l.entry_id) |> Repo.all()
+
+    from(e in Entry,
+      where:
+        fragment("btrim(regexp_replace(?, '\\s+', ' ', 'g')) = ANY(?)", e.monogr_title, ^titles) or
+          fragment(
+            "btrim(regexp_replace(?, '\\s+', ' ', 'g')) = ANY(?)",
+            e.analytic_title,
+            ^titles
+          ) or
+          (fragment("coalesce(btrim(?), '') = ''", e.monogr_title) and
+             fragment("coalesce(btrim(?), '') = ''", e.analytic_title)),
+      order_by: [asc: e.inserted_at, asc: e.id]
+    )
+    |> Repo.all()
+    |> Enum.map(&{Entry.description(&1), &1.id})
+    |> Enum.filter(&MapSet.member?(wanted, elem(&1, 0)))
+    |> Enum.sort_by(&(elem(&1, 1) not in linked))
+    |> Enum.reduce(%{}, fn {description, id}, found -> Map.put_new(found, description, id) end)
   end
 
   def update_entry(%Entry{} = entry, attrs), do: entry |> Entry.changeset(attrs) |> Repo.update()
