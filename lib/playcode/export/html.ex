@@ -4,9 +4,11 @@ defmodule Playcode.Export.Html do
   styled to match the public play presentation page.
   """
 
+  alias Playcode.Catalogue.Play
   alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
   alias Playcode.PlayContent.Note
+  alias PlaycodeWeb.PlayLabels
 
   def generate(play) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :editorial_notes])
@@ -32,6 +34,7 @@ defmodule Playcode.Export.Html do
     #{render_sources(play.sources)}
     #{render_editors(play.editors)}
     #{render_verse_info(play)}
+    #{render_dating(play)}
         </header>
 
     #{render_editorial_notes(play.editorial_notes)}
@@ -99,7 +102,8 @@ defmodule Playcode.Export.Html do
           color: rgba(51, 51, 51, 0.35);
         }
 
-        .header .verse-info {
+        .header .verse-info,
+        .header .dating {
           margin-top: 0.5rem;
           font-size: 0.75rem;
           color: rgba(51, 51, 51, 0.5);
@@ -287,6 +291,32 @@ defmodule Playcode.Export.Html do
         ""
     end
   end
+
+  @doc """
+  The dating and the historical time, one line each, as the published site's title page
+  shows them (`StaticSite.Components.study/1`), in the downloads' English. The EPUB
+  prints the same lines.
+  """
+  def dating(play) do
+    [
+      (play.composition_date_from || play.composition_date_note) &&
+        dating_line("Composition", [Play.composition_years(play), play.composition_date_note]),
+      play.historical_time &&
+        dating_line("Historical time", [
+          Gettext.with_locale(PlaycodeWeb.Gettext, "en", fn ->
+            PlayLabels.historical_time_label(play.historical_time)
+          end),
+          play.historical_time_note
+        ])
+    ]
+    |> Enum.filter(& &1)
+  end
+
+  defp dating_line(label, parts),
+    do: "#{label}: " <> (parts |> Enum.reject(&is_nil/1) |> Enum.join(". "))
+
+  defp render_dating(play),
+    do: play |> dating() |> Enum.map_join("\n", &"      <p class=\"dating\">#{escape(&1)}</p>")
 
   defp render_editorial_notes(notes) do
     notes

@@ -139,12 +139,14 @@ defmodule Playcode.Export.PdfCache do
     Path.join(dir(), "#{play.id}-#{play.content_version}-#{code_version()}.pdf")
   end
 
-  # What the PDF is rendered with: the HTML export and the PDF export around it, and the
-  # modules that draw the text and the notes in it.
+  # What the PDF is rendered with: the HTML export and the PDF export around it, the
+  # modules that draw the text and the notes in it, and those that word the dating.
   defp code_version do
     [
       Playcode.Export.Html,
       Playcode.Export.Pdf,
+      Playcode.Catalogue.Play,
+      PlaycodeWeb.PlayLabels,
       Playcode.Export.NoteMarkup,
       Playcode.PlayContent.InlineMarkup,
       Playcode.PlayContent.Note
