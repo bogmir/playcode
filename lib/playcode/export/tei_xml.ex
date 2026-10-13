@@ -3,6 +3,7 @@ defmodule Playcode.Export.TeiXml do
   Generates TEI-XML from a play record and its content.
   """
 
+  alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{InlineMarkup, Note}
@@ -591,27 +592,6 @@ defmodule Playcode.Export.TeiXml do
 
   # --- Back: the bibliography (S4) ---
 
-  @list_types %{
-    "modern_edition" => "ediciones_modernas",
-    "criticism" => "critica",
-    "translation" => "traducciones",
-    "adaptation" => "adaptaciones"
-  }
-
-  # FileMaker's own type names (T12.11), as the corpus spells its other types in Spanish.
-  @bibl_types %{
-    "article" => "articulo_revista",
-    "book_section" => "seccion_libro",
-    "scholarly_edition" => "edicion_estudioso",
-    "book" => "libro",
-    "proceedings" => "acta",
-    "prologue" => "prologo",
-    "festschrift" => "homenaje",
-    "electronic" => "publicacion_electronica",
-    "thesis" => "tesis_doctorado",
-    "collection" => "coleccion"
-  }
-
   defp build_back([]), do: element(:back)
 
   defp build_back(groups) do
@@ -622,7 +602,7 @@ defmodule Playcode.Export.TeiXml do
         Enum.map(groups, fn {kind, subgroups} ->
           element(
             :listBibl,
-            %{type: @list_types[kind]},
+            %{type: Entry.tei_list(kind)},
             for({_language, links} <- subgroups, link <- links, do: build_bibl_struct(link))
           )
         end)
@@ -634,7 +614,7 @@ defmodule Playcode.Export.TeiXml do
   # never leave Playcode: this file is published with the static site.
   defp build_bibl_struct(%{entry: e} = link) do
     attrs =
-      %{"type" => @bibl_types[e.pub_type], "xml:lang" => e.language}
+      %{"type" => Entry.tei_type(e.pub_type), "xml:lang" => e.language}
       |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
     element(

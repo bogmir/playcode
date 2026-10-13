@@ -36,9 +36,9 @@
 
 Pure refactor; the export's output does not change.
 
-- [ ] Move `@list_types` and `@bibl_types` from `TeiXml` to `Bibliography.Entry`, with `tei_list(kind)`, `kind_from_tei_list(type)`, `tei_type(pub_type)`, `pub_type_from_tei(type)`.
-- [ ] `TeiXml` calls them. The bibliography tests in `export/tei_xml_test.exs` stay green unchanged, which is the proof.
-- [ ] Commit: `refactor(bibliography): the TEI type tables live with the entry`
+- [x] Move `@list_types` and `@bibl_types` from `TeiXml` to `Bibliography.Entry` (`@tei_lists`, `@tei_types`), with `tei_list(kind)` and `tei_type(pub_type)`. The reverse lookups, `kind_from_tei_list/1` and `pub_type_from_tei/1`, come with Task 4, where the parser uses them and a test covers them.
+- [x] `TeiXml` calls them. The bibliography tests in `export/tei_xml_test.exs` stay green unchanged, which is the proof (a mistyped type name turns "an article: …" red).
+- [x] Commit: `refactor(bibliography): the TEI type tables live with the entry`
 
 ### Task 2: The play's own volume and pages in `citedRange`
 
@@ -56,6 +56,7 @@ Pure refactor; the export's output does not change.
 ### Task 4: Reading `<back>`
 
 - [ ] Parser test (purity): a play with a `back/div[@type="bibliografia"]` reads without the database; add every new app call to `@pure_helpers`.
+- [ ] `Entry.kind_from_tei_list/1` and `Entry.pub_type_from_tei/1`, the reverse of Task 1's lookups, on `@pure_helpers`.
 - [ ] `TeiParser` gives `bibliography: [%{description: map, volume: _, pages: _}]` from every `listBibl/biblStruct` under a `div[@type="bibliografia"]` in `back`; `kind` from the `listBibl`, the rest from the `biblStruct`. A `div` holding `p` or `bibl` (the seven prose bibliographies) gives nothing: test with EMOTHE0310's shape.
 - [ ] Task 3's test goes green.
 - [ ] Commit: `feat(tei): the parser reads the bibliography`

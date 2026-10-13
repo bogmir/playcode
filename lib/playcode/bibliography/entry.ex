@@ -59,9 +59,38 @@ defmodule Playcode.Bibliography.Entry do
     :note
   ]
 
+  # How a TEI file names them: each kind is a `listBibl/@type`, each type a
+  # `biblStruct/@type`, FileMaker's own type names (T12.11) in Spanish, as the corpus spells
+  # its other types.
+  @tei_lists %{
+    "modern_edition" => "ediciones_modernas",
+    "criticism" => "critica",
+    "translation" => "traducciones",
+    "adaptation" => "adaptaciones"
+  }
+
+  @tei_types %{
+    "article" => "articulo_revista",
+    "book_section" => "seccion_libro",
+    "scholarly_edition" => "edicion_estudioso",
+    "book" => "libro",
+    "proceedings" => "acta",
+    "prologue" => "prologo",
+    "festschrift" => "homenaje",
+    "electronic" => "publicacion_electronica",
+    "thesis" => "tesis_doctorado",
+    "collection" => "coleccion"
+  }
+
   def kinds, do: @kinds
   def pub_types, do: @pub_types
   def languages, do: @languages
+
+  @doc "The `listBibl/@type` of a kind's references in a TEI file."
+  def tei_list(kind), do: @tei_lists[kind]
+
+  @doc "The `biblStruct/@type` of a publication type in a TEI file; nil for none."
+  def tei_type(pub_type), do: @tei_types[pub_type]
 
   schema "bibliography_entries" do
     field :kind, :string
