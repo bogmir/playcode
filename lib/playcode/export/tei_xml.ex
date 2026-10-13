@@ -611,7 +611,9 @@ defmodule Playcode.Export.TeiXml do
   end
 
   # In the order TEI requires. The entry's `note` and the link's are for researchers and
-  # never leave Playcode: this file is published with the static site.
+  # never leave Playcode: this file is published with the static site. A field that may
+  # hold italics goes out on one line (inline_element/3): an indented one would put a space
+  # between "<<Adonis y Venus>>" and ": hacia", and a reference is matched on its words.
   defp build_bibl_struct(%{entry: e} = link) do
     attrs =
       %{"type" => Entry.tei_type(e.pub_type), "xml:lang" => e.language}
@@ -624,9 +626,14 @@ defmodule Playcode.Export.TeiXml do
         build_analytic(e),
         build_monogr(e),
         if(filled?(e.series),
-          do: element(:series, [element(:title, %{level: "s"}, build_inline_content(e.series))])
+          do:
+            element(:series, [
+              inline_element(:title, %{level: "s"}, build_inline_content(e.series))
+            ])
         ),
-        if(filled?(e.public_note), do: element(:note, build_inline_content(e.public_note))),
+        if(filled?(e.public_note),
+          do: inline_element(:note, %{}, build_inline_content(e.public_note))
+        ),
         ptr(Entry.tei_url(e.url)),
         # Where this play sits in the edition, apart from the edition's own volume and pages.
         cited_range("volume", link.volume),
@@ -648,7 +655,7 @@ defmodule Playcode.Export.TeiXml do
           bibl_people(e.analytic_author, e.analytic_editors, e.analytic_translators) ++
             [
               if(filled?(e.analytic_title),
-                do: element(:title, %{level: "a"}, build_inline_content(e.analytic_title))
+                do: inline_element(:title, %{level: "a"}, build_inline_content(e.analytic_title))
               )
             ],
           &is_nil/1
@@ -665,9 +672,14 @@ defmodule Playcode.Export.TeiXml do
       Enum.reject(
         bibl_people(e.monogr_author, e.monogr_editors, e.monogr_translators) ++
           [
-            element(:title, %{level: level}, build_inline_content(e.monogr_title)),
+            inline_element(:title, %{level: level}, build_inline_content(e.monogr_title)),
             if(filled?(e.original_title),
-              do: element(:title, %{type: "original"}, build_inline_content(e.original_title))
+              do:
+                inline_element(
+                  :title,
+                  %{type: "original"},
+                  build_inline_content(e.original_title)
+                )
             ),
             if(filled?(e.siglum), do: element(:idno, %{type: "siglum"}, e.siglum)),
             if(filled?(e.edition), do: element(:edition, e.edition)),
@@ -684,7 +696,7 @@ defmodule Playcode.Export.TeiXml do
 
   defp bibl_people(author, editors, translators) do
     [
-      if(filled?(author), do: element(:author, build_inline_content(author))),
+      if(filled?(author), do: inline_element(:author, %{}, build_inline_content(author))),
       if(filled?(editors), do: element(:editor, editors)),
       if(filled?(translators), do: element(:editor, %{role: "translator"}, translators))
     ]

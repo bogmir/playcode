@@ -183,9 +183,10 @@ defmodule Playcode.Bibliography.Entry do
     |> Map.update!(:url, &tei_url/1)
   end
 
-  defp collapse(nil), do: nil
+  @doc "A field as a description writes it: whitespace collapsed, blank as nil."
+  def collapse(nil), do: nil
 
-  defp collapse(text) do
+  def collapse(text) do
     case text |> String.replace(~r/\s+/u, " ") |> String.trim() do
       "" -> nil
       text -> text

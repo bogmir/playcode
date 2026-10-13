@@ -127,9 +127,10 @@ defmodule Playcode.Bibliography do
   The entries Playcode already has for a TEI file's references, as
   `%{description => entry_id}`: an entry whose `Entry.description/1` is identical to one of
   `descriptions`. Of identical entries, the one `play_id` links wins, else the oldest.
-  Candidates are found by title in SQL, whitespace collapsed as the description collapses
-  it, then compared in full; an entry with no title at all is always a candidate.
-  `play_id` is nil for a play not imported yet.
+  Candidates are the entries with one of the descriptions' titles, as `Entry.collapse/1`
+  writes them, compared in Elixir: Postgres's `\\s` misses the non-breaking spaces FileMaker
+  left in titles. Then they are compared in full; an entry with no title at all is always a
+  candidate. `play_id` is nil for a play not imported yet.
   """
   def identical_entries([], _play_id), do: %{}
 
@@ -140,22 +141,18 @@ defmodule Playcode.Bibliography do
       descriptions
       |> Enum.flat_map(&[&1.monogr_title, &1.analytic_title])
       |> Enum.reject(&is_nil/1)
-      |> Enum.uniq()
+      |> MapSet.new()
+
+    candidates =
+      for {id, monogr, analytic} <-
+            Repo.all(from e in Entry, select: {e.id, e.monogr_title, e.analytic_title}),
+          own = [Entry.collapse(monogr), Entry.collapse(analytic)],
+          own == [nil, nil] or Enum.any?(own, &(&1 in titles)),
+          do: id
 
     linked = linked_entry_ids(play_id)
 
-    from(e in Entry,
-      where:
-        fragment("btrim(regexp_replace(?, '\\s+', ' ', 'g')) = ANY(?)", e.monogr_title, ^titles) or
-          fragment(
-            "btrim(regexp_replace(?, '\\s+', ' ', 'g')) = ANY(?)",
-            e.analytic_title,
-            ^titles
-          ) or
-          (fragment("coalesce(btrim(?), '') = ''", e.monogr_title) and
-             fragment("coalesce(btrim(?), '') = ''", e.analytic_title)),
-      order_by: [asc: e.inserted_at, asc: e.id]
-    )
+    from(e in Entry, where: e.id in ^candidates, order_by: [asc: e.inserted_at, asc: e.id])
     |> Repo.all()
     |> Enum.map(&{Entry.description(&1), &1.id})
     |> Enum.filter(&MapSet.member?(wanted, elem(&1, 0)))

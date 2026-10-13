@@ -1197,13 +1197,19 @@ defmodule Playcode.TeiRoundtripTest do
     @every_field %{
       "language" => "es",
       "analytic_author" => "Autor, A",
-      "analytic_title" => "Capítulo <<en cursiva>>",
+      # A non-breaking space, as FileMaker left in titles ("The Alchemist : A…"), here and
+      # in each monogr_title, so neither title finds the entry unless it is collapsed.
+      "analytic_title" => "Capítulo\u00a0<<en cursiva>>",
       "analytic_editors" => "Editor, Analítico",
+      # Italics with punctuation right after them, as FileMaker wrote "<<Adonis y Venus>>:
+      # hacia la tragedia…": no space may come in between.
+      "original_title" => "<<Adonis y Venus>>: hacia la tragedia",
+      "series" => "Serie <<Clásicos>>, segunda",
+      "public_note" => "Véase <<Fenisa>>.",
       "analytic_translators" => "Traductor, Analítico",
       "monogr_author" => "Autor, M",
       "monogr_editors" => "Editor, E",
       "monogr_translators" => "Traductor, T",
-      "original_title" => "Original",
       "edition" => "2nd",
       "volume" => "2",
       "volumes_total" => "4",
@@ -1214,8 +1220,6 @@ defmodule Playcode.TeiRoundtripTest do
       "year_text" => "1957-75",
       "url" => "https://example.org",
       "url_accessed_on" => "2020-01-01",
-      "series" => "Serie",
-      "public_note" => "Nota impresa",
       "note" => "Solo para investigadores"
     }
 
@@ -1228,7 +1232,7 @@ defmodule Playcode.TeiRoundtripTest do
           Map.merge(@every_field, %{
             "kind" => Enum.at(Entry.kinds(), rem(i, 4)),
             "pub_type" => type,
-            "monogr_title" => "Libro #{i}",
+            "monogr_title" => "Libro\u00a0#{i}",
             "siglum" => "S#{i}"
           }),
           %{"volume" => "#{i + 1}", "pages" => "#{i}-#{i + 9}"}

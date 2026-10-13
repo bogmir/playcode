@@ -884,36 +884,54 @@ defmodule Playcode.Import.TeiParser do
       kind: kind,
       pub_type: Entry.pub_type_from_tei(attr_value(attrs, "type")),
       language: attr_value(attrs, "xml:lang"),
-      analytic_author: safe_text(find_child(analytic, "author")),
-      analytic_title: analytic |> typed("title", nil) |> safe_text(),
-      analytic_editors: analytic |> with_attr("editor", "role", nil) |> safe_text(),
-      analytic_translators: analytic |> with_attr("editor", "role", "translator") |> safe_text(),
-      monogr_author: safe_text(find_child(monogr, "author")),
-      monogr_title: monogr |> typed("title", nil) |> safe_text(),
-      monogr_editors: monogr |> with_attr("editor", "role", nil) |> safe_text(),
-      monogr_translators: monogr |> with_attr("editor", "role", "translator") |> safe_text(),
-      original_title: monogr |> typed("title", "original") |> safe_text(),
-      siglum: monogr |> typed("idno", "siglum") |> safe_text(),
-      edition: safe_text(find_child(monogr, "edition")),
-      volumes_total: monogr |> find_child("extent") |> safe_text() |> volumes(),
-      volume: monogr |> with_attr("biblScope", "unit", "volume") |> safe_text(),
-      issue: monogr |> with_attr("biblScope", "unit", "issue") |> safe_text(),
-      pages: monogr |> with_attr("biblScope", "unit", "page") |> safe_text(),
-      pub_place: safe_text(find_child(imprint, "pubPlace")),
-      publisher: safe_text(find_child(imprint, "publisher")),
-      year_text: imprint |> typed("date", nil) |> safe_text(),
-      url_accessed_on: imprint |> typed("date", "access") |> safe_text(),
-      series: safe_text(find_child(series, "title")),
-      public_note: safe_text(find_child(children, "note")),
+      analytic_author: running_text(find_child(analytic, "author")),
+      analytic_title: analytic |> typed("title", nil) |> running_text(),
+      analytic_editors: analytic |> with_attr("editor", "role", nil) |> running_text(),
+      analytic_translators:
+        analytic |> with_attr("editor", "role", "translator") |> running_text(),
+      monogr_author: running_text(find_child(monogr, "author")),
+      monogr_title: monogr |> typed("title", nil) |> running_text(),
+      monogr_editors: monogr |> with_attr("editor", "role", nil) |> running_text(),
+      monogr_translators: monogr |> with_attr("editor", "role", "translator") |> running_text(),
+      original_title: monogr |> typed("title", "original") |> running_text(),
+      siglum: monogr |> typed("idno", "siglum") |> running_text(),
+      edition: running_text(find_child(monogr, "edition")),
+      volumes_total: monogr |> find_child("extent") |> running_text() |> volumes(),
+      volume: monogr |> with_attr("biblScope", "unit", "volume") |> running_text(),
+      issue: monogr |> with_attr("biblScope", "unit", "issue") |> running_text(),
+      pages: monogr |> with_attr("biblScope", "unit", "page") |> running_text(),
+      pub_place: running_text(find_child(imprint, "pubPlace")),
+      publisher: running_text(find_child(imprint, "publisher")),
+      year_text: imprint |> typed("date", nil) |> running_text(),
+      url_accessed_on: imprint |> typed("date", "access") |> running_text(),
+      series: running_text(find_child(series, "title")),
+      public_note: running_text(find_child(children, "note")),
       url: children |> find_child("ptr") |> attrs_of() |> attr_value("target")
     }
 
     %{
       description: Entry.description(entry),
-      volume: children |> with_attr("citedRange", "unit", "volume") |> safe_text(),
-      pages: children |> with_attr("citedRange", "unit", "page") |> safe_text()
+      volume: children |> with_attr("citedRange", "unit", "volume") |> running_text(),
+      pages: children |> with_attr("citedRange", "unit", "page") |> running_text()
     }
   end
+
+  # A bibliography field's text as it runs: italics as <<…>>, whitespace collapsed but none
+  # added. text_content/1 joins an element's pieces with a space, which would put one
+  # between "<<Adonis y Venus>>" and ": hacia", and a reference is matched on its words.
+  defp running_text(nil), do: nil
+
+  defp running_text(element),
+    do: element |> run() |> String.replace(~r/\s+/u, " ") |> String.trim()
+
+  defp run(text) when is_binary(text), do: text
+
+  defp run({name, attrs, children}) do
+    text = Enum.map_join(children, &run/1)
+    if emph_element?(name, attrs), do: "<<" <> String.trim(text) <> ">>", else: text
+  end
+
+  defp run(_other), do: ""
 
   # The export writes a total of volumes as "6 vols.".
   defp volumes(nil), do: nil
