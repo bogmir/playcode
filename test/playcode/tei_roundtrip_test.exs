@@ -10,7 +10,7 @@ defmodule Playcode.TeiRoundtripTest do
   use Playcode.DataCase, async: true
 
   import Playcode.ImportHelpers
-  import Playcode.TestFixtures, only: [bibliography_fixture: 2]
+  import Playcode.TestFixtures, only: [bibliography_fixture: 2, bibliography_fixture: 3]
 
   @rich_header [
     title: "Ricardo III",
@@ -1184,8 +1184,248 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
-  # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
-  # re-importing that copy made a second editor: one more per round trip.
+  # A reference is matched on its description as the file carries it
+  # (Bibliography.Entry.description/1), so a play's references must come back from its
+  # file with exactly the description they went in with, and the play's own place in each.
+  describe "the bibliography" do
+    alias Playcode.Bibliography
+    alias Playcode.Bibliography.Entry
+    alias Playcode.Import.TeiImport
+
+    @every_field %{
+      "language" => "es",
+      "analytic_author" => "Autor, A",
+      # A non-breaking space, as FileMaker left in titles ("The Alchemist : A…"), here and
+      # in each monogr_title, so neither title finds the entry unless it is collapsed.
+      "analytic_title" => "Capítulo\u00a0<<en cursiva>>",
+      "analytic_editors" => "Editor, Analítico",
+      # Italics with punctuation right after them, as FileMaker wrote "<<Adonis y Venus>>:
+      # hacia la tragedia…": no space may come in between.
+      "original_title" => "<<Adonis y Venus>>: hacia la tragedia",
+      "series" => "Serie <<Clásicos>>, segunda",
+      "public_note" => "Véase <<Fenisa>>.",
+      "analytic_translators" => "Traductor, Analítico",
+      "monogr_author" => "Autor, M",
+      # Several people in one field, as FileMaker keeps them, with the separators it uses:
+      # "; ", " ; " (9 fields in dev) and ";" (2).
+      "monogr_editors" => "Morris, Brian ; Gill, Roma",
+      "monogr_translators" => "Traductor, T;Otra, O",
+      "edition" => "2nd",
+      "volume" => "2",
+      "volumes_total" => "4",
+      "issue" => "3",
+      "pages" => "1-20",
+      "pub_place" => "Madrid",
+      "publisher" => "Cátedra  Letras",
+      "year_text" => "1957-75",
+      "url" => "https://example.org",
+      "url_accessed_on" => "2020-01-01",
+      "note" => "Solo para investigadores"
+    }
+
+    # Every publication type with every field, the play's own volume and pages, and an
+    # entry with no type and a URL that is no address: 11 references.
+    defp fill_bibliography(play) do
+      for {type, i} <- Enum.with_index(Entry.pub_types()) do
+        bibliography_fixture(
+          play,
+          Map.merge(@every_field, %{
+            "kind" => Enum.at(Entry.kinds(), rem(i, 4)),
+            "pub_type" => type,
+            "monogr_title" => "Libro\u00a0#{i}",
+            "siglum" => "S#{i}"
+          }),
+          %{"volume" => "#{i + 1}", "pages" => "#{i}-#{i + 9}"}
+        )
+      end
+
+      # Italics as a curator may type them: two runs touching, an empty one, a space
+      # inside. The export merges, drops and keeps them as InlineMarkup reads them, and
+      # the reference must still be recognised from its file.
+      bibliography_fixture(play, %{
+        "kind" => "adaptation",
+        "pub_type" => nil,
+        "monogr_title" => "<<Solo>><<un>> título<<>> y <<Foo >>bar",
+        "url" => ". http://emothe.uv.es/x.php"
+      })
+
+      play
+    end
+
+    defp bibl_struct(title, cited \\ "") do
+      ~s(<biblStruct type="libro"><monogr><author>Autor, Ana</author>) <>
+        ~s(<title level="m">#{title}</title><imprint><date/></imprint></monogr>#{cited}</biblStruct>)
+    end
+
+    defp with_bibliography(code, lists) do
+      lists =
+        for {type, structs} <- lists,
+            do: ~s(<listBibl type="#{type}">#{Enum.join(structs)}</listBibl>)
+
+      tei(code: code, back: ~s(<div type="bibliografia">#{Enum.join(lists)}</div>))
+    end
+
+    defp references(play) do
+      for link <- Bibliography.list_links(play.id),
+          do: {Entry.description(link.entry), link.volume, link.pages, link.origin}
+    end
+
+    # Sorted: links made in the same second list in no fixed order.
+    defp titles(play) do
+      play.id
+      |> Bibliography.list_links()
+      |> Enum.map(&{&1.entry.monogr_title, &1.pages, &1.origin})
+      |> Enum.sort()
+    end
+
+    test "a play rebuilt from its file gets every reference back, as the file's" do
+      n = System.unique_integer([:positive])
+      play = fill_bibliography(import_tei!(tei(code: "BIB#{n}")))
+      xml = export_tei(play)
+
+      before =
+        for {description, volume, pages, _} <- references(play),
+            do: {description, volume, pages, "tei"}
+
+      # The entries go with their last link, as in an installation that never had them.
+      for link <- Bibliography.list_links(play.id), do: {:ok, _} = Bibliography.unlink(link)
+
+      copy = import_tei!(String.replace(xml, "BIB#{n}", "BIC#{n}"))
+
+      assert Enum.sort(references(copy)) == Enum.sort(before)
+
+      assert Enum.all?(
+               Bibliography.list_links(copy.id),
+               &(is_nil(&1.note) and is_nil(&1.entry.note))
+             )
+    end
+
+    test "importing a play's own export again adds nothing" do
+      play = fill_bibliography(import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}")))
+      xml = export_tei(play)
+
+      assert {:ok, %{bibliography_adds: []}} = TeiImport.preview_import(write_tmp!(xml))
+
+      import_tei!(xml)
+      assert length(Bibliography.list_links(play.id)) == 11
+    end
+
+    # FileMaker keeps several people in one field; TEI gives each person an element.
+    test "several people in one field are one element each, and one field again" do
+      play =
+        import_tei!(tei(code: "BIP#{System.unique_integer([:positive])}"))
+        |> bibliography_fixture(%{
+          "monogr_author" => "Uno, Ana; Dos, Berta",
+          "monogr_editors" => "Morris, Brian ; Gill, Roma",
+          "monogr_translators" => "Tres, C;Cuatro, D"
+        })
+        |> then(&Playcode.Catalogue.get_play!(&1.play_id))
+
+      xml = export_tei(play)
+
+      assert xml_texts(xml, "author", within: "monogr") == ["Uno, Ana", "Dos, Berta"]
+
+      assert xml_elements(xml, "editor", within: "monogr") == [
+               {%{}, "Morris, Brian"},
+               {%{}, "Gill, Roma"},
+               {%{"role" => "translator"}, "Tres, C"},
+               {%{"role" => "translator"}, "Cuatro, D"}
+             ]
+
+      # Rebuilt from the file: the original entry gone, so the copy's is read from it.
+      for link <- Bibliography.list_links(play.id), do: {:ok, _} = Bibliography.unlink(link)
+
+      copy =
+        import_tei!(String.replace(xml, play.code, "BIQ#{System.unique_integer([:positive])}"))
+
+      assert [%{entry: entry}] = Bibliography.list_links(copy.id)
+
+      assert {entry.monogr_author, entry.monogr_editors, entry.monogr_translators} ==
+               {"Uno, Ana; Dos, Berta", "Morris, Brian; Gill, Roma", "Tres, C; Cuatro, D"}
+    end
+
+    # Seven source files (EMOTHE0310, 0451, 0488…) give their bibliography as prose: those
+    # paragraphs must not become references.
+    test "a bibliography in prose gives no references" do
+      play =
+        import_tei!(
+          tei(
+            back:
+              ~s(<div type="bibliografia"><p><emph>Autoridades</emph>: Real Academia Española. ) <>
+                ~s(<emph>Diccionario de Autoridades</emph>. Madrid: Gredos, 1963.</p></div>)
+          )
+        )
+
+      assert Bibliography.list_links(play.id) == []
+    end
+
+    test "one reference in two plays' files is one entry with two links" do
+      n = System.unique_integer([:positive])
+      play = fill_bibliography(import_tei!(tei(code: "BIB#{n}")))
+
+      copy = import_tei!(String.replace(export_tei(play), "BIB#{n}", "BIC#{n}"))
+
+      entry_ids =
+        &(&1.id
+          |> Bibliography.list_links()
+          |> Enum.map(fn link -> link.entry_id end)
+          |> Enum.sort())
+
+      assert entry_ids.(copy) == entry_ids.(play)
+    end
+
+    test "a re-import adds a reference new to its file and changes nothing else" do
+      code = "BIR#{System.unique_integer([:positive])}"
+      play = import_tei!(with_bibliography(code, critica: [bibl_struct("Uno")]))
+      bibliography_fixture(play, %{"monogr_title" => "A mano"})
+
+      import_tei!(
+        with_bibliography(code,
+          critica: [
+            bibl_struct("Uno"),
+            bibl_struct("Dos", ~s(<citedRange unit="page">3-4</citedRange>))
+          ]
+        )
+      )
+
+      assert titles(play) == [
+               {"A mano", nil, "manual"},
+               {"Dos", "3-4", "tei"},
+               {"Uno", nil, "tei"}
+             ]
+    end
+
+    # The one way a duplicate gets in: the file's old version no longer matches the
+    # corrected entry. The import preview lists it before the import is confirmed.
+    test "an older file brings back the old version of a corrected reference, beside it" do
+      code = "BIR#{System.unique_integer([:positive])}"
+      file = with_bibliography(code, critica: [bibl_struct("Uno")])
+      play = import_tei!(file)
+      [link] = Bibliography.list_links(play.id)
+      {:ok, _} = Bibliography.update_entry(link.entry, %{"monogr_title" => "Uno, corregido"})
+
+      import_tei!(file)
+
+      assert titles(play) == [{"Uno", nil, "tei"}, {"Uno, corregido", nil, "tei"}]
+    end
+
+    test "a reference that cannot be an entry, or comes twice, does not stop the import" do
+      play =
+        import_tei!(
+          with_bibliography("BIR#{System.unique_integer([:positive])}",
+            desconocida: [bibl_struct("Sin tipo")],
+            critica: [
+              bibl_struct("Uno"),
+              bibl_struct("Uno"),
+              ~s(<biblStruct><monogr><imprint><date/></imprint></monogr></biblStruct>)
+            ]
+          )
+        )
+
+      assert titles(play) == [{"Uno", nil, "tei"}]
+    end
+  end
+
   describe "witnesses" do
     @list_wit """
     <listWit>
@@ -1416,6 +1656,8 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
+  # re-importing that copy made a second editor: one more per round trip.
   test "exporting, re-importing and exporting again changes nothing" do
     body = """
     <div1 type="acto" n="1"><head>ACTO I</head><div2 type="escena" n="1"><head>ESCENA I</head>

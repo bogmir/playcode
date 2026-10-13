@@ -21,7 +21,7 @@ defmodule Playcode.ImportHelpers do
 
   Options: `:title`, `:code`, `:title_stmt`, `:file_desc` (between titleStmt and
   publicationStmt: editionStmt, extent), `:publication_stmt`, `:source_desc`,
-  `:profile_desc`, `:front`, `:body`.
+  `:profile_desc`, `:front`, `:body`, `:back`.
   """
   def tei(opts \\ []) do
     code = Keyword.get_lazy(opts, :code, &tei_code/0)
@@ -47,6 +47,7 @@ defmodule Playcode.ImportHelpers do
       <text>
         <front>#{opts[:front]}</front>
         <body>#{opts[:body]}</body>
+        #{if opts[:back], do: "<back>#{opts[:back]}</back>"}
       </text>
     </TEI>
     """

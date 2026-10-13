@@ -60,7 +60,8 @@ defmodule Playcode.Import.TeiCorpus do
   What importing `files` would do, as `{:info | :error, line}`s: one per file, then a
   summary. Writes nothing. Under `force: true` a play already imported would be
   re-imported, and its line says what that replaces and keeps, and how many hand edits
-  to its text since its last import it would undo.
+  to its text since its last import it would undo. A play that would be imported lists
+  the references it would gain and those it would skip, one line each.
   """
   def dry_run(files, opts \\ []) do
     force = Keyword.get(opts, :force, false)
@@ -68,18 +69,18 @@ defmodule Playcode.Import.TeiCorpus do
     edits = hand_edits(for {_code, {:ok, %{existing: %{id: id}}}} <- previews, do: id)
 
     lines =
-      Enum.map(previews, fn
-        {code, {:ok, %{existing: nil}}} ->
-          {:info, "  #{code}  new"}
+      Enum.flat_map(previews, fn
+        {code, {:ok, %{existing: nil} = preview}} ->
+          [{:info, "  #{code}  new" <> adds(preview)} | added(preview)]
 
         {code, {:ok, _preview}} when not force ->
-          {:info, "  #{code}  already imported, would be skipped"}
+          [{:info, "  #{code}  already imported, would be skipped"}]
 
         {code, {:ok, preview}} ->
-          {:info, "  #{code}  " <> replaces(preview, edits)}
+          [{:info, "  #{code}  " <> replaces(preview, edits) <> adds(preview)} | added(preview)]
 
         {code, {:error, reason}} ->
-          {:error, "  #{code}: #{inspect(reason)}"}
+          [{:error, "  #{code}: #{inspect(reason)}"}]
       end)
 
     count = fn pattern -> Enum.count(previews, pattern) end
@@ -113,6 +114,17 @@ defmodule Playcode.Import.TeiCorpus do
          "skipped #{count.(&match?({:skipped, _}, &1))}, " <>
          "failed #{count.(&match?({:error, _, _}, &1))}"}
     )
+  end
+
+  defp adds(preview) do
+    [adds: preview.bibliography_adds, skips: preview.bibliography_skips]
+    |> Enum.reject(&(elem(&1, 1) == []))
+    |> Enum.map_join(fn {verb, refs} -> ", #{verb} #{length(refs)} reference(s)" end)
+  end
+
+  defp added(preview) do
+    for(citation <- preview.bibliography_adds, do: {:info, "      + #{citation}"}) ++
+      for(citation <- preview.bibliography_skips, do: {:info, "      - #{citation}"})
   end
 
   defp replaces(preview, edits) do

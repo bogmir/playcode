@@ -11,6 +11,8 @@ defmodule Playcode.Import.TeiImport do
 
   import Ecto.Query
 
+  alias Playcode.Bibliography
+  alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
   alias Playcode.Import.TeiParser
@@ -68,10 +70,10 @@ defmodule Playcode.Import.TeiImport do
   nobody discovers the replacement afterwards.
   """
   def preview_import(path) do
-    with {:ok, tei} <- TeiParser.parse_file(path), do: {:ok, preview(tei.play)}
+    with {:ok, tei} <- TeiParser.parse_file(path), do: {:ok, preview(tei)}
   end
 
-  defp preview(%{code: code, title: title}) do
+  defp preview(%{play: %{code: code, title: title}} = tei) do
     existing = Repo.get_by(Play, code: code)
 
     %{
@@ -83,6 +85,26 @@ defmodule Playcode.Import.TeiImport do
       preserves: preserved_counts(existing),
       preserves_fields: preserved_fields(existing)
     }
+    |> Map.merge(bibliography_preview(tei.bibliography, existing))
+  end
+
+  # The import's bibliography plan as it prints: the references the play would gain, and
+  # those it would skip. A stale one, an older file's version of a reference corrected
+  # since, shows among the first before it is imported.
+  defp bibliography_preview(references, existing) do
+    steps = bibliography_plan(references, existing && existing.id)
+
+    %{
+      bibliography_adds: for({step, _, ref} <- steps, step != :skip, do: citation(ref)),
+      bibliography_skips: for({:skip, _, ref} <- steps, do: citation(ref))
+    }
+  end
+
+  defp citation(reference) do
+    Citation.plain(
+      struct(Entry, reference.description),
+      %Link{volume: reference.volume, pages: reference.pages}
+    )
   end
 
   @doc """
@@ -176,6 +198,7 @@ defmodule Playcode.Import.TeiImport do
 
     cast = Map.new(PlayContent.list_characters(play.id), &{&1.xml_id, &1.id})
     Enum.each(tei.divisions, &write_division(&1, play, nil, cast))
+    write_bibliography(tei.bibliography, play)
 
     # Recompute verse_count from actual verse_line elements (the TEI header
     # <extent> value is often inaccurate or includes non-verse lines), and return
@@ -260,6 +283,67 @@ defmodule Playcode.Import.TeiImport do
 
     :ok
   end
+
+  # --- Bibliography ---
+
+  # What an import does with a file's references, decided once for the import and its
+  # preview: `{:link, entry_id, ref}` for an entry Playcode has with the reference's
+  # description (Bibliography.identical_entries/2) that the play does not link yet,
+  # `{:create, nil, ref}` for one it has not, and `{:skip, nil, ref}` for one that is no
+  # valid entry (a language or a list Playcode does not know). A reference the play links
+  # already, or that the file gives twice, has no step. Nothing is ever changed or removed.
+  defp bibliography_plan([], _play_id), do: []
+
+  defp bibliography_plan(references, play_id) do
+    found = Bibliography.identical_entries(Enum.map(references, & &1.description), play_id)
+    linked = MapSet.new(Bibliography.linked_entry_ids(play_id))
+
+    {steps, _seen} =
+      Enum.flat_map_reduce(references, MapSet.new(), fn reference, seen ->
+        if reference.description in seen do
+          {[], seen}
+        else
+          {step(reference, found[reference.description], linked),
+           MapSet.put(seen, reference.description)}
+        end
+      end)
+
+    steps
+  end
+
+  defp step(reference, nil, _linked) do
+    if valid_reference?(reference),
+      do: [{:create, nil, reference}],
+      else: [{:skip, nil, reference}]
+  end
+
+  defp step(reference, entry_id, linked) do
+    if entry_id in linked, do: [], else: [{:link, entry_id, reference}]
+  end
+
+  # On every import, the first and every re-import. A write the database refuses (an
+  # entry removed while the import ran) rolls the play back with a reason, not a crash.
+  defp write_bibliography(references, play) do
+    for step <- bibliography_plan(references, play.id), do: write_step(step, play)
+    :ok
+  end
+
+  defp write_step({:skip, nil, reference}, _play),
+    do: Logger.warning("Skipped a reference that is no valid entry: #{inspect(reference)}")
+
+  defp write_step({step, entry_id, reference}, play) do
+    place = %{volume: reference.volume, pages: reference.pages}
+
+    result =
+      if step == :link,
+        do: Bibliography.link_entry(play.id, entry_id, place, "tei"),
+        else: Bibliography.create_entry_for_play(play.id, reference.description, place, "tei")
+
+    with {:error, reason} <- result, do: Repo.rollback({:bibliography, reason})
+  end
+
+  defp valid_reference?(reference),
+    do: Bibliography.change_entry(%Entry{}, reference.description).valid?
 
   # --- Places ---
 

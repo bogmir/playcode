@@ -3,6 +3,7 @@ defmodule Playcode.Export.TeiXml do
   Generates TEI-XML from a play record and its content.
   """
 
+  alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{InlineMarkup, Note}
@@ -591,27 +592,6 @@ defmodule Playcode.Export.TeiXml do
 
   # --- Back: the bibliography (S4) ---
 
-  @list_types %{
-    "modern_edition" => "ediciones_modernas",
-    "criticism" => "critica",
-    "translation" => "traducciones",
-    "adaptation" => "adaptaciones"
-  }
-
-  # FileMaker's own type names (T12.11), as the corpus spells its other types in Spanish.
-  @bibl_types %{
-    "article" => "articulo_revista",
-    "book_section" => "seccion_libro",
-    "scholarly_edition" => "edicion_estudioso",
-    "book" => "libro",
-    "proceedings" => "acta",
-    "prologue" => "prologo",
-    "festschrift" => "homenaje",
-    "electronic" => "publicacion_electronica",
-    "thesis" => "tesis_doctorado",
-    "collection" => "coleccion"
-  }
-
   defp build_back([]), do: element(:back)
 
   defp build_back(groups) do
@@ -622,7 +602,7 @@ defmodule Playcode.Export.TeiXml do
         Enum.map(groups, fn {kind, subgroups} ->
           element(
             :listBibl,
-            %{type: @list_types[kind]},
+            %{type: Entry.tei_list(kind)},
             for({_language, links} <- subgroups, link <- links, do: build_bibl_struct(link))
           )
         end)
@@ -631,10 +611,12 @@ defmodule Playcode.Export.TeiXml do
   end
 
   # In the order TEI requires. The entry's `note` and the link's are for researchers and
-  # never leave Playcode: this file is published with the static site.
+  # never leave Playcode: this file is published with the static site. A field that may
+  # hold italics goes out on one line (inline_element/3): an indented one would put a space
+  # between "<<Adonis y Venus>>" and ": hacia", and a reference is matched on its words.
   defp build_bibl_struct(%{entry: e} = link) do
     attrs =
-      %{"type" => @bibl_types[e.pub_type], "xml:lang" => e.language}
+      %{"type" => Entry.tei_type(e.pub_type), "xml:lang" => e.language}
       |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
     element(
@@ -642,16 +624,20 @@ defmodule Playcode.Export.TeiXml do
       attrs,
       [
         build_analytic(e),
-        build_monogr(e, link),
+        build_monogr(e),
         if(filled?(e.series),
-          do: element(:series, [element(:title, %{level: "s"}, build_inline_content(e.series))])
+          do:
+            element(:series, [
+              inline_element(:title, %{level: "s"}, build_inline_content(e.series))
+            ])
         ),
-        if(filled?(e.public_note), do: element(:note, build_inline_content(e.public_note))),
-        # ponytail: only an http(s) address is a valid target; the FileMaker strays
-        # (". http://…") stay in the database for curators to clean.
-        if(filled?(e.url) and String.trim(e.url) =~ ~r{\Ahttps?://\S+\z}i,
-          do: element(:ptr, %{target: String.trim(e.url)})
-        )
+        if(filled?(e.public_note),
+          do: inline_element(:note, %{}, build_inline_content(e.public_note))
+        ),
+        ptr(Entry.tei_url(e.url)),
+        # Where this play sits in the edition, apart from the edition's own volume and pages.
+        cited_range("volume", link.volume),
+        cited_range("page", link.pages)
       ]
       |> List.flatten()
       |> Enum.reject(&is_nil/1)
@@ -669,7 +655,7 @@ defmodule Playcode.Export.TeiXml do
           bibl_people(e.analytic_author, e.analytic_editors, e.analytic_translators) ++
             [
               if(filled?(e.analytic_title),
-                do: element(:title, %{level: "a"}, build_inline_content(e.analytic_title))
+                do: inline_element(:title, %{level: "a"}, build_inline_content(e.analytic_title))
               )
             ],
           &is_nil/1
@@ -678,9 +664,7 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
-  defp build_monogr(e, link) do
-    volume = if filled?(link.volume), do: link.volume, else: e.volume
-    pages = if filled?(link.pages), do: link.pages, else: e.pages
+  defp build_monogr(e) do
     level = if e.pub_type == "article", do: "j", else: "m"
 
     element(
@@ -688,17 +672,22 @@ defmodule Playcode.Export.TeiXml do
       Enum.reject(
         bibl_people(e.monogr_author, e.monogr_editors, e.monogr_translators) ++
           [
-            element(:title, %{level: level}, build_inline_content(e.monogr_title)),
+            inline_element(:title, %{level: level}, build_inline_content(e.monogr_title)),
             if(filled?(e.original_title),
-              do: element(:title, %{type: "original"}, build_inline_content(e.original_title))
+              do:
+                inline_element(
+                  :title,
+                  %{type: "original"},
+                  build_inline_content(e.original_title)
+                )
             ),
             if(filled?(e.siglum), do: element(:idno, %{type: "siglum"}, e.siglum)),
             if(filled?(e.edition), do: element(:edition, e.edition)),
             build_imprint(e),
             if(filled?(e.volumes_total), do: element(:extent, "#{e.volumes_total} vols.")),
-            bibl_scope("volume", volume),
+            bibl_scope("volume", e.volume),
             bibl_scope("issue", e.issue),
-            bibl_scope("page", pages)
+            bibl_scope("page", e.pages)
           ],
         &is_nil/1
       )
@@ -706,11 +695,17 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp bibl_people(author, editors, translators) do
-    [
-      if(filled?(author), do: element(:author, build_inline_content(author))),
-      if(filled?(editors), do: element(:editor, editors)),
-      if(filled?(translators), do: element(:editor, %{role: "translator"}, translators))
-    ]
+    people(author, &inline_element(:author, %{}, build_inline_content(&1))) ++
+      people(editors, &element(:editor, &1)) ++
+      people(translators, &element(:editor, %{role: "translator"}, &1))
+  end
+
+  # One element per person: FileMaker keeps several in one field ("Morris, Brian; Gill,
+  # Roma"), TEI gives each their own. The import joins them again (Entry.people/1).
+  defp people(field, build) do
+    if filled?(field),
+      do: field |> Entry.people() |> Enum.map(build),
+      else: []
   end
 
   defp build_imprint(e) do
@@ -737,6 +732,12 @@ defmodule Playcode.Export.TeiXml do
 
   defp bibl_scope(unit, value),
     do: if(filled?(value), do: element(:biblScope, %{unit: unit}, value))
+
+  defp ptr(nil), do: nil
+  defp ptr(url), do: element(:ptr, %{target: url})
+
+  defp cited_range(unit, value),
+    do: if(filled?(value), do: element(:citedRange, %{unit: unit}, value))
 
   defp filled?(value), do: is_binary(value) and String.trim(value) != ""
 

@@ -15,6 +15,9 @@ defmodule Playcode.Import.TeiParserTest do
   # The app functions the reader may call: none of them reads a row. A new one is a
   # decision, made here.
   @pure_helpers [
+    {Playcode.Bibliography.Entry, :description, 1},
+    {Playcode.Bibliography.Entry, :kind_from_tei_list, 1},
+    {Playcode.Bibliography.Entry, :pub_type_from_tei, 1},
     {Playcode.Catalogue.Play, :composition_year_range, 0},
     {Playcode.Catalogue.Play, :historical_times, 0},
     {Playcode.Catalogue.Play, :short_code, 1},

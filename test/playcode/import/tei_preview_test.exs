@@ -1,7 +1,7 @@
 defmodule Playcode.Import.TeiPreviewTest do
   use Playcode.DataCase, async: true
 
-  import Playcode.ImportHelpers, only: [write_tmp!: 1]
+  import Playcode.ImportHelpers, only: [write_tmp!: 1, tei: 1]
 
   alias Playcode.Catalogue
   alias Playcode.Import.TeiImport
@@ -108,6 +108,55 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert {:ok, preview} = TeiImport.preview_import(path)
     assert preview.archived
     assert preview.existing.id == play.id
+  end
+
+  # An import adds the file's references Playcode has no identical entry for. Listing them
+  # is how a stale one (an older file's version of a corrected reference) is seen first.
+  test "lists the references an import would add, as they print" do
+    code = "PRV#{System.unique_integer([:positive])}"
+
+    file = fn titles ->
+      structs =
+        Enum.map_join(titles, fn title ->
+          ~s(<biblStruct type="libro"><monogr><author>Autor, Ana</author>) <>
+            ~s(<title level="m">#{title}</title><imprint><date/></imprint></monogr></biblStruct>)
+        end)
+
+      write_tmp!(
+        tei(
+          code: code,
+          back: ~s(<div type="bibliografia"><listBibl type="critica">#{structs}</listBibl></div>)
+        )
+      )
+    end
+
+    assert {:ok, %{bibliography_adds: [uno]}} = TeiImport.preview_import(file.(["Uno"]))
+    assert uno =~ "Autor, Ana" and uno =~ "Uno"
+
+    {:ok, _} = TeiImport.import_file(file.(["Uno"]))
+
+    assert {:ok, %{bibliography_adds: [dos]}} =
+             TeiImport.preview_import(file.(["Uno", "Dos", "Dos"]))
+
+    assert dos =~ "Dos"
+  end
+
+  # A reference Playcode cannot store (here a language it does not list) is skipped by the
+  # import; the preview says so rather than let it vanish.
+  test "lists the references an import would skip" do
+    xml =
+      tei(
+        back:
+          ~s(<div type="bibliografia"><listBibl type="critica">) <>
+            ~s(<biblStruct type="libro" xml:lang="la"><monogr><author>Autor, Ana</author>) <>
+            ~s(<title level="m">Liber</title><imprint><date/></imprint></monogr></biblStruct>) <>
+            ~s(</listBibl></div>)
+      )
+
+    assert {:ok, %{bibliography_adds: [], bibliography_skips: [skipped]}} =
+             TeiImport.preview_import(write_tmp!(xml))
+
+    assert skipped =~ "Liber"
   end
 
   test "preview writes nothing", %{path: path} do

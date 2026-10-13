@@ -62,10 +62,10 @@ note, URL. Not folded for case or accents: "identical" means a correction is a d
 description.
 
 The comparison is between descriptions as the file carries them, so a field the export does not
-write faithfully cannot make a false difference: `Bibliography.description/1` gives an entry's
+write faithfully cannot make a false difference: `Bibliography.Entry.description/1` gives an entry's
 description in the file's terms (the URL only when it is an `http(s)` address, as `build_bibl_struct`
 writes it; `volumes_total` as its number), and the parser gives the file's in the same terms. A test
-holds them together: for every publication type, `description(entry)` equals what the parser reads
+holds them together: for every publication type, `Entry.description(entry)` equals what the parser reads
 from the export of that entry.
 
 Where to look, in order:
@@ -96,9 +96,9 @@ confirmed, and unlinking it deletes it (`Bibliography.unlink/1`, no orphans).
 ## What a rebuild from files gives up
 
 - Researchers' notes on entries (137 in dev) and links (15), as on purpose.
-- FileMaker numbers: they stay in the installation that imported them. A rebuilt installation must
-  not run `mix playcode.import.bibliography` again: its links are `tei`, so the run would take every
-  play as not yet imported and add FileMaker's entries beside the file's.
+- FileMaker numbers: they stay in the installation that imported them. The FileMaker
+  bibliography import counts a play with `tei` links as imported (`imported_play_ids/0`), so
+  a run on a rebuilt installation does not bring FileMaker's copies in beside the file's.
 - FileMaker's identical copies merge: 72 entries in dev are word-for-word copies of another, in 32
   groups (*The Chief British Dramatists Excluding Shakespeare*, 1924, six times, once per play). A
   rebuild makes each group one shared entry; in 4 cases a play links two copies of one and comes back

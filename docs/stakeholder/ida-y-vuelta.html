@@ -284,7 +284,7 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time. The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team. The exported file carries the CDU number again, and the witnesses come back from it whole, with their line breaks. A translation’s file names its original, so the two are linked again, whichever is imported first.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time. The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team. The exported file carries the CDU number again, and the witnesses come back from it whole, with their line breaks. A translation’s file names its original, so the two are linked again, whichever is imported first, and the bibliography comes back from the file too. A translation’s file names its original, so the two are linked again, whichever is imported first.</p>
   </header>
 
   <section aria-labelledby="h-why">
@@ -301,7 +301,6 @@
       <tbody>
         <tr class="ok"><td>Lines, speeches, stage directions and prose: identical</td><td class="num">1,308,522</td></tr>
         <tr class="ok"><td>Notes, editors, sources, dedications and introductions: identical</td><td class="num">5,789</td></tr>
-        <tr class="lost"><td>Bibliography references lost (115 plays)</td><td class="num">2,804</td></tr>
         <tr class="lost"><td>Plays with a cast list per act that come back with one</td><td class="num">4</td></tr>
         <tr class="todo"><td>Witnesses ready from FileMaker, not yet imported on production</td><td class="num">510</td></tr>
         <tr class="todo"><td>Plays whose notes wait on production for the TEI re-import</td><td class="num">84</td></tr>
@@ -464,7 +463,7 @@
             <td class="imp" data-label="Imported data"><span class="n">114</span><span class="src">FileMaker; 2,803 references</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
-            <td data-label="Read from TEI"><span class="s no">No</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span><sup class="fn"><a href="#n9" aria-label="note 9">9</a></sup></td>
             <td data-label="Downloads"><span class="s no">No</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
@@ -802,7 +801,7 @@
       <li id="n6">The EMOTHE files already label their form, on the <code>extent</code> that counts their verses: <code>ana="verso"</code> in 222 files, <code>"prosa"</code> in 56 and <code>"versoprosa"</code>, verse and prose, in 41; 45 count speeches (<code>"intervenciones"</code>) instead, and 8 say nothing. Playcode reads only the number and works the form out from the text, where one numbered verse line makes a play verse: the 41 plays labelled verse and prose show as verse, and so do 33 labelled prose that hold a song or a few quoted lines, while 17 labelled verse show as prose. The file Playcode writes labels every play verse, a prose play as “0 versos”. The downloads print the form worked out from the text, never one set by hand. No play has its form set by hand yet. Where the label belongs, and whether it or the text decides, are questions 22 and 23; the background is <a href="verso-y-prosa.html">Verse, prose or both in the TEI files</a>.</li>
       <li id="n7">They come back marked as coming from the file, whatever their origin. Two digital editors of the same play come back as “editor” (3 plays).</li>
       <li id="n8">All 510 witnesses of 107 plays come back, with the line breaks in their titles and notes (45 fields in 8 plays); a double space comes back as one, which is all any page prints. They come back as the file’s: the file names no FileMaker record (see <a href="#h-tei">Into the TEI</a>).</li>
-      <li id="n9">The bibliography is written to the file in full, as structured TEI, but Playcode does not read it back: 2,804 references on 115 plays are lost. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
+      <li id="n9">The bibliography comes back from the file: all 2,804 references of 115 plays, each with the play’s own volume and pages in it. A reference several plays cite comes back as the one shared reference, recognised by its description, since the file carries no FileMaker or Playcode number; so FileMaker’s word-for-word copies of one work become one (72 references into 32). Importing a file only adds what Playcode does not have: it never changes or removes a reference, so a correction made in Playcode stays, and the import preview lists what would be added, so an older file’s version of a corrected reference can be caught. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
       <li id="n10">Checked by an automated test. No play in the development copy has places yet, so the measurement could not count them. FileMaker records the places of the action of its plays (138 links to about 94 places), still to be imported.</li>
       <li id="n11">Playcode does not record which list a character is in, so the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back from the file with a single list, under the first heading; the play page and the downloads print each list with its heading, but every one lists all the characters, and the published site prints one list.</li>
       <li id="n12">Not editable in Playcode yet; both come from the TEI files.</li>
@@ -837,11 +836,10 @@
   <section aria-labelledby="h-next">
     <h2 id="h-next">What happens next</h2>
     <ol class="next">
-      <li><strong>Read the bibliography back from the file.</strong> The largest loss, and the next piece of work.</li>
       <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: the kind of an adaptation or a <i>refundición</i> and a play’s several cast lists. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
       <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
     </ol>
-    <p class="note">None of these three needs a decision from the team. The parts not in Playcode yet, at the end of the table, are projects of their own: the variant readings, the HTML in the text, the line breaks, the performances, the form, verse or prose, and what the downloads print wait on the team’s answers in the <a href="preguntas.html">questions for the project</a>, and the genre on FileMaker’s genre table.</p>
+    <p class="note">Neither needs a decision from the team. The parts not in Playcode yet, at the end of the table, are projects of their own: the variant readings, the HTML in the text, the line breaks, the performances, the form, verse or prose, and what the downloads print wait on the team’s answers in the <a href="preguntas.html">questions for the project</a>, and the genre on FileMaker’s genre table.</p>
   </section>
 </main>
 </body>
