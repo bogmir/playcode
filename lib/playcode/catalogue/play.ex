@@ -31,6 +31,8 @@ defmodule Playcode.Catalogue.Play do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Playcode.Text
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -68,6 +70,7 @@ defmodule Playcode.Catalogue.Play do
     field :composition_date_from, :integer
     field :composition_date_to, :integer
     field :composition_date_note, :string
+    field :edition_notes, {:array, :string}, default: []
 
     # Set only through Catalogue.delete_play/1 and restore_play/1 — deliberately absent
     # from every cast list so no form can archive a play.
@@ -196,8 +199,10 @@ defmodule Playcode.Catalogue.Play do
       :historical_time_note,
       :composition_date_from,
       :composition_date_to,
-      :composition_date_note
+      :composition_date_note,
+      :edition_notes
     ])
+    |> update_change(:edition_notes, &squeeze_notes/1)
     |> validate_required([:title, :code])
     |> validate_inclusion(:language, @valid_languages)
     |> validate_number(:verse_count, greater_than_or_equal_to: 0)
@@ -215,6 +220,9 @@ defmodule Playcode.Catalogue.Play do
     |> validate_composition_date_span()
     |> unique_constraint(:code)
   end
+
+  # A note left blank, in the file or the form, is no note.
+  defp squeeze_notes(notes), do: notes |> Enum.map(&Text.squeeze/1) |> Enum.reject(&is_nil/1)
 
   # Both endpoints or neither: a lone year is a half-filled form, not a dating.
   defp validate_composition_date_span(changeset) do

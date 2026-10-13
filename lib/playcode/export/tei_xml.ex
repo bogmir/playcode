@@ -80,12 +80,21 @@ defmodule Playcode.Export.TeiXml do
     )
   end
 
-  # The play this one translates, adapts or reworks, by its short code, so an import can
-  # link the two whichever arrives first (Catalogue.link_waiting_translations/0).
+  # The notes on the edition, then the play this one translates, adapts or reworks, by its
+  # short code, so an import can link the two whichever arrives first
+  # (Catalogue.link_waiting_translations/0).
   defp build_notes_stmt(play) do
-    case Catalogue.original_code(play) do
-      nil -> []
-      code -> [element(:notesStmt, [element(:relatedItem, %{type: "original", target: code})])]
+    notes = Enum.map(play.edition_notes, &inline_element(:note, %{}, lines(&1)))
+
+    original =
+      case Catalogue.original_code(play) do
+        nil -> []
+        code -> [element(:relatedItem, %{type: "original", target: code})]
+      end
+
+    case notes ++ original do
+      [] -> []
+      children -> [element(:notesStmt, children)]
     end
   end
 

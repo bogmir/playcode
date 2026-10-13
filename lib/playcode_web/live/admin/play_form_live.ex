@@ -751,6 +751,28 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
           <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
+            {gettext("Notes on the edition")}
+          </h3>
+          <p class="text-xs text-base-content/70">
+            {gettext(
+              "Written in the TEI file's header, not shown to readers. Empty a box to remove its note."
+            )}
+          </p>
+          <div :for={{note, i} <- Enum.with_index(edition_note_boxes(@form))}>
+            <label class="label" for={"play_edition_notes_#{i}"}>
+              <span class="label-text font-medium">{gettext("Note %{n}", n: i + 1)}</span>
+            </label>
+            <textarea
+              id={"play_edition_notes_#{i}"}
+              name="play[edition_notes][]"
+              rows="3"
+              class="w-full textarea"
+            >{note}</textarea>
+          </div>
+        </div>
+
+        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
             {gettext("Funding & Licence")}
           </h3>
           <div>
@@ -806,5 +828,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       </.form>
     </div>
     """
+  end
+
+  # One box per note and an empty one for a new note. While the form is being edited the
+  # boxes are what was typed, blanks included (the changeset drops them), so a box being
+  # emptied stays and no new box appears per keystroke.
+  defp edition_note_boxes(form) do
+    notes = form.params["edition_notes"] || form[:edition_notes].value || []
+    if List.last(notes) == "", do: notes, else: notes ++ [""]
   end
 end

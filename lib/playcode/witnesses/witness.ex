@@ -9,6 +9,8 @@ defmodule Playcode.Witnesses.Witness do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Playcode.Text
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -60,25 +62,12 @@ defmodule Playcode.Witnesses.Witness do
     )
   end
 
-  # The spec's "All values are trimmed": a pasted " Q1 " is Q1, and blank is nothing. A
-  # line break, FileMaker's \r or a form's \r\n, is kept as \n with no spaces around it,
-  # and a run of spaces or tabs as one space: what the TEI file gives back, and all any
-  # page prints.
+  # The spec's "All values are trimmed": a pasted " Q1 " is Q1, and blank is nothing.
+  # Line breaks and spaces as the TEI file gives them back (Playcode.Text.squeeze/1),
+  # which is all any page prints.
   defp trim(changeset, fields) do
     Enum.reduce(fields, changeset, fn field, changeset ->
-      update_change(changeset, field, fn
-        nil ->
-          nil
-
-        value ->
-          value =
-            value
-            |> String.replace(~r/[ \t]*(?:\r\n?|\n)[ \t]*/, "\n")
-            |> String.replace(~r/[ \t]+/, " ")
-            |> String.trim()
-
-          if value == "", do: nil, else: value
-      end)
+      update_change(changeset, field, &Text.squeeze/1)
     end)
   end
 

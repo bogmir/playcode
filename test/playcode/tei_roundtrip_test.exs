@@ -278,6 +278,45 @@ defmodule Playcode.TeiRoundtripTest do
   # which play. It names the original by its short code, the part of its code before the
   # first "_" (EMOTHE0530 of EMOTHE0530_LesAmoursTragiques…), and the import links the two
   # whichever arrives first.
+  # 15 notes in 14 production files (EMOTHE0005, 0161…): the edition's own remarks, lists
+  # of the witnesses used, editors' reminders. emothe.uv.es shows none of them.
+  describe "the notes on the edition" do
+    alias Playcode.Catalogue
+
+    test "each comes back, its line breaks too, beside a translation's original" do
+      n = System.unique_integer([:positive])
+
+      play =
+        import_tei!(
+          tei(
+            code: "NS#{n}",
+            file_desc: """
+            <notesStmt>
+              <note>El epílogo figura en la edición
+                de Ferrara de 1581.</note>
+              <note>Impresos<lb/>Madrid, 1637.<lb/><lb/>Madrid, 1641.</note>
+              <note> </note>
+              <relatedItem type="original" target="EMOTHE0005"/>
+            </notesStmt>
+            """
+          )
+        )
+
+      notes = [
+        "El epílogo figura en la edición de Ferrara de 1581.",
+        "Impresos\nMadrid, 1637.\n\nMadrid, 1641."
+      ]
+
+      assert Catalogue.get_play!(play.id).edition_notes == notes
+
+      xml = export_tei(play)
+      assert [{%{"target" => "EMOTHE0005"}, ""}] = xml_elements(xml, "relatedItem")
+
+      copy = import_tei!(String.replace(xml, "NS#{n}", "NC#{n}"))
+      assert Catalogue.get_play!(copy.id).edition_notes == notes
+    end
+  end
+
   describe "the play a translation translates" do
     alias Playcode.Catalogue
 
