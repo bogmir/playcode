@@ -92,8 +92,8 @@ Then:
 
 ### Task 7: Measure, then docs
 
-- [ ] On dev: export each of the 115 plays with a bibliography, read the file back, and compare every link's description, volume and pages with the database. Expected differences only: researchers' notes, non-`http(s)` URLs. Record the numbers.
-- [ ] Dry run of the corpus re-import for EMOTHE0784 *Le Favori*: 0 references to add.
-- [ ] Round-trip page: the bibliography row, Read from TEI "Yes", note 9 rewritten (what a rebuild gives up, from the spec); backlog item moved to history; `CLAUDE.md`: the `back` mapping is read, `play_bibliography.origin` may be `tei`, and a rebuilt installation does not re-run the FileMaker bibliography import.
-- [ ] `mix test`, `mix test --include slow`, `mix compile --warnings-as-errors`.
-- [ ] Commit: `docs: the bibliography comes back from the file`
+- [x] On dev: export each of the 115 plays with a bibliography, read the file back, compare every link's description, volume and pages with the database, and preview importing the file in place. First run: 3 plays read back differently and 10 would gain references. Two causes, both fixed test first: (1) a space after italics ("<<Adonis y Venus>> : hacia"): the bibliography's inline fields now go out on one line (`inline_element/3`) and the parser reads them as they run (`running_text/1`, no space added between pieces); (2) Postgres's `\s` misses the non-breaking spaces FileMaker left in titles, so candidates are filtered in Elixir with `Entry.collapse/1`. After: 2,804 links on 115 plays, 0 differ, 0 would be added.
+- [x] Dry run of EMOTHE0784 *Le Favori*'s source file against dev: 0 references to add.
+- [x] Round-trip page: the bibliography row reads "Yes" from TEI, note 9 rewritten, the "references lost" tally and the "read the bibliography back" next step gone; backlog item moved to history; `CLAUDE.md`: the `back` mapping is read, `play_bibliography.origin` may be `tei`, a rebuilt installation does not re-run the FileMaker bibliography import.
+- [x] `mix test`, `mix test --include slow`, `mix compile --warnings-as-errors`.
+- [x] Commit: `fix(tei): a reference reads back as the database holds it` and `docs: the bibliography comes back from the file`
