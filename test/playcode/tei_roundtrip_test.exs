@@ -174,6 +174,27 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # The editionStmt wrote a digital editor as "Edición digital", which reads back as an
+  # editor: 6 credits in 3 plays changed role on their first round trip.
+  test "a digital editor of the edition stays one" do
+    xml =
+      roundtrip(
+        tei(
+          file_desc: """
+          <editionStmt>
+            <respStmt>
+              <resp>Electronic edition: text adapted, edited for XML and encoded by</resp>
+              <persName>Tronch Pérez, Jesús</persName>
+            </respStmt>
+          </editionStmt>
+          """
+        )
+      )
+
+    assert xml_texts(roundtrip(xml), "resp", within: "editionStmt") ==
+             xml_texts(xml, "resp", within: "editionStmt")
+  end
+
   test "an all-capitals title is title-cased, a mixed-case one is left alone" do
     for {given, expected} <- [
           {"LOS RAMILLETES DE MADRID", "Los Ramilletes de Madrid"},

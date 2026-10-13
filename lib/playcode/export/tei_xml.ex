@@ -150,23 +150,7 @@ defmodule Playcode.Export.TeiXml do
         &(&1.role in ["digital_editor", "editor", "reviewer"] and &1.position >= 100 and
             &1.position < 200)
       )
-      |> Enum.map(fn e ->
-        resp_label =
-          case e.role do
-            "editor" -> "Edición"
-            "reviewer" -> "Revisión"
-            _ -> "Electronic edition"
-          end
-
-        children = [element(:resp, resp_label), element(:persName, e.person_name)]
-
-        children =
-          if e.organization,
-            do: children ++ [element(:orgName, e.organization)],
-            else: children
-
-        element(:respStmt, children)
-      end)
+      |> Enum.map(&resp_stmt/1)
 
     principal =
       play.editors
@@ -197,31 +181,26 @@ defmodule Playcode.Export.TeiXml do
       play.editors
       |> Enum.filter(&(&1.role in ["editor", "digital_editor", "reviewer"]))
       |> Enum.reject(&(&1.position in 100..199))
-      |> Enum.map(fn e ->
-        resp_label =
-          case e.role do
-            "editor" -> "Edición"
-            "reviewer" -> "Revisión"
-            _ -> "Edición digital"
-          end
-
-        children = [
-          element(:resp, resp_label),
-          element(:persName, e.person_name)
-        ]
-
-        children =
-          if e.organization,
-            do: children ++ [element(:orgName, e.organization)],
-            else: children
-
-        element(:respStmt, children)
-      end)
+      |> Enum.map(&resp_stmt/1)
 
     element(:editionStmt, [
       element(:edition, "Edición electrónica de '#{play.title}'")
       | editors
     ])
+  end
+
+  # The resp is the wording TeiParser reads the role back from: anything with "Edición"
+  # is an editor, so a digital editor is written in English.
+  defp resp_stmt(editor) do
+    resp =
+      case editor.role do
+        "editor" -> "Edición"
+        "reviewer" -> "Revisión"
+        "digital_editor" -> "Electronic edition"
+      end
+
+    org = if editor.organization, do: [element(:orgName, editor.organization)], else: []
+    element(:respStmt, [element(:resp, resp), element(:persName, editor.person_name) | org])
   end
 
   defp build_extent(play) do
