@@ -8,7 +8,9 @@ defmodule Playcode.Catalogue.Play do
 
   Plays form families. An original has a nil `relationship_type`. A translation,
   adaptation or reworking (`traduccion`, `adaptacion`, `refundicion`) points at it
-  through `parent_play_id`.
+  through `parent_play_id`. A TEI file names the original by its `short_code/1`; while no
+  play has that code, `pending_original_code` holds it, and
+  `Catalogue.link_waiting_translations/0` links the two when the original arrives.
 
   `language` is the language the play is written in, from `<langUsage>` or the FileMaker
   index. It is not the TEI root's `xml:lang`, which is always "es".
@@ -58,6 +60,7 @@ defmodule Playcode.Catalogue.Play do
     field :authority, :string
     field :parent_play_id, :binary_id
     field :relationship_type, :string
+    field :pending_original_code, :string
     field :edition_title, :string
     field :is_complete, :boolean, default: false
     field :historical_time, :string
@@ -131,6 +134,15 @@ defmodule Playcode.Catalogue.Play do
   def form(%__MODULE__{form: form}) when is_binary(form), do: form
   def form(%__MODULE__{is_verse: true}), do: "verse"
   def form(%__MODULE__{}), do: "prose"
+
+  @doc """
+  The part of a code before its first `_`: `EMOTHE0530` of
+  `EMOTHE0530_LesAmoursTragiquesDePyrameEtThisbe`. It is what names a play for FileMaker
+  and across versions of its file, whose readable tail may change, so a TEI file names a
+  play's original by it.
+  """
+  def short_code(nil), do: nil
+  def short_code(code), do: code |> String.split("_", parts: 2) |> hd()
 
   @doc "The composition years as printed: `1614`, `1600–1601`, or nil with none."
   def composition_years(%{composition_date_from: nil}), do: nil

@@ -245,6 +245,7 @@ defmodule Playcode.Import.TeiParser do
       editorial_declaration: editorial_decl,
       edition_title: safe_text(edition_title_el),
       relationship_type: relationship_type,
+      pending_original_code: original_code(file_desc),
       language: language || "es",
       composition_date_from: composition_from,
       composition_date_to: composition_to,
@@ -355,6 +356,25 @@ defmodule Playcode.Import.TeiParser do
       Enum.find(idnos, fn {_, attrs, _} -> attr_value(attrs, "type") == "EMOTHE" end)
 
     if emothe_idno, do: text_content(emothe_idno), else: nil
+  end
+
+  # <notesStmt><relatedItem type="original" target="EMOTHE0530"/>: the play this one
+  # translates, by its short code. The import waits for it
+  # (Catalogue.link_waiting_translations/0).
+  defp original_code(nil), do: nil
+
+  defp original_code({_name, _attrs, children}) do
+    with {_, _, notes} <- find_child(children, "notesStmt"),
+         {_, attrs, _} <-
+           notes
+           |> find_children("relatedItem")
+           |> Enum.find(&(attr_value(elem(&1, 1), "type") == "original")),
+         target when is_binary(target) <- attr_value(attrs, "target"),
+         code when code != "" <- target |> String.trim() |> Play.short_code() do
+      code
+    else
+      _ -> nil
+    end
   end
 
   defp extract_verse_count({_name, _attrs, _children} = extent) do

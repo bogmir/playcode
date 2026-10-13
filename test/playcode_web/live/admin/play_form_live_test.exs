@@ -5,6 +5,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
   import Phoenix.LiveViewTest
   import Playcode.TestFixtures
+  import Playcode.ImportHelpers, only: [import_tei!: 1, tei: 1]
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
@@ -26,6 +27,43 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     created = Catalogue.get_play_by_code!(code)
     assert created.author_name == "Behavior Author"
     assert_redirect(view, ~p"/admin/plays/#{created.id}")
+  end
+
+  # A TEI file names a translation's original by its short code; a play imported before
+  # its original waits for it, and the original may well be typed in by hand.
+  defp waiting_translation(original_code) do
+    import_tei!(
+      tei(
+        title_stmt: ~s(<title type="traduccion">Los amores</title>),
+        file_desc:
+          ~s(<notesStmt><relatedItem type="original" target="#{original_code}"/></notesStmt>)
+      )
+    )
+  end
+
+  test "a new play is the original a waiting translation named", %{conn: conn} do
+    n = System.unique_integer([:positive])
+    translation = waiting_translation("FO#{n}")
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+    save(view, %{"title" => "Pyrame", "code" => "FO#{n}_Pyrame"})
+
+    original = Catalogue.get_play_by_code!("FO#{n}_Pyrame")
+    assert Catalogue.get_play!(translation.id).parent_play_id == original.id
+  end
+
+  test "an original picked by hand stays when the one the file named arrives",
+       %{conn: conn} do
+    n = System.unique_integer([:positive])
+    translation = waiting_translation("FO#{n}")
+    chosen = play_fixture(%{"title" => "Chosen"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{translation.id}/edit")
+
+    render_click(view, "pick_parent", %{"id" => chosen.id, "label" => chosen.title})
+    save(view, %{"title" => translation.title})
+    import_tei!(tei(code: "FO#{n}_Pyrame"))
+
+    assert Catalogue.get_play!(translation.id).parent_play_id == chosen.id
   end
 
   test "a play without a title is not saved, and the form says why", %{conn: conn} do

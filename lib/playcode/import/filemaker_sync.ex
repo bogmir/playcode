@@ -43,9 +43,6 @@ defmodule Playcode.Import.FilemakerSync do
   # The columns of a dating the index carries but the version record does not.
   @index_curated [:composition_date_from, :composition_date_to, :composition_date_note]
 
-  @doc "The FileMaker code hiding at the front of a play code."
-  def base_code(code), do: code |> String.split("_") |> List.first()
-
   @doc "Every play not archived, for `plan/2`. An archived play is not synced."
   def all_plays do
     Play |> where([p], is_nil(p.deleted_at)) |> order_by([p], p.code) |> Repo.all()
@@ -53,12 +50,12 @@ defmodule Playcode.Import.FilemakerSync do
 
   @doc "Diffs the export against the given plays. Writes nothing."
   def plan(index, plays, versions \\ %{}) do
-    by_code = Map.new(plays, &{base_code(&1.code), &1})
+    by_code = Map.new(plays, &{Play.short_code(&1.code), &1})
     empty = %{changes: [], unchanged: [], missing: [], conflicts: [], skipped: []}
 
     plays
     |> Enum.reduce(empty, fn play, acc ->
-      code = base_code(play.code)
+      code = Play.short_code(play.code)
       indexed = Map.get(index, code, %{})
 
       # The two sources are independent. A play absent from the published index is

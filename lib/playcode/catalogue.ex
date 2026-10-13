@@ -104,12 +104,14 @@ defmodule Playcode.Catalogue do
 
   @doc """
   Creates a play from every metadata column `Play.changeset/2` casts. The TEI importer
-  uses it; the admin form uses `create_play_from_form/1`.
+  uses it, with `base` carrying the `pending_original_code` its file named; the admin form
+  uses `create_play_from_form/1`.
   """
-  def create_play(attrs \\ %{}) do
-    %Play{}
+  def create_play(attrs \\ %{}, %Play{} = base \\ %Play{}) do
+    base
     |> Play.changeset(attrs)
     |> Repo.insert()
+    |> link_waiting_translations()
   end
 
   @doc """
@@ -120,6 +122,70 @@ defmodule Playcode.Catalogue do
     play
     |> Play.changeset(attrs)
     |> Repo.update()
+    |> link_waiting_translations()
+  end
+
+  @doc """
+  Links every play waiting for its original (`pending_original_code`) to the one play
+  whose `Play.short_code/1` that is, archived or not, and ends the wait of a play that
+  has an original already, set by hand or by FileMaker. A code no play has, or two plays
+  share, is left waiting: Playcode does not guess. Returns the ids of the plays it wrote.
+
+  Every write of a play runs it, so whichever of a translation and its original arrives
+  first, the second links them; it looks at every waiting play, not only the one written,
+  so a link a write missed is made by the next. A writer in a transaction of its own (the
+  TEI import) runs it again once that has committed, for an import running beside it.
+
+  With a write's result, `{:ok, play}`, it returns the play as stored.
+  """
+  def link_waiting_translations do
+    case Repo.all(from p in Play, where: not is_nil(p.pending_original_code)) do
+      [] ->
+        []
+
+      waiting ->
+        by_short_code =
+          from(p in Play, select: {p.id, p.code})
+          |> Repo.all()
+          |> Enum.group_by(fn {_id, code} -> Play.short_code(code) end, &elem(&1, 0))
+
+        Enum.flat_map(waiting, fn play ->
+          case original_link(play, by_short_code[play.pending_original_code]) do
+            nil ->
+              []
+
+            change ->
+              play |> Ecto.Changeset.change(change) |> Repo.update!()
+              [play.id]
+          end
+        end)
+    end
+  end
+
+  def link_waiting_translations({:ok, %Play{} = play}) do
+    {:ok, if(play.id in link_waiting_translations(), do: Repo.reload!(play), else: play)}
+  end
+
+  def link_waiting_translations(error), do: error
+
+  # Fill-only: an original already set wins over the one the file named.
+  defp original_link(%Play{parent_play_id: id}, _candidates) when not is_nil(id),
+    do: %{pending_original_code: nil}
+
+  defp original_link(%Play{id: id}, [original_id]) when original_id != id,
+    do: %{parent_play_id: original_id, pending_original_code: nil}
+
+  defp original_link(_play, _candidates), do: nil
+
+  @doc """
+  The short code of the play `play` translates, adapts or reworks: its original's, or the
+  one its TEI file named while that has not arrived. Archived and draft originals count:
+  the TEI file names the original whoever reads it.
+  """
+  def original_code(%Play{parent_play_id: nil} = play), do: play.pending_original_code
+
+  def original_code(%Play{parent_play_id: id}) do
+    Play |> where(id: ^id) |> select([p], p.code) |> Repo.one() |> Play.short_code()
   end
 
   @doc """
@@ -177,6 +243,7 @@ defmodule Playcode.Catalogue do
     %Play{}
     |> Play.form_changeset(attrs)
     |> Repo.insert()
+    |> link_waiting_translations()
   end
 
   @doc """
@@ -186,6 +253,7 @@ defmodule Playcode.Catalogue do
     play
     |> Play.form_changeset(attrs)
     |> Repo.update()
+    |> link_waiting_translations()
   end
 
   @doc """

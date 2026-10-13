@@ -49,7 +49,9 @@ defmodule Playcode.Import.TeiImport do
 
     case TeiParser.parse_file(path) do
       {:ok, tei} ->
-        Repo.transaction(fn -> write(tei) end)
+        fn -> write(tei) end
+        |> Repo.transaction()
+        |> Catalogue.link_waiting_translations()
 
       {:error, reason} ->
         Logger.error("Import failed for #{path}: #{inspect(reason)}")
@@ -187,7 +189,11 @@ defmodule Playcode.Import.TeiImport do
   # alone. Rows created anywhere else default to "manual".
   defp tei_row(attrs, play), do: Map.merge(attrs, %{play_id: play.id, origin: "tei"})
 
+  # The original the file names waits on a first import only, like the link itself
+  # (`parent_play_id` is platform-owned).
   defp write_play(attrs) do
+    {original_code, attrs} = Map.pop(attrs, :pending_original_code)
+
     case Repo.get_by(Play, code: attrs.code) do
       %Play{} = existing_play ->
         reset_tei_content(existing_play)
@@ -203,7 +209,7 @@ defmodule Playcode.Import.TeiImport do
         end
 
       nil ->
-        case Catalogue.create_play(attrs) do
+        case Catalogue.create_play(attrs, %Play{pending_original_code: original_code}) do
           {:ok, play} -> play
           {:error, changeset} -> Repo.rollback(changeset)
         end

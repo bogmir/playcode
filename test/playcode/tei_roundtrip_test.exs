@@ -253,6 +253,89 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # A file says a play is a translation (<title type="traduccion">) but, before this, not of
+  # which play. It names the original by its short code, the part of its code before the
+  # first "_" (EMOTHE0530 of EMOTHE0530_LesAmoursTragiques…), and the import links the two
+  # whichever arrives first.
+  describe "the play a translation translates" do
+    alias Playcode.Catalogue
+
+    defp translation(code, original_code) do
+      tei(
+        code: code,
+        title_stmt: ~s(<title type="traduccion">Los amores trágicos</title>),
+        file_desc:
+          ~s(<notesStmt><relatedItem type="original" target="#{original_code}"/></notesStmt>)
+      )
+    end
+
+    defp original_of(play), do: Catalogue.get_play!(play.id).parent_play_id
+
+    test "is named by its short code, and links a play imported after the original" do
+      n = System.unique_integer([:positive])
+      original = import_tei!(tei(code: "OR#{n}_Pyrame"))
+      play = import_tei!(tei(code: "TR#{n}", title_stmt: ~s(<title type="traduccion">X</title>)))
+
+      # as the FileMaker sync links them
+      {:ok, _} = Catalogue.update_play(play, %{parent_play_id: original.id})
+
+      xml = export_tei(play)
+
+      assert xml_elements(xml, "relatedItem", within: "notesStmt") == [
+               {%{"type" => "original", "target" => "OR#{n}"}, ""}
+             ]
+
+      copy = import_tei!(String.replace(xml, "TR#{n}", "TC#{n}"))
+      assert original_of(copy) == original.id
+    end
+
+    test "imported before its original, waits for it, and is linked when it arrives" do
+      n = System.unique_integer([:positive])
+      play = import_tei!(translation("TR#{n}", "OR#{n}"))
+
+      assert original_of(play) == nil
+
+      assert xml_elements(export_tei(play), "relatedItem") == [
+               {%{"type" => "original", "target" => "OR#{n}"}, ""}
+             ]
+
+      original = import_tei!(tei(code: "OR#{n}_Pyrame"))
+      assert original_of(play) == original.id
+    end
+
+    test "is not guessed when two plays share the short code" do
+      n = System.unique_integer([:positive])
+      import_tei!(tei(code: "DU#{n}_Uno"))
+      import_tei!(tei(code: "DU#{n}_Dos"))
+
+      play = import_tei!(translation("TR#{n}", "DU#{n}"))
+
+      assert original_of(play) == nil
+
+      assert xml_elements(export_tei(play), "relatedItem") == [
+               {%{"type" => "original", "target" => "DU#{n}"}, ""}
+             ]
+    end
+
+    test "a re-import leaves the link alone" do
+      n = System.unique_integer([:positive])
+      original = import_tei!(tei(code: "OR#{n}"))
+      other = import_tei!(tei(code: "OT#{n}"))
+      play = import_tei!(translation("TR#{n}", "OR#{n}"))
+
+      import_tei!(translation("TR#{n}", "OT#{n}"))
+
+      assert original_of(play) == original.id
+      refute original_of(play) == other.id
+    end
+
+    test "an original never imported leaves the play with none" do
+      play = import_tei!(translation("TR#{System.unique_integer([:positive])}", "NOPE"))
+
+      assert original_of(play) == nil
+    end
+  end
+
   describe "the composition date" do
     defp creation(date), do: tei(profile_desc: "<creation>#{date}</creation>")
 

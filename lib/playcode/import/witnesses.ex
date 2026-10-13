@@ -14,7 +14,8 @@ defmodule Playcode.Import.Witnesses do
   import Ecto.Query
 
   alias Playcode.ActivityLog
-  alias Playcode.Import.{FilemakerSync, FilemakerXml}
+  alias Playcode.Catalogue.Play
+  alias Playcode.Import.FilemakerXml
   alias Playcode.Repo
   alias Playcode.Witnesses
   alias Playcode.Witnesses.Witness
@@ -93,7 +94,7 @@ defmodule Playcode.Import.Witnesses do
     attributions = attributions(data)
 
     context = %{
-      by_code: Enum.group_by(plays, &FilemakerSync.base_code(&1.code)),
+      by_code: Enum.group_by(plays, &Play.short_code(&1.code)),
       imported: imported_play_ids(),
       sigla: existing_sigla()
     }

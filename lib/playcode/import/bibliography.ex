@@ -17,7 +17,8 @@ defmodule Playcode.Import.Bibliography do
 
   alias Playcode.ActivityLog
   alias Playcode.Bibliography.{Entry, Link}
-  alias Playcode.Import.{FilemakerSync, FilemakerXml}
+  alias Playcode.Catalogue.Play
+  alias Playcode.Import.FilemakerXml
   alias Playcode.Repo
 
   @default_dir "doc/ctce_dades"
@@ -88,7 +89,7 @@ defmodule Playcode.Import.Bibliography do
     lookups = lookups(data)
 
     context = %{
-      by_code: Enum.group_by(plays, &FilemakerSync.base_code(&1.code)),
+      by_code: Enum.group_by(plays, &Play.short_code(&1.code)),
       imported: imported_play_ids(),
       linked: linked_refs()
     }
