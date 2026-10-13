@@ -82,6 +82,8 @@ defmodule Playcode.Bibliography.Entry do
     "collection" => "coleccion"
   }
 
+  @described @fields -- [:note]
+
   def kinds, do: @kinds
   def pub_types, do: @pub_types
   def languages, do: @languages
@@ -89,8 +91,28 @@ defmodule Playcode.Bibliography.Entry do
   @doc "The `listBibl/@type` of a kind's references in a TEI file."
   def tei_list(kind), do: @tei_lists[kind]
 
+  @doc "The kind a `listBibl/@type` names; nil for one not here."
+  def kind_from_tei_list(type),
+    do: Enum.find_value(@tei_lists, &(elem(&1, 1) == type && elem(&1, 0)))
+
   @doc "The `biblStruct/@type` of a publication type in a TEI file; nil for none."
   def tei_type(pub_type), do: @tei_types[pub_type]
+
+  @doc "The publication type a `biblStruct/@type` names; nil for one not here."
+  def pub_type_from_tei(type),
+    do: Enum.find_value(@tei_types, &(elem(&1, 1) == type && elem(&1, 0)))
+
+  @doc """
+  The URL a TEI file gives, as a `ptr`: the address trimmed, or nil when it is not an
+  http(s) address. ponytail: FileMaker's strays (". http://…") stay in the database for
+  curators to clean.
+  """
+  def tei_url(nil), do: nil
+
+  def tei_url(url) do
+    url = String.trim(url)
+    if url =~ ~r{\Ahttps?://\S+\z}i, do: url
+  end
 
   schema "bibliography_entries" do
     field :kind, :string
@@ -148,4 +170,25 @@ defmodule Playcode.Bibliography.Entry do
   end
 
   defp present?(value), do: is_binary(value) and String.trim(value) != ""
+
+  @doc """
+  The reference as a TEI file carries it: every public field, whitespace collapsed, blank
+  as nil, the URL only as `tei_url/1` gives it. It is all a file says of a reference, so it
+  is what a file's reference is matched on; researchers' `note` never leaves Playcode and
+  is not in it.
+  """
+  def description(%__MODULE__{} = entry) do
+    @described
+    |> Map.new(&{&1, entry |> Map.fetch!(&1) |> collapse()})
+    |> Map.update!(:url, &tei_url/1)
+  end
+
+  defp collapse(nil), do: nil
+
+  defp collapse(text) do
+    case text |> String.replace(~r/\s+/u, " ") |> String.trim() do
+      "" -> nil
+      text -> text
+    end
+  end
 end

@@ -62,10 +62,10 @@ note, URL. Not folded for case or accents: "identical" means a correction is a d
 description.
 
 The comparison is between descriptions as the file carries them, so a field the export does not
-write faithfully cannot make a false difference: `Bibliography.description/1` gives an entry's
+write faithfully cannot make a false difference: `Bibliography.Entry.description/1` gives an entry's
 description in the file's terms (the URL only when it is an `http(s)` address, as `build_bibl_struct`
 writes it; `volumes_total` as its number), and the parser gives the file's in the same terms. A test
-holds them together: for every publication type, `description(entry)` equals what the parser reads
+holds them together: for every publication type, `Entry.description(entry)` equals what the parser reads
 from the export of that entry.
 
 Where to look, in order:

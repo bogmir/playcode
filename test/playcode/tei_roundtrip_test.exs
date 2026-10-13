@@ -10,7 +10,7 @@ defmodule Playcode.TeiRoundtripTest do
   use Playcode.DataCase, async: true
 
   import Playcode.ImportHelpers
-  import Playcode.TestFixtures, only: [bibliography_fixture: 2]
+  import Playcode.TestFixtures, only: [bibliography_fixture: 2, bibliography_fixture: 3]
 
   @rich_header [
     title: "Ricardo III",
@@ -1186,6 +1186,79 @@ defmodule Playcode.TeiRoundtripTest do
 
   # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
   # re-importing that copy made a second editor: one more per round trip.
+  # A reference is matched on its description as the file carries it
+  # (Bibliography.Entry.description/1), so what the parser reads back from an entry's
+  # biblStruct must be exactly that description, with the play's own place in it.
+  describe "the bibliography" do
+    alias Playcode.Bibliography
+    alias Playcode.Bibliography.Entry
+    alias Playcode.Import.TeiParser
+
+    @every_field %{
+      "language" => "es",
+      "analytic_author" => "Autor, A",
+      "analytic_title" => "Capítulo <<en cursiva>>",
+      "analytic_editors" => "Editor, Analítico",
+      "analytic_translators" => "Traductor, Analítico",
+      "monogr_author" => "Autor, M",
+      "monogr_editors" => "Editor, E",
+      "monogr_translators" => "Traductor, T",
+      "original_title" => "Original",
+      "edition" => "2nd",
+      "volume" => "2",
+      "volumes_total" => "4",
+      "issue" => "3",
+      "pages" => "1-20",
+      "pub_place" => "Madrid",
+      "publisher" => "Cátedra  Letras",
+      "year_text" => "1957-75",
+      "url" => "https://example.org",
+      "url_accessed_on" => "2020-01-01",
+      "series" => "Serie",
+      "public_note" => "Nota impresa",
+      "note" => "Solo para investigadores"
+    }
+
+    test "the parser reads back each reference's description and the play's place in it" do
+      play = import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}"))
+
+      for {type, i} <- Enum.with_index(Entry.pub_types()) do
+        bibliography_fixture(
+          play,
+          Map.merge(@every_field, %{
+            "kind" => Enum.at(Entry.kinds(), rem(i, 4)),
+            "pub_type" => type,
+            "monogr_title" => "Libro #{i}",
+            "siglum" => "S#{i}"
+          }),
+          %{"volume" => "#{i + 1}", "pages" => "#{i}-#{i + 9}"}
+        )
+      end
+
+      # No type, and a URL that is no address: the export leaves it out.
+      bibliography_fixture(play, %{
+        "kind" => "adaptation",
+        "pub_type" => nil,
+        "monogr_title" => "Solo un título",
+        "url" => ". http://emothe.uv.es/x.php"
+      })
+
+      {:ok, tei} = TeiParser.parse_file(write_tmp!(export_tei(play)))
+
+      expected =
+        for link <- Bibliography.list_links(play.id),
+            do: %{
+              description: Entry.description(link.entry),
+              volume: link.volume,
+              pages: link.pages
+            }
+
+      assert length(tei.bibliography) == 11
+      assert Enum.sort(tei.bibliography) == Enum.sort(expected)
+      refute Enum.any?(tei.bibliography, &Map.has_key?(&1.description, :note))
+    end
+  end
+
   describe "witnesses" do
     @list_wit """
     <listWit>

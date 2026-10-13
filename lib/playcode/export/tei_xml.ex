@@ -627,11 +627,7 @@ defmodule Playcode.Export.TeiXml do
           do: element(:series, [element(:title, %{level: "s"}, build_inline_content(e.series))])
         ),
         if(filled?(e.public_note), do: element(:note, build_inline_content(e.public_note))),
-        # ponytail: only an http(s) address is a valid target; the FileMaker strays
-        # (". http://…") stay in the database for curators to clean.
-        if(filled?(e.url) and String.trim(e.url) =~ ~r{\Ahttps?://\S+\z}i,
-          do: element(:ptr, %{target: String.trim(e.url)})
-        ),
+        ptr(Entry.tei_url(e.url)),
         # Where this play sits in the edition, apart from the edition's own volume and pages.
         cited_range("volume", link.volume),
         cited_range("page", link.pages)
@@ -718,6 +714,9 @@ defmodule Playcode.Export.TeiXml do
 
   defp bibl_scope(unit, value),
     do: if(filled?(value), do: element(:biblScope, %{unit: unit}, value))
+
+  defp ptr(nil), do: nil
+  defp ptr(url), do: element(:ptr, %{target: url})
 
   defp cited_range(unit, value),
     do: if(filled?(value), do: element(:citedRange, %{unit: unit}, value))

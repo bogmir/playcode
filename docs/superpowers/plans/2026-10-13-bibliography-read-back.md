@@ -4,7 +4,7 @@
 
 **Goal:** A play imported from a TEI file gets its bibliography back from `<back>`: shared references recognised by their description, the play's own volume and pages on its link, nothing in Playcode changed or removed, and new references added on every import.
 
-**Architecture:** The file stays a plain bibliographic description (no FileMaker or Playcode identifier). `Bibliography.Entry` holds the TEI type tables both directions use; `Bibliography.description/1` gives an entry in the file's terms, which is what a reference is matched on. The parser reads `biblStruct`s into descriptions; `TeiImport` matches or creates entries and links them, after the text, on every import; `preview_import/1` reports what it would add.
+**Architecture:** The file stays a plain bibliographic description (no FileMaker or Playcode identifier). `Bibliography.Entry` holds the TEI type tables both directions use; `Bibliography.Entry.description/1` gives an entry in the file's terms, which is what a reference is matched on. The parser reads `biblStruct`s into descriptions; `TeiImport` matches or creates entries and links them, after the text, on every import; `preview_import/1` reports what it would add.
 
 **Spec:** `docs/superpowers/specs/2026-10-13-bibliography-read-back-design.md` (read it first).
 
@@ -22,8 +22,8 @@
 
 | File | Change |
 |---|---|
-| `lib/playcode/bibliography/entry.ex` | the TEI type tables (`@list_types`, `@bibl_types` from `TeiXml`), both directions |
-| `lib/playcode/bibliography.ex` | `description/1`; `find_identical/2` |
+| `lib/playcode/bibliography/entry.ex` | the TEI type tables (`@list_types`, `@bibl_types` from `TeiXml`), both directions; `description/1`; `tei_url/1` |
+| `lib/playcode/bibliography.ex` | `find_identical/2` |
 | `lib/playcode/bibliography/link.ex` | moduledoc: `origin` may be `"tei"` |
 | `lib/playcode/export/tei_xml.ex` | the tables from `Entry`; the link's volume and pages as `citedRange` |
 | `lib/playcode/import/tei_parser.ex` | `back` → `bibliography: [%{description, volume, pages}]` |
@@ -47,19 +47,21 @@ Pure refactor; the export's output does not change.
 - [x] Schema: the bibliography test in `tei_validator_test.exs` links a modern edition with its own volume and pages, and now asserts its `citedRange`; run with `--include slow`.
 - [x] Commit: `feat(tei): a play's own volume and pages in an edition are a citedRange`. Only files with such a link change: 136 links on 43 plays in dev.
 
-### Task 3: `Bibliography.description/1`
+### Task 3: `Bibliography.Entry.description/1`
 
-- [ ] Test (in `tei_roundtrip_test.exs`, describe "the bibliography"): for an entry of every publication type, with every field filled, a URL with a stray ". " and a `volumes_total`, `description(entry)` equals what Task 4's reader gives for that entry's `biblStruct`. Write it now against a stub reader; it fails.
-- [ ] `description/1`: the public fields as the file carries them, each whitespace-collapsed, nil for blank; `url` only when `build_bibl_struct/1` would write it (share that predicate); `volumes_total` as written in "N vols.". Researchers' `note` is not part of it.
-- [ ] Commit with Task 4.
+In `Entry`, not the `Bibliography` context: it is pure, and the parser builds an `%Entry{}` from the file and passes it through the same function, so "the file's terms" is defined once.
+
+- [x] Test (in `tei_roundtrip_test.exs`, describe "the bibliography"): for an entry of every publication type, with every field filled, a double space, a URL with a stray ". " and a `volumes_total`, `description(entry)` and the link's volume and pages equal what the reader gives for the exported file. Failed first (no `description/1`); a reader that drops `issue`, or a description that does not collapse whitespace, turns it red.
+- [x] `description/1`: the public fields, each whitespace-collapsed, nil for blank; `url` through `Entry.tei_url/1`, the predicate the export now shares. Researchers' `note` is not part of it.
+- [x] Committed with Task 4.
 
 ### Task 4: Reading `<back>`
 
-- [ ] Parser test (purity): a play with a `back/div[@type="bibliografia"]` reads without the database; add every new app call to `@pure_helpers`.
-- [ ] `Entry.kind_from_tei_list/1` and `Entry.pub_type_from_tei/1`, the reverse of Task 1's lookups, on `@pure_helpers`.
-- [ ] `TeiParser` gives `bibliography: [%{description: map, volume: _, pages: _}]` from every `listBibl/biblStruct` under a `div[@type="bibliografia"]` in `back`; `kind` from the `listBibl`, the rest from the `biblStruct`. A `div` holding `p` or `bibl` (the seven prose bibliographies) gives nothing: test with EMOTHE0310's shape.
-- [ ] Task 3's test goes green.
-- [ ] Commit: `feat(tei): the parser reads the bibliography`
+- [x] Parser purity: `Entry.description/1`, `kind_from_tei_list/1` and `pub_type_from_tei/1` on `@pure_helpers`; the test reading a prose bibliography runs with no database.
+- [x] `Entry.kind_from_tei_list/1` and `Entry.pub_type_from_tei/1`, the reverse of Task 1's lookups.
+- [x] `TeiParser` gives `bibliography: [%{description: map, volume: _, pages: _}]` from every `listBibl/biblStruct` under a `div[@type="bibliografia"]` in `back`; `kind` from the `listBibl`, the rest from the `biblStruct`. A `div` holding `p` (the seven prose bibliographies) gives nothing: tested with EMOTHE0310's shape. `tei/1` in `import_helpers.ex` gains a `:back` option.
+- [x] Task 3's test goes green.
+- [x] Commit: `feat(tei): the parser reads the bibliography`
 
 ### Task 5: Importing it
 

@@ -15,17 +15,20 @@ defmodule Playcode.Import.TeiParser do
         settings: [%{slug, role, position, note}],
         characters: [%{xml_id, name, description, is_hidden, position}],
         editorial_notes: [%{section_type, heading, content, position}],
-        divisions: [%{type, number, title, position, notes, elements, divisions}]
+        divisions: [%{type, number, title, position, notes, elements, divisions}],
+        bibliography: [%{description, volume, pages}]
       }
 
   An element is `%{type, position, notes, elements}` plus its columns, and a speech's
-  `who` the xml_ids it names. A note is `%{offset, n, type, term, body}`. Nothing here
+  `who` the xml_ids it names. A reference of the bibliography is its
+  `Bibliography.Entry.description/1` and where the play sits in it. A note is `%{offset, n, type, term, body}`. Nothing here
   knows a row: ids, `play_id` and `origin` are the writer's.
 
   Handles UTF-16 encoded files (common in the EMOTHE corpus) by converting them to UTF-8
   before parsing with Saxy.
   """
 
+  alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
   alias Playcode.Places
   alias Playcode.Witnesses
@@ -669,8 +672,11 @@ defmodule Playcode.Import.TeiParser do
   end
 
   # The first `name` child whose @type is `type` (nil: no @type).
-  defp typed(children, name, type),
-    do: children |> find_children(name) |> Enum.find(&(attr_value(elem(&1, 1), "type") == type))
+  defp typed(children, name, type), do: with_attr(children, name, "type", type)
+
+  # The first `name` child whose `attr` is `value` (nil: no such attribute).
+  defp with_attr(children, name, attr, value),
+    do: children |> find_children(name) |> Enum.find(&(attr_value(elem(&1, 1), attr) == value))
 
   # --- Places ---
 
@@ -838,7 +844,7 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Text (front, body) ---
 
-  defp text(nil), do: %{characters: [], editorial_notes: [], divisions: []}
+  defp text(nil), do: %{characters: [], editorial_notes: [], divisions: [], bibliography: []}
 
   defp text({_name, _attrs, children}) do
     front = front(find_child(children, "front"))
@@ -847,9 +853,77 @@ defmodule Playcode.Import.TeiParser do
     %{
       characters: front.characters,
       editorial_notes: front.editorial_notes,
-      divisions: front.divisions ++ body
+      divisions: front.divisions ++ body,
+      bibliography: bibliography(find_child(children, "back"))
     }
   end
+
+  # --- Back: the bibliography ---
+
+  # Every biblStruct of a bibliography's listBibls, read into the entry it describes, as
+  # Entry.description/1 gives it, with where the play sits in it (its citedRanges). A
+  # bibliography in prose, as seven source files give theirs, has no listBibl: nothing.
+  defp bibliography(nil), do: []
+
+  defp bibliography({_name, _attrs, children}) do
+    for {"div", attrs, parts} <- children,
+        attr_value(attrs, "type") == "bibliografia",
+        {"listBibl", list_attrs, structs} <- parts,
+        {"biblStruct", _, _} = struct <- structs do
+      reference(struct, Entry.kind_from_tei_list(attr_value(list_attrs, "type")))
+    end
+  end
+
+  defp reference({_name, attrs, children}, kind) do
+    analytic = children_of(find_child(children, "analytic"))
+    monogr = children_of(find_child(children, "monogr"))
+    imprint = children_of(find_child(monogr, "imprint"))
+    series = children_of(find_child(children, "series"))
+
+    entry = %Entry{
+      kind: kind,
+      pub_type: Entry.pub_type_from_tei(attr_value(attrs, "type")),
+      language: attr_value(attrs, "xml:lang"),
+      analytic_author: safe_text(find_child(analytic, "author")),
+      analytic_title: analytic |> typed("title", nil) |> safe_text(),
+      analytic_editors: analytic |> with_attr("editor", "role", nil) |> safe_text(),
+      analytic_translators: analytic |> with_attr("editor", "role", "translator") |> safe_text(),
+      monogr_author: safe_text(find_child(monogr, "author")),
+      monogr_title: monogr |> typed("title", nil) |> safe_text(),
+      monogr_editors: monogr |> with_attr("editor", "role", nil) |> safe_text(),
+      monogr_translators: monogr |> with_attr("editor", "role", "translator") |> safe_text(),
+      original_title: monogr |> typed("title", "original") |> safe_text(),
+      siglum: monogr |> typed("idno", "siglum") |> safe_text(),
+      edition: safe_text(find_child(monogr, "edition")),
+      volumes_total: monogr |> find_child("extent") |> safe_text() |> volumes(),
+      volume: monogr |> with_attr("biblScope", "unit", "volume") |> safe_text(),
+      issue: monogr |> with_attr("biblScope", "unit", "issue") |> safe_text(),
+      pages: monogr |> with_attr("biblScope", "unit", "page") |> safe_text(),
+      pub_place: safe_text(find_child(imprint, "pubPlace")),
+      publisher: safe_text(find_child(imprint, "publisher")),
+      year_text: imprint |> typed("date", nil) |> safe_text(),
+      url_accessed_on: imprint |> typed("date", "access") |> safe_text(),
+      series: safe_text(find_child(series, "title")),
+      public_note: safe_text(find_child(children, "note")),
+      url: children |> find_child("ptr") |> attrs_of() |> attr_value("target")
+    }
+
+    %{
+      description: Entry.description(entry),
+      volume: children |> with_attr("citedRange", "unit", "volume") |> safe_text(),
+      pages: children |> with_attr("citedRange", "unit", "page") |> safe_text()
+    }
+  end
+
+  # The export writes a total of volumes as "6 vols.".
+  defp volumes(nil), do: nil
+  defp volumes(text), do: String.replace_suffix(text, " vols.", "")
+
+  defp children_of({_name, _attrs, children}), do: children
+  defp children_of(nil), do: []
+
+  defp attrs_of({_name, attrs, _children}), do: attrs
+  defp attrs_of(nil), do: []
 
   # --- Front matter ---
 

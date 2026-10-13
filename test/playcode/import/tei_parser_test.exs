@@ -15,6 +15,9 @@ defmodule Playcode.Import.TeiParserTest do
   # The app functions the reader may call: none of them reads a row. A new one is a
   # decision, made here.
   @pure_helpers [
+    {Playcode.Bibliography.Entry, :description, 1},
+    {Playcode.Bibliography.Entry, :kind_from_tei_list, 1},
+    {Playcode.Bibliography.Entry, :pub_type_from_tei, 1},
     {Playcode.Catalogue.Play, :composition_year_range, 0},
     {Playcode.Catalogue.Play, :historical_times, 0},
     {Playcode.Catalogue.Play, :short_code, 1},
@@ -67,5 +70,19 @@ defmodule Playcode.Import.TeiParserTest do
              line_number: 1,
              notes: [%{offset: 3, n: "1", body: "Glosa."}]
            } = line
+  end
+
+  # Seven source files (EMOTHE0310, 0451, 0488…) give their bibliography as prose: those
+  # paragraphs must not become references.
+  test "a bibliography in prose gives no references" do
+    xml =
+      tei(
+        code: "PROSE01",
+        back:
+          ~s(<div type="bibliografia"><p><emph>Autoridades</emph>: Real Academia Española. ) <>
+            ~s(<emph>Diccionario de Autoridades</emph>. Madrid: Gredos, 1963.</p></div>)
+      )
+
+    assert {:ok, %{bibliography: []}} = TeiParser.parse_file(write_tmp!(xml))
   end
 end
