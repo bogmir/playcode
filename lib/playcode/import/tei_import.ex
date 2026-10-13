@@ -241,22 +241,19 @@ defmodule Playcode.Import.TeiImport do
   # after reset_tei_content/1 removed the file's own). So is a witness printing the same
   # line as one the play kept: most FileMaker witnesses have no siglum, and the play's own
   # export lists them. A witness with nothing to print fails its changeset and is left
-  # out too. One carrying its FileMaker record number is FileMaker's, as it was before
-  # the export, so a re-import keeps it like any FileMaker row.
+  # out too.
   defp write_witnesses([], _play), do: :ok
 
   defp write_witnesses(witnesses, play) do
     kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&Witnesses.plain/1)
 
     Enum.reduce(witnesses, Witnesses.taken_sigla(play.id), fn witness, taken ->
-      {filemaker_id, witness} = Map.pop(witness, :filemaker_id)
       attrs = tei_row(witness, play)
-      attrs = if filemaker_id, do: %{attrs | origin: "filemaker"}, else: attrs
 
       if attrs.siglum in taken or Witnesses.plain(struct(Witness, attrs)) in kept do
         taken
       else
-        _ = Witnesses.create_witness(attrs, %Witness{filemaker_id: filemaker_id})
+        _ = Witnesses.create_witness(attrs)
         if attrs.siglum, do: MapSet.put(taken, attrs.siglum), else: taken
       end
     end)

@@ -101,7 +101,10 @@ item in `docs/backlog.md`, *Round trip*, with the technical detail, or an except
 explains (a researcher's note never leaves Playcode: the file is published with the static site).
 **Whether a play is complete is the one curated column kept out of the file on purpose**: it is
 Playcode's switch for what visitors see, not part of the edition, so a play imported from a file
-arrives as a draft (decided 2026-10-13).
+arrives as a draft (decided 2026-10-13). **A TEI file names no FileMaker or Playcode identifier**:
+no record numbers, no database ids. The only identifiers it gives are play codes (a translation's
+original, `EMOTHE0530`) and the ones TEI defines (sigla, the text's `xml:id`s); a FileMaker number
+stays in the installation FileMaker was imported into (decided 2026-10-13).
 
 **Accessibility** is held by `test/playcode_web/accessibility_test.exs`, which renders
 every page, the content editor's tabs and the modal forms, and fails on an unnamed control,
@@ -218,7 +221,7 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 
 The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/fileDesc` -> play metadata, editors, sources
-- `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept; `bibl/idno[@type="filemaker"]` the FileMaker record, which makes the row FileMaker's (`origin: "filemaker"`); `<lb/>` a line break in a field
+- `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept; `<lb/>` a line break in a field
 - `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note; words with no year are a note alone); read on first import only, since the columns are `@platform_owned`
 - `teiHeader/profileDesc/settingDesc/setting/time` -> historical time (`@type` the period, the text its note), beside the place links in the same `setting`; first import only, like the dating
 - `teiHeader/fileDesc/notesStmt/relatedItem[@type="original"]/@target` -> the original's short code; a first import links the two whichever arrives first (`Catalogue.link_waiting_translations/0`), and never replaces an original already set

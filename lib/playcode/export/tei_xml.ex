@@ -346,7 +346,6 @@ defmodule Playcode.Export.TeiXml do
           ),
           if(filled?(w.format), do: inline_element(:extent, %{}, lines(w.format))),
           if(filled?(w.shelfmark), do: element(:idno, %{type: "shelfmark"}, w.shelfmark)),
-          if(w.filemaker_id, do: element(:idno, %{type: "filemaker"}, w.filemaker_id)),
           if(filled?(w.note),
             do: inline_element(:note, %{}, lines(w.note, &build_inline_content/1))
           )

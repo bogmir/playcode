@@ -1350,9 +1350,11 @@ defmodule Playcode.TeiRoundtripTest do
       assert listed.(roundtrip(first)) == listed.(first)
     end
 
-    # The record number ties a witness to the FileMaker record S3 brought it from: an
-    # installation restored from the files must still know which witnesses those are.
-    test "a FileMaker witness comes back with its record number, as FileMaker's" do
+    # This test used to assert the opposite: the export wrote the FileMaker record number
+    # as <idno type="filemaker"> and the import made the witness FileMaker's again. A TEI
+    # file names no FileMaker or Playcode identifier (decided 2026-10-13): the record
+    # number stays in the installation FileMaker was imported into.
+    test "a FileMaker witness's file names no FileMaker record, and comes back as the file's" do
       play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
 
       {:ok, _} =
@@ -1363,14 +1365,13 @@ defmodule Playcode.TeiRoundtripTest do
 
       xml = export_tei(play)
 
-      assert xml_elements(xml, "idno", within: "witness") == [
-               {%{"type" => "filemaker"}, "T03:36"}
-             ]
+      refute xml =~ "T03:36"
+      assert xml_elements(xml, "idno", within: "witness") == []
 
       copy =
         import_tei!(String.replace(xml, play.code, "WIT#{System.unique_integer([:positive])}"))
 
-      assert [%{filemaker_id: "T03:36", origin: "filemaker"}] =
+      assert [%{title: "Octava parte", filemaker_id: nil, origin: "tei"}] =
                Playcode.Witnesses.list_for_play(copy.id)
     end
 
