@@ -86,6 +86,16 @@ defmodule Playcode.Bibliography.Entry do
 
   @described @fields -- [:note]
 
+  # The fields that hold people, several in one field as FileMaker keeps them.
+  @people [
+    :analytic_author,
+    :monogr_author,
+    :analytic_editors,
+    :monogr_editors,
+    :analytic_translators,
+    :monogr_translators
+  ]
+
   # The fields the export writes through InlineMarkup, as italics.
   @inline [
     :analytic_author,
@@ -100,6 +110,12 @@ defmodule Playcode.Bibliography.Entry do
   def kinds, do: @kinds
   def pub_types, do: @pub_types
   def languages, do: @languages
+
+  @doc """
+  The people of a field, one each: FileMaker separates them with ";", written "; ", " ; "
+  or ";". A TEI file gives each an element, and a description joins them with "; ".
+  """
+  def people(field), do: String.split(field, ~r/\s*;\s*/, trim: true)
 
   @doc "The `listBibl/@type` of a kind's references in a TEI file."
   def tei_list(kind), do: @tei_lists[kind]
@@ -186,15 +202,17 @@ defmodule Playcode.Bibliography.Entry do
 
   @doc """
   The reference as a TEI file carries it: every public field, whitespace collapsed, blank
-  as nil, the URL only as `tei_url/1` gives it, and the italics as the export writes them
-  (`as_written/1`). It is all a file says of a reference, so it is what a file's reference
+  as nil, the URL only as `tei_url/1` gives it, the italics as the export writes them
+  (`as_written/1`), and the people of a field joined with "; " (`people/1`). It is all a file says of a reference, so it is what a file's reference
   is matched on; researchers' `note` never leaves Playcode and is not in it.
   """
   def description(%__MODULE__{} = entry) do
     @described
     |> Map.new(fn field ->
       value = Map.fetch!(entry, field)
-      {field, collapse(if field in @inline, do: as_written(value), else: value)}
+      value = if field in @inline, do: as_written(value), else: value
+      value = if field in @people and value, do: value |> people() |> Enum.join("; "), else: value
+      {field, collapse(value)}
     end)
     |> Map.update!(:url, &tei_url/1)
   end

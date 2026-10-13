@@ -1206,8 +1206,10 @@ defmodule Playcode.TeiRoundtripTest do
       "public_note" => "Véase <<Fenisa>>.",
       "analytic_translators" => "Traductor, Analítico",
       "monogr_author" => "Autor, M",
-      "monogr_editors" => "Editor, E",
-      "monogr_translators" => "Traductor, T",
+      # Several people in one field, as FileMaker keeps them, with the separators it uses:
+      # "; ", " ; " (9 fields in dev) and ";" (2).
+      "monogr_editors" => "Morris, Brian ; Gill, Roma",
+      "monogr_translators" => "Traductor, T;Otra, O",
       "edition" => "2nd",
       "volume" => "2",
       "volumes_total" => "4",
@@ -1306,6 +1308,40 @@ defmodule Playcode.TeiRoundtripTest do
 
       import_tei!(xml)
       assert length(Bibliography.list_links(play.id)) == 11
+    end
+
+    # FileMaker keeps several people in one field; TEI gives each person an element.
+    test "several people in one field are one element each, and one field again" do
+      play =
+        import_tei!(tei(code: "BIP#{System.unique_integer([:positive])}"))
+        |> bibliography_fixture(%{
+          "monogr_author" => "Uno, Ana; Dos, Berta",
+          "monogr_editors" => "Morris, Brian ; Gill, Roma",
+          "monogr_translators" => "Tres, C;Cuatro, D"
+        })
+        |> then(&Playcode.Catalogue.get_play!(&1.play_id))
+
+      xml = export_tei(play)
+
+      assert xml_texts(xml, "author", within: "monogr") == ["Uno, Ana", "Dos, Berta"]
+
+      assert xml_elements(xml, "editor", within: "monogr") == [
+               {%{}, "Morris, Brian"},
+               {%{}, "Gill, Roma"},
+               {%{"role" => "translator"}, "Tres, C"},
+               {%{"role" => "translator"}, "Cuatro, D"}
+             ]
+
+      # Rebuilt from the file: the original entry gone, so the copy's is read from it.
+      for link <- Bibliography.list_links(play.id), do: {:ok, _} = Bibliography.unlink(link)
+
+      copy =
+        import_tei!(String.replace(xml, play.code, "BIQ#{System.unique_integer([:positive])}"))
+
+      assert [%{entry: entry}] = Bibliography.list_links(copy.id)
+
+      assert {entry.monogr_author, entry.monogr_editors, entry.monogr_translators} ==
+               {"Uno, Ana; Dos, Berta", "Morris, Brian; Gill, Roma", "Tres, C; Cuatro, D"}
     end
 
     # Seven source files (EMOTHE0310, 0451, 0488…) give their bibliography as prose: those

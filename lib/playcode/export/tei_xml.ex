@@ -695,11 +695,17 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp bibl_people(author, editors, translators) do
-    [
-      if(filled?(author), do: inline_element(:author, %{}, build_inline_content(author))),
-      if(filled?(editors), do: element(:editor, editors)),
-      if(filled?(translators), do: element(:editor, %{role: "translator"}, translators))
-    ]
+    people(author, &inline_element(:author, %{}, build_inline_content(&1))) ++
+      people(editors, &element(:editor, &1)) ++
+      people(translators, &element(:editor, %{role: "translator"}, &1))
+  end
+
+  # One element per person: FileMaker keeps several in one field ("Morris, Brian; Gill,
+  # Roma"), TEI gives each their own. The import joins them again (Entry.people/1).
+  defp people(field, build) do
+    if filled?(field),
+      do: field |> Entry.people() |> Enum.map(build),
+      else: []
   end
 
   defp build_imprint(e) do

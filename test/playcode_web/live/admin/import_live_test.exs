@@ -57,6 +57,35 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
     assert page =~ play.title
   end
 
+  # A new play whose file brings references: the curator sees which before they come in,
+  # since one may duplicate a reference Playcode holds under a corrected description.
+  test "a new play that would add references is shown first, and imported on confirmation",
+       %{conn: conn} do
+    code = "IMP#{System.unique_integer([:positive])}"
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
+
+    html =
+      upload(lv, [
+        {"new.xml",
+         tei(
+           code: code,
+           back:
+             ~s(<div type="bibliografia"><listBibl type="critica"><biblStruct type="libro"><monogr>) <>
+               ~s(<author>Autor, Ana</author><title level="m">Libro nuevo</title><imprint><date/></imprint>) <>
+               ~s(</monogr></biblStruct></listBibl></div>)
+         )}
+      ])
+
+    assert html =~ t("Adds %{count} reference(s) to the bibliography:", count: 1)
+    assert html =~ "Libro nuevo"
+    assert Catalogue.list_plays(search: code) == []
+
+    lv |> element("button", ~r/^\s*#{t("Import")}\s*$/) |> render_click()
+    await_import(lv)
+
+    assert Catalogue.get_play_by_code!(code)
+  end
+
   describe "a file whose code is already a play" do
     setup %{conn: conn} do
       code = "IMP#{System.unique_integer([:positive])}"

@@ -884,15 +884,14 @@ defmodule Playcode.Import.TeiParser do
       kind: kind,
       pub_type: Entry.pub_type_from_tei(attr_value(attrs, "type")),
       language: attr_value(attrs, "xml:lang"),
-      analytic_author: running_text(find_child(analytic, "author")),
+      analytic_author: analytic |> find_children("author") |> people(),
       analytic_title: analytic |> typed("title", nil) |> running_text(),
-      analytic_editors: analytic |> with_attr("editor", "role", nil) |> running_text(),
-      analytic_translators:
-        analytic |> with_attr("editor", "role", "translator") |> running_text(),
-      monogr_author: running_text(find_child(monogr, "author")),
+      analytic_editors: analytic |> editors(nil) |> people(),
+      analytic_translators: analytic |> editors("translator") |> people(),
+      monogr_author: monogr |> find_children("author") |> people(),
       monogr_title: monogr |> typed("title", nil) |> running_text(),
-      monogr_editors: monogr |> with_attr("editor", "role", nil) |> running_text(),
-      monogr_translators: monogr |> with_attr("editor", "role", "translator") |> running_text(),
+      monogr_editors: monogr |> editors(nil) |> people(),
+      monogr_translators: monogr |> editors("translator") |> people(),
       original_title: monogr |> typed("title", "original") |> running_text(),
       siglum: monogr |> typed("idno", "siglum") |> running_text(),
       edition: running_text(find_child(monogr, "edition")),
@@ -934,6 +933,22 @@ defmodule Playcode.Import.TeiParser do
   end
 
   defp run(_other), do: ""
+
+  # One element per person in the file, one field in Playcode: joined with "; ", as FileMaker
+  # keeps several people (Entry.people/1). Nil for none.
+  defp people(elements) do
+    case elements |> Enum.map(&running_text/1) |> Enum.reject(&(&1 == "")) do
+      [] -> nil
+      names -> Enum.join(names, "; ")
+    end
+  end
+
+  # The <editor>s of a level whose @role is `role` (nil: an editor; "translator").
+  defp editors(children, role),
+    do:
+      children
+      |> find_children("editor")
+      |> Enum.filter(&(attr_value(elem(&1, 1), "role") == role))
 
   # The export writes a total of volumes as "6 vols.".
   defp volumes(nil), do: nil

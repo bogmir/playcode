@@ -64,13 +64,14 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     {:noreply, socket |> assign(:pending, []) |> assign(:previews, [])}
   end
 
-  # An import that lands on a play we already hold replaces its whole text. Say so and
-  # wait for a click; a batch of entirely new plays goes straight through.
+  # An import that lands on a play we already hold replaces its whole text, and one whose
+  # file brings references may add one Playcode holds under a corrected description. Say
+  # so and wait for a click; a batch of new plays with no references goes straight through.
   defp start_or_confirm(socket, pending) do
     previews =
       for {path, filename} <- pending,
           {:ok, preview} <- [TeiImport.preview_import(path)],
-          preview.existing,
+          preview.existing || preview.bibliography_adds != [] || preview.bibliography_skips != [],
           do: Map.put(preview, :filename, filename)
 
     if previews == [] do
@@ -235,9 +236,11 @@ defmodule PlaycodeWeb.Admin.ImportLive do
         <div class="card-body">
           <h2 class="card-title text-warning">
             <.icon name="hero-exclamation-triangle" class="size-5" />
-            {gettext("%{count} of these plays already exist", count: length(@previews))}
+            {if existing_count(@previews) > 0,
+              do: gettext("%{count} of these plays already exist", count: existing_count(@previews)),
+              else: gettext("Check the references before importing")}
           </h2>
-          <p class="text-sm text-base-content/70">
+          <p :if={existing_count(@previews) > 0} class="text-sm text-base-content/70">
             {gettext(
               "Importing replaces the text and the records that came from TEI. Anything entered by hand is kept."
             )}
@@ -247,12 +250,15 @@ defmodule PlaycodeWeb.Admin.ImportLive do
             <li :for={p <- @previews} class="rounded-box bg-base-200 px-3 py-2">
               <div class="flex items-center gap-2">
                 <span class="badge badge-primary badge-sm">{p.code}</span>
-                <span class="font-medium">{p.existing.title}</span>
+                <span class="font-medium">{if p.existing, do: p.existing.title, else: p.title}</span>
+                <span :if={!p.existing} class="badge badge-ghost badge-sm">
+                  {gettext("new play")}
+                </span>
                 <span :if={p.archived} class="badge badge-ghost badge-sm">
                   {gettext("archived — will be restored")}
                 </span>
               </div>
-              <div class="mt-1 text-xs text-base-content/70">
+              <div :if={p.existing} class="mt-1 text-xs text-base-content/70">
                 {gettext(
                   "Replaces %{divisions} division(s), %{elements} element(s), %{characters} character(s) and %{tei} record(s) imported from TEI.",
                   divisions: p.replaces.divisions,
@@ -292,7 +298,9 @@ defmodule PlaycodeWeb.Admin.ImportLive do
 
           <div class="card-actions mt-4">
             <button phx-click="confirm_import" class="btn btn-warning btn-sm">
-              {gettext("Replace and import")}
+              {if existing_count(@previews) > 0,
+                do: gettext("Replace and import"),
+                else: gettext("Import")}
             </button>
             <button phx-click="cancel_import" class="btn btn-ghost btn-sm">
               {gettext("Cancel")}
@@ -409,6 +417,8 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     </div>
     """
   end
+
+  defp existing_count(previews), do: Enum.count(previews, & &1.existing)
 
   defp tei_total(preview), do: TeiImport.mixed_ownership_total(preview.replaces)
   defp preserved_total(preview), do: TeiImport.mixed_ownership_total(preview.preserves)
