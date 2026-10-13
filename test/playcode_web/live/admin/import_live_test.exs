@@ -77,6 +77,23 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
       assert Catalogue.get_play_by_code!(code).title == "Segunda versión"
     end
 
+    test "lists the references a re-import would add", %{lv: lv, code: code} do
+      html =
+        upload(lv, [
+          {"again.xml",
+           tei(
+             code: code,
+             back:
+               ~s(<div type="bibliografia"><listBibl type="critica"><biblStruct type="libro"><monogr>) <>
+                 ~s(<author>Autor, Ana</author><title level="m">Libro nuevo</title><imprint><date/></imprint>) <>
+                 ~s(</monogr></biblStruct></listBibl></div>)
+           )}
+        ])
+
+      assert html =~ t("Adds %{count} reference(s) to the bibliography:", count: 1)
+      assert html =~ "Libro nuevo"
+    end
+
     test "leaves it alone when cancelled", %{lv: lv, code: code} do
       upload(lv, [{"again.xml", tei(code: code, title: "Segunda versión")}])
 

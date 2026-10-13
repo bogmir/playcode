@@ -12,7 +12,7 @@ defmodule Playcode.Import.TeiImport do
   import Ecto.Query
 
   alias Playcode.Bibliography
-  alias Playcode.Bibliography.Entry
+  alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
   alias Playcode.Import.TeiParser
@@ -70,10 +70,10 @@ defmodule Playcode.Import.TeiImport do
   nobody discovers the replacement afterwards.
   """
   def preview_import(path) do
-    with {:ok, tei} <- TeiParser.parse_file(path), do: {:ok, preview(tei.play)}
+    with {:ok, tei} <- TeiParser.parse_file(path), do: {:ok, preview(tei)}
   end
 
-  defp preview(%{code: code, title: title}) do
+  defp preview(%{play: %{code: code, title: title}} = tei) do
     existing = Repo.get_by(Play, code: code)
 
     %{
@@ -83,8 +83,30 @@ defmodule Playcode.Import.TeiImport do
       archived: not is_nil(existing) and not is_nil(existing.deleted_at),
       replaces: replaced_counts(existing),
       preserves: preserved_counts(existing),
-      preserves_fields: preserved_fields(existing)
+      preserves_fields: preserved_fields(existing),
+      bibliography_adds: bibliography_adds(tei.bibliography, existing)
     }
+  end
+
+  # The references the import would give the play, as they print: those of the file it
+  # does not link yet, whether they would link an entry Playcode has or make a new one,
+  # once each, leaving out what write_bibliography/2 would skip. A stale one, an older
+  # file's version of a reference corrected since, shows here before it is imported.
+  defp bibliography_adds(references, existing) do
+    play_id = existing && existing.id
+    found = Bibliography.identical_entries(Enum.map(references, & &1.description), play_id)
+    linked = Bibliography.linked_entry_ids(play_id)
+
+    references
+    |> Enum.reject(&(found[&1.description] in linked))
+    |> Enum.uniq_by(& &1.description)
+    |> Enum.filter(&valid_reference?/1)
+    |> Enum.map(fn reference ->
+      Citation.plain(
+        struct(Entry, reference.description),
+        %Link{volume: reference.volume, pages: reference.pages}
+      )
+    end)
   end
 
   @doc """
@@ -289,7 +311,7 @@ defmodule Playcode.Import.TeiImport do
           {found, MapSet.put(linked, entry_id)}
 
         :error ->
-          if Bibliography.change_entry(%Entry{}, reference.description).valid? do
+          if valid_reference?(reference) do
             {:ok, link} =
               Bibliography.create_entry_for_play(play.id, reference.description, place, "tei")
 
@@ -304,6 +326,9 @@ defmodule Playcode.Import.TeiImport do
 
     :ok
   end
+
+  defp valid_reference?(reference),
+    do: Bibliography.change_entry(%Entry{}, reference.description).valid?
 
   # --- Places ---
 

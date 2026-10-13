@@ -84,9 +84,11 @@ Then:
 
 ### Task 6: The preview lists what would be added
 
-- [ ] Test: `TeiImport.preview_import/1` on a file with one known and one new reference reports the new one only (title, author, year), for a new play and for a re-import.
-- [ ] The admin import page and `mix playcode.import.tei --dry-run` print them: test through the LiveView and `Mix.Task.rerun/2`.
-- [ ] Commit: `feat(import): the preview lists the references an import would add`
+- [x] Test: `TeiImport.preview_import/1` reports `bibliography_adds`, the references the play would gain, as `Citation.plain/2` prints them: all of a new play's, then only the new one on a re-import, once each though the file gives it twice. Without the "already linked" filter it goes red.
+- [x] `mix playcode.import.tei --dry-run` prints ", adds N reference(s)" on the play's line and one "+ citation" line each (`Mix.Task.rerun/2` test); the admin import page lists them in the card that asks before replacing a play (LiveView test). A new play imports without a card, so only the dry run shows its additions.
+- [x] Shared with the import: `Bibliography.linked_entry_ids/1`, and the validity check that skips a reference.
+- [x] Spanish: "Añade %{count} referencia(s) a la bibliografía:".
+- [x] Commit: `feat(import): the preview lists the references an import would add`
 
 ### Task 7: Measure, then docs
 

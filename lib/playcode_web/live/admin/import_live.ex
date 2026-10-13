@@ -271,6 +271,14 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                   fields: Enum.map_join(p.preserves_fields, ", ", &field_label/1)
                 )}
               </div>
+              <div :if={p.bibliography_adds != []} class="mt-1 text-xs text-base-content/70">
+                {gettext("Adds %{count} reference(s) to the bibliography:",
+                  count: length(p.bibliography_adds)
+                )}
+                <ul class="ml-4 list-disc">
+                  <li :for={citation <- p.bibliography_adds}>{citation}</li>
+                </ul>
+              </div>
             </li>
           </ul>
 

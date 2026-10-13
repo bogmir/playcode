@@ -94,6 +94,25 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert Catalogue.list_plays() == []
     end
 
+    test "--dry-run lists the references an import would add", %{dir: dir} do
+      File.write!(
+        Path.join(dir, "TASK0003_Tercera.xml"),
+        tei(
+          code: "TASK0003",
+          title: "Tercera",
+          back:
+            ~s(<div type="bibliografia"><listBibl type="critica"><biblStruct type="libro"><monogr>) <>
+              ~s(<author>Autor, Ana</author><title level="m">Libro nuevo</title><imprint><date/></imprint>) <>
+              ~s(</monogr></biblStruct></listBibl></div>)
+        )
+      )
+
+      out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
+
+      assert out =~ "TASK0003  new, adds 1 reference(s)"
+      assert out =~ ~r/\n\s+\+ Autor, Ana\. Libro nuevo/
+    end
+
     test "imports once, skips on the next run, and re-imports under --force", %{dir: dir} do
       assert run("playcode.import.tei", ["--dir", dir]) =~ "imported 1, skipped 0, failed 0"
       assert [%{title: "Primera"}] = Catalogue.list_plays()

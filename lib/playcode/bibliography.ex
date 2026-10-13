@@ -129,6 +129,7 @@ defmodule Playcode.Bibliography do
   `descriptions`. Of identical entries, the one `play_id` links wins, else the oldest.
   Candidates are found by title in SQL, whitespace collapsed as the description collapses
   it, then compared in full; an entry with no title at all is always a candidate.
+  `play_id` is nil for a play not imported yet.
   """
   def identical_entries([], _play_id), do: %{}
 
@@ -141,7 +142,7 @@ defmodule Playcode.Bibliography do
       |> Enum.reject(&is_nil/1)
       |> Enum.uniq()
 
-    linked = from(l in Link, where: l.play_id == ^play_id, select: l.entry_id) |> Repo.all()
+    linked = linked_entry_ids(play_id)
 
     from(e in Entry,
       where:
@@ -164,6 +165,12 @@ defmodule Playcode.Bibliography do
 
   def update_entry(%Entry{} = entry, attrs), do: entry |> Entry.changeset(attrs) |> Repo.update()
   def update_link(%Link{} = link, attrs), do: link |> Link.changeset(attrs) |> Repo.update()
+
+  @doc "The ids of the entries a play links; none for nil, a play not imported yet."
+  def linked_entry_ids(nil), do: []
+
+  def linked_entry_ids(play_id),
+    do: from(l in Link, where: l.play_id == ^play_id, select: l.entry_id) |> Repo.all()
 
   @doc """
   Removes a play's link. `{:ok, :deleted}` when it was the entry's last, which goes with
