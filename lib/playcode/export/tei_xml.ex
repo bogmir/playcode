@@ -348,7 +348,36 @@ defmodule Playcode.Export.TeiXml do
         do: children ++ [element(:editorialDecl, [element(:p, play.editorial_declaration)])],
         else: children
 
+    children = children ++ build_class_decl(play)
+
     element(:encodingDesc, if(children == [], do: [element(:p, "")], else: children))
+  end
+
+  # The library classification of the source files, the Universal Decimal Classification
+  # number for drama in the play's language. It follows the language one for one, so it is
+  # written from it and never stored; the Portuguese files have none.
+  @cdu %{"es" => "821.134.2-2", "fr" => "821.133-2", "en" => "821.111-2", "it" => "821.131-2"}
+
+  defp cdu(play), do: Map.get(@cdu, play.language || "es")
+
+  defp build_class_decl(play) do
+    if cdu(play) do
+      taxonomy =
+        element(:taxonomy, %{"xml:id" => "CDU"}, [
+          element(:bibl, "Clasificación Decimal Universal")
+        ])
+
+      [element(:classDecl, [taxonomy])]
+    else
+      []
+    end
+  end
+
+  defp build_text_class(play) do
+    case cdu(play) do
+      nil -> []
+      cdu -> [element(:textClass, [element(:classCode, %{"scheme" => "#CDU"}, cdu)])]
+    end
   end
 
   @language_ident_labels %{
@@ -365,7 +394,8 @@ defmodule Playcode.Export.TeiXml do
 
     children =
       build_creation(play) ++
-        [element(:langUsage, [element(:language, %{ident: ident}, label)])]
+        [element(:langUsage, [element(:language, %{ident: ident}, label)])] ++
+        build_text_class(play)
 
     element(:profileDesc, children ++ build_setting_desc(play))
   end

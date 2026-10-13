@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verse and Prose</title>
+<!-- Background to questions 22 and 23 in preguntas.html. Counted on 13 October 2026 from the 372
+     files under doc/tei_corpus/ (fileDesc/extent/@ana, the <l> and the <p> inside <sp> of each
+     body) against the development copy's plays.is_verse and verse_count. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --paper: #F4F6F3;
+    --surface: #FFFFFF;
+    --ink: #1A2130;
+    --muted: #586171;
+    --rule: #D6DBD4;
+    --accent: #27487A;
+    --code-bg: #ECEFEA;
+    --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #12161B;
+      --surface: #1A1F26;
+      --ink: #E4E7EA;
+      --muted: #9AA3AE;
+      --rule: #2C333C;
+      --accent: #9DB9E8;
+      --code-bg: #161B21;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #12161B;
+    --surface: #1A1F26;
+    --ink: #E4E7EA;
+    --muted: #9AA3AE;
+    --rule: #2C333C;
+    --accent: #9DB9E8;
+    --code-bg: #161B21;
+  }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.6;
+    padding-inline: 16px;
+  }
+  main {
+    max-width: 46rem;
+    margin-inline: auto;
+    padding-block: 3rem 5rem;
+    display: grid;
+    gap: 3.25rem;
+  }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+
+  .eyebrow {
+    font-size: 0.75rem;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  header { display: grid; gap: 1rem; }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: clamp(2.1rem, 6vw, 3.1rem);
+    line-height: 1.08;
+    letter-spacing: -0.01em;
+  }
+  .lede { font-size: 1.125rem; max-width: 62ch; }
+  .meta { font-size: 0.875rem; color: var(--muted); }
+
+  section { display: grid; gap: 1.1rem; }
+  section > h2 {
+    font-family: var(--serif);
+    font-weight: 500;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--rule);
+  }
+  h3 { font-size: 1.0625rem; font-weight: 600; }
+  .note { font-size: 0.9375rem; color: var(--muted); }
+  code { font-family: var(--mono); font-size: 0.85em; }
+  pre {
+    margin: 0;
+    background: var(--code-bg);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 1rem 1.1rem;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 0.8125rem;
+    line-height: 1.55;
+  }
+  .plan { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.6rem; }
+
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9375rem;
+    font-variant-numeric: tabular-nums;
+  }
+  th, td {
+    text-align: left;
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    vertical-align: top;
+  }
+  thead th {
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  td.num, th.num { text-align: right; }
+  tbody th { font-weight: 500; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Playcode · Verse and prose · For review</p>
+    <h1>Verse, prose or both in the TEI files</h1>
+    <p class="lede">Every EMOTHE file says whether its play is in verse, in prose or in both. Playcode does not read what the file says: it works the form out from the text. On 91 plays the two disagree. This page shows what the files say, what Playcode does, and the other place TEI offers for the label. The decisions it raises are questions 22 and 23 on the project’s list of questions.</p>
+    <p class="meta">Prepared by Bogdan, 13 October 2026, from the 372 TEI files of the published corpus and the plays of Playcode’s development copy.</p>
+  </header>
+
+  <section aria-labelledby="h-files">
+    <h2 id="h-files">What the files say</h2>
+    <p>The label sits on <code>extent</code>, the line of the header that gives the size of the text, next to a count of verses or paragraphs:</p>
+<pre>&lt;extent ana="verso"&gt;2749 versos&lt;/extent&gt;
+&lt;extent ana="prosa"&gt;52 párrafos&lt;/extent&gt;
+&lt;extent ana="versoprosa"&gt;851&lt;/extent&gt;</pre>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">The file’s label</th><th scope="col">Meaning</th><th scope="col" class="num">Files</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>verso</code></th><td>Verse</td><td class="num">222</td></tr>
+          <tr><th scope="row"><code>prosa</code></th><td>Prose</td><td class="num">56</td></tr>
+          <tr><th scope="row"><code>versoprosa</code></th><td>Verse and prose</td><td class="num">41</td></tr>
+          <tr><th scope="row"><code>intervenciones</code></th><td>Counts speeches; says nothing of the form</td><td class="num">45</td></tr>
+          <tr><th scope="row">None</th><td>—</td><td class="num">8</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-playcode">
+    <h2 id="h-playcode">What Playcode does</h2>
+    <ul class="plan">
+      <li><strong>Importing a file</strong>, it reads only the number and ignores the label.</li>
+      <li><strong>It works the form out from the text:</strong> a play with one numbered verse line is verse, any other play prose. Only a person in Playcode can call a play “verse and prose”, and no one has yet.</li>
+      <li><strong>Writing a file</strong>, it labels every play <code>verso</code>, with its count of numbered verse lines, so a prose play comes out as <code>&lt;extent ana="verso"&gt;0 versos&lt;/extent&gt;</code>.</li>
+      <li><strong>The play page and the published site</strong> show the form Playcode holds, “Verse · 3021 verses” or “Prose”; <strong>the downloads</strong> print the one worked out from the text, never one set by hand.</li>
+    </ul>
+  </section>
+
+  <section aria-labelledby="h-disagree">
+    <h2 id="h-disagree">Where the label and Playcode disagree</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">The file’s label</th><th scope="col" class="num">Playcode: verse</th><th scope="col" class="num">Playcode: prose</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>verso</code></th><td class="num">205</td><td class="num"><strong>17</strong></td></tr>
+          <tr><th scope="row"><code>prosa</code></th><td class="num"><strong>33</strong></td><td class="num">23</td></tr>
+          <tr><th scope="row"><code>versoprosa</code></th><td class="num"><strong>41</strong></td><td class="num">0</td></tr>
+          <tr><th scope="row"><code>intervenciones</code></th><td class="num">28</td><td class="num">17</td></tr>
+          <tr><th scope="row">None</th><td class="num">6</td><td class="num">2</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h3>Labelled prose, shown as verse: 33 plays</h3>
+    <p>Most hold a few dozen verse lines: songs or quoted verse, by the look of them. A few hold far more: <i>The Shoemaker’s Holiday</i> 1,003, <i>La finzione veritiera</i> 655, <i>Sophonisba</i> 340, <i>La novella della vecchia</i> 319. The number is the verse lines Playcode counts.</p>
+    <p class="note"><i>La finzione veritiera</i> 655 · <i>Hamlet</i> (EMOTHE0053) 291 · <i>Antoine et Cléopâtre</i> 6 · <i>La Tragédie espagnole</i> 40 · <i>Il bugiardo</i> 90 · <i>Epicena o la mujer silenciosa</i> 30 · <i>El diablo blanco</i> 29 · <i>La très excellente et lamentable tragédie de Roméo et Juliette</i> 39 · <i>La mandragola</i> 43 · <i>La mandrágora</i> 47 · <i>El trueque</i> 39 · <i>Comme il vous plaira</i> 187 · <i>Macbeth</i> (EMOTHE0195) 40 · <i>Le Premier Hamlet</i> 126 · <i>Henry V</i> (EMOTHE0198) 10 · <i>Les Fous de Valence</i> 14 · <i>Le Soir des Rois ou Ce que vous voudrez</i> 2 · <i>Romeo y Julieta</i> 6 · <i>Enrico V</i> 10 · <i>Giulio Cesare</i> 3 · <i>La tempestad</i> 193 · <i>La tempête</i> 130 · <i>La tempesta</i> 140 · <i>Macbeth</i> (EMOTHE0259) 111 · <i>A piacer vostro</i> 162 · <i>Como gustéis</i> 190 · <i>The Shoemaker’s Holiday</i> 1,003 · <i>Le mardi gras du cordonnier</i> 6 · <i>Volpone ou le renard</i> 62 · <i>Re Enrico IV, parte prima</i> 5 · <i>Sophonisba</i> 340 · <i>La novella della vecchia</i> 319 · <i>La comedia de la corte</i> 26</p>
+
+    <h3>Labelled verse, shown as prose: 17 plays</h3>
+    <p>Seven have no verse line at all. Ten have verse lines that carry no number, which Playcode does not count. Three of those hold over a thousand verse lines each, and calling them prose is a mistake of ours, to be fixed whatever the answers: <i>As You Like It</i> (EMOTHE0151, 1,235 verse lines), <i>El caballero de la ardiente mano</i> (EMOTHE0444, 1,377) and <i>Una dama asesinada con la bondad</i> (EMOTHE0496, 1,859).</p>
+    <p class="note">No verse line: <i>Le châtiment sans vengeance</i> · <i>La tragica storia del Dottor Fausto</i> · <i>La tragedia del vengador</i> · <i>Una donna uccisa con la dolcezza</i> · <i>La tragédie de l’athée</i> · <i>La tragédie du roy Richard Troisième</i> · <i>The Coffer</i>. The other seven with unnumbered verse lines: <i>Il cavaliere del pestello ardente</i> 173 · <i>The Man of Mode</i> 158 · <i>Amor por amor</i> 65 · <i>Endimión, o el hombre de la luna</i> 60 · <i>Enrico IV, parte seconda</i> 25 · <i>Timon d’Athènes</i> 22 · <i>Le moyen d’attraper un vieillard</i> 4.</p>
+
+    <h3>Labelled verse and prose, shown as verse: all 41</h3>
+    <p>Among them <i>Doctor Faustus</i> (EMOTHE0103), <i>The Revenger’s Tragedy</i>, <i>The Alchemist</i>, <i>The Way of the World</i>, <i>A Midsummer Night’s Dream</i>, <i>King Lear</i>, <i>Othello</i> and <i>Le malade imaginaire</i>. In 16 of them no speech is in prose.</p>
+  </section>
+
+  <section aria-labelledby="h-where">
+    <h2 id="h-where">Two places TEI offers</h2>
+    <h3>On <code>extent</code>, as the files do now</h3>
+    <p>Valid TEI, but the project’s own convention: <code>extent</code> is meant for the size of a text, and <code>ana</code> for a pointer to an interpretation declared elsewhere in the file, so a program reading TEI does not know what <code>ana="verso"</code> means.</p>
+    <h3>In <code>textClass</code>, TEI’s classification of a text</h3>
+    <p>Where the files already give their CDU number. The three forms are declared once in the header, beside the CDU, and each play points at one of them; <code>extent</code> keeps only the count. This is the place the TEI Guidelines give for classifying a text, and where other projects and tools look for it.</p>
+<pre>&lt;classDecl&gt;
+  &lt;taxonomy xml:id="CDU"&gt;…&lt;/taxonomy&gt;
+  &lt;taxonomy xml:id="forma"&gt;
+    &lt;category xml:id="verso"&gt;&lt;catDesc&gt;Verso&lt;/catDesc&gt;&lt;/category&gt;
+    &lt;category xml:id="prosa"&gt;&lt;catDesc&gt;Prosa&lt;/catDesc&gt;&lt;/category&gt;
+    &lt;category xml:id="versoprosa"&gt;&lt;catDesc&gt;Verso y prosa&lt;/catDesc&gt;&lt;/category&gt;
+  &lt;/taxonomy&gt;
+&lt;/classDecl&gt;
+…
+&lt;textClass&gt;
+  &lt;classCode scheme="#CDU"&gt;821.111-2&lt;/classCode&gt;
+  &lt;catRef scheme="#forma" target="#versoprosa"/&gt;
+&lt;/textClass&gt;
+&lt;extent&gt;2639 versos&lt;/extent&gt;</pre>
+    <p class="note">Either way, Playcode will read the label back, so a file it writes and imports again keeps its form, and the 41 plays in verse and prose come in as such.</p>
+  </section>
+
+  <section aria-labelledby="h-questions">
+    <h2 id="h-questions">Questions</h2>
+    <p>Question 22 asks where the label belongs, question 23 whether the label or the text decides. Answer them on the project’s running list, <a href="preguntas.html#t-form">Questions for the project</a>, with the others.</p>
+  </section>
+</main>
+</body>
+</html>
