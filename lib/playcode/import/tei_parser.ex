@@ -644,7 +644,6 @@ defmodule Playcode.Import.TeiParser do
         date: safe_text(find_child(parts, "date")),
         format: lines_text(find_child(parts, "extent")),
         shelfmark: parts |> typed("idno", "shelfmark") |> safe_text(),
-        filemaker_id: parts |> typed("idno", "filemaker") |> safe_text(),
         note: lines_text(find_child(parts, "note"))
       })
     else
