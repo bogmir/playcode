@@ -1218,7 +1218,7 @@ defmodule Playcode.Import.TeiParser do
   defp aside_delivery?(children) when is_list(children) do
     Enum.any?(children, fn
       {"stage", attrs, stage_children} ->
-        attr_value(attrs, "type") == "delivery" and
+        stage_type(attrs) == "delivery" and
           String.match?(
             text_content({"stage", attrs, stage_children}),
             ~r/aparte/i
@@ -1262,7 +1262,7 @@ defmodule Playcode.Import.TeiParser do
       type: "stage_direction",
       position: pos,
       content: content,
-      stage_type: attr_value(attrs, "type"),
+      stage_type: stage_type(attrs),
       notes: notes,
       elements: []
     }
@@ -1364,9 +1364,17 @@ defmodule Playcode.Import.TeiParser do
 
   # The type goes into the marker when it is the plain word the marker allows.
   defp stage_tag(attrs) do
-    type = attr_value(attrs, "type")
+    type = stage_type(attrs)
 
     if type && type =~ ~r/\A[A-Za-z0-9_]+\z/, do: ~s(<stage type="#{type}">), else: "<stage>"
+  end
+
+  # A <stage>'s @type. 24 source files spell TEI's "delivery" "delivery_".
+  defp stage_type(attrs) do
+    case attr_value(attrs, "type") do
+      "delivery_" -> "delivery"
+      type -> type
+    end
   end
 
   defp emph_element?("emph", _attrs), do: true

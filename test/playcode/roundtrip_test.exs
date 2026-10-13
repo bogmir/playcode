@@ -68,8 +68,7 @@ defmodule Playcode.RoundtripTest do
   defp count_stage_children({_name, _attrs, children}) do
     Enum.reduce(children, 0, fn
       {"stage", attrs, _}, acc ->
-        type = attr_val(attrs, "type")
-        if type == "delivery", do: acc, else: acc + 1
+        if delivery?(attrs), do: acc, else: acc + 1
 
       {tag, _, _} = el, acc when tag in ~w(root div1 div2 sp lg) ->
         acc + count_stage_children(el)
@@ -81,6 +80,9 @@ defmodule Playcode.RoundtripTest do
   end
 
   defp attr_val(attrs, key), do: Enum.find_value(attrs, fn {k, v} -> if k == key, do: v end)
+
+  # As the importer reads it: 24 source files spell TEI's "delivery" "delivery_".
+  defp delivery?(attrs), do: attr_val(attrs, "type") in ["delivery", "delivery_"]
 
   # Count <l> elements with a part attribute (split verses)
   defp count_part_attrs(body) do
@@ -266,7 +268,7 @@ defmodule Playcode.RoundtripTest do
         attr_val(attrs, "type") == "aside"
 
       {"stage", attrs, _kids} = stage ->
-        tag == "l" and attr_val(attrs, "type") == "delivery" and
+        tag == "l" and delivery?(attrs) and
           Regex.match?(~r/aparte/i, text_of(stage))
 
       _ ->

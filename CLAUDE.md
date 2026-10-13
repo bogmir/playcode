@@ -232,8 +232,8 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `text/body/div1/div2[@type="escena"]` -> scene subdivisions
 - `sp` -> speech elements with `who` -> character reference
 - `lg` -> line groups with verse type (redondilla, romance_tirada, etc.)
-- `l` -> verse lines with line numbering, split line markers (part I/M/F)
-- `stage` -> stage directions
+- `l` -> verse lines with line numbering, split line markers (part I/M/F); `@xml:id` the line's identifier, shown in the content editor but never edited
+- `stage` -> stage directions, `@type` the kind (`Element.stage_types/0`, TEI's list, chosen in the content editor; any other word a file gives is kept); the `delivery_` of 24 source files is read as `delivery`
 - `stage` inside `l`, `p` or `seg` -> a `<stage>` marker in the line's text (aside lines and paragraphs drop theirs)
 - `note` in the play text -> `play_notes`, at its offset in the line, speaker label or heading it sits in (not part of the text)
 - `back/div[@type="bibliografia"]/listBibl/biblStruct` -> the bibliography, on every import: a reference is linked to the entry with an identical `Bibliography.Entry.description/1` (`Bibliography.identical_entries/2`), else created, with link origin `tei`; nothing is changed or removed, and `preview_import/1` lists what an import would add. The play's own volume and pages are `biblStruct/citedRange`, the entry's `monogr/biblScope`; each person of a field ("Morris, Brian; Gill, Roma") is an `author` or `editor` of their own, joined with "; " on import. A bibliography in prose (seven source files) gives nothing. `mix playcode.import.bibliography` counts a play with `tei` links as imported, so FileMaker's copies never come in beside a file's references. Completeness is never written (see *The TEI file is a complete copy of a play*)

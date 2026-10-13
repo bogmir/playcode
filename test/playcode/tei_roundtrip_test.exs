@@ -819,6 +819,8 @@ defmodule Playcode.TeiRoundtripTest do
                 <l n="2"><stage type="delivery">[Aparte.]</stage><seg type="aside">Square</seg></l>
                 <l n="3"><stage type="delivery">(Aparte.)</stage><seg type="aside">Round</seg></l>
                 <l n="4"><stage type="delivery">Aparte</stage><seg type="aside">Bare</seg></l>
+                <l n="5"><stage type="delivery">[Aparte.]</stage>No seg</l>
+                <l n="6"><stage type="delivery_">[Aparte.]</stage>Typo</l>
               </lg></sp>
               <sp><speaker>REY</speaker>
                 <p><seg type="aside">An aside in prose</seg></p>
@@ -828,10 +830,27 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
-      assert xml_texts(xml, "seg") == ["Square", "Round", "Bare", "An aside in prose"]
+      assert xml_texts(xml, "seg") ==
+               ["Square", "Round", "Bare", "No seg", "Typo", "An aside in prose"]
+
       assert Enum.all?(xml_elements(xml, "seg"), &match?({%{"type" => "aside"}, _}, &1))
       assert "Normal verse line" in xml_texts(xml, "l")
       assert "Normal prose." in xml_texts(xml, "p", within: "sp")
+    end
+
+    # 24 source files spell the delivery type "delivery_" (79 stage directions and 418
+    # stages inside lines in dev); TEI's word is "delivery".
+    test "a stage direction's kind comes back, delivery_ as delivery" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene(~s(<stage type="exit">Vase.</stage><stage type="delivery_">A Juan.</stage>))
+          )
+        )
+
+      assert xml_elements(xml, "stage") ==
+               [{%{"type" => "exit"}, "Vase."}, {%{"type" => "delivery"}, "A Juan."}]
     end
 
     test "a stage direction that merely mentions an aside does not make the next line one" do
@@ -1021,6 +1040,8 @@ defmodule Playcode.TeiRoundtripTest do
     </div1>
     """
 
+    # "delivery_", a misspelling in 24 source files, used to come back as written; it is
+    # read as TEI's "delivery" since 2026-10-13.
     test "a stage comes back inside its line, where it was, with its type" do
       xml = roundtrip(tei(body: @staged))
 
@@ -1031,7 +1052,7 @@ defmodule Playcode.TeiRoundtripTest do
                  {"l", "business", "(se lève)", "Il parle", "puis (sort)"},
                  {"l", nil, "(sort)", "Il parle (se lève) puis", ""},
                  {"p", nil, "Entra", "", "El rey dijo (bajo) y salió."},
-                 {"p", "delivery_", "(bajo)", "Entra El rey dijo", "y salió."}
+                 {"p", "delivery", "(bajo)", "Entra El rey dijo", "y salió."}
                ]
 
       # The words are the ones the line had when the stage was plain text of it.

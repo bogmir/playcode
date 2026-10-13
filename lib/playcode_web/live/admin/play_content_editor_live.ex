@@ -15,6 +15,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element}
   alias PlaycodeWeb.Admin.LiveHelpers
+  alias PlaycodeWeb.PlayLabels
 
   @impl true
   def mount(%{"id" => id} = params, _session, socket) do
@@ -2927,11 +2928,23 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             placeholder={gettext("Stage direction text...")}
           />
         </div>
-        <div>
-          <label class="label" for={@form[:rend].id}>
-            <span class="label-text font-medium">Rend</span>
-          </label>
-          <.input field={@form[:rend]} type="text" placeholder={gettext("e.g. italics")} />
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="label" for={@form[:stage_type].id}>
+              <span class="label-text font-medium">{gettext("Kind")}</span>
+            </label>
+            <.input
+              field={@form[:stage_type]}
+              type="select"
+              options={PlayLabels.stage_type_options(@editing && @editing.stage_type)}
+            />
+          </div>
+          <div>
+            <label class="label" for={@form[:rend].id}>
+              <span class="label-text font-medium">Rend</span>
+            </label>
+            <.input field={@form[:rend]} type="text" placeholder={gettext("e.g. italics")} />
+          </div>
         </div>
       </div>
 
@@ -2989,6 +3002,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             <.input field={@form[:part]} type="select" options={part_options()} />
           </div>
         </div>
+        <p :if={@editing && @editing.line_id} class="mt-2 text-sm text-base-content/70">
+          {gettext("Identifier")}: <code>{@editing.line_id}</code>
+        </p>
       </div>
 
       <div class="flex gap-2 pt-2">

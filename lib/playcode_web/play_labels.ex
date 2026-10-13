@@ -12,7 +12,7 @@ defmodule PlaycodeWeb.PlayLabels do
 
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
-  alias Playcode.PlayContent.Note
+  alias Playcode.PlayContent.{Element, Note}
   alias Playcode.Places.{Place, PlayPlace}
 
   @doc "The Spanish-or-English name of a historical period slug."
@@ -53,9 +53,32 @@ defmodule PlaycodeWeb.PlayLabels do
   other fields does not drop its type.
   """
   def note_type_options(current \\ nil) do
-    options = [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]
+    [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]
+    |> with_current(Note.types(), current)
+  end
 
-    if current in [nil, ""] or current in Note.types(),
+  @doc "The name of a kind of stage direction (`Element.stage_types/0`)."
+  def stage_type_label("setting"), do: gettext("Setting")
+  def stage_type_label("entrance"), do: gettext("Entrance")
+  def stage_type_label("exit"), do: gettext("Exit")
+  def stage_type_label("business"), do: gettext("Stage business")
+  def stage_type_label("novelistic"), do: gettext("Narrative")
+  def stage_type_label("delivery"), do: gettext("Delivery")
+  def stage_type_label("modifier"), do: gettext("Character detail")
+  def stage_type_label("location"), do: gettext("Location")
+  def stage_type_label("mixed"), do: gettext("Mixed")
+
+  @doc """
+  `{label, kind}` pairs for a select: none first, then TEI's kinds; and `current`, a kind
+  a file gave that is not among them, as itself, so saving the form does not drop it.
+  """
+  def stage_type_options(current \\ nil) do
+    [{"", ""} | Enum.map(Element.stage_types(), &{stage_type_label(&1), &1})]
+    |> with_current(Element.stage_types(), current)
+  end
+
+  defp with_current(options, known, current) do
+    if current in [nil, ""] or current in known,
       do: options,
       else: options ++ [{current, current}]
   end
