@@ -873,6 +873,29 @@ defmodule Playcode.TeiRoundtripTest do
       refute xml =~ "&lt;&lt;"
     end
 
+    # Everyman's readings (EMOTHE0460, four stages) are two italics with a note after the
+    # first; the export merged them into one <emph> around the note, as it does for a
+    # note inside one italic run.
+    test "two italics with a note between them stay two" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene(
+                "<stage><emph>[Every man puts on the garment.]</emph><note>subst.</note>" <>
+                  "<emph>[Takes the garment.]</emph></stage>"
+              )
+          )
+        )
+
+      for xml <- [xml, roundtrip(xml)] do
+        assert xml_texts(xml, "emph") == [
+                 "[Every man puts on the garment.]",
+                 "[Takes the garment.]"
+               ]
+      end
+    end
+
     test "the extent counts the verse lines actually imported" do
       xml =
         roundtrip(

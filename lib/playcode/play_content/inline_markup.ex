@@ -62,9 +62,9 @@ defmodule Playcode.PlayContent.InlineMarkup do
   end
 
   @doc """
-  As `parts/1`, with each of `notes` placed as a `%{note: note, stage: stage}` part after
-  the first `note.offset` graphemes of the plain text. A note at the end of a piece
-  follows that piece; one inside an italic run splits it. `notes` are placed by
+  As `parts/1`, with each of `notes` placed as a `%{note: note, stage: stage, italic:
+  boolean}` part after the first `note.offset` graphemes of the plain text. A note at the
+  end of a piece follows that piece; one inside an italic run splits it, and is `italic`. `notes` are placed by
   `{offset, position}` whatever their order in the list, and a note past the end of the
   text goes last.
 
@@ -82,7 +82,7 @@ defmodule Playcode.PlayContent.InlineMarkup do
       |> Enum.chunk_every(2, 1, [nil])
       |> Enum.flat_map_reduce({0, notes}, &place_notes/2)
 
-    parts ++ Enum.map(rest, &%{note: &1, stage: nil})
+    parts ++ Enum.map(rest, &%{note: &1, stage: nil, italic: false})
   end
 
   # Splits `part` (which starts `at` graphemes into the text) at every note that falls
@@ -96,7 +96,8 @@ defmodule Playcode.PlayContent.InlineMarkup do
         k = max(note.offset - at, cut)
         piece = %{part | text: String.slice(part.text, cut, k - cut)}
         inside = if k > 0 and (k < length or same_stage?(part, next)), do: part.stage
-        {[%{note: note, stage: inside} | prepend_text(pieces, piece)], k}
+        italic = part.italic and k > 0 and k < length
+        {[%{note: note, stage: inside, italic: italic} | prepend_text(pieces, piece)], k}
       end)
 
     rest = %{part | text: String.slice(part.text, cut..-1//1)}
