@@ -315,24 +315,49 @@ defmodule Playcode.Export.TeiXml do
     children =
       Enum.reject(
         [
-          if(filled?(w.title), do: element(:title, build_inline_content(w.title))),
-          if(filled?(w.normalized_title),
-            do: element(:title, %{type: "normalized"}, build_inline_content(w.normalized_title))
+          if(filled?(w.title),
+            do: inline_element(:title, %{}, lines(w.title, &build_inline_content/1))
           ),
-          if(filled?(w.attribution), do: element(:author, w.attribution)),
-          if(filled?(w.pub_place), do: element(:pubPlace, w.pub_place)),
-          if(filled?(w.publisher), do: element(:publisher, w.publisher)),
+          if(filled?(w.normalized_title),
+            do:
+              inline_element(
+                :title,
+                %{type: "normalized"},
+                lines(w.normalized_title, &build_inline_content/1)
+              )
+          ),
+          if(filled?(w.attribution), do: inline_element(:author, %{}, lines(w.attribution))),
+          if(filled?(w.pub_place), do: inline_element(:pubPlace, %{}, lines(w.pub_place))),
+          if(filled?(w.publisher), do: inline_element(:publisher, %{}, lines(w.publisher))),
           if(date,
             do: element(:date, if(date =~ ~r/^\d{4}$/, do: %{when: date}, else: %{}), date)
           ),
-          if(filled?(w.format), do: element(:extent, w.format)),
+          if(filled?(w.format), do: inline_element(:extent, %{}, lines(w.format))),
           if(filled?(w.shelfmark), do: element(:idno, %{type: "shelfmark"}, w.shelfmark)),
-          if(filled?(w.note), do: element(:note, build_inline_content(w.note)))
+          if(w.filemaker_id, do: element(:idno, %{type: "filemaker"}, w.filemaker_id)),
+          if(filled?(w.note),
+            do: inline_element(:note, %{}, lines(w.note, &build_inline_content/1))
+          )
         ],
         &is_nil/1
       )
 
     element(:witness, attrs, [element(:bibl, bibl_attrs, children)])
+  end
+
+  # A witness's field, its line breaks (FileMaker's, a title page's lines) as <lb/>s. A row
+  # saved before the changeset kept breaks as \n may still hold FileMaker's \r.
+  defp lines(text, build \\ & &1) do
+    case String.split(text, ~r/\r\n?|\n/) do
+      [line] ->
+        build.(line)
+
+      lines ->
+        lines
+        |> Enum.map(&List.wrap(build.(&1)))
+        |> Enum.intersperse([element(:lb)])
+        |> Enum.concat()
+    end
   end
 
   defp build_encoding_desc(play) do

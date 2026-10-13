@@ -113,8 +113,9 @@ defmodule Playcode.Export.TeiValidatorTest do
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
-    # Every witness type, a siglum that is no XML name, a witness with no siglum, and no
-    # sources: the sourceDesc then holds the listWit alone. Under a code of its own, for the
+    # Every witness type, a siglum that is no XML name, a FileMaker witness with no siglum
+    # and line breaks (its record number an <idno>, its breaks <lb/>s), and no sources: the
+    # sourceDesc then holds the listWit alone. Under a code of its own, for the
     # same reason as the bibliography test.
     test "witnesses of every type export as schema-valid TEI" do
       play =
@@ -154,11 +155,22 @@ defmodule Playcode.Export.TeiValidatorTest do
           "date" => "s. a."
         })
 
-      {:ok, _} = Playcode.Witnesses.create_witness(%{"play_id" => play.id, "note" => "Sin sigla"})
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(
+          %{
+            "play_id" => play.id,
+            "title" => "ORBECCHE TRAGEDIA\rDI M. GIOVANBATTISTA",
+            "note" => "Sin sigla\r\rBIBL.: ADAMS 1967",
+            "origin" => "filemaker"
+          },
+          %Playcode.Witnesses.Witness{filemaker_id: "T03:124"}
+        )
 
       xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
 
       assert xml =~ "<listWit>"
+      assert xml =~ "<lb/>"
+      assert xml =~ ~s(<idno type="filemaker">T03:124</idno>)
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 

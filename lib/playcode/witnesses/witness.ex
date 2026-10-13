@@ -60,12 +60,24 @@ defmodule Playcode.Witnesses.Witness do
     )
   end
 
-  # The spec's "All values are trimmed": a pasted " Q1 " is Q1, and blank is nothing.
+  # The spec's "All values are trimmed": a pasted " Q1 " is Q1, and blank is nothing. A
+  # line break, FileMaker's \r or a form's \r\n, is kept as \n with no spaces around it,
+  # and a run of spaces or tabs as one space: what the TEI file gives back, and all any
+  # page prints.
   defp trim(changeset, fields) do
     Enum.reduce(fields, changeset, fn field, changeset ->
       update_change(changeset, field, fn
-        nil -> nil
-        value -> if String.trim(value) == "", do: nil, else: String.trim(value)
+        nil ->
+          nil
+
+        value ->
+          value =
+            value
+            |> String.replace(~r/[ \t]*(?:\r\n?|\n)[ \t]*/, "\n")
+            |> String.replace(~r/[ \t]+/, " ")
+            |> String.trim()
+
+          if value == "", do: nil, else: value
       end)
     end)
   end

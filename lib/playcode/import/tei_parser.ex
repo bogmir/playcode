@@ -616,19 +616,37 @@ defmodule Playcode.Import.TeiParser do
          )
        ) do
       Map.merge(base, %{
-        title: parts |> typed("title", nil) |> safe_text(),
-        normalized_title: parts |> typed("title", "normalized") |> safe_text(),
-        attribution: safe_text(find_child(parts, "author")),
-        pub_place: safe_text(find_child(parts, "pubPlace")),
-        publisher: safe_text(find_child(parts, "publisher")),
+        title: parts |> typed("title", nil) |> lines_text(),
+        normalized_title: parts |> typed("title", "normalized") |> lines_text(),
+        attribution: lines_text(find_child(parts, "author")),
+        pub_place: lines_text(find_child(parts, "pubPlace")),
+        publisher: lines_text(find_child(parts, "publisher")),
         date: safe_text(find_child(parts, "date")),
-        format: safe_text(find_child(parts, "extent")),
+        format: lines_text(find_child(parts, "extent")),
         shelfmark: parts |> typed("idno", "shelfmark") |> safe_text(),
-        note: safe_text(find_child(parts, "note"))
+        filemaker_id: parts |> typed("idno", "filemaker") |> safe_text(),
+        note: lines_text(find_child(parts, "note"))
       })
     else
       Map.put(base, :note, text_content({"bibl", [], parts}))
     end
+  end
+
+  # A witness's field with each <lb/> read as a line break, the rest as text_content/1
+  # reads it.
+  defp lines_text(nil), do: nil
+
+  defp lines_text({name, attrs, children}) do
+    children
+    |> Enum.chunk_while(
+      [],
+      fn
+        {"lb", _, _}, line -> {:cont, Enum.reverse(line), []}
+        child, line -> {:cont, [child | line]}
+      end,
+      &{:cont, Enum.reverse(&1), []}
+    )
+    |> Enum.map_join("\n", &text_content({name, attrs, &1}))
   end
 
   # The first `name` child whose @type is `type` (nil: no @type).
