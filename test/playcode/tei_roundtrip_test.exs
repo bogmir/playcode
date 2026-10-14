@@ -614,6 +614,41 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # The importer stores <emph> as <<…>> wherever it reads text; outside the play's lines
+  # the export once wrote the markers back as characters, "&lt;&lt;Aminta&gt;&gt;".
+  test "italics outside the text come back as italics" do
+    xml =
+      roundtrip(
+        tei(
+          file_desc: "<notesStmt><note>Basada en <emph>La venganza</emph>.</note></notesStmt>",
+          source_desc:
+            "<bibl><title><emph>Aminta</emph></title><note>Tasso. <emph>Aminta</emph>. Venezia.</note></bibl>",
+          front: """
+          <div type="dedicatoria"><head>A <emph>Damone</emph></head><p>Dedica <emph>Egle</emph>.</p></div>
+          <div type="elenco"><head><emph>Dramatis Personae</emph></head><castList>
+            <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
+          </castList></div>
+          <set><p><emph>La Scena è in Atene.</emph></p></set>
+          """
+        )
+      )
+
+    refute xml =~ "&lt;&lt;"
+
+    assert Enum.sort(xml_texts(xml, "emph")) ==
+             Enum.sort([
+               "La venganza",
+               "Aminta",
+               "Aminta",
+               "Damone",
+               "Egle",
+               "Dramatis Personae",
+               "The courtiers",
+               "Spela",
+               "La Scena è in Atene."
+             ])
+  end
+
   # The Old Wife's Tale's "SCENE: An English wood…". 15 of the 17 files that have one put it
   # right after the cast list, and emothe.uv.es prints it there; Egle's comes back there too.
   test "the scene of the action keeps its heading and paragraphs, after the cast list" do

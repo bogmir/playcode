@@ -33,6 +33,28 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
     %{play: play, view: view, ana: ana, voyent: voyent, movido: movido}
   end
 
+  test "a glossed word in italics is listed in italics", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">Nous voyent<note n="2" type="editor"><term><emph>voyent</emph></term><p>Forma arcaica.</p></note> dans la ville</l></sp></div1>)
+        )
+      )
+
+    {:ok, _view, html} =
+      conn
+      |> log_in_user(user_fixture(role: :researcher))
+      |> live(~p"/admin/plays/#{play.id}/notes")
+
+    refute html =~ "&lt;&lt;"
+
+    assert "voyent" in (html
+                        |> LazyHTML.from_fragment()
+                        |> LazyHTML.query(".note-glossed em")
+                        |> Enum.map(&LazyHTML.text/1))
+  end
+
   # The play's notes in reading order, as the public page numbers them.
   defp notes(play) do
     play.id

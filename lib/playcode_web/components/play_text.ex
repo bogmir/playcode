@@ -114,13 +114,13 @@ defmodule PlaycodeWeb.Components.PlayText do
         :for={char <- @visible_characters}
         class="cast-item flex items-baseline gap-3 py-1 ml-1 sm:ml-4"
       >
-        <span class="speaker shrink-0">{char.name}</span>
+        <span class="speaker shrink-0"><.inline_content text={char.name} /></span>
         <span
           :if={char.description}
           class="text-sm"
           style="color: oklch(from var(--color-base-content) l c h / 0.55)"
         >
-          {char.description}
+          <.inline_content text={char.description} />
         </span>
       </div>
     </div>
@@ -132,8 +132,8 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp scene(assigns) do
     ~H"""
     <div class="mb-8 max-w-xl mx-auto text-center text-sm">
-      <h3 :if={@note.heading} class="font-bold mb-1">{@note.heading}</h3>
-      <div class="whitespace-pre-line">{@note.content}</div>
+      <h3 :if={@note.heading} class="font-bold mb-1"><.inline_content text={@note.heading} /></h3>
+      <div class="whitespace-pre-line"><.inline_content text={@note.content} /></div>
     </div>
     """
   end
@@ -292,9 +292,12 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :notes, :list, default: []
   attr :show_stage, :boolean, default: true
 
-  # One line, kept from the formatter by phx-no-format and built as iodata: a line break
-  # between a word and its note's number would show as a space.
-  defp inline_content(assigns) do
+  @doc """
+  Stored text as readers see it: `<<…>>` italics as emphasis, inline stage directions and
+  note numbers in place. Kept on one line by phx-no-format and built as iodata: a line
+  break between a word and its note's number would show as a space.
+  """
+  def inline_content(assigns) do
     html =
       assigns.text
       |> InlineMarkup.parts(assigns.notes)
@@ -399,7 +402,9 @@ defmodule PlaycodeWeb.Components.PlayText do
       <li :for={entry <- @shown} id={"play-note-#{entry.note.id}"} value={entry.note.number}>
         <p class="flex flex-wrap items-baseline gap-x-2 text-base-content/70">
           <b class="text-base-content">{PlayLabels.note_type_label(entry.note.type)}</b>
-          <i :if={entry.glossed} class="text-base-content font-serif">{entry.glossed}</i>
+          <i :if={entry.glossed} class="text-base-content font-serif">
+            <.inline_content text={entry.glossed} />
+          </i>
           <button
             type="button"
             phx-click="show_note"

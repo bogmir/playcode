@@ -15,6 +15,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Statistics
@@ -316,7 +317,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             <%!-- Source info --%>
             <div :if={@play.sources != []} id="meta-sources" class="scroll-mt-20">
               <div :for={source <- @play.sources} class="mt-4 text-xs text-base-content/70">
-                <p :if={source.note} class="italic">{source.note}</p>
+                <p :if={source.note} class="italic"><.inline_content text={source.note} /></p>
                 <p :if={provenance = PlayLabels.provenance(source)}>
                   {gettext("Provenance")}: {provenance}
                 </p>
@@ -495,8 +496,10 @@ defmodule PlaycodeWeb.PlayShowLive do
               id={"meta-note-#{index}"}
               class="mb-6 max-w-2xl mx-auto scroll-mt-20 text-justify text-sm"
             >
-              <h3 :if={note.heading} class="font-bold text-center mb-2">{note.heading}</h3>
-              <div class="whitespace-pre-line">{note.content}</div>
+              <h3 :if={note.heading} class="font-bold text-center mb-2">
+                <.inline_content text={note.heading} />
+              </h3>
+              <div class="whitespace-pre-line"><.inline_content text={note.content} /></div>
             </div>
           </div>
 
@@ -578,7 +581,7 @@ defmodule PlaycodeWeb.PlayShowLive do
     |> Enum.map(fn {note, index} ->
       label =
         case note.heading do
-          heading when is_binary(heading) and heading != "" -> heading
+          heading when is_binary(heading) and heading != "" -> InlineMarkup.plain(heading)
           _ -> "#{gettext("Editorial Note")} #{index}"
         end
 
@@ -590,7 +593,7 @@ defmodule PlaycodeWeb.PlayShowLive do
     current =
       case division.title do
         title when is_binary(title) and title != "" ->
-          [%{id: "div-#{division.id}", label: title, depth: depth}]
+          [%{id: "div-#{division.id}", label: InlineMarkup.plain(title), depth: depth}]
 
         _ ->
           []

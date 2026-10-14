@@ -7,7 +7,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   """
 
   alias Playcode.{Bibliography, Catalogue, PlayContent, Statistics}
-  alias Playcode.PlayContent.{Division, Note}
+  alias Playcode.PlayContent.{Division, InlineMarkup, Note}
   alias Playcode.Statistics.Metrics
 
   defstruct [
@@ -86,7 +86,12 @@ defmodule Playcode.Export.StaticSite.Edition do
         base = if division.type in Metrics.act_types(), do: "act", else: division.type
         n = Map.get(counts, base, 0) + 1
         slug = if base == "act" or n > 1, do: "#{base}-#{n}", else: base
-        title = division.title || String.capitalize(division.type)
+
+        title =
+          if division.title,
+            do: InlineMarkup.plain(division.title),
+            else: String.capitalize(division.type)
+
         page = %{slug: slug, title: title, division: division, scene: nil, split: false}
         {page, Map.put(counts, base, n)}
       end)
@@ -117,7 +122,8 @@ defmodule Playcode.Export.StaticSite.Edition do
   end
 
   @doc "A scene's heading, or its number when it has none."
-  def scene_title(scene), do: scene.title || "Scene #{scene.position + 1}"
+  def scene_title(%{title: nil} = scene), do: "Scene #{scene.position + 1}"
+  def scene_title(scene), do: InlineMarkup.plain(scene.title)
 
   @doc "The notes in a page's text, in reading order: the endnotes it lists."
   def page_notes(%{scene: nil, split: false, division: division}),

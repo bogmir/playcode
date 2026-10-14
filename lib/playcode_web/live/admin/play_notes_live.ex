@@ -263,7 +263,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
                 {PlayLabels.note_type_label(entry.note.type)}
               </span>
               <i :if={entry.glossed} class="note-glossed font-serif text-sm text-base-content">
-                {entry.glossed}
+                <PlayText.inline_content text={entry.glossed} />
               </i>
               <span class="note-where text-base-content/55">{entry.where}</span>
             </div>

@@ -84,7 +84,10 @@ defmodule Playcode.Export.TeiXml do
   # short code, so an import can link the two whichever arrives first
   # (Catalogue.link_waiting_translations/0).
   defp build_notes_stmt(play) do
-    notes = Enum.map(play.edition_notes, &inline_element(:note, %{}, lines(&1)))
+    notes =
+      Enum.map(play.edition_notes, fn note ->
+        inline_element(:note, %{}, lines(note, &build_inline_content/1))
+      end)
 
     original =
       case Catalogue.original_code(play) do
@@ -275,7 +278,7 @@ defmodule Playcode.Export.TeiXml do
       Enum.map(play.sources, fn source ->
         children =
           [
-            if(source.title, do: element(:title, source.title)),
+            if(source.title, do: inline_element(:title, %{}, build_inline_content(source.title))),
             if(source.author, do: element(:author, source.author)),
             if source.editor do
               attrs = if source.editor_role, do: %{role: source.editor_role}, else: %{}
@@ -285,7 +288,7 @@ defmodule Playcode.Export.TeiXml do
             if(source.pub_place, do: element(:pubPlace, source.pub_place)),
             if(source.pub_date, do: element(:date, source.pub_date)),
             if(source.language, do: element(:lang, source.language)),
-            if(source.note, do: element(:note, source.note)),
+            if(source.note, do: inline_element(:note, %{}, build_inline_content(source.note))),
             if(source.distributor, do: element(:distributor, source.distributor))
           ]
           |> Enum.reject(&is_nil/1)
@@ -768,11 +771,13 @@ defmodule Playcode.Export.TeiXml do
           Enum.map(characters, fn char ->
             role_attrs = %{"xml:id" => char.xml_id}
 
-            children = [element(:role, role_attrs, char.name)]
+            children = [inline_element(:role, role_attrs, build_inline_content(char.name))]
 
             children =
               if char.description,
-                do: children ++ [element(:roleDesc, char.description)],
+                do:
+                  children ++
+                    [inline_element(:roleDesc, %{}, build_inline_content(char.description))],
                 else: children
 
             children =
@@ -782,7 +787,11 @@ defmodule Playcode.Export.TeiXml do
             element(:castItem, item_attrs, children)
           end)
 
-        head = if cast_heading, do: [element(:head, cast_heading)], else: []
+        head =
+          if cast_heading,
+            do: [inline_element(:head, %{}, build_inline_content(cast_heading))],
+            else: []
+
         [element(:div, %{type: "elenco"}, head ++ [element(:castList, cast_items)])]
       else
         []
@@ -796,8 +805,15 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp front_section(note) do
-    head = if note.heading, do: [element(:head, note.heading)], else: []
-    paragraphs = note.content |> String.split("\n\n") |> Enum.map(&element(:p, &1))
+    head =
+      if note.heading,
+        do: [inline_element(:head, %{}, build_inline_content(note.heading))],
+        else: []
+
+    paragraphs =
+      note.content
+      |> String.split("\n\n")
+      |> Enum.map(&inline_element(:p, %{}, build_inline_content(&1)))
 
     case note.section_type do
       "lugar_accion" -> element(:set, head ++ paragraphs)
