@@ -214,6 +214,32 @@ defmodule Playcode.Export.TeiValidatorTest do
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
+    # The scene of the action as TEI's <set>, last in the front. Under a code of its own,
+    # for the same reason as the bibliography test.
+    test "a scene of the action exports as schema-valid TEI" do
+      play =
+        @fixture_file
+        |> File.read!()
+        |> String.replace(
+          ~s(<title key="archivo">EMOTHE0759_AutoDeLaBarcaDelInfierno</title>),
+          ~s(<title key="archivo">SET#{System.unique_integer([:positive])}</title>)
+        )
+        |> Playcode.ImportHelpers.import_tei!()
+
+      {:ok, _} =
+        Catalogue.create_play_editorial_note(%{
+          "play_id" => play.id,
+          "section_type" => "lugar_accion",
+          "heading" => "SCENE:",
+          "content" => "An English wood."
+        })
+
+      xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
+
+      assert xml =~ "<set>"
+      assert TeiValidator.validate(xml) == {:ok, :valid}
+    end
+
     # The original a translation translates, as a notesStmt between publicationStmt and
     # sourceDesc, after the notes on the edition. Under a code of its own, for the same
     # reason as the bibliography test.

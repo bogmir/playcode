@@ -32,9 +32,10 @@ defmodule PlaycodeWeb.PlayShowLive do
     characters = PlayContent.list_characters(play.id)
     statistic = Statistics.get_statistics(play.id)
     bibliography = Bibliography.list_for_play(play.id)
+    {front_notes, scene} = PlayLabels.split_front_matter(play.editorial_notes, divisions)
 
     %{metadata: metadata_sections, play: play_sections} =
-      build_sections_navigation(play, divisions, bibliography)
+      build_sections_navigation(play, front_notes, divisions, bibliography)
 
     {:ok,
      socket
@@ -42,6 +43,8 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:play, play)
      |> assign(:divisions, divisions)
      |> assign(:characters, characters)
+     |> assign(:front_notes, front_notes)
+     |> assign(:scene, scene)
      |> assign(:statistic, statistic)
      |> assign(:bibliography, bibliography)
      |> assign(:notes, note_entries(divisions))
@@ -484,7 +487,7 @@ defmodule PlaycodeWeb.PlayShowLive do
 
           <%!-- Editorial notes (text view only) --%>
           <div
-            :for={{note, index} <- Enum.with_index(@play.editorial_notes, 1)}
+            :for={{note, index} <- Enum.with_index(@front_notes, 1)}
             :if={@active_tab == :text}
           >
             <hr :if={index > 1} class="max-w-2xl mx-auto border-base-300 mb-6" />
@@ -502,6 +505,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             <.play_body
               divisions={@divisions}
               characters={@characters}
+              scene={@scene}
               show_line_numbers={@show_line_numbers}
               show_stage_directions={@show_stage_directions}
               show_asides={@show_asides}
@@ -525,14 +529,14 @@ defmodule PlaycodeWeb.PlayShowLive do
     """
   end
 
-  defp build_sections_navigation(play, divisions, bibliography) do
-    metadata_sections = build_metadata_sections(play, bibliography)
+  defp build_sections_navigation(play, front_notes, divisions, bibliography) do
+    metadata_sections = build_metadata_sections(play, front_notes, bibliography)
     play_sections = divisions |> Enum.flat_map(&division_navigation_item(&1, 0))
 
     %{metadata: metadata_sections, play: play_sections}
   end
 
-  defp build_metadata_sections(play, bibliography) do
+  defp build_metadata_sections(play, front_notes, bibliography) do
     base = [%{id: "meta-overview", label: gettext("Overview")}]
 
     base
@@ -547,7 +551,7 @@ defmodule PlaycodeWeb.PlayShowLive do
     |> maybe_add_section(play.editors != [], "meta-editors", gettext("Editors"))
     |> maybe_add_section(play.witnesses != [], "meta-witnesses", gettext("Witnesses"))
     |> maybe_add_section(bibliography != [], "meta-bibliography", gettext("Bibliography"))
-    |> Kernel.++(build_editorial_note_sections(play.editorial_notes))
+    |> Kernel.++(build_editorial_note_sections(front_notes))
   end
 
   defp maybe_add_section(sections, true, id, label), do: sections ++ [%{id: id, label: label}]

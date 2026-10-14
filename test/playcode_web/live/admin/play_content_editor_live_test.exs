@@ -524,6 +524,27 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  test "the scene of the action is a kind of front-matter section", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Editorial Notes")) |> render_click()
+    lv |> element("button", t("Add Note")) |> render_click()
+
+    lv
+    |> form("#editorial-note-form",
+      editorial_note: %{
+        "section_type" => "lugar_accion",
+        "heading" => "SCENE:",
+        "content" => "An English wood."
+      }
+    )
+    |> render_submit()
+
+    assert render(lv) =~ t("Scene of the action")
+    xml = export_tei(play)
+    assert xml_texts(xml, "head", within: "set") == ["SCENE:"]
+    assert xml_texts(xml, "p", within: "set") == ["An English wood."]
+  end
+
   test "a character's actor in the original cast is edited and listed", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
     lv |> element("nav[aria-label='Editor tabs'] button", t("Cast list")) |> render_click()

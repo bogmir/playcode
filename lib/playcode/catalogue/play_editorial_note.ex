@@ -1,8 +1,9 @@
 defmodule Playcode.Catalogue.PlayEditorialNote do
   @moduledoc """
   A front-matter text by `section_type`: an editor's introduction, a dedication, an
-  argument, a prologue or a note, with an optional `heading`. `origin` works as for
-  `PlayEditor`.
+  argument, a prologue, a note, or the scene of the action (`lugar_accion`, TEI's
+  `<set>`, printed after the cast list), with an optional `heading`. `origin` works as
+  for `PlayEditor`.
   """
 
   use Ecto.Schema
@@ -29,7 +30,7 @@ defmodule Playcode.Catalogue.PlayEditorialNote do
     |> validate_required([:section_type, :content])
     |> validate_inclusion(
       :section_type,
-      ~w(introduccion_editor dedicatoria argumento prologo nota)
+      ~w(introduccion_editor dedicatoria argumento prologo nota lugar_accion)
     )
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
   end

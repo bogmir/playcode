@@ -230,6 +230,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/profileDesc/textClass/classCode[@scheme="#CDU"]` <- written from the language (with `encodingDesc/classDecl/taxonomy[@xml:id="CDU"]`), never read: the CDU number follows the language one for one, and Portuguese has none
 - `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading; `castItem/actor` -> `characters.actor`, the original cast, edited in the content editor and printed nowhere, as on emothe.uv.es (question 28)
 - `text/front/div[@type="dedicatoria|introduccion_editor"]` -> editorial notes
+- `text/front/set` -> an editorial note of type `lugar_accion`, the scene of the action, written back as `<set>` after the cast list and printed there (`PlayLabels.split_front_matter/2`)
 - `text/body/div1[@type="acto"]` -> act divisions
 - `text/body/div1/div2[@type="escena"]` -> scene subdivisions
 - `sp` -> speech elements with `who` -> character reference

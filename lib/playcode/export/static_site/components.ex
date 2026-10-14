@@ -297,6 +297,15 @@ defmodule Playcode.Export.StaticSite.Components do
   @doc "The cast as published: every character not marked hidden."
   def cast(characters), do: Enum.reject(characters, & &1.is_hidden)
 
+  @doc "The front matter printed above the cast list (`PlayLabels.split_front_matter/2`)."
+  def front_notes(edition), do: edition |> front_matter() |> elem(0)
+
+  @doc "The scene of the action, printed under the cast list."
+  def scene(edition), do: edition |> front_matter() |> elem(1)
+
+  defp front_matter(edition),
+    do: PlayLabels.split_front_matter(edition.play.editorial_notes, edition.divisions)
+
   @doc "The cast list's heading: the play's own, as its TEI file carries it, or the Latin."
   def cast_heading(divisions),
     do: Enum.find_value(divisions, &(&1.type == "elenco" && &1.title)) || "Dramatis personae"

@@ -754,20 +754,12 @@ defmodule Playcode.Export.TeiXml do
         |> Enum.reject(&is_nil/1)
       )
 
-    # Editorial notes as front divs with their stored section_type
-    note_divs =
+    # Editorial notes as front divs with their stored section_type; the scene of the
+    # action after the cast list, where 15 of the 17 files that have one put it.
+    {scenes, notes} =
       play.editorial_notes
       |> Enum.sort_by(& &1.position)
-      |> Enum.map(fn note ->
-        head = if note.heading, do: [element(:head, note.heading)], else: []
-
-        paragraphs =
-          note.content
-          |> String.split("\n\n")
-          |> Enum.map(&element(:p, &1))
-
-        element(:div, %{type: note.section_type}, head ++ paragraphs)
-      end)
+      |> Enum.split_with(&(&1.section_type == "lugar_accion"))
 
     # Cast list
     cast_list =
@@ -796,7 +788,21 @@ defmodule Playcode.Export.TeiXml do
         []
       end
 
-    element(:front, [title_page] ++ note_divs ++ cast_list)
+    element(
+      :front,
+      [title_page] ++
+        Enum.map(notes, &front_section/1) ++ cast_list ++ Enum.map(scenes, &front_section/1)
+    )
+  end
+
+  defp front_section(note) do
+    head = if note.heading, do: [element(:head, note.heading)], else: []
+    paragraphs = note.content |> String.split("\n\n") |> Enum.map(&element(:p, &1))
+
+    case note.section_type do
+      "lugar_accion" -> element(:set, head ++ paragraphs)
+      type -> element(:div, %{type: type}, head ++ paragraphs)
+    end
   end
 
   defp build_body(body_divisions) do

@@ -83,6 +83,17 @@ defmodule PlaycodeWeb.PlayLabels do
       else: options ++ [{current, current}]
   end
 
+  @doc """
+  A play's front-matter notes as printed: those above the text, and its scene of the
+  action (`lugar_accion`), printed after the cast list as emothe.uv.es prints it. A play
+  with no cast list (no `elenco` division) prints its scene with the rest.
+  """
+  def split_front_matter(notes, divisions) do
+    if Enum.any?(divisions, &(&1.type == "elenco")),
+      do: Enum.split_with(notes, &(&1.section_type != "lugar_accion")),
+      else: {notes, []}
+  end
+
   # The files' template values for a source's provenance: kept, as the file's, but no
   # reader is told them until the project says what they mean (question 27 in
   # docs/stakeholder/preguntas.html).
