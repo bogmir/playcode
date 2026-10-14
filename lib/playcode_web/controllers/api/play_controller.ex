@@ -120,7 +120,8 @@ defmodule PlaycodeWeb.API.PlayController do
       pub_date: source.pub_date,
       pub_place: source.pub_place,
       publisher: source.publisher,
-      note: source.note
+      note: source.note,
+      distributor: source.distributor
     }
   end
 

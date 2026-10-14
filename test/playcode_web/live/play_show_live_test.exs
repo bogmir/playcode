@@ -397,6 +397,29 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute has_element?(view, "#play-tab-statistics")
   end
 
+  # "Procedencia" on emothe.uv.es; a placeholder ("Texto base") is not printed.
+  test "a source says where its digital text came from, unless that is a placeholder",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          source_desc: """
+          <bibl><title>Aminta</title><note>Tasso, Torquato. Aminta.</note>
+            <distributor>IntraText Digital Library</distributor></bibl>
+          <bibl><title>Hamlet</title><distributor>Texto base</distributor></bibl>
+          <bibl><title>El pastor fido</title><distributor>ProcedenciaFuente</distributor></bibl>
+          """
+        )
+      )
+
+    TestFixtures.mark_complete!(play)
+    {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert has_element?(view, "#meta-sources", t("Provenance") <> ": IntraText Digital Library")
+    refute has_element?(view, "#meta-sources", "Texto base")
+    refute has_element?(view, "#meta-sources", "ProcedenciaFuente")
+  end
+
   test "metadata links appear when metadata exists", %{conn: conn} do
     play = TestFixtures.play_with_metadata_fixture()
 

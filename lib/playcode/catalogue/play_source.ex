@@ -2,11 +2,14 @@ defmodule Playcode.Catalogue.PlaySource do
   @moduledoc """
   A printed source the digital edition was made from, TEI's `<sourceDesc><bibl>`. Most
   corpus files carry the citation as free text in `note`; the structured fields are
-  optional. `origin` works as for `PlayEditor`.
+  optional. `distributor` is where the digital text came from (`<distributor>`, Canon
+  60, Gallica…), "Procedencia" on emothe.uv.es. `origin` works as for `PlayEditor`.
   """
 
   use Ecto.Schema
   import Ecto.Changeset
+
+  alias Playcode.Text
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
@@ -21,6 +24,7 @@ defmodule Playcode.Catalogue.PlaySource do
     field :pub_place, :string
     field :pub_date, :string
     field :language, :string
+    field :distributor, :string
     field :position, :integer, default: 0
     field :origin, :string, default: "manual"
 
@@ -41,10 +45,12 @@ defmodule Playcode.Catalogue.PlaySource do
       :pub_place,
       :pub_date,
       :language,
+      :distributor,
       :position,
       :play_id,
       :origin
     ])
+    |> update_change(:distributor, &Text.squeeze/1)
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
   end
 end

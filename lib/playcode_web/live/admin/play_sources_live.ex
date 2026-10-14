@@ -239,6 +239,16 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
             </label>
             <.input field={@source_form[:note]} type="textarea" rows="3" />
           </div>
+          <div class="mt-4">
+            <label class="label" for={@source_form[:distributor].id}>
+              <span class="label-text font-medium">{gettext("Provenance")}</span>
+            </label>
+            <.input
+              field={@source_form[:distributor]}
+              type="text"
+              placeholder={gettext("Where the digital text came from: Gallica, Canon 60…")}
+            />
+          </div>
           <div class="mt-4 flex gap-2 justify-end">
             <button type="button" phx-click="cancel_edit" class="btn btn-ghost btn-sm">
               {gettext("Cancel")}
@@ -315,6 +325,11 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
                 {gettext("Reference")}
               </span>
               <span :if={source.note} class="text-xs text-base-content/80">{source.note}</span>
+
+              <span :if={source.distributor} class="font-medium text-base-content/70 text-right">
+                {gettext("Provenance")}
+              </span>
+              <span :if={source.distributor}>{source.distributor}</span>
             </div>
           </div>
           <div class="flex justify-end gap-1 border-t border-base-300 px-3 py-2">

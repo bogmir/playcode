@@ -107,6 +107,29 @@ defmodule Playcode.Export.StaticSiteTest do
     refute "Dramatis personae" in texts(page, "h2")
   end
 
+  # "Procedencia" on emothe.uv.es. A placeholder ("Texto base", 59 plays) stays in the
+  # file but is not printed; question 27 asks the project what it means.
+  test "a source says where its digital text came from, unless that is a placeholder" do
+    play =
+      tei(
+        source_desc: """
+          <bibl><title>Aminta</title><note>Tasso, Torquato. Aminta.</note>
+            <distributor>IntraText Digital Library</distributor></bibl>
+          <bibl><title>Hamlet</title><distributor>Texto base</distributor></bibl>
+          <bibl><title>El pastor fido</title><distributor>ProcedenciaFuente</distributor></bibl>
+        """
+      )
+      |> import_tei!()
+
+    {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
+    sources = play |> then(&title_page(generate!([&1]), &1)) |> texts("li")
+
+    # The note's own period ends its sentence: no "Aminta.. Provenance".
+    assert "Aminta. Tasso, Torquato. Aminta. Provenance: IntraText Digital Library" in sources
+    assert "Hamlet" in sources
+    assert "El pastor fido" in sources
+  end
+
   test "a cast list with no heading of its own is the Dramatis personae" do
     %{play: play} = play_with_structure_fixture()
     page = title_page(generate!([play], all: true), play)

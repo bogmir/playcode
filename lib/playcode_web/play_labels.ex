@@ -11,7 +11,7 @@ defmodule PlaycodeWeb.PlayLabels do
   use Gettext, backend: PlaycodeWeb.Gettext
 
   alias Playcode.Bibliography.Entry
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Play, PlaySource}
   alias Playcode.PlayContent.{Element, Note}
   alias Playcode.Places.{Place, PlayPlace}
 
@@ -82,6 +82,18 @@ defmodule PlaycodeWeb.PlayLabels do
       do: options,
       else: options ++ [{current, current}]
   end
+
+  # The files' template values for a source's provenance: kept, as the file's, but no
+  # reader is told them until the project says what they mean (question 27 in
+  # docs/stakeholder/preguntas.html).
+  @placeholder_provenances ["Texto base", "ProcedenciaFuente"]
+
+  @doc "Where a source's digital text came from, as readers see it: nil for a placeholder."
+  def provenance(%PlaySource{distributor: distributor})
+      when distributor in @placeholder_provenances,
+      do: nil
+
+  def provenance(%PlaySource{distributor: distributor}), do: distributor
 
   @doc "The name of a play's form, as `Play.form/1` gives it."
   def form_label("verse"), do: gettext("Verse")

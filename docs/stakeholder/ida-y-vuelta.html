@@ -284,7 +284,7 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time. The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team. The exported file carries the CDU number again; the witnesses come back from it whole, with their line breaks; a translation’s file names its original, so the two are linked again whichever is imported first; the bibliography comes back from the file, with each play’s own place in an edition; a digital editor comes back as one, not as an editor; two italic passages side by side come back as two; the kind of a stage direction can be corrected in Playcode; and the notes on the edition are read from the file and written back. The files carry no FileMaker or Playcode record numbers.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October. Updated on 13 and 14 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time. The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team. The exported file carries the CDU number again; the witnesses come back from it whole, with their line breaks; a translation’s file names its original, so the two are linked again whichever is imported first; the bibliography comes back from the file, with each play’s own place in an edition; a digital editor comes back as one, not as an editor; two italic passages side by side come back as two; the kind of a stage direction can be corrected in Playcode; the notes on the edition are read from the file and written back; and where the digital text came from is read, written back and printed. The files carry no FileMaker or Playcode record numbers.</p>
   </header>
 
   <section aria-labelledby="h-why">
@@ -304,7 +304,7 @@
         <tr class="lost"><td>Plays with a cast list per act that come back with one</td><td class="num">4</td></tr>
         <tr class="todo"><td>Witnesses ready from FileMaker, not yet imported on production</td><td class="num">510</td></tr>
         <tr class="todo"><td>Plays whose notes wait on production for the TEI re-import</td><td class="num">84</td></tr>
-        <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">13</td></tr>
+        <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">11</td></tr>
         <tr class="todo"><td>Parts of a play in FileMaker or planned, not built yet</td><td class="num">3</td></tr>
       </tbody>
     </table>
@@ -447,6 +447,16 @@
             <td data-label="Downloads"><span class="s yes">Yes</span></td>
             <td data-label="Play page"><span class="s yes">Yes</span></td>
             <td data-label="Published site"><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">Where the digital text came from: Canon 60, Gallica…<span class="where">152 plays · <a href="preguntas.html#t-provenance">question 27</a></span></th>
+            <td class="imp" data-label="Imported data"><span class="s part">Waiting</span><sup class="fn"><a href="#n20" aria-label="note 20">20</a></sup><span class="src">the TEI re-import; 152 plays</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s no">No</span><sup class="fn"><a href="#n18" aria-label="note 18">18</a></sup></td>
+            <td data-label="Play page"><span class="s yes">Yes</span><sup class="fn"><a href="#n20" aria-label="note 20">20</a></sup></td>
+            <td data-label="Published site"><span class="s yes">Yes</span><sup class="fn"><a href="#n20" aria-label="note 20">20</a></sup></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Witnesses: manuscripts and early printings</th>
@@ -734,16 +744,6 @@
             <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
-            <th scope="row" class="feature">Who supplied the digital text: Canon 60, Gallica…<span class="where">In 152 plays</span></th>
-            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
-            <td data-label="Edited"><span class="s todo">Not yet</span></td>
-            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
-            <td data-label="Play page"><span class="s todo">Not yet</span></td>
-            <td data-label="Published site"><span class="s todo">Not yet</span></td>
-          </tr>
-          <tr>
             <th scope="row" class="feature">Identifiers of speeches, paragraphs and stage directions<span class="where">About 460,000</span></th>
             <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
             <td data-label="Edited"><span class="s todo">Not yet</span></td>
@@ -812,6 +812,7 @@
       <li id="n17">The CDU number of the source files follows the play’s language one for one: 821.134.2-2 for Spanish (151 files), 821.133-2 for French (84), 821.111-2 for English (82), 821.131-2 for Italian (45); the 8 Portuguese plays leave it empty. Playcode holds the language, so it loses nothing by not reading the number, and writes it back from the language.</li>
       <li id="n18">The play page and the published site show it; whether the downloads should print it too is <a href="preguntas.html#t-downloads">question 24</a>, with the other parts they leave out.</li>
       <li id="n19">A note on the edition as a whole, in the file’s header: “El epílogo figura en la edición de Ferrara de 1581, que no es la edición princeps” (<i>L’Aminta</i>). Some are remarks for readers, four list the witnesses and editions used, and three are an editor’s reminders (“¡¡¡CUIDADO, REVISAR QUE SÍ HAY APARTES QUE NO SE MARCAN!!!”). emothe.uv.es shows none of them, so Playcode keeps them in its play form and in the file only; whether readers should see them is <a href="preguntas.html#t-edition-notes">question 26</a>. The plays already in Playcode get theirs when their files are imported again.</li>
+      <li id="n20">“Procedencia” on emothe.uv.es, which prints it under the source on the pages of its older layout: “Procedencia: IntraText Digital Library” for <i>L’Aminta</i>, Folger Digital Texts, Internet Shakespeare Editions; its newer pages leave it out. Playcode prints it under the source. 61 of the 152 hold no real value: “Texto base” (59 plays, <i>Hamlet</i> among them) or “ProcedenciaFuente” (2), and one more file gives an empty one. Playcode keeps them in the file but prints none of them; what “Texto base” means is <a href="preguntas.html#t-provenance">question 27</a>. The plays already in Playcode get theirs when their files are imported again.</li>
     </ol>
   </section>
 
