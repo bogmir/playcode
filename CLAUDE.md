@@ -228,7 +228,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/fileDesc/notesStmt/note` -> `plays.edition_notes`, one text per note, `<lb/>` a line break; on every import, like the title. In the play form and the file only: emothe.uv.es shows none, and readers seeing them waits on question 26
 - `teiHeader/fileDesc/notesStmt/relatedItem[@type="original"]/@target` -> the original's short code; a first import links the two whichever arrives first (`Catalogue.link_waiting_translations/0`), and never replaces an original already set
 - `teiHeader/profileDesc/textClass/classCode[@scheme="#CDU"]` <- written from the language (with `encodingDesc/classDecl/taxonomy[@xml:id="CDU"]`), never read: the CDU number follows the language one for one, and Portuguese has none
-- `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading
+- `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading; `castItem/actor` -> `characters.actor`, the original cast, edited in the content editor and printed nowhere, as on emothe.uv.es (question 28)
 - `text/front/div[@type="dedicatoria|introduccion_editor"]` -> editorial notes
 - `text/body/div1[@type="acto"]` -> act divisions
 - `text/body/div1/div2[@type="escena"]` -> scene subdivisions

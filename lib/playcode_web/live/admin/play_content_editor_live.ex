@@ -1401,6 +1401,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         >
           <div
             :for={{char, idx} <- Enum.with_index(@characters)}
+            id={"character-#{char.id}"}
             data-id={char.id}
             class="drag-item group flex items-center gap-2 px-3 py-2.5 transition-all hover:bg-base-200/40 border-b border-base-300/60 last:border-b-0"
           >
@@ -1433,6 +1434,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               </div>
               <p :if={char.description} class="text-xs text-base-content/70 truncate">
                 {char.description}
+              </p>
+              <p :if={char.actor} class="text-xs text-base-content/70 truncate">
+                {gettext("Actor")}: {char.actor}
               </p>
             </div>
 
@@ -2740,6 +2744,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     ~H"""
     <h3 class="text-lg font-bold mb-4">{editing_label(@editing)} {gettext("Character")}</h3>
     <.form
+      id="character-form"
       for={@form}
       as={:character}
       phx-change="validate_form"
@@ -2763,6 +2768,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <span class="label-text font-medium">{gettext("Description")}</span>
         </label>
         <.input field={@form[:description]} type="text" placeholder={gettext("e.g. una dama")} />
+      </div>
+      <div>
+        <label class="label" for={@form[:actor].id}>
+          <span class="label-text font-medium">{gettext("Actor in the original cast")}</span>
+        </label>
+        <.input field={@form[:actor]} type="text" placeholder={gettext("e.g. Mr. Betterton")} />
       </div>
       <div>
         <.input field={@form[:is_hidden]} type="checkbox" label={gettext("Hidden character")} />

@@ -134,6 +134,7 @@ defmodule PlaycodeWeb.API.PlayController do
       xml_id: char.xml_id,
       name: char.name,
       description: char.description,
+      actor: char.actor,
       is_hidden: char.is_hidden
     }
   end

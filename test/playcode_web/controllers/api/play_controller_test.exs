@@ -15,7 +15,7 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
             "<bibl><title>Primera parte</title><distributor>Gallica</distributor></bibl>",
           front: """
           <div type="elenco"><castList>
-            <castItem><role xml:id="REY">EL REY</role><roleDesc>de Castilla</roleDesc></castItem>
+            <castItem><role xml:id="REY">EL REY</role><roleDesc>de Castilla</roleDesc><actor>Mr. Betterton</actor></castItem>
           </castList></div>
           """,
           body: """
@@ -74,8 +74,16 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
   end
 
   test "a play's characters", %{conn: conn} do
-    assert %{"data" => [%{"xml_id" => "REY", "name" => "EL REY", "description" => "de Castilla"}]} =
-             json_response(get(conn, ~p"/api/v1/plays/API0001/characters"), 200)
+    assert %{
+             "data" => [
+               %{
+                 "xml_id" => "REY",
+                 "name" => "EL REY",
+                 "description" => "de Castilla",
+                 "actor" => "Mr. Betterton"
+               }
+             ]
+           } = json_response(get(conn, ~p"/api/v1/plays/API0001/characters"), 200)
   end
 
   test "a play's text, division by division", %{conn: conn} do
