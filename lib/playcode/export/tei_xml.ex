@@ -285,7 +285,8 @@ defmodule Playcode.Export.TeiXml do
             if(source.pub_place, do: element(:pubPlace, source.pub_place)),
             if(source.pub_date, do: element(:date, source.pub_date)),
             if(source.language, do: element(:lang, source.language)),
-            if(source.note, do: element(:note, source.note))
+            if(source.note, do: element(:note, source.note)),
+            if(source.distributor, do: element(:distributor, source.distributor))
           ]
           |> Enum.reject(&is_nil/1)
 

@@ -9,7 +9,7 @@ defmodule Playcode.Import.TeiParser do
         play: %{code: "EMOTHE0010", title: "…", …},
         editors: [%{person_name, role, organization, position}],
         sources: [%{title, author, editor, editor_role, publisher, pub_place, pub_date,
-                    note, language, position}],
+                    note, language, distributor, position}],
         witnesses: [%{siglum, witness_type, title, …}],
         places: [%{attrs: %{"slug" => …, …}, slug_declared: boolean, places: [place]}],
         settings: [%{slug, role, position, note}],
@@ -599,6 +599,7 @@ defmodule Playcode.Import.TeiParser do
       pub_date: safe_text(find_child(children, "date")),
       note: safe_text(find_child(children, "note")),
       language: safe_text(find_child(children, "lang")),
+      distributor: safe_text(find_child(children, "distributor")),
       position: position
     }
   end

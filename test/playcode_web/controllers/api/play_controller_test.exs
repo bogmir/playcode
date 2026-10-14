@@ -11,7 +11,8 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
           code: "API0001",
           title: "Obra de la API",
           title_stmt: "<author>Lope de Vega</author><principal>Joan Oleza Simó</principal>",
-          source_desc: "<bibl><title>Primera parte</title></bibl>",
+          source_desc:
+            "<bibl><title>Primera parte</title><distributor>Gallica</distributor></bibl>",
           front: """
           <div type="elenco"><castList>
             <castItem><role xml:id="REY">EL REY</role><roleDesc>de Castilla</roleDesc></castItem>
@@ -59,7 +60,7 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
 
     assert body["title"] == "Obra de la API"
     assert %{"name" => "Joan Oleza Simó", "role" => "principal"} in body["editors"]
-    assert [%{"title" => "Primera parte"}] = body["sources"]
+    assert [%{"title" => "Primera parte", "distributor" => "Gallica"}] = body["sources"]
   end
 
   test "a play's form is the curator's, served beside is_verse", %{conn: conn, play: play} do

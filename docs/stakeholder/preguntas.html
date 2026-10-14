@@ -259,7 +259,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 14 October 2026. 26 questions, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 14 October 2026. 27 questions, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -276,6 +276,7 @@
       <li><a href="#t-downloads">The downloads</a><span class="nums">24</span></li>
       <li><a href="#t-ids">Verse identifiers</a><span class="nums">25</span></li>
       <li><a href="#t-edition-notes">Notes on the edition</a><span class="nums">26</span></li>
+      <li><a href="#t-provenance">Where the digital text came from</a><span class="nums">27</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
   </nav>
@@ -1000,6 +1001,7 @@
             <label for="q24-o5"><input type="checkbox" id="q24-o5" name="q24-choice" value="The verse forms: redondilla, romance…">The verse forms: redondilla, romance…</label>
             <label for="q24-o6"><input type="checkbox" id="q24-o6" name="q24-choice" value="The statistics">The statistics</label>
             <label for="q24-o7"><input type="checkbox" id="q24-o7" name="q24-choice" value="The publication details, the licence, the project and editorial statements and the identifiers">The publication details, the licence, the project and editorial statements and the identifiers</label>
+            <label for="q24-o9"><input type="checkbox" id="q24-o9" name="q24-choice" value="Where the digital text came from (“Procedencia”: Gallica, Canon 60…; 91 plays)">Where the digital text came from (“Procedencia”: Gallica, Canon 60…; 91 plays)</label>
             <label for="q24-o8"><input type="checkbox" id="q24-o8" name="q24-choice" value="None: the downloads are for reading the play">None: the downloads are for reading the play</label>
           </div>
         </fieldset>
@@ -1069,6 +1071,33 @@
         <div>
           <label class="label" for="q26-text">Notes</label>
           <textarea id="q26-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-provenance" aria-labelledby="h-provenance">
+    <h2 id="h-provenance">Where the digital text came from</h2>
+    <p>152 files say, beside the edition the text was taken from, where its digital text came from: <code>&lt;distributor&gt;IntraText Digital Library&lt;/distributor&gt;</code> (<i>L’Aminta</i>, EMOTHE0005). Canon 60 (30 plays), Gallica (15), the TC/12 groups, Internet Shakespeare Editions, Folger Digital Texts, Project Gutenberg… emothe.uv.es prints it as “Procedencia” under the source on the pages of its older layout, and its newer pages leave it out. Playcode now keeps it, writes it back to the file, and prints it under the source on the play page and the published site.</p>
+
+    <div class="q" data-q="q27" data-n="27">
+      <span class="q-num" aria-hidden="true">27</span>
+      <div class="q-body">
+        <h3>What does “Texto base” mean as the provenance of a text?</h3>
+        <p class="why">59 files give it, among them <i>Hamlet</i> (EMOTHE0010), <i>Arte nuevo de hacer comedias</i> (EMOTHE0002) and <i>La vida es sueño</i> (EMOTHE0020). Two more give “ProcedenciaFuente” (<i>El pastor fido</i>, EMOTHE0298, and <i>Fray Bacon y fray Bungay</i>, EMOTHE0299), the name of the field rather than a value, and one gives nothing (<i>Le berger fidelle</i>, EMOTHE0286). emothe.uv.es printed “Procedencia: Texto base” where its layout shows the line. Until you answer, Playcode keeps these values in the files and prints none of them.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q27-o1"><input type="radio" id="q27-o1" name="q27-choice" value="A placeholder: print nothing, and we will give the real provenance where we know it">A placeholder: print nothing, and we will give the real provenance where we know it</label>
+            <label for="q27-o2"><input type="radio" id="q27-o2" name="q27-choice" value="A placeholder: take it out of the files too">A placeholder: take it out of the files too</label>
+            <label for="q27-o3"><input type="radio" id="q27-o3" name="q27-choice" value="It means something: print it as emothe.uv.es did (say what it means in the notes)">It means something: print it as emothe.uv.es did (say what it means in the notes)</label>
+            <label for="q27-o4"><input type="radio" id="q27-o4" name="q27-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q27-text">Notes</label>
+          <textarea id="q27-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>

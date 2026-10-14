@@ -222,6 +222,28 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # Where the digital text came from (152 production files: Canon 60, Gallica…). The
+  # placeholders "Texto base" (59) and "ProcedenciaFuente" (2) are kept, as the file's;
+  # an empty one (EMOTHE0286) says nothing.
+  test "a source's provenance comes back, a placeholder too, an empty one not" do
+    xml =
+      roundtrip(
+        tei(
+          source_desc: """
+          <bibl><title>Aminta</title><note>Tasso, Torquato. Aminta.</note>
+            <distributor>IntraText Digital Library</distributor></bibl>
+          <bibl><title>Hamlet</title><distributor>Texto base</distributor></bibl>
+          <bibl><title>Le berger fidelle</title><distributor></distributor></bibl>
+          """
+        )
+      )
+
+    for xml <- [xml, roundtrip(xml)] do
+      assert xml_texts(xml, "distributor", within: "bibl") ==
+               ["IntraText Digital Library", "Texto base"]
+    end
+  end
+
   describe "the play's language" do
     # The root's xml:lang is always "es" in EMOTHE files (the editorial platform's
     # language); the play's own language is langUsage.

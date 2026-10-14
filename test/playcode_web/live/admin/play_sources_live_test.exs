@@ -22,7 +22,8 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLiveTest do
       play_source: %{
         "title" => "El Rey Lear",
         "author" => "Shakespeare, William",
-        "pub_place" => "Barcelona"
+        "pub_place" => "Barcelona",
+        "distributor" => "  Gallica "
       }
     )
     |> render_submit()
@@ -30,7 +31,10 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLiveTest do
     assert {bibl(play, "title"), bibl(play, "author"), bibl(play, "pubPlace")} ==
              {["El Rey Lear"], ["Shakespeare, William"], ["Barcelona"]}
 
+    # Kept as the file gives it back, and shown on the source's card.
     [source] = Playcode.Catalogue.list_play_sources(play.id)
+    assert source.distributor == "Gallica"
+    assert has_element?(lv, "#source-#{source.id}", "Gallica")
     lv |> element("#source-#{source.id} button", t("Edit")) |> render_click()
     lv |> form("#source-form", play_source: %{"pub_date" => "1908"}) |> render_submit()
 
