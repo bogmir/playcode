@@ -39,18 +39,24 @@
     </section>
     <Components.witnesses play={@edition.play} />
     <Components.bibliography groups={@edition.bibliography} />
-    <section :for={note <- @edition.play.editorial_notes}>
+    <section :for={note <- Components.front_notes(@edition)}>
       <h2>{note.heading || Components.note_heading(note.section_type)}</h2>
       <p :for={paragraph <- Components.paragraphs(note.content)}>{paragraph}</p>
     </section>
-    <section :if={Components.cast(@edition.characters) != []}>
-      <h2>{Components.cast_heading(@edition.divisions)}</h2>
-      <dl class="cast">
-        <%= for character <- Components.cast(@edition.characters) do %>
-          <dt>{character.name}</dt>
-          <dd>{character.description}</dd>
-        <% end %>
-      </dl>
+    <section :if={Components.cast(@edition.characters) != [] or Components.scene(@edition) != []}>
+      <%= if Components.cast(@edition.characters) != [] do %>
+        <h2>{Components.cast_heading(@edition.divisions)}</h2>
+        <dl class="cast">
+          <%= for character <- Components.cast(@edition.characters) do %>
+            <dt>{character.name}</dt>
+            <dd>{character.description}</dd>
+          <% end %>
+        </dl>
+      <% end %>
+      <%= for note <- Components.scene(@edition) do %>
+        <h3 :if={note.heading}>{note.heading}</h3>
+        <p :for={paragraph <- Components.paragraphs(note.content)}>{paragraph}</p>
+      <% end %>
     </section>
     <section>
       <h2>Contents</h2>

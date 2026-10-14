@@ -614,6 +614,29 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # The Old Wife's Tale's "SCENE: An English wood…". 15 of the 17 files that have one put it
+  # right after the cast list, and emothe.uv.es prints it there; Egle's comes back there too.
+  test "the scene of the action keeps its heading and paragraphs, after the cast list" do
+    xml =
+      roundtrip(
+        tei(
+          front: """
+          <set><head>SCENE:</head><p>An English wood and Clunch's house on the edge of it.]<lb/></p><p>Otro.</p></set>
+          <div type="elenco"><castList><castItem><role xml:id="DON">Don</role></castItem></castList></div>
+          """
+        )
+      )
+
+    assert xml_texts(xml, "head", within: "set") == ["SCENE:"]
+
+    assert xml_texts(xml, "p", within: "set") == [
+             "An English wood and Clunch's house on the edge of it.]",
+             "Otro."
+           ]
+
+    assert xml =~ ~r{</castList>\s*</div>\s*<set>}
+  end
+
   test "a front-matter note keeps its type, heading and paragraphs" do
     xml =
       roundtrip(

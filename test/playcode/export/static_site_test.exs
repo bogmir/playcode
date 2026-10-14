@@ -107,6 +107,25 @@ defmodule Playcode.Export.StaticSiteTest do
     refute "Dramatis personae" in texts(page, "h2")
   end
 
+  # Under the cast list, as on emothe.uv.es, and not among the front matter above it.
+  test "the scene of the action follows the cast list" do
+    play =
+      tei(
+        front: """
+        <div type="elenco"><castList><castItem><role xml:id="DON">Don Juan</role></castItem></castList></div>
+        <set><head>SCENE:</head><p>An English wood.</p></set>
+        """
+      )
+      |> import_tei!()
+
+    {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
+    page = title_page(generate!([play]), play)
+
+    assert texts(page, "dl.cast ~ h3") == ["SCENE:"]
+    assert texts(page, "dl.cast ~ p") == ["An English wood."]
+    refute "SCENE:" in texts(page, "h2")
+  end
+
   # "Procedencia" on emothe.uv.es. A placeholder ("Texto base", 59 plays) stays in the
   # file but is not printed; question 27 asks the project what it means.
   test "a source says where its digital text came from, unless that is a placeholder" do

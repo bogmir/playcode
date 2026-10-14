@@ -12,6 +12,7 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   attr :divisions, :list, required: true
   attr :characters, :list, default: []
+  attr :scene, :list, default: [], doc: "the scene of the action, printed after the cast list"
   attr :show_line_numbers, :boolean, default: true
   attr :show_stage_directions, :boolean, default: true
   attr :show_asides, :boolean, default: true
@@ -31,6 +32,7 @@ defmodule PlaycodeWeb.Components.PlayText do
 
         <%!-- Render inline cast list for elenco divisions --%>
         <.cast_list :if={division.type == "elenco"} characters={@characters} />
+        <.scene :for={note <- @scene} :if={division.type == "elenco"} note={note} />
 
         <div :if={Map.has_key?(division, :loaded_elements)}>
           <.element_list
@@ -121,6 +123,17 @@ defmodule PlaycodeWeb.Components.PlayText do
           {char.description}
         </span>
       </div>
+    </div>
+    """
+  end
+
+  attr :note, :map, required: true
+
+  defp scene(assigns) do
+    ~H"""
+    <div class="mb-8 max-w-xl mx-auto text-center text-sm">
+      <h3 :if={@note.heading} class="font-bold mb-1">{@note.heading}</h3>
+      <div class="whitespace-pre-line">{@note.content}</div>
     </div>
     """
   end

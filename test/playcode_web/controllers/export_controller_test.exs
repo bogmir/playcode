@@ -87,6 +87,32 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  # After the cast list, as the play page and the published site print it.
+  test "the HTML and EPUB downloads print the scene of the action after the cast list",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          front: """
+          <div type="elenco"><castList><castItem><role xml:id="DON">Don Juan</role></castItem></castList></div>
+          <set><head>SCENE:</head><p>An English wood.</p></set>
+          """
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    assert [_before_cast, after_cast] = String.split(html, "Don Juan")
+    assert after_cast =~ ~r/SCENE:.*An English wood\./s
+    refute html =~ ~r/An English wood.*An English wood/s
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    assert Enum.any?(files, fn {_name, content} ->
+             content =~ ~r/Don Juan.*SCENE:.*An English wood\./s
+           end)
+  end
+
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.delete_play(play)
 

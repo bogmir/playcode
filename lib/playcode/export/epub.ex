@@ -7,6 +7,7 @@ defmodule Playcode.Export.Epub do
   alias Playcode.Export.{Html, NoteMarkup}
   alias Playcode.PlayContent
   alias Playcode.PlayContent.Note
+  alias PlaycodeWeb.PlayLabels
 
   @act_types ~w(acto act acte jornada)
 
@@ -30,7 +31,13 @@ defmodule Playcode.Export.Epub do
 
       # Front matter: title, author, sources, editors, editorial notes, cast list
       front_path =
-        write_chapter(tmp_dir, "front", play.title, play.language, render_front(play, characters))
+        write_chapter(
+          tmp_dir,
+          "front",
+          play.title,
+          play.language,
+          render_front(play, characters, divisions)
+        )
 
       # One chapter per top-level division
       chapter_entries =
@@ -121,7 +128,9 @@ defmodule Playcode.Export.Epub do
 
   # --- Front matter ---
 
-  defp render_front(play, characters) do
+  defp render_front(play, characters, divisions) do
+    {front_notes, scene} = PlayLabels.split_front_matter(play.editorial_notes, divisions)
+
     """
     <div class="header">
       <p class="author">#{escape(play.author_name || "")}</p>
@@ -131,8 +140,9 @@ defmodule Playcode.Export.Epub do
     #{render_verse_info(play)}
     #{render_dating(play)}
     </div>
-    #{render_editorial_notes(play.editorial_notes)}
+    #{render_editorial_notes(front_notes)}
     #{render_cast_list(characters)}
+    #{render_editorial_notes(scene)}
     """
   end
 

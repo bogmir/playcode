@@ -398,6 +398,39 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   end
 
   # "Procedencia" on emothe.uv.es; a placeholder ("Texto base") is not printed.
+  # Where emothe.uv.es prints it: after the cast list, once, not among the front matter
+  # above the text.
+  test "the scene of the action follows the cast list", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          front: """
+          <div type="dedicatoria"><head>Al lector</head><p>Dedicada.</p></div>
+          <div type="elenco"><castList><castItem><role xml:id="DON">Don Juan</role></castItem></castList></div>
+          <set><head>SCENE:</head><p>An English wood.</p></set>
+          """
+        )
+      )
+
+    TestFixtures.mark_complete!(play)
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert [_before_cast, after_cast] = String.split(html, "Don Juan")
+    assert [_, _] = String.split(after_cast, "SCENE:")
+    assert [_, _] = String.split(after_cast, "An English wood.")
+    refute html =~ ~r/An English wood.*An English wood/s
+  end
+
+  test "without a cast list, the scene of the action is printed with the front matter",
+       %{conn: conn} do
+    play = import_tei!(tei(front: "<set><p>An English wood.</p></set>"))
+
+    TestFixtures.mark_complete!(play)
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert html =~ "An English wood."
+  end
+
   test "a source says where its digital text came from, unless that is a placeholder",
        %{conn: conn} do
     play =

@@ -14,6 +14,7 @@ defmodule Playcode.Export.Html do
     play = Playcode.Repo.preload(play, [:editors, :sources, :editorial_notes])
     characters = PlayContent.list_characters(play.id)
     divisions = PlayContent.load_play_content(play.id)
+    {front_notes, scene} = PlayLabels.split_front_matter(play.editorial_notes, divisions)
 
     """
     <!DOCTYPE html>
@@ -37,10 +38,10 @@ defmodule Playcode.Export.Html do
     #{render_dating(play)}
         </header>
 
-    #{render_editorial_notes(play.editorial_notes)}
+    #{render_editorial_notes(front_notes)}
 
         <div class="play-text">
-    #{render_divisions(divisions, characters)}
+    #{render_divisions(divisions, characters, scene)}
         </div>
       </div>
     </body>
@@ -354,14 +355,14 @@ defmodule Playcode.Export.Html do
 
   @act_types ~w(acto act acte jornada)
 
-  defp render_divisions(divisions, characters) do
+  defp render_divisions(divisions, characters, scene) do
     Enum.map(divisions, fn div ->
       heading = division_heading(div)
 
       # Render inline cast list for elenco divisions
       cast =
         if div.type == "elenco",
-          do: render_inline_cast_list(characters),
+          do: render_inline_cast_list(characters) <> render_editorial_notes(scene),
           else: ""
 
       elements = render_elements(Map.get(div, :loaded_elements, []))

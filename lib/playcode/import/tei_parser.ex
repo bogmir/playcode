@@ -999,7 +999,12 @@ defmodule Playcode.Import.TeiParser do
         Enum.flat_map(divs, fn
           {{"elenco", _div_children}, _pos} -> []
           {{type, div_children}, pos} -> editorial_note(type, div_children, pos)
-        end),
+        end) ++
+          for(
+            {"set", _attrs, set_children} <- children,
+            note <- editorial_note("lugar_accion", set_children, length(divs)),
+            do: note
+          ),
       next_position: length(divs)
     }
   end
@@ -1039,8 +1044,9 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  defp section_type(type) when type in ~w(introduccion_editor dedicatoria argumento prologo),
-    do: type
+  defp section_type(type)
+       when type in ~w(introduccion_editor dedicatoria argumento prologo lugar_accion),
+       do: type
 
   defp section_type(_type), do: "nota"
 

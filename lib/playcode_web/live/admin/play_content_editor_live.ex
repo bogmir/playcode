@@ -1175,7 +1175,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       {gettext("Dedication"), "dedicatoria"},
       {gettext("Argument"), "argumento"},
       {gettext("Prologue"), "prologo"},
-      {gettext("Note"), "nota"}
+      {gettext("Note"), "nota"},
+      {gettext("Scene of the action"), "lugar_accion"}
     ]
   end
 
@@ -1184,6 +1185,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   defp section_type_label("argumento"), do: gettext("Argument")
   defp section_type_label("prologo"), do: gettext("Prologue")
   defp section_type_label("nota"), do: gettext("Note")
+  defp section_type_label("lugar_accion"), do: gettext("Scene of the action")
   defp section_type_label(t), do: t
 
   defp division_types do
@@ -1299,7 +1301,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </div>
         <p class="mb-4 text-sm text-base-content/70">
           {gettext(
-            "Front-matter sections: dedications, editor's introductions, prologues, arguments."
+            "Front-matter sections: dedications, editor's introductions, prologues, arguments, the scene of the action."
           )}
         </p>
         <div
@@ -2696,6 +2698,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       {editing_label(@editing)} {gettext("Editorial Note")}
     </h3>
     <.form
+      id="editorial-note-form"
       for={@form}
       as={:editorial_note}
       phx-change="validate_form"
