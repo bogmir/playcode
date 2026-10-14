@@ -193,6 +193,27 @@ defmodule Playcode.Export.TeiValidatorTest do
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
+    # An actor of the original cast, after the role's description. Under a code of its own,
+    # for the same reason as the bibliography test.
+    test "an original cast exports as schema-valid TEI" do
+      play =
+        @fixture_file
+        |> File.read!()
+        |> String.replace(
+          ~s(<title key="archivo">EMOTHE0759_AutoDeLaBarcaDelInfierno</title>),
+          ~s(<title key="archivo">ACT#{System.unique_integer([:positive])}</title>)
+        )
+        |> Playcode.ImportHelpers.import_tei!()
+
+      [character | _] = Playcode.PlayContent.list_characters(play.id)
+      {:ok, _} = Playcode.PlayContent.update_character(character, %{"actor" => "Mr. Betterton"})
+
+      xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
+
+      assert xml =~ "<actor>Mr. Betterton</actor>"
+      assert TeiValidator.validate(xml) == {:ok, :valid}
+    end
+
     # The original a translation translates, as a notesStmt between publicationStmt and
     # sourceDesc, after the notes on the edition. Under a code of its own, for the same
     # reason as the bibliography test.

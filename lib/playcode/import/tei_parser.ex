@@ -13,7 +13,7 @@ defmodule Playcode.Import.TeiParser do
         witnesses: [%{siglum, witness_type, title, …}],
         places: [%{attrs: %{"slug" => …, …}, slug_declared: boolean, places: [place]}],
         settings: [%{slug, role, position, note}],
-        characters: [%{xml_id, name, description, is_hidden, position}],
+        characters: [%{xml_id, name, description, actor, is_hidden, position}],
         editorial_notes: [%{section_type, heading, content, position}],
         divisions: [%{type, number, title, position, notes, elements, divisions}],
         bibliography: [%{description, volume, pages}]
@@ -1067,6 +1067,7 @@ defmodule Playcode.Import.TeiParser do
               xml_id: if(xml_id, do: String.trim(xml_id), else: name),
               name: name,
               description: safe_text(find_child(item_children, "roleDesc")),
+              actor: safe_text(find_child(item_children, "actor")),
               is_hidden: attr_value(attrs, "ana") == "oculto",
               position: idx
             }

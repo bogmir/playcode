@@ -259,7 +259,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 14 October 2026. 27 questions, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 14 October 2026. 28 questions, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -277,6 +277,7 @@
       <li><a href="#t-ids">Verse identifiers</a><span class="nums">25</span></li>
       <li><a href="#t-edition-notes">Notes on the edition</a><span class="nums">26</span></li>
       <li><a href="#t-provenance">Where the digital text came from</a><span class="nums">27</span></li>
+      <li><a href="#t-original-cast">The original cast</a><span class="nums">28</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
   </nav>
@@ -1085,7 +1086,7 @@
       <span class="q-num" aria-hidden="true">27</span>
       <div class="q-body">
         <h3>What does “Texto base” mean as the provenance of a text?</h3>
-        <p class="why">59 files give it, among them <i>Hamlet</i> (EMOTHE0010), <i>Arte nuevo de hacer comedias</i> (EMOTHE0002) and <i>La vida es sueño</i> (EMOTHE0020). Two more give “ProcedenciaFuente” (<i>El pastor fido</i>, EMOTHE0298, and <i>Fray Bacon y fray Bungay</i>, EMOTHE0299), the name of the field rather than a value, and one gives nothing (<i>Le berger fidelle</i>, EMOTHE0286). emothe.uv.es printed “Procedencia: Texto base” where its layout shows the line. Until you answer, Playcode keeps these values in the files and prints none of them.</p>
+        <p class="why">59 files give it, among them <i>Hamlet</i> (EMOTHE0010), <i>Arte nuevo de hacer comedias</i> (EMOTHE0002) and <i>La vida es sueño</i> (EMOTHE0020). Two more give “ProcedenciaFuente” (<i>El pastor fido</i>, EMOTHE0298, and <i>Fray Bacon y fray Bungay</i>, EMOTHE0299), the name of the field rather than a value, and one gives nothing (<i>Le berger fidelle</i>, EMOTHE0286). emothe.uv.es printed “Procedencia: Texto base” where its layout shows the line. In FileMaker, “Texto base” is one of the 45 entries of the list the files’ provenance was chosen from, beside Gallica and Canon 60, so it was picked on purpose; “ProcedenciaFuente” is not in that list. Until you answer, Playcode keeps these values in the files and prints none of them.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
@@ -1098,6 +1099,33 @@
         <div>
           <label class="label" for="q27-text">Notes</label>
           <textarea id="q27-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-original-cast" aria-labelledby="h-original-cast">
+    <h2 id="h-original-cast">The original cast</h2>
+    <p>One play names the actors of its first performance in its cast list: <i>The Way of the World</i> (EMOTHE0313), staged in 1700, gives twelve, from “Fainall, in love with Mrs. Marwood: Mr. Betterton” to “Mincing, Woman to Mrs. Millamant: Mrs. Prince”. emothe.uv.es prints the cast list without them. Playcode now keeps them, lets them be edited in the cast list, and writes them back to the file, but prints them nowhere, as emothe.uv.es does.</p>
+    <p>Two more files use the same place for something else. <i>El sueño de una noche de verano</i> (EMOTHE0477) puts there “personaje del entremés representado por los graciosos”, which describes the five roles of the play within the play bracketed together before it (Píramo, Tisbe, Muro, Luz lunar, León); emothe.uv.es printed the brackets but not the words. <i>A Midsummer Night’s Dream</i> (EMOTHE0474) leaves it empty after Hippolyta, and Playcode drops the empty one. Playcode keeps the words of EMOTHE0477 as the file has them; the play’s editor can move them into the roles’ description in the cast list.</p>
+
+    <div class="q" data-q="q28" data-n="28">
+      <span class="q-num" aria-hidden="true">28</span>
+      <div class="q-body">
+        <h3>Should readers see the actors of the original cast?</h3>
+        <p class="why">They would follow each role in the cast list of the play page, the published site and the downloads: “Fainall, in love with Mrs. Marwood. Mr. Betterton.” FileMaker records the same first performance among its historical performances (1700, Betterton’s company, “probably 5 March”, after Nicoll’s <i>History of English Drama</i>) but with no cast, so these twelve names are in the file only. When the performances are brought over (questions 11 and 12), that one will take its cast from these twelve rather than hold a copy.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q28-o1"><input type="radio" id="q28-o1" name="q28-choice" value="Yes, after each role in every cast list">Yes, after each role in every cast list</label>
+            <label for="q28-o2"><input type="radio" id="q28-o2" name="q28-choice" value="No: keep them in the file only, as emothe.uv.es does">No: keep them in the file only, as emothe.uv.es does</label>
+            <label for="q28-o3"><input type="radio" id="q28-o3" name="q28-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q28-text">Notes</label>
+          <textarea id="q28-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>

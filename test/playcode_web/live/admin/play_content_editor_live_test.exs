@@ -524,6 +524,21 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  test "a character's actor in the original cast is edited and listed", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Cast list")) |> render_click()
+    ana = Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == "ANA"))
+
+    lv |> element("#character-#{ana.id} button[aria-label='#{t("Edit")}']") |> render_click()
+
+    lv
+    |> form("#character-form", character: %{"actor" => " Mrs.  Bracegirdle "})
+    |> render_submit()
+
+    assert lv |> element("#character-#{ana.id}") |> render() =~ "Mrs. Bracegirdle"
+    assert xml_texts(export_tei(play), "actor") == ["Mrs. Bracegirdle"]
+  end
+
   describe "a stage direction's type, changed in a line that has a note" do
     setup %{conn: conn} do
       play =

@@ -548,6 +548,26 @@ defmodule Playcode.TeiRoundtripTest do
                xml_elements(xml, "castItem")
     end
 
+    # The Way of the World names the actors of its first performance (1700). An empty
+    # actor, as in A Midsummer Night's Dream's file, gives none.
+    test "keeps the original cast's actors" do
+      xml =
+        roundtrip(
+          tei(
+            front: """
+            <div type="elenco">
+              <castList>
+                <castItem><role xml:id="Fainall">Fainall</role><roleDesc>in love with Mrs. Marwood</roleDesc><actor>Mr.  Betterton </actor></castItem>
+                <castItem><role xml:id="HIPPOLYTA">HIPPOLYTA</role><actor> </actor></castItem>
+              </castList>
+            </div>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "actor") == ["Mr. Betterton"]
+    end
+
     test "keeps its heading" do
       xml =
         roundtrip(

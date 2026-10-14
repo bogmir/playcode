@@ -783,6 +783,9 @@ defmodule Playcode.Export.TeiXml do
                 do: children ++ [element(:roleDesc, char.description)],
                 else: children
 
+            children =
+              if char.actor, do: children ++ [element(:actor, char.actor)], else: children
+
             item_attrs = if char.is_hidden, do: %{ana: "oculto"}, else: %{}
             element(:castItem, item_attrs, children)
           end)
