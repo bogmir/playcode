@@ -6,7 +6,7 @@ defmodule Playcode.Export.Epub do
 
   alias Playcode.Export.{Html, NoteMarkup}
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.Note
+  alias Playcode.PlayContent.{InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
   @act_types ~w(acto act acte jornada)
@@ -45,7 +45,7 @@ defmodule Playcode.Export.Epub do
         |> Enum.with_index(1)
         |> Enum.map(fn {div, i} ->
           filename = "chapter-#{String.pad_leading("#{i}", 3, "0")}"
-          title = div.title || "#{div.type} #{i}"
+          title = if div.title, do: InlineMarkup.plain(div.title), else: "#{div.type} #{i}"
 
           path =
             write_chapter(
@@ -150,7 +150,7 @@ defmodule Playcode.Export.Epub do
     sources
     |> Enum.map(fn s ->
       if s.note,
-        do: "  <p class=\"source-note\">#{escape(s.note)}</p>",
+        do: "  <p class=\"source-note\">#{NoteMarkup.inline(s.note, [], :epub)}</p>",
         else: ""
     end)
     |> Enum.reject(&(&1 == ""))
@@ -188,8 +188,12 @@ defmodule Playcode.Export.Epub do
   defp render_editorial_notes(notes) do
     notes
     |> Enum.map(fn note ->
-      heading = if note.heading, do: "  <h3>#{escape(note.heading)}</h3>\n", else: ""
-      "<div class=\"editorial-note\">\n#{heading}  <div>#{escape(note.content)}</div>\n</div>"
+      heading =
+        if note.heading,
+          do: "  <h3>#{NoteMarkup.inline(note.heading, [], :epub)}</h3>\n",
+          else: ""
+
+      "<div class=\"editorial-note\">\n#{heading}  <div>#{NoteMarkup.inline(note.content, [], :epub)}</div>\n</div>"
     end)
     |> Enum.join("\n<hr class=\"editorial-note-sep\"/>\n")
   end
@@ -204,10 +208,11 @@ defmodule Playcode.Export.Epub do
       Enum.map(characters, fn char ->
         desc =
           if char.description,
-            do: " <span class=\"cast-desc\">#{escape(char.description)}</span>",
+            do:
+              " <span class=\"cast-desc\">#{NoteMarkup.inline(char.description, [], :epub)}</span>",
             else: ""
 
-        "  <div class=\"cast-item\"><span class=\"cast-name\">#{escape(char.name)}</span>#{desc}</div>"
+        "  <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(char.name, [], :epub)}</span>#{desc}</div>"
       end)
       |> Enum.join("\n")
 

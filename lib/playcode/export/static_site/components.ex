@@ -120,7 +120,9 @@ defmodule Playcode.Export.StaticSite.Components do
         <h2>Highlight</h2>
         <select data-highlight aria-label="Highlight a character">
           <option value="">No one</option>
-          <option :for={character <- @cast} value={character.xml_id}>{character.name}</option>
+          <option :for={character <- @cast} value={character.xml_id}>
+            {InlineMarkup.plain(character.name)}
+          </option>
         </select>
       <% end %>
     </div>
@@ -880,10 +882,12 @@ defmodule Playcode.Export.StaticSite.Components do
   defp column_title(%{"form" => form} = column),
     do: "#{PlayLabels.verse_form_label(form)} · vv. #{range(column)}"
 
+  # The statistics keep a heading as stored, its italics marked: a title attribute takes
+  # plain text.
   defp column_title(%{"act" => act, "label" => label}) when is_integer(act),
-    do: "#{Edition.roman(act)}: #{label}"
+    do: "#{Edition.roman(act)}: #{InlineMarkup.plain(label)}"
 
-  defp column_title(%{"label" => label}), do: label || ""
+  defp column_title(%{"label" => label}), do: InlineMarkup.plain(label)
 
   defp act_start(columns, i),
     do:

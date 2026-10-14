@@ -113,6 +113,35 @@ defmodule PlaycodeWeb.ExportControllerTest do
            end)
   end
 
+  test "the HTML and EPUB downloads print italics outside the text as italics", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          source_desc:
+            "<bibl><title>Aminta</title><note>Tasso. <emph>Aminta</emph>. Venezia.</note></bibl>",
+          front: """
+          <div type="dedicatoria"><head>A <emph>Damone</emph></head><p>Dedica <emph>Egle</emph>.</p></div>
+          <div type="elenco"><head><emph>Dramatis Personae</emph></head><castList>
+            <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
+          </castList></div>
+          <set><p><emph>La Scena è in Atene.</emph></p></set>
+          """
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    for {format, text} <- [html: html, epub: epub] do
+      refute text =~ "&lt;&lt;", "#{format} prints the markers"
+
+      for italic <- ~w(Aminta Damone Egle Spela) ++ ["The courtiers", "La Scena è in Atene."],
+          do: assert(text =~ "<em>#{italic}</em>", "#{format} lacks #{italic}")
+    end
+  end
+
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.delete_play(play)
 

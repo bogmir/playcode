@@ -34,28 +34,36 @@
     <section :if={@edition.play.sources != []}>
       <h2>Sources</h2>
       <ul>
-        <li :for={source <- @edition.play.sources}>{Components.source_text(source)}</li>
+        <li :for={source <- @edition.play.sources}>
+          <Components.inline text={Components.source_text(source)} />
+        </li>
       </ul>
     </section>
     <Components.witnesses play={@edition.play} />
     <Components.bibliography groups={@edition.bibliography} />
     <section :for={note <- Components.front_notes(@edition)}>
-      <h2>{note.heading || Components.note_heading(note.section_type)}</h2>
-      <p :for={paragraph <- Components.paragraphs(note.content)}>{paragraph}</p>
+      <h2>
+        <Components.inline text={note.heading || Components.note_heading(note.section_type)} />
+      </h2>
+      <p :for={paragraph <- Components.paragraphs(note.content)}>
+        <Components.inline text={paragraph} />
+      </p>
     </section>
     <section :if={Components.cast(@edition.characters) != [] or Components.scene(@edition) != []}>
       <%= if Components.cast(@edition.characters) != [] do %>
-        <h2>{Components.cast_heading(@edition.divisions)}</h2>
+        <h2><Components.inline text={Components.cast_heading(@edition.divisions)} /></h2>
         <dl class="cast">
           <%= for character <- Components.cast(@edition.characters) do %>
-            <dt>{character.name}</dt>
-            <dd>{character.description}</dd>
+            <dt><Components.inline text={character.name} /></dt>
+            <dd><Components.inline text={character.description} /></dd>
           <% end %>
         </dl>
       <% end %>
       <%= for note <- Components.scene(@edition) do %>
-        <h3 :if={note.heading}>{note.heading}</h3>
-        <p :for={paragraph <- Components.paragraphs(note.content)}>{paragraph}</p>
+        <h3 :if={note.heading}><Components.inline text={note.heading} /></h3>
+        <p :for={paragraph <- Components.paragraphs(note.content)}>
+          <Components.inline text={paragraph} />
+        </p>
       <% end %>
     </section>
     <section>

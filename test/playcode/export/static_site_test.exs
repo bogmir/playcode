@@ -107,6 +107,38 @@ defmodule Playcode.Export.StaticSiteTest do
     refute "Dramatis personae" in texts(page, "h2")
   end
 
+  # Stored as <<…>>, printed as italics; a heading in a link or a page's title, as plain text.
+  test "italics outside the text are printed as italics, and never as the markers" do
+    play =
+      tei(
+        source_desc:
+          "<bibl><title><emph>Aminta</emph></title><note>Tasso. <emph>Aminta</emph>. Venezia.</note></bibl>",
+        front: """
+        <div type="dedicatoria"><head>A <emph>Damone</emph></head><p>Dedica <emph>Egle</emph>.</p></div>
+        <div type="elenco"><head><emph>Dramatis Personae</emph></head><castList>
+          <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
+        </castList></div>
+        <set><p><emph>La Scena è in Atene.</emph></p></set>
+        """,
+        body:
+          ~s(<div1 type="acto" n="1"><head><emph>Actus Primus</emph></head><sp><speaker>CORT</speaker><p>Texto.</p></sp></div1>)
+      )
+      |> import_tei!()
+
+    {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
+    dir = generate!([play])
+
+    for page <- ["index.html", "act-1.html", "statistics.html"],
+        do: refute(read!(dir, "plays/#{play.code}/#{page}") =~ "&lt;&lt;", page)
+
+    ems = dir |> title_page(play) |> texts("em")
+
+    for italic <-
+          ~w(Aminta Damone Egle Spela) ++
+            ["The courtiers", "La Scena è in Atene.", "Dramatis Personae"],
+        do: assert(italic in ems, italic)
+  end
+
   # Under the cast list, as on emothe.uv.es, and not among the front matter above it.
   test "the scene of the action follows the cast list" do
     play =
@@ -634,6 +666,21 @@ defmodule Playcode.Export.StaticSiteTest do
 
     assert Enum.filter(texts(page, "h2"), &(&1 in ["First note", "Second note"])) ==
              ["First note", "Second note"]
+  end
+
+  test "the notes page prints a glossed word in italics as italics" do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">Nous voyent<note n="2" type="editor"><term><emph>voyent</emph></term><p>Forma arcaica.</p></note> dans la ville</l></sp></div1>)
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    dir = generate!([play])
+
+    refute read!(dir, "plays/#{play.code}/notes.html") =~ "&lt;&lt;"
+    assert texts(html!(dir, "plays/#{play.code}/notes.html"), ".note-head em") == ["voyent"]
   end
 
   describe "in-text notes" do

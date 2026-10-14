@@ -261,7 +261,7 @@ defmodule Playcode.Export.Html do
     sources
     |> Enum.map(fn s ->
       if s.note,
-        do: "      <p class=\"source-note\">#{escape(s.note)}</p>",
+        do: "      <p class=\"source-note\">#{NoteMarkup.inline(s.note, [], :html)}</p>",
         else: ""
     end)
     |> Enum.reject(&(&1 == ""))
@@ -322,9 +322,12 @@ defmodule Playcode.Export.Html do
   defp render_editorial_notes(notes) do
     notes
     |> Enum.map(fn note ->
-      heading = if note.heading, do: "      <h3>#{escape(note.heading)}</h3>\n", else: ""
+      heading =
+        if note.heading,
+          do: "      <h3>#{NoteMarkup.inline(note.heading, [], :html)}</h3>\n",
+          else: ""
 
-      "    <div class=\"editorial-note\">\n#{heading}      <div>#{escape(note.content)}</div>\n    </div>"
+      "    <div class=\"editorial-note\">\n#{heading}      <div>#{NoteMarkup.inline(note.content, [], :html)}</div>\n    </div>"
     end)
     |> Enum.join("\n    <hr class=\"editorial-note-sep\">\n")
   end
@@ -339,10 +342,11 @@ defmodule Playcode.Export.Html do
       Enum.map(characters, fn char ->
         desc =
           if char.description,
-            do: " <span class=\"cast-desc\">#{escape(char.description)}</span>",
+            do:
+              " <span class=\"cast-desc\">#{NoteMarkup.inline(char.description, [], :html)}</span>",
             else: ""
 
-        "          <div class=\"cast-item\"><span class=\"cast-name\">#{escape(char.name)}</span>#{desc}</div>"
+        "          <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(char.name, [], :html)}</span>#{desc}</div>"
       end)
       |> Enum.join("\n")
 

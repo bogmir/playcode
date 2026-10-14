@@ -25,7 +25,7 @@
     <li :for={entry <- @edition.notes} data-type={note_type(entry.note)} value={entry.note.number}>
       <p class="note-head">
         <b>{PlayLabels.note_type_label(entry.note.type)}</b>
-        <i :if={entry.glossed}>{entry.glossed}</i>
+        <i :if={entry.glossed}><Components.inline text={entry.glossed} /></i>
         <a href={"#{entry.slug}.html#nref-#{entry.note.number}"}>{entry.ref}</a>
       </p>
       <p :for={paragraph <- Note.paragraphs(entry.note)}>
