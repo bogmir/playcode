@@ -3,6 +3,8 @@ defmodule Playcode.Import.TeiCorpusTest do
   # is asserted through `mix playcode.import.tei` in test/mix/tasks_test.exs.
   use Playcode.DataCase, async: true
 
+  import Playcode.ImportHelpers
+
   alias Playcode.Import.TeiCorpus
 
   defp tmp_dir(name) do
@@ -53,6 +55,29 @@ defmodule Playcode.Import.TeiCorpusTest do
 
       assert [{"EMOTHE0050", _}] = TeiCorpus.collect_files([dir])
       assert "test/fixtures/tei_files" in TeiCorpus.default_dirs()
+    end
+  end
+
+  describe "dry_run/3" do
+    # On a throttled machine the dry run of 372 files said nothing for an hour, then
+    # everything. Each file's line is reported once that file is read: the report below
+    # deletes the second file when the first file's line arrives, so a dry run that read
+    # every file first would still find it.
+    test "reports each file's line as soon as that file is read" do
+      dir = tmp_dir("stream")
+      second = Path.join(dir, "STR0002_Segunda.xml")
+      File.write!(Path.join(dir, "STR0001_Primera.xml"), tei(code: "STR0001", title: "Primera"))
+      File.write!(second, tei(code: "STR0002", title: "Segunda"))
+
+      report = fn {_level, line} ->
+        if line =~ "STR0001", do: File.rm!(second)
+        send(self(), {:line, line})
+      end
+
+      TeiCorpus.dry_run(TeiCorpus.collect_files([dir]), [], report)
+
+      assert_received {:line, "  STR0001  new"}
+      assert_received {:line, "  STR0002: " <> _unreadable}
     end
   end
 end

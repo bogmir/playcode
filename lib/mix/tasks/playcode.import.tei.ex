@@ -43,7 +43,7 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
     end
 
     if opts[:dry_run] do
-      files |> TeiCorpus.dry_run(force: opts[:force] || false) |> Enum.each(report)
+      TeiCorpus.dry_run(files, [force: opts[:force] || false], report)
     else
       TeiCorpus.run(files, [force: opts[:force] || false], report)
     end
