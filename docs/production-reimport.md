@@ -23,6 +23,12 @@ an interrupted run leaves every play either wholly old or wholly new.
 In this directory `fly.toml` makes `playcode` the default app, so every command for the
 database names it with `-a emothe-db-1g`.
 
+**Push nothing to `main` while a run or a site build is going.** A green CI deploys, and a
+deploy restarts `playcode` with `fly.toml`'s size and autostop, which ends the run. On
+2026-10-15 a docs-only push during Generate was caught by cancelling its CI run
+(`gh run cancel <id>`; the deploy then skips); rerun it afterwards (`gh run rerun <id>`),
+which also puts `playcode` back to its usual size.
+
 ## The run
 
 1. **Deploy the code.** Push `main`; CI, then `.github/workflows/deploy-fly.yml`, deploys
@@ -119,8 +125,11 @@ database names it with `-a emothe-db-1g`.
    database.
 
 10. **Generate the site** from `/admin/export`. A re-import moves every play's
-    `content_version`, so Generate rebuilds every complete play; a change to a fingerprinted
-    module (`StaticSite.Fingerprint`) does too. Then Deploy, after checking the preview.
+    `content_version`, and a change to a fingerprinted module (`StaticSite.Fingerprint`)
+    marks the whole site changed, so Generate rebuilds every play *on the site*
+    (`SiteBuilder.codes_in_site/0`): a complete play not yet on it is added from the export
+    page, not by Generate. On 2026-10-15 that was 212 of the 373 complete plays, about four
+    minutes on performance-1x, 560 MB of memory. Then Deploy, after checking the preview.
 
 ## Why it is not automatic
 
