@@ -168,13 +168,19 @@ passages and the Additions are proposals to the editors, questions 36 and 37; bo
 their answers before they are built.
 
 - **Hamlet's Folio-only text** (question 5; the encoding, question 36): hidden, with a "Folio
-  interpolations" switch showing it in grey between superscript F's, as before. All 247
-  passages sit inside one element, so each is an `<app>` in the line, the Folio words a
-  reading the base text (Q2) lacks: `O God, <app type="folio"><lem wit="#Q2"/><rdg
+  interpolations" switch showing it in grey between superscript F's, as before. A passage
+  inside one element is an `<app>` in the line, the Folio words a reading the base text (Q2)
+  lacks: `O God, <app type="folio"><lem wit="#Q2"/><rdg
   wit="#F1">O</rdg></app> God,`. Stored, when built, as a marker in the line like `<stage>`
   (`<folio lem="#Q2" rdg="#F1">O</folio>`), so note offsets keep working; the word count is
   Q2's and search still finds the Folio words. Still open: whether the downloads, which have
-  no switch, print them.
+  no switch, print them. **Correction (2026-10-16): not every passage sits in one element.**
+  The 247 `<span class="folio">`s are one per element; a passage runs from one superscript F
+  to the next, about 131 passages of which some 42 cross elements, the longest 26 speeches
+  (115 spans have no F beside them: the inner elements of such a passage). So a long passage
+  needs the start-and-end form of the Additions, and so does the reading of today's file.
+  The file also holds 263 F's and one `<sup>and</sup>`, so one F is unpaired. Hamlet is left
+  for later.
 - **The Q4 Additions** (question 6; the encoding, question 37): a line in the margin beside
   the whole passage and a superscript Q4 at each end, in all four versions, wherever the text
   is printed. An Addition crosses speeches and scenes, so it is marked start to end:
@@ -196,9 +202,9 @@ their answers before they are built.
   paragraph's edge.
 - **The Rover's directions** (question 7, waiting on the play's digital-text editor, David
   Amelang): until he answers, shown as the stage directions they are, the HTML dropped; the
-  mark stays in the project's file. The importer drops a `<span class="folio">` wrapper that
-  holds no superscript F, which also drops the Spanish version's wrappers around Additions
-  2-5; Hamlet's, which open and close beside an F, are kept as they are.
+  mark stays in the project's file. In a file that marks no Folio passage (no superscript F
+  anywhere) the importer drops every `<span class="folio">` wrapper and keeps its words: The
+  Rover's 40 and the Spanish version's 4 around Additions 2-5. Hamlet's are left as they are.
 - **Mariamne** (question 8): "trône". Our copy of the file is corrected and the play
   re-imported, and the project gets the same correction for its own file.
 - **An unknown `<code>` string** will be refused on import, once the Folio passages and the
