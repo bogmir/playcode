@@ -128,7 +128,7 @@ which also puts `playcode` back to its usual size.
     `content_version`, and a change to a fingerprinted module (`StaticSite.Fingerprint`)
     marks the whole site changed, so Generate rebuilds every play *on the site*
     (`SiteBuilder.codes_in_site/0`): a complete play not yet on it is added from the export
-    page, not by Generate. On 2026-10-15 that was 212 of the 373 complete plays, about four
+    page, not by Generate ("Add every complete play" adds them all in one batch). On 2026-10-15 that was 212 of the 373 complete plays, about four
     minutes on performance-1x, 560 MB of memory. Then Deploy, after checking the preview.
 
 ## Why it is not automatic
