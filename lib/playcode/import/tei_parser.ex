@@ -88,7 +88,7 @@ defmodule Playcode.Import.TeiParser do
     with {:ok, raw} <- File.read(path),
          xml when is_binary(xml) <- normalize_encoding(raw),
          {:ok, tree} <- parse_xml(xml) do
-      {:ok, tree}
+      {:ok, drop_folio_wrappers(tree)}
     else
       {:error, reason} ->
         {:error, reason}
@@ -102,6 +102,50 @@ defmodule Playcode.Import.TeiParser do
         {:error, other}
     end
   end
+
+  # --- HTML typed as text ---
+
+  # Seven files hold HTML typed into <code> as text (docs/tei-apparatus-and-code.md). On
+  # the old site a <span class="folio"> hid Hamlet's Folio passages, each marked by a
+  # superscript F at either end. A file with no such F (The Rover, the Spanish version of
+  # The Spanish Tragedy) uses the wrapper for nothing the project wants hidden, so it goes
+  # and its words stay. Hamlet's wait for its editor (question 36).
+  @folio_wrapper [~s(<span class="folio">), "</span>"]
+  @folio_label ["<sup>", "F", "</sup>"]
+
+  defp drop_folio_wrappers(tree),
+    do: if(folio_labels?(tree), do: tree, else: without_folio_wrappers(tree))
+
+  defp folio_labels?({_name, _attrs, children}) do
+    labelled =
+      children
+      |> Enum.map(&typed_text/1)
+      |> Enum.reject(&(&1 == ""))
+      |> Enum.chunk_every(3, 1, :discard)
+      |> Enum.member?(@folio_label)
+
+    labelled or Enum.any?(children, &folio_labels?/1)
+  end
+
+  defp folio_labels?(_text), do: false
+
+  defp without_folio_wrappers({name, attrs, children}) do
+    {name, attrs,
+     for(
+       child <- children,
+       typed_text(child) not in @folio_wrapper,
+       do: without_folio_wrappers(child)
+     )}
+  end
+
+  defp without_folio_wrappers(text), do: text
+
+  # A <code>'s text or a text node, trimmed; nil for any other element.
+  defp typed_text({"code", _attrs, children}),
+    do: children |> Enum.filter(&is_binary/1) |> Enum.join() |> String.trim()
+
+  defp typed_text(text) when is_binary(text), do: String.trim(text)
+  defp typed_text(_element), do: nil
 
   # --- Encoding ---
 
