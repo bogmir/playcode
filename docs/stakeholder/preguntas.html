@@ -266,7 +266,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 15 October 2026. 35 questions, two of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 35 questions, nine of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -296,16 +296,21 @@
     <p>Six plays carry a critical apparatus: 604 entries, each after the word it is about, listing which witness reads what. The old site showed the edited text with an asterisk that opened the readings. Playcode currently pastes the readings into the line, so <i>La discreta enamorada</i>, v. 72 reads “mucho la hermosura llama llamafalta infama ,”. We plan to keep only the edited text in the line and make each entry a note of its own kind, “Textual variant”.</p>
     <p class="note">The full background, with the six plays and examples: <a href="variantes-y-codigo.html">Variant readings and HTML fragments in the TEI files</a>.</p>
 
-    <div class="q" data-q="q1" data-n="1">
+    <div class="q" data-q="q1" data-n="1" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">1</span>
       <div class="q-body">
         <h3>Should a variant be marked with a number, like the notes, or with an asterisk as before?</h3>
         <p class="why">The old site marked a variant with an asterisk and listed it apart from the notes, which carry numbers. Playcode numbers the notes 1, 2, 3 through the play. A variant could take the next number, so a page has one sequence and one list, or keep a sign of its own.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> an asterisk, as on the old site.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q1-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q1-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q1-o1"><input type="radio" id="q1-o1" name="q1-choice" value="A number, in the same sequence as the notes">A number, in the same sequence as the notes</label>
-            <label for="q1-o2"><input type="radio" id="q1-o2" name="q1-choice" value="An asterisk, as on the old site">An asterisk, as on the old site</label>
+            <label for="q1-o2"><input type="radio" id="q1-o2" name="q1-choice" value="An asterisk, as on the old site" checked>An asterisk, as on the old site</label>
             <label for="q1-o3"><input type="radio" id="q1-o3" name="q1-choice" value="A numbering of its own (a, b, c…)">A numbering of its own (a, b, c…)</label>
           </div>
         </fieldset>
@@ -314,10 +319,11 @@
           <textarea id="q1-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" data-q="q2" data-n="2">
+    <div class="q" data-q="q2" data-n="2" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">2</span>
       <div class="q-body">
         <h3>Should readers see Hamlet’s variant readings?</h3>
@@ -325,12 +331,17 @@
         <p class="why">The old site showed 4 of the 90, at v. 1319 and vv. 3256–3257. The other 86 never appeared: their lines were printed with no marker, so readers never knew they were there.</p>
         <p class="why">They look unfinished. 81 of the 90 sit in the first 313 lines (Act 1, scenes 1 and 2) of a play of about 3,900. Some are damaged: at v. 189 the entry for “an … a” was put after every letter “a” in the line, so it would appear four times, three of them in the middle of a word; at v. 313 (“too too sullied”) the entry is empty and the readings were typed into a note instead; three readings name no witness.</p>
         <p class="why">Whatever you choose, the entries stay in the TEI file. This is only about what readers of the site see.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> show none until the play’s editor has finished them. Hamlet is a special case: its TEI file needs editing to encode the variants and emendations of the critical apparatus properly, and the Folio interpolations, a kind of variant that the side panel shows or hides. Playcode gets a setting per play, “Show variant readings”, off for Hamlet until then.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q2-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q2-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q2-o1"><input type="radio" id="q2-o1" name="q2-choice" value="Show all 90, once we have mended the damaged ones">Show all 90, once we have mended the damaged ones</label>
             <label for="q2-o2"><input type="radio" id="q2-o2" name="q2-choice" value="Show only the 4 shown before">Show only the 4 shown before</label>
-            <label for="q2-o3"><input type="radio" id="q2-o3" name="q2-choice" value="Show none until the play’s editor has finished them">Show none until the play’s editor has finished them</label>
+            <label for="q2-o3"><input type="radio" id="q2-o3" name="q2-choice" value="Show none until the play’s editor has finished them" checked>Show none until the play’s editor has finished them</label>
             <label for="q2-o4"><input type="radio" id="q2-o4" name="q2-choice" value="Not sure: ask the play’s editor">Not sure: ask the play’s editor</label>
           </div>
         </fieldset>
@@ -339,10 +350,11 @@
           <textarea id="q2-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" data-q="q3" data-n="3">
+    <div class="q" data-q="q3" data-n="3" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">3</span>
       <div class="q-body">
         <h3>How will readers know what a siglum such as “P3” or “H” stands for?</h3>
@@ -350,11 +362,16 @@
         <p class="why">They name two kinds of source. 21 are early printings or manuscripts, the play’s witnesses: P3 is the <i>Parte tercera de comedias de los mejores ingenios de España</i> (Madrid, 1653), MP a printing of 1735. The other 21 are modern editions from the play’s bibliography: H is Hartzenbusch’s <i>Comedias escogidas</i> (1860). Playcode now holds all 42, taken from FileMaker, so every siglum points at a known witness or edition.</p>
         <p class="why">The old site printed the sigla and nothing more. Its list of witnesses and its bibliography did not show them, so a reader had no way to match “P3” to a book. Playcode’s play page does the same today.</p>
         <p class="why">The second and third answers can go together; say so in the notes.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> each siglum followed by a short name in the variant: “P3 (Madrid, 1653)”, “H (Hartzenbusch, 1860)”, to be checked once it can be seen. Another way, open to the editors: a preliminary note (“Nota preliminar”) describing the witnesses and editions the apparatus cites, as a paratext in FileMaker or in the TEI file’s front.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q3-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q3-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q3-o1"><input type="radio" id="q3-o1" name="q3-choice" value="Sigla only, as before">Sigla only, as before</label>
-            <label for="q3-o2"><input type="radio" id="q3-o2" name="q3-choice" value="Each siglum followed by a short name in the variant: “P3 (Madrid, 1653)”, “H (Hartzenbusch, 1860)”">Each siglum followed by a short name in the variant: “P3 (Madrid, 1653)”, “H (Hartzenbusch, 1860)”</label>
+            <label for="q3-o2"><input type="radio" id="q3-o2" name="q3-choice" value="Each siglum followed by a short name in the variant: “P3 (Madrid, 1653)”, “H (Hartzenbusch, 1860)”" checked>Each siglum followed by a short name in the variant: “P3 (Madrid, 1653)”, “H (Hartzenbusch, 1860)”</label>
             <label for="q3-o3"><input type="radio" id="q3-o3" name="q3-choice" value="The play’s list of witnesses and its bibliography print each one’s siglum, so readers can look it up">The play’s list of witnesses and its bibliography print each one’s siglum, so readers can look it up</label>
             <label for="q3-o4"><input type="radio" id="q3-o4" name="q3-choice" value="Not sure">Not sure</label>
           </div>
@@ -364,18 +381,24 @@
           <textarea id="q3-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" data-q="q4" data-n="4">
+    <div class="q" data-q="q4" data-n="4" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">4</span>
       <div class="q-body">
         <h3>Should readers see the variants by default?</h3>
         <p class="why">The reading pages have switches for line numbers, stage directions and asides. Variants could be shown with a switch to hide them, hidden with a switch to show them, or always shown.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> the asterisks are always shown, and the side panel, beside the switches for line numbers and stage directions, has one to hide them.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q4-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q4-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q4-o1"><input type="radio" id="q4-o1" name="q4-choice" value="Shown, with a switch to hide them">Shown, with a switch to hide them</label>
+            <label for="q4-o1"><input type="radio" id="q4-o1" name="q4-choice" value="Shown, with a switch to hide them" checked>Shown, with a switch to hide them</label>
             <label for="q4-o2"><input type="radio" id="q4-o2" name="q4-choice" value="Hidden, with a switch to show them">Hidden, with a switch to show them</label>
             <label for="q4-o3"><input type="radio" id="q4-o3" name="q4-choice" value="Always shown">Always shown</label>
           </div>
@@ -385,6 +408,7 @@
           <textarea id="q4-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -394,16 +418,21 @@
     <p>Seven plays hold 1,211 fragments of HTML written as text inside the TEI. The old site printed them as HTML, and its stylesheet hid one kind. Playcode stores them as text, so 236 lines show the tags themselves. Whatever you choose, these tags will no longer reach the page as text.</p>
     <p class="note">Background and examples: <a href="variantes-y-codigo.html#h-html">HTML typed into the text</a>.</p>
 
-    <div class="q" data-q="q5" data-n="5">
+    <div class="q" data-q="q5" data-n="5" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">5</span>
       <div class="q-body">
         <h3>What should readers of Hamlet see of the words found only in the Folio?</h3>
         <p class="why">Hamlet’s text follows the Second Quarto (Q2, 1604). The editor also added the words that only the Folio (F1, 1623) prints, each passage between two superscript F’s: 247 passages over 155 lines, from a single word to runs of 14 lines. At v. 316, Q2 reads “O God, God,” and the Folio “O God, <i>O</i> God,”.</p>
         <p class="why">The old site hid them by default, so its text was Q2’s. A switch in its side panel, “Folio interpolations: Show”, brought them back in grey between their F’s. Playcode today shows the code itself: “O God, &lt;span class="folio"&gt; &lt;sup&gt; F &lt;/sup&gt; O …”.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> hidden, with a switch to show them in grey, as before.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q5-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q5-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q5-o1"><input type="radio" id="q5-o1" name="q5-choice" value="Hidden, with a switch to show them in grey, as before">Hidden, with a switch to show them in grey, as before</label>
+            <label for="q5-o1"><input type="radio" id="q5-o1" name="q5-choice" value="Hidden, with a switch to show them in grey, as before" checked>Hidden, with a switch to show them in grey, as before</label>
             <label for="q5-o2"><input type="radio" id="q5-o2" name="q5-choice" value="Shown in grey between superscript F’s, with a switch to hide them">Shown in grey between superscript F’s, with a switch to hide them</label>
             <label for="q5-o3"><input type="radio" id="q5-o3" name="q5-choice" value="Turn each into a variant entry, “F1: O God, O God”">Turn each into a variant entry, “F1: O God, O God”</label>
             <label for="q5-o4"><input type="radio" id="q5-o4" name="q5-choice" value="Not sure">Not sure</label>
@@ -414,22 +443,28 @@
           <textarea id="q5-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" data-q="q6" data-n="6">
+    <div class="q" data-q="q6" data-n="6" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">6</span>
       <div class="q-body">
         <h3>How should the Q4 Additions of <i>The Spanish Tragedy</i> be marked?</h3>
         <p class="why">The Additions are the five passages first printed in the fourth quarto (Q4, 1602). They run from a few lines to a whole scene: the Painter scene is about 130 lines and 45 speeches. All four versions of the play, English, French, Italian and Spanish, mark where each one starts and ends with a superscript “Q4”. The English and Italian versions also set the Additions in italics; the French and Spanish do not, although the Spanish translator’s notes say they are printed “con un tipo de letra distinto”.</p>
         <p class="why">The marks were typed as pieces of HTML, and on the old site several went wrong. Most ends are written backwards, so the closing “Q4” came out full size. In the French version, one backwards end set the rest of a paragraph in superscript (“Bon voyage, Messieurs !…”). In the Spanish version, Additions 2 to 5 were wrapped in the code that hid Hamlet’s Folio text, so the first line of each disappeared, together with its “Q4” and the translator’s note announcing it. Playcode today shows the code itself: “&lt;sup&gt; Q4 &lt;/sup&gt; [Draws his sword.] &lt;/sup&gt; Q4 &lt;sup&gt;”.</p>
         <p class="why">Whatever you choose, we mend the broken marks and every line is shown. The question is how a reader sees where an Addition begins and ends, especially a long one.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> both: the line in the margin and a Q4 at each end.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q6-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q6-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q6-o1"><input type="radio" id="q6-o1" name="q6-choice" value="A superscript Q4 at each end, as before">A superscript Q4 at each end, as before</label>
             <label for="q6-o2"><input type="radio" id="q6-o2" name="q6-choice" value="A line in the margin beside the whole passage, with Q4 at its start, in all four versions">A line in the margin beside the whole passage, with Q4 at its start, in all four versions</label>
-            <label for="q6-o3"><input type="radio" id="q6-o3" name="q6-choice" value="Both: the line in the margin and a Q4 at each end">Both: the line in the margin and a Q4 at each end</label>
+            <label for="q6-o3"><input type="radio" id="q6-o3" name="q6-choice" value="Both: the line in the margin and a Q4 at each end" checked>Both: the line in the margin and a Q4 at each end</label>
             <label for="q6-o4"><input type="radio" id="q6-o4" name="q6-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
@@ -438,6 +473,7 @@
           <textarea id="q6-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -448,6 +484,7 @@
         <p class="why">In <i>The Rover</i>, 40 short stage directions are wrapped in the same code as Hamlet’s Folio-only words (question 5), so the old site hid them; unlike Hamlet’s page, this one had no switch to show them. They are “Aside” (28 times, and once “Aside to Hellena”), “within” (5 times: a character speaking from offstage), “Exit” (twice, closing a scene), “To Hellena” and “To Willmore” (who a speech is addressed to), and two names inside entrances: “Enter Antonio and his page Diego” and “… and Belvile’s page Boy”.</p>
         <p class="why">Readers lost little with the asides, because the aside itself is set in its own style. The rest was simply missing: the old site printed “Enter Antonio and his page ; Antonio knocks on the hilt of his sword”, and nothing told the reader that Belvile’s lines at the door are spoken from offstage. Playcode today shows the code itself around them.</p>
         <p class="why">The play has the same kinds of direction elsewhere, shown normally: “(Aside)” 53 times, “(To Willmore)” 4 times, “Exit” 5 times. We do not know why these 40 were set apart. The edition’s note says Summers’ additions to the 1677 quarto are in brackets and the digital editor’s in double brackets; these have neither.</p>
+        <p class="why"><strong>16 October 2026:</strong> waiting on the play’s digital-text editor, David Amelang, who is being asked why these 40 were marked. Until he answers, Playcode shows them as ordinary stage directions; the mark stays in the play’s TEI file.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
@@ -465,16 +502,21 @@
       </div>
     </div>
 
-    <div class="q" data-q="q8" data-n="8">
+    <div class="q" data-q="q8" data-n="8" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">8</span>
       <div class="q-body">
         <h3>Is v. 623 of <i>Mariamne</i> “Devant le Ciel voûté, trône du Dieu qui tonne,”?</h3>
         <p class="why">A letter is missing from this line in the file. It reads “tr”, then a piece of HTML that starts superscript, then “ne”. The tag stands exactly where an “ô” would be, so the letter seems to have turned into the tag when the file was made. On the old site the rest of the line, “ne du Dieu qui tonne,”, came out in superscript; Playcode today shows the tag as text.</p>
         <p class="why">Elsewhere the play spells the word “trône” (vv. 208, 466, 835) and “thrône” (vv. 8, 387). What is left here, “tr…ne”, fits “trône”, or the old spelling “trosne”, which the play never uses. The text follows Alan Howe’s edition (Exeter, 1989), which would settle it.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> yes: trône. We correct our copy of the file, and send the project the same one-letter correction for its own.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q8-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q8-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q8-o1"><input type="radio" id="q8-o1" name="q8-choice" value="Yes: trône">Yes: trône</label>
+            <label for="q8-o1"><input type="radio" id="q8-o1" name="q8-choice" value="Yes: trône" checked>Yes: trône</label>
             <label for="q8-o2"><input type="radio" id="q8-o2" name="q8-choice" value="No: Howe’s edition reads otherwise (see my note)">No: Howe’s edition reads otherwise (see my note)</label>
             <label for="q8-o3"><input type="radio" id="q8-o3" name="q8-choice" value="Not sure">Not sure</label>
           </div>
@@ -484,6 +526,7 @@
           <textarea id="q8-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1336,7 +1379,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 33 answered</span>
+        <span class="count" id="answered-count">0 of 26 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>

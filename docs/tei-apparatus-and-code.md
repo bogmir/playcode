@@ -1,11 +1,12 @@
 # Critical apparatus (`<app>`) and literal HTML (`<code>`) in the TEI corpus
 
-Analysis of 2026-10-10, corrected 2026-10-11, from the 370 production TEI files (`doc/tei_corpus/`, git-ignored), the
+Analysis of 2026-10-10, corrected 2026-10-11, decided 2026-10-16, from the 370 production TEI files (`doc/tei_corpus/`, git-ignored), the
 dev database after a full re-import, and the old EMOTHE pages
 (`https://emothe.uv.es/biblioteca/textosEMOTHE/<file>.php`) with their stylesheet. Both are
 listed in `backlog.md`, *Found by the corpus round trip*. The questions only the project can
 answer are 1 to 8 of `stakeholder/preguntas.html`, the project's running list of questions;
-`stakeholder/variantes-y-codigo.html` is their background.
+`stakeholder/variantes-y-codigo.html` is their background. All but 7 were answered on
+2026-10-16; the design below follows the answers.
 
 ## `<app>`: the critical apparatus
 
@@ -76,28 +77,44 @@ v. 189 the entry for "an ... a" was inserted after every letter "a" of the line
 v. 240 are empty `<app>`s; three readings carry `wit="#"`; one `to` points at
 `#em0010-en-0000`, which does not exist. Question 2.
 
-### Proposed design (agreed so far)
+### Design (decided 2026-10-16)
 
 1. **Import**: the whole `<app>` leaves the line's text, as a `<note>` does, so the line reads
    as the old site showed it. The entry is stored at its offset, after the word it annotates.
 2. **A kind of note**: a `play_notes` row of a new type, `variante` ("Textual variant",
-   "Variante textual"), keeping the `<app>`'s `n`, its type in a new `variant_type` column,
-   its own note as the body, and its readings in a new `readings` field (`embeds_many`,
-   JSONB: `lemma` true or false, `wit` as written, `text` with `<<italics>>`, the reading's own
-   `note`). Offsets, the carrying of offsets through edits, pop-ups, endnotes and the
-   content-version trigger are the notes' own.
-3. **Display**: a marker after the word, with the readings in the pop-up as the old site
-   listed them. Whether the marker is a number in the notes' sequence or a separate `*` is
-   question 1 for the stakeholders.
-4. **TEI round trip**: the export writes `<app type n><lem wit>…</lem><rdg wit>…</rdg><note>…
-   </note></app>` back at the note's offset from the stored data, as `build_note/1` writes a
-   `<note>` today. A test imports, exports, re-imports and exports again and expects the same
-   file, as for notes and inline stages.
-5. **Editor**: a variant is edited in the note editor, with its readings as a list (witness,
+   "Variante textual"), keeping the `<app>`'s `n`, its type in a new `variant_type` column
+   (stored and written back, never shown), its own note as the body, its `to` when it has
+   one, and its readings in a new `readings` field (`embeds_many`, JSONB: `lemma` true or
+   false, `wit` as written, `text` with `<<italics>>`, the reading's own `note`). Offsets,
+   the carrying of offsets through edits, pop-ups and the content-version trigger are the
+   notes' own.
+3. **Display** (questions 1, 3 and 4): a superscript `*` after the word, apart from the
+   numbered notes, opening the readings as the old site listed them, each siglum followed
+   by a short name worked out from what it names: a witness's place and year
+   ("P3 (Madrid, 1653)", "MP (1735)"), a modern edition's editor's surname and year
+   ("H (Hartzenbusch, 1860)", "BRA (Bruster and Rasmussen, 2009)"), the year alone for a
+   siglum that is already the surname ("Dyce (1831)"), the siglum alone when it names
+   nothing. Shown by default, with a "Variants" switch to hide them, on the play page and
+   the site. The downloads, which have no pop-ups, list each act's variants after its
+   notes.
+4. **Hamlet** (question 2): a per-play setting, "Show variant readings", on by default, off
+   for EMOTHE0010 until its editor has finished; it hides the asterisks only, never the
+   Folio switch. Its entries, damaged ones included, are imported as they are and written
+   back. When it is switched on, its marker (the old site's `F` or `*`) is decided then.
+5. **Copies inside notes**: 51 of the 52 `<app>`s inside a `<note>` (EMOTHE0187 34, 0560 12,
+   0010 4, 0530 1) repeat the line's entry, same `n`, same readings. They are read as that
+   entry: the note keeps its words ("an learn me that"), and the export writes the entry
+   once, in the line. The 52nd (EMOTHE0530 v. 141, `n="496"`) exists only in the note on
+   "ne"; it moves into the line as a variant after that word.
+6. **Ranges**: the 11 entries with `to="#id"` show their asterisk where they sit, the pop-up
+   prints the note as written (the editors name the range in it: "vv. 13-14 Estos dos
+   versos…"), and `to` is kept and written back.
+7. **TEI round trip**: the export writes `<app type n to><lem wit>…</lem><rdg wit>…</rdg>
+   <note>…</note></app>` back at the note's offset from the stored data, as `build_note/1`
+   writes a `<note>` today. A test imports, exports, re-imports and exports again and
+   expects the same file, as for notes and inline stages.
+8. **Editor**: a variant is edited in the note editor, with its readings as a list (witness,
    reading, comment) to add to, change or remove.
-
-Still to settle in the design: entries inside a note's `<term>` (30), the `to="#id"` ranges
-(11), and how the witness sigla are shown (question 3).
 
 ## `<code>`: literal HTML in the text
 
@@ -142,19 +159,39 @@ The strings are stored as text and shown as text, with spaces around them: 236 l
 direction of *The Spanish Tragedy* reads "`<sup>` Q4 `</sup>` [Draws his sword.] `</sup>` Q4
 `<sup>`".
 
-### Options, per use
+### Decided, per use (2026-10-16)
 
-- **Hamlet's Folio-only text** (question 5): hidden with a switch to show it, as before (the
-  reading text is Q2); shown set apart (grey, between superscript F's) with a switch to hide it; or
-  turn each passage into a textual variant entry (`F1: O God, O God`), which the `<app>` work
-  above already provides and which exports as proper TEI.
-- **The Q4 Additions** (question 6): keep the superscript Q4 labels at each end, with the
-  backwards closings repaired on import; or mark the whole added passage, which often spans
-  several speeches, with a line in the margin; or both. The Spanish Folio spans are dropped
-  either way.
-- **The Rover's directions** (question 7): show them as the stage directions they already are,
-  shown in grey, or drop them as the old site hid them.
-- **Mariamne** (question 8): correct the source to "trône".
+The three uses that mark a difference between printed witnesses become `<app>`s, told apart
+by `type`, so variants, Folio passages and Additions are read and written by one path. The
+importer reads the old HTML forms and the new TEI forms alike, and refuses an unknown
+`<code>` string rather than showing it.
 
-Whatever is chosen, the importer stops storing these strings as text: an unknown `<code>`
-string is refused rather than shown.
+- **Hamlet's Folio-only text** (question 5): hidden, with a "Folio interpolations" switch
+  showing it in grey between superscript F's, as before. All 247 passages sit inside one
+  element, so each is an `<app>` in the line, the Folio words a reading the base text (Q2)
+  lacks: `O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O</rdg></app> God,`. The
+  form is proposed to Hamlet's editor, who is re-encoding the variants and the Folio
+  interpolations, so that his file and Playcode's export agree.
+- **The Q4 Additions** (question 6): a line in the margin beside the whole passage and a
+  superscript Q4 at each end, in all four versions, wherever the text is printed (the play
+  page, the site, the downloads). An Addition crosses speeches and scenes, so it is marked
+  start to end, the way the 11 range entries already are: `<anchor xml:id="q4-1"/>`…the
+  passage…`<anchor xml:id="q4-1-end"/><app type="addition" from="#q4-1" to="#q4-1-end">
+  <lem wit="#Q4"/><rdg wit="#Q1"/></app>`; the printed "Q4" is the `lem`'s witness. Every
+  mark sits at the start or end of a line, stage direction or heading, so an Addition is a
+  run of whole elements. The backwards closings are mended, the Spanish version's "Q4.1"
+  prints as "Q4", its Folio wrappers are dropped, and the English and Italian italics stay.
+  `<addSpan>` was considered and set aside: it marks text added into one document, while an
+  Addition is a difference between printings.
+- **The Rover's directions** (question 7, waiting on the play's digital-text editor, David
+  Amelang): until he answers, shown as the stage directions they are, the HTML dropped; the
+  mark stays in the project's file.
+- **Mariamne** (question 8): "trône". Our copy of the file is corrected and the play
+  re-imported, and the project gets the same correction for its own file.
+
+### Working order
+
+The project's TEI files stay the master while Playcode is tested against the corpus;
+Playcode's export takes over only once it carries every feature of the files. The HTML
+fragments come first (236 lines show tags today), then the variants. The site is deployed
+as it stands, and each fix reaches it with the next Generate and Deploy.
