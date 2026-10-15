@@ -161,6 +161,13 @@ What the commands do, for when one of them fails part way, or something new is n
     page, not by Generate ("Add every complete play" adds them all in one batch). On 2026-10-15 that was 212 of the 373 complete plays, about four
     minutes on performance-1x, 560 MB of memory. Then Deploy, after checking the preview.
 
+    Start it from the export page and keep the page open: its connection is the web traffic
+    that keeps autostop away. Started over `bin/playcode rpc`, with no page open, a build
+    sends no traffic, and after `run` has turned autostop back on the proxy stops the app in
+    the middle of it (2026-10-16, ten minutes into a four-play Generate). From a shell, keep
+    a request going while it runs (`curl -s https://playcode.fly.dev/plays` every 20
+    seconds), or Generate before `run` scales back.
+
 ## Why it is not all one command
 
 Each decision above is one someone should see: the snapshot exists, the dry run shows no
