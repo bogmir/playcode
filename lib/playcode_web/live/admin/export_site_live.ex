@@ -61,6 +61,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   def handle_event("refresh_play", %{"id" => id}, socket),
     do: id |> SiteBuilder.add(form_opts(socket)) |> queued_flash(socket)
 
+  # Every complete play the site lacks, as its switch would add it. Queued behind one
+  # another, the adds land together, in one batch after the first.
+  def handle_event("add_all", _params, socket) do
+    opts = form_opts(socket)
+    %{plays: plays, exported_codes: exported, pending: pending} = socket.assigns
+    Enum.each(missing(plays, exported, pending), &SiteBuilder.add(&1.id, opts))
+    {:noreply, socket}
+  end
+
   # The repository is server config, never typed in: the GitHub token goes only to it.
   def handle_event("deploy", _params, %{assigns: %{deploy_to: %{repo: repo}}} = socket),
     do: repo |> SiteBuilder.deploy() |> queued_flash(socket)
@@ -222,12 +231,24 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             {gettext("No plays marked as complete.")}
           </div>
 
-          <p :if={@plays != []} class="text-sm text-base-content/70 mb-3">
-            {gettext("%{exported} of %{total} complete plays exported",
-              exported: Enum.count(@plays, &MapSet.member?(@exported_codes, &1.code)),
-              total: length(@plays)
-            )}
-          </p>
+          <div :if={@plays != []} class="mb-3 flex items-center justify-between gap-3">
+            <p class="text-sm text-base-content/70">
+              {gettext("%{exported} of %{total} complete plays exported",
+                exported: Enum.count(@plays, &MapSet.member?(@exported_codes, &1.code)),
+                total: length(@plays)
+              )}
+            </p>
+            <button
+              :if={missing(@plays, @exported_codes, @pending) != []}
+              type="button"
+              phx-click="add_all"
+              class="btn btn-sm btn-outline"
+            >
+              {gettext("Add every complete play")} ({length(
+                missing(@plays, @exported_codes, @pending)
+              )})
+            </button>
+          </div>
 
           <div class="divide-y divide-base-200">
             <div :for={play <- @plays} id={"play-#{play.id}"} class="flex items-center gap-3 py-2">
@@ -652,6 +673,10 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       total_count: Enum.count(all, &is_nil(&1.deleted_at))
     )
   end
+
+  # The complete plays not in the site and not already on their way to it.
+  defp missing(plays, exported, pending),
+    do: Enum.reject(plays, &(MapSet.member?(exported, &1.code) or Map.has_key?(pending, &1.id)))
 
   # The plays in the site that are not published any more, by code; a purged one has
   # no row left, only its code.
