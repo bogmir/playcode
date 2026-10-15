@@ -157,3 +157,6 @@ msgstr "necesita un título, un título normalizado o una observación"
 
 msgid "is already used by another witness of this play"
 msgstr "ya lo usa otro testimonio de esta obra"
+
+msgid "the scene of the action stands with the cast list"
+msgstr "el lugar de la acción va con el elenco"

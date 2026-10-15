@@ -651,9 +651,9 @@ defmodule Playcode.Export.StaticSiteTest do
 
     for {heading, position} <- [{"Second note", 2}, {"First note", 1}] do
       {:ok, _} =
-        Catalogue.create_play_editorial_note(%{
+        Catalogue.create_paratext(%{
           play_id: original.id,
-          section_type: "nota",
+          kind: "nota_edicion_digital",
           heading: heading,
           content: "Text",
           position: position
@@ -736,5 +736,73 @@ defmodule Playcode.Export.StaticSiteTest do
       assert marker_target(text_page, "Translator's note 2") == ["note-2"]
       assert text_page |> LazyHTML.query("li[popover]") |> Enum.count() == 2
     end
+  end
+
+  # Question 10: readers see every break of a paratext.
+  test "a paratext's line breaks are printed on the title page" do
+    play =
+      tei(
+        front:
+          ~s(<div type="dedicatoria"><p>The banished cavaliers!<lb/>A roving blade!</p></div>)
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = read!(generate!([play]), "plays/#{play.code}/index.html")
+
+    assert page =~ ~r{The banished cavaliers!<br/?>\s*A roving blade!}
+  end
+
+  test "a line break inside a paratext's italics is printed inside them" do
+    play = play_fixture() |> mark_complete!()
+
+    {:ok, _} =
+      Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "dedicatoria",
+        content: "C <<una\ndos>> fin"
+      })
+
+    page = read!(generate!([play]), "plays/#{play.code}/index.html")
+
+    refute page =~ "&lt;&lt;"
+    assert page =~ ~r{<em>una<br/?>dos</em>}
+  end
+
+  # After the text on the full-text page and on the last page of the text, as emothe.uv.es
+  # prints them, each in the Contents; an untitled one by its kind.
+  test "the paratexts after the text are printed after it and listed in the Contents" do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><head>ACTO I</head><sp><speaker>A</speaker><p>Verso final.</p></sp></div1>),
+        back: """
+        <div type="epilogo"><head>EPILOGUE</head><p>The banished <emph>cavaliers</emph>!</p></div>
+        <div type="colofon"><p>Loado sea.</p></div>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    dir = generate!([play])
+
+    for path <- ["text.html", "act-1.html"] do
+      page = read!(dir, "plays/#{play.code}/#{path}")
+      assert [_text, after_text] = String.split(page, "Verso final.")
+
+      assert after_text =~
+               ~r{<h2[^>]*>\s*EPILOGUE\s*</h2>.*<em>cavaliers</em>.*Colophon.*Loado sea\.}s
+    end
+
+    title = title_page(dir, play)
+
+    assert [epilogue, colophon] =
+             title
+             |> LazyHTML.query("article a[href^='act-1.html#']")
+             |> Enum.map(&{LazyHTML.text(&1), LazyHTML.attribute(&1, "href")})
+
+    assert {"EPILOGUE", ["act-1.html#" <> _]} = epilogue
+    assert {"Colophon", ["act-1.html#" <> _]} = colophon
+    refute LazyHTML.text(title) =~ "Loado sea."
   end
 end

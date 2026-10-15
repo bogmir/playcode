@@ -4,7 +4,7 @@ defmodule Playcode.Import.TeiImport do
   it read, in one transaction.
 
   A re-import updates the play with that code in place. It replaces the play's whole
-  text and the editors, sources, editorial notes, witnesses and place links the importer
+  text and the editors, sources, paratexts, witnesses and place links the importer
   created itself (`origin: "tei"`); everything a researcher typed is kept, and so are the
   columns the platform owns. `preview_import/1` reports that before anything is written.
   """
@@ -14,10 +14,10 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Bibliography
   alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue
-  alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
+  alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
   alias Playcode.Import.TeiParser
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Character, Division, Element}
+  alias Playcode.PlayContent.{Character, Division, Element, Note}
   alias Playcode.Places
   alias Playcode.Repo
   alias Playcode.Witnesses
@@ -64,7 +64,7 @@ defmodule Playcode.Import.TeiImport do
   @doc """
   Reports what importing `path` would do, without writing anything.
 
-  A re-import replaces the play's whole text and the editors, sources and notes the
+  A re-import replaces the play's whole text and the editors, sources and paratexts the
   importer created itself; everything a researcher typed is kept, as are the columns
   the platform owns. This is what the admin import page and `--dry-run` print so that
   nobody discovers the replacement afterwards.
@@ -82,6 +82,7 @@ defmodule Playcode.Import.TeiImport do
       existing: existing,
       archived: not is_nil(existing) and not is_nil(existing.deleted_at),
       replaces: replaced_counts(existing),
+      edited: edited_count(existing),
       preserves: preserved_counts(existing),
       preserves_fields: preserved_fields(existing)
     }
@@ -110,13 +111,13 @@ defmodule Playcode.Import.TeiImport do
   @doc """
   Sums the mixed-ownership counts in one half of a `preview_import/1` result.
 
-  Those five tables — editors, sources, notes, places and witnesses — hold both TEI-imported and
+  Those five tables — editors, sources, paratexts, places and witnesses — hold both TEI-imported and
   hand-entered rows, so `:replaces` and `:preserves` split each one by `origin`. Both
   the admin import page and the `--dry-run` output report the totals, and adding a
   fifth such table must not mean remembering two more addition sites.
   """
   def mixed_ownership_total(counts) do
-    [:editors, :sources, :notes, :places, :witnesses]
+    [:editors, :sources, :paratexts, :places, :witnesses]
     |> Enum.map(&Map.fetch!(counts, &1))
     |> Enum.sum()
   end
@@ -128,7 +129,7 @@ defmodule Playcode.Import.TeiImport do
       characters: 0,
       editors: 0,
       sources: 0,
-      notes: 0,
+      paratexts: 0,
       places: 0,
       witnesses: 0
     }
@@ -140,19 +141,19 @@ defmodule Playcode.Import.TeiImport do
       characters: count_rows(Character, id),
       editors: count_rows(PlayEditor, id, "tei"),
       sources: count_rows(PlaySource, id, "tei"),
-      notes: count_rows(PlayEditorialNote, id, "tei"),
+      paratexts: count_rows(Paratext, id, "tei"),
       places: count_rows(Places.PlayPlace, id, "tei"),
       witnesses: count_rows(Witness, id, "tei")
     }
   end
 
-  defp preserved_counts(nil), do: %{editors: 0, sources: 0, notes: 0, places: 0, witnesses: 0}
+  defp preserved_counts(nil), do: %{editors: 0, sources: 0, paratexts: 0, places: 0, witnesses: 0}
 
   defp preserved_counts(%Play{id: id}) do
     %{
       editors: count_rows(PlayEditor, id) - count_rows(PlayEditor, id, "tei"),
       sources: count_rows(PlaySource, id) - count_rows(PlaySource, id, "tei"),
-      notes: count_rows(PlayEditorialNote, id) - count_rows(PlayEditorialNote, id, "tei"),
+      paratexts: count_rows(Paratext, id) - count_rows(Paratext, id, "tei"),
       places: count_rows(Places.PlayPlace, id) - count_rows(Places.PlayPlace, id, "tei"),
       witnesses: count_rows(Witness, id) - count_rows(Witness, id, "tei")
     }
@@ -162,6 +163,22 @@ defmodule Playcode.Import.TeiImport do
 
   defp preserved_fields(%Play{} = play) do
     Enum.filter(@platform_owned, fn field -> Map.get(play, field) not in [nil, false] end)
+  end
+
+  # The file's rows edited since their import, which a re-import replaces, an editor's
+  # fixes with them: every row of the text, and the others that came from the file. An
+  # import only inserts, so a fresh one counts none. A row typed by hand is kept, and an
+  # edit within the second of its import does not show (timestamps are to the second).
+  defp edited_count(nil), do: 0
+
+  defp edited_count(%Play{id: id}) do
+    edited = &from(r in &1, where: r.play_id == ^id and r.updated_at > r.inserted_at)
+    from_file = &where(edited.(&1), origin: "tei")
+
+    (Enum.map([Division, Element, Note, Character], edited) ++
+       Enum.map([PlayEditor, PlaySource, Paratext, Witness, Places.PlayPlace], from_file))
+    |> Enum.map(&Repo.aggregate(&1, :count))
+    |> Enum.sum()
   end
 
   defp count_rows(schema, play_id) do
@@ -194,7 +211,7 @@ defmodule Playcode.Import.TeiImport do
       &PlayContent.create_character_unless_exists(Map.put(&1, :play_id, play.id))
     )
 
-    Enum.each(tei.editorial_notes, &Catalogue.create_play_editorial_note(tei_row(&1, play)))
+    Enum.each(tei.paratexts, &Catalogue.create_paratext(tei_row(&1, play)))
 
     cast = Map.new(PlayContent.list_characters(play.id), &{&1.xml_id, &1.id})
     Enum.each(tei.divisions, &write_division(&1, play, nil, cast))
@@ -239,7 +256,7 @@ defmodule Playcode.Import.TeiImport do
     end
   end
 
-  # A re-import replaces the text wholesale, but only the editors, sources and notes the
+  # A re-import replaces the text wholesale, but only the editors, sources and paratexts the
   # importer created itself. Anything a researcher typed — and every table later slices
   # add — stays. Deleting elements first lets the element_characters FK cascade handle
   # the join rows.
@@ -248,7 +265,7 @@ defmodule Playcode.Import.TeiImport do
       Repo.delete_all(from(r in schema, where: r.play_id == ^id))
     end
 
-    for schema <- [PlayEditor, PlaySource, PlayEditorialNote, Witness] do
+    for schema <- [PlayEditor, PlaySource, Paratext, Witness] do
       Repo.delete_all(from(r in schema, where: r.play_id == ^id and r.origin == "tei"))
     end
 

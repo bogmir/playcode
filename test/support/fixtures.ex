@@ -25,6 +25,28 @@ defmodule Playcode.TestFixtures do
   end
 
   @doc """
+  Moves a play's rows a day into the past, so an edit made now is after their import:
+  timestamps are to the second, and the test's import and edit fall in the same one.
+  Time travel: no context ages a row, so this reaches the tables directly.
+  """
+  def age_rows!(play) do
+    import Ecto.Query
+
+    day_ago = DateTime.add(DateTime.utc_now(:second), -1, :day)
+
+    for schema <- [
+          Playcode.PlayContent.Character,
+          Playcode.Catalogue.PlaySource,
+          Playcode.Catalogue.Paratext
+        ] do
+      from(r in schema, where: r.play_id == ^play.id)
+      |> Playcode.Repo.update_all(set: [inserted_at: day_ago, updated_at: day_ago])
+    end
+
+    play
+  end
+
+  @doc """
   Marks `play` complete. A fixture or an import makes a draft, and a visitor who is not
   logged in gets a 404 for a draft's public pages, API and downloads.
   """
@@ -53,9 +75,9 @@ defmodule Playcode.TestFixtures do
       })
 
     {:ok, _} =
-      Catalogue.create_play_editorial_note(%{
+      Catalogue.create_paratext(%{
         play_id: play.id,
-        section_type: "nota",
+        kind: "nota_edicion_digital",
         heading: "Editorial heading",
         content: "Editorial content",
         position: 1

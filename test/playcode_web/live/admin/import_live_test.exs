@@ -140,6 +140,24 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
       assert html =~ "Liber"
     end
 
+    test "says how many of the file's rows were edited since their import",
+         %{lv: lv, code: code} do
+      cast =
+        ~s(<div type="elenco"><castList><castItem><role xml:id="REY">REY</role></castItem></castList></div>)
+
+      play = tei(code: code, front: cast) |> import_tei!() |> Playcode.TestFixtures.age_rows!()
+      [character] = Playcode.PlayContent.list_characters(play.id)
+      {:ok, _} = Playcode.PlayContent.update_character(character, %{"actor" => "Mr. Betterton"})
+
+      html = upload(lv, [{"again.xml", tei(code: code, title: "Segunda versión")}])
+
+      assert html =~
+               t(
+                 "%{count} row(s) from the file were edited by hand since its import: importing replaces them too.",
+                 count: 1
+               )
+    end
+
     test "leaves it alone when cancelled", %{lv: lv, code: code} do
       upload(lv, [{"again.xml", tei(code: code, title: "Segunda versión")}])
 

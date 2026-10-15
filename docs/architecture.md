@@ -13,7 +13,7 @@ lib/
 │   │   ├── play.ex                   # Core play schema (UUID PK)
 │   │   ├── play_editor.ex            # Editors/reviewers
 │   │   ├── play_source.ex            # Bibliographic sources
-│   │   └── play_editorial_note.ex    # Front matter notes (dedications, editorial notes)
+│   │   └── paratext.ex               # Paratexts: texts before or after the text (CONTEXT.md)
 │   ├── play_content.ex               # Content management context (divisions, elements, characters)
 │   ├── play_content/
 │   │   ├── character.ex              # Dramatis personae

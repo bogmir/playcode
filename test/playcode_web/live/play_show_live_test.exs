@@ -33,6 +33,44 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "&lt;&lt;"
   end
 
+  # Question 10: readers see every break of a paratext, as its file gives them.
+  test "a paratext's line breaks are shown", %{conn: conn} do
+    play =
+      tei(
+        front:
+          ~s(<div type="dedicatoria"><p>The banished cavaliers!<lb/>A roving blade!</p></div>)
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert html =~ "The banished cavaliers!\nA roving blade!"
+  end
+
+  # Where emothe.uv.es prints them: after the text, each listed in the navigation, an
+  # untitled one by its kind.
+  test "the paratexts after the text follow it", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><head>ACTO I</head><sp><speaker>A</speaker><p>Verso final.</p></sp></div1>),
+        back: """
+        <div type="epilogo"><head>EPILOGUE</head><p>The banished <emph>cavaliers</emph>!</p></div>
+        <div type="colofon"><p>Loado sea.</p></div>
+        """
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert [_text, after_text] = String.split(html, "Verso final.")
+    assert after_text =~ ~r/EPILOGUE.*<em>cavaliers<\/em>.*Loado sea\./s
+    assert has_element?(view, "nav a", "EPILOGUE")
+    assert has_element?(view, "nav a", t("Colophon"))
+  end
+
   describe "an inline stage direction" do
     setup %{conn: conn} do
       play =

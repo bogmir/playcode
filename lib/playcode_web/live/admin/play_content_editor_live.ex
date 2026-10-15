@@ -1,6 +1,6 @@
 defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   @moduledoc """
-  /admin/plays/:id/content: a play's text: editorial notes, characters, divisions and
+  /admin/plays/:id/content: a play's text: paratexts, characters, divisions and
   elements, a preview, and the character review that assigns speakers in bulk. Every id an
   event carries is resolved through a getter scoped to the play, and a miss reloads the
   lists with `LiveHelpers.put_gone_flash/1` (see *Access control* in CLAUDE.md).
@@ -11,7 +11,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   import PlaycodeWeb.Components.PlayText
 
   alias Playcode.Catalogue
-  alias Playcode.Catalogue.PlayEditorialNote
+  alias Playcode.Catalogue.Paratext
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element}
   alias PlaycodeWeb.Admin.LiveHelpers
@@ -47,7 +47,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       PlayContent.subscribe(play.id)
     end
 
-    editorial_notes = Catalogue.list_play_editorial_notes(play.id)
+    paratexts = Catalogue.list_paratexts(play.id)
     characters = PlayContent.list_characters(play.id)
 
     divisions = PlayContent.list_top_divisions(play.id)
@@ -60,7 +60,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
      |> assign(
        page_title: "#{gettext("Edit Content")}: #{play.title}",
        play: play,
-       editorial_notes: editorial_notes,
+       paratexts: paratexts,
        characters: characters,
        divisions: divisions,
        selected_division_id: nil,
@@ -132,9 +132,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     changeset =
       case socket.assigns.modal do
-        :editorial_note ->
-          Catalogue.change_play_editorial_note(
-            socket.assigns.editing || %PlayEditorialNote{},
+        :paratext ->
+          Catalogue.change_paratext(
+            socket.assigns.editing || %Paratext{},
             form_params
           )
 
@@ -156,52 +156,53 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   def handle_event("save_form", params, socket) do
     case socket.assigns.modal do
-      :editorial_note -> save_editorial_note(socket, params)
+      :paratext -> save_paratext(socket, params)
       :character -> save_character(socket, params)
       :division -> save_division(socket, params)
       :element -> save_element(socket, params)
     end
   end
 
-  def handle_event("new_editorial_note", _, socket) do
+  def handle_event("new_paratext", _, socket) do
     play = socket.assigns.play
-    next_pos = length(socket.assigns.editorial_notes)
+    # Last, after the file's positions, which the cast list division shares.
+    next_pos = Enum.max(Enum.map(socket.assigns.paratexts, & &1.position), fn -> -1 end) + 1
 
     changeset =
-      Catalogue.change_play_editorial_note(%PlayEditorialNote{
+      Catalogue.change_paratext(%Paratext{
         play_id: play.id,
         position: next_pos
       })
 
     {:noreply,
      assign(socket,
-       modal: :editorial_note,
+       modal: :paratext,
        editing: nil,
-       form: to_form(changeset, as: :editorial_note)
+       form: to_form(changeset, as: :paratext)
      )}
   end
 
-  def handle_event("edit_editorial_note", %{"id" => id}, socket) do
-    with_row(socket, Catalogue.get_play_editorial_note(socket.assigns.play.id, id), fn note ->
+  def handle_event("edit_paratext", %{"id" => id}, socket) do
+    with_row(socket, Catalogue.get_paratext(socket.assigns.play.id, id), fn paratext ->
       assign(socket,
-        modal: :editorial_note,
-        editing: note,
-        form: to_form(Catalogue.change_play_editorial_note(note), as: :editorial_note)
+        modal: :paratext,
+        editing: paratext,
+        form: to_form(Catalogue.change_paratext(paratext), as: :paratext)
       )
     end)
   end
 
-  def handle_event("delete_editorial_note", %{"id" => id}, socket) do
-    with_row(socket, Catalogue.get_play_editorial_note(socket.assigns.play.id, id), fn note ->
-      {:ok, _} = Catalogue.delete_play_editorial_note(note)
+  def handle_event("delete_paratext", %{"id" => id}, socket) do
+    with_row(socket, Catalogue.get_paratext(socket.assigns.play.id, id), fn paratext ->
+      {:ok, _} = Catalogue.delete_paratext(paratext)
 
-      LiveHelpers.log_activity(socket, "delete", "editorial_note", note.id, %{
-        section_type: note.section_type
+      LiveHelpers.log_activity(socket, "delete", "paratext", paratext.id, %{
+        kind: paratext.kind
       })
 
       socket
-      |> put_flash(:info, gettext("Editorial note deleted."))
-      |> reload_editorial_notes()
+      |> put_flash(:info, gettext("Paratext deleted."))
+      |> reload_paratexts()
     end)
   end
 
@@ -246,6 +247,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       |> put_flash(:info, gettext("Character deleted."))
       |> reload_characters()
     end)
+  end
+
+  def handle_event("reorder_paratexts", %{"ids" => ids}, socket) do
+    Catalogue.reorder_paratexts(socket.assigns.play.id, ids)
+    {:noreply, reload_paratexts(socket)}
   end
 
   def handle_event("reorder_characters", %{"ids" => ids}, socket) do
@@ -784,7 +790,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   defp gone(socket) do
     socket
     |> assign(inline_editing_id: nil)
-    |> reload_editorial_notes()
+    |> reload_paratexts()
     |> reload_characters()
     |> reload_divisions()
     |> reload_elements()
@@ -820,36 +826,36 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   # --- Save helpers ---
 
-  defp save_editorial_note(socket, params) do
-    note_params = params["editorial_note"] || %{}
+  defp save_paratext(socket, params) do
+    paratext_params = params["paratext"] || %{}
     play = socket.assigns.play
 
     result =
       case socket.assigns.editing do
         nil ->
-          note_params = Map.put(note_params, "play_id", play.id)
-          Catalogue.create_play_editorial_note(note_params)
+          paratext_params = Map.put(paratext_params, "play_id", play.id)
+          Catalogue.create_paratext(paratext_params)
 
-        note ->
-          Catalogue.update_play_editorial_note(note, note_params)
+        paratext ->
+          Catalogue.update_paratext(paratext, paratext_params)
       end
 
     case result do
       {:ok, saved} ->
         action = if socket.assigns.editing, do: "update", else: "create"
 
-        LiveHelpers.log_activity(socket, action, "editorial_note", saved.id, %{
-          section_type: saved.section_type
+        LiveHelpers.log_activity(socket, action, "paratext", saved.id, %{
+          kind: saved.kind
         })
 
         {:noreply,
          socket
-         |> put_flash(:info, gettext("Editorial note saved."))
+         |> put_flash(:info, gettext("Paratext saved."))
          |> assign(modal: nil, form: nil, editing: nil)
-         |> reload_editorial_notes()}
+         |> reload_paratexts()}
 
       {:error, changeset} ->
-        {:noreply, assign(socket, form: to_form(changeset, as: :editorial_note))}
+        {:noreply, assign(socket, form: to_form(changeset, as: :paratext))}
     end
   end
 
@@ -1016,7 +1022,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     {:noreply,
      socket
      |> assign(:play, play)
-     |> reload_editorial_notes()
+     |> reload_paratexts()
      |> reload_characters()
      |> reload_divisions()
      |> reload_elements()
@@ -1028,8 +1034,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   # --- Reload helpers ---
 
-  defp reload_editorial_notes(socket) do
-    assign(socket, editorial_notes: Catalogue.list_play_editorial_notes(socket.assigns.play.id))
+  defp reload_paratexts(socket) do
+    assign(socket, paratexts: Catalogue.list_paratexts(socket.assigns.play.id))
   end
 
   defp reload_characters(socket) do
@@ -1140,7 +1146,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
   end
 
-  defp extract_form_params(params, :editorial_note), do: params["editorial_note"] || %{}
+  defp extract_form_params(params, :paratext), do: params["paratext"] || %{}
   defp extract_form_params(params, :character), do: params["character"] || %{}
   defp extract_form_params(params, :division), do: params["division"] || %{}
   defp extract_form_params(params, :element), do: params["element"] || %{}
@@ -1168,25 +1174,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   defp maybe_add_line_number(attrs, _type, _play_id), do: attrs
-
-  defp section_type_options do
-    [
-      {gettext("Editor's Introduction"), "introduccion_editor"},
-      {gettext("Dedication"), "dedicatoria"},
-      {gettext("Argument"), "argumento"},
-      {gettext("Prologue"), "prologo"},
-      {gettext("Note"), "nota"},
-      {gettext("Scene of the action"), "lugar_accion"}
-    ]
-  end
-
-  defp section_type_label("introduccion_editor"), do: gettext("Editor's Introduction")
-  defp section_type_label("dedicatoria"), do: gettext("Dedication")
-  defp section_type_label("argumento"), do: gettext("Argument")
-  defp section_type_label("prologo"), do: gettext("Prologue")
-  defp section_type_label("nota"), do: gettext("Note")
-  defp section_type_label("lugar_accion"), do: gettext("Scene of the action")
-  defp section_type_label(t), do: t
 
   defp division_types do
     [
@@ -1250,11 +1237,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       <div class="border-b border-base-300 mb-6">
         <nav class="-mb-px flex gap-1" aria-label="Editor tabs">
           <.tab_button
-            tab={:editorial_notes}
-            label={gettext("Editorial Notes")}
+            tab={:paratexts}
+            label={gettext("Paratexts")}
             active={@editor_tab}
             icon="hero-document-text-mini"
-            count={length(@editorial_notes)}
+            count={length(@paratexts)}
           />
           <.tab_button
             tab={:structure}
@@ -1288,61 +1275,73 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </nav>
       </div>
 
-      <%!-- Tab: Editorial Notes --%>
-      <div :if={@editor_tab == :editorial_notes} class="animate-in fade-in">
+      <%!-- Tab: Paratexts --%>
+      <div :if={@editor_tab == :paratexts} class="animate-in fade-in">
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-base-content">
-            {gettext("Editorial Notes")}
-            <span class="text-base-content/70 font-normal">({length(@editorial_notes)})</span>
+            {gettext("Paratexts")}
+            <span class="text-base-content/70 font-normal">({length(@paratexts)})</span>
           </h2>
-          <button phx-click="new_editorial_note" class="btn btn-sm btn-primary gap-1">
-            <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add Note")}
+          <button phx-click="new_paratext" class="btn btn-sm btn-primary gap-1">
+            <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add Paratext")}
           </button>
         </div>
         <p class="mb-4 text-sm text-base-content/70">
           {gettext(
-            "Front-matter sections: dedications, editor's introductions, prologues, arguments, the scene of the action."
+            "Texts around the play's text: dedications, editor's introductions, prologues, arguments, the scene of the action."
           )}
         </p>
         <div
-          :if={@editorial_notes == []}
+          :if={@paratexts == []}
           class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/70"
         >
           <.icon name="hero-document-text" class="mx-auto mb-2 size-8 text-base-content/70" />
-          <p>{gettext("No editorial notes yet.")}</p>
+          <p>{gettext("No paratexts yet.")}</p>
         </div>
-        <div class="space-y-3">
+        <div
+          id="paratext-list"
+          phx-hook=".DragSortList"
+          class="space-y-3"
+          data-event="reorder_paratexts"
+        >
           <div
-            :for={note <- @editorial_notes}
-            id={"note-#{note.id}"}
-            class="rounded-box border border-base-300 bg-base-100 shadow-sm"
+            :for={paratext <- @paratexts}
+            id={"paratext-#{paratext.id}"}
+            data-id={paratext.id}
+            class="drag-item rounded-box border border-base-300 bg-base-100 shadow-sm"
           >
             <div class="flex items-start justify-between gap-4 p-4">
+              <div class="drag-handle shrink-0 cursor-grab active:cursor-grabbing p-1 -ml-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-200/60 transition-colors">
+                <.icon name="hero-bars-3-mini" class="size-4" />
+              </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="badge badge-outline badge-sm">
-                    {section_type_label(note.section_type)}
+                    {PlayLabels.kind_label(paratext.kind)}
                   </span>
-                  <span :if={note.heading} class="font-medium text-sm">{note.heading}</span>
+                  <span :if={paratext.back} class="badge badge-ghost badge-sm">
+                    {gettext("After the text")}
+                  </span>
+                  <span :if={paratext.heading} class="font-medium text-sm">{paratext.heading}</span>
                 </div>
                 <p class="text-sm text-base-content/70 line-clamp-3 whitespace-pre-line">
-                  {note.content}
+                  {paratext.content}
                 </p>
               </div>
-              <span class="text-xs text-base-content/70 shrink-0">#{note.position}</span>
+              <span class="text-xs text-base-content/70 shrink-0">#{paratext.position}</span>
             </div>
             <div class="flex justify-end gap-1 border-t border-base-300 px-3 py-2">
               <button
-                phx-click="edit_editorial_note"
-                phx-value-id={note.id}
+                phx-click="edit_paratext"
+                phx-value-id={paratext.id}
                 class="btn btn-ghost btn-xs gap-1"
               >
                 <.icon name="hero-pencil-square-micro" class="size-3.5" /> {gettext("Edit")}
               </button>
               <button
-                phx-click="delete_editorial_note"
-                phx-value-id={note.id}
-                data-confirm={gettext("Delete this editorial note?")}
+                phx-click="delete_paratext"
+                phx-value-id={paratext.id}
+                data-confirm={gettext("Delete this paratext?")}
                 class="btn btn-ghost btn-xs text-error gap-1"
               >
                 <.icon name="hero-trash-micro" class="size-3.5" /> {gettext("Delete")}
@@ -2692,24 +2691,31 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   attr :play_id, :string, default: nil
   attr :user, :any, default: nil
 
-  defp modal_content(%{modal: :editorial_note} = assigns) do
+  defp modal_content(%{modal: :paratext} = assigns) do
     ~H"""
     <h3 class="text-lg font-bold mb-4">
-      {editing_label(@editing)} {gettext("Editorial Note")}
+      {editing_label(@editing)} {gettext("Paratext")}
     </h3>
     <.form
-      id="editorial-note-form"
+      id="paratext-form"
       for={@form}
-      as={:editorial_note}
+      as={:paratext}
       phx-change="validate_form"
       phx-submit="save_form"
       class="space-y-4"
     >
       <div>
-        <label class="label" for={@form[:section_type].id}>
-          <span class="label-text font-medium">{gettext("Section Type")} *</span>
+        <label class="label" for={@form[:kind].id}>
+          <span class="label-text font-medium">{gettext("Kind")} *</span>
         </label>
-        <.input field={@form[:section_type]} type="select" options={section_type_options()} />
+        <.input
+          field={@form[:kind]}
+          type="select"
+          options={PlayLabels.kind_options(@editing && @editing.kind)}
+        />
+      </div>
+      <div>
+        <.input field={@form[:back]} type="checkbox" label={gettext("After the text")} />
       </div>
       <div>
         <label class="label" for={@form[:heading].id}>
@@ -2718,18 +2724,18 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <.input
           field={@form[:heading]}
           type="text"
-          placeholder={gettext("Optional section heading")}
+          placeholder={gettext("Optional heading")}
         />
       </div>
       <div>
         <label class="label" for={@form[:content].id}>
-          <span class="label-text font-medium">{gettext("Content")} *</span>
+          <span class="label-text font-medium">{gettext("Content")}</span>
         </label>
         <.input
           field={@form[:content]}
           type="textarea"
           rows="8"
-          placeholder={gettext("Note text...")}
+          placeholder={gettext("Paragraphs, separated by a blank line")}
         />
       </div>
       <.input field={@form[:position]} type="hidden" />

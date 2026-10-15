@@ -63,6 +63,40 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
     assert [%{"title" => "Primera parte", "distributor" => "Gallica"}] = body["sources"]
   end
 
+  # The glossary's words (CONTEXT.md); the scene of the action is not a paratext.
+  test "a play's paratexts, and its scene of the action, by their own names", %{conn: conn} do
+    tei(
+      code: "API0003",
+      front: """
+      <div type="dedicatoria"><head>Al duque</head><p>Señor.</p></div>
+      <div type="introduccion_editor"><p>Esta edición.</p></div>
+      <div type="elenco"><castList><castItem><role xml:id="DON">Don</role></castItem></castList></div>
+      <set><p>London</p></set>
+      """,
+      back: ~s(<div type="colofon"><p>Loado sea.<lb/>En Madrid</p></div>)
+    )
+    |> import_tei!()
+    |> Playcode.TestFixtures.mark_complete!()
+
+    json = json_response(get(conn, ~p"/api/v1/plays/API0003"), 200)
+
+    assert %{
+             "paratexts" => [
+               %{
+                 "kind" => "dedicatoria",
+                 "heading" => "Al duque",
+                 "back" => false,
+                 "editorial" => false
+               },
+               %{"kind" => "introduccion_editor", "heading" => nil, "editorial" => true},
+               %{"kind" => "colofon", "back" => true, "content" => "Loado sea.\nEn Madrid"}
+             ],
+             "scene_of_action" => [%{"heading" => nil, "content" => "London"}]
+           } = json
+
+    refute Map.has_key?(json, "editorial_notes")
+  end
+
   test "a play's form is the curator's, served beside is_verse", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.update_play(play, %{form: "prose"})
 

@@ -598,7 +598,7 @@ defmodule Playcode.Import.WordParser do
   """
   def import_content(play_id, path) do
     alias Playcode.{Repo, Catalogue, PlayContent}
-    alias Playcode.Catalogue.PlayEditorialNote
+    alias Playcode.Catalogue.Paratext
     alias Playcode.PlayContent.{Character, Division, Element}
     import Ecto.Query
 
@@ -611,13 +611,13 @@ defmodule Playcode.Import.WordParser do
         Repo.delete_all(from e in Element, where: e.play_id == ^play_id)
         Repo.delete_all(from d in Division, where: d.play_id == ^play_id)
         Repo.delete_all(from c in Character, where: c.play_id == ^play_id)
-        Repo.delete_all(from n in PlayEditorialNote, where: n.play_id == ^play_id)
+        Repo.delete_all(from n in Paratext, where: n.play_id == ^play_id)
 
-        # Store front matter as editorial note
+        # Store front matter as paratext
         if front_matter do
-          Catalogue.create_play_editorial_note(%{
+          Catalogue.create_paratext(%{
             play_id: play_id,
-            section_type: "nota",
+            kind: "nota_edicion_digital",
             heading: "Front matter",
             content: front_matter,
             position: 0

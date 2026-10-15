@@ -14,7 +14,7 @@ defmodule Playcode.Import.TeiParser do
         places: [%{attrs: %{"slug" => …, …}, slug_declared: boolean, places: [place]}],
         settings: [%{slug, role, position, note}],
         characters: [%{xml_id, name, description, actor, is_hidden, position}],
-        editorial_notes: [%{section_type, heading, content, position}],
+        paratexts: [%{kind, heading, content, position, back}],
         divisions: [%{type, number, title, position, notes, elements, divisions}],
         bibliography: [%{description, volume, pages}]
       }
@@ -856,18 +856,39 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Text (front, body) ---
 
-  defp text(nil), do: %{characters: [], editorial_notes: [], divisions: [], bibliography: []}
+  defp text(nil), do: %{characters: [], paratexts: [], divisions: [], bibliography: []}
 
   defp text({_name, _attrs, children}) do
     front = front(find_child(children, "front"))
     body = body(find_child(children, "body"), front.next_position)
+    back = find_child(children, "back")
 
     %{
       characters: front.characters,
-      editorial_notes: front.editorial_notes,
+      paratexts: front.paratexts ++ back_matter(back, front.next_position + length(body)),
       divisions: front.divisions ++ body,
-      bibliography: bibliography(find_child(children, "back"))
+      bibliography: bibliography(back)
     }
+  end
+
+  # --- Back: paratexts after the text ---
+
+  # Each div but the bibliography, read as a front paratext is, positions continuing
+  # after the body's. Not read: a cast list (0404, 0718; question 29) and a div in verse,
+  # two files' commendatory sonnet, though it has a heading (question 30).
+  defp back_matter(nil, _first), do: []
+
+  defp back_matter({_name, _attrs, children}, first) do
+    for(
+      {"div", attrs, div_children} <- children,
+      type = attr_value(attrs, "type") || "front",
+      type not in ~w(bibliografia elenco),
+      find_child(div_children, "lg") == nil,
+      do: {type, div_children}
+    )
+    |> Enum.with_index(first)
+    |> Enum.flat_map(fn {{type, div_children}, pos} -> paratext(type, div_children, pos) end)
+    |> Enum.map(&%{&1 | back: true})
   end
 
   # --- Back: the bibliography ---
@@ -976,8 +997,8 @@ defmodule Playcode.Import.TeiParser do
 
   # Each <div> of the front takes a position, which the body's divisions continue; the
   # title page and anything else take none. A cast list is the play's characters and an
-  # `elenco` division; any other div is an editorial note.
-  defp front(nil), do: %{characters: [], editorial_notes: [], divisions: [], next_position: 0}
+  # `elenco` division; any other div is a paratext.
+  defp front(nil), do: %{characters: [], paratexts: [], divisions: [], next_position: 0}
 
   defp front({_name, _attrs, children}) do
     divs =
@@ -995,15 +1016,15 @@ defmodule Playcode.Import.TeiParser do
         end),
       divisions:
         for({{"elenco", div_children}, pos} <- divs, do: elenco_division(div_children, pos)),
-      editorial_notes:
+      paratexts:
         Enum.flat_map(divs, fn
           {{"elenco", _div_children}, _pos} -> []
-          {{type, div_children}, pos} -> editorial_note(type, div_children, pos)
+          {{type, div_children}, pos} -> paratext(type, div_children, pos)
         end) ++
           for(
             {"set", _attrs, set_children} <- children,
-            note <- editorial_note("lugar_accion", set_children, length(divs)),
-            do: note
+            scene <- paratext("lugar_accion", set_children, length(divs)),
+            do: scene
           ),
       next_position: length(divs)
     }
@@ -1021,34 +1042,43 @@ defmodule Playcode.Import.TeiParser do
     }
   end
 
-  # Generic front matter div (dedication, editor's introduction, …), kept when it has
-  # paragraphs.
-  defp editorial_note(type, children, pos) do
+  # A paratext (dedication, editor's introduction, …), kept when it has a heading or
+  # paragraphs: 12 head titles are a heading alone.
+  defp paratext(type, children, pos) do
+    heading = with "" <- safe_text(find_child(children, "head")), do: nil
+
+    # Each <lb/> a line break; an empty line between two (before a signature, in 140
+    # plays) is the blank line that parts paragraphs, so it reads as a new one.
     paragraphs =
       children
       |> find_children("p")
-      |> Enum.map(&text_content/1)
+      |> Enum.map_join("\n\n", &lines_text/1)
+      |> String.split(~r/\n\s*\n/)
+      |> Enum.map(&String.trim/1)
+      |> Enum.reject(&(&1 == ""))
       |> Enum.join("\n\n")
 
-    if paragraphs == "" do
+    if heading == nil and paragraphs == "" do
       []
     else
       [
         %{
-          section_type: section_type(type),
-          heading: safe_text(find_child(children, "head")),
-          content: paragraphs,
-          position: pos
+          kind: kind(type),
+          heading: heading,
+          content: if(paragraphs != "", do: paragraphs),
+          position: pos,
+          back: false
         }
       ]
     end
   end
 
-  defp section_type(type)
-       when type in ~w(introduccion_editor dedicatoria argumento prologo lugar_accion),
-       do: type
-
-  defp section_type(_type), do: "nota"
+  # The file's own word, kept as a stage direction's is. The scene of the action, which 45
+  # files give as a div, is TEI's <set>; nota (0784's only) and a div with no type are a
+  # note on the digital edition.
+  defp kind("circunstancia_accion"), do: "lugar_accion"
+  defp kind(type) when type in ~w(nota front), do: "nota_edicion_digital"
+  defp kind(type), do: type
 
   # --- Cast list ---
 

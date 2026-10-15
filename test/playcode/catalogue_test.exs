@@ -94,4 +94,28 @@ defmodule Playcode.CatalogueTest do
       end
     end
   end
+
+  describe "what a paratext may hold" do
+    # The kind is written to the file as a div's @type, a TEI token (teidata.enumerated):
+    # any one word is kept, a kind of the file's own included; spaces are refused.
+    test "a kind is one word, known or not" do
+      play = play_fixture()
+
+      assert {:ok, %{kind: "carta_al_lector"}} =
+               Catalogue.create_paratext(%{
+                 play_id: play.id,
+                 kind: "carta_al_lector",
+                 content: "Lector."
+               })
+
+      assert {:error, changeset} =
+               Catalogue.create_paratext(%{
+                 play_id: play.id,
+                 kind: "two words",
+                 content: "Lector."
+               })
+
+      assert Map.has_key?(errors_on(changeset), :kind)
+    end
+  end
 end

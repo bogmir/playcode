@@ -86,9 +86,9 @@ defmodule Playcode.Import.TeiReimportTest do
       })
 
     {:ok, _} =
-      Catalogue.create_play_editorial_note(%{
+      Catalogue.create_paratext(%{
         play_id: play.id,
-        section_type: "nota",
+        kind: "nota_edicion_digital",
         content: "Typed"
       })
 
@@ -102,7 +102,62 @@ defmodule Playcode.Import.TeiReimportTest do
              "Teresa Ferrer"
            ]
 
-    assert Enum.map(play.editorial_notes, &{&1.section_type, &1.content}) |> Enum.sort() ==
-             [{"dedicatoria", "Al lector."}, {"nota", "Typed"}]
+    assert Enum.map(play.paratexts, &{&1.kind, &1.content}) |> Enum.sort() ==
+             [{"dedicatoria", "Al lector."}, {"nota_edicion_digital", "Typed"}]
+  end
+
+  # Review focus 1: only the file's own paratexts are replaced; one typed by hand keeps
+  # its place before the text.
+  test "a re-import adds the file's paratexts after the text and keeps a hand-entered one" do
+    path = write_tmp!(tei(code: "TBACK1", back: ~s(<div type="colofon"><p>Loado sea.</p></div>)))
+    {:ok, play} = TeiImport.import_file(path)
+
+    {:ok, _} =
+      Catalogue.create_paratext(%{play_id: play.id, kind: "dedicatoria", content: "A mano."})
+
+    {:ok, _} = TeiImport.import_file(path)
+
+    paratexts = Catalogue.list_paratexts(play.id)
+    assert [%{content: "A mano.", back: false}] = Enum.filter(paratexts, &(&1.origin == "manual"))
+    assert [%{kind: "colofon", back: true}] = Enum.filter(paratexts, &(&1.origin == "tei"))
+  end
+
+  # Review focus 1: a hand-entered paratext keeps its place and its side of the text. A
+  # re-import gives the file's paratexts the file's positions, which can equal one an
+  # editor dragged; the older row then goes first, whatever Postgres reads first (here the
+  # hand-entered one, edited after the re-import, lies last on disk).
+  test "a hand-entered paratext keeps its dragged place and its side through a re-import" do
+    path =
+      write_tmp!(
+        tei(
+          code: "TBACK2",
+          front:
+            ~s(<div type="dedicatoria"><p>Ded.</p></div><div type="argumento"><p>Arg.</p></div>)
+        )
+      )
+
+    {:ok, play} = TeiImport.import_file(path)
+
+    {:ok, typed} =
+      Catalogue.create_paratext(%{play_id: play.id, kind: "prologo", content: "A mano."})
+
+    {:ok, _} =
+      Catalogue.create_paratext(%{play_id: play.id, kind: "colofon", content: "Fin.", back: true})
+
+    ids = play.id |> Catalogue.list_paratexts() |> Enum.map(& &1.id)
+    Catalogue.reorder_paratexts(play.id, [typed.id | List.delete(ids, typed.id)])
+    Playcode.TestFixtures.age_rows!(play)
+
+    {:ok, _} = TeiImport.import_file(path)
+
+    {:ok, _} =
+      Catalogue.update_paratext(Catalogue.get_paratext(play.id, typed.id), %{
+        content: "A mano, corregido."
+      })
+
+    # The two sides are printed apart, so only the order within each is the play's.
+    {back, front} = play.id |> Catalogue.list_paratexts() |> Enum.split_with(& &1.back)
+    assert Enum.map(front, & &1.content) == ["A mano, corregido.", "Ded.", "Arg."]
+    assert Enum.map(back, & &1.content) == ["Fin."]
   end
 end

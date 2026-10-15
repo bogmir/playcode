@@ -214,14 +214,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     test "editing, deleting or opening one changes nothing and says so",
          %{conn: conn, play: play, other: other} do
       before = export_tei(other)
-      [note] = Playcode.Catalogue.list_play_editorial_notes(other.id)
+      [paratext] = Playcode.Catalogue.list_paratexts(other.id)
       [character] = Playcode.PlayContent.list_characters(other.id)
       act = row(other, &match?(%Division{type: "acto"}, &1))
       verse = row(other, &(&1.type == "verse_line"))
 
       events = [
-        {"edit_editorial_note", note.id},
-        {"delete_editorial_note", note.id},
+        {"edit_paratext", paratext.id},
+        {"delete_paratext", paratext.id},
         {"edit_character", character.id},
         {"delete_character", character.id},
         {"edit_division", act.id},
@@ -524,15 +524,215 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
-  test "the scene of the action is a kind of front-matter section", %{conn: conn, play: play} do
+  # The glossary's word (CONTEXT.md): a dedication, an epilogue or an editor's
+  # introduction is a paratext, not an "editorial note".
+  test "the paratexts tab adds a paratext", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
-    lv |> element("nav[aria-label='Editor tabs'] button", t("Editorial Notes")) |> render_click()
-    lv |> element("button", t("Add Note")) |> render_click()
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
 
     lv
-    |> form("#editorial-note-form",
-      editorial_note: %{
-        "section_type" => "lugar_accion",
+    |> form("#paratext-form", paratext: %{"kind" => "dedicatoria", "content" => "Al duque."})
+    |> render_submit()
+
+    assert [%{kind: "dedicatoria", content: "Al duque."}] =
+             Playcode.Catalogue.list_paratexts(play.id)
+  end
+
+  # As a stage direction's: the select offers the known kinds and keeps a file's other word.
+  test "a paratext keeps a kind the admin does not offer", %{conn: conn} do
+    play = import_tei!(tei(front: ~s(<div type="carta_al_lector"><p>Lector.</p></div>)))
+    [paratext] = Playcode.Catalogue.list_paratexts(play.id)
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("#paratext-#{paratext.id} button", t("Edit")) |> render_click()
+
+    lv |> form("#paratext-form", paratext: %{"heading" => "Al lector"}) |> render_submit()
+
+    assert [{%{"type" => "carta_al_lector"}, _}] =
+             xml_elements(export_tei(play), "div", within: "front")
+  end
+
+  # Three groups, so the kinds can be found: what the early edition printed, what this
+  # edition wrote, and the scene of the action.
+  test "the kind select is grouped", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
+
+    assert has_element?(lv, "#paratext-form label", t("Kind"))
+
+    assert has_element?(
+             lv,
+             ~s(optgroup[label="#{t("Editorial texts")}"] option[value="apendice"])
+           )
+
+    assert has_element?(
+             lv,
+             ~s(optgroup[label="#{t("Printed with the play")}"] option[value="licencia"]),
+             t("Licence to print")
+           )
+
+    refute has_element?(lv, ~s(#paratext-form option[value="nota"]))
+  end
+
+  # A browser sends a textarea's line breaks as \r\n: kept so, a blank line was no
+  # paragraph break and the file got one <p> with two <lb/>s. Squeezed as a witness's
+  # fields are, it is what a file gives back.
+  test "a paratext typed with a browser's line breaks keeps its paragraphs",
+       %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
+
+    lv
+    |> form("#paratext-form",
+      paratext: %{"kind" => "dedicatoria", "content" => "A \r\nB\r\n\r\n\r\nC "}
+    )
+    |> render_submit()
+
+    xml = export_tei(play)
+    assert xml_texts(xml, "p", within: "front") == ["A B", "C"]
+    assert xml =~ ~r{<p>A<lb/>B</p>}
+  end
+
+  # A line break typed inside italics: TEI allows <lb/> in <emph>; split before the
+  # italics were read, the file got the markers as text, "&lt;&lt;una".
+  test "a line break inside italics is written inside the <emph>", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
+
+    lv
+    |> form("#paratext-form",
+      paratext: %{"kind" => "dedicatoria", "content" => "C <<una\ndos>> fin"}
+    )
+    |> render_submit()
+
+    xml = export_tei(play)
+    refute xml =~ "&lt;&lt;"
+    assert xml =~ ~r{<emph>una\s*<lb/>\s*dos</emph>}
+  end
+
+  # Review focus 3: the scene of the action is written as the front's <set>, never in <back>.
+  test "a paratext is placed after the text, but not the scene of the action",
+       %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
+
+    lv
+    |> form("#paratext-form",
+      paratext: %{"kind" => "lugar_accion", "content" => "A wood.", "back" => "true"}
+    )
+    |> render_submit()
+
+    assert lv |> element("#paratext-form") |> render() =~
+             Gettext.dgettext(
+               PlaycodeWeb.Gettext,
+               "errors",
+               "the scene of the action stands with the cast list"
+             )
+
+    lv
+    |> form("#paratext-form",
+      paratext: %{"kind" => "colofon", "content" => "Loado sea.", "back" => "true"}
+    )
+    |> render_submit()
+
+    assert xml_texts(export_tei(play), "p", within: "back") == ["Loado sea."]
+    assert has_element?(lv, "#paratext-list", t("After the text"))
+  end
+
+  describe "the paratexts' order" do
+    setup do
+      play =
+        import_tei!(
+          tei(
+            front:
+              ~s(<div type="dedicatoria"><p>A.</p></div><div type="argumento"><p>B.</p></div>)
+          )
+        )
+
+      other =
+        import_tei!(
+          tei(
+            front:
+              ~s(<div type="dedicatoria"><p>X.</p></div><div type="argumento"><p>Y.</p></div>)
+          )
+        )
+
+      %{play: play, other: other}
+    end
+
+    defp contents(play),
+      do: play.id |> Playcode.Catalogue.list_paratexts() |> Enum.map(& &1.content)
+
+    # As the cast list: a file's order may be wrong, and only an editor can fix it.
+    test "is dragged", %{conn: conn, play: play} do
+      [a, b] = Playcode.Catalogue.list_paratexts(play.id)
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+      lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+
+      lv
+      |> element("#paratext-list")
+      |> render_hook("reorder_paratexts", %{"ids" => [b.id, a.id]})
+
+      assert contents(play) == ["B.", "A."]
+    end
+
+    # The ids came from the browser: another play's rows, or a malformed id, move nothing.
+    test "moves none of another play's", %{conn: conn, play: play, other: other} do
+      [a, b] = Playcode.Catalogue.list_paratexts(play.id)
+      [x, y] = Playcode.Catalogue.list_paratexts(other.id)
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+      lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+
+      lv
+      |> element("#paratext-list")
+      |> render_hook("reorder_paratexts", %{"ids" => [b.id, a.id, y.id, x.id, "not-an-id"]})
+
+      assert contents(play) == ["B.", "A."]
+      assert contents(other) == ["X.", "Y."]
+    end
+  end
+
+  # A new one took the count as its position, which falls among the file's: positions are
+  # shared with the cast list division, and a div that gives nothing still takes one.
+  test "a new paratext goes last", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          front: """
+          <div type="dedicatoria"><p>A.</p></div>
+          <div type="elenco"><castList><castItem><role xml:id="X">X</role></castItem></castList></div>
+          <div type="prologo"></div>
+          <div type="argumento"><p>B.</p></div>
+          """
+        )
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
+
+    lv
+    |> form("#paratext-form", paratext: %{"kind" => "licencia", "content" => "C."})
+    |> render_submit()
+
+    assert play.id |> Playcode.Catalogue.list_paratexts() |> Enum.map(& &1.content) ==
+             ["A.", "B.", "C."]
+  end
+
+  test "the scene of the action is entered in the paratexts tab", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
+
+    lv
+    |> form("#paratext-form",
+      paratext: %{
+        "kind" => "lugar_accion",
         "heading" => "SCENE:",
         "content" => "An English wood."
       }

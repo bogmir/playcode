@@ -85,7 +85,7 @@ defmodule Playcode.Catalogue.Play do
 
     has_many :editors, Playcode.Catalogue.PlayEditor
     has_many :sources, Playcode.Catalogue.PlaySource
-    has_many :editorial_notes, Playcode.Catalogue.PlayEditorialNote
+    has_many :paratexts, Playcode.Catalogue.Paratext
     has_many :characters, Playcode.PlayContent.Character
     has_many :divisions, Playcode.PlayContent.Division
     has_many :elements, Playcode.PlayContent.Element
