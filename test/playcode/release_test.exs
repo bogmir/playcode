@@ -31,5 +31,8 @@ defmodule Playcode.ReleaseTest do
     assert [%{title: "Primera"}] = Catalogue.list_plays()
 
     assert capture_io(fn -> Release.import_tei(dir, force: true) end) =~ "imported 1, skipped 0"
+
+    assert capture_io(fn -> Release.import_tei(dir, force: true, resume: true) end) =~
+             "imported 0, skipped 1"
   end
 end

@@ -40,6 +40,8 @@ defmodule Playcode.Import.TeiCorpus do
 
   @doc """
   Imports each file. Codes already in the database are skipped unless `force: true`.
+  Under `resume: true` a play imported since its file was written is skipped too, so a
+  forced run that stopped part way carries on where it stopped when run again.
   `on_result` is called with each file's result as it is reached, so a long run can
   report as it goes.
   """
@@ -47,12 +49,14 @@ defmodule Playcode.Import.TeiCorpus do
     force = Keyword.get(opts, :force, false)
     on_result = Keyword.get(opts, :on_result, fn _result -> :ok end)
     existing = existing_codes()
+    imported_at = if Keyword.get(opts, :resume, false), do: last_import_by_code(), else: %{}
 
     Enum.map(files, fn {code, path} ->
       result =
-        if not force and MapSet.member?(existing, code),
-          do: {:skipped, code},
-          else: import_one(code, path)
+        if (not force and MapSet.member?(existing, code)) or
+             imported_since_written?(imported_at[code], path),
+           do: {:skipped, code},
+           else: import_one(code, path)
 
       on_result.(result)
       result
@@ -60,43 +64,49 @@ defmodule Playcode.Import.TeiCorpus do
   end
 
   @doc """
-  What importing `files` would do, as `{:info | :error, line}`s: one per file, then a
-  summary. Writes nothing. Under `force: true` a play already imported would be
-  re-imported, and its line says what that replaces and keeps, and how many hand edits
-  to its text since its last import it would undo. A play that would be imported lists
-  the references it would gain and those it would skip, one line each.
+  What importing `files` would do, reported as `{:info | :error, line}`s as each file is
+  read, then a summary. Writes nothing. Under `force: true` a play already imported
+  would be re-imported, and its line says what that replaces and keeps, and how many hand
+  edits to its text since its last import it would undo. A play that would be imported
+  lists the references it would gain and those it would skip, one line each.
   """
-  def dry_run(files, opts \\ []) do
+  def dry_run(files, opts, report) do
     force = Keyword.get(opts, :force, false)
-    previews = Enum.map(files, fn {code, path} -> {code, TeiImport.preview_import(path)} end)
-    edits = hand_edits(for {_code, {:ok, %{existing: %{id: id}}}} <- previews, do: id)
 
-    lines =
-      Enum.flat_map(previews, fn
-        {code, {:ok, %{existing: nil} = preview}} ->
-          [{:info, "  #{code}  new" <> adds(preview)} | added(preview)]
-
-        {code, {:ok, _preview}} when not force ->
-          [{:info, "  #{code}  already imported, would be skipped"}]
-
-        {code, {:ok, preview}} ->
-          [{:info, "  #{code}  " <> replaces(preview, edits) <> adds(preview)} | added(preview)]
-
-        {code, {:error, reason}} ->
-          [{:error, "  #{code}: #{inspect(reason)}"}]
+    counts =
+      Enum.reduce(files, %{}, fn {code, path}, counts ->
+        {outcome, lines} = preview_lines(code, TeiImport.preview_import(path), force)
+        Enum.each(lines, report)
+        Map.update(counts, outcome, 1, &(&1 + 1))
       end)
 
-    count = fn pattern -> Enum.count(previews, pattern) end
-    edited = if force, do: map_size(edits), else: 0
+    count = &Map.get(counts, &1, 0)
+    edited = count.(:edited)
 
-    summary =
-      "\ndry run, nothing written — #{count.(&match?({_, {:ok, %{existing: nil}}}, &1))} new, " <>
-        "#{count.(&match?({_, {:ok, %{existing: %{}}}}, &1))} already imported" <>
-        if(edited > 0, do: " (#{edited} with hand edits since their last import)", else: "") <>
-        ", #{count.(&match?({_, {:error, _}}, &1))} unreadable"
-
-    lines ++ [{:info, summary}]
+    report.(
+      {:info,
+       "\ndry run, nothing written — #{count.(:new)} new, " <>
+         "#{count.(:existing) + edited} already imported" <>
+         if(edited > 0, do: " (#{edited} with hand edits since their last import)", else: "") <>
+         ", #{count.(:unreadable)} unreadable"}
+    )
   end
+
+  defp preview_lines(code, {:ok, %{existing: nil} = preview}, _force),
+    do: {:new, [{:info, "  #{code}  new" <> adds(preview)} | added(preview)]}
+
+  defp preview_lines(code, {:ok, _preview}, false),
+    do: {:existing, [{:info, "  #{code}  already imported, would be skipped"}]}
+
+  defp preview_lines(code, {:ok, preview}, true) do
+    undone = hand_edits(preview.existing.id)
+    outcome = if undone > 0, do: :edited, else: :existing
+    line = "  #{code}  " <> replaces(preview, undone) <> adds(preview)
+    {outcome, [{:info, line} | added(preview)]}
+  end
+
+  defp preview_lines(code, {:error, reason}, _force),
+    do: {:unreadable, [{:error, "  #{code}: #{inspect(reason)}"}]}
 
   @doc """
   Imports `files` as `import_all/2` does, calling `report` with an `{:info | :error,
@@ -130,12 +140,12 @@ defmodule Playcode.Import.TeiCorpus do
       for(citation <- preview.bibliography_skips, do: {:info, "      - #{citation}"})
   end
 
-  defp replaces(preview, edits) do
+  defp replaces(preview, undone) do
     "replaces #{preview.replaces.divisions} division(s), " <>
       "#{preview.replaces.elements} element(s), " <>
       "#{preview.replaces.characters} character(s), " <>
       "#{TeiImport.mixed_ownership_total(preview.replaces)} TEI record(s)" <>
-      edited(preview.edited) <> keeps(preview) <> undoes(Map.get(edits, preview.existing.id, 0))
+      edited(preview.edited) <> keeps(preview) <> undoes(undone)
   end
 
   defp edited(0), do: ""
@@ -154,28 +164,36 @@ defmodule Playcode.Import.TeiCorpus do
   defp undoes(0), do: ""
   defp undoes(n), do: ", undoes #{n} hand edit(s) to its text"
 
-  # `%{play_id => n}`: the logged edits to each play's text after its last logged import,
-  # or ever, for a play with no import logged. See @text_edits.
-  defp hand_edits([]), do: %{}
-
-  defp hand_edits(play_ids) do
-    last_import =
-      from(a in ActivityLog.Entry,
-        where: a.action == "import" and a.resource_type == "play",
-        group_by: a.play_id,
-        select: %{play_id: a.play_id, at: max(a.inserted_at)}
-      )
-
+  # The logged edits to a play's text after its last logged import, or ever, for a play
+  # with no import logged. See @text_edits.
+  defp hand_edits(play_id) do
     from(a in ActivityLog.Entry,
-      left_join: i in subquery(last_import),
+      left_join: i in subquery(last_imports()),
       on: i.play_id == a.play_id,
-      where: a.play_id in ^play_ids and a.resource_type in ^@text_edits,
-      where: is_nil(i.at) or a.inserted_at > i.at,
-      group_by: a.play_id,
-      select: {a.play_id, count(a.id)}
+      where: a.play_id == ^play_id and a.resource_type in ^@text_edits,
+      where: is_nil(i.at) or a.inserted_at > i.at
     )
+    |> Repo.aggregate(:count)
+  end
+
+  # Each play's last logged import (import_one/2 logs it).
+  defp last_imports do
+    from a in ActivityLog.Entry,
+      where: a.action == "import" and a.resource_type == "play",
+      group_by: a.play_id,
+      select: %{play_id: a.play_id, at: max(a.inserted_at)}
+  end
+
+  defp imported_since_written?(nil, _path), do: false
+
+  defp imported_since_written?(imported_at, path),
+    do: DateTime.to_unix(imported_at) >= File.stat!(path, time: :posix).mtime
+
+  defp last_import_by_code do
+    from(p in Play, join: i in subquery(last_imports()), on: i.play_id == p.id)
+    |> select([p, i], {p.code, i.at})
     |> Repo.all()
-    |> Map.new()
+    |> Map.new(fn {code, at} -> {Play.short_code(code), at} end)
   end
 
   # The parser raises on some malformed files (over-long fields, Postgrex errors);

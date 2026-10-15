@@ -7,6 +7,7 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
 
       mix playcode.import.tei                  # skip codes already imported
       mix playcode.import.tei --force          # re-import everything
+      mix playcode.import.tei --force --resume # ...except plays imported since their file was written
       mix playcode.import.tei --dry-run        # report what would happen, write nothing
       mix playcode.import.tei --dir some/path  # use another directory (repeatable)
 
@@ -21,7 +22,7 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
 
   alias Playcode.Import.TeiCorpus
 
-  @switches [force: :boolean, dry_run: :boolean, dir: :keep]
+  @switches [force: :boolean, resume: :boolean, dry_run: :boolean, dir: :keep]
 
   @impl Mix.Task
   def run(args) do
@@ -43,9 +44,9 @@ defmodule Mix.Tasks.Playcode.Import.Tei do
     end
 
     if opts[:dry_run] do
-      files |> TeiCorpus.dry_run(force: opts[:force] || false) |> Enum.each(report)
+      TeiCorpus.dry_run(files, [force: opts[:force] || false], report)
     else
-      TeiCorpus.run(files, [force: opts[:force] || false], report)
+      TeiCorpus.run(files, Keyword.take(opts, [:force, :resume]), report)
     end
   end
 end
