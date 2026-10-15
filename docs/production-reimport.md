@@ -31,6 +31,36 @@ which also puts `playcode` back to its usual size.
 
 ## The run
 
+Two commands do the mechanical steps, run from this directory with flyctl; the two
+decisions, after the dry run and after the counts, stay with a person.
+
+```bash
+mix playcode.fly.reimport prepare     # steps 2-5 below, then stops
+mix playcode.fly.reimport run         # steps 6, 7 and 9
+mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run
+```
+
+1. **Deploy the code** (step 1 below).
+2. **`prepare`** snapshots the database volume and waits for the snapshot, uploads
+   `doc/tei_corpus/` (`--dir` for another folder) and checks the count on the machine,
+   scales both machines up with autostop off, and runs the dry run, printing each play as
+   it is read. It ends by listing the lines that need a look (hand fixes the re-import
+   would lose, an archived play it restores, a file it cannot read) or saying there are
+   none. Step 5 says what to do with them. Running `prepare` again is safe.
+3. **`run`** re-imports every play not imported since its file was uploaded
+   (`resume: true`). When a run stops part way it shows the machine's status, starts it,
+   and runs again, three times at most. When a play fails it stops with the machines
+   still scaled up: fix the cause and `run` again, which re-imports only what is left.
+   When none fails it scales both machines back and turns autostop on.
+4. **Check** what the change was for (step 8), then **Generate** the site (step 10).
+
+The machines' ids are constants in `lib/mix/tasks/playcode.fly.reimport.ex`; a new
+machine or volume means editing them there and in the table above.
+
+## By hand
+
+What the commands do, for when one of them fails part way, or something new is needed.
+
 1. **Deploy the code.** Push `main`; CI, then `.github/workflows/deploy-fly.yml`, deploys
    and runs the migrations. Wait for both runs to pass (`gh run list --limit 3`).
 
@@ -49,7 +79,7 @@ which also puts `playcode` back to its usual size.
    rm -rf /tmp/tei && mkdir /tmp/tei && cp doc/tei_corpus/*.xml /tmp/tei/
    tar czf /tmp/tei.tgz -C /tmp/tei .
    ~/.fly/bin/flyctl ssh sftp put /tmp/tei.tgz /data/tei.tgz -a playcode
-   ~/.fly/bin/flyctl ssh console -a playcode -C "sh -c 'rm -rf /data/tei && mkdir /data/tei && tar xzf /data/tei.tgz -C /data/tei && ls /data/tei | wc -l'"
+   ~/.fly/bin/flyctl ssh console -a playcode -C "sh -c 'rm -rf /data/tei && mkdir /data/tei && tar xzmf /data/tei.tgz -C /data/tei && ls /data/tei | wc -l'"
    ```
 
 4. **Scale both machines up, and turn autostop off.** On shared CPUs a run of this size uses
@@ -68,8 +98,8 @@ which also puts `playcode` back to its usual size.
    lost its connection on 2026-10-15). `machine update` needs `--yes` outside a terminal;
    `scale vm` has no `--yes` and does not ask.
 
-5. **Dry run.** It writes nothing, and prints nothing until it has read every file (about a
-   minute scaled up, an hour throttled), then one line per play and a summary.
+5. **Dry run.** It writes nothing; it prints one line per play as it reads its file (about a
+   minute for all of them scaled up, an hour throttled), then a summary.
 
    ```bash
    ~/.fly/bin/flyctl ssh console -a playcode -C "bin/playcode rpc 'Playcode.Release.import_tei(\"/data/tei\", dry_run: true, force: true)'" > /tmp/dry.log
@@ -94,18 +124,18 @@ which also puts `playcode` back to its usual size.
    Progress: `grep -c "Importing TEI file" /tmp/run.log`. A failure prints the play's code
    and the error as it happens.
 
-7. **If it stops part way**, find the last play it started (`grep "Importing TEI file"
-   /tmp/run.log | tail -1`); that play and every one after it are untouched or rolled back.
-   Files are read in code order, so copy that file and the rest into a folder of their own
-   and run step 6 on it:
+7. **If it stops part way**, run step 6 again with `resume: true` as well: it skips every
+   play imported since its file was uploaded, so it carries on where the last run stopped.
+   The upload dates each file (`tar -m`), and a new upload starts over.
 
    ```bash
-   ~/.fly/bin/flyctl ssh console -a playcode -C "sh -c 'rm -rf /data/tei-rest && mkdir /data/tei-rest && for f in /data/tei/*.xml; do b=\$(basename \"\$f\"); [ \"\$b\" \\> EMOTHE0146 ] && cp \"\$f\" /data/tei-rest/; done; ls /data/tei-rest | wc -l'"
+   ~/.fly/bin/flyctl ssh console -a playcode -C "bin/playcode rpc 'Playcode.Release.import_tei(\"/data/tei\", force: true, resume: true)'" > /tmp/run.log
    ```
 
-   (`EMOTHE0146` there: one below the first code to redo.) Check the machine's events first
+   Check the machine's events first
    (`~/.fly/bin/flyctl machine status 7847063c04e7e8 -a playcode`): `requested_stop=true` is
-   autostop, `oom_killed=true` memory.
+   autostop, `oom_killed=true` memory. On 2026-10-15, before `resume`, the files left to
+   do were copied into `/data/tei-rest` by hand.
 
 8. **Check.** What the change was for, counted on production, for example:
 
@@ -131,8 +161,8 @@ which also puts `playcode` back to its usual size.
     page, not by Generate ("Add every complete play" adds them all in one batch). On 2026-10-15 that was 212 of the 373 complete plays, about four
     minutes on performance-1x, 560 MB of memory. Then Deploy, after checking the preview.
 
-## Why it is not automatic
+## Why it is not all one command
 
-Each step above is a decision someone should see: the snapshot exists, the dry run shows no
-hand fixes, the counts match. What can still be automated is in `docs/backlog.md`,
-*Production rollout*.
+Each decision above is one someone should see: the snapshot exists, the dry run shows no
+hand fixes, the counts match. `prepare` stops before the first; the counts and Generate
+come after `run`.
