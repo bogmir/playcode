@@ -148,7 +148,10 @@ defmodule RenameGuardTest do
       #   emothe-static                the published EMOTHE site: the example
       #                                GitHub repo in the deploy form and the
       #                                name of the .zip a researcher downloads
-      assert git_grep(~S{(?<!w3)emothe(?!\.uv\.es|_id|_project_description|-static)}) == []
+      #   emothe-db-1g                 production's database, a Fly app of its
+      #                                own that predates the rename; renaming it
+      #                                means moving the database
+      assert git_grep(~S{(?<!w3)emothe(?!\.uv\.es|_id|_project_description|-static|-db-1g)}) == []
     end
   end
 

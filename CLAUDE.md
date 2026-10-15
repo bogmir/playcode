@@ -27,10 +27,10 @@ changes only when a rule, an invariant or a command changes.
 **Naming.** The application was renamed `Emothe` -> `Playcode` on 2026-09-21, because a
 backend serving both EMOTHE and ARTELOPE should not be named after one of them. Upper-case
 `EMOTHE` is *never* the application: it is a play code (`EMOTHE0010`), the corpus, or the
-public brand. Four lower-case tokens are also not the application and must survive any future
+public brand. Five lower-case tokens are also not the application and must survive any future
 search-and-replace - `emothe.uv.es`, `plays.emothe_id`, `w3emothe` (the FileMaker export's
-database, including the real path `doc/w3emothe_T01_tituloEM.ndjson`) and `emothe-static` (the
-published site's repo and .zip). `test/rename_guard_test.exs` enforces all of this; read it
+database, including the real path `doc/w3emothe_T01_tituloEM.ndjson`), `emothe-static` (the
+published site's repo and .zip) and `emothe-db-1g` (production's database, a Fly app). `test/rename_guard_test.exs` enforces all of this; read it
 before running any bulk rename. Plans and specs under `docs/superpowers/` written before that
 date use the old namespace and are left as written - they record work done, not instructions.
 The one exception is the FileMaker roadmap, `docs/superpowers/plans/2026-08-01-filemaker-import-slices.md`:
