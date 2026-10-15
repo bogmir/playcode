@@ -268,7 +268,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 36 questions, nine of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 37 questions, nine of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -501,6 +501,32 @@
         </div>
         <p class="status" aria-live="polite"></p>
         </div>
+      </div>
+    </div>
+
+    <div class="q" data-q="q37" data-n="37">
+      <span class="q-num" aria-hidden="true">37</span>
+      <div class="q-body">
+        <h3>Follow-up to question 6, for the editors of <i>The Spanish Tragedy</i>: should the files mark the Additions this way?</h3>
+        <p class="why">The four versions mark each Addition with a superscript “Q4” typed as HTML at each end. Playcode will read those marks as they are: a “Q4” followed by text starts an Addition, a “Q4” at the end of a line or before a line break ends one. That reads every mark in the four files, the French Additions that start or end in the middle of a paragraph included.</p>
+        <p class="why">The file Playcode exports needs a TEI way to say where an Addition starts and ends. An Addition runs across speeches and whole scenes, which no single TEI element can wrap, so we propose two anchors, one at each end, and an <code>&lt;app&gt;</code> saying that the words between them are in Q4 and not in Q1. At II.i.69 of the English version:</p>
+        <pre class="tei">&lt;stage&gt;&lt;anchor xml:id="q4-1"/&gt;[Draws his sword.]&lt;anchor xml:id="q4-1-end"/&gt;&lt;app type="addition" from="#q4-1" to="#q4-1-end"&gt;&lt;lem wit="#Q4"/&gt;&lt;rdg wit="#Q1"/&gt;&lt;/app&gt;&lt;/stage&gt;</pre>
+        <p class="why">in place of today’s</p>
+        <pre class="tei">&lt;stage&gt;&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;Q4&lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt; [Draws his sword.] &lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt;Q4&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;&lt;/stage&gt;</pre>
+        <p class="why">For a long Addition, such as the Painter scene, the first anchor stands at its start and the second, with the <code>&lt;app&gt;</code>, at its end, scenes and speeches away. The superscript “Q4” is no longer typed: the site prints it at each anchor, from <code>wit="#Q4"</code>, beside the line in the margin of question 6. The same form serves Hamlet’s Folio passages (question 36), told apart by <code>type</code>. Whatever you answer, Playcode keeps reading the files as they are today.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q37-o1"><input type="radio" id="q37-o1" name="q37-choice" value="Yes, mark them this way">Yes, mark them this way</label>
+            <label for="q37-o2"><input type="radio" id="q37-o2" name="q37-choice" value="Another form (described in my note)">Another form (described in my note)</label>
+            <label for="q37-o3"><input type="radio" id="q37-o3" name="q37-choice" value="Not sure yet">Not sure yet</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q37-text">Notes</label>
+          <textarea id="q37-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
       </div>
     </div>
 
@@ -1406,7 +1432,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 27 answered</span>
+        <span class="count" id="answered-count">0 of 28 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>

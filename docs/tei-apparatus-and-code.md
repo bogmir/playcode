@@ -163,35 +163,51 @@ direction of *The Spanish Tragedy* reads "`<sup>` Q4 `</sup>` [Draws his sword.]
 
 The three uses that mark a difference between printed witnesses become `<app>`s, told apart
 by `type`, so variants, Folio passages and Additions are read and written by one path. The
-importer reads the old HTML forms and the new TEI forms alike, and refuses an unknown
-`<code>` string rather than showing it.
+importer will read the old HTML forms and the new TEI forms alike. The TEI forms for the Folio
+passages and the Additions are proposals to the editors, questions 36 and 37; both wait for
+their answers before they are built.
 
-- **Hamlet's Folio-only text** (question 5): hidden, with a "Folio interpolations" switch
-  showing it in grey between superscript F's, as before. All 247 passages sit inside one
-  element, so each is an `<app>` in the line, the Folio words a reading the base text (Q2)
-  lacks: `O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O</rdg></app> God,`. The
-  form is proposed to Hamlet's editor in question 36, who is re-encoding the variants and the Folio
-  interpolations, so that his file and Playcode's export agree.
-- **The Q4 Additions** (question 6): a line in the margin beside the whole passage and a
-  superscript Q4 at each end, in all four versions, wherever the text is printed (the play
-  page, the site, the downloads). An Addition crosses speeches and scenes, so it is marked
-  start to end, the way the 11 range entries already are: `<anchor xml:id="q4-1"/>`…the
-  passage…`<anchor xml:id="q4-1-end"/><app type="addition" from="#q4-1" to="#q4-1-end">
-  <lem wit="#Q4"/><rdg wit="#Q1"/></app>`; the printed "Q4" is the `lem`'s witness. Every
-  mark sits at the start or end of a line, stage direction or heading, so an Addition is a
-  run of whole elements. The backwards closings are mended, the Spanish version's "Q4.1"
-  prints as "Q4", its Folio wrappers are dropped, and the English and Italian italics stay.
-  `<addSpan>` was considered and set aside: it marks text added into one document, while an
+- **Hamlet's Folio-only text** (question 5; the encoding, question 36): hidden, with a "Folio
+  interpolations" switch showing it in grey between superscript F's, as before. All 247
+  passages sit inside one element, so each is an `<app>` in the line, the Folio words a
+  reading the base text (Q2) lacks: `O God, <app type="folio"><lem wit="#Q2"/><rdg
+  wit="#F1">O</rdg></app> God,`. Stored, when built, as a marker in the line like `<stage>`
+  (`<folio lem="#Q2" rdg="#F1">O</folio>`), so note offsets keep working; the word count is
+  Q2's and search still finds the Folio words. Still open: whether the downloads, which have
+  no switch, print them.
+- **The Q4 Additions** (question 6; the encoding, question 37): a line in the margin beside
+  the whole passage and a superscript Q4 at each end, in all four versions, wherever the text
+  is printed. An Addition crosses speeches and scenes, so it is marked start to end:
+  `<anchor xml:id="q4-1"/>`…the passage…`<anchor xml:id="q4-1-end"/><app type="addition"
+  from="#q4-1" to="#q4-1-end"><lem wit="#Q4"/><rdg wit="#Q1"/></app>`; the printed "Q4" is the
+  `lem`'s witness. `<addSpan>` was set aside: it marks text added into one document, while an
   Addition is a difference between printings.
+
+  The marks, read in full on 2026-10-16: 14 in English, 14 in French, 12 in Italian, 10 in
+  Spanish, a start and an end for every Addition. One rule tells them apart: a "Q4" followed
+  by text starts an Addition, a "Q4" followed by the end of its element or a `<lb/>` ends one;
+  the direction the tags are typed in says nothing. A mark may hold a note (`Q4<note>…</note>`,
+  the start of the English Addition 5). Most sit at the edge of a line or stage direction; two
+  start in a scene heading ("[SCENE XIIA]", English and French), one in a speaker label
+  (French), and three French ones in the middle of a prose paragraph, at a `<lb/>`. So the
+  planned storage is a start and an end marker at the exact place in the text, the margin
+  line worked out by walking the elements in reading order (a French paragraph an Addition
+  starts inside gets the line in full); a flag per element would move those Q4s to the
+  paragraph's edge.
 - **The Rover's directions** (question 7, waiting on the play's digital-text editor, David
   Amelang): until he answers, shown as the stage directions they are, the HTML dropped; the
-  mark stays in the project's file.
+  mark stays in the project's file. The importer drops a `<span class="folio">` wrapper that
+  holds no superscript F, which also drops the Spanish version's wrappers around Additions
+  2-5; Hamlet's, which open and close beside an F, are kept as they are.
 - **Mariamne** (question 8): "trône". Our copy of the file is corrected and the play
   re-imported, and the project gets the same correction for its own file.
+- **An unknown `<code>` string** will be refused on import, once the Folio passages and the
+  Additions are read; until then they are its only other uses.
 
 ### Working order
 
 The project's TEI files stay the master while Playcode is tested against the corpus;
-Playcode's export takes over only once it carries every feature of the files. The HTML
-fragments come first (236 lines show tags today), then the variants. The site is deployed
+Playcode's export takes over only once it carries every feature of the files. Of the HTML
+fragments, The Rover's and the Spanish wrappers and Mariamne come first; the Folio passages
+and the Additions follow the answers to questions 36 and 37; then the variants. The site is deployed
 as it stands, and each fix reaches it with the next Generate and Deploy.
