@@ -40,6 +40,8 @@ defmodule Playcode.Import.TeiCorpus do
 
   @doc """
   Imports each file. Codes already in the database are skipped unless `force: true`.
+  Under `resume: true` a play imported since its file was written is skipped too, so a
+  forced run that stopped part way carries on where it stopped when run again.
   `on_result` is called with each file's result as it is reached, so a long run can
   report as it goes.
   """
@@ -47,12 +49,14 @@ defmodule Playcode.Import.TeiCorpus do
     force = Keyword.get(opts, :force, false)
     on_result = Keyword.get(opts, :on_result, fn _result -> :ok end)
     existing = existing_codes()
+    imported_at = if Keyword.get(opts, :resume, false), do: last_import_by_code(), else: %{}
 
     Enum.map(files, fn {code, path} ->
       result =
-        if not force and MapSet.member?(existing, code),
-          do: {:skipped, code},
-          else: import_one(code, path)
+        if (not force and MapSet.member?(existing, code)) or
+             imported_since_written?(imported_at[code], path),
+           do: {:skipped, code},
+           else: import_one(code, path)
 
       on_result.(result)
       result
@@ -178,6 +182,18 @@ defmodule Playcode.Import.TeiCorpus do
       where: a.action == "import" and a.resource_type == "play",
       group_by: a.play_id,
       select: %{play_id: a.play_id, at: max(a.inserted_at)}
+  end
+
+  defp imported_since_written?(nil, _path), do: false
+
+  defp imported_since_written?(imported_at, path),
+    do: DateTime.to_unix(imported_at) >= File.stat!(path, time: :posix).mtime
+
+  defp last_import_by_code do
+    from(p in Play, join: i in subquery(last_imports()), on: i.play_id == p.id)
+    |> select([p, i], {p.code, i.at})
+    |> Repo.all()
+    |> Map.new(fn {code, at} -> {Play.short_code(code), at} end)
   end
 
   # The parser raises on some malformed files (over-long fields, Postgrex errors);

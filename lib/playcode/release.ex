@@ -101,7 +101,9 @@ defmodule Playcode.Release do
       bin/playcode rpc 'Playcode.Release.import_tei("/tmp/tei", force: true)'
 
   Without `force: true` a play already imported is skipped. A forced re-import replaces a
-  play's text and loses hand edits to it, which the dry run counts per play.
+  play's text and loses hand edits to it, which the dry run counts per play. With
+  `resume: true` as well, a play imported since its file was written is skipped, so a run
+  that stopped part way carries on when run again.
   """
   def import_tei(dir, opts \\ []) do
     load_app()
@@ -114,7 +116,7 @@ defmodule Playcode.Release do
     if opts[:dry_run] do
       TeiCorpus.dry_run(files, [force: opts[:force] || false], report)
     else
-      TeiCorpus.run(files, [force: opts[:force] || false], report)
+      TeiCorpus.run(files, Keyword.take(opts, [:force, :resume]), report)
     end
   end
 

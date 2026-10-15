@@ -145,6 +145,26 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert [%{title: "Segunda"}] = Catalogue.list_plays()
     end
 
+    # A forced run on Fly stopped part way twice. Under --resume it skips a play imported
+    # since its file was written, so running the same command again carries on where the
+    # last one stopped; a play never imported, or one that failed, is imported.
+    test "--force --resume skips a play imported since its file was written", %{dir: dir} do
+      path = Path.join(dir, "TASK0001_Primera.xml")
+      File.touch!(path, System.os_time(:second) - 60)
+      run("playcode.import.tei", ["--dir", dir])
+      File.write!(Path.join(dir, "TASK0002_Segunda.xml"), tei(code: "TASK0002"))
+
+      assert run("playcode.import.tei", ["--dir", dir, "--force", "--resume"]) =~
+               "imported 1, skipped 1, failed 0"
+
+      File.touch!(path, System.os_time(:second) + 60)
+
+      assert run("playcode.import.tei", ["--dir", dir, "--force", "--resume"]) =~
+               "imported 1, skipped 1, failed 0"
+
+      assert run("playcode.import.tei", ["--dir", dir, "--force"]) =~ "imported 2"
+    end
+
     # A forced re-import replaces a play's text, so the dry run names the plays whose text
     # was edited by hand after their last import. The edit is logged here the way the
     # content editor logs it; the editor itself is tested on its own page.
