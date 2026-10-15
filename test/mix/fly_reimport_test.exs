@@ -1,0 +1,149 @@
+defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
+  @moduledoc """
+  `mix playcode.fly.reimport` against a fake flyctl (`FLYCTL`) that records its calls and
+  answers the ones the task reads: what production receives, in order, and where the
+  task stops for a person. The fake keeps the uploaded tarball, so the file count the
+  "machine" reports is the upload's.
+  """
+  # Mix.shell/1 and FLYCTL are global to the VM.
+  use ExUnit.Case, async: false
+
+  @fake ~S"""
+  #!/bin/sh
+  d=$(dirname "$0")
+  echo "$*" >> "$d/calls"
+  case "$*" in
+    *"sftp put"*) cp "$4" "$d/uploaded.tgz" ;;
+    *"wc -l"*) tar tzf "$d/uploaded.tgz" | grep -c xml ;;
+    *"snapshots list"*) cat "$d/snapshots" ;;
+    *dry_run*) cat "$d/dry_run" ;;
+    *"resume: true"*) cat "$d/run.$(grep -c 'resume: true' "$d/calls")" 2>/dev/null ;;
+  esac
+  """
+
+  setup do
+    dir = Path.join(System.tmp_dir!(), "fly-#{System.unique_integer([:positive])}")
+    corpus = Path.join(dir, "corpus")
+    File.mkdir_p!(corpus)
+    File.write!(Path.join(corpus, "EMOTHE0001_Uno.xml"), "<TEI/>")
+    File.write!(Path.join(corpus, "EMOTHE0002_Dos.xml"), "<TEI/>")
+
+    flyctl = Path.join(dir, "flyctl")
+    File.write!(flyctl, @fake)
+    File.chmod!(flyctl, 0o755)
+
+    File.write!(
+      Path.join(dir, "snapshots"),
+      Jason.encode!([%{id: "vs_new", created_at: DateTime.utc_now(), status: "created"}])
+    )
+
+    Mix.shell(Mix.Shell.Process)
+    System.put_env("FLYCTL", flyctl)
+
+    on_exit(fn ->
+      Mix.shell(Mix.Shell.IO)
+      System.delete_env("FLYCTL")
+      File.rm_rf(dir)
+    end)
+
+    %{dir: dir, corpus: corpus}
+  end
+
+  defp answer(dir, name, text), do: File.write!(Path.join(dir, name), text)
+
+  defp calls(dir), do: dir |> Path.join("calls") |> File.read!() |> String.split("\n", trim: true)
+
+  defp output(acc \\ []) do
+    receive do
+      {:mix_shell, _level, [line]} -> output([line | acc])
+    after
+      0 -> acc |> Enum.reverse() |> Enum.join("\n")
+    end
+  end
+
+  # Each expected call appears, in this order, among the calls made.
+  defp assert_in_order(calls, expected) do
+    Enum.reduce(expected, calls, fn wanted, rest ->
+      case Enum.drop_while(rest, &(not String.contains?(&1, wanted))) do
+        [_found | after_it] ->
+          after_it
+
+        [] ->
+          flunk(
+            "no call #{inspect(wanted)} after the ones before it in:\n" <> Enum.join(calls, "\n")
+          )
+      end
+    end)
+  end
+
+  describe "prepare" do
+    test "snapshots, uploads, scales up, runs the dry run, and stops at what needs a look",
+         %{dir: dir, corpus: corpus} do
+      answer(dir, "dry_run", """
+      2 file(s) in /data/tei
+        EMOTHE0001  replaces 3 division(s), 40 element(s), 5 character(s), 2 TEI record(s)
+        EMOTHE0002  replaces 2 division(s), 9 element(s), 4 character(s), 1 TEI record(s), undoes 2 hand edit(s) to its text
+
+      dry run, nothing written — 0 new, 2 already imported (1 with hand edits since their last import), 0 unreadable
+      """)
+
+      Mix.Task.rerun("playcode.fly.reimport", ["prepare", "--dir", corpus])
+
+      calls = calls(dir)
+
+      assert_in_order(calls, [
+        "volumes snapshots create vol_40l3p92ozj187o94 -a emothe-db-1g",
+        "volumes snapshots list vol_40l3p92ozj187o94 -a emothe-db-1g --json",
+        "ssh sftp put",
+        "tar xzmf /data/tei.tgz -C /data/tei",
+        "machine update d8d14e7b0465d8 --vm-size performance-1x -a emothe-db-1g --yes",
+        "scale vm performance-1x -a playcode",
+        "machine update 7847063c04e7e8 --autostop=off -a playcode --yes",
+        ~s[import_tei("/data/tei", dry_run: true, force: true)]
+      ])
+
+      refute Enum.any?(calls, &(&1 =~ "resume: true"))
+
+      out = output()
+      assert out =~ "2 file(s) uploaded"
+      assert out =~ ~r/look.*\n.*EMOTHE0002 .*undoes 2 hand edit/i
+      refute out =~ ~r/look.*\n.*EMOTHE0001/i
+      assert out =~ "mix playcode.fly.reimport run"
+    end
+  end
+
+  describe "run" do
+    test "runs again after a run that stopped part way, then scales back", %{dir: dir} do
+      answer(dir, "run.1", "372 file(s) in /data/tei\nError: ssh shell: connection closed\n")
+      answer(dir, "run.2", "372 file(s) in /data/tei\nimported 300, skipped 72, failed 0\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["run"])
+
+      assert_in_order(calls(dir), [
+        ~s[import_tei("/data/tei", force: true, resume: true)],
+        "machine start 7847063c04e7e8 -a playcode",
+        ~s[import_tei("/data/tei", force: true, resume: true)],
+        "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes",
+        "scale vm shared-cpu-1x --vm-memory 1024 -a playcode",
+        "machine update d8d14e7b0465d8 --vm-size shared-cpu-1x --vm-memory 512 -a emothe-db-1g --yes"
+      ])
+
+      assert output() =~ "Generate"
+    end
+
+    test "stops at failed plays and keeps the machines scaled up", %{dir: dir} do
+      answer(dir, "run.1", """
+      372 file(s) in /data/tei
+        EMOTHE0002: %DBConnection.ConnectionError{message: "timeout"}
+      imported 371, skipped 0, failed 1
+      """)
+
+      assert_raise Mix.Error, ~r/1 play\(s\) failed/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["run"])
+      end
+
+      refute Enum.any?(calls(dir), &(&1 =~ "shared-cpu-1x"))
+      assert output() =~ "EMOTHE0002: %DBConnection.ConnectionError"
+    end
+  end
+end
