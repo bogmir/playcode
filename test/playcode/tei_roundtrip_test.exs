@@ -1263,6 +1263,69 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  describe "HTML typed into the text" do
+    @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
+    @folio_close ~s(<code>&lt;/span&gt;</code>)
+    @sup_open ~s(<code>&lt;sup&gt;</code>)
+    @sup_close ~s(<code>&lt;/sup&gt;</code>)
+
+    # The Rover wraps 40 stage directions, and the Spanish version of The Spanish Tragedy
+    # the starts and ends of Additions 2-5 (across lines), in the class that hid Hamlet's
+    # Folio text on the old site, and neither marks a Folio passage. The project decided
+    # the words are shown (questions 6 and 7, docs/stakeholder/preguntas.html).
+    test "a Folio wrapper in a file with no superscript F goes, its words stay" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACT I</head>
+              <sp><speaker>BELVILE</speaker>
+                <p>Who's there? <stage type="delivery">#{@folio_open}within#{@folio_close}</stage></p>
+              </sp>
+              <stage>#{@folio_open}Aside#{@folio_close}</stage>
+              <sp><speaker>JERÓNIMO</speaker>
+                <l n="80">#{@folio_open}#{@sup_open}Q4#{@sup_close}A vos, señor?</l>
+                <l n="92">¡Mera nadería, señor! #{@sup_open}Q4#{@sup_close}#{@folio_close}</l>
+              </sp>
+            </div1>
+            """
+          )
+        )
+
+      refute xml =~ "folio"
+      assert Enum.map(xml_inline_stages(xml), & &1.text) == ["within"]
+      assert reading_texts(xml, "stage") == ["within", "Aside"]
+      assert [first, last] = reading_texts(xml, "l")
+      assert first =~ "A vos, señor?"
+      assert last =~ "¡Mera nadería, señor!"
+    end
+
+    # Hamlet's Folio passages run from one superscript F to the next, across speeches, and
+    # its wrappers mark each element of a passage. They wait for the editor's answer to
+    # question 36; dropping the wrappers now would lose where a passage's inner lines are.
+    test "a file that marks Folio passages with a superscript F keeps its wrappers" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACT II</head>
+              <sp><speaker>HAMLET</speaker>
+                <p>#{@folio_open}#{@sup_open}F#{@sup_close}Denmark's a prison.#{@folio_close}</p>
+              </sp>
+              <sp><speaker>ROSENCRANTZ</speaker>
+                <p>#{@folio_open}Then is the world one.#{@sup_open}F#{@sup_close}#{@folio_close}</p>
+              </sp>
+            </div1>
+            """
+          )
+        )
+
+      assert [prison, world] = reading_texts(xml, "p")
+      assert prison =~ ~s(<span class="folio">)
+      assert world =~ ~s(<span class="folio">)
+    end
+  end
+
   describe "inline stage directions" do
     @staged """
     <div1 type="acto" n="1"><head>ACTO I</head>
