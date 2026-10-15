@@ -5,6 +5,7 @@ defmodule Playcode.Export.TeiXml do
 
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue
+  alias Playcode.Catalogue.Paratext
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{InlineMarkup, Note}
   alias Playcode.Witnesses
@@ -33,7 +34,7 @@ defmodule Playcode.Export.TeiXml do
       Playcode.Repo.preload(play, [
         :editors,
         :sources,
-        :editorial_notes,
+        :paratexts,
         :witnesses,
         play_places: [place: :names]
       ])
@@ -582,12 +583,16 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
-  # --- Back: the bibliography (S4) ---
+  # --- Back: the paratexts after the text, then the bibliography (S4) ---
 
-  defp build_back([]), do: element(:back)
+  defp build_back(paratexts, groups) do
+    element(:back, Enum.map(paratexts, &paratext_element/1) ++ build_bibliography(groups))
+  end
 
-  defp build_back(groups) do
-    element(:back, [
+  defp build_bibliography([]), do: []
+
+  defp build_bibliography(groups) do
+    [
       element(
         :div,
         %{type: "bibliografia"},
@@ -599,7 +604,7 @@ defmodule Playcode.Export.TeiXml do
           )
         end)
       )
-    ])
+    ]
   end
 
   # In the order TEI requires. The entry's `note` and the link's are for researchers and
@@ -739,14 +744,16 @@ defmodule Playcode.Export.TeiXml do
     body_divisions = Enum.filter(divisions, fn d -> d.type in @body_types end)
     cast_heading = Enum.find_value(divisions, &(&1.type == "elenco" && &1.title))
 
+    {back, front} = play.paratexts |> Enum.sort_by(& &1.position) |> Enum.split_with(& &1.back)
+
     element(:text, [
-      build_front(play, characters, cast_heading),
+      build_front(play, front, characters, cast_heading),
       build_body(body_divisions),
-      build_back(Playcode.Bibliography.list_for_play(play.id))
+      build_back(back, Playcode.Bibliography.list_for_play(play.id))
     ])
   end
 
-  defp build_front(play, characters, cast_heading) do
+  defp build_front(play, paratexts, characters, cast_heading) do
     title_page =
       element(
         :titlePage,
@@ -757,12 +764,9 @@ defmodule Playcode.Export.TeiXml do
         |> Enum.reject(&is_nil/1)
       )
 
-    # Editorial notes as front divs with their stored section_type; the scene of the
+    # Paratexts as front divs with their stored kind; the scene of the
     # action after the cast list, where 15 of the 17 files that have one put it.
-    {scenes, notes} =
-      play.editorial_notes
-      |> Enum.sort_by(& &1.position)
-      |> Enum.split_with(&(&1.section_type == "lugar_accion"))
+    {scenes, paratexts} = Enum.split_with(paratexts, &Paratext.scene?(&1.kind))
 
     # Cast list
     cast_list =
@@ -800,25 +804,35 @@ defmodule Playcode.Export.TeiXml do
     element(
       :front,
       [title_page] ++
-        Enum.map(notes, &front_section/1) ++ cast_list ++ Enum.map(scenes, &front_section/1)
+        Enum.map(paratexts, &paratext_element/1) ++
+        cast_list ++ Enum.map(scenes, &paratext_element/1)
     )
   end
 
-  defp front_section(note) do
+  # A paratext's line breaks as <lb/>, wherever they fall, inside an <emph> too: split
+  # before the italics are read, a break inside them would leave the markers as text.
+  defp with_breaks(text) when is_binary(text), do: lines(text)
+
+  defp with_breaks(nodes) when is_list(nodes),
+    do: Enum.flat_map(nodes, &List.wrap(with_breaks(&1)))
+
+  defp with_breaks({name, attrs, content}), do: {name, attrs, with_breaks(content)}
+  defp with_breaks(other), do: other
+
+  # A paratext before or after the text: a div of its kind, the scene of the action a <set>.
+  defp paratext_element(paratext) do
     head =
-      if note.heading,
-        do: [inline_element(:head, %{}, build_inline_content(note.heading))],
+      if paratext.heading,
+        do: [inline_element(:head, %{}, build_inline_content(paratext.heading))],
         else: []
 
     paragraphs =
-      note.content
-      |> String.split("\n\n")
-      |> Enum.map(&inline_element(:p, %{}, build_inline_content(&1)))
+      for paragraph <- String.split(paratext.content || "", "\n\n", trim: true),
+          do: inline_element(:p, %{}, paragraph |> build_inline_content() |> with_breaks())
 
-    case note.section_type do
-      "lugar_accion" -> element(:set, head ++ paragraphs)
-      type -> element(:div, %{type: type}, head ++ paragraphs)
-    end
+    if Paratext.scene?(paratext.kind),
+      do: element(:set, head ++ paragraphs),
+      else: element(:div, %{type: paratext.kind}, head ++ paragraphs)
   end
 
   defp build_body(body_divisions) do

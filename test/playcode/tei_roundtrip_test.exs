@@ -607,11 +607,42 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
-  test "every kind of front-matter note keeps its type" do
-    for type <- ~w(introduccion_editor dedicatoria argumento prologo nota) do
-      xml = roundtrip(tei(front: ~s(<div type="#{type}"><p>Texto.</p></div>)))
-      assert [{%{"type" => ^type}, "Texto."}] = xml_elements(xml, "div", within: "front")
-    end
+  # Until 2026-10-15 any kind outside five became "nota": 285 paratexts on dev lost theirs.
+  # "nota" itself, 0784's only, is a note on the digital edition, and so is a div with no
+  # type (no file has one); the test that listed nota among the kept kinds said otherwise.
+  test "a paratext keeps its kind, a new one included; nota is a note on the digital edition" do
+    xml =
+      roundtrip(
+        tei(
+          front: """
+          <div type="nota_edicion_digital"><head>Nota a esta edición digital</head><p>Texto.</p></div>
+          <div type="epistola"><head>Épître</head><p>Sire.</p></div>
+          <div type="carta_al_lector"><p>Lector.</p></div>
+          <div type="nota"><p>Note sur cette édition numérique.</p></div>
+          <div><p>Sin tipo.</p></div>
+          """
+        )
+      )
+
+    assert xml |> xml_elements("div", within: "front") |> Enum.map(&elem(&1, 0)["type"]) ==
+             ~w(nota_edicion_digital epistola carta_al_lector nota_edicion_digital nota_edicion_digital)
+  end
+
+  # 45 files give the scene of the action as a div; <set> is TEI's element for it.
+  test "a circunstancia_accion div is the scene of the action, after the cast list" do
+    xml =
+      roundtrip(
+        tei(
+          front: """
+          <div type="elenco"><castList><castItem><role xml:id="DON">Don</role></castItem></castList></div>
+          <div type="circunstancia_accion"><head>The Scene:</head><p>London</p></div>
+          """
+        )
+      )
+
+    assert xml_texts(xml, "p", within: "set") == ["London"]
+    assert xml_texts(xml, "head", within: "set") == ["The Scene:"]
+    refute xml =~ "circunstancia_accion"
   end
 
   # The importer stores <emph> as <<…>> wherever it reads text; outside the play's lines
@@ -672,7 +703,7 @@ defmodule Playcode.TeiRoundtripTest do
     assert xml =~ ~r{</castList>\s*</div>\s*<set>}
   end
 
-  test "a front-matter note keeps its type, heading and paragraphs" do
+  test "a paratext keeps its kind, heading and paragraphs" do
     xml =
       roundtrip(
         tei(
@@ -696,8 +727,75 @@ defmodule Playcode.TeiRoundtripTest do
            ]
   end
 
+  # The Rover's epilogue and post-script, Everyman's appendices: after the text, before the
+  # bibliography, as the files put them.
+  test "a paratext after the text comes back after it, before the bibliography" do
+    xml =
+      roundtrip(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><head>ACT I</head><sp><speaker>A</speaker><p>Hola.</p></sp></div1>),
+          back: """
+          <div type="epilogo"><head>EPILOGUE</head><p>The banished <emph>cavaliers</emph>!</p></div>
+          <div type="despedida"><head>POST-SCRIPT</head><p>This play had been sooner in print.</p></div>
+          <div type="bibliografia"><listBibl type="ediciones_modernas"><biblStruct type="book"><monogr><title>T</title><imprint><date>1990</date></imprint></monogr></biblStruct></listBibl></div>
+          """
+        )
+      )
+
+    assert xml |> xml_elements("div", within: "back") |> Enum.map(&elem(&1, 0)["type"]) ==
+             ~w(epilogo despedida bibliografia)
+
+    assert xml_texts(xml, "head", within: "back") == ["EPILOGUE", "POST-SCRIPT"]
+    assert xml_texts(xml, "emph", within: "back") == ["cavaliers"]
+    refute "EPILOGUE" in xml_texts(xml, "head", within: "front")
+  end
+
+  # Two files' commendatory sonnet waits on question 30, and a cast list after the text
+  # (0404, 0718) on question 29: neither is read.
+  test "a sonnet or a cast list after the text is not read" do
+    xml =
+      roundtrip(
+        tei(
+          back: """
+          <div type="epilogo"><head>SONNET</head><lg><l>Line one</l></lg><trailer>FIN</trailer></div>
+          <div type="elenco"><castList><castItem><role xml:id="X">X</role></castItem></castList></div>
+          """
+        )
+      )
+
+    assert xml_elements(xml, "div", within: "back") == []
+  end
+
+  # 12 head titles and 4 notes on the digital edition are a heading alone.
+  test "a paratext with a heading and no paragraphs comes back" do
+    xml = roundtrip(tei(front: ~s(<div type="head_title"><head>THE MALCONTENT</head></div>)))
+
+    assert [{%{"type" => "head_title"}, _}] = xml_elements(xml, "div", within: "front")
+    assert xml_texts(xml, "head", within: "front") == ["THE MALCONTENT"]
+  end
+
+  # Question 10: every break shown. A double break, an empty line before a signature in 140
+  # plays, is a new paragraph: the same gap for readers, and what a blank line means in the
+  # admin's textbox.
+  test "a paratext keeps its line breaks; a double break is a new paragraph" do
+    xml =
+      roundtrip(
+        tei(
+          front: """
+          <div type="dedicatoria"><p>A Vuestra Excelencia<lb/>guarde Dios<lb/><lb/>Frey Lope Félix de Vega Carpio<lb/></p></div>
+          """
+        )
+      )
+
+    assert xml_texts(xml, "p", within: "front") ==
+             ["A Vuestra Excelencia guarde Dios", "Frey Lope Félix de Vega Carpio"]
+
+    assert xml =~ ~r{A Vuestra Excelencia\s*<lb/>\s*guarde Dios</p>}
+  end
+
   # EMOTHE0113 (Tartuffe) heads its second placet with 302 characters.
-  test "a front-matter note keeps a heading longer than 255 characters" do
+  test "a paratext keeps a heading longer than 255 characters" do
     heading = String.duplicate("PLACET PRÉSENTÉ AU ROI ", 14)
 
     xml =

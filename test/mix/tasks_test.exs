@@ -163,6 +163,26 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert out =~ "1 with hand edits since their last import"
     end
 
+    # The rows a forced re-import replaces, counted by when they changed rather than by
+    # the activity log, so an edit to any of the file's rows shows.
+    test "--dry-run --force counts the file's rows edited since their import", %{dir: dir} do
+      File.write!(
+        Path.join(dir, "TASK0001_Primera.xml"),
+        tei(code: "TASK0001", front: ~s(<div type="licencia"><p>Privilège.</p></div>))
+      )
+
+      run("playcode.import.tei", ["--dir", dir])
+      [play] = Catalogue.list_plays()
+      refute run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"]) =~ "edited since"
+
+      play |> Playcode.TestFixtures.age_rows!()
+      [paratext] = Catalogue.list_paratexts(play.id)
+      {:ok, _} = Catalogue.update_paratext(paratext, %{kind: "noticia_representacion"})
+
+      assert run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"]) =~
+               ~r/TASK0001  replaces .*, 1 row\(s\) from the file edited since their import/
+    end
+
     test "an import logs itself, so edits made before it are not counted again", %{dir: dir} do
       run("playcode.import.tei", ["--dir", dir])
       [play] = Catalogue.list_plays()

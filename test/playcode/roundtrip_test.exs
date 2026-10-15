@@ -13,8 +13,8 @@ defmodule Playcode.RoundtripTest do
   """
 
   @fields ~w(acts scenes characters speeches verses line_groups stage_dirs asides
-             split_parts verse_type_attrs hidden_chars heads front_notes speaker_refs notes
-             inline_stages)a
+             split_parts verse_type_attrs hidden_chars heads front_paratexts back_paratexts
+             speaker_refs notes inline_stages)a
 
   # Read a possibly UTF-16 file and return UTF-8 string
   defp read_original(path) do
@@ -50,6 +50,13 @@ defmodule Playcode.RoundtripTest do
   defp extract_front(xml) do
     case Regex.run(~r/<front>(.*)<\/front>/s, xml) do
       [_, front] -> front
+      _ -> ""
+    end
+  end
+
+  defp extract_back(xml) do
+    case Regex.run(~r/<back>(.*)<\/back>/s, xml) do
+      [_, back] -> back
       _ -> ""
     end
   end
@@ -116,53 +123,34 @@ defmodule Playcode.RoundtripTest do
     Regex.scan(~r/<castItem\s[^>]*ana="oculto"/, front) |> length()
   end
 
-  # Count front-matter <div> elements that the parser imports as editorial notes:
-  # any div that is NOT "elenco" and has at least one direct <p> child with non-empty text.
-  # Mirrors import_front_div/4: "elenco" has its own handler, everything else becomes a note
-  # if paragraphs (direct <p> children) are non-empty.
-  defp count_front_note_divs(front) do
-    clean = Regex.replace(~r/<\?xml[^?]*\?>/, front, "")
+  # Count the <div>s the parser imports as paratexts, in the front or the back: any but a
+  # cast list ("elenco") or the bibliography, with a heading or a <p> holding text of its
+  # own, and no verse (two files' sonnet waits on question 30). A <set> with paragraphs
+  # counts too: 45 files give the scene of the action as a circunstancia_accion div, which
+  # the export writes back as <set>, so the same paratext is a div on one side and a set
+  # on the other.
+  defp count_paratext_divs(xml) do
+    clean = Regex.replace(~r/<\?xml[^?]*\?>/, xml, "")
 
     case Saxy.SimpleForm.parse_string("<root>#{clean}</root>") do
-      {:ok, tree} -> count_note_divs_in_front(tree)
+      {:ok, {_root, _attrs, children}} -> Enum.count(children, &paratext_div?/1)
       _ -> 0
     end
   end
 
-  defp count_note_divs_in_front({_name, _attrs, children}) do
-    Enum.reduce(children, 0, fn
-      {"div", attrs, div_children}, acc ->
-        type = attr_val(attrs, "type") || ""
-
-        # Skip cast list — it has its own import handler
-        if type != "elenco" do
-          has_content =
-            Enum.any?(div_children, fn
-              {"p", _, p_children} ->
-                text =
-                  Enum.map_join(p_children, fn
-                    t when is_binary(t) -> String.trim(t)
-                    _ -> ""
-                  end)
-
-                text != ""
-
-              _ ->
-                false
-            end)
-
-          if has_content, do: acc + 1, else: acc
-        else
-          acc
-        end
-
-      {"root", _, _} = root, acc ->
-        acc + count_note_divs_in_front(root)
-
-      _, acc ->
-        acc
-    end)
+  defp paratext_div?({tag, attrs, children}) when tag in ~w(div set) do
+    attr_val(attrs, "type") not in ~w(elenco bibliografia) and
+      not Enum.any?(children, &match?({"lg", _, _}, &1)) and
+      Enum.any?(children, fn
+        {name, _, inner} when name in ~w(head p) -> own_text(inner) != ""
+        _ -> false
+      end)
   end
+
+  defp paratext_div?(_other), do: false
+
+  defp own_text(children),
+    do: Enum.map_join(children, fn t -> if is_binary(t), do: String.trim(t), else: "" end)
 
   # Count <head> elements inside div1/div2 (division titles in body)
   defp count_heads_in_body(body) do
@@ -204,7 +192,8 @@ defmodule Playcode.RoundtripTest do
       verse_type_attrs: count_verse_type_attrs(body),
       hidden_chars: count_hidden_chars(front),
       heads: count_heads_in_body(body),
-      front_notes: count_front_note_divs(front),
+      front_paratexts: count_paratext_divs(front),
+      back_paratexts: count_paratext_divs(extract_back(xml)),
       notes: count_notes(xml),
       inline_stages: count_inline_stages(body)
     }

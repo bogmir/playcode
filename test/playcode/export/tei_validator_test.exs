@@ -79,9 +79,19 @@ defmodule Playcode.Export.TeiValidatorTest do
         "monogr_title" => "Solo un título"
       })
 
+      # A paratext after the text stands before the bibliography's div, a line break in it
+      # is an <lb/>, and one may be a heading alone.
+      for attrs <- [
+            %{"kind" => "colofon", "content" => "Loado sea.\nEn Madrid", "back" => true},
+            %{"kind" => "head_title", "heading" => "LA BARCA"}
+          ] do
+        {:ok, _} = Catalogue.create_paratext(Map.put(attrs, "play_id", play.id))
+      end
+
       xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
 
       assert xml =~ ~s(<citedRange unit="volume">5</citedRange>)
+      assert xml =~ ~r{<div type="colofon">.*<lb/>.*<div type="bibliografia">}s
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
@@ -227,9 +237,9 @@ defmodule Playcode.Export.TeiValidatorTest do
         |> Playcode.ImportHelpers.import_tei!()
 
       {:ok, _} =
-        Catalogue.create_play_editorial_note(%{
+        Catalogue.create_paratext(%{
           "play_id" => play.id,
-          "section_type" => "lugar_accion",
+          "kind" => "lugar_accion",
           "heading" => "SCENE:",
           "content" => "An English wood."
         })

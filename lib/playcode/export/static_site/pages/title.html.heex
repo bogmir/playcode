@@ -41,12 +41,12 @@
     </section>
     <Components.witnesses play={@edition.play} />
     <Components.bibliography groups={@edition.bibliography} />
-    <section :for={note <- Components.front_notes(@edition)}>
+    <section :for={note <- Components.front_paratexts(@edition)}>
       <h2>
-        <Components.inline text={note.heading || Components.note_heading(note.section_type)} />
+        <Components.inline text={note.heading || PlayLabels.kind_label(note.kind)} />
       </h2>
       <p :for={paragraph <- Components.paragraphs(note.content)}>
-        <Components.inline text={paragraph} />
+        <Components.lines text={paragraph} />
       </p>
     </section>
     <section :if={Components.cast(@edition.characters) != [] or Components.scene(@edition) != []}>
@@ -62,7 +62,7 @@
       <%= for note <- Components.scene(@edition) do %>
         <h3 :if={note.heading}><Components.inline text={note.heading} /></h3>
         <p :for={paragraph <- Components.paragraphs(note.content)}>
-          <Components.inline text={paragraph} />
+          <Components.lines text={paragraph} />
         </p>
       <% end %>
     </section>

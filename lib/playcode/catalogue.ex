@@ -1,6 +1,6 @@
 defmodule Playcode.Catalogue do
   @moduledoc """
-  Plays and their metadata: the play row, its editors, sources and editorial notes.
+  Plays and their metadata: the play row, its editors, sources and paratexts.
   The text lives in `Playcode.PlayContent`.
 
   Every play read takes the same options. Archived plays are hidden unless the caller
@@ -12,7 +12,7 @@ defmodule Playcode.Catalogue do
 
   import Ecto.Query
   alias Playcode.Repo
-  alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, PlayEditorialNote}
+  alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
   alias Playcode.Places.{PlaceName, PlayPlace}
   alias Playcode.Witnesses.Witness
 
@@ -23,7 +23,7 @@ defmodule Playcode.Catalogue do
   @origins ~w(tei manual filemaker)
 
   @doc """
-  Where a play's editors, sources and editorial notes came from.
+  Where a play's editors, sources and paratexts came from.
 
   A TEI re-import replaces only the rows it created itself (`"tei"`); anything a
   researcher typed or a FileMaker slice wrote survives untouched.
@@ -376,53 +376,73 @@ defmodule Playcode.Catalogue do
     PlaySource.changeset(source, attrs)
   end
 
-  # --- Editorial Notes ---
+  # --- Paratexts ---
+
+  # A re-import gives the file's paratexts the file's positions, which can equal one an
+  # editor gave a hand-entered paratext: the older row goes first, never whichever the
+  # database reads first.
+  @paratext_order [asc: :position, asc: :inserted_at]
 
   @doc """
-  The play's front-matter notes, in their order.
+  The play's paratexts, in their order.
   """
-  def list_play_editorial_notes(play_id) do
-    PlayEditorialNote
+  def list_paratexts(play_id) do
+    Paratext
     |> where(play_id: ^play_id)
-    |> order_by(:position)
+    |> order_by(^@paratext_order)
     |> Repo.all()
   end
 
   @doc """
-  As `get_play_editor/2`, for an editorial note.
+  As `get_play_editor/2`, for a paratext.
   """
-  def get_play_editorial_note(play_id, id), do: get_play_row(PlayEditorialNote, play_id, id)
+  def get_paratext(play_id, id), do: get_play_row(Paratext, play_id, id)
 
   @doc """
-  Creates an editorial note; `attrs` carry its `play_id`.
+  Creates a paratext; `attrs` carry its `play_id`.
   """
-  def create_play_editorial_note(attrs) do
-    %PlayEditorialNote{}
-    |> PlayEditorialNote.changeset(attrs)
+  def create_paratext(attrs) do
+    %Paratext{}
+    |> Paratext.changeset(attrs)
     |> Repo.insert()
   end
 
   @doc """
-  Updates an editorial note.
+  Updates a paratext.
   """
-  def update_play_editorial_note(%PlayEditorialNote{} = note, attrs) do
-    note
-    |> PlayEditorialNote.changeset(attrs)
+  def update_paratext(%Paratext{} = paratext, attrs) do
+    paratext
+    |> Paratext.changeset(attrs)
     |> Repo.update()
   end
 
   @doc """
-  Deletes an editorial note.
+  Deletes a paratext.
   """
-  def delete_play_editorial_note(%PlayEditorialNote{} = note) do
-    Repo.delete(note)
+  def delete_paratext(%Paratext{} = paratext) do
+    Repo.delete(paratext)
   end
 
   @doc """
-  An editorial note's changeset, for a form.
+  Puts the play's paratexts in the order of `ordered_ids`. The ids came from the browser:
+  one that is not this play's paratext, or no id at all, moves nothing.
   """
-  def change_play_editorial_note(%PlayEditorialNote{} = note, attrs \\ %{}) do
-    PlayEditorialNote.changeset(note, attrs)
+  def reorder_paratexts(play_id, ordered_ids) when is_list(ordered_ids) do
+    Repo.transaction(fn ->
+      for {raw_id, position} <- Enum.with_index(ordered_ids),
+          {:ok, id} <- [Ecto.UUID.cast(raw_id)] do
+        Paratext
+        |> where(id: ^id, play_id: ^play_id)
+        |> Repo.update_all(set: [position: position, updated_at: DateTime.utc_now()])
+      end
+    end)
+  end
+
+  @doc """
+  A paratext's changeset, for a form.
+  """
+  def change_paratext(%Paratext{} = paratext, attrs \\ %{}) do
+    Paratext.changeset(paratext, attrs)
   end
 
   @doc """
@@ -521,7 +541,7 @@ defmodule Playcode.Catalogue do
       editors: from(e in PlayEditor, order_by: e.position),
       sources: from(s in PlaySource, order_by: s.position),
       witnesses: from(w in Witness, order_by: [asc: w.position, asc: w.inserted_at]),
-      editorial_notes: from(n in PlayEditorialNote, order_by: n.position),
+      paratexts: from(n in Paratext, order_by: ^@paratext_order),
       play_places:
         {from(pp in PlayPlace, order_by: pp.position),
          [place: [names: from(n in PlaceName, order_by: [asc: n.position, asc: n.id])]]}

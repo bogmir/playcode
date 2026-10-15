@@ -8,7 +8,7 @@ defmodule PlaycodeWeb.API.PlayController do
   use PlaycodeWeb, :controller
 
   alias Playcode.{Catalogue, PlayContent, Statistics}
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Paratext, Play}
 
   # The API has no session, so every reader is anonymous: complete plays only.
 
@@ -103,7 +103,9 @@ defmodule PlaycodeWeb.API.PlayController do
       availability_note: play.availability_note,
       editors: Enum.map(play.editors, &editor_json/1),
       sources: Enum.map(play.sources, &source_json/1),
-      editorial_notes: Enum.map(play.editorial_notes, &note_json/1)
+      paratexts: for(p <- play.paratexts, not Paratext.scene?(p.kind), do: paratext_json(p)),
+      scene_of_action:
+        for(p <- play.paratexts, Paratext.scene?(p.kind), do: Map.take(p, [:heading, :content]))
     }
   end
 
@@ -125,8 +127,15 @@ defmodule PlaycodeWeb.API.PlayController do
     }
   end
 
-  defp note_json(note) do
-    %{heading: note.heading, content: note.content, section_type: note.section_type}
+  # `content` holds its line breaks as \n, its paragraphs parted by a blank line.
+  defp paratext_json(paratext) do
+    %{
+      kind: paratext.kind,
+      heading: paratext.heading,
+      content: paratext.content,
+      back: paratext.back,
+      editorial: Paratext.editorial?(paratext.kind)
+    }
   end
 
   defp character_json(char) do

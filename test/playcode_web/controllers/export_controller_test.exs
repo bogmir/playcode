@@ -142,6 +142,70 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  # Question 10: the HTML keeps the break for its white-space: pre-line; an EPUB reader
+  # need not honour that, so the EPUB writes <br/>.
+  test "a paratext's line breaks are printed", %{conn: conn} do
+    play =
+      tei(
+        front:
+          ~s(<div type="dedicatoria"><p>The banished cavaliers!<lb/>A roving blade!</p></div>)
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    assert html =~ "The banished cavaliers!\nA roving blade!"
+    assert epub =~ "The banished cavaliers!<br/>A roving blade!"
+  end
+
+  test "a line break inside italics is printed inside them", %{conn: conn, play: play} do
+    {:ok, _} =
+      Playcode.Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "dedicatoria",
+        content: "C <<una\ndos>> fin"
+      })
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    refute epub =~ "&lt;&lt;"
+    assert epub =~ "<em>una<br/>dos</em>"
+  end
+
+  test "the paratexts after the text are printed after it", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><head>ACTO I</head><sp><speaker>A</speaker><p>Verso final.</p></sp></div1>),
+        back: """
+        <div type="epilogo"><head>EPILOGUE</head><p>The banished <emph>cavaliers</emph>!</p></div>
+        <div type="colofon"><p>Loado sea.</p></div>
+        """
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    assert [_text, after_text] = String.split(html, "Verso final.")
+    assert after_text =~ ~r/EPILOGUE.*<em>cavaliers<\/em>.*Loado sea\./s
+
+    # A chapter each, after the text's, in the reader's table of contents.
+    {_name, toc} = Enum.find(files, fn {_name, content} -> content =~ ~s(epub:type="toc") end)
+
+    assert Regex.scan(~r{<a href="[^"]+">([^<]+)</a>}, toc, capture: :all_but_first) ==
+             [["Test Play"], ["ACTO I"], ["EPILOGUE"], [t("Colophon")]]
+
+    assert Enum.any?(files, fn {_name, content} ->
+             content =~ "Loado sea." and content =~ "<title>#{t("Colophon")}</title>"
+           end)
+  end
+
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.delete_play(play)
 

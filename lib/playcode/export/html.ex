@@ -11,10 +11,10 @@ defmodule Playcode.Export.Html do
   alias PlaycodeWeb.PlayLabels
 
   def generate(play) do
-    play = Playcode.Repo.preload(play, [:editors, :sources, :editorial_notes])
+    play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
     characters = PlayContent.list_characters(play.id)
     divisions = PlayContent.load_play_content(play.id)
-    {front_notes, scene} = PlayLabels.split_front_matter(play.editorial_notes, divisions)
+    {front, scene, back} = PlayLabels.split_paratexts(play.paratexts, divisions)
 
     """
     <!DOCTYPE html>
@@ -38,11 +38,13 @@ defmodule Playcode.Export.Html do
     #{render_dating(play)}
         </header>
 
-    #{render_editorial_notes(front_notes)}
+    #{render_paratexts(front)}
 
         <div class="play-text">
     #{render_divisions(divisions, characters, scene)}
         </div>
+
+    #{render_paratexts(back)}
       </div>
     </body>
     </html>
@@ -110,8 +112,8 @@ defmodule Playcode.Export.Html do
           color: rgba(51, 51, 51, 0.5);
         }
 
-        /* Editorial notes */
-        .editorial-note {
+        /* Paratexts */
+        .paratext {
           max-width: 640px;
           margin: 0 auto 1.5rem;
           text-align: justify;
@@ -119,13 +121,13 @@ defmodule Playcode.Export.Html do
           white-space: pre-line;
         }
 
-        .editorial-note h3 {
+        .paratext h3 {
           font-weight: bold;
           text-align: center;
           margin-bottom: 0.5rem;
         }
 
-        .editorial-note-sep {
+        .paratext-sep {
           max-width: 640px;
           margin: 0 auto 1.5rem;
           border: none;
@@ -319,17 +321,17 @@ defmodule Playcode.Export.Html do
   defp render_dating(play),
     do: play |> dating() |> Enum.map_join("\n", &"      <p class=\"dating\">#{escape(&1)}</p>")
 
-  defp render_editorial_notes(notes) do
-    notes
-    |> Enum.map(fn note ->
+  defp render_paratexts(paratexts) do
+    paratexts
+    |> Enum.map(fn paratext ->
       heading =
-        if note.heading,
-          do: "      <h3>#{NoteMarkup.inline(note.heading, [], :html)}</h3>\n",
+        if paratext.heading,
+          do: "      <h3>#{NoteMarkup.inline(paratext.heading, [], :html)}</h3>\n",
           else: ""
 
-      "    <div class=\"editorial-note\">\n#{heading}      <div>#{NoteMarkup.inline(note.content, [], :html)}</div>\n    </div>"
+      "    <div class=\"paratext\">\n#{heading}      <div>#{NoteMarkup.inline(paratext.content, [], :html)}</div>\n    </div>"
     end)
-    |> Enum.join("\n    <hr class=\"editorial-note-sep\">\n")
+    |> Enum.join("\n    <hr class=\"paratext-sep\">\n")
   end
 
   defp render_inline_cast_list(characters) do
@@ -366,7 +368,7 @@ defmodule Playcode.Export.Html do
       # Render inline cast list for elenco divisions
       cast =
         if div.type == "elenco",
-          do: render_inline_cast_list(characters) <> render_editorial_notes(scene),
+          do: render_inline_cast_list(characters) <> render_paratexts(scene),
           else: ""
 
       elements = render_elements(Map.get(div, :loaded_elements, []))

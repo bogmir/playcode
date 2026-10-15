@@ -266,6 +266,12 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                   characters: p.replaces.characters,
                   tei: tei_total(p)
                 )}
+                <span :if={p.edited > 0} class="font-medium text-warning">
+                  {gettext(
+                    "%{count} row(s) from the file were edited by hand since its import: importing replaces them too.",
+                    count: p.edited
+                  )}
+                </span>
               </div>
               <div :if={preserved_total(p) > 0} class="mt-1 text-xs font-medium text-success">
                 {gettext("Keeps %{count} record(s) you entered by hand.",

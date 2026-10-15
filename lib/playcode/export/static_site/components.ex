@@ -156,6 +156,7 @@ defmodule Playcode.Export.StaticSite.Components do
           </li>
         </ul>
       </li>
+      <li :for={{href, title} <- back_matter_links(@edition)}><a href={href}>{title}</a></li>
       <li><a href="text.html" aria-current={@current == "text" && "page"}>Full text</a></li>
       <li>
         <a href="statistics.html" aria-current={@current == "statistics" && "page"}>Statistics</a>
@@ -299,14 +300,44 @@ defmodule Playcode.Export.StaticSite.Components do
   @doc "The cast as published: every character not marked hidden."
   def cast(characters), do: Enum.reject(characters, & &1.is_hidden)
 
-  @doc "The front matter printed above the cast list (`PlayLabels.split_front_matter/2`)."
-  def front_notes(edition), do: edition |> front_matter() |> elem(0)
+  @doc "The paratexts printed above the cast list (`PlayLabels.split_paratexts/2`)."
+  def front_paratexts(edition), do: edition |> paratexts() |> elem(0)
 
   @doc "The scene of the action, printed under the cast list."
-  def scene(edition), do: edition |> front_matter() |> elem(1)
+  def scene(edition), do: edition |> paratexts() |> elem(1)
 
-  defp front_matter(edition),
-    do: PlayLabels.split_front_matter(edition.play.editorial_notes, edition.divisions)
+  @doc "The paratexts after the text, each with its anchor on the page."
+  def back_matter(edition) do
+    for {paratext, index} <- edition |> paratexts() |> elem(2) |> Enum.with_index(1),
+        do: {"after-#{index}", paratext}
+  end
+
+  defp paratexts(edition),
+    do: PlayLabels.split_paratexts(edition.play.paratexts, edition.divisions)
+
+  @doc "The paratexts after the text, printed after it."
+  attr :edition, :map, required: true
+
+  def back_paratexts(assigns) do
+    ~H"""
+    <section :for={{id, paratext} <- back_matter(@edition)} id={id} class="division">
+      <h2 class="act-head">
+        <.inline text={paratext.heading || PlayLabels.kind_label(paratext.kind)} />
+      </h2>
+      <p :for={paragraph <- paragraphs(paratext.content)}><.lines text={paragraph} /></p>
+    </section>
+    """
+  end
+
+  # The Contents' entries for the paratexts after the text, on the text's last page.
+  defp back_matter_links(%{pages: []}), do: []
+
+  defp back_matter_links(edition) do
+    last = List.last(edition.pages)
+
+    for {id, paratext} <- back_matter(edition),
+        do: {"#{last.slug}.html##{id}", PlayLabels.paratext_title(paratext)}
+  end
 
   @doc "The cast list's heading: the play's own, as its TEI file carries it, or the Latin."
   def cast_heading(divisions),
@@ -355,12 +386,6 @@ defmodule Playcode.Export.StaticSite.Components do
 
   def paragraphs(nil), do: []
   def paragraphs(text), do: String.split(text, ~r/\n\s*\n/, trim: true)
-
-  def note_heading("dedicatoria"), do: "Dedication"
-  def note_heading("introduccion_editor"), do: "Editor's introduction"
-  def note_heading("argumento"), do: "Argument"
-  def note_heading("prologo"), do: "Prologue"
-  def note_heading(_other), do: "Note"
 
   @doc "The citation shown on the title page; JS adds the page's URL when copying."
   def citation(play, site) do
@@ -562,6 +587,27 @@ defmodule Playcode.Export.StaticSite.Components do
     # whitespace it adds between a word and its <em> would be visible.
     ~H"""
     {Phoenix.HTML.raw(Enum.map(@parts, &part/1))}
+    """
+  end
+
+  @doc """
+  A paragraph of a paratext with its italics, each line break a `<br>`, inside the
+  italics too: the italics are read first, so a break cannot leave their markers as text.
+  """
+  attr :text, :string, required: true
+
+  def lines(assigns) do
+    html =
+      assigns.text
+      |> InlineMarkup.parts()
+      |> Enum.map(&part/1)
+      |> IO.iodata_to_binary()
+      |> String.replace("\n", "<br>")
+
+    assigns = assign(assigns, :html, html)
+
+    ~H"""
+    {Phoenix.HTML.raw(@html)}
     """
   end
 

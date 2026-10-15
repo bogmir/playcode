@@ -12,9 +12,10 @@ defmodule Playcode.Export.Epub do
   @act_types ~w(acto act acte jornada)
 
   def generate(play) do
-    play = Playcode.Repo.preload(play, [:editors, :sources, :editorial_notes])
+    play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
     characters = PlayContent.list_characters(play.id)
     divisions = PlayContent.load_play_content(play.id)
+    {front, scene, back} = PlayLabels.split_paratexts(play.paratexts, divisions)
 
     tmp_dir =
       Path.join(
@@ -29,14 +30,14 @@ defmodule Playcode.Export.Epub do
       css_path = Path.join(tmp_dir, "style.css")
       File.write!(css_path, css())
 
-      # Front matter: title, author, sources, editors, editorial notes, cast list
+      # Front matter: title, author, sources, editors, paratexts, cast list
       front_path =
         write_chapter(
           tmp_dir,
           "front",
           play.title,
           play.language,
-          render_front(play, characters, divisions)
+          render_front(play, characters, front, scene)
         )
 
       # One chapter per top-level division
@@ -59,8 +60,20 @@ defmodule Playcode.Export.Epub do
           {path, title}
         end)
 
+      # One chapter per paratext after the text, named by its heading or its kind
+      back_entries =
+        back
+        |> Enum.with_index(1)
+        |> Enum.map(fn {paratext, i} ->
+          title = PlayLabels.paratext_title(paratext)
+          filename = "back-#{String.pad_leading("#{i}", 3, "0")}"
+
+          {write_chapter(tmp_dir, filename, title, play.language, render_paratexts([paratext])),
+           title}
+        end)
+
       all_pages =
-        [{front_path, play.title} | chapter_entries]
+        [{front_path, play.title} | chapter_entries ++ back_entries]
         |> Enum.map(fn {path, title} ->
           %BUPE.Item{
             href: path,
@@ -128,9 +141,7 @@ defmodule Playcode.Export.Epub do
 
   # --- Front matter ---
 
-  defp render_front(play, characters, divisions) do
-    {front_notes, scene} = PlayLabels.split_front_matter(play.editorial_notes, divisions)
-
+  defp render_front(play, characters, front, scene) do
     """
     <div class="header">
       <p class="author">#{escape(play.author_name || "")}</p>
@@ -140,9 +151,9 @@ defmodule Playcode.Export.Epub do
     #{render_verse_info(play)}
     #{render_dating(play)}
     </div>
-    #{render_editorial_notes(front_notes)}
+    #{render_paratexts(front)}
     #{render_cast_list(characters)}
-    #{render_editorial_notes(scene)}
+    #{render_paratexts(scene)}
     """
   end
 
@@ -185,17 +196,25 @@ defmodule Playcode.Export.Epub do
     end
   end
 
-  defp render_editorial_notes(notes) do
-    notes
-    |> Enum.map(fn note ->
+  # Each paragraph a <p>, each line break a <br/>, inside the italics too: an EPUB reader
+  # need not honour white-space: pre-line.
+  defp paratext_paragraphs(content) do
+    for paragraph <- String.split(content || "", "\n\n", trim: true), into: "" do
+      "  <p>#{paragraph |> NoteMarkup.inline([], :epub) |> String.replace("\n", "<br/>")}</p>\n"
+    end
+  end
+
+  defp render_paratexts(paratexts) do
+    paratexts
+    |> Enum.map(fn paratext ->
       heading =
-        if note.heading,
-          do: "  <h3>#{NoteMarkup.inline(note.heading, [], :epub)}</h3>\n",
+        if paratext.heading,
+          do: "  <h3>#{NoteMarkup.inline(paratext.heading, [], :epub)}</h3>\n",
           else: ""
 
-      "<div class=\"editorial-note\">\n#{heading}  <div>#{NoteMarkup.inline(note.content, [], :epub)}</div>\n</div>"
+      "<div class=\"paratext\">\n#{heading}#{paratext_paragraphs(paratext.content)}</div>"
     end)
-    |> Enum.join("\n<hr class=\"editorial-note-sep\"/>\n")
+    |> Enum.join("\n<hr class=\"paratext-sep\"/>\n")
   end
 
   defp render_cast_list(characters) do
@@ -371,19 +390,19 @@ defmodule Playcode.Export.Epub do
       color: rgba(51, 51, 51, 0.5);
     }
 
-    .editorial-note {
+    .paratext {
       margin: 0 auto 1.5em;
       text-align: justify;
       font-size: 0.875em;
     }
 
-    .editorial-note h3 {
+    .paratext h3 {
       font-weight: bold;
       text-align: center;
       margin-bottom: 0.5em;
     }
 
-    .editorial-note-sep {
+    .paratext-sep {
       margin: 0 auto 1.5em;
       border: none;
       border-top: 1px solid #e5e7eb;

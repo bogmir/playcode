@@ -295,7 +295,9 @@ defmodule Playcode.Import.WordParserTest do
     end
   end
 
-  test "text before the first scene becomes the front matter note" do
+  # A paratext of kind "nota" until 2026-10-15; a file's nota now reads as a note on the
+  # digital edition, so the Word import writes that word and its TEI comes back the same.
+  test "text before the first scene becomes a paratext for the editor to sort" do
     xml =
       import_word([
         "BARTHOLOMEW FAIR",
@@ -308,7 +310,7 @@ defmodule Playcode.Import.WordParserTest do
     assert [{_, text}] =
              Enum.filter(
                xml_elements(xml, "div", within: "front"),
-               &match?({%{"type" => "nota"}, _}, &1)
+               &match?({%{"type" => "nota_edicion_digital"}, _}, &1)
              )
 
     assert text =~ "Front matter"

@@ -64,9 +64,9 @@ defmodule Playcode.ContentVersionTest do
         Catalogue.create_play_source(%{play_id: play.id, title: "Fuente", position: 1})
       end,
       note: fn ->
-        Catalogue.create_play_editorial_note(%{
+        Catalogue.create_paratext(%{
           play_id: play.id,
-          section_type: "nota",
+          kind: "nota_edicion_digital",
           content: "Nota",
           position: 1
         })

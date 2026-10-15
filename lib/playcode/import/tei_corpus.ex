@@ -135,8 +135,11 @@ defmodule Playcode.Import.TeiCorpus do
       "#{preview.replaces.elements} element(s), " <>
       "#{preview.replaces.characters} character(s), " <>
       "#{TeiImport.mixed_ownership_total(preview.replaces)} TEI record(s)" <>
-      keeps(preview) <> undoes(Map.get(edits, preview.existing.id, 0))
+      edited(preview.edited) <> keeps(preview) <> undoes(Map.get(edits, preview.existing.id, 0))
   end
+
+  defp edited(0), do: ""
+  defp edited(n), do: ", #{n} row(s) from the file edited since their import"
 
   defp keeps(preview) do
     kept = TeiImport.mixed_ownership_total(preview.preserves)

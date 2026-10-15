@@ -59,12 +59,12 @@ defmodule Playcode.Import.TeiPreviewTest do
              characters: 0,
              editors: 0,
              sources: 0,
-             notes: 0,
+             paratexts: 0,
              places: 0,
              witnesses: 0
            }
 
-    assert preview.preserves == %{editors: 0, sources: 0, notes: 0, places: 0, witnesses: 0}
+    assert preview.preserves == %{editors: 0, sources: 0, paratexts: 0, places: 0, witnesses: 0}
   end
 
   test "an existing play reports what is replaced and what is kept", %{path: path} do
@@ -82,6 +82,37 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert preview.preserves.sources == 1
     assert :language in preview.preserves_fields
     assert :form in preview.preserves_fields
+  end
+
+  # A re-import replaces the file's rows, and an editor's fixes to them with them; the
+  # preview says how many. A fresh import edits nothing (review focus 7), and a row typed
+  # by hand is kept, so its edits do not count.
+  test "counts the file's rows edited since their import" do
+    path =
+      write_tmp!(
+        tei(
+          code: "TEDIT1",
+          source_desc: "<bibl><title>Primera parte</title></bibl>",
+          front: """
+          <div type="licencia"><p>Privilège.</p></div>
+          <div type="elenco"><castList><castItem><role xml:id="REY">EL REY</role></castItem></castList></div>
+          """
+        )
+      )
+
+    {:ok, play} = TeiImport.import_file(path)
+    assert {:ok, %{edited: 0}} = TeiImport.preview_import(path)
+
+    {:ok, typed} = Catalogue.create_play_source(%{play_id: play.id, title: "Typed by hand"})
+    Playcode.TestFixtures.age_rows!(play)
+
+    [paratext] = Catalogue.list_paratexts(play.id)
+    {:ok, _} = Catalogue.update_paratext(paratext, %{kind: "noticia_representacion"})
+    [character] = Playcode.PlayContent.list_characters(play.id)
+    {:ok, _} = Playcode.PlayContent.update_character(character, %{"actor" => "Mr. Betterton"})
+    {:ok, _} = Catalogue.update_play_source(typed, %{title: "Typed again"})
+
+    assert {:ok, %{edited: 2}} = TeiImport.preview_import(path)
   end
 
   test "a hand-linked place counts as kept, a TEI one as replaced", %{path: path} do

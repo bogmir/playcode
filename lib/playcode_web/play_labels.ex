@@ -11,8 +11,8 @@ defmodule PlaycodeWeb.PlayLabels do
   use Gettext, backend: PlaycodeWeb.Gettext
 
   alias Playcode.Bibliography.Entry
-  alias Playcode.Catalogue.{Play, PlaySource}
-  alias Playcode.PlayContent.{Element, Note}
+  alias Playcode.Catalogue.{Paratext, Play, PlaySource}
+  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias Playcode.Places.{Place, PlayPlace}
 
   @doc "The Spanish-or-English name of a historical period slug."
@@ -77,6 +77,44 @@ defmodule PlaycodeWeb.PlayLabels do
     |> with_current(Element.stage_types(), current)
   end
 
+  @doc "The name of a paratext's kind (`Paratext.kinds/0`); a file's other word as itself."
+  def kind_label("dedicatoria"), do: gettext("Dedication")
+  def kind_label("epistola"), do: gettext("Epistle")
+  def kind_label("introduccion_autor"), do: gettext("Author's address to the reader")
+  def kind_label("prologo"), do: gettext("Prologue")
+  def kind_label("argumento"), do: gettext("Argument")
+  def kind_label("licencia"), do: gettext("Licence to print")
+  def kind_label("noticia_representacion"), do: gettext("Performance notice")
+  def kind_label("title_page"), do: gettext("Title page")
+  def kind_label("head_title"), do: gettext("Head title")
+  def kind_label("epilogo"), do: gettext("Epilogue")
+  def kind_label("despedida"), do: gettext("Post-script")
+  def kind_label("colofon"), do: gettext("Colophon")
+  def kind_label("nota_edicion_digital"), do: gettext("Note on the digital edition")
+
+  def kind_label("introduccion_editor_digital"),
+    do: gettext("Introduction to the digital edition")
+
+  def kind_label("introduccion_editor"), do: gettext("Editor's introduction")
+  def kind_label("introduccion_traductor"), do: gettext("Translator's note")
+  def kind_label("apendice"), do: gettext("Appendix")
+  def kind_label("lugar_accion"), do: gettext("Scene of the action")
+  def kind_label(kind), do: kind
+
+  @doc """
+  The kinds for a select, grouped: printed with the play, editorial texts, the scene of
+  the action; and `current`, a kind a file gave that is not among them, as itself.
+  """
+  def kind_options(current \\ nil) do
+    [
+      {gettext("Printed with the play"), Paratext.printed_kinds()},
+      {gettext("Editorial texts"), Paratext.editorial_kinds()},
+      {gettext("Scene of the action"), ["lugar_accion"]}
+    ]
+    |> Enum.map(fn {group, kinds} -> {group, Enum.map(kinds, &{kind_label(&1), &1})} end)
+    |> with_current(Paratext.kinds(), current)
+  end
+
   defp with_current(options, known, current) do
     if current in [nil, ""] or current in known,
       do: options,
@@ -84,15 +122,26 @@ defmodule PlaycodeWeb.PlayLabels do
   end
 
   @doc """
-  A play's front-matter notes as printed: those above the text, and its scene of the
-  action (`lugar_accion`), printed after the cast list as emothe.uv.es prints it. A play
-  with no cast list (no `elenco` division) prints its scene with the rest.
+  A play's paratexts as printed, `{front, scene, back}`: those before the text; its scene
+  of the action, printed after the cast list as emothe.uv.es prints it (with those before
+  the text when the play has no cast list); and those after the text.
   """
-  def split_front_matter(notes, divisions) do
-    if Enum.any?(divisions, &(&1.type == "elenco")),
-      do: Enum.split_with(notes, &(&1.section_type != "lugar_accion")),
-      else: {notes, []}
+  def split_paratexts(paratexts, divisions) do
+    {back, front} = Enum.split_with(paratexts, & &1.back)
+
+    {front, scene} =
+      if Enum.any?(divisions, &(&1.type == "elenco")),
+        do: Enum.split_with(front, &(not Paratext.scene?(&1.kind))),
+        else: {front, []}
+
+    {front, scene, back}
   end
+
+  @doc "A paratext's name where one is needed: its heading, plain, or its kind's."
+  def paratext_title(%{heading: heading}) when heading not in [nil, ""],
+    do: InlineMarkup.plain(heading)
+
+  def paratext_title(paratext), do: kind_label(paratext.kind)
 
   # The files' template values for a source's provenance: kept, as the file's, but no
   # reader is told them until the project says what they mean (question 27 in

@@ -32,9 +32,9 @@ defmodule PlaycodeWeb.AccessibilityTest do
       })
 
     {:ok, _} =
-      Catalogue.create_play_editorial_note(%{
+      Catalogue.create_paratext(%{
         play_id: play.id,
-        section_type: "nota",
+        kind: "nota_edicion_digital",
         heading: "Nota",
         content: "Texto",
         position: 1
@@ -119,7 +119,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
           {"/admin/plays/:id/bibliography", [{"button", t("Add existing")}]},
           {"/admin/plays/:id/places", [{"button", t("New place")}]},
           {"/admin/places", [{"button", t("New place")}]},
-          {content, [tab.(t("Editorial Notes")), {"button", t("Add Note")}]},
+          {content, [tab.(t("Paratexts")), {"button", t("Add Paratext")}]},
           {content, [tab.(t("Cast list")), {"button", t("Add Character")}]},
           {content, [tab.(t("Character Review")), {"button", t("Select all")}]},
           {content, [tab.("content")]},

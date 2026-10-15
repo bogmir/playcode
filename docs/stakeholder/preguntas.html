@@ -218,6 +218,13 @@
   textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
   .status { font-size: 0.8125rem; color: var(--muted); min-height: 1.2em; }
 
+  /* An answered question keeps its record; "Change this answer" brings its form back. */
+  .answered { display: grid; gap: 0.6rem; justify-items: start; padding: 0.8rem 1rem; background: var(--accent-soft); border-radius: 4px; }
+  .answered p { margin: 0; }
+  .answer-form { display: grid; gap: 0.8rem; }
+  .answer-form[hidden] { display: none; }
+  button.reopen { color: var(--accent); background: transparent; border: 1px solid var(--accent); padding: 0.4rem 0.9rem; }
+
   .send {
     background: var(--surface);
     border: 1px solid var(--accent);
@@ -259,7 +266,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 14 October 2026. 28 questions, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 15 October 2026. 35 questions, two of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -278,6 +285,8 @@
       <li><a href="#t-edition-notes">Notes on the edition</a><span class="nums">26</span></li>
       <li><a href="#t-provenance">Where the digital text came from</a><span class="nums">27</span></li>
       <li><a href="#t-original-cast">The original cast</a><span class="nums">28</span></li>
+      <li><a href="#t-paratexts">Texts around the play</a><span class="nums">29–35</span></li>
+      <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
   </nav>
@@ -514,7 +523,7 @@
       </table>
     </div>
 
-    <div class="q" data-q="q9" data-n="9">
+    <div class="q" data-q="q9" data-n="9" data-answered="2026-10-15">
       <span class="q-num" aria-hidden="true">9</span>
       <div class="q-body">
         <h3>How should prose line numbers be shown?</h3>
@@ -538,10 +547,15 @@
             <p>Beggar that I am, I am ever poor in thanks, but I thank you, and sure, dear friends, my thanks are too dear a halfpenny. Were you not sent for? …</p>
           </div>
         </div>
+        <div class="answered">
+          <p><strong>Answered on 15 October 2026:</strong> inline where each printed line starts, as the old site did.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q9-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q9-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q9-o1"><input type="radio" id="q9-o1" name="q9-choice" value="Inline where each printed line starts, as the old site did">1. Inline where each printed line starts, as the old site did</label>
+            <label for="q9-o1"><input type="radio" id="q9-o1" name="q9-choice" value="Inline where each printed line starts, as the old site did" checked>1. Inline where each printed line starts, as the old site did</label>
             <label for="q9-o2"><input type="radio" id="q9-o2" name="q9-choice" value="Each printed line on a line of its own, numbered in the margin like verse">2. Each printed line on a line of its own, numbered in the margin like verse</label>
             <label for="q9-o3"><input type="radio" id="q9-o3" name="q9-choice" value="Not on the page, only in the TEI file">3. Not on the page, only in the TEI file</label>
           </div>
@@ -551,20 +565,26 @@
           <textarea id="q9-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" data-q="q10" data-n="10">
+    <div class="q" data-q="q10" data-n="10" data-answered="2026-10-15">
       <span class="q-num" aria-hidden="true">10</span>
       <div class="q-body">
         <h3>Which line breaks without a number should readers see?</h3>
         <p class="why">Most of them set something apart: a letter’s greeting, a song or verse quoted in a speech, a new line after a stage direction, the lines of a dedication, and, with an empty line, a dedication’s signature. Running them on, as Playcode does now, joins lines that were meant to stand apart: “…como deseo. Frey Lope Félix de Vega Carpio”.</p>
         <p class="why">In eight plays they do something else. They copy where each line ended in the book the text was taken from, mid-sentence, like the numbered breaks of question 9 but with no numbers: <i>Romeo y Julieta</i> (3,390), <i>Le Soir des rois</i> (1,658), <i>Le Mardi gras du cordonnier</i> (1,334), <i>Enrique IV, primera parte</i> (961), <i>The Shoemaker’s Holiday</i> (784), <i>La trágica historia del Doctor Fausto</i> (277), <i>The Duchess of Malfi</i> (242) and <i>The Spanish Tragedy</i> (79). The old site showed these too, so Capuleto’s speech came out in the book’s short lines: “Y demasiado pronto ajadas están / aquellas que tan precozmente han sido / madres.” A few dedications do the same, Congreve’s in <i>The Way of the World</i> among them. In these eight plays a song or a letter may hide among the book’s line ends; only reading them would tell.</p>
+        <div class="answered">
+          <p><strong>Answered on 15 October 2026:</strong> show every break, as before, the eight plays’ line ends included.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q10-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q10-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q10-o1"><input type="radio" id="q10-o1" name="q10-choice" value="Show the breaks that set something apart; run on the book’s line ends in the eight plays">Show the breaks that set something apart; run on the book’s line ends in the eight plays</label>
-            <label for="q10-o2"><input type="radio" id="q10-o2" name="q10-choice" value="Show every break, as before, the eight plays’ line ends included">Show every break, as before, the eight plays’ line ends included</label>
+            <label for="q10-o2"><input type="radio" id="q10-o2" name="q10-choice" value="Show every break, as before, the eight plays’ line ends included" checked>Show every break, as before, the eight plays’ line ends included</label>
             <label for="q10-o3"><input type="radio" id="q10-o3" name="q10-choice" value="Show none: run the text on, as Playcode does now">Show none: run the text on, as Playcode does now</label>
             <label for="q10-o4"><input type="radio" id="q10-o4" name="q10-choice" value="Not sure">Not sure</label>
           </div>
@@ -574,6 +594,7 @@
           <textarea id="q10-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1132,6 +1153,173 @@
     </div>
   </section>
 
+  <section id="t-paratexts" aria-labelledby="h-paratexts">
+    <h2 id="h-paratexts">Texts around the play</h2>
+    <p>Besides the play, the files carry the texts printed around it: dedications, addresses to the reader, licences to print, performance notices, epilogues, colophons, and the texts written for this edition, its introductions, notes and appendices. Playcode is being changed to read them before and after the text, keep the kind each file gives them, and print them where the file puts them. These questions are about the ones whose place or kind the files leave open.</p>
+
+    <div class="q" data-q="q29" data-n="29">
+      <span class="q-num" aria-hidden="true">29</span>
+      <div class="q-body">
+        <h3>Which cast list is the play’s when it stands after the text?</h3>
+        <p class="why">Two plays keep a cast list after the text. <i>Qué lástima que sea una puta</i> (EMOTHE0404) has two: one before the text, 17 names with no identifiers, and one after it, headed “[EDITORIAL CASTLIST”, 20 roles carrying the identifiers its 893 speeches point at. Playcode reads the first, so none of those speeches has a speaker and the play has no speaker statistics. emothe.uv.es prints both, the second after the text as another “Elenco”.</p>
+        <p class="why"><i>Farsa de Inês Pereira</i> (EMOTHE0718) has only the one after the text, every role marked hidden. Playcode reads none, so its 282 speeches have no speaker either; emothe.uv.es prints none of it, as the roles are hidden.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q29-o1"><input type="radio" id="q29-o1" name="q29-choice" value="The list after the text is the play’s cast list, and stays after the text">The list after the text is the play’s cast list, and stays after the text</label>
+            <label for="q29-o2"><input type="radio" id="q29-o2" name="q29-choice" value="The list after the text is the play’s cast list, moved before the text where the other plays have theirs">The list after the text is the play’s cast list, moved before the text where the other plays have theirs</label>
+            <label for="q29-o3"><input type="radio" id="q29-o3" name="q29-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q29-text">Notes (and what to do with the 17 names before the text of EMOTHE0404)</label>
+          <textarea id="q29-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q30" data-n="30">
+      <span class="q-num" aria-hidden="true">30</span>
+      <div class="q-body">
+        <h3>How should the sonnet after <i>Les Contents</i> be printed?</h3>
+        <p class="why"><i>Les Contents</i> (EMOTHE0542) and its translation <i>Los contentos</i> (EMOTHE0743) end with a sonnet in praise of the author, “Réjouis-toi, Paris, œil unique de France…”: 14 lines and “FIN”, spoken by no character, filed as an epilogue. emothe.uv.es prints it after the text, as verse. Playcode reads only texts in prose after the text, so it leaves the sonnet out.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q30-o1"><input type="radio" id="q30-o1" name="q30-choice" value="After the text, as verse, not counted among the play’s verse lines">After the text, as verse, not counted among the play’s verse lines</label>
+            <label for="q30-o2"><input type="radio" id="q30-o2" name="q30-choice" value="After the text, as verse, counted among the play’s verse lines">After the text, as verse, counted among the play’s verse lines</label>
+            <label for="q30-o3"><input type="radio" id="q30-o3" name="q30-choice" value="Only in the TEI file">Only in the TEI file</label>
+            <label for="q30-o4"><input type="radio" id="q30-o4" name="q30-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q30-text">Notes</label>
+          <textarea id="q30-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q31" data-n="31">
+      <span class="q-num" aria-hidden="true">31</span>
+      <div class="q-body">
+        <h3>Is a prologue to the reader a different thing from a spoken prologue?</h3>
+        <p class="why">A prologue spoken by a character before the first act is part of the play’s text: it has lines, and they are counted. A prologue printed for readers (“Al lector”, “Prólogo [a la edición de 1635]”, “To the reader”) is a text around the play. The files call both <code>prologo</code>; and they also file “Al lector”, “Advertencia para el lector” and “Avertissement au lecteur” as an author’s address to the reader (<code>introduccion_autor</code>).</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q31-o1"><input type="radio" id="q31-o1" name="q31-choice" value="Yes; a prologue to the reader and an author’s address to the reader stay two kinds">Yes; a prologue to the reader and an author’s address to the reader stay two kinds</label>
+            <label for="q31-o2"><input type="radio" id="q31-o2" name="q31-choice" value="Yes; a prologue to the reader and an author’s address to the reader are one kind">Yes; a prologue to the reader and an author’s address to the reader are one kind</label>
+            <label for="q31-o3"><input type="radio" id="q31-o3" name="q31-choice" value="No: the line falls elsewhere (say where in the notes)">No: the line falls elsewhere (say where in the notes)</label>
+            <label for="q31-o4"><input type="radio" id="q31-o4" name="q31-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q31-text">Notes</label>
+          <textarea id="q31-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q32" data-n="32">
+      <span class="q-num" aria-hidden="true">32</span>
+      <div class="q-body">
+        <h3>Should a text that follows the cast list be printed after it?</h3>
+        <p class="why">28 plays give a title at the head of the text (“Título de cabecera”). In 20 it stands before the cast list; in 7, <i>Gorboduc</i> and <i>Don Lope de Cardona</i> among them, it stands after it, directly above the text. In <i>The Masque of Blackness</i> the address to the reader follows the cast list too. Playcode prints every such text above the cast list.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q32-o1"><input type="radio" id="q32-o1" name="q32-choice" value="Where its file puts it, before or after the cast list">Where its file puts it, before or after the cast list</label>
+            <label for="q32-o2"><input type="radio" id="q32-o2" name="q32-choice" value="The title at the head of the text always directly above the text; the rest above the cast list">The title at the head of the text always directly above the text; the rest above the cast list</label>
+            <label for="q32-o3"><input type="radio" id="q32-o3" name="q32-choice" value="All above the cast list, as Playcode prints them now">All above the cast list, as Playcode prints them now</label>
+            <label for="q32-o4"><input type="radio" id="q32-o4" name="q32-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q32-text">Notes</label>
+          <textarea id="q32-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q33" data-n="33">
+      <span class="q-num" aria-hidden="true">33</span>
+      <div class="q-body">
+        <h3>Where should the texts written for this edition be printed?</h3>
+        <p class="why">Playcode prints each text around a play where its file puts it, before or after the text. Some were printed in the play’s early edition: the dedication, the licence to print, the address to the reader. Others were written for this edition: the editor’s introduction, the note on the digital edition, the translator’s note, the appendices (<i>Everyman</i>’s “The Early Texts: Analysis” and “Editorial Procedures”, the critical apparatus of <i>She Would If She Could</i>).</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q33-o1"><input type="radio" id="q33-o1" name="q33-choice" value="Beside the editors, sources and witnesses, as “about this edition”, leaving around the text only what its first readers saw">Beside the editors, sources and witnesses, as “about this edition”, leaving around the text only what its first readers saw</label>
+            <label for="q33-o2"><input type="radio" id="q33-o2" name="q33-choice" value="Where the file puts them, as Playcode prints them now">Where the file puts them, as Playcode prints them now</label>
+            <label for="q33-o3"><input type="radio" id="q33-o3" name="q33-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q33-text">Notes</label>
+          <textarea id="q33-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q34" data-n="34">
+      <span class="q-num" aria-hidden="true">34</span>
+      <div class="q-body">
+        <h3>Are the epilogues after <i>The Rover</i> and <i>El hombre a la moda</i> part of the play?</h3>
+        <p class="why">The encoding manual makes a spoken prologue or epilogue a division of the play. <i>The Rover</i> (EMOTHE0503) and <i>El hombre a la moda</i> (EMOTHE0662, Dryden’s epilogue) give theirs, spoken to the audience and in verse, after the text as one paragraph with no speaker. Playcode will print them after the text, line by line, as texts around the play.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q34-o1"><input type="radio" id="q34-o1" name="q34-choice" value="Divisions of the play, their lines counted: re-enter them in Playcode as part of the text">Divisions of the play, their lines counted: re-enter them in Playcode as part of the text</label>
+            <label for="q34-o2"><input type="radio" id="q34-o2" name="q34-choice" value="Texts after the play, as Playcode prints them now">Texts after the play, as Playcode prints them now</label>
+            <label for="q34-o3"><input type="radio" id="q34-o3" name="q34-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q34-text">Notes</label>
+          <textarea id="q34-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" data-q="q35" data-n="35">
+      <span class="q-num" aria-hidden="true">35</span>
+      <div class="q-body">
+        <h3>Should the files Playcode exports use TEI’s own elements for these texts?</h3>
+        <p class="why">TEI has elements for some of them: <code>&lt;performance&gt;</code> for a performance notice, <code>&lt;argument&gt;</code>, <code>&lt;postscript&gt;</code>, <code>&lt;prologue&gt;</code> and <code>&lt;epilogue&gt;</code>. The files use <code>&lt;div type="noticia_representacion"&gt;</code> and the like, and Playcode writes those words back. TEI does not let every element stand where the file put its text: <code>&lt;performance&gt;</code> can, but <code>&lt;argument&gt;</code> and <code>&lt;postscript&gt;</code> cannot sit between sections. The scene of the action is already written as TEI’s <code>&lt;set&gt;</code>, as 17 files give it, also where the file says <code>&lt;div type="circunstancia_accion"&gt;</code>. Either way this changes the files you publish and any tool that reads them.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q35-o1"><input type="radio" id="q35-o1" name="q35-choice" value="Use TEI’s elements wherever TEI lets them stand where the file put the text">Use TEI’s elements wherever TEI lets them stand where the file put the text</label>
+            <label for="q35-o2"><input type="radio" id="q35-o2" name="q35-choice" value="Keep the project’s words, as Playcode writes them now">Keep the project’s words, as Playcode writes them now</label>
+            <label for="q35-o3"><input type="radio" id="q35-o3" name="q35-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q35-text">Notes</label>
+          <textarea id="q35-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-correct" aria-labelledby="h-correct">
+    <h2 id="h-correct">Kinds to correct</h2>
+    <p>Not questions: texts whose file gives them the wrong kind, so Playcode names them wrongly where they have no heading of their own. An editor can correct each one in Playcode’s admin, and the corrected kind goes into the file Playcode exports.</p>
+    <ul class="requests">
+      <li><strong><i>Epicoene, or The Silent Woman</i> (EMOTHE0125) and <i>Epicena o la mujer silenciosa</i> (EMOTHE0133):</strong> filed as a licence to print, after the text; a performance notice (“The comedy was first acted in the year of 1609…”).</li>
+      <li><strong><i>Every Man in His Humour</i> (EMOTHE0715):</strong> filed as a colophon; a performance notice (“This comedy was first acted in the year 1598…”).</li>
+      <li><strong><i>Didon se sacrifiant</i> (EMOTHE0750):</strong> filed as a colophon; a licence to print (“Extrait du privilège”).</li>
+      <li><strong><i>Sophonisba</i> (EMOTHE0271):</strong> filed as a licence to print; the author’s address to the reader (“Advertissement”).</li>
+    </ul>
+  </section>
+
   <section id="t-requests" aria-labelledby="h-requests">
     <h2 id="h-requests">FileMaker tables we still need</h2>
     <p>Not questions, but they unblock the next pieces of work. One export can carry all of them.</p>
@@ -1148,7 +1336,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 24 answered</span>
+        <span class="count" id="answered-count">0 of 33 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
@@ -1190,9 +1378,15 @@
     return !!(a.choice || (a.text && a.text.trim()));
   }
 
+  // A question answered on this page is left out until "Change this answer" reopens it.
+  function isOpen(q) {
+    return !q.dataset.answered || q.classList.contains("reopened");
+  }
+
   function updateCount() {
-    var n = questions.filter(function (q) { return isAnswered(read(q)); }).length;
-    document.getElementById("answered-count").textContent = n + " of " + questions.length + " answered";
+    var open = questions.filter(isOpen);
+    var n = open.filter(function (q) { return isAnswered(read(q)); }).length;
+    document.getElementById("answered-count").textContent = n + " of " + open.length + " answered";
   }
 
   var timers = {};
@@ -1230,6 +1424,16 @@
     }
     q.addEventListener("input", schedule);
     q.addEventListener("change", schedule);
+    var reopen = q.querySelector(".reopen");
+    if (reopen) {
+      reopen.addEventListener("click", function () {
+        var reopened = q.classList.toggle("reopened");
+        q.querySelector(".answer-form").hidden = !reopened;
+        reopen.setAttribute("aria-expanded", String(reopened));
+        reopen.textContent = reopened ? "Keep the recorded answer" : "Change this answer";
+        updateCount();
+      });
+    }
   });
   updateCount();
 
@@ -1238,7 +1442,7 @@
     questions.forEach(function (q) {
       var a = read(q);
       var hasOptions = !!q.querySelector('input[type="radio"], input[type="checkbox"]');
-      if (!isAnswered(a)) return;
+      if (!isOpen(q) || !isAnswered(a)) return;
       lines.push(q.dataset.n + ". " + q.querySelector("h3").textContent.trim());
       if (hasOptions) lines.push("   Answer: " + (a.choice || "(none chosen)"));
       var text = a.text.trim();

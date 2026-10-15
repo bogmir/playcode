@@ -22,7 +22,7 @@ defmodule PlaycodeWeb.Demo.UIDemoData do
       sources: [
         %{note: "Edición digital preparada a partir de la tradición impresa."}
       ],
-      editorial_notes: [
+      paratexts: [
         %{heading: "Nota editorial", content: "Texto de muestra para la vista previa del diseño."}
       ]
     }
