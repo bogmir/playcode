@@ -109,6 +109,31 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     refute has_element?(lv, "#{switch(a)}[disabled]")
   end
 
+  # One click for every complete play the site lacks, where a switch each was slow: 161
+  # plays on production on 2026-10-15.
+  test "Add every complete play puts each missing one in the site", %{conn: conn, a: a, b: b} do
+    c = play_fixture(%{"is_complete" => true, "title" => "Delta Farce"})
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    lv |> element("button", t("Add every complete play")) |> render_click()
+
+    wait_for(fn ->
+      render(lv)
+      Enum.all?([a, b, c], &has_element?(lv, "#{switch(&1)}[checked]:not([disabled])"))
+    end)
+
+    for play <- [a, b, c],
+        do: assert(html_response(preview(conn, "plays/#{play.code}/index.html"), 200))
+  end
+
+  test "with every complete play in the site, there is nothing to add", %{conn: conn, a: a, b: b} do
+    build_site([a.code, b.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    refute has_element?(lv, "button", t("Add every complete play"))
+  end
+
   test "a second admin's page follows a build started on the first", %{conn: conn, a: a} do
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
     {:ok, other, _html} = live(log_in_user(build_conn(), admin_fixture()), ~p"/admin/export")
