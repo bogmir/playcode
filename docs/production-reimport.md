@@ -1,0 +1,129 @@
+# Re-importing the TEI corpus on production
+
+How to re-import every play from its TEI file on Fly, the way it was done on 2026-10-07 and
+2026-10-15. A re-import is how a change to what the importer reads (a new field, a kind kept,
+line breaks) reaches the plays already in the database: the code alone changes nothing until
+each play is read again. `mix playcode.import.tei --force` does it on dev; this is the
+production version, with what went wrong each time.
+
+A forced re-import replaces, for each play, its text (divisions, elements, notes, characters)
+and every row that came from its file (`origin: "tei"`: editors, sources, paratexts,
+witnesses, place links). Hand-entered rows (`origin: "manual"`), FileMaker rows and the
+curated columns (`@platform_owned` in `TeiImport`) are kept. Each play is one transaction:
+an interrupted run leaves every play either wholly old or wholly new.
+
+## The machines
+
+| What | Fly app | Machine | Size day to day |
+|---|---|---|---|
+| The application | `playcode` | `7847063c04e7e8` | shared-cpu-1x, 1 GB (`fly.toml`) |
+| The database | `emothe-db-1g` | `d8d14e7b0465d8`, volume `vol_40l3p92ozj187o94` | shared-cpu-1x, 512 MB |
+
+`flyctl` lives at `~/.fly/bin/flyctl`; it is not on the PATH of Claude Code's `!` shell.
+In this directory `fly.toml` makes `playcode` the default app, so every command for the
+database names it with `-a emothe-db-1g`.
+
+## The run
+
+1. **Deploy the code.** Push `main`; CI, then `.github/workflows/deploy-fly.yml`, deploys
+   and runs the migrations. Wait for both runs to pass (`gh run list --limit 3`).
+
+2. **Snapshot the database volume.** The re-import cannot be undone any other way.
+
+   ```bash
+   ~/.fly/bin/flyctl volumes snapshots create vol_40l3p92ozj187o94 -a emothe-db-1g
+   ~/.fly/bin/flyctl volumes snapshots list vol_40l3p92ozj187o94 -a emothe-db-1g   # wait for "created"
+   ```
+
+3. **Put the files on the machine.** `doc/tei_corpus/` (git-ignored) holds the production
+   corpus, 372 files on 2026-10-15, EMOTHE0784 and 0785 among them. One play per code; the
+   importer reads every `*.xml` in the folder it is given, not its subfolders.
+
+   ```bash
+   rm -rf /tmp/tei && mkdir /tmp/tei && cp doc/tei_corpus/*.xml /tmp/tei/
+   tar czf /tmp/tei.tgz -C /tmp/tei .
+   ~/.fly/bin/flyctl ssh sftp put /tmp/tei.tgz /data/tei.tgz -a playcode
+   ~/.fly/bin/flyctl ssh console -a playcode -C "sh -c 'rm -rf /data/tei && mkdir /data/tei && tar xzf /data/tei.tgz -C /data/tei && ls /data/tei | wc -l'"
+   ```
+
+4. **Scale both machines up, and turn autostop off.** On shared CPUs a run of this size uses
+   up the burst allowance within minutes; then Fly lends the machine almost no CPU (89.7%
+   steal on 2026-10-15) and imports hit the 60-second database timeout (half the plays on
+   2026-10-07). Autostop: the proxy stops `playcode` when it sees no web traffic, and an SSH
+   session is not traffic, so it stopped the machine ten minutes into the run on 2026-10-15.
+
+   ```bash
+   ~/.fly/bin/flyctl machine update d8d14e7b0465d8 --vm-size performance-1x -a emothe-db-1g --yes
+   ~/.fly/bin/flyctl scale vm performance-1x -a playcode
+   ~/.fly/bin/flyctl machine update 7847063c04e7e8 --autostop=off -a playcode --yes
+   ```
+
+   Do this before the dry run: restarting the database ends any run in progress (the dry run
+   lost its connection on 2026-10-15). `machine update` needs `--yes` outside a terminal;
+   `scale vm` has no `--yes` and does not ask.
+
+5. **Dry run.** It writes nothing, and prints nothing until it has read every file (about a
+   minute scaled up, an hour throttled), then one line per play and a summary.
+
+   ```bash
+   ~/.fly/bin/flyctl ssh console -a playcode -C "bin/playcode rpc 'Playcode.Release.import_tei(\"/data/tei\", dry_run: true, force: true)'" > /tmp/dry.log
+   grep -E "edited since their import|undoes|keeps|restores it" /tmp/dry.log
+   tail -1 /tmp/dry.log
+   ```
+
+   Stop here if any line says a play has rows `edited since their import` (file rows changed
+   in Playcode, which the re-import replaces) or `undoes N hand edit(s)` (logged edits to the
+   text): those are hand fixes that would be lost. Look at each with the project first.
+   `keeps N hand-entered record(s)` is fine; `restores it from the archive` un-archives a play.
+   A note on dev: a backfill script's `update_all` also counts as edited (152 sources and 13
+   characters on 2026-10-15); production had none.
+
+6. **The run.** About 5 plays a minute on performance-1x, so a little over an hour for 372.
+
+   ```bash
+   ~/.fly/bin/flyctl ssh console -a playcode -C "bin/playcode rpc 'Playcode.Release.import_tei(\"/data/tei\", force: true)'" > /tmp/run.log
+   tail -3 /tmp/run.log    # "imported N, skipped 0, failed 0"
+   ```
+
+   Progress: `grep -c "Importing TEI file" /tmp/run.log`. A failure prints the play's code
+   and the error as it happens.
+
+7. **If it stops part way**, find the last play it started (`grep "Importing TEI file"
+   /tmp/run.log | tail -1`); that play and every one after it are untouched or rolled back.
+   Files are read in code order, so copy that file and the rest into a folder of their own
+   and run step 6 on it:
+
+   ```bash
+   ~/.fly/bin/flyctl ssh console -a playcode -C "sh -c 'rm -rf /data/tei-rest && mkdir /data/tei-rest && for f in /data/tei/*.xml; do b=\$(basename \"\$f\"); [ \"\$b\" \\> EMOTHE0146 ] && cp \"\$f\" /data/tei-rest/; done; ls /data/tei-rest | wc -l'"
+   ```
+
+   (`EMOTHE0146` there: one below the first code to redo.) Check the machine's events first
+   (`~/.fly/bin/flyctl machine status 7847063c04e7e8 -a playcode`): `requested_stop=true` is
+   autostop, `oom_killed=true` memory.
+
+8. **Check.** What the change was for, counted on production, for example:
+
+   ```bash
+   ~/.fly/bin/flyctl ssh console -a playcode -C "bin/playcode rpc 'import Ecto.Query; IO.inspect(Playcode.Repo.aggregate(from(x in Playcode.Catalogue.Paratext, where: x.kind == \"nota\"), :count))'"
+   ```
+
+9. **Scale back, autostop back on.**
+
+   ```bash
+   ~/.fly/bin/flyctl machine update 7847063c04e7e8 --autostop=stop -a playcode --yes
+   ~/.fly/bin/flyctl scale vm shared-cpu-1x --vm-memory 1024 -a playcode
+   ~/.fly/bin/flyctl machine update d8d14e7b0465d8 --vm-size shared-cpu-1x --vm-memory 512 -a emothe-db-1g --yes
+   ```
+
+   The next deploy puts `playcode` back to `fly.toml`'s size and autostop anyway, but not the
+   database.
+
+10. **Generate the site** from `/admin/export`. A re-import moves every play's
+    `content_version`, so Generate rebuilds every complete play; a change to a fingerprinted
+    module (`StaticSite.Fingerprint`) does too. Then Deploy, after checking the preview.
+
+## Why it is not automatic
+
+Each step above is a decision someone should see: the snapshot exists, the dry run shows no
+hand fixes, the counts match. What can still be automated is in `docs/backlog.md`,
+*Production rollout*.

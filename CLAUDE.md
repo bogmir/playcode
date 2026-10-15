@@ -11,6 +11,7 @@ This file holds the rules every session needs. The rest is in `docs/`:
 - `CONTEXT.md` - the glossary: the project's words for its concepts (paratext, editorial text, kind…) and the words to avoid
 - `docs/architecture.md` - the file map and the routes
 - `docs/static-site.md` - the static site export in full: architecture, measurements, output, publishing on emothe.uv.es
+- `docs/production-reimport.md` - re-importing the TEI corpus on Fly: the machines, the steps, and what broke each time
 - `docs/backlog.md` - open work, the TEI corpus gaps among it
 - `docs/history.md` - what has been built, and what each audit found and fixed
 - `docs/static-site-improvements.md` - deferred static-site and exporter work, written up at length
