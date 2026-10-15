@@ -170,7 +170,7 @@ importer reads the old HTML forms and the new TEI forms alike, and refuses an un
   showing it in grey between superscript F's, as before. All 247 passages sit inside one
   element, so each is an `<app>` in the line, the Folio words a reading the base text (Q2)
   lacks: `O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O</rdg></app> God,`. The
-  form is proposed to Hamlet's editor, who is re-encoding the variants and the Folio
+  form is proposed to Hamlet's editor in question 36, who is re-encoding the variants and the Folio
   interpolations, so that his file and Playcode's export agree.
 - **The Q4 Additions** (question 6): a line in the margin beside the whole passage and a
   superscript Q4 at each end, in all four versions, wherever the text is printed (the play

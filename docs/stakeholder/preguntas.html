@@ -121,6 +121,8 @@
   }
   .note { font-size: 0.9375rem; color: var(--muted); }
   code { font-family: var(--mono); font-size: 0.85em; }
+  /* TEI shown as it is written: wraps anywhere, so a long line never scrolls the page. */
+  pre.tei { font-family: var(--mono); font-size: 0.85em; white-space: pre-wrap; overflow-wrap: anywhere; margin: 0; padding: 0.6rem 0.8rem; background: var(--accent-soft); border-radius: 4px; }
 
   .table-wrap { overflow-x: auto; }
   table {
@@ -266,7 +268,7 @@
     <h1>Questions for the project</h1>
     <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 35 questions, nine of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 36 questions, nine of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -444,6 +446,31 @@
         </div>
         <p class="status" aria-live="polite"></p>
         </div>
+      </div>
+    </div>
+
+    <div class="q" data-q="q36" data-n="36">
+      <span class="q-num" aria-hidden="true">36</span>
+      <div class="q-body">
+        <h3>Follow-up to question 5, for Hamlet’s editor: will you encode the Folio passages this way?</h3>
+        <p class="why">Hamlet’s file is being re-encoded so that its variants and its Folio interpolations are proper TEI. Playcode is about to read the Folio passages, and the file it exports should write them the way your new file will, so that the two agree. We propose that each passage be a reading the base text (Q2) lacks, inside the line where it stands. At v. 316:</p>
+        <pre class="tei">O God, &lt;app type="folio"&gt;&lt;lem wit="#Q2"/&gt;&lt;rdg wit="#F1"&gt;O&lt;/rdg&gt;&lt;/app&gt; God,</pre>
+        <p class="why">in place of today’s</p>
+        <pre class="tei">O God, &lt;code&gt;&amp;lt;span class="folio"&amp;gt;&lt;/code&gt;&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;F&lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt;O&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;F&lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt;&lt;code&gt;&amp;lt;/span&amp;gt;&lt;/code&gt; God,</pre>
+        <p class="why">The superscript F’s are no longer typed: the site prints them from <code>wit="#F1"</code>, in grey, when a reader switches the Folio interpolations on (question 5). All 247 passages sit inside a single line, so each fits in one <code>&lt;app&gt;</code>. The variants of question 2 stay <code>&lt;app&gt;</code>s as they are now, without <code>type="folio"</code>. Whatever you answer, Playcode keeps reading the file as it is today.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q36-o1"><input type="radio" id="q36-o1" name="q36-choice" value="Yes, I will encode them this way">Yes, I will encode them this way</label>
+            <label for="q36-o2"><input type="radio" id="q36-o2" name="q36-choice" value="I will use another form (described in my note)">I will use another form (described in my note)</label>
+            <label for="q36-o3"><input type="radio" id="q36-o3" name="q36-choice" value="Not sure yet">Not sure yet</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q36-text">Notes</label>
+          <textarea id="q36-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
       </div>
     </div>
 
@@ -1379,7 +1406,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 26 answered</span>
+        <span class="count" id="answered-count">0 of 27 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
