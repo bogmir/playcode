@@ -83,10 +83,10 @@ defmodule Playcode.PlayContent.Note do
   def summary(%__MODULE__{} = note) do
     readings =
       Enum.map(note.readings, fn reading ->
-        [reading.wit, reading.text] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+        [reading.wit, reading.text] |> Enum.reject(&(&1 in [nil, ""])) |> Enum.join(" ")
       end)
 
-    (readings ++ List.wrap(note.body)) |> Enum.join(" · ")
+    (readings ++ List.wrap(note.body)) |> Enum.reject(&(&1 == "")) |> Enum.join(" · ")
   end
 
   @doc "A note's paragraphs, or a text's, in order; none for no text (a variant with no note)."
@@ -186,6 +186,7 @@ defmodule Playcode.PlayContent.Note do
         :division_id
       ])
       |> cast_embed(:readings, sort_param: :readings_order, drop_param: :readings_delete)
+      |> lemma_first()
 
     # A note is its text; a variant may have no note of its own.
     required =
@@ -199,5 +200,18 @@ defmodule Playcode.PlayContent.Note do
     |> check_constraint(:element_id, name: :one_anchor)
     |> foreign_key_constraint(:element_id)
     |> foreign_key_constraint(:division_id)
+  end
+
+  # TEI allows an <app> one <lem>, and first. The form's "Edition's reading" checkbox sits
+  # on every row, so two are refused and the one there is goes first (a stable sort).
+  defp lemma_first(changeset) do
+    if Enum.count(get_field(changeset, :readings), & &1.lemma) > 1,
+      do: add_error(changeset, :readings, "Only one reading can be the edition's"),
+      else:
+        update_change(
+          changeset,
+          :readings,
+          &Enum.sort_by(&1, fn r -> not get_field(r, :lemma) end)
+        )
   end
 end

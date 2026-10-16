@@ -8,7 +8,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
   use PlaycodeWeb, :live_component
 
   alias Phoenix.LiveView.JS
-  alias Playcode.{ActivityLog, PlayContent}
+  alias Playcode.{ActivityLog, PlayContent, Text}
   alias Playcode.PlayContent.{Division, Note}
   alias Playcode.PlayContent.Note.Reading
   alias PlaycodeWeb.PlayLabels
@@ -68,7 +68,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
 
   def handle_event("save_note", %{"note" => params}, socket) do
     %{editing: note, anchor: anchor, play_id: play_id} = socket.assigns
-    params = note_params(note, params)
+    params = save_params(note, params)
 
     {action, result} =
       if note.id,
@@ -117,6 +117,21 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
         |> Map.put("type", note.type),
       else: Map.take(params, ~w(offset type term body))
   end
+
+  # What a save writes: `note_params/2` less the reading rows left empty ("Add reading" and
+  # nothing typed), dropped as the form's Remove button drops a row; a form being edited
+  # keeps them. Only the editor's input is cleaned: a reading an import brought stays as written.
+  @doc false
+  def save_params(note, params) do
+    params = note_params(note, params)
+
+    with %{"readings" => rows} when is_map(rows) <- params do
+      blank = for {key, row} <- rows, blank_row?(row), do: key
+      Map.update(params, "readings_delete", blank, &(blank ++ &1))
+    end
+  end
+
+  defp blank_row?(row), do: Enum.all?(~w(wit text note), &(Text.squeeze(row[&1]) == nil))
 
   # One of this anchor's notes: the id comes from the browser, and the list in the socket
   # may be stale, so it is read afresh.
@@ -292,11 +307,17 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
     ~H"""
     <fieldset>
       <legend class="label-text font-medium">{gettext("Readings")}</legend>
+      <.error :for={error <- Enum.map(@form[:readings].errors, &translate_error/1)}>{error}</.error>
       <.inputs_for :let={reading} field={@form[:readings]}>
         <input type="hidden" name={"#{@form.name}[readings_order][]"} value={reading.index} />
         <div class="mb-2 flex flex-wrap items-end gap-2">
           <div class="w-32">
-            <.input field={reading[:wit]} type="text" label={gettext("Witnesses")} />
+            <.input
+              field={reading[:wit]}
+              type="text"
+              label={gettext("Witnesses")}
+              placeholder="#H #P3"
+            />
           </div>
           <div class="grow">
             <.input field={reading[:text]} type="text" label={gettext("Reading")} />

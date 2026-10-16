@@ -91,7 +91,12 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
       |> log_in_user(user_fixture(role: :researcher))
       |> live(~p"/admin/plays/#{play.id}/notes")
 
-    [variant, _note] = notes(play)
+    [variant, note] = notes(play)
+
+    # The variants are numbered apart from the notes, so a variant has an asterisk, as in
+    # the line beside it, and not a number a note has too.
+    assert texts(view, "##{row(variant)} .note-number") == ["*"]
+    assert texts(view, "##{row(note)} .note-number") == ["1"]
 
     view |> form("#notes-filter", filter: %{type: "variante"}) |> render_change()
     assert rows(view) == [row(variant)]
@@ -115,6 +120,24 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
                note: "Por la rima."
              }
            ] = xml_apps(export_tei(play))
+  end
+
+  # A reading with nothing in it (a damaged entry, kept as written) adds no stray " · ".
+  test "a variant's list entry skips a reading with nothing in it", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">mucho<app><lem wit="#H">llama</lem><rdg/><rdg wit="#P3">falta</rdg></app> y</l></sp></div1>)
+        )
+      )
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(user_fixture(role: :researcher))
+      |> live(~p"/admin/plays/#{play.id}/notes")
+
+    assert texts(view, "#notes .note-body p") == ["#H llama · #P3 falta"]
   end
 
   test "the play has a Notes tab beside Content", %{conn: conn, play: play} do

@@ -61,7 +61,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
   def handle_event("save", %{"note" => params}, socket) do
     note = socket.assigns.editing
 
-    case PlayContent.update_note(note, NotesComponent.note_params(note, params)) do
+    case PlayContent.update_note(note, NotesComponent.save_params(note, params)) do
       {:ok, saved} ->
         log(socket, "update", saved)
 
@@ -144,6 +144,10 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
 
   defp type_label("other"), do: PlayLabels.note_type_label(nil)
   defp type_label(type), do: PlayLabels.note_type_label(type)
+
+  # A note's number, or a variant's asterisk: variants are numbered apart from the notes, so
+  # a variant's own number would read like a note's.
+  defp marker(note), do: if(Note.variant?(note), do: "*", else: note.number)
 
   # The plain text the note hangs on, cut around the note: {before, after}.
   defp context(%{note: note, anchor: anchor}) do
@@ -267,7 +271,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
           ]}
         >
           <span class="note-number w-8 shrink-0 pt-0.5 text-right text-sm font-semibold tabular-nums text-primary">
-            {entry.note.number}
+            {marker(entry.note)}
           </span>
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
@@ -283,7 +287,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
             <p
               class="note-context mt-1.5 border-l-2 border-base-300 pl-3 font-serif text-sm text-base-content/60"
               phx-no-format
-            >{before}<sup class="px-0.5 font-sans font-semibold text-primary">{if Note.variant?(entry.note), do: "*", else: entry.note.number}</sup>{after_note}</p>
+            >{before}<sup class="px-0.5 font-sans font-semibold text-primary">{marker(entry.note)}</sup>{after_note}</p>
 
             <.form
               :if={@editing && @editing.id == entry.note.id}

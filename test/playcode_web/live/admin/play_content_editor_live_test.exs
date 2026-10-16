@@ -970,6 +970,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       # A variant has no type to choose: it stays a variant.
       refute has_element?(lv, "#note-form label", t("Type"))
 
+      # A siglum is typed with its #, as the file writes it: the field shows how.
+      assert has_element?(lv, ~s(#note-form input[placeholder="#H #P3"]))
+
       # "Add reading": a second row.
       lv |> form("#note-form") |> render_change(%{note: %{"readings_order" => ["0", "new"]}})
 
@@ -1016,6 +1019,86 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
       lv |> element("#{notes_section()} button", t("Delete")) |> render_click()
       assert xml_apps(export_tei(play)) == []
+    end
+
+    # TEI's <app> has at most one <lem>, and it comes first: the form's "Edition's reading"
+    # checkbox sits on every row, so the note refuses two and puts the one it has first.
+    test "a variant with two readings the edition follows is refused, and nothing is saved",
+         %{conn: conn, play: play} do
+      lv = open_variant_form(conn, play)
+
+      html =
+        lv
+        |> form("#note-form",
+          note: %{
+            "offset" => "7",
+            "readings" => %{
+              "0" => %{"lemma" => "true", "wit" => "#H", "text" => "Segunda"},
+              "1" => %{"lemma" => "true", "wit" => "#P3", "text" => "Primera"}
+            }
+          }
+        )
+        |> render_submit()
+
+      assert html =~
+               Gettext.dgettext(
+                 PlaycodeWeb.Gettext,
+                 "errors",
+                 "Only one reading can be the edition's"
+               )
+
+      assert xml_apps(export_tei(play)) == []
+    end
+
+    test "the reading the edition follows is exported first, whichever row it is on",
+         %{conn: conn, play: play} do
+      lv = open_variant_form(conn, play)
+
+      lv
+      |> form("#note-form",
+        note: %{
+          "offset" => "7",
+          "readings" => %{
+            "0" => %{"lemma" => "false", "wit" => "#P3", "text" => "Primera"},
+            "1" => %{"lemma" => "true", "wit" => "#H", "text" => "Segunda"}
+          }
+        }
+      )
+      |> render_submit()
+
+      assert [%{readings: [{"lem", "#H", "Segunda", nil}, {"rdg", "#P3", "Primera", nil}]}] =
+               xml_apps(export_tei(play))
+    end
+
+    test "an \"Add reading\" row left empty is not saved", %{conn: conn, play: play} do
+      lv = open_variant_form(conn, play)
+
+      lv
+      |> form("#note-form",
+        note: %{
+          "offset" => "7",
+          "readings" => %{"0" => %{"lemma" => "true", "wit" => "#H", "text" => "Segunda"}}
+        }
+      )
+      |> render_submit()
+
+      assert [%{readings: [{"lem", "#H", "Segunda", nil}]}] = xml_apps(export_tei(play))
+      html = render(lv)
+      assert html =~ "#H Segunda"
+      refute html =~ "#H Segunda ·"
+    end
+
+    # A variant's form, with a second (empty) reading row added.
+    defp open_variant_form(conn, play) do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      lv |> element("button", t("Add variant")) |> render_click()
+      lv |> form("#note-form") |> render_change(%{note: %{"readings_order" => ["0", "new"]}})
+      lv
     end
 
     # The Notes tab links a note's line or heading here; its modal opens on arrival.
