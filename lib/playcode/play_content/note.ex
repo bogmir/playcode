@@ -63,6 +63,19 @@ defmodule Playcode.PlayContent.Note do
   @doc "True for a variant (`variant/0`), false for a note."
   def variant?(%{type: type}), do: type == @variant
 
+  @doc """
+  `note` with each reading's `sigla`: every siglum its `wit` names, with what `names`
+  (`Witnesses.short_names/1`) says it names, or nil.
+  """
+  def name_witnesses(%__MODULE__{} = note, names) do
+    readings =
+      Enum.map(note.readings, fn reading ->
+        %{reading | sigla: Enum.map(Reading.sigla(reading.wit), &{&1, names[&1]})}
+      end)
+
+    %{note | readings: readings}
+  end
+
   @doc "A note's paragraphs, or a text's, in order; none for no text (a variant with no note)."
   def paragraphs(%__MODULE__{body: body}), do: paragraphs(body)
   def paragraphs(nil), do: []

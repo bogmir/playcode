@@ -59,6 +59,17 @@ defmodule PlaycodeWeb.AccessibilityTest do
       "is_complete" => true
     })
 
+    # A textual variant, so the play page's asterisk and its readings are checked too.
+    {:ok, _} =
+      Playcode.PlayContent.create_note(%{
+        play_id: play.id,
+        element_id: structure.verse_line.id,
+        offset: 0,
+        type: "variante",
+        readings: [%{lemma: true, wit: "#A", text: "uno"}, %{wit: "#B", text: "dos"}],
+        body: "Por la rima."
+      })
+
     %{conn: log_in_user(conn, admin_fixture()), play: play, structure: structure}
   end
 

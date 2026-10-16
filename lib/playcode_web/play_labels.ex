@@ -38,6 +38,7 @@ defmodule PlaycodeWeb.PlayLabels do
   def note_type_label("editor_critico"), do: gettext("Critical editor's note")
   def note_type_label("editor_digital"), do: gettext("Digital editor's note")
   def note_type_label("autor"), do: gettext("Author's note")
+  def note_type_label("variante"), do: gettext("Textual variant")
   def note_type_label(_other), do: gettext("Note")
 
   @doc """

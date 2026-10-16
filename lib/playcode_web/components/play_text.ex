@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext
 
+  alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
@@ -18,11 +19,12 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
   attr :show_verse_type, :boolean, default: false
+  attr :show_variants, :boolean, default: true
   attr :sync_keys, :boolean, default: false
 
   def play_body(assigns) do
     ~H"""
-    <div class="play-text">
+    <div class="play-text" data-variants={if @show_variants, do: "on", else: "off"}>
       <div
         :for={{division, div_key} <- sync_keyed(@divisions, @sync_keys)}
         class="mb-8 scroll-mt-16"
@@ -331,8 +333,15 @@ defmodule PlaycodeWeb.Components.PlayText do
       "</span>"
     ]
 
-  # Its id is where the Notes view takes the reader back to.
-  defp part_html(%{note: note}, _show) do
+  # Its id is where the Notes view takes the reader back to. A variant's marker is an
+  # asterisk, apart from the numbers, which the Variants switch hides (app.css).
+  defp part_html(%{note: note}, _show),
+    do: if(Note.variant?(note), do: variant_ref(note), else: note_ref(note))
+
+  defp part_html(%{italic: true, text: text}, _show), do: ["<em>", breaks(text), "</em>"]
+  defp part_html(%{text: text}, _show), do: breaks(text)
+
+  defp note_ref(note) do
     [
       ~s(<button type="button" id="nref-),
       escape(note.id),
@@ -346,8 +355,15 @@ defmodule PlaycodeWeb.Components.PlayText do
     ]
   end
 
-  defp part_html(%{italic: true, text: text}, _show), do: ["<em>", breaks(text), "</em>"]
-  defp part_html(%{text: text}, _show), do: breaks(text)
+  defp variant_ref(note) do
+    [
+      ~s(<button type="button" class="vref" popovertarget="var-),
+      escape(note.id),
+      ~s(" aria-label="),
+      escape(note_label(note)),
+      ~s(">*</button>)
+    ]
+  end
 
   defp breaks(text), do: text |> escape() |> String.replace("\n", "<br>")
 
@@ -444,8 +460,12 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   attr :notes, :list, required: true
 
-  # The play's notes, each a popover its number opens.
+  # The play's notes, each a popover its number opens, then its variants, each a popover
+  # its asterisk opens.
   defp endnotes(assigns) do
+    {variants, notes} = Enum.split_with(assigns.notes, &Note.variant?/1)
+    assigns = assign(assigns, notes: notes, variants: variants)
+
     ~H"""
     <section
       :if={@notes != []}
@@ -469,6 +489,23 @@ defmodule PlaycodeWeb.Components.PlayText do
           <p :for={paragraph <- Note.paragraphs(note)}><.inline_content text={paragraph} /></p>
         </li>
       </ol>
+    </section>
+    <section :if={@variants != []} class="play-notes" aria-label={gettext("Textual variants")}>
+      <ul>
+        <li :for={variant <- @variants} id={"var-#{variant.id}"} popover>
+          <button
+            type="button"
+            popovertarget={"var-#{variant.id}"}
+            popovertargetaction="hide"
+            aria-label={gettext("Close")}
+            class="float-right"
+          >
+            ×
+          </button>
+          <b>{PlayLabels.note_type_label(variant.type)}</b>
+          {Phoenix.HTML.raw(NoteMarkup.readings(variant, :html))}
+        </li>
+      </ul>
     </section>
     """
   end

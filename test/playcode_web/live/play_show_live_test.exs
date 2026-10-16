@@ -4,6 +4,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   import Phoenix.LiveViewTest
   import Playcode.ImportHelpers
 
+  import Playcode.TestFixtures, only: [bibliography_fixture: 2]
+
   alias Playcode.TestFixtures
 
   @italics ~w(Aminta Damone Egle Spela) ++
@@ -938,6 +940,116 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       staff = log_in_user(conn, TestFixtures.user_fixture())
       {:ok, view, _html} = live(staff, ~p"/plays/#{translation.code}")
       assert has_element?(view, ~s(a[href="/plays/#{draft.code}"]), draft.title)
+    end
+  end
+
+  describe "textual variants" do
+    setup %{conn: conn} do
+      play =
+        tei(
+          source_desc: """
+          <listWit>
+            <witness xml:id="P3" n="P3"><bibl type="edicion_antigua"><title>Doce comedias</title><pubPlace>Madrid:</pubPlace><date>1653</date></bibl></witness>
+            <witness xml:id="MP" n="MP"><bibl type="edicion_antigua"><title>Comedias</title><date>1735</date></bibl></witness>
+          </listWit>
+          """,
+          body: """
+          <div1 type="jornada" n="1"><head>Jornada I</head>
+            <sp><speaker>FENISA</speaker>
+              <l n="72">mucho la hermosura llama<app type="substantive" n="908"><lem wit="#H">llama<note>Corrección de <emph>Hartzenbusch</emph></note></lem><rdg wit="#P3">falta</rdg><rdg wit="#MP #X">infama</rdg><note>Por la rima.</note></app>,<note n="1" type="editor"><p>Glosa.</p></note></l>
+              <l n="73">lovely<app n="909"><rdg wit="#BRA #JOW">lively</rdg><rdg wit="#Dyce #POPE1">lowly</rdg><rdg wit="#">lonely</rdg></app> y más</l>
+            </sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      for {siglum, editors, year} <- [
+            {"H", "Hartzenbusch, J. E.", "1860"},
+            {"BRA", "Bruster, Douglas; Rasmussen, Eric", "2009"},
+            {"JOW", "Taylor, Gary; Jowett, John; Bourus, Terri", "2016"},
+            {"Dyce", "Dyce, Alexander", "1831"},
+            {"POPE1", nil, "1723"}
+          ] do
+        bibliography_fixture(play, %{
+          "kind" => "modern_edition",
+          "siglum" => siglum,
+          "monogr_editors" => editors,
+          "year_text" => year
+        })
+      end
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      %{view: view, play: play}
+    end
+
+    defp squished(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
+
+    defp variant_buttons(view) do
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query(~s(button[aria-label^="#{t("Textual variant")}"]))
+    end
+
+    test "an asterisk after the word opens the readings, each witness with what it names",
+         %{view: view} do
+      doc = view |> render() |> LazyHTML.from_fragment()
+
+      # The line reads as the edition's text; the asterisk is apart from the note's number,
+      # and the note is still the first.
+      assert doc |> LazyHTML.query("#play-tab-text") |> LazyHTML.text() |> squished() =~
+               "mucho la hermosura llama*,1"
+
+      assert has_element?(view, ~s(button[aria-label="#{t("Editor's note")} 1"]))
+
+      [first, second] = view |> variant_buttons() |> LazyHTML.attribute("popovertarget")
+
+      readings = fn id ->
+        doc |> LazyHTML.query("##{id} p") |> Enum.map(&squished(LazyHTML.text(&1)))
+      end
+
+      assert readings.(first) == [
+               "H (Hartzenbusch, 1860) llama (Corrección de Hartzenbusch)",
+               "P3 (Madrid, 1653) falta",
+               "MP (1735) X infama",
+               "Por la rima."
+             ]
+
+      assert readings.(second) == [
+               "BRA (Bruster & Rasmussen, 2009) JOW (Taylor et al., 2016) lively",
+               "Dyce (1831) POPE1 (1723) lowly",
+               "lonely"
+             ]
+    end
+
+    test "the Variants switch hides the asterisks, and the Notes view lists notes only",
+         %{conn: conn, view: view} do
+      assert has_element?(view, "label", t("Variants"))
+      assert has_element?(view, ~s(#play-tab-text [data-variants="on"]))
+
+      render_click(view, "toggle_variants")
+      assert has_element?(view, ~s(#play-tab-text [data-variants="off"]))
+
+      view |> element("#play-sections-panel button", t("Notes")) |> render_click()
+
+      assert view
+             |> render()
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query("#play-tab-notes li")
+             |> Enum.count() == 1
+
+      # A play with no variants has no switch.
+      plain =
+        tei(
+          body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>)
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, plain_view, _html} = live(conn, ~p"/plays/#{plain.code}")
+      refute has_element?(plain_view, "label", t("Variants"))
     end
   end
 end

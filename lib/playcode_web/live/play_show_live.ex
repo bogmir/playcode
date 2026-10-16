@@ -15,7 +15,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{InlineMarkup, Note}
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Statistics
@@ -51,7 +51,7 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:back_paratexts, back_paratexts)
      |> assign(:statistic, statistic)
      |> assign(:bibliography, bibliography)
-     |> assign(:notes, note_entries(divisions))
+     |> assign(:notes, divisions |> note_entries() |> Enum.reject(&Note.variant?(&1.note)))
      |> assign(:note_type, nil)
      |> assign(:metadata_sections, metadata_sections)
      |> assign(:play_sections, play_sections)
@@ -62,6 +62,8 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:show_asides, true)
      |> assign(:show_split_verses, true)
      |> assign(:show_verse_type, false)
+     |> assign(:show_variants, true)
+     |> assign(:has_variants, divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1))
      |> assign(:active_tab, :text)
      |> assign(:sidebar_open, true)
      |> assign(:breadcrumbs, [
@@ -89,6 +91,10 @@ defmodule PlaycodeWeb.PlayShowLive do
 
   def handle_event("toggle_verse_type", _, socket) do
     {:noreply, assign(socket, :show_verse_type, !socket.assigns.show_verse_type)}
+  end
+
+  def handle_event("toggle_variants", _, socket) do
+    {:noreply, assign(socket, :show_variants, !socket.assigns.show_variants)}
   end
 
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
@@ -252,6 +258,17 @@ defmodule PlaycodeWeb.PlayShowLive do
                   phx-click="toggle_verse_type"
                   class="checkbox checkbox-xs checkbox-primary"
                 /> {gettext("Verse type")}
+              </label>
+              <label
+                :if={@has_variants}
+                class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70"
+              >
+                <input
+                  type="checkbox"
+                  checked={@show_variants}
+                  phx-click="toggle_variants"
+                  class="checkbox checkbox-xs checkbox-primary"
+                /> {gettext("Variants")}
               </label>
             </div>
           </div>
@@ -507,6 +524,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               show_asides={@show_asides}
               show_split_verses={@show_split_verses}
               show_verse_type={@show_verse_type}
+              show_variants={@show_variants}
             />
             <.paratexts paratexts={@back_paratexts} id_prefix="back-paratext" />
           </div>

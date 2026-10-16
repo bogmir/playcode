@@ -13,6 +13,7 @@ defmodule Playcode.PlayContent do
   import Ecto.Query
   alias Playcode.Repo
   alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, InlineMarkup, Note}
+  alias Playcode.Witnesses
 
   @pubsub Playcode.PubSub
 
@@ -628,8 +629,9 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Loads the full play content tree: divisions with nested elements.
-  Used for rendering the play text.
+  Loads the full play content tree: divisions with nested elements, their notes and variants
+  (`Note.variant?/1`) numbered in reading order, each kind in its own sequence, and each
+  variant reading's sigla named (`Note.Reading`). Used for rendering the play text.
   """
   def load_play_content(play_id) do
     divisions =
@@ -674,7 +676,10 @@ defmodule Playcode.PlayContent do
 
     elements_by_division = Enum.group_by(elements, & &1.division_id)
 
-    divisions |> attach_elements(elements_by_division) |> number_notes()
+    divisions
+    |> attach_elements(elements_by_division)
+    |> number_notes()
+    |> name_witnesses(play_id)
   end
 
   # --- Element-Character associations ---
@@ -728,35 +733,49 @@ defmodule Playcode.PlayContent do
     end)
   end
 
-  # Gives each note its `number`: its place in Note.reading_order/1, from 1.
+  # Gives each note its `number`, its place in Note.reading_order/1 from 1, the variants
+  # numbered apart: readers count the notes, and a variant's number is only its marker's id.
   defp number_notes(divisions) do
-    numbers =
-      divisions
-      |> Note.reading_order()
-      |> Enum.with_index(1)
-      |> Map.new(fn {note, number} -> {note.id, number} end)
+    {variants, notes} = divisions |> Note.reading_order() |> Enum.split_with(&Note.variant?/1)
 
-    Enum.map(divisions, &number_division(&1, numbers))
+    numbers =
+      Map.new(Enum.with_index(notes, 1) ++ Enum.with_index(variants, 1), fn {note, number} ->
+        {note.id, number}
+      end)
+
+    update_notes(divisions, fn notes -> Enum.map(notes, &%{&1 | number: numbers[&1.id]}) end)
   end
 
-  defp number_division(division, numbers) do
+  # Each variant reading's sigla with what they name; the witnesses are read only for a
+  # play that has variants.
+  defp name_witnesses(divisions, play_id) do
+    if divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1) do
+      names = Witnesses.short_names(play_id)
+      update_notes(divisions, fn notes -> Enum.map(notes, &Note.name_witnesses(&1, names)) end)
+    else
+      divisions
+    end
+  end
+
+  # Each anchor's list of notes, through `fun`.
+  defp update_notes(divisions, fun), do: Enum.map(divisions, &update_division_notes(&1, fun))
+
+  defp update_division_notes(division, fun) do
     %{
       division
-      | notes: number(division.notes, numbers),
-        loaded_elements: Enum.map(division.loaded_elements, &number_element(&1, numbers)),
-        children: Enum.map(division.children, &number_division(&1, numbers))
+      | notes: fun.(division.notes),
+        loaded_elements: Enum.map(division.loaded_elements, &update_element_notes(&1, fun)),
+        children: Enum.map(division.children, &update_division_notes(&1, fun))
     }
   end
 
-  defp number_element(element, numbers) do
+  defp update_element_notes(element, fun) do
     children =
       case element.children do
         %Ecto.Association.NotLoaded{} = not_loaded -> not_loaded
-        children -> Enum.map(children, &number_element(&1, numbers))
+        children -> Enum.map(children, &update_element_notes(&1, fun))
       end
 
-    %{element | notes: number(element.notes, numbers), children: children}
+    %{element | notes: fun.(element.notes), children: children}
   end
-
-  defp number(notes, numbers), do: Enum.map(notes, &%{&1 | number: numbers[&1.id]})
 end

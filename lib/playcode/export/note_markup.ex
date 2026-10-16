@@ -5,7 +5,8 @@ defmodule Playcode.Export.NoteMarkup do
   to its endnote, and an act's notes as endnotes.
   `:html` links a superscript number to its endnote and back; `:epub` marks them
   `noteref` and `footnote`, which e-readers show as pop-ups. The labels are English, as
-  the rest of the downloads are.
+  the rest of the downloads are. `readings/2` prints a variant's readings, for the play
+  page and the site as well.
   """
 
   alias Playcode.PlayContent.{InlineMarkup, Note}
@@ -53,6 +54,34 @@ defmodule Playcode.Export.NoteMarkup do
   def endnotes(notes, :epub) do
     Enum.map_join(notes, "", fn note ->
       ~s(<aside epub:type="footnote" id="note-#{note.number}">#{body(note, "#{note.number}. ")}</aside>\n)
+    end)
+  end
+
+  @doc """
+  A variant's readings as HTML paragraphs, one per reading in order: each siglum in italics
+  followed by what it names in parentheses (`Note.Reading`, `sigla`), the reading, and the
+  reading's own note in parentheses; then the entry's own note. The play page, the site and
+  the downloads print a variant so.
+  """
+  def readings(note, format) do
+    Enum.map_join(note.readings, &"<p>#{reading(&1, format)}</p>") <>
+      Enum.map_join(Note.paragraphs(note), &"<p>#{inline(&1, [], format)}</p>")
+  end
+
+  defp reading(reading, format) do
+    [
+      witnesses(reading.sigla),
+      inline(reading.text, [], format),
+      reading.note && "(#{inline(reading.note, [], format)})"
+    ]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(" ")
+  end
+
+  defp witnesses(sigla) do
+    Enum.map_join(sigla, " ", fn
+      {siglum, nil} -> "<i>#{escape(siglum)}</i>"
+      {siglum, name} -> "<i>#{escape(siglum)}</i> (#{escape(name)})"
     end)
   end
 
