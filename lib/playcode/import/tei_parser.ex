@@ -1331,11 +1331,10 @@ defmodule Playcode.Import.TeiParser do
   defp aside_delivery?(_), do: false
 
   # The spoken text of a verse line, read with note marks (text_content/2). An aside line
-  # is its <seg type="aside"> text, with the line's own notes kept beside it; with no
-  # <seg>, the line without its delivery <stage>.
-  defp verse_line_content({_name, _attrs, children}, true) do
+  # is aside_text/1; with no <seg>, the line without its delivery <stage>.
+  defp verse_line_content({_name, _attrs, children} = line, true) do
     if aside_in_children?(children) do
-      aside_content(children)
+      aside_text(line)
     else
       children
       |> Enum.reject(&match?({"stage", _, _}, &1))
@@ -1371,7 +1370,7 @@ defmodule Playcode.Import.TeiParser do
 
   defp prose({_name, attrs, children} = para, pos) do
     is_aside = aside_in_children?(children)
-    marked = if is_aside, do: aside_content(children), else: text_content(para, :mark)
+    marked = if is_aside, do: aside_text(para), else: text_content(para, :mark)
     {content, notes} = take_notes(marked, para)
     # p@n: the number of the paragraph's first printed line, a marker at its very start.
     content =
@@ -1392,11 +1391,30 @@ defmodule Playcode.Import.TeiParser do
 
   defp aside_in_children?(_), do: false
 
-  # An aside line's or paragraph's <seg type="aside"> text, with its own notes beside it.
+  # A line or paragraph holding a <seg type="aside">. All aside, when every word is in a
+  # seg: the segs' text, with the element's own notes and breaks, its stages dropped (the
+  # delivery, "(Aparte)", is what is_aside says). Partly aside: the whole text, each seg an
+  # <aside> marker (read_child/3).
+  defp aside_text({_name, _attrs, children} = element) do
+    if Enum.any?(children, &spoken_outside_aside?/1),
+      do: text_content(element, :mark),
+      else: aside_content(children)
+  end
+
+  defp spoken_outside_aside?(text) when is_binary(text), do: String.trim(text) != ""
+
+  defp spoken_outside_aside?({name, _, _} = child),
+    do: name not in ~w(stage note) and not aside_seg?(child) and text_content(child) != ""
+
+  defp spoken_outside_aside?(_), do: false
+
   defp aside_content(children) do
     children
-    |> Enum.filter(&(aside_seg?(&1) or match?({"note", _, _}, &1)))
-    |> pieces(:mark, &text_content(&1, :mark))
+    |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note lb), &1)))
+    |> pieces(:mark, fn
+      {"lb", attrs, _} -> line_break(attrs)
+      seg -> text_content(seg, :mark)
+    end)
     |> squeeze()
   end
 
@@ -1444,20 +1462,13 @@ defmodule Playcode.Import.TeiParser do
   # child of an <l>, <p> or <seg> is kept as a marker (InlineMarkup). Anywhere else (a
   # speaker label, a heading, a stage inside a standalone stage direction) its words are
   # pasted as text of the parent: TEI allows no <stage> there, and markers do not nest.
-  #
-  # A note at the very start of the stage goes in front of its tag, and a stage left with
-  # no words is dropped, its notes staying in the line. The note leads with a space ("s")
-  # because the pieces of the element are joined by one: the offset the first import
-  # stores is the one a re-import of the export computes, a note before the stage.
   defp read_child({"stage", attrs, _children} = stage, :mark, parent)
-       when parent in @stage_parents do
-    [_all, lead, words] = Regex.run(@leading_marks, text_content(stage, :mark))
-    lead = Regex.replace(~r/\A(\x{E000}\d+)[sn]/u, String.trim(lead), "\\1s")
+       when parent in @stage_parents,
+       do: marker(stage, stage_tag(attrs), "</stage>")
 
-    case String.trim(words) do
-      "" -> lead
-      words -> lead <> stage_tag(attrs) <> words <> "</stage>"
-    end
+  # A <seg type="aside"> of a line or paragraph partly aside (aside_text/1), likewise.
+  defp read_child({"seg", _attrs, _children} = seg, :mark, parent) when parent in ~w(l p) do
+    if aside_seg?(seg), do: marker(seg, "<aside>", "</aside>"), else: text_content(seg, :mark)
   end
 
   # A line break in the play text (:mark) or a note's body (:breaks); elsewhere, a space.
@@ -1465,6 +1476,21 @@ defmodule Playcode.Import.TeiParser do
     do: line_break(attrs)
 
   defp read_child(child, notes, _parent), do: text_content(child, notes)
+
+  # `element` read as a marker opened by `open`. A note at its very start goes in front of
+  # the tag, and a marker left with no words is dropped, its notes staying in the line.
+  # The note leads with a space ("s") because the pieces of the element are joined by
+  # one: the offset the first import stores is the one a re-import of the export
+  # computes, a note before the marker.
+  defp marker(element, open, close) do
+    [_all, lead, words] = Regex.run(@leading_marks, text_content(element, :mark))
+    lead = Regex.replace(~r/\A(\x{E000}\d+)[sn]/u, String.trim(lead), "\\1s")
+
+    case String.trim(words) do
+      "" -> lead
+      words -> lead <> open <> words <> close
+    end
+  end
 
   # Where an <lb/> stood while the pieces of a text are joined and squeezed: a character
   # squeeze/1 does not take for whitespace, so the file's own line ends, which are, still
@@ -1593,7 +1619,7 @@ defmodule Playcode.Import.TeiParser do
      |> Enum.flat_map(fn {offset, note} -> parse_note(note, min(offset, last)) end)}
   end
 
-  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<lb n="[A-Za-z0-9.\-]+"\/>/
+  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<lb n="[A-Za-z0-9.\-]+"\/>/
 
   # Graphemes of `text` without its markers, one marker at a time: a note inside an
   # italic run or a stage is read while the run is still open, so InlineMarkup.plain/1,

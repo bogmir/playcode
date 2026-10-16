@@ -6,6 +6,7 @@ items with a longer write-up live in `docs/static-site-improvements.md`.
 
 ## Production rollout
 
+- [ ] **Re-import for the line breaks and the lines partly aside** (both 2026-10-16, `docs/history.md`) - production's plays keep each `<lb/>` as a space and a line or paragraph partly aside as its aside alone until their files are re-imported (`mix playcode.fly.reimport prepare`, then `run`; `docs/production-reimport.md`) and the site generated
 - [ ] **Paratexts on production: the editors' corrections** - the re-import (2026-10-15) brought every file's kind back, so the five wrong ones listed under "Kinds to correct" in `docs/stakeholder/preguntas.html` (EMOTHE0125, 0133, 0715, 0750, 0271) show on production as their files give them. The editors correct them in the content editor's Paratexts tab, and the order where a file's is wrong. A correction lives in Playcode only: a later forced re-import of the original file puts the file's kind back (the dry run counts it as a row edited since its import), so correct the file as well, or import Playcode's own export instead
 - [ ] **Credit corrections** (question 21, decided 2026-10-16) - "Tronch Pérez, Jesus" to "Jesús" (63 credits), "Ramírez Sánez" to "Sáenz" on EMOTHE0278, EMOTHE0372's `Editor1`/`Editor2` replaced by Jesús Tronch Pérez, then whatever the project answers to questions 18-20. Made in our copies of the files under `doc/tei_corpus/` and those plays re-imported: a forced re-import replaces every TEI-sourced credit, so a fix made in Playcode alone would not last while the files are the master. The project gets the list of changes for its own files, as with Mariamne. Background in `docs/stakeholder/creditos.html`
 
@@ -41,7 +42,6 @@ Questions 29-35 in `docs/stakeholder/preguntas.html`; the design is `docs/superp
 
 ## High Priority
 
-- [ ] **An aside paragraph keeps only its aside** - `TeiParser.aside_content/1` reads a `<p>` holding a `<seg type="aside">` as that seg's text and its notes, so every word outside the seg is lost: 1,010 paragraphs in the corpus have spoken words there ("<seg type=\"aside\">(Cielo, te ringrazio.)</seg> El me consola con ste bone notizie.", EMOTHE0120; 3,008 counting the `(Aparte)` stages around them; 32,334 words), and the line breaks among them (one in EMOTHE0776's paragraph 80, which also loses "En fin, vete ahora a casa de Camila…"). Found on 2026-10-16 while counting the line breaks. Needs a model for a paragraph that is partly aside (a `<seg>` marker in the text, as `<stage>` is, or the aside's span), then a re-import
 - [ ] **Render** — `render.yaml` and `Dockerfile.render` exist but the blueprint has never been applied
 
 ## Medium Priority

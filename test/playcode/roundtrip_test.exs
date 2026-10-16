@@ -230,18 +230,15 @@ defmodule Playcode.RoundtripTest do
   end
 
   # <stage> children of <l> and <p> that the importer keeps, as markers in the line's
-  # text: those of a line or paragraph that is not an aside, which drops every stage it
-  # holds. An <l> is an aside when it has a <seg type="aside"> or a delivery <stage>
-  # naming an aside; a <p> only by its <seg>.
+  # text: all but those of a line or paragraph all aside (kept_children/2).
   defp count_inline_stages(body) do
     clean = Regex.replace(~r/<\?xml[^?]*\?>/, body, "")
     {:ok, tree} = Saxy.SimpleForm.parse_string("<root>#{clean}</root>")
     count_inline_stage_leaves(tree)
   end
 
-  # The <lb>s the importer keeps: all but those of an aside line or paragraph outside its
-  # <seg type="aside">, which aside_content/1 drops with the rest of that text, and one
-  # that ends a paragraph, which shows nothing and Note.paragraphs/1 trims (10 in the
+  # The <lb>s the importer keeps: all but those of a line all aside by its delivery
+  # <stage> alone (kept_children/2), and one that ends a paragraph, which shows nothing and Note.paragraphs/1 trims (10 in the
   # notes of EMOTHE0254, 0730 and 0752; no paragraph of the play text ends with one).
   defp count_line_breaks(body, kind) do
     clean =
@@ -256,14 +253,8 @@ defmodule Playcode.RoundtripTest do
   defp count_breaks({"lb", attrs, _}, kind),
     do: if(attr_val(attrs, "n") == nil == (kind == :bare), do: 1, else: 0)
 
-  defp count_breaks({tag, _attrs, inner}, kind) when tag in ~w(l p) do
-    kept =
-      if aside_leaf?(tag, inner),
-        do: Enum.filter(inner, &match?({"seg", _, _}, &1)),
-        else: inner
-
-    kept |> Enum.map(&count_breaks(&1, kind)) |> Enum.sum()
-  end
+  defp count_breaks({tag, _attrs, inner}, kind) when tag in ~w(l p),
+    do: tag |> kept_children(inner) |> Enum.map(&count_breaks(&1, kind)) |> Enum.sum()
 
   defp count_breaks({_tag, _attrs, inner}, kind),
     do: inner |> Enum.map(&count_breaks(&1, kind)) |> Enum.sum()
@@ -273,9 +264,7 @@ defmodule Playcode.RoundtripTest do
   defp count_inline_stage_leaves({_name, _attrs, children}) do
     Enum.reduce(children, 0, fn
       {tag, _attrs, inner}, acc when tag in ~w(l p) ->
-        if aside_leaf?(tag, inner),
-          do: acc,
-          else: acc + Enum.count(inner, &match?({"stage", _, _}, &1))
+        acc + Enum.count(kept_children(tag, inner), &match?({"stage", _, _}, &1))
 
       {_tag, _, _} = child, acc ->
         acc + count_inline_stage_leaves(child)
@@ -284,6 +273,27 @@ defmodule Playcode.RoundtripTest do
         acc
     end)
   end
+
+  # The children of an <l> or <p> the importer reads: all of them, but for a line or
+  # paragraph all aside, its segs and breaks when it has segs (its stages dropped), and
+  # none of its stages and breaks when only a delivery <stage> makes it an aside. One with
+  # a word outside its segs is partly aside, and keeps everything.
+  defp kept_children(tag, inner) do
+    cond do
+      not aside_leaf?(tag, inner) -> inner
+      not Enum.any?(inner, &aside_seg?/1) -> []
+      Enum.any?(inner, &spoken_outside_aside?/1) -> inner
+      true -> Enum.filter(inner, &(aside_seg?(&1) or match?({"lb", _, _}, &1)))
+    end
+  end
+
+  defp aside_seg?({"seg", attrs, _}), do: attr_val(attrs, "type") == "aside"
+  defp aside_seg?(_), do: false
+
+  defp spoken_outside_aside?(text) when is_binary(text), do: String.trim(text) != ""
+
+  defp spoken_outside_aside?({name, _, _} = child),
+    do: name not in ~w(stage note) and not aside_seg?(child) and String.trim(text_of(child)) != ""
 
   defp aside_leaf?(tag, inner) do
     Enum.any?(inner, fn

@@ -113,6 +113,38 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     end
   end
 
+  describe "a paragraph partly aside" do
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>BEATRICE</speaker><p>Me consola. <seg type="aside">(Cielo, te ringrazio.)</seg> El me consola.</p></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+      %{view: view, html: html}
+    end
+
+    test "reads whole, without its markers", %{html: html} do
+      assert squish(html |> LazyHTML.from_fragment() |> LazyHTML.text()) =~
+               "Me consola. (Cielo, te ringrazio.) El me consola."
+
+      refute html =~ "&lt;aside"
+    end
+
+    # Hiding the asides used to hide a paragraph holding one, its other words with it.
+    test "stays when the asides are hidden", %{view: view} do
+      html = render_click(view, "toggle_asides")
+
+      assert squish(html |> LazyHTML.from_fragment() |> LazyHTML.text()) =~ "El me consola."
+    end
+  end
+
   describe "prose line breaks and numbers" do
     setup %{conn: conn} do
       play =

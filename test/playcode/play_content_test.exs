@@ -266,4 +266,55 @@ defmodule Playcode.PlayContentTest do
       assert PlayContent.get_element!(element.id).type == "verse_line"
     end
   end
+
+  describe "an aside marker in an element's text" do
+    setup do
+      %{play: play, scene: scene, line_group: line_group} =
+        TestFixtures.play_with_structure_fixture()
+
+      attrs = fn content ->
+        %{
+          play_id: play.id,
+          division_id: scene.id,
+          parent_id: line_group.id,
+          type: "verse_line",
+          content: content,
+          position: 9
+        }
+      end
+
+      %{attrs: attrs}
+    end
+
+    test "makes a line or a paragraph an aside", %{attrs: attrs} do
+      for type <- ~w(verse_line prose) do
+        assert {:ok, %{is_aside: true}} =
+                 PlayContent.create_element(%{
+                   attrs.("Sola mi basta. <aside><<Basta>>.</aside>")
+                   | type: type
+                 })
+      end
+    end
+
+    test "is refused when it is not sound, or not in a line or a paragraph", %{attrs: attrs} do
+      message = "has an aside marker that is not well formed"
+
+      for content <- [
+            "<aside>sin cerrar",
+            "a</aside>b",
+            "<aside></aside>",
+            "<aside>a <aside>b</aside></aside>",
+            "<<a <aside>b>></aside>",
+            "<stage>(a <aside>b</stage>)</aside>"
+          ] do
+        assert {:error, changeset} = PlayContent.create_element(attrs.(content))
+        assert %{content: [^message]} = errors_on(changeset), content
+      end
+
+      assert {:error, changeset} =
+               PlayContent.create_element(%{attrs.("<aside>Vase</aside>") | type: "trailer"})
+
+      assert %{content: [^message]} = errors_on(changeset)
+    end
+  end
 end

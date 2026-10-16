@@ -2987,6 +2987,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
         </p>
         <p class="mt-1 text-xs text-base-content/70">
+          {gettext("Words spoken aside: <aside>…</aside>")}
+        </p>
+        <p class="mt-1 text-xs text-base-content/70">
           {gettext("Number of a printed line in the text: <lb n=\"1320\"/>")}
         </p>
       </div>
@@ -3013,6 +3016,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           />
           <p class="mt-1 text-xs text-base-content/70">
             {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
+          </p>
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext("Words spoken aside: <aside>…</aside>")}
           </p>
         </div>
         <div class="grid grid-cols-2 gap-4">

@@ -7,7 +7,7 @@ defmodule Playcode.Export.TeiXml do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Paratext
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias Playcode.Witnesses
   import XmlBuilder, except: [element: 2, element: 3]
 
@@ -935,16 +935,7 @@ defmodule Playcode.Export.TeiXml do
     attrs = if el.part, do: Map.put(attrs, :part, el.part), else: attrs
     attrs = if el.rend, do: Map.put(attrs, :rend, el.rend), else: attrs
 
-    inline = build_inline_content(el.content, el.notes)
-
-    content =
-      if el.is_aside do
-        [element(:seg, %{type: "aside"}, inline)]
-      else
-        inline
-      end
-
-    inline_element(:l, attrs, content)
+    inline_element(:l, attrs, spoken_content(el, el.content))
   end
 
   defp build_element(%{type: "stage_direction"} = el) do
@@ -955,22 +946,52 @@ defmodule Playcode.Export.TeiXml do
   defp build_element(%{type: "prose"} = el) do
     # The number at the very start of the text is the paragraph's own (p@n).
     {number, text} = InlineMarkup.paragraph_number(el.content)
-    inline = build_inline_content(text, el.notes)
-
-    content =
-      if el.is_aside do
-        [element(:seg, %{type: "aside"}, inline)]
-      else
-        inline
-      end
-
-    inline_element(:p, if(number, do: %{n: number}, else: %{}), content)
+    inline_element(:p, if(number, do: %{n: number}, else: %{}), spoken_content(el, text))
   end
 
   defp build_element(%{type: "trailer"} = el),
     do: inline_element(:trailer, %{}, build_inline_content(el.content, el.notes))
 
   defp build_element(_), do: nil
+
+  # The text of a line or paragraph: in one <seg type="aside"> when it is all aside, and
+  # when it is partly, each <aside> marker a seg, a note at an aside's end inside it.
+  defp spoken_content(el, text) do
+    cond do
+      Element.whole_aside?(el) ->
+        [element(:seg, %{type: "aside"}, build_inline_content(text, el.notes))]
+
+      el.is_aside ->
+        {nodes, _} =
+          ~r{<aside>.*?</aside>}s
+          |> Regex.split(text, include_captures: true, trim: true)
+          |> Enum.flat_map_reduce({0, el.notes}, &aside_piece/2)
+
+        nodes
+
+      true ->
+        build_inline_content(text, el.notes)
+    end
+  end
+
+  # One piece of a text partly aside, starting `at` graphemes into its plain form, with the
+  # notes not yet placed. Its notes go in with offsets counted from its own start.
+  defp aside_piece(piece, {at, notes}) do
+    {aside?, words} =
+      case piece do
+        "<aside>" <> rest -> {true, String.replace_suffix(rest, "</aside>", "")}
+        words -> {false, words}
+      end
+
+    stop = at + String.length(InlineMarkup.plain(words))
+    {here, later} = Enum.split_with(notes, &(&1.offset <= stop))
+    inline = build_inline_content(words, Enum.map(here, &%{&1 | offset: &1.offset - at}))
+
+    nodes =
+      if aside?, do: [element(:seg, %{type: "aside"}, inline)], else: List.wrap(inline)
+
+    {nodes, {stop, later}}
+  end
 
   # A text as TEI: <<…>> becomes <emph>, as the EMOTHE corpus writes italics (<hi
   # rend="italic"> would do too, per TEI P5), and each note goes back at its offset

@@ -7,7 +7,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   use Gettext, backend: PlaycodeWeb.Gettext
 
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Division, InlineMarkup, Note}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
   attr :divisions, :list, required: true
@@ -266,7 +266,10 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   defp render_element(%{element: %{type: "prose"}} = assigns) do
     ~H"""
-    <div :if={!@element.is_aside || @show_asides} class="ml-1 sm:ml-4 mb-2 text-justify">
+    <div
+      :if={@show_asides or not Element.whole_aside?(@element)}
+      class="ml-1 sm:ml-4 mb-2 text-justify"
+    >
       <.inline_content
         text={@element.content}
         notes={@element.notes}

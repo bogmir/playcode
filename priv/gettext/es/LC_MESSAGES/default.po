@@ -146,7 +146,7 @@ msgstr "Explorar, editar y gestionar las obras importadas."
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2749
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2798
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2838
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3040
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3046
 #: lib/playcode_web/live/admin/play_editors_live.ex:231
 #: lib/playcode_web/live/admin/play_form_live.ex:825
 #: lib/playcode_web/live/admin/play_notes_live.ex:304
@@ -230,7 +230,7 @@ msgstr "Confirmar nueva contraseña"
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2736
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2946
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2978
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3006
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3009
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr "Contenido"
@@ -543,7 +543,7 @@ msgstr "Último cálculo:"
 msgid "Line Group"
 msgstr "Grupo de versos"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3021
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3027
 #, elixir-autogen, elixir-format
 msgid "Line Number"
 msgstr "Número de verso"
@@ -671,7 +671,7 @@ msgstr "¡Algo salió mal! Por favor, revise los errores a continuación."
 msgid "Overview"
 msgstr "Resumen"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3027
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3033
 #, elixir-autogen, elixir-format
 msgid "Part (split line)"
 msgstr "Parte (verso partido)"
@@ -831,7 +831,7 @@ msgstr "Restableciendo..."
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2747
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2796
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2836
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3038
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3044
 #: lib/playcode_web/live/admin/play_editors_live.ex:234
 #: lib/playcode_web/live/admin/play_notes_live.ex:306
 #: lib/playcode_web/live/admin/play_places_live.ex:392
@@ -1041,7 +1041,7 @@ msgstr "Verso"
 msgid "Verse Distribution"
 msgstr "Distribución de versos"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2997
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3000
 #, elixir-autogen, elixir-format
 msgid "Verse Type"
 msgstr "Tipo de verso"
@@ -1056,7 +1056,7 @@ msgstr "Número de versos:"
 msgid "Verse distribution, character analysis, and more"
 msgstr "Distribución de versos, análisis de personajes y más"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3012
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3015
 #, elixir-autogen, elixir-format
 msgid "Verse line text..."
 msgstr "Texto del verso..."
@@ -2108,7 +2108,7 @@ msgstr "(auto)"
 msgid "(no speaker)"
 msgstr "(sin hablante)"
 
-#: lib/playcode_web/components/play_text.ex:404
+#: lib/playcode_web/components/play_text.ex:407
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2225
 #, elixir-autogen, elixir-format
 msgid "All"
@@ -3993,7 +3993,7 @@ msgstr "Capítulo de libro"
 msgid "Book or journal"
 msgstr "Libro o revista"
 
-#: lib/playcode_web/components/play_text.ex:459
+#: lib/playcode_web/components/play_text.ex:462
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -4142,7 +4142,7 @@ msgid "Not stated"
 msgstr "Sin indicar"
 
 #: lib/playcode_web/components/layouts.ex:179
-#: lib/playcode_web/components/play_text.ex:451
+#: lib/playcode_web/components/play_text.ex:454
 #: lib/playcode_web/live/admin/notes_component.ex:148
 #: lib/playcode_web/live/admin/notes_component.ex:149
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:484
@@ -4370,18 +4370,18 @@ msgid "The site's styles and scripts are updated."
 msgstr "Los estilos y scripts del sitio están actualizados."
 
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2987
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3015
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3018
 #, elixir-autogen, elixir-format
 msgid "Stage direction in the text: <stage type=\"delivery\">…</stage>"
 msgstr "Acotación dentro del texto: <stage type=\"delivery\">…</stage>"
 
-#: lib/playcode_web/components/play_text.ex:400
+#: lib/playcode_web/components/play_text.ex:403
 #: lib/playcode_web/live/admin/play_notes_live.ex:198
 #, elixir-autogen, elixir-format
 msgid "Note type"
 msgstr "Tipo de nota"
 
-#: lib/playcode_web/components/play_text.ex:369
+#: lib/playcode_web/components/play_text.ex:372
 #, elixir-autogen, elixir-format
 msgid "line %{n}"
 msgstr "verso %{n}"
@@ -4669,7 +4669,7 @@ msgstr "Entrada"
 msgid "Exit"
 msgstr "Salida"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3033
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3039
 #, elixir-autogen, elixir-format
 msgid "Identifier"
 msgstr "Identificador"
@@ -4884,7 +4884,13 @@ msgstr "%{count} fila(s) del archivo se editaron a mano tras su importación: im
 msgid "Add every complete play"
 msgstr "Añadir todas las obras completas"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2990
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:2993
 #, elixir-autogen, elixir-format
 msgid "Number of a printed line in the text: <lb n=\"1320\"/>"
 msgstr "Número de una línea impresa en el texto: <lb n=\"1320\"/>"
+
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:2990
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3021
+#, elixir-autogen, elixir-format
+msgid "Words spoken aside: <aside>…</aside>"
+msgstr "Palabras dichas aparte: <aside>…</aside>"

@@ -134,6 +134,9 @@ msgstr ""
 msgid "has a stage marker that is not well formed"
 msgstr ""
 
+msgid "has an aside marker that is not well formed"
+msgstr ""
+
 msgid "has a line number marker that is not well formed"
 msgstr ""
 
