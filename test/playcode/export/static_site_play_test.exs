@@ -281,6 +281,64 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  describe "line breaks and prose line numbers" do
+    setup do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>LUCRECIA</speaker>
+            <p>Yo amé en mis primeros años, <lb/>dulce cosa lo juzgué.</p>
+            <p n="1319">Beggar that I am, <lb n="1320"/>but I thank you, <lb n="1311-2"/>my thanks.</p>
+          </sp>
+        </div1>
+        """)
+
+      %{act: page(dir, play, "act-1.html"), dir: dir}
+    end
+
+    test "a break is a new line in its paragraph", %{act: act} do
+      [song, _hamlet] = act |> LazyHTML.query("p.pr") |> Enum.to_list()
+
+      assert song |> LazyHTML.query("br") |> Enum.count() == 1
+      assert squish(LazyHTML.text(song)) == "Yo amé en mis primeros años,dulce cosa lo juzgué."
+    end
+
+    test "a number shows where its printed line starts, every fifth marked", %{act: act} do
+      [_song, hamlet] = act |> LazyHTML.query("p.pr") |> Enum.to_list()
+
+      assert hamlet |> LazyHTML.query(".pn") |> Enum.map(&LazyHTML.text/1) ==
+               ["1319", "1320", "1311-2"]
+
+      assert hamlet |> LazyHTML.query(".pn.m5") |> Enum.map(&LazyHTML.text/1) == ["1320"]
+      refute LazyHTML.text(act) =~ "<lb"
+    end
+
+    test "the line-number control and print hide the numbers", %{dir: dir} do
+      css = read!(dir, "assets/style.css")
+
+      assert css =~ ~s(body[data-ln="off"] .pn)
+      assert css =~ ~s|body[data-ln="5"] .pn:not(.m5)|
+      assert css =~ ".pn:not(.m5) { display: none !important; }"
+    end
+  end
+
+  # Components.lines/1, the paratexts' renderer, folded into inline/1 on 2026-10-16.
+  test "a dedication's line breaks are still new lines on the title page" do
+    play =
+      import_tei!(
+        tei(
+          front:
+            ~s(<div type="dedicatoria"><head>DEDICATORIA</head><p>My Lord,<lb/>Whether the world</p></div>),
+          body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Verso</l></sp></div1>)
+        )
+      )
+
+    dir = generate!([play], all: true)
+
+    assert html!(dir, "plays/#{play.code}/index.html") |> LazyHTML.to_html() =~
+             ~r{My Lord,<br/?>Whether the world}
+  end
+
   describe "a split verse whose opening fragment holds an inline stage direction" do
     test "hides the stage's words in the continuing fragment's invisible lead too" do
       {play, dir} =

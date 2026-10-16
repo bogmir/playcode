@@ -103,6 +103,18 @@ defmodule Playcode.PlayContent.Element do
       ~w(speech stage_direction verse_line prose line_group trailer unrecognized)
     )
     |> validate_stage_markers()
+    |> validate_number_markers()
+  end
+
+  # A malformed <lb would print as literal tags and could not be written back as <lb n>.
+  # A bare <lb/> is refused too: a break is a newline in the text.
+  defp validate_number_markers(changeset) do
+    if changed?(changeset, :content) and
+         not Playcode.PlayContent.InlineMarkup.numbers_well_formed?(
+           get_field(changeset, :content)
+         ),
+       do: add_error(changeset, :content, "has a line number marker that is not well formed"),
+       else: changeset
   end
 
   # A marker that is not closed, or is nested, would print as literal tags on every page

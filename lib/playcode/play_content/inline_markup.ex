@@ -4,7 +4,9 @@ defmodule Playcode.PlayContent.InlineMarkup do
   content, and a `<stage>` inside a verse line or a paragraph as `<stage>…</stage>`
   (`<stage type="delivery">…</stage>` with a type; the type is letters, digits and `_`).
   A stage is flat: no stage in a stage, and no stage inside italics, though italics may
-  sit inside a stage.
+  sit inside a stage. A line break is `\n`, kept as text; where a printed line of the
+  source starts, its number is a marker, `<lb n="1320"/>`, and a prose paragraph's own
+  number is that marker at its very start.
 
   `parts/1` turns that back into pieces a renderer can mark up; `plain/1` gives the
   text without the markers, stage words kept, for search and word counts; `spoken/1`
@@ -18,10 +20,14 @@ defmodule Playcode.PlayContent.InlineMarkup do
   # lazy `.*?` read to the end of the text from every `<stage>`).
   @stage ~r/<stage(?: type="([A-Za-z0-9_]+)")?>((?:(?!<\/?stage[\s>]).)+?)<\/stage>/s
 
+  # A printed line's number. Group: the number, letters, digits, "." and "-".
+  @number ~r/<lb n="([A-Za-z0-9.\-]+)"\/>/
+
   @doc """
   Splits `text` into `%{text: binary, italic: boolean, stage: stage}` parts, in order.
   `stage` is nil outside a stage, else `%{type: binary | nil, run: integer}`, `run`
-  counting the stages in the text, so two touching stages stay two.
+  counting the stages in the text, so two touching stages stay two. A printed line's
+  number is `%{number: binary, text: "", italic: boolean, stage: stage}`.
   """
   def parts(nil), do: []
 
@@ -29,9 +35,12 @@ defmodule Playcode.PlayContent.InlineMarkup do
     text = text |> String.replace("&lt;&lt;", "<<") |> String.replace("&gt;&gt;", ">>")
 
     if String.contains?(text, "<stage"),
-      do: Enum.reject(with_stages(text), &(&1.text == "")),
-      else: Enum.reject(italics(text, nil), &(&1.text == ""))
+      do: Enum.reject(with_stages(text), &empty?/1),
+      else: Enum.reject(italics(text, nil), &empty?/1)
   end
+
+  defp empty?(%{number: _}), do: false
+  defp empty?(part), do: part.text == ""
 
   defp with_stages(text) do
     {parts, _runs} =
@@ -50,15 +59,32 @@ defmodule Playcode.PlayContent.InlineMarkup do
     parts
   end
 
+  # A number marker is read whole inside the italics, so its "/>" cannot be taken for the
+  # start of their closing ">>" (`<<sic <lb n="5"/>>>`).
   defp italics(text, stage) do
-    ~r/<<(.*?)>>/s
+    ~r/<<((?:<lb n="[A-Za-z0-9.\-]+"\/>|.)*?)>>/s
     |> Regex.split(text, include_captures: true)
-    |> Enum.map(fn part ->
+    |> Enum.flat_map(fn part ->
       case Regex.run(~r/\A<<(.*)>>\z/s, part) do
-        [_, inner] -> %{text: inner, italic: true, stage: stage}
-        nil -> %{text: part, italic: false, stage: stage}
+        [_, inner] -> numbers(inner, true, stage)
+        nil -> numbers(part, false, stage)
       end
     end)
+  end
+
+  defp numbers(text, italic, stage) do
+    if String.contains?(text, "<lb") do
+      @number
+      |> Regex.split(text, include_captures: true)
+      |> Enum.map(fn piece ->
+        case Regex.run(@number, piece) do
+          [_, n] -> %{number: n, text: "", italic: italic, stage: stage}
+          nil -> %{text: piece, italic: italic, stage: stage}
+        end
+      end)
+    else
+      [%{text: text, italic: italic, stage: stage}]
+    end
   end
 
   @doc """
@@ -86,7 +112,10 @@ defmodule Playcode.PlayContent.InlineMarkup do
   end
 
   # Splits `part` (which starts `at` graphemes into the text) at every note that falls
-  # inside it or at its end. `next` is the part after it, or nil.
+  # inside it or at its end. `next` is the part after it, or nil. A number has no text to
+  # split, and prepend_text/2 would drop it.
+  defp place_notes([%{number: _} = part, _next], acc), do: {[part], acc}
+
   defp place_notes([part, next], {at, notes}) do
     length = String.length(part.text)
     {here, later} = Enum.split_while(notes, &(&1.offset <= at + length))
@@ -124,6 +153,26 @@ defmodule Playcode.PlayContent.InlineMarkup do
   @doc "How many stage markers `text` holds."
   def stage_count(nil), do: 0
   def stage_count(text), do: @stage |> Regex.scan(text) |> length()
+
+  @doc "The marker the importer stores where printed line `n` of the source starts."
+  def number_marker(n), do: ~s(<lb n="#{n}"/>)
+
+  @doc """
+  A prose paragraph's own number (TEI's `p@n`): the number of a marker at the very start
+  of `text`, and the text after it. `{nil, text}` when it opens with none.
+  """
+  def paragraph_number(nil), do: {nil, nil}
+
+  def paragraph_number(text) do
+    case Regex.run(~r/\A<lb n="([A-Za-z0-9.\-]+)"\/>(.*)\z/s, text) do
+      [_, n, rest] -> {n, rest}
+      nil -> {nil, text}
+    end
+  end
+
+  @doc "True when every `<lb` in `text` is a well-formed number marker."
+  def numbers_well_formed?(nil), do: true
+  def numbers_well_formed?(text), do: not Regex.match?(~r/<lb(?! n="[A-Za-z0-9.\-]+"\/>)/, text)
 
   @doc """
   True when every `<stage` and `</stage>` in `text` belongs to a closed, flat marker with

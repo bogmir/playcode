@@ -57,6 +57,19 @@ defmodule Playcode.StatisticsTest do
     assert data["words"] == 3
   end
 
+  # The words a line had when every <lb/> was a space: a break and a number add none.
+  test "a line break and a printed line's number add no word" do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><p n="7">Yo amé en mis primeros años, <lb/>dulce cosa <lb n="8"/>lo juzgué.</p></sp></div1>)
+        )
+      )
+
+    assert Statistics.get_statistics(play.id).data["words"] == 10
+  end
+
   # `Metrics.words/1` is pure and runs once per line, so it has a fast path for a line with
   # no stage; the import route would need a whole play to compare the two. A text with a
   # stage goes through the full reading, so adding a stage of words that are not counted

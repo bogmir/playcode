@@ -174,6 +174,14 @@ defmodule Playcode.Export.CompareHtml do
         .verse-line .content.part-m { padding-left: 40px; }
         .verse-line .content.part-f { padding-left: 80px; }
 
+        .pn {
+          font-size: x-small;
+          color: #999;
+          vertical-align: super;
+          padding-right: 0.2em;
+          font-variant-numeric: tabular-nums;
+        }
+
         .line-number {
           width: 1.5rem;
           text-align: left;

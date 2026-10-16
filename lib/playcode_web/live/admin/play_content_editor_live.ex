@@ -2474,10 +2474,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             {@element.speaker_label}
           </span>
           <%!-- Content: inline editing or click to edit --%>
+          <%!-- A browser strips the newlines from the one-line quick edit: a text with a
+            line break opens in the form instead. --%>
           <span
             :if={@element.content && !@is_inline_editing}
             id={"el-text-#{@element.id}"}
-            phx-click="inline_edit"
+            phx-click={
+              if String.contains?(@element.content, "\n"), do: "edit_element", else: "inline_edit"
+            }
             phx-value-id={@element.id}
             class="text-sm text-base-content/80 cursor-pointer hover:text-base-content truncate"
             title={@element.content}
@@ -2981,6 +2985,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         />
         <p class="mt-1 text-xs text-base-content/70">
           {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
+        </p>
+        <p class="mt-1 text-xs text-base-content/70">
+          {gettext("Number of a printed line in the text: <lb n=\"1320\"/>")}
         </p>
       </div>
 

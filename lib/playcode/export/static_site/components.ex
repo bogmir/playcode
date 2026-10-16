@@ -324,7 +324,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2 class="act-head">
         <.inline text={paratext.heading || PlayLabels.kind_label(paratext.kind)} />
       </h2>
-      <p :for={paragraph <- paragraphs(paratext.content)}><.lines text={paragraph} /></p>
+      <p :for={paragraph <- paragraphs(paratext.content)}><.inline text={paragraph} /></p>
     </section>
     """
   end
@@ -580,6 +580,12 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :text, :string, default: nil
   attr :notes, :list, default: []
 
+  @doc """
+  Stored text as HTML: italics as `<em>`, each line break a `<br>` (inside the italics
+  too: they are read first, so a break cannot leave their markers as text), each
+  printed line's number a `span.pn`, and the notes' markers. A paratext's paragraph goes
+  through it too.
+  """
   def inline(assigns) do
     assigns = assign(assigns, :parts, InlineMarkup.parts(assigns.text, assigns.notes))
 
@@ -590,31 +596,16 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
-  @doc """
-  A paragraph of a paratext with its italics, each line break a `<br>`, inside the
-  italics too: the italics are read first, so a break cannot leave their markers as text.
-  """
-  attr :text, :string, required: true
-
-  def lines(assigns) do
-    html =
-      assigns.text
-      |> InlineMarkup.parts()
-      |> Enum.map(&part/1)
-      |> IO.iodata_to_binary()
-      |> String.replace("\n", "<br>")
-
-    assigns = assign(assigns, :html, html)
-
-    ~H"""
-    {Phoenix.HTML.raw(@html)}
-    """
-  end
-
   # A piece of an inline stage direction, a note's number among them: in a span the
   # "Stage directions" toggle hides.
   defp part(%{stage: %{}} = part),
     do: [~s(<span class="sdi">), part(%{part | stage: nil}), "</span>"]
+
+  # Where a printed line of the source starts, in prose: its number, which the "Line
+  # numbers" control hides (style.css), every fifth kept by "5". Not a link: a play that
+  # counts its paragraphs restarts at 1, so an id built from the number would repeat.
+  defp part(%{number: n}),
+    do: [~s(<span class="pn), if(fifth?(n), do: " m5", else: ""), ~s(">), escape(n), "</span>"]
 
   # A note's marker: its number, a button that opens the note (endnotes/1) as a popover.
   # Its id is what a search result and the Notes page link to.
@@ -636,9 +627,13 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   defp part(%{italic: true, text: text}),
-    do: ["<em>", escape(text), "</em>"]
+    do: ["<em>", breaks(text), "</em>"]
 
-  defp part(%{text: text}), do: escape(text)
+  defp part(%{text: text}), do: breaks(text)
+
+  defp breaks(text), do: text |> escape() |> String.replace("\n", "<br>")
+
+  defp fifth?(n), do: match?({i, ""} when rem(i, 5) == 0, Integer.parse(n))
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 

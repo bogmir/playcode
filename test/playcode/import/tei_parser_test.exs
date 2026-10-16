@@ -24,6 +24,7 @@ defmodule Playcode.Import.TeiParserTest do
     {Playcode.Catalogue.Play, :valid_languages, 0},
     {Playcode.Places, :slugify, 1},
     {Playcode.Places.Place, :authorities, 0},
+    {Playcode.PlayContent.InlineMarkup, :number_marker, 1},
     {Playcode.Witnesses, :type_from_tei, 2}
   ]
 

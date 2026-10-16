@@ -14,7 +14,7 @@ defmodule Playcode.RoundtripTest do
 
   @fields ~w(acts scenes characters speeches verses line_groups stage_dirs asides
              split_parts verse_type_attrs hidden_chars heads front_paratexts back_paratexts
-             speaker_refs notes inline_stages)a
+             speaker_refs notes inline_stages line_breaks line_numbers paragraph_numbers)a
 
   # Read a possibly UTF-16 file and return UTF-8 string
   defp read_original(path) do
@@ -195,7 +195,10 @@ defmodule Playcode.RoundtripTest do
       front_paratexts: count_paratext_divs(front),
       back_paratexts: count_paratext_divs(extract_back(xml)),
       notes: count_notes(xml),
-      inline_stages: count_inline_stages(body)
+      inline_stages: count_inline_stages(body),
+      line_breaks: count_line_breaks(body, :bare),
+      line_numbers: count_line_breaks(body, :numbered),
+      paragraph_numbers: length(Regex.scan(~r/<p\b[^>]*\sn="/, body))
     }
   end
 
@@ -235,6 +238,37 @@ defmodule Playcode.RoundtripTest do
     {:ok, tree} = Saxy.SimpleForm.parse_string("<root>#{clean}</root>")
     count_inline_stage_leaves(tree)
   end
+
+  # The <lb>s the importer keeps: all but those of an aside line or paragraph outside its
+  # <seg type="aside">, which aside_content/1 drops with the rest of that text, and one
+  # that ends a paragraph, which shows nothing and Note.paragraphs/1 trims (10 in the
+  # notes of EMOTHE0254, 0730 and 0752; no paragraph of the play text ends with one).
+  defp count_line_breaks(body, kind) do
+    clean =
+      body
+      |> String.replace(~r/<\?xml[^?]*\?>/, "")
+      |> String.replace(~r/<lb\b[^>]*\/>(\s*<\/p>)/, "\\1")
+
+    {:ok, tree} = Saxy.SimpleForm.parse_string("<root>#{clean}</root>")
+    count_breaks(tree, kind)
+  end
+
+  defp count_breaks({"lb", attrs, _}, kind),
+    do: if(attr_val(attrs, "n") == nil == (kind == :bare), do: 1, else: 0)
+
+  defp count_breaks({tag, _attrs, inner}, kind) when tag in ~w(l p) do
+    kept =
+      if aside_leaf?(tag, inner),
+        do: Enum.filter(inner, &match?({"seg", _, _}, &1)),
+        else: inner
+
+    kept |> Enum.map(&count_breaks(&1, kind)) |> Enum.sum()
+  end
+
+  defp count_breaks({_tag, _attrs, inner}, kind),
+    do: inner |> Enum.map(&count_breaks(&1, kind)) |> Enum.sum()
+
+  defp count_breaks(_text, _kind), do: 0
 
   defp count_inline_stage_leaves({_name, _attrs, children}) do
     Enum.reduce(children, 0, fn

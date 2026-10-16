@@ -463,6 +463,85 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  describe "line numbers in the text" do
+    defp number_refusal,
+      do:
+        Gettext.dgettext(
+          PlaycodeWeb.Gettext,
+          "errors",
+          "has a line number marker that is not well formed"
+        )
+
+    # A break is typed with Enter; a bare <lb/> would print as literal text.
+    test "a bare <lb/> or a malformed number is refused, and the line is unchanged",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      assert edit(lv, "Segunda línea", "Segunda <lb/>línea") =~ number_refusal()
+
+      # A refusal leaves the quick edit open, its field still in place.
+      assert lv
+             |> element("form[id^='inline-edit-']")
+             |> render_submit(%{"value" => ~s(Segunda <lb n="1 2"/>línea)}) =~ number_refusal()
+
+      assert {"Segunda línea", 2} in lines(play)
+    end
+
+    defp play_with_a_song do
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+            <div2 type="escena" n="1"><head>ESCENA I</head>
+              <sp><speaker>ANA</speaker><p>Yo amé en mis primeros años, <lb/>dulce cosa lo juzgué.</p></sp>
+            </div2>
+          </div1>
+          """
+        )
+      )
+    end
+
+    # A browser strips the newlines from an <input type="text">: saving the quick edit
+    # would glue "años," to "dulce".
+    test "a paragraph with a break opens in the form, never the one-line quick edit",
+         %{conn: conn} do
+      play = play_with_a_song()
+      lv = open_scene(conn, play)
+
+      lv |> span("dulce cosa") |> render_click()
+
+      assert has_element?(lv, "#element-form textarea")
+      refute has_element?(lv, "form[id^='inline-edit-']")
+    end
+
+    test "a break typed in the form is kept, and written back as <lb/>", %{conn: conn} do
+      play = play_with_a_song()
+      lv = open_scene(conn, play)
+
+      lv |> span("dulce cosa") |> render_click()
+
+      lv
+      |> form("#element-form", element: %{"content" => "Yo amé,\ndulce cosa,\nlo juzgué."})
+      |> render_submit()
+
+      assert play |> export_tei() |> xml_lines("p") ==
+               [{%{}, "Yo amé, | dulce cosa, | lo juzgué."}]
+    end
+
+    test "the prose form says how to type a printed line's number", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      # A scene-level card's insert menu: the toolbar and each such card offer "Prose".
+      lv |> element("#{card(lv, "Sale el Rey")} button", t("Prose")) |> render_click()
+
+      assert has_element?(
+               lv,
+               "#element-form",
+               t(~s|Number of a printed line in the text: <lb n="1320"/>|)
+             )
+    end
+  end
+
   describe "a stage direction's kind and a verse's identifier" do
     setup %{conn: conn} do
       play =

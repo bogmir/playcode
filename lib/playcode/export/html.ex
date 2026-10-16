@@ -204,6 +204,14 @@ defmodule Playcode.Export.Html do
         .verse-line .content.part-m { padding-left: 50px; }
         .verse-line .content.part-f { padding-left: 100px; }
 
+        .pn {
+          font-size: x-small;
+          color: #999;
+          vertical-align: super;
+          padding-right: 0.2em;
+          font-variant-numeric: tabular-nums;
+        }
+
         .line-number {
           width: 2rem;
           text-align: left;

@@ -271,6 +271,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         text={@element.content}
         notes={@element.notes}
         show_stage={@show_stage_directions}
+        show_numbers={@show_line_numbers}
       />
     </div>
     """
@@ -291,17 +292,17 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :text, :string, default: nil
   attr :notes, :list, default: []
   attr :show_stage, :boolean, default: true
+  attr :show_numbers, :boolean, default: true
 
   @doc """
-  Stored text as readers see it: `<<…>>` italics as emphasis, inline stage directions and
-  note numbers in place. Kept on one line by phx-no-format and built as iodata: a line
-  break between a word and its note's number would show as a space.
+  Stored text as readers see it: `<<…>>` italics as emphasis, inline stage directions,
+  note numbers and printed line numbers in place, each line break a `<br>`. Kept on one
+  line by phx-no-format and built as iodata: a line break between a word and its note's
+  number would show as a space.
   """
   def inline_content(assigns) do
-    html =
-      assigns.text
-      |> InlineMarkup.parts(assigns.notes)
-      |> Enum.map(&part_html(&1, assigns.show_stage))
+    show = %{stage: assigns.show_stage, numbers: assigns.show_numbers}
+    html = assigns.text |> InlineMarkup.parts(assigns.notes) |> Enum.map(&part_html(&1, show))
 
     assigns = assign(assigns, :html, html)
 
@@ -312,13 +313,23 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   # A piece of an inline stage direction, a note's number among them: in a span, and left
   # out while the stage directions are hidden.
-  defp part_html(%{stage: %{}}, false), do: ""
+  defp part_html(%{stage: %{}}, %{stage: false}), do: ""
 
-  defp part_html(%{stage: %{}} = part, true),
-    do: [~s(<span class="inline-stage">), part_html(%{part | stage: nil}, true), "</span>"]
+  defp part_html(%{stage: %{}} = part, show),
+    do: [~s(<span class="inline-stage">), part_html(%{part | stage: nil}, show), "</span>"]
+
+  # Where a printed line of the source starts; gone while the line numbers are hidden.
+  defp part_html(%{number: _}, %{numbers: false}), do: ""
+
+  defp part_html(%{number: n}, _show),
+    do: [
+      ~s(<span class="pn text-xs align-super text-base-content/70 select-none">),
+      escape(n),
+      "</span>"
+    ]
 
   # Its id is where the Notes view takes the reader back to.
-  defp part_html(%{note: note}, _show_stage) do
+  defp part_html(%{note: note}, _show) do
     [
       ~s(<button type="button" id="nref-),
       escape(note.id),
@@ -332,8 +343,10 @@ defmodule PlaycodeWeb.Components.PlayText do
     ]
   end
 
-  defp part_html(%{italic: true, text: text}, _show_stage), do: ["<em>", escape(text), "</em>"]
-  defp part_html(%{text: text}, _show_stage), do: escape(text)
+  defp part_html(%{italic: true, text: text}, _show), do: ["<em>", breaks(text), "</em>"]
+  defp part_html(%{text: text}, _show), do: breaks(text)
+
+  defp breaks(text), do: text |> escape() |> String.replace("\n", "<br>")
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 

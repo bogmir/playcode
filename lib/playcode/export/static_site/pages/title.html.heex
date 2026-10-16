@@ -46,7 +46,7 @@
         <Components.inline text={note.heading || PlayLabels.kind_label(note.kind)} />
       </h2>
       <p :for={paragraph <- Components.paragraphs(note.content)}>
-        <Components.lines text={paragraph} />
+        <Components.inline text={paragraph} />
       </p>
     </section>
     <section :if={Components.cast(@edition.characters) != [] or Components.scene(@edition) != []}>
@@ -62,7 +62,7 @@
       <%= for note <- Components.scene(@edition) do %>
         <h3 :if={note.heading}><Components.inline text={note.heading} /></h3>
         <p :for={paragraph <- Components.paragraphs(note.content)}>
-          <Components.lines text={paragraph} />
+          <Components.inline text={paragraph} />
         </p>
       <% end %>
     </section>

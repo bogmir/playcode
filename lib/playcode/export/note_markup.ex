@@ -13,7 +13,8 @@ defmodule Playcode.Export.NoteMarkup do
 
   @doc """
   `text`, with `<<…>>` italics as `<em>`, each inline stage direction in a `<span class="stage">`
-  (a note's number inside it when the note falls inside the stage), and its `notes`, as escaped HTML.
+  (a note's number inside it when the note falls inside the stage), and its `notes`, as escaped HTML;
+  each line break a `<br>` (`<br/>` in the EPUB), each printed line's number a `span.pn`.
   """
   def inline(text, notes, format),
     do: text |> InlineMarkup.parts(notes) |> Enum.map_join(&part(&1, format))
@@ -28,8 +29,13 @@ defmodule Playcode.Export.NoteMarkup do
   defp part(%{note: %{number: n}}, :epub),
     do: ~s(<sup><a epub:type="noteref" href="#note-#{n}">#{n}</a></sup>)
 
-  defp part(%{italic: true, text: text}, _format), do: "<em>#{escape(text)}</em>"
-  defp part(%{text: text}, _format), do: escape(text)
+  defp part(%{number: n}, _format), do: ~s(<span class="pn">#{escape(n)}</span>)
+  defp part(%{italic: true, text: text}, format), do: "<em>#{breaks(text, format)}</em>"
+  defp part(%{text: text}, format), do: breaks(text, format)
+
+  # A line break: the EPUB is XHTML.
+  defp breaks(text, :epub), do: text |> escape() |> String.replace("\n", "<br/>")
+  defp breaks(text, :html), do: text |> escape() |> String.replace("\n", "<br>")
 
   @doc "`notes` as endnotes: an `<ol>` section for `:html`, footnote asides for `:epub`."
   def endnotes([], _format), do: ""
