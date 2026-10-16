@@ -486,6 +486,60 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
       assert {"Segunda línea", 2} in lines(play)
     end
+
+    defp play_with_a_song do
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+            <div2 type="escena" n="1"><head>ESCENA I</head>
+              <sp><speaker>ANA</speaker><p>Yo amé en mis primeros años, <lb/>dulce cosa lo juzgué.</p></sp>
+            </div2>
+          </div1>
+          """
+        )
+      )
+    end
+
+    # A browser strips the newlines from an <input type="text">: saving the quick edit
+    # would glue "años," to "dulce".
+    test "a paragraph with a break opens in the form, never the one-line quick edit",
+         %{conn: conn} do
+      play = play_with_a_song()
+      lv = open_scene(conn, play)
+
+      lv |> span("dulce cosa") |> render_click()
+
+      assert has_element?(lv, "#element-form textarea")
+      refute has_element?(lv, "form[id^='inline-edit-']")
+    end
+
+    test "a break typed in the form is kept, and written back as <lb/>", %{conn: conn} do
+      play = play_with_a_song()
+      lv = open_scene(conn, play)
+
+      lv |> span("dulce cosa") |> render_click()
+
+      lv
+      |> form("#element-form", element: %{"content" => "Yo amé,\ndulce cosa,\nlo juzgué."})
+      |> render_submit()
+
+      assert play |> export_tei() |> xml_lines("p") ==
+               [{%{}, "Yo amé, | dulce cosa, | lo juzgué."}]
+    end
+
+    test "the prose form says how to type a printed line's number", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      # A scene-level card's insert menu: the toolbar and each such card offer "Prose".
+      lv |> element("#{card(lv, "Sale el Rey")} button", t("Prose")) |> render_click()
+
+      assert has_element?(
+               lv,
+               "#element-form",
+               t(~s|Number of a printed line in the text: <lb n="1320"/>|)
+             )
+    end
   end
 
   describe "a stage direction's kind and a verse's identifier" do
