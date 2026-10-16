@@ -41,6 +41,24 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert attachment(conn) == ~s(attachment; filename="#{play.code}.epub")
   end
 
+  test "the comparison page prints a prose break as a new line, and its number",
+       %{conn: conn, play: play} do
+    other =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><p n="5">Uno, <lb/>dos.</p></sp></div1>)
+        )
+      )
+
+    body =
+      conn
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{other.id}"]}")
+      |> response(200)
+
+    assert body =~ ~s(<span class="pn">5</span>Uno,<br>dos.)
+  end
+
   test "two plays compared side by side download as one page", %{conn: conn, play: play} do
     other = play_fixture(%{"title" => "La otra versión"})
 

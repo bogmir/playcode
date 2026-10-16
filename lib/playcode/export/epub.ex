@@ -196,11 +196,11 @@ defmodule Playcode.Export.Epub do
     end
   end
 
-  # Each paragraph a <p>, each line break a <br/>, inside the italics too: an EPUB reader
-  # need not honour white-space: pre-line.
+  # Each paragraph a <p>; NoteMarkup turns each line break into a <br/>, inside the
+  # italics too: an EPUB reader need not honour white-space: pre-line.
   defp paratext_paragraphs(content) do
     for paragraph <- String.split(content || "", "\n\n", trim: true), into: "" do
-      "  <p>#{paragraph |> NoteMarkup.inline([], :epub) |> String.replace("\n", "<br/>")}</p>\n"
+      "  <p>#{NoteMarkup.inline(paragraph, [], :epub)}</p>\n"
     end
   end
 
@@ -470,6 +470,12 @@ defmodule Playcode.Export.Epub do
       font-size: 0.7em;
       color: #999;
       margin-left: 0.5em;
+    }
+    .pn {
+      font-size: 0.7em;
+      color: #999;
+      vertical-align: super;
+      padding-right: 0.2em;
     }
 
     .stage-direction {

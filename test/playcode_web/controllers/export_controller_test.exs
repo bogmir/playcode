@@ -87,6 +87,25 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  test "the HTML and EPUB downloads print a prose break as a new line, and its numbers",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><p n="5">Uno, <lb/>dos <lb n="6"/>tres.</p></sp></div1>)
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    assert html =~ ~s(<span class="pn">5</span>Uno,<br>dos <span class="pn">6</span>tres.)
+    assert epub =~ ~s(<span class="pn">5</span>Uno,<br/>dos <span class="pn">6</span>tres.)
+  end
+
   # After the cast list, as the play page and the published site print it.
   test "the HTML and EPUB downloads print the scene of the action after the cast list",
        %{conn: conn} do
@@ -157,7 +176,9 @@ defmodule PlaycodeWeb.ExportControllerTest do
     {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
     epub = Enum.map_join(files, fn {_name, content} -> content end)
 
-    assert html =~ "The banished cavaliers!\nA roving blade!"
+    # A <br> in the HTML since 2026-10-16, the one rule for a line break that the play
+    # text shares; it used to be the \n itself, shown by white-space: pre-line.
+    assert html =~ "The banished cavaliers!<br>A roving blade!"
     assert epub =~ "The banished cavaliers!<br/>A roving blade!"
   end
 
