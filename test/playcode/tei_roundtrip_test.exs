@@ -1549,6 +1549,59 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # Until 2026-10-16 a line or paragraph holding a <seg type="aside"> was read as that
+  # seg's text alone: 1,092 paragraphs and 581 lines of the corpus lost every word, stage
+  # and break outside it ("Sola mi basta. <seg>Basta.</seg>" read "Basta.").
+  describe "a line or paragraph partly aside" do
+    @partly """
+    <div1 type="acto" n="1"><sp><speaker>A</speaker>
+      <lg><l n="1">Sola mi basta. <seg type="aside">Basta.</seg></l></lg>
+      <p>Me fouiller ? Soit. <stage type="delivery">(À part.)</stage><seg type="aside">Prends la coupe<note n="1" type="editor"><p>Dick.</p></note>, Dick.</seg><lb n="12"/>Allons ! <seg type="aside">Vite.</seg></p>
+    </sp></div1>
+    """
+
+    test "keeps its other words, stages, breaks and notes, its asides marked" do
+      xml = roundtrip(tei(body: @partly))
+
+      assert xml_texts(xml, "l") == ["Sola mi basta. Basta."]
+
+      assert xml_lines(xml, "p") ==
+               [{%{}, "Me fouiller ? Soit. (À part.) Prends la coupe, Dick. [12] Allons ! Vite."}]
+
+      assert xml_lines(xml, "seg") ==
+               Enum.map(
+                 ["Basta.", "Prends la coupe, Dick.", "Vite."],
+                 &{%{"type" => "aside"}, &1}
+               )
+
+      assert [%{text: "(À part.)", type: "delivery"}] = xml_inline_stages(xml)
+      assert xml_texts(xml, "note", within: "seg") == ["Dick."]
+    end
+
+    test "exporting, re-importing and exporting again changes nothing" do
+      first = tei(code: "ASD1", body: @partly) |> roundtrip()
+      second = first |> String.replace("ASD1", "ASD2") |> roundtrip()
+
+      assert String.replace(second, "ASD2", "ASD1") == first
+    end
+
+    test "a paragraph all aside keeps the breaks between its asides" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              ~s|<div1 type="acto" n="1"><sp><speaker>A</speaker><p n="51"><stage type="delivery">(Aside.)</stage><seg type="aside">Ay, marry, now there's</seg><lb n="52"/><seg type="aside">a wise man.</seg></p></sp></div1>|
+          )
+        )
+
+      assert xml_lines(xml, "seg") == [
+               {%{"type" => "aside"}, "Ay, marry, now there's [52] a wise man."}
+             ]
+
+      assert xml_inline_stages(xml) == []
+    end
+  end
+
   # A reference is matched on its description as the file carries it
   # (Bibliography.Entry.description/1), so a play's references must come back from its
   # file with exactly the description they went in with, and the play's own place in each.

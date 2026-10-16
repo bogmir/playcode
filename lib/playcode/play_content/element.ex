@@ -30,6 +30,9 @@ defmodule Playcode.PlayContent.Element do
   `content` is plain text with italics as `<<…>>` markers and a stage direction inside a
   line or paragraph as `<stage type="…">…</stage>` (see `InlineMarkup`).
   `position` orders an element among its siblings.
+
+  `is_aside` marks a line or paragraph spoken aside: all of it (`whole_aside?/1`), or,
+  when its content holds `<aside>…</aside>` markers, the words inside them.
   """
 
   use Ecto.Schema
@@ -70,6 +73,10 @@ defmodule Playcode.PlayContent.Element do
   @doc "The kinds of stage direction TEI suggests for `<stage type>`, in its order."
   def stage_types, do: @stage_types
 
+  @doc "True when every word of the element is spoken aside: no marker says which are."
+  def whole_aside?(%{is_aside: aside, content: content}),
+    do: aside and not String.contains?(content || "", "<aside>")
+
   @doc """
   Returns the ordered list of characters from preloaded element_characters.
   """
@@ -103,7 +110,26 @@ defmodule Playcode.PlayContent.Element do
       ~w(speech stage_direction verse_line prose line_group trailer unrecognized)
     )
     |> validate_stage_markers()
+    |> validate_aside_markers()
     |> validate_number_markers()
+  end
+
+  # An aside marker, like a stage, is sound or refused, and only a line or a paragraph
+  # holds one. A line holding one is an aside: the export writes the marker back only then.
+  defp validate_aside_markers(changeset) do
+    content = get_field(changeset, :content)
+
+    cond do
+      not String.contains?(content || "", ["<aside>", "</aside>"]) ->
+        changeset
+
+      get_field(changeset, :type) in ~w(verse_line prose) and
+          Playcode.PlayContent.InlineMarkup.asides_well_formed?(content) ->
+        put_change(changeset, :is_aside, true)
+
+      true ->
+        add_error(changeset, :content, "has an aside marker that is not well formed")
+    end
   end
 
   # A malformed <lb would print as literal tags and could not be written back as <lb n>.

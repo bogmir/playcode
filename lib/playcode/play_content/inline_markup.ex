@@ -6,7 +6,9 @@ defmodule Playcode.PlayContent.InlineMarkup do
   A stage is flat: no stage in a stage, and no stage inside italics, though italics may
   sit inside a stage. A line break is `\n`, kept as text; where a printed line of the
   source starts, its number is a marker, `<lb n="1320"/>`, and a prose paragraph's own
-  number is that marker at its very start.
+  number is that marker at its very start. In a line or paragraph partly spoken aside,
+  each aside is `<aside>…</aside>`, flat, outside any stage or italics (a whole aside is
+  the element's `is_aside` alone, `Element.whole_aside?/1`); the pieces below leave it out.
 
   `parts/1` turns that back into pieces a renderer can mark up; `plain/1` gives the
   text without the markers, stage words kept, for search and word counts; `spoken/1`
@@ -32,7 +34,11 @@ defmodule Playcode.PlayContent.InlineMarkup do
   def parts(nil), do: []
 
   def parts(text) do
-    text = text |> String.replace("&lt;&lt;", "<<") |> String.replace("&gt;&gt;", ">>")
+    text =
+      text
+      |> String.replace("&lt;&lt;", "<<")
+      |> String.replace("&gt;&gt;", ">>")
+      |> String.replace(["<aside>", "</aside>"], "")
 
     if String.contains?(text, "<stage"),
       do: Enum.reject(with_stages(text), &empty?/1),
@@ -168,6 +174,20 @@ defmodule Playcode.PlayContent.InlineMarkup do
       [_, n, rest] -> {n, rest}
       nil -> {nil, text}
     end
+  end
+
+  @doc """
+  True when every `<aside>` and `</aside>` in `text` belongs to a closed, flat marker with
+  words in it, and none sits inside a stage or italics.
+  """
+  def asides_well_formed?(nil), do: true
+
+  def asides_well_formed?(text) do
+    without_asides = Regex.replace(~r{<aside>((?:(?!</?aside>).)+?)</aside>}s, text, "\\1")
+
+    not (String.contains?(without_asides, ["<aside>", "</aside>"]) or
+           Regex.match?(~r{<<(?:(?!>>).)*?</?aside>}s, text) or
+           Regex.match?(~r{<stage[^>]*>(?:(?!</stage>).)*?</?aside>}s, text))
   end
 
   @doc "True when every `<lb` in `text` is a well-formed number marker."

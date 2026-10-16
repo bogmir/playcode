@@ -391,6 +391,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
                "#element-form",
                t(~s|Stage direction in the text: <stage type="delivery">…</stage>|)
              )
+
+      assert has_element?(lv, "#element-form", t("Words spoken aside: <aside>…</aside>"))
     end
 
     test "one typed into a line is a <stage> in the exported line", %{conn: conn, play: play} do

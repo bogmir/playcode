@@ -84,6 +84,7 @@ defmodule Playcode.StatisticsTest do
           "Dulce <<sueño>>mío",
           "<<a>>b <<c>>",
           "Dulce &lt;&lt;sueño&gt;&gt; mío",
+          "Dulce <aside>sueño</aside> mío",
           "",
           "!?"
         ] do
@@ -95,6 +96,7 @@ defmodule Playcode.StatisticsTest do
     # Touching italics are one word, as they are said.
     assert Metrics.words("<<a>>b c") == 2
     assert Metrics.words("Dulce <stage>(bajo)</stage> sueño") == 2
+    assert Metrics.words("Dulce <aside><<sueño>></aside> mío") == 3
     assert Metrics.words(nil) == 0
   end
 
