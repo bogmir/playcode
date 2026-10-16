@@ -1529,6 +1529,9 @@ defmodule Playcode.TeiRoundtripTest do
   end
 
   describe "HTML typed into the text" do
+    alias Playcode.PlayContent
+    alias Playcode.PlayContent.{InlineMarkup, Note}
+
     @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
     @folio_close ~s(<code>&lt;/span&gt;</code>)
     @sup_open ~s(<code>&lt;sup&gt;</code>)
@@ -1623,7 +1626,9 @@ defmodule Playcode.TeiRoundtripTest do
 
     # The form a re-encoded file will use (question 36) reads as the same passage. An
     # <app type="folio"> of any other shape is an entry of the apparatus, kept as written:
-    # read as a passage, its witness would be lost.
+    # read as a passage, its witness would be lost. Both come back as the same <app>, so
+    # the stored lines say which was read as which: a passage is words in the line's text,
+    # an entry a note of the line.
     test "the app form reads back as the passage; any other folio app stays an entry" do
       body = """
       <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
@@ -1632,7 +1637,8 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = roundtrip(tei(code: "FOL3", body: body))
+      play = import_tei!(tei(code: "FOL3", body: body))
+      first = export_tei(play)
 
       assert [
                %{type: "folio", readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O", nil}]},
@@ -1641,8 +1647,38 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert reading_texts(first, "l") == ["O God, God,", "Fie, ’tis"]
 
+      assert [%{loaded_elements: [%{children: [passage, entry]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert InlineMarkup.plain(passage.content) == "O God, O God,"
+      assert passage.notes == []
+      assert [%{} = variant] = entry.notes
+      assert Note.variant?(variant)
+
       second = first |> String.replace("FOL3", "FOL4") |> roundtrip()
       assert String.replace(second, "FOL4", "FOL3") == first
+    end
+
+    # A reading with no word would be an empty passage, which the line refuses (and the
+    # import with it): it stays the entry of the apparatus it was before.
+    test "a folio app whose reading has no word stays an entry, and the import goes on" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">One <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"/></app> two</l>
+        <l n="319">Three <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"> </rdg></app> four</l>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOL6", body: body))
+
+      assert [%{loaded_elements: [%{children: [first, second]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert [%{type: "folio"}, %{type: "folio"}] = xml_apps(export_tei(play))
+      assert InlineMarkup.plain(first.content) == "One two"
+      assert InlineMarkup.plain(second.content) == "Three four"
+      assert [%{}] = first.notes
+      assert [%{}] = second.notes
     end
   end
 

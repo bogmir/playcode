@@ -151,10 +151,15 @@ defmodule Playcode.Import.TeiParser do
 
   defp folio_apps(text), do: text
 
+  # A reading with no word would be an empty passage, which the line refuses: that app
+  # stays an entry.
   defp folio_app?({"app", [{"type", "folio"}], children}) do
     case Enum.reject(children, &blank?/1) do
-      [{"lem", [{"wit", "#Q2"}], lem}, {"rdg", [{"wit", "#F1"}], _}] -> Enum.all?(lem, &blank?/1)
-      _ -> false
+      [{"lem", [{"wit", "#Q2"}], lem}, {"rdg", [{"wit", "#F1"}], words}] ->
+        Enum.all?(lem, &blank?/1) and text_content({"rdg", [], without(words, "note")}) != ""
+
+      _ ->
+        false
     end
   end
 
@@ -167,6 +172,8 @@ defmodule Playcode.Import.TeiParser do
 
   defp blank?(child), do: is_binary(child) and String.trim(child) == ""
 
+  # Whether the file has an F label, which is what makes it Hamlet's. `label?/3` reads a
+  # label of any word on purpose: one passage closes with "and" (v. 3315).
   defp folio_labels?({_name, _attrs, children}) do
     labelled =
       children
@@ -260,8 +267,7 @@ defmodule Playcode.Import.TeiParser do
 
   # The marks as marker text: a passage opened and closed here is <folio>…</folio>.
   defp folio_tags(marks) do
-    marks
-    |> Enum.map(fn
+    Enum.map(marks, fn
       :open -> "<folio>"
       :close -> "</folio>"
       other -> other
