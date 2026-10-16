@@ -158,6 +158,52 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
                )
     end
 
+    # The preview names every column `TeiImport` keeps (its @platform_owned, in that order);
+    # a column without a label crashed the page.
+    test "names the columns a curator set, which the import keeps", %{lv: lv, code: code} do
+      relative = play_fixture(%{"title" => "Original"})
+
+      {:ok, _} =
+        code
+        |> Catalogue.get_play_by_code!()
+        |> Catalogue.update_play(%{
+          language: "en",
+          relationship_type: "traduccion",
+          parent_play_id: relative.id,
+          is_complete: true,
+          show_variants: false,
+          historical_time: "edad_media",
+          historical_time_note: "Reinado de Juan I",
+          composition_date_from: 1606,
+          composition_date_to: 1607,
+          composition_date_note: "typed by a curator",
+          form: "mixed"
+        })
+
+      html = upload(lv, [{"again.xml", tei(code: code)}])
+
+      fields =
+        Enum.map_join(
+          [
+            "language",
+            "relationship",
+            "parent play",
+            "completeness",
+            "variant readings",
+            "historical time",
+            "historical time note",
+            "composition date (from)",
+            "composition date (to)",
+            "composition date note",
+            "form"
+          ],
+          ", ",
+          &t/1
+        )
+
+      assert html =~ t("Keeps: %{fields}", fields: fields)
+    end
+
     test "leaves it alone when cancelled", %{lv: lv, code: code} do
       upload(lv, [{"again.xml", tei(code: code, title: "Segunda versión")}])
 
