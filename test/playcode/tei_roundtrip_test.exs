@@ -1565,29 +1565,84 @@ defmodule Playcode.TeiRoundtripTest do
       assert last =~ "¡Mera nadería, señor!"
     end
 
-    # Hamlet's Folio passages run from one superscript F to the next, across speeches, and
-    # its wrappers mark each element of a passage. They wait for the editor's answer to
-    # question 36; dropping the wrappers now would lose where a passage's inner lines are.
-    test "a file that marks Folio passages with a superscript F keeps its wrappers" do
-      xml =
-        roundtrip(
-          tei(
-            body: """
-            <div1 type="acto" n="1"><head>ACT II</head>
-              <sp><speaker>HAMLET</speaker>
-                <p>#{@folio_open}#{@sup_open}F#{@sup_close}Denmark's a prison.#{@folio_close}</p>
-              </sp>
-              <sp><speaker>ROSENCRANTZ</speaker>
-                <p>#{@folio_open}Then is the world one.#{@sup_open}F#{@sup_close}#{@folio_close}</p>
-              </sp>
-            </div1>
-            """
-          )
-        )
+    @f "#{@sup_open}F#{@sup_close}"
 
-      assert [prison, world] = reading_texts(xml, "p")
-      assert prison =~ ~s(<span class="folio">)
-      assert world =~ ~s(<span class="folio">)
+    # Hamlet's Folio passages (questions 5 and 36): the words only the 1623 Folio prints,
+    # between two superscript F's. They used to stay as typed (this replaces "a file that
+    # marks Folio passages with a superscript F keeps its wrappers"). A passage inside one
+    # element is now the <app type="folio"> question 36 agreed, the spans gone, the words
+    # spaced as the file spaces them.
+    test "a passage inside one element goes back as an app the base text lacks" do
+      body = """
+      <div1 type="acto" n="1"><head>ACT I</head>
+        <sp><speaker>HAMLET</speaker>
+          <l n="316">O God, #{@folio_open}#{@f}O#{@f}#{@folio_close} God,</l>
+          <l n="435">Very like#{@folio_open}#{@f}, very like#{@f}#{@folio_close}. Stayed it long?</l>
+          <p n="1223">blessing, but #{@folio_open}#{@f}not#{@f}#{@folio_close} as your daughter
+            <lb n="1224"/>may conceive. <seg type="aside">’A is far gone, #{@folio_open}#{@f}far gone,#{@f}#{@folio_close} and truly</seg></p>
+        </sp>
+        <stage type="business">Enter a king and a queen, #{@folio_open}#{@f}very lovingly,#{@f}#{@folio_close} the queen embracing</stage>
+      </div1>
+      """
+
+      first = roundtrip(tei(code: "FOL1", body: body))
+
+      refute first =~ "span"
+      assert reading_texts(first, "l") == ["O God, God,", "Very like. Stayed it long?"]
+
+      assert for(app <- xml_apps(first), do: {app.in, app.type, app.readings}) == [
+               {"l", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O", nil}]},
+               {"l", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", ", very like", nil}]},
+               {"p", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "not", nil}]},
+               {"p", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "far gone,", nil}]},
+               {"stage", "folio",
+                [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "very lovingly,", nil}]}
+             ]
+
+      # The aside keeps the Folio words inside it.
+      assert [{_attrs, "’A is far gone, far gone, and truly"}] = xml_elements(first, "seg")
+
+      second = first |> String.replace("FOL1", "FOL2") |> roundtrip()
+      assert String.replace(second, "FOL2", "FOL1") == first
+    end
+
+    # A note counts graphemes into the text without its markers, the Folio ones included:
+    # the one after a passage stays after it.
+    test "a note after a passage stays where it was" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">O God, #{@folio_open}#{@f}O#{@f}#{@folio_close} God,<note n="1"><p>An oath.</p></note> be</l>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOL5", body: body))
+
+      assert [%{in: "l", after: "O God, God,", n: "1"}] = xml_notes(first)
+      assert reading_texts(first, "l") == ["O God, God, be"]
+    end
+
+    # The form a re-encoded file will use (question 36) reads as the same passage. An
+    # <app type="folio"> of any other shape is an entry of the apparatus, kept as written:
+    # read as a passage, its witness would be lost.
+    test "the app form reads back as the passage; any other folio app stays an entry" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O</rdg></app> God,</l>
+        <l n="319">Fie, <app type="folio"><lem wit="#Q2"/><rdg wit="#F2">fie,</rdg></app> ’tis</l>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOL3", body: body))
+
+      assert [
+               %{type: "folio", readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O", nil}]},
+               %{type: "folio", readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F2", "fie,", nil}]}
+             ] = xml_apps(first)
+
+      assert reading_texts(first, "l") == ["O God, God,", "Fie, ’tis"]
+
+      second = first |> String.replace("FOL3", "FOL4") |> roundtrip()
+      assert String.replace(second, "FOL4", "FOL3") == first
     end
   end
 

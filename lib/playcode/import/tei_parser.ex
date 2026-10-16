@@ -91,7 +91,7 @@ defmodule Playcode.Import.TeiParser do
     with {:ok, raw} <- File.read(path),
          xml when is_binary(xml) <- normalize_encoding(raw),
          {:ok, tree} <- parse_xml(xml) do
-      {:ok, drop_folio_wrappers(tree)}
+      {:ok, folio_text(tree)}
     else
       {:error, reason} ->
         {:error, reason}
@@ -109,15 +109,63 @@ defmodule Playcode.Import.TeiParser do
   # --- HTML typed as text ---
 
   # Seven files hold HTML typed into <code> as text (docs/tei-apparatus-and-code.md). On
-  # the old site a <span class="folio"> hid Hamlet's Folio passages, each marked by a
-  # superscript F at either end. A file with no such F (The Rover, the Spanish version of
-  # The Spanish Tragedy) uses the wrapper for nothing the project wants hidden, so it goes
-  # and its words stay. Hamlet's wait for its editor (question 36).
+  # the old site a <span class="folio"> hid Hamlet's Folio passages, each between two
+  # superscript F's. A file with such an F has its passages read into <folio> markers
+  # (InlineMarkup); a file with none (The Rover, the Spanish version of The Spanish
+  # Tragedy) uses the wrapper for nothing the project wants hidden, so it goes and its
+  # words stay. An <app type="folio"> of the agreed form is a passage in any file.
   @folio_wrapper [~s(<span class="folio">), "</span>"]
   @folio_label ["<sup>", "F", "</sup>"]
 
-  defp drop_folio_wrappers(tree),
-    do: if(folio_labels?(tree), do: tree, else: without_folio_wrappers(tree))
+  defp folio_text(tree) do
+    tree = folio_apps(tree)
+
+    if folio_labels?(tree),
+      do: tree |> passages(false) |> elem(0),
+      else: without_folio_wrappers(tree)
+  end
+
+  # The form question 36 agreed: an empty <lem wit="#Q2"/> and one <rdg wit="#F1">. The
+  # reading's contents go between markers in the text beside the <app>. Any other <app
+  # type="folio"> stays an entry of the apparatus, which keeps everything it says.
+  defp folio_apps({name, attrs, children}) do
+    children = Enum.map(children, &folio_apps/1)
+
+    if Enum.any?(children, &folio_app?/1) do
+      children =
+        Enum.flat_map(children, fn
+          {"app", _, readings} = app ->
+            if folio_app?(app),
+              do: ["<folio>" | folio_reading(readings)] ++ ["</folio>"],
+              else: [app]
+
+          child ->
+            [child]
+        end)
+
+      {name, attrs, merge_text(children)}
+    else
+      {name, attrs, children}
+    end
+  end
+
+  defp folio_apps(text), do: text
+
+  defp folio_app?({"app", [{"type", "folio"}], children}) do
+    case Enum.reject(children, &blank?/1) do
+      [{"lem", [{"wit", "#Q2"}], lem}, {"rdg", [{"wit", "#F1"}], _}] -> Enum.all?(lem, &blank?/1)
+      _ -> false
+    end
+  end
+
+  defp folio_app?(_), do: false
+
+  defp folio_reading(readings) do
+    {"rdg", _, words} = Enum.find(readings, &match?({"rdg", _, _}, &1))
+    words
+  end
+
+  defp blank?(child), do: is_binary(child) and String.trim(child) == ""
 
   defp folio_labels?({_name, _attrs, children}) do
     labelled =
@@ -131,6 +179,104 @@ defmodule Playcode.Import.TeiParser do
   end
 
   defp folio_labels?(_text), do: false
+
+  # Elements whose children are elements of the text, not its words.
+  @folio_containers ~w(TEI text front body back group div div1 div2 div3 div4 div5 sp lg)
+
+  # `node` with its Folio passages read, and whether a passage is open after it, threaded
+  # through the tree in document order. A passage runs from one superscript label to the
+  # next, whatever the spans say (Hamlet's file misplaces two): the labels become markers in
+  # the text nodes beside them, so the words keep their spacing, and the spans go.
+  defp passages({name, attrs, children}, inside) when name in @folio_containers do
+    {children, inside} = Enum.map_reduce(children, inside, &passages/2)
+    {{name, attrs, children}, inside}
+  end
+
+  defp passages({name, attrs, children} = element, inside) do
+    if inside or labelled?(element) do
+      {marks, inside} = label_marks(children, inside)
+      {{name, attrs, marks |> folio_tags() |> merge_text()}, inside}
+    else
+      {without_folio_wrappers(element), inside}
+    end
+  end
+
+  defp passages(text, inside), do: {text, inside}
+
+  defp labelled?({_name, _attrs, children}) do
+    children |> Enum.chunk_every(3, 1, :discard) |> Enum.any?(fn [a, b, c] -> label?(a, b, c) end) or
+      Enum.any?(children, &(is_tuple(&1) and labelled?(&1)))
+  end
+
+  defp labelled?(_text), do: false
+
+  # <sup>, its text, </sup>, each typed as text: an F, or once in Hamlet "and" (v. 3315).
+  defp label?(open, text, close),
+    do: typed_text(open) == "<sup>" and is_binary(text) and typed_text(close) == "</sup>"
+
+  # The children with each label an :open or a :close (its words, when they are not the F,
+  # kept inside the passage) and the spans dropped. A child read while no passage is open
+  # may hold one of its own (a <seg> aside); one read inside a passage goes in whole.
+  defp label_marks([a, b, c | rest] = children, inside) do
+    if label?(a, b, c) do
+      label =
+        case {String.trim(b), inside} do
+          {"F", true} -> [:close]
+          {"F", false} -> [:open]
+          {words, true} -> [" " <> words, :close]
+          {words, false} -> [:open, words <> " "]
+        end
+
+      {marks, inside} = label_marks(rest, not inside)
+      {label ++ marks, inside}
+    else
+      next_mark(children, inside)
+    end
+  end
+
+  defp label_marks(children, inside), do: next_mark(children, inside)
+
+  defp next_mark([], inside), do: {[], inside}
+
+  defp next_mark([child | rest], inside) do
+    {child, inside} =
+      cond do
+        typed_text(child) in @folio_wrapper ->
+          {[], inside}
+
+        is_tuple(child) and not inside ->
+          child |> passages(false) |> then(fn {c, i} -> {[c], i} end)
+
+        is_tuple(child) ->
+          {[without_folio_wrappers(child)], inside}
+
+        true ->
+          {[child], inside}
+      end
+
+    {marks, inside} = label_marks(rest, inside)
+    {child ++ marks, inside}
+  end
+
+  # The marks as marker text: a passage opened and closed here is <folio>…</folio>.
+  defp folio_tags(marks) do
+    marks
+    |> Enum.map(fn
+      :open -> "<folio>"
+      :close -> "</folio>"
+      other -> other
+    end)
+  end
+
+  # Touching text nodes as one, so a marker sits against the words beside it.
+  defp merge_text(children) do
+    children
+    |> Enum.chunk_by(&is_binary/1)
+    |> Enum.flat_map(fn
+      [text | _] = texts when is_binary(text) -> [Enum.join(texts)]
+      elements -> elements
+    end)
+  end
 
   defp without_folio_wrappers({name, attrs, children}) do
     {name, attrs,
@@ -1664,7 +1810,7 @@ defmodule Playcode.Import.TeiParser do
 
   defp strays(_app, _own), do: []
 
-  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<lb n="[A-Za-z0-9.\-]+"\/>/
+  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<folio(?: part="[IMF]")?>|<\/folio>|<lb n="[A-Za-z0-9.\-]+"\/>/
 
   # Graphemes of `text` without its markers, one marker at a time: a note inside an
   # italic run or a stage is read while the run is still open, so InlineMarkup.plain/1,

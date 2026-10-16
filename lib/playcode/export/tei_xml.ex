@@ -1008,6 +1008,15 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
+  # A Folio passage (InlineMarkup): inside one element, the <app type="folio"> question 36
+  # agreed, the base text (Q2) lacking what the Folio (F1) reads. Its stages, numbers and
+  # notes nest in the reading as they would anywhere.
+  defp inline_nodes([%{folio: %{run: run} = folio} | _] = parts) do
+    {inside, rest} = Enum.split_while(parts, &match?(%{folio: %{run: ^run}}, &1))
+    words = inside |> Enum.map(&Map.delete(&1, :folio)) |> inline_nodes()
+    folio_nodes(folio.part, words) ++ inline_nodes(rest)
+  end
+
   # A stage direction: its pieces, the notes among them included, go inside one <stage>.
   # Its italics and notes nest as they would anywhere, so the pieces are read again with
   # the stage taken off.
@@ -1041,6 +1050,14 @@ defmodule Playcode.Export.TeiXml do
 
   defp inline_nodes([part | rest]), do: [inline_node(part) | inline_nodes(rest)]
   defp inline_nodes([]), do: []
+
+  defp folio_nodes(nil, words),
+    do: [
+      element(:app, %{type: "folio"}, [
+        element(:lem, %{wit: "#Q2"}, []),
+        element(:rdg, %{wit: "#F1"}, words)
+      ])
+    ]
 
   # An italic piece and the italic pieces that follow it: adjacent italic runs
   # (`<<a>><<b>>`, which the importer would part with a space) and the halves of one a
