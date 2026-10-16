@@ -1463,6 +1463,35 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert String.replace(second, "APP4", "APP3") == first
     end
+
+    # EMOTHE0187 n="481" and EMOTHE0560 n="1106": the entry sits in the "(Aparte)" stage that a
+    # line all aside drops. The stage goes with its words; the entry is not dropped with it, it
+    # stays at the line's start, where the stage was.
+    test "an entry inside the delivery stage of a line all aside is kept, and comes back the same" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1"><stage type="delivery">[Aside to Bungay<app type="substantive" n="481"><rdg wit="#Bevington">[Aside to Bungay]</rdg></app>]</stage><seg type="aside">I smell a tragedy.</seg></l>
+      </sp></div1>
+      """
+
+      first = tei(code: "APP5", body: body) |> roundtrip()
+
+      assert reading_texts(first, "l") == ["I smell a tragedy."]
+
+      assert [
+               %{
+                 in: "l",
+                 after: "",
+                 n: "481",
+                 type: "substantive",
+                 readings: [{"rdg", "#Bevington", "[Aside to Bungay]", nil}]
+               }
+             ] =
+               xml_apps(first)
+
+      second = first |> String.replace("APP5", "APP6") |> roundtrip()
+      assert String.replace(second, "APP6", "APP5") == first
+    end
   end
 
   describe "HTML typed into the text" do

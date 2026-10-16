@@ -1410,8 +1410,13 @@ defmodule Playcode.Import.TeiParser do
 
   defp spoken_outside_aside?(_), do: false
 
+  # An entry in a stage the line drops is not dropped with it: it comes out where the stage was.
   defp aside_content(children) do
     children
+    |> Enum.flat_map(fn
+      {"stage", _, _} = stage -> outermost(stage, ["app"])
+      child -> [child]
+    end)
     |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note app lb), &1)))
     |> pieces(:mark, fn
       {"lb", attrs, _} -> line_break(attrs)
