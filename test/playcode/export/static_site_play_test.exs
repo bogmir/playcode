@@ -675,4 +675,68 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
     assert "index.html#witnesses" in rail
   end
+
+  describe "textual variants" do
+    @variant """
+    <div1 type="jornada" n="1"><head>Jornada I</head>
+      <sp><speaker>FENISA</speaker>
+        <l n="72">mucho la hermosura llama<app n="908"><lem wit="#H">llama</lem><rdg wit="#P3">falta</rdg><note>Por la rima.</note></app>,<note n="1" type="editor"><p>Glosa.</p></note></l>
+      </sp>
+    </div1>
+    """
+
+    defp opened_by(page, label),
+      do:
+        page
+        |> LazyHTML.query(~s(button[aria-label="#{label}"]))
+        |> LazyHTML.attribute("popovertarget")
+
+    defp variant_play! do
+      play = import_tei!(tei(body: @variant))
+
+      bibliography_fixture(play, %{
+        "kind" => "modern_edition",
+        "siglum" => "H",
+        "monogr_editors" => "Hartzenbusch, J. E.",
+        "year_text" => "1860"
+      })
+
+      play
+    end
+
+    test "an asterisk opens the readings; the Notes page leaves them out" do
+      play = variant_play!()
+      dir = generate!([play], all: true)
+      act = page(dir, play, "act-1.html")
+
+      assert squish(LazyHTML.text(LazyHTML.query(act, "main"))) =~ "mucho la hermosura llama*,1"
+      assert opened_by(act, "Textual variant 1") == ["var-1"]
+      assert opened_by(act, "Editor's note 1") == ["note-1"]
+
+      assert act |> LazyHTML.query("#var-1 p") |> Enum.map(&squish(LazyHTML.text(&1))) == [
+               "H (Hartzenbusch, 1860) llama",
+               "P3 falta",
+               "Por la rima."
+             ]
+
+      assert act |> LazyHTML.query(~s(input[data-toggle="va"])) |> Enum.count() == 1
+
+      # the Notes page prints a note's type and body, not a variant's readings: its own
+      # trace of a listed variant is the entry's note, "Por la rima."
+      notes_page = squish(LazyHTML.text(page(dir, play, "notes.html")))
+      refute notes_page =~ "falta"
+      refute notes_page =~ "Por la rima."
+      assert notes_page =~ "Glosa."
+    end
+
+    test "a play whose variants readers do not see has no asterisk and no switch" do
+      play = variant_play!()
+      {:ok, play} = Playcode.Catalogue.update_play(play, %{show_variants: false})
+      act = page(generate!([play], all: true), play, "act-1.html")
+
+      assert opened_by(act, "Textual variant 1") == []
+      assert act |> LazyHTML.query(~s(input[data-toggle="va"])) |> Enum.count() == 0
+      assert opened_by(act, "Editor's note 1") == ["note-1"]
+    end
+  end
 end

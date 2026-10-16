@@ -8,6 +8,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue.Play
+  alias Playcode.Export.NoteMarkup
   alias Playcode.Export.StaticSite.{Edition, Search}
   alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias Playcode.Witnesses
@@ -116,6 +117,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2>Show</h2>
       <label><input type="checkbox" data-toggle="sd" checked /> Stage directions</label>
       <label><input type="checkbox" data-toggle="vf" checked /> Verse forms</label>
+      <label :if={@edition.variants}>
+        <input type="checkbox" data-toggle="va" checked /> Variants
+      </label>
       <%= if @cast != [] do %>
         <h2>Highlight</h2>
         <select data-highlight aria-label="Highlight a character">
@@ -608,8 +612,17 @@ defmodule Playcode.Export.StaticSite.Components do
     do: [~s(<span class="pn), if(fifth?(n), do: " m5", else: ""), ~s(">), escape(n), "</span>"]
 
   # A note's marker: its number, a button that opens the note (endnotes/1) as a popover.
-  # Its id is what a search result and the Notes page link to.
-  defp part(%{note: note}) do
+  # Its id is what a search result and the Notes page link to. A variant's is an asterisk,
+  # which the "Variants" toggle hides.
+  defp part(%{note: note}),
+    do: if(Note.variant?(note), do: variant_ref(note), else: note_ref(note))
+
+  defp part(%{italic: true, text: text}),
+    do: ["<em>", breaks(text), "</em>"]
+
+  defp part(%{text: text}), do: breaks(text)
+
+  defp note_ref(note) do
     number = Integer.to_string(note.number)
     label = escape("#{PlayLabels.note_type_label(note.type)} #{number}")
 
@@ -626,10 +639,17 @@ defmodule Playcode.Export.StaticSite.Components do
     ]
   end
 
-  defp part(%{italic: true, text: text}),
-    do: ["<em>", breaks(text), "</em>"]
+  defp variant_ref(note) do
+    number = Integer.to_string(note.number)
 
-  defp part(%{text: text}), do: breaks(text)
+    [
+      ~s(<button type="button" class="vref" popovertarget="var-),
+      number,
+      ~s(" aria-label="),
+      escape("#{PlayLabels.note_type_label(note.type)} #{number}"),
+      ~s(">*</button>)
+    ]
+  end
 
   defp breaks(text), do: text |> escape() |> String.replace("\n", "<br>")
 
@@ -641,9 +661,12 @@ defmodule Playcode.Export.StaticSite.Components do
 
   @doc """
   A page's notes. Each is a popover its marker opens (`part/1`); in print, and in a
-  browser without popover, they are the page's endnotes.
+  browser without popover, they are the page's endnotes, its variants after them.
   """
   def endnotes(assigns) do
+    {variants, notes} = Enum.split_with(assigns.notes, &Note.variant?/1)
+    assigns = assign(assigns, notes: notes, variants: variants)
+
     ~H"""
     <section :if={@notes != []} class="notes" role="doc-endnotes" aria-label="Notes">
       <ol>
@@ -661,6 +684,22 @@ defmodule Playcode.Export.StaticSite.Components do
           <p :for={paragraph <- Note.paragraphs(note)}><.inline text={paragraph} /></p>
         </li>
       </ol>
+    </section>
+    <section :if={@variants != []} class="notes" aria-label="Textual variants">
+      <ul>
+        <li :for={variant <- @variants} id={"var-#{variant.number}"} popover>
+          <button
+            type="button"
+            popovertarget={"var-#{variant.number}"}
+            popovertargetaction="hide"
+            aria-label="Close"
+          >
+            ×
+          </button>
+          <b>{PlayLabels.note_type_label(variant.type)}</b>
+          {Phoenix.HTML.raw(NoteMarkup.readings(variant, :html))}
+        </li>
+      </ul>
     </section>
     """
   end

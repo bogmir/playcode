@@ -23,7 +23,8 @@ defmodule Playcode.Export.StaticSite.Edition do
     :ghosts,
     :passage_starts,
     :page_of,
-    :notes
+    :notes,
+    :variants
   ]
 
   @doc "Loads play `id` and everything the site derives from it."
@@ -32,7 +33,7 @@ defmodule Playcode.Export.StaticSite.Edition do
     # after it can only be newer. A play edited mid-load stays flagged as changed, never
     # published stale and recorded as current.
     play = Catalogue.get_play_with_all!(id)
-    divisions = PlayContent.load_play_content(id)
+    divisions = PlayContent.load_play_content(id, variants: play.show_variants)
     items = Metrics.items(divisions)
     pages = pages(divisions, items)
     refs = refs(items)
@@ -50,7 +51,8 @@ defmodule Playcode.Export.StaticSite.Edition do
       ghosts: ghosts(items),
       passage_starts: passage_starts(Metrics.passages(items)),
       page_of: page_of(pages, items),
-      notes: notes(divisions, items, pages, refs)
+      notes: notes(divisions, items, pages, refs),
+      variants: divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1)
     }
   end
 
@@ -139,7 +141,8 @@ defmodule Playcode.Export.StaticSite.Edition do
   # the first page that lists it (a split act's heading note is on the act's own page,
   # not on every scene page that prints the heading again), how a search result cites
   # where it is, the speakers there, and the word it glosses. A note on no page (in a
-  # cast list) is left out.
+  # cast list) is left out. Variants are not listed: they are the apparatus, opened from
+  # the text.
   defp notes(divisions, items, pages, refs) do
     slug_of =
       Enum.reduce(pages, %{}, fn page, acc ->
@@ -156,6 +159,7 @@ defmodule Playcode.Export.StaticSite.Edition do
       end)
 
     for %{note: note, anchor: anchor} = at <- Note.with_anchors(divisions),
+        not Note.variant?(note),
         slug when not is_nil(slug) <- [slug_of[note.id]] do
       item = item_of[anchor.id] || first_of[anchor.id]
 
