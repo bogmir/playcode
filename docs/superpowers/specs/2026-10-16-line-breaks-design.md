@@ -1,6 +1,6 @@
 # Line breaks and prose line numbers
 
-**Status:** design, approved section by section on 2026-10-16. Answers questions 9 and 10 of
+**Status:** implemented, 2026-10-16 (branch `line-breaks`, commits da72d28 to 453456b); approved section by section the same day. Answers questions 9 and 10 of
 `docs/stakeholder/preguntas.html` (answered 2026-10-15), and closes the backlog item "`<lb/>` is
 flattened to a space in the play text" and the round-trip rows "Line breaks in prose, letters
 and songs" and "Line numbers of prose".
@@ -224,3 +224,5 @@ Each is run and seen failing before the code it covers, through the outermost AP
   renderer change only.
 - **Content search in the editor** matches the marker text, as it does `<stage>`.
 - **The Word importer** produces no breaks and is not touched.
+- **A break that ends a note's paragraph** (`…<lb/></p>`, 10 in EMOTHE0254, 0730 and 0752) is dropped: it shows nothing, and `Note.paragraphs/1` trims it.
+- **A break in an aside paragraph, outside its aside**, is lost with that text (`docs/backlog.md`, *An aside paragraph keeps only its aside*).
