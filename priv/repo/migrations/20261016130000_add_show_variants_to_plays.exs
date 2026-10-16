@@ -1,7 +1,7 @@
 defmodule Playcode.Repo.Migrations.AddShowVariantsToPlays do
   @moduledoc """
   "Show variant readings": whether readers see a play's textual variants. Hamlet's
-  apparatus is unfinished (question 2 of docs/stakeholder/preguntas.html), so its are
+  apparatus is unfinished (question 2 of docs/stakeholder/preguntas.html), so its variants are
   hidden until its editor has finished. The TEI import never writes it, and the file never
   carries it.
   """
