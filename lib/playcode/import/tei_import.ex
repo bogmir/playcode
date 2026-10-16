@@ -34,6 +34,7 @@ defmodule Playcode.Import.TeiImport do
     :relationship_type,
     :parent_play_id,
     :is_complete,
+    :show_variants,
     :historical_time,
     :historical_time_note,
     :composition_date_from,
@@ -161,8 +162,9 @@ defmodule Playcode.Import.TeiImport do
 
   defp preserved_fields(nil), do: []
 
+  # The platform-owned columns a curator has set: those that differ from a new play's.
   defp preserved_fields(%Play{} = play) do
-    Enum.filter(@platform_owned, fn field -> Map.get(play, field) not in [nil, false] end)
+    Enum.filter(@platform_owned, &(Map.get(play, &1) != Map.get(%Play{}, &1)))
   end
 
   # The file's rows edited since their import, which a re-import replaces, an editor's

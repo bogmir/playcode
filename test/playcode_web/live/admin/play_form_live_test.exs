@@ -5,7 +5,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
   import Phoenix.LiveViewTest
   import Playcode.TestFixtures
-  import Playcode.ImportHelpers, only: [import_tei!: 1, tei: 1]
+
+  import Playcode.ImportHelpers,
+    only: [export_tei: 1, import_tei!: 1, tei: 1, write_tmp!: 1, xml_apps: 1]
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
@@ -201,5 +203,35 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
     assert html =~ error("must be given together with the end year")
     assert Catalogue.get_play!(play.id).composition_date_from == nil
+  end
+
+  # Hamlet's apparatus is unfinished (question 2): its variants are hidden from readers
+  # until its editor has finished, and the file still carries them.
+  test "Show variant readings off hides the variants from readers, never from the file",
+       %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno<app n="1"><rdg wit="#B">dos</rdg></app> tres</l></sp></div1>)
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+    save(view, %{"show_variants" => "false"})
+
+    hidden? = fn ->
+      {:ok, page, _html} = live(build_conn(), ~p"/plays/#{play.code}")
+
+      not has_element?(page, ~s(button[aria-label^="#{t("Textual variant")}"])) and
+        not has_element?(page, "label", t("Variants"))
+    end
+
+    assert hidden?.()
+    assert [%{n: "1"}] = xml_apps(export_tei(play))
+
+    # A re-import of its file leaves the setting as the curator left it.
+    {:ok, _} = play |> export_tei() |> write_tmp!() |> Playcode.Import.TeiImport.import_file()
+    assert hidden?.()
   end
 end

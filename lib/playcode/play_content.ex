@@ -632,8 +632,11 @@ defmodule Playcode.PlayContent do
   Loads the full play content tree: divisions with nested elements, their notes and variants
   (`Note.variant?/1`) numbered in reading order, each kind in its own sequence, and each
   variant reading's sigla named (`Note.Reading`). Used for rendering the play text.
+
+  `variants: false` leaves the variants out, as readers of a play whose `show_variants` is off
+  see it.
   """
-  def load_play_content(play_id) do
+  def load_play_content(play_id, opts \\ []) do
     divisions =
       Division
       |> where(play_id: ^play_id)
@@ -678,9 +681,16 @@ defmodule Playcode.PlayContent do
 
     divisions
     |> attach_elements(elements_by_division)
+    |> without_variants(Keyword.get(opts, :variants, true))
     |> number_notes()
     |> name_witnesses(play_id)
   end
+
+  # A play whose readers do not see its variants (Play.show_variants).
+  defp without_variants(divisions, true), do: divisions
+
+  defp without_variants(divisions, false),
+    do: update_notes(divisions, &Enum.reject(&1, fn note -> Note.variant?(note) end))
 
   # --- Element-Character associations ---
 

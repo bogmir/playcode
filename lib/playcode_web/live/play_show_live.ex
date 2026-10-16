@@ -29,7 +29,7 @@ defmodule PlaycodeWeb.PlayShowLive do
         complete: not Authz.can?(socket.assigns.current_user, :view_drafts)
       )
 
-    divisions = PlayContent.load_play_content(play.id)
+    divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
     characters = PlayContent.list_characters(play.id)
     statistic = Statistics.get_statistics(play.id)
     bibliography = Bibliography.list_for_play(play.id)
