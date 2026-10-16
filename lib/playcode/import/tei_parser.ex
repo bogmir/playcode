@@ -21,8 +21,10 @@ defmodule Playcode.Import.TeiParser do
 
   An element is `%{type, position, notes, elements}` plus its columns, and a speech's
   `who` the xml_ids it names. A reference of the bibliography is its
-  `Bibliography.Entry.description/1` and where the play sits in it. A note is `%{offset, n, type, term, body}`. Nothing here
-  knows a row: ids, `play_id` and `origin` are the writer's.
+  `Bibliography.Entry.description/1` and where the play sits in it. A note is `%{offset, n, type, term, body}`. An entry of
+  the critical apparatus is a note of type "variante" that also carries `variant_type`,
+  `range_end` and `readings` (`%{lemma, wit, text, note}`), its `body` possibly nil. Nothing
+  here knows a row: ids, `play_id` and `origin` are the writer's.
 
   Handles UTF-16 encoded files (common in the EMOTHE corpus) by converting them to UTF-8
   before parsing with Saxy.
@@ -1404,13 +1406,13 @@ defmodule Playcode.Import.TeiParser do
   defp spoken_outside_aside?(text) when is_binary(text), do: String.trim(text) != ""
 
   defp spoken_outside_aside?({name, _, _} = child),
-    do: name not in ~w(stage note) and not aside_seg?(child) and text_content(child) != ""
+    do: name not in ~w(stage note app) and not aside_seg?(child) and text_content(child) != ""
 
   defp spoken_outside_aside?(_), do: false
 
   defp aside_content(children) do
     children
-    |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note lb), &1)))
+    |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note app lb), &1)))
     |> pieces(:mark, fn
       {"lb", attrs, _} -> line_break(attrs)
       seg -> text_content(seg, :mark)
@@ -1557,8 +1559,12 @@ defmodule Playcode.Import.TeiParser do
   # critical apparatus.
   @apart ~w(note app)
 
-  # Each child's text, read by `fun`; under :mark a <note> or <app> child is its mark instead.
+  # Each child's text, read by `fun`. Under :mark (the play text) a <note> or <app> child is
+  # its mark instead; elsewhere (a note's own text) an <app> is left out, its neighbours
+  # joined as written: a note that copies its line's entry keeps the line's words.
   defp pieces(children, notes, fun) do
+    children = if notes == :mark, do: children, else: without(children, "app")
+
     children
     |> Enum.with_index()
     |> Enum.map(fn
@@ -1596,12 +1602,18 @@ defmodule Playcode.Import.TeiParser do
   # Returns the text and its notes (parse_note/2), each offset counting graphemes of the text
   # without its << and >> markers and stage tags, as InlineMarkup.plain/1 does. A note
   # whose mark the reading dropped (inside a stripped aside <stage>) is dropped with it.
-  # So is a note with no text.
+  # So is a note with no text. An entry inside a note that copies none of the element's
+  # comes out after the note (strays/2).
   # ponytail: two adjacent notes each with whitespace beside them ("a <note/><note/> b")
   # store "a  b" and the second note one grapheme later; the corpus has no note after a
   # space. Carry a pending space to the next text if one turns up.
   defp take_notes(marked, element) do
     by_key = Map.new(outermost(element, @apart), &{Integer.to_string(:erlang.phash2(&1)), &1})
+
+    own =
+      for {"app", attrs, _} <- outermost(element, @apart),
+          into: MapSet.new(),
+          do: attr_value(attrs, "n")
 
     {text, found} =
       @note_mark
@@ -1627,8 +1639,19 @@ defmodule Playcode.Import.TeiParser do
     {text,
      found
      |> Enum.reverse()
-     |> Enum.flat_map(fn {offset, note} -> parse_note(note, min(offset, last)) end)}
+     |> Enum.flat_map(fn {offset, note} ->
+       offset = min(offset, last)
+       parse_note(note, offset) ++ Enum.flat_map(strays(note, own), &parse_note(&1, offset))
+     end)}
   end
+
+  # The <app>s inside a note that copy none of its element's entries (`own`, their `n`s):
+  # EMOTHE0530's n="496", only in the note on "ne". They move into the line, after the
+  # note; the others are copies of the line's entry, which the note's text leaves out.
+  defp strays({"note", _, _} = note, own),
+    do: note |> outermost(["app"]) |> Enum.reject(&(attr_value(elem(&1, 1), "n") in own))
+
+  defp strays(_app, _own), do: []
 
   @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<lb n="[A-Za-z0-9.\-]+"\/>/
 
