@@ -138,6 +138,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
           {content, scene},
           {content, scene ++ [{"span", s.speech.speaker_label}]},
           {content, scene ++ [edit.(s.verse_line)]},
+          {content, scene ++ [edit.(s.verse_line), {"button", t("Add variant")}]},
           {content, scene ++ [edit.(s.prose)]},
           {content, scene ++ [edit.(s.stage_direction)]}
         ] do

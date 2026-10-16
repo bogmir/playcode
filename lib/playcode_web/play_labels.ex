@@ -44,8 +44,10 @@ defmodule PlaycodeWeb.PlayLabels do
   @doc """
   The type a note is filtered by: its own when it has a label (`Note.types/0`), else
   `"other"`, so the many types the corpus carries without one (`latinismo`,
-  `falta_tipo`, …) are one plain Note, not several options that read the same.
+  `falta_tipo`, …) are one plain Note, not several options that read the same. A variant
+  is a key of its own.
   """
+  def note_type_key("variante"), do: "variante"
   def note_type_key(type), do: if(type in Note.types(), do: type, else: "other")
 
   @doc """

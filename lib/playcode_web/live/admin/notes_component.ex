@@ -1,14 +1,16 @@
 defmodule PlaycodeWeb.Admin.NotesComponent do
   @moduledoc """
   The notes on one line, speaker label or heading, in the content editor's modal for it:
-  a list with Edit and Delete, and a form to add a note or change one. Each change is
-  saved and logged at once, apart from the modal's own form, which a note's form cannot
-  sit inside.
+  a list with Edit and Delete, and a form to add a note or a variant, or change one. Each
+  change is saved and logged at once, apart from the modal's own form, which a note's form
+  cannot sit inside.
   """
   use PlaycodeWeb, :live_component
 
+  alias Phoenix.LiveView.JS
   alias Playcode.{ActivityLog, PlayContent}
   alias Playcode.PlayContent.{Division, Note}
+  alias Playcode.PlayContent.Note.Reading
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -26,6 +28,26 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
     note = %Note{offset: default_offset(socket.assigns.anchor)}
     {:noreply, assign(socket, editing: note, form: to_form(PlayContent.change_note(note)))}
   end
+
+  def handle_event("new_variant", _params, socket) do
+    note = %Note{
+      type: Note.variant(),
+      offset: default_offset(socket.assigns.anchor),
+      readings: [%Reading{lemma: true}]
+    }
+
+    {:noreply, assign(socket, editing: note, form: to_form(PlayContent.change_note(note)))}
+  end
+
+  # A reading added or removed, or a field typed in: the form shows the rows as they stand.
+  def handle_event("change_note", %{"note" => params}, %{assigns: %{editing: %Note{}}} = socket) do
+    %{editing: note} = socket.assigns
+
+    {:noreply,
+     assign(socket, :form, to_form(PlayContent.change_note(note, note_params(note, params))))}
+  end
+
+  def handle_event("change_note", _params, socket), do: {:noreply, socket}
 
   def handle_event("edit_note", %{"id" => id}, socket) do
     case own_note(socket, id) do
@@ -46,7 +68,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
 
   def handle_event("save_note", %{"note" => params}, socket) do
     %{editing: note, anchor: anchor, play_id: play_id} = socket.assigns
-    params = Map.take(params, ~w(offset type term body))
+    params = note_params(note, params)
 
     {action, result} =
       if note.id,
@@ -81,6 +103,19 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
             {:noreply, gone(socket)}
         end
     end
+  end
+
+  # What a form may change: a variant's place, readings and note, never its type; a note's
+  # type, place, term and text. A variant stays a variant and a note a note. The Notes tab
+  # saves through it too.
+  @doc false
+  def note_params(note, params) do
+    if Note.variant?(note),
+      do:
+        params
+        |> Map.take(~w(offset body readings readings_order readings_delete))
+        |> Map.put("type", note.type),
+      else: Map.take(params, ~w(offset type term body))
   end
 
   # One of this anchor's notes: the id comes from the browser, and the list in the socket
@@ -152,7 +187,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
           <div class="flex-1">
             <span class="font-medium">{PlayLabels.note_type_label(note.type)}</span>
             <em :if={note.term}>{note.term}</em>
-            <span class="text-base-content/70">{String.slice(note.body, 0, 80)}</span>
+            <span class="text-base-content/70">{String.slice(Note.summary(note), 0, 80)}</span>
           </div>
           <button
             type="button"
@@ -187,16 +222,27 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
       >
         {gettext("Add note")}
       </button>
+      <button
+        :if={is_nil(@form)}
+        type="button"
+        phx-click="new_variant"
+        phx-target={@myself}
+        class="btn btn-sm"
+      >
+        {gettext("Add variant")}
+      </button>
 
       <.form
         :if={@form}
         for={@form}
         id="note-form"
+        phx-change="change_note"
         phx-submit="save_note"
         phx-target={@myself}
         class="space-y-3"
       >
         <.input
+          :if={not Note.variant?(@editing)}
           field={@form[:type]}
           type="select"
           label={gettext("Type")}
@@ -208,8 +254,21 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
           label={gettext("After")}
           options={offset_options(@anchor, @editing)}
         />
-        <.input field={@form[:term]} type="text" label={gettext("Term")} />
-        <.input field={@form[:body]} type="textarea" rows="4" label={gettext("Text")} />
+        <.readings_fields :if={Note.variant?(@editing)} form={@form} />
+        <.input
+          :if={not Note.variant?(@editing)}
+          field={@form[:term]}
+          type="text"
+          label={gettext("Term")}
+        />
+        <.input
+          field={@form[:body]}
+          type="textarea"
+          rows="4"
+          label={
+            if Note.variant?(@editing), do: gettext("Comment on the entry"), else: gettext("Text")
+          }
+        />
         <div class="flex gap-2">
           <button type="submit" class="btn btn-primary btn-sm">{gettext("Save")}</button>
           <button
@@ -223,6 +282,53 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
         </div>
       </.form>
     </section>
+    """
+  end
+
+  attr :form, Phoenix.HTML.Form, required: true
+
+  @doc "A variant's readings in a note form, to add to, change or remove."
+  def readings_fields(assigns) do
+    ~H"""
+    <fieldset>
+      <legend class="label-text font-medium">{gettext("Readings")}</legend>
+      <.inputs_for :let={reading} field={@form[:readings]}>
+        <input type="hidden" name={"#{@form.name}[readings_order][]"} value={reading.index} />
+        <div class="mb-2 flex flex-wrap items-end gap-2">
+          <div class="w-32">
+            <.input field={reading[:wit]} type="text" label={gettext("Witnesses")} />
+          </div>
+          <div class="grow">
+            <.input field={reading[:text]} type="text" label={gettext("Reading")} />
+          </div>
+          <div class="grow">
+            <.input field={reading[:note]} type="text" label={gettext("Comment")} />
+          </div>
+          <div class="text-xs">
+            <.input field={reading[:lemma]} type="checkbox" label={gettext("Edition's reading")} />
+          </div>
+          <button
+            type="button"
+            name={"#{@form.name}[readings_delete][]"}
+            value={reading.index}
+            phx-click={JS.dispatch("change")}
+            class="btn btn-ghost btn-xs text-error"
+          >
+            {gettext("Remove")}
+          </button>
+        </div>
+      </.inputs_for>
+      <input type="hidden" name={"#{@form.name}[readings_delete][]"} />
+      <button
+        type="button"
+        name={"#{@form.name}[readings_order][]"}
+        value="new"
+        phx-click={JS.dispatch("change")}
+        class="btn btn-ghost btn-xs"
+      >
+        {gettext("Add reading")}
+      </button>
+    </fieldset>
     """
   end
 end

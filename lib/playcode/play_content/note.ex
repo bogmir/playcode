@@ -76,6 +76,19 @@ defmodule Playcode.PlayContent.Note do
     %{note | readings: readings}
   end
 
+  @doc """
+  A note's text, or a variant's readings, each its witnesses and text ("#H llama · #P3
+  falta"), then its own note: what the admin's lists show of it.
+  """
+  def summary(%__MODULE__{} = note) do
+    readings =
+      Enum.map(note.readings, fn reading ->
+        [reading.wit, reading.text] |> Enum.reject(&is_nil/1) |> Enum.join(" ")
+      end)
+
+    (readings ++ List.wrap(note.body)) |> Enum.join(" · ")
+  end
+
   @doc "A note's paragraphs, or a text's, in order; none for no text (a variant with no note)."
   def paragraphs(%__MODULE__{body: body}), do: paragraphs(body)
   def paragraphs(nil), do: []
