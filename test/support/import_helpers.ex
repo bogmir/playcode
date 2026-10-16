@@ -240,6 +240,39 @@ defmodule Playcode.ImportHelpers do
   end
 
   @doc """
+  Each `tag` element of the body, in document order, as `{attributes, text}`: its text
+  with each `<lb/>` written " | " and each `<lb n="…"/>` " [n] ", its notes left out,
+  whitespace collapsed. `in_notes: true` reads the `tag` elements inside the body's notes
+  instead.
+  """
+  def xml_lines(xml, tag, opts \\ []) do
+    body = xml |> parse() |> descendants("body") |> List.first()
+
+    elements =
+      if opts[:in_notes],
+        do: body |> descendants("note") |> Enum.flat_map(&descendants(&1, tag)),
+        else: outside_notes(body, tag)
+
+    Enum.map(elements, fn {_name, attrs, children} ->
+      text =
+        children |> Enum.map_join(&lined/1) |> String.replace(~r/\s+/u, " ") |> String.trim()
+
+      {Map.new(attrs), text}
+    end)
+  end
+
+  defp lined({"lb", attrs, _}) do
+    case Map.new(attrs)["n"] do
+      nil -> " | "
+      n -> " [#{n}] "
+    end
+  end
+
+  defp lined({"note", _, _}), do: ""
+  defp lined({_name, _attrs, children}), do: Enum.map_join(children, &lined/1)
+  defp lined(text) when is_binary(text), do: text
+
+  @doc """
   Every `<note>` in the body, in document order, as a map: `in`, the tag of the line,
   paragraph, stage direction, speaker or heading it sits in; `after`, that element's text
   before it (notes left out, whitespace collapsed); its `n`, `type` and `term`; the text

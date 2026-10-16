@@ -124,6 +124,30 @@ defmodule Playcode.Export.TeiValidatorTest do
       assert TeiValidator.validate(xml) == {:ok, :valid}
     end
 
+    # TEI allows <lb> in <p>, <note>, <emph> and <stage>, and an n on <p>. @fixture_file
+    # with one more act, under a code of its own, for the same reason as the bibliography
+    # test.
+    test "a play with line breaks and prose line numbers exports as schema-valid TEI" do
+      act =
+        ~s(<div1 type="acto" n="9"><sp><speaker>A</speaker><p n="7">Uno, <lb/>dos <lb n="8"/><emph>tres <lb/>cuatro</emph><note n="1" type="editor"><p>Glosa <lb/>larga.</p></note>.</p></sp></div1>)
+
+      play =
+        @fixture_file
+        |> File.read!()
+        |> String.replace(
+          ~s(<title key="archivo">EMOTHE0759_AutoDeLaBarcaDelInfierno</title>),
+          ~s(<title key="archivo">LB#{System.unique_integer([:positive])}</title>)
+        )
+        |> String.replace("</body>", act <> "</body>")
+        |> Playcode.ImportHelpers.import_tei!()
+
+      xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
+
+      assert xml =~ ~s(<p n="7">)
+      assert xml =~ ~s(<lb n="8"/>)
+      assert TeiValidator.validate(xml) == {:ok, :valid}
+    end
+
     # Every witness type, a siglum that is no XML name, a witness with no siglum and line
     # breaks (<lb/>s), and no sources: the sourceDesc then holds the listWit alone. Under a code of its own, for the
     # same reason as the bibliography test.

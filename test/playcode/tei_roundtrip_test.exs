@@ -1552,6 +1552,97 @@ defmodule Playcode.TeiRoundtripTest do
   # A reference is matched on its description as the file carries it
   # (Bibliography.Entry.description/1), so a play's references must come back from its
   # file with exactly the description they went in with, and the play's own place in each.
+
+  # Questions 9 and 10 (docs/stakeholder/preguntas.html): every break is shown, and a
+  # printed line's number with it. Until 2026-10-16 each <lb/> was read as a space.
+  describe "line breaks and prose line numbers" do
+    defp speech(paragraphs, code \\ nil) do
+      opts = [
+        body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{paragraphs}</sp></div1>)
+      ]
+
+      tei(if code, do: [{:code, code} | opts], else: opts)
+    end
+
+    test "a paragraph's line breaks come back where the file had them" do
+      xml =
+        roundtrip(
+          speech(
+            ~s(<p>Yo amé en mis primeros años, <lb/>dulce cosa lo juzgué; <lb/>pero casarme.</p>)
+          )
+        )
+
+      assert xml_lines(xml, "p") ==
+               [{%{}, "Yo amé en mis primeros años, | dulce cosa lo juzgué; | pero casarme."}]
+    end
+
+    test "a printed line's number and a paragraph's number come back as written" do
+      xml =
+        roundtrip(
+          speech(
+            ~s(<p n="1319">Beggar that I am, <lb n="1320"/>but I thank you, <lb n="1311-2"/>my thanks.</p>)
+          )
+        )
+
+      assert xml_lines(xml, "p") ==
+               [
+                 {%{"n" => "1319"},
+                  "Beggar that I am, [1320] but I thank you, [1311-2] my thanks."}
+               ]
+    end
+
+    test "a number right after a paragraph's own stays a break inside it" do
+      xml = roundtrip(speech(~s(<p n="5"><lb n="6"/>Uno.</p>)))
+
+      assert xml_lines(xml, "p") == [{%{"n" => "5"}, "[6] Uno."}]
+    end
+
+    test "a break that opens a paragraph comes back" do
+      xml = roundtrip(speech(~s(<p><lb/>Fausto maledetto!</p>)))
+
+      assert xml_lines(xml, "p") == [{%{}, "| Fausto maledetto!"}]
+    end
+
+    test "a break inside italics, inside a stage and inside a note comes back there" do
+      xml =
+        roundtrip(
+          speech(
+            ~s|<p>Dijo <emph>sic <lb/>probo</emph> y <stage>(canta <lb/>bajo)</stage> fin<note n="1" type="editor"><p>Una glosa <lb/>en dos líneas.</p></note>.</p>|
+          )
+        )
+
+      assert xml_lines(xml, "p") == [{%{}, "Dijo sic | probo y (canta | bajo) fin."}]
+      assert xml_lines(xml, "emph") == [{%{}, "sic | probo"}]
+      assert xml_lines(xml, "stage") == [{%{}, "(canta | bajo)"}]
+      assert xml_lines(xml, "p", in_notes: true) == [{%{}, "Una glosa | en dos líneas."}]
+    end
+
+    test "a note just after a break keeps its place, and no space follows the break" do
+      xml =
+        roundtrip(
+          # The space between the break and the note is what makes the note "spaced".
+          speech(~s(<p>Uno, <lb/> <note n="1" type="editor"><p>Glosa.</p></note>dos.</p>))
+        )
+
+      assert [%{n: "1", after: "Uno,"}] = xml_notes(xml)
+      assert xml_lines(xml, "p") == [{%{}, "Uno, | dos."}]
+      # Stored "Uno,\ndos.", as many characters as "Uno, dos." before: no space after the
+      # break, so none after the note either.
+      assert xml =~ "<lb/><note"
+      assert xml =~ "</note>dos."
+    end
+
+    test "exporting, re-importing and exporting again changes nothing" do
+      body =
+        ~s(<p n="7">Uno, <lb/>dos <lb n="8"/>tres<note n="1" type="editor"><p>Glosa <lb/>larga.</p></note>.</p><p><lb/>Cuatro <emph>cinco <lb/>seis</emph>.</p>)
+
+      first = speech(body, "LBR1") |> roundtrip()
+      second = first |> String.replace("LBR1", "LBR2") |> roundtrip()
+
+      assert String.replace(second, "LBR2", "LBR1") == first
+    end
+  end
+
   describe "the bibliography" do
     alias Playcode.Bibliography
     alias Playcode.Bibliography.Entry

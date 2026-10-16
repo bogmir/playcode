@@ -809,8 +809,8 @@ defmodule Playcode.Export.TeiXml do
     )
   end
 
-  # A paratext's line breaks as <lb/>, wherever they fall, inside an <emph> too: split
-  # before the italics are read, a break inside them would leave the markers as text.
+  # A text's line breaks as <lb/>, wherever they fall, inside an <emph> or a <stage> too:
+  # the italics and stages are read first, so a break cannot leave their markers as text.
   defp with_breaks(text) when is_binary(text), do: lines(text)
 
   defp with_breaks(nodes) when is_list(nodes),
@@ -828,7 +828,7 @@ defmodule Playcode.Export.TeiXml do
 
     paragraphs =
       for paragraph <- String.split(paratext.content || "", "\n\n", trim: true),
-          do: inline_element(:p, %{}, paragraph |> build_inline_content() |> with_breaks())
+          do: inline_element(:p, %{}, build_inline_content(paragraph))
 
     if Paratext.scene?(paratext.kind),
       do: element(:set, head ++ paragraphs),
@@ -953,7 +953,9 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp build_element(%{type: "prose"} = el) do
-    inline = build_inline_content(el.content, el.notes)
+    # The number at the very start of the text is the paragraph's own (p@n).
+    {number, text} = InlineMarkup.paragraph_number(el.content)
+    inline = build_inline_content(text, el.notes)
 
     content =
       if el.is_aside do
@@ -962,7 +964,7 @@ defmodule Playcode.Export.TeiXml do
         inline
       end
 
-    inline_element(:p, %{}, content)
+    inline_element(:p, if(number, do: %{n: number}, else: %{}), content)
   end
 
   defp build_element(%{type: "trailer"} = el),
@@ -977,6 +979,7 @@ defmodule Playcode.Export.TeiXml do
     (text || "")
     |> InlineMarkup.parts(notes)
     |> inline_nodes()
+    |> with_breaks()
     |> case do
       [] -> ""
       [single] when is_binary(single) -> single
@@ -1033,6 +1036,7 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp inline_node(%{note: note}), do: build_note(note)
+  defp inline_node(%{number: n}), do: element(:lb, %{n: n})
   defp inline_node(%{text: text}), do: text
 
   defp build_note(note) do

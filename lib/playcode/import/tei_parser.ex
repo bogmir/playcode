@@ -31,6 +31,7 @@ defmodule Playcode.Import.TeiParser do
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
   alias Playcode.Places
+  alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Witnesses
 
   require Logger
@@ -1366,10 +1367,13 @@ defmodule Playcode.Import.TeiParser do
     %{type: "trailer", position: pos, content: content, notes: notes, elements: []}
   end
 
-  defp prose({_name, _attrs, children} = para, pos) do
+  defp prose({_name, attrs, children} = para, pos) do
     is_aside = aside_in_children?(children)
     marked = if is_aside, do: aside_content(children), else: text_content(para, :mark)
     {content, notes} = take_notes(marked, para)
+    # p@n: the number of the paragraph's first printed line, a marker at its very start.
+    content =
+      if content == "", do: content, else: printed_line(attr_value(attrs, "n")) <> content
 
     %{
       type: "prose",
@@ -1416,7 +1420,8 @@ defmodule Playcode.Import.TeiParser do
 
   # The text of an element, whitespace collapsed, italics as <<…>>. A <note> inside it is
   # pasted in (:paste, what the header and the front matter read) or left as a mark
-  # (:mark, the play text), which take_notes/2 turns into the note's offset.
+  # (:mark, the play text), which take_notes/2 turns into the note's offset. :breaks reads
+  # as :paste, but keeps each <lb/> as a break (a note's body).
   defp text_content(element, notes \\ :paste)
 
   defp text_content({name, attrs, children}, notes) do
@@ -1453,7 +1458,32 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
+  # A line break in the play text (:mark) or a note's body (:breaks); elsewhere, a space.
+  defp read_child({"lb", attrs, _children}, notes, _parent) when notes in [:mark, :breaks],
+    do: line_break(attrs)
+
   defp read_child(child, notes, _parent), do: text_content(child, notes)
+
+  # Where an <lb/> stood while the pieces of a text are joined and squeezed: a character
+  # squeeze/1 does not take for whitespace, so the file's own line ends, which are, still
+  # collapse. take_notes/2 and parse_note/2 turn it into the \n the text keeps.
+  @break "\u{E002}"
+
+  # An <lb/>: a break, or, with a number, where a printed line of the source starts. A
+  # number the marker cannot hold is read as before, a space.
+  defp line_break(attrs) do
+    case attr_value(attrs, "n") do
+      nil -> @break
+      n -> printed_line(n)
+    end
+  end
+
+  # The marker for printed line `n`, or nothing when `n` is absent or not a number the
+  # marker can hold.
+  defp printed_line(nil), do: ""
+
+  defp printed_line(n),
+    do: if(n =~ ~r/\A[A-Za-z0-9.\-]+\z/, do: InlineMarkup.number_marker(n), else: "")
 
   # The type goes into the marker when it is the plain word the marker allows.
   defp stage_tag(attrs) do
@@ -1478,11 +1508,22 @@ defmodule Playcode.Import.TeiParser do
   defp emph_element?(_, _), do: false
 
   defp extract_plain_text(children, notes) when is_list(children),
-    do: children |> pieces(notes, &extract_plain_text(elem(&1, 2), notes)) |> squeeze()
+    do: children |> pieces(notes, &emph_child(&1, notes)) |> squeeze()
 
-  # Pieces of text as one string, a space between them, whitespace collapsed.
-  defp squeeze(pieces),
-    do: pieces |> Enum.join(" ") |> String.replace(~r/\s+/, " ") |> String.trim()
+  defp emph_child({"lb", attrs, _}, notes) when notes in [:mark, :breaks], do: line_break(attrs)
+  defp emph_child({_name, _attrs, children}, notes), do: extract_plain_text(children, notes)
+
+  # Pieces of text as one string, a space between them, whitespace collapsed. A break
+  # takes the place of the spaces around it; a number keeps the space before it and none
+  # after, as the text read before it was kept had them.
+  defp squeeze(pieces) do
+    pieces
+    |> Enum.join(" ")
+    |> String.replace(~r/\s+/, " ")
+    |> String.replace(~r/ ?\x{E002} ?/u, @break)
+    |> String.replace(~r/(<lb n="[^"]*"\/>) /, "\\1")
+    |> String.trim()
+  end
 
   # Each child's text, read by `fun`; under :mark a <note> child is its mark instead.
   defp pieces(children, notes, fun) do
@@ -1529,7 +1570,11 @@ defmodule Playcode.Import.TeiParser do
       |> Enum.reduce({"", []}, fn piece, {text, found} ->
         case Regex.run(@note_mark, piece) do
           [_, key, spaced] ->
-            space = if spaced == "s" and text != "", do: " ", else: ""
+            space =
+              if spaced == "s" and text != "" and not String.ends_with?(text, @break),
+                do: " ",
+                else: ""
+
             {text <> space, [{plain_length(text), Map.fetch!(by_key, key)} | found]}
 
           nil ->
@@ -1537,7 +1582,7 @@ defmodule Playcode.Import.TeiParser do
         end
       end)
 
-    text = String.trim_trailing(text)
+    text = text |> String.trim_trailing() |> String.replace(@break, "\n")
     last = plain_length(text)
 
     {text,
@@ -1546,7 +1591,7 @@ defmodule Playcode.Import.TeiParser do
      |> Enum.flat_map(fn {offset, note} -> parse_note(note, min(offset, last)) end)}
   end
 
-  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>/
+  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<lb n="[A-Za-z0-9.\-]+"\/>/
 
   # Graphemes of `text` without its markers, one marker at a time: a note inside an
   # italic run or a stage is read while the run is still open, so InlineMarkup.plain/1,
@@ -1573,14 +1618,18 @@ defmodule Playcode.Import.TeiParser do
     body =
       case find_children(children, "p") do
         [] ->
-          text_content({"note", attrs, Enum.reject(children, &match?({"term", _, _}, &1))})
+          text_content(
+            {"note", attrs, Enum.reject(children, &match?({"term", _, _}, &1))},
+            :breaks
+          )
 
         paragraphs ->
           paragraphs
-          |> Enum.map(&text_content/1)
+          |> Enum.map(&text_content(&1, :breaks))
           |> Enum.reject(&(&1 == ""))
           |> Enum.join("\n\n")
       end
+      |> String.replace(@break, "\n")
 
     term = safe_text(find_child(children, "term"))
 
