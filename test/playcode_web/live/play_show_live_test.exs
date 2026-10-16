@@ -45,7 +45,9 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
     {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
 
-    assert html =~ "The banished cavaliers!\nA roving blade!"
+    # A <br> since 2026-10-16, the one rule for a line break that the play text shares;
+    # it used to be the \n itself, shown by the paratext's white-space: pre-line.
+    assert html =~ ~r{The banished cavaliers!<br/?>A roving blade!}
   end
 
   # Where emothe.uv.es prints them: after the text, each listed in the navigation, an
@@ -108,6 +110,42 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       refute html =~ "(A Léonor.)"
       # The page's text, not its markup: the markup escapes the apostrophe.
       assert squish(html |> LazyHTML.from_fragment() |> LazyHTML.text()) =~ "Allez l'entretenir."
+    end
+  end
+
+  describe "prose line breaks and numbers" do
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Act II</head>
+            <sp><speaker>HAMLET</speaker><p n="1319">Beggar that I am, <lb n="1320"/>but I thank you. <lb/>Come, come.</p></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+      %{view: view, html: html}
+    end
+
+    test "a break is a new line and the numbers show where printed lines start", %{html: html} do
+      doc = LazyHTML.from_fragment(html)
+
+      assert doc |> LazyHTML.query(".pn") |> Enum.map(&LazyHTML.text/1) == ["1319", "1320"]
+      # The page's HTML as LiveViewTest serialises it: a void <br> may come out as <br/>.
+      assert html =~ ~r{thank you\.<br/?>Come, come\.}
+      refute html =~ "&lt;lb"
+    end
+
+    # The checkbox is a plain input that pushes this event, as the stage directions' does.
+    test "the numbers go when the line numbers are hidden, and the words stay", %{view: view} do
+      html = render_click(view, "toggle_line_numbers")
+      doc = LazyHTML.from_fragment(html)
+
+      assert doc |> LazyHTML.query(".pn") |> Enum.count() == 0
+      assert squish(LazyHTML.text(doc)) =~ "Beggar that I am, but I thank you."
     end
   end
 
