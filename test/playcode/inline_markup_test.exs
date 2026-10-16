@@ -275,6 +275,19 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
       assert labelled.("<folio>a</folio><folio>b</folio>") == "[F]a[F][F]b[F]"
     end
 
+    test "folio_labels/1 keeps its labels at a passage's two ends when a note sits inside it" do
+      notes = [%{id: 1, offset: 3, position: 0}]
+
+      assert "a <folio>O O</folio> b"
+             |> InlineMarkup.parts(notes)
+             |> InlineMarkup.folio_labels()
+             |> Enum.map(fn
+               %{label: label} -> label
+               %{note: %{id: id}} -> {:note, id}
+               %{text: text} -> text
+             end) == ["a ", "F", "O", {:note, 1}, " O", "F", " b"]
+    end
+
     test "plain and spoken keep its words and drop its tags" do
       text = "Very like<folio>, very like</folio>. Stayed it long?"
       assert InlineMarkup.plain(text) == "Very like, very like. Stayed it long?"
@@ -287,6 +300,7 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
       assert InlineMarkup.whole_folio?("<folio>For he himself is subject to his birth:</folio>")
       refute InlineMarkup.whole_folio?("O God, <folio>O</folio> God,")
       refute InlineMarkup.whole_folio?("no passage")
+      refute InlineMarkup.whole_folio?("<folio> </folio>")
       refute InlineMarkup.whole_folio?(nil)
     end
   end

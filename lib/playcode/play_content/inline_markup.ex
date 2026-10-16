@@ -11,14 +11,15 @@ defmodule Playcode.PlayContent.InlineMarkup do
   the element's `is_aside` alone, `Element.whole_aside?/1`); the pieces below leave it out.
 
   A Folio passage (Hamlet's words only the 1623 Folio prints) is `<folio>…</folio>`, flat,
-  outside any stage or italics and holding no aside, though it may sit inside one; a passage
-  that crosses elements is a marker in each, with `part="I"` (its start, ending the text),
-  `"M"` (all of it) or `"F"` (its end, starting the text). Its parts carry `:folio`.
+  outside any stage or italics and holding no aside, though it may sit inside an aside; a
+  passage that crosses elements is a marker in each, with `part="I"` (its start, ending the
+  text), `"M"` (all of it) or `"F"` (its end, starting the text). Its parts carry `:folio`.
 
   `parts/1` turns that back into pieces a renderer can mark up; `plain/1` gives the
   text without the markers, stage words kept, for search and word counts; `spoken/1`
   and `staged/1` split the words by where they are said. `parts/2` also places a
-  line's notes between the pieces. `well_formed?/1` says whether the markers are sound.
+  line's notes between the pieces. `well_formed?/1`, `asides_well_formed?/1`,
+  `numbers_well_formed?/1` and `folios_well_formed?/1` say whether the markers are sound.
   """
 
   # The type and the text of one stage. Groups: type (empty when there is none), text.
@@ -28,8 +29,8 @@ defmodule Playcode.PlayContent.InlineMarkup do
   @stage ~r/<stage(?: type="([A-Za-z0-9_]+)")?>((?:(?!<\/?stage[\s>]).)+?)<\/stage>/s
 
   # One Folio passage. Groups: the part ("I", "M", "F", or empty for a passage inside one
-  # text), the words. Flat, like a stage.
-  @folio ~r/<folio(?: part="([IMF])")?>((?:(?!<\/?folio[\s>]).)+?)<\/folio>/s
+  # text), the words. Flat, like a stage; one with nothing but white space is no passage.
+  @folio ~r/<folio(?: part="([IMF])")?>(\s*(?:(?!<\/?folio[\s>])\S)(?:(?!<\/?folio[\s>]).)*?)<\/folio>/s
 
   # A printed line's number. Group: the number, letters, digits, "." and "-".
   @number ~r/<lb n="([A-Za-z0-9.\-]+)"\/>/
@@ -54,17 +55,17 @@ defmodule Playcode.PlayContent.InlineMarkup do
       |> String.replace("&gt;&gt;", ">>")
       |> String.replace(["<aside>", "</aside>"], "")
 
-    {parts, _stages} =
-      if String.contains?(text, "<folio"),
-        do: with_folios(text),
-        else: unmarked(text, 0)
-
-    parts
+    if String.contains?(text, "<folio") do
+      with_folios(text)
+    else
+      {parts, _stages} = unmarked(text, 0)
+      parts
+    end
   end
 
   # The parts of each passage carry it; stages are counted through the whole text.
   defp with_folios(text) do
-    {parts, {_folios, stages}} =
+    {parts, _counts} =
       @folio
       |> Regex.split(text, include_captures: true)
       |> Enum.flat_map_reduce({0, 0}, fn piece, {folios, stages} ->
@@ -80,7 +81,7 @@ defmodule Playcode.PlayContent.InlineMarkup do
         end
       end)
 
-    {parts, stages}
+    parts
   end
 
   # The parts of a text with no passage in it, and the number of stage runs after it.

@@ -355,6 +355,13 @@ defmodule Playcode.PlayContentTest do
       end
     end
 
+    test "may sit inside an aside, which it makes an aside of the line", %{attrs: attrs} do
+      content = "<aside>O God, <folio>O</folio></aside> God,"
+
+      assert {:ok, %{content: ^content, is_aside: true}} =
+               PlayContent.create_element(attrs.(content))
+    end
+
     test "is refused when it is not sound, or not where a passage can stand",
          %{attrs: attrs} do
       message = "has a Folio marker that is not well formed"
@@ -363,6 +370,7 @@ defmodule Playcode.PlayContentTest do
             "<folio>sin cerrar",
             "a</folio>b",
             "<folio></folio>",
+            "<folio> </folio>",
             "<folio>a <folio>b</folio></folio>",
             ~s(<folio part="X">a</folio>),
             "<<a <folio>b>></folio>",
