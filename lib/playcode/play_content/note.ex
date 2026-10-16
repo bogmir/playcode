@@ -10,17 +10,26 @@ defmodule Playcode.PlayContent.Note do
   `number`, which `PlayContent.load_play_content/1` fills in reading order. `type` is
   TEI's (`types/0` lists the corpus's); the importer keeps whatever the file says.
   `body` is paragraphs separated by a blank line, italics as `<<…>>`.
+
+  A variant (`variant?/1`) is an entry of the critical apparatus, a TEI `<app>`: `n` its
+  `n`, `variant_type` its `type`, `range_end` its `to`, both as written, `readings` its
+  `<lem>` and `<rdg>`s (`Note.Reading`), `body` its own note or nil. Spec:
+  docs/superpowers/specs/2026-10-16-critical-apparatus-design.md.
   """
 
   use Ecto.Schema
   import Ecto.Changeset
 
   alias Playcode.PlayContent.{Division, Element, InlineMarkup}
+  alias Playcode.PlayContent.Note.Reading
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
   @types ~w(traductor editor editor_critico editor_digital autor)
+
+  # The type of an entry of the critical apparatus. Not "variantes", an ordinary note's.
+  @variant "variante"
 
   # A word a note can follow: letters and digits, an apostrophe inside.
   @word ~r/[\p{L}\p{N}'’]+/u
@@ -32,7 +41,11 @@ defmodule Playcode.PlayContent.Note do
     field :type, :string
     field :term, :string
     field :body, :string
+    field :variant_type, :string
+    field :range_end, :string
     field :number, :integer, virtual: true
+
+    embeds_many :readings, Reading, on_replace: :delete
 
     belongs_to :play, Playcode.Catalogue.Play
     belongs_to :element, Playcode.PlayContent.Element
@@ -44,9 +57,18 @@ defmodule Playcode.PlayContent.Note do
   @doc "The note types the corpus uses, as TEI spells them."
   def types, do: @types
 
-  @doc "The note's paragraphs, in order."
-  def paragraphs(%__MODULE__{body: body}) do
-    body
+  @doc "The `type` a variant is stored with: an entry of the critical apparatus, a TEI `<app>`."
+  def variant, do: @variant
+
+  @doc "True for a variant (`variant/0`), false for a note."
+  def variant?(%{type: type}), do: type == @variant
+
+  @doc "A note's paragraphs, or a text's, in order; none for no text (a variant with no note)."
+  def paragraphs(%__MODULE__{body: body}), do: paragraphs(body)
+  def paragraphs(nil), do: []
+
+  def paragraphs(text) when is_binary(text) do
+    text
     |> String.split(~r/\n\s*\n/)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))
@@ -122,19 +144,31 @@ defmodule Playcode.PlayContent.Note do
   end
 
   def changeset(note, attrs) do
-    note
-    |> cast(attrs, [
-      :offset,
-      :position,
-      :n,
-      :type,
-      :term,
-      :body,
-      :play_id,
-      :element_id,
-      :division_id
-    ])
-    |> validate_required([:offset, :body, :play_id])
+    changeset =
+      note
+      |> cast(attrs, [
+        :offset,
+        :position,
+        :n,
+        :type,
+        :term,
+        :body,
+        :variant_type,
+        :range_end,
+        :play_id,
+        :element_id,
+        :division_id
+      ])
+      |> cast_embed(:readings, sort_param: :readings_order, drop_param: :readings_delete)
+
+    # A note is its text; a variant may have no note of its own.
+    required =
+      if variant?(%{type: get_field(changeset, :type)}),
+        do: [:offset, :play_id],
+        else: [:offset, :body, :play_id]
+
+    changeset
+    |> validate_required(required)
     |> validate_number(:offset, greater_than_or_equal_to: 0)
     |> check_constraint(:element_id, name: :one_anchor)
     |> foreign_key_constraint(:element_id)

@@ -1263,6 +1263,95 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  describe "the critical apparatus" do
+    # A lemma with its own note, readings in italics, readings only with a range and the
+    # entry's note, and an empty entry (Hamlet has four). No punctuation follows an </emph>:
+    # the parser reads "<emph>x</emph>." as "<<x>> .", a matter of its own.
+    @apparatus """
+    <div1 type="jornada" n="1"><head>JORNADA PRIMERA</head>
+      <sp><speaker>FENISA</speaker>
+        <l n="72">mucho la hermosura llama<app type="substantive" n="908">
+            <lem wit="#H">llama<note>Corrección de <emph>Hartzenbusch</emph> aceptada.</note></lem>
+            <rdg wit="#P3">falta</rdg> <rdg wit="#MP">infama</rdg>
+          </app>,</l>
+        <l n="73">Barnardo.<app n="2"><lem wit="#Q2">Barnardo.</lem><rdg wit="#F1 #Q1"><emph>Barnardo?</emph></rdg></app> Bien</l>
+        <l n="74">lovely<app type="orthographical" n="3" to="#l75"><rdg wit="#Dyce #Collier">lively</rdg><note>vv. 74-75 Faltan en <emph>Q1</emph> y Q2.</note></app> y más</l>
+        <l n="75" xml:id="l75">sin nada<app n="4"/></l>
+      </sp>
+    </div1>
+    """
+
+    test "an entry leaves the line, which reads as the edition's text" do
+      xml = roundtrip(tei(body: @apparatus))
+
+      assert reading_texts(xml, "l") == [
+               "mucho la hermosura llama,",
+               "Barnardo. Bien",
+               "lovely y más",
+               "sin nada"
+             ]
+
+      # A reading's note is the reading's, not a note of the line.
+      assert xml_notes(xml) == []
+    end
+
+    test "an entry comes back after the same word, with its readings, their notes and its own" do
+      xml = roundtrip(tei(body: @apparatus))
+
+      assert [
+               %{
+                 in: "l",
+                 after: "mucho la hermosura llama",
+                 n: "908",
+                 type: "substantive",
+                 to: nil,
+                 readings: [
+                   {"lem", "#H", "llama", "Corrección de Hartzenbusch aceptada."},
+                   {"rdg", "#P3", "falta", nil},
+                   {"rdg", "#MP", "infama", nil}
+                 ],
+                 note: nil
+               },
+               %{
+                 after: "Barnardo.",
+                 n: "2",
+                 type: nil,
+                 readings: [
+                   {"lem", "#Q2", "Barnardo.", nil},
+                   {"rdg", "#F1 #Q1", "Barnardo?", nil}
+                 ]
+               },
+               %{
+                 after: "lovely",
+                 n: "3",
+                 type: "orthographical",
+                 to: "#l75",
+                 readings: [{"rdg", "#Dyce #Collier", "lively", nil}],
+                 note: "vv. 74-75 Faltan en Q1 y Q2."
+               },
+               %{after: "sin nada", n: "4", readings: [], note: nil}
+             ] = xml_apps(xml)
+
+      assert xml_texts(xml, "emph", within: "app") == ["Hartzenbusch", "Barnardo?", "Q1"]
+    end
+
+    test "importing a file again replaces its entries, never doubles them" do
+      path = tei(body: @apparatus) |> write_tmp!()
+
+      {:ok, _} = Playcode.Import.TeiImport.import_file(path)
+      {:ok, play} = Playcode.Import.TeiImport.import_file(path)
+
+      assert length(xml_apps(export_tei(play))) == 4
+    end
+
+    test "exporting, re-importing and exporting again changes nothing" do
+      first = tei(code: "APP1", body: @apparatus) |> roundtrip()
+      second = first |> String.replace("APP1", "APP2") |> roundtrip()
+
+      assert String.replace(second, "APP2", "APP1") == first
+    end
+  end
+
   describe "HTML typed into the text" do
     @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
     @folio_close ~s(<code>&lt;/span&gt;</code>)

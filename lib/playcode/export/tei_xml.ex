@@ -1056,16 +1056,54 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
-  defp inline_node(%{note: note}), do: build_note(note)
+  defp inline_node(%{note: note}),
+    do: if(Note.variant?(note), do: build_app(note), else: build_note(note))
+
   defp inline_node(%{number: n}), do: element(:lb, %{n: n})
   defp inline_node(%{text: text}), do: text
 
   defp build_note(note) do
-    attrs = for {key, value} <- [n: note.n, type: note.type], value, into: %{}, do: {key, value}
+    attrs = attributes(n: note.n, type: note.type)
     term = if note.term, do: [element(:term, build_inline_content(note.term))], else: []
     paragraphs = Enum.map(Note.paragraphs(note), &element(:p, build_inline_content(&1)))
     element(:note, attrs, term ++ paragraphs)
   end
+
+  # A variant (Note.variant?/1) as the <app> it was read from: its readings in order, a
+  # reading's note inside it, the entry's own note last.
+  defp build_app(note) do
+    readings =
+      Enum.map(note.readings, fn reading ->
+        element(
+          if(reading.lemma, do: :lem, else: :rdg),
+          attributes(wit: reading.wit),
+          inline_children(reading.text) ++ note_element(reading.note)
+        )
+      end)
+
+    element(
+      :app,
+      attributes(type: note.variant_type, n: note.n, to: note.range_end),
+      readings ++ note_element(note.body)
+    )
+  end
+
+  # The pairs that have a value, as attributes.
+  defp attributes(pairs), do: for({key, value} <- pairs, value, into: %{}, do: {key, value})
+
+  # A text as an element's children: none when it is empty.
+  defp inline_children(text) do
+    case build_inline_content(text) do
+      "" -> []
+      nodes -> List.wrap(nodes)
+    end
+  end
+
+  # A text as a <note> of paragraphs, or nothing for none.
+  defp note_element(nil), do: []
+
+  defp note_element(text),
+    do: [element(:note, Enum.map(Note.paragraphs(text), &element(:p, build_inline_content(&1))))]
 
   # An element whose text holds others (<emph>, <note>) goes out on one line, its text
   # exactly as it runs: :indent would put line breaks inside it, and a break before a
