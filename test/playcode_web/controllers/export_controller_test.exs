@@ -252,16 +252,24 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
     assert html =~ ~r{id="note-1".*id="var-1"}s
 
-    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
-    epub = Enum.map_join(files, fn {_name, content} -> content end)
+    # The asterisk is styled as the note's number is (the CSS has no browser to test in).
+    assert html =~ ".nref, .vref {"
 
-    assert epub =~ ~s(<a epub:type="noteref" href="#var-1">*</a>)
+    epub = fn ->
+      {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+      Enum.map_join(files, fn {_name, content} -> content end)
+    end
 
-    assert epub =~
+    epub_text = epub.()
+
+    assert epub_text =~ ~s(<a epub:type="noteref" href="#var-1">*</a>)
+
+    assert epub_text =~
              ~s(<aside epub:type="footnote" id="var-1"><p><i>A</i> Verso</p><p><i>B</i> Canto</p></aside>)
 
     {:ok, _} = Playcode.Catalogue.update_play(play, %{show_variants: false})
     refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "var-1"
+    refute epub.() =~ "var-1"
   end
 
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do

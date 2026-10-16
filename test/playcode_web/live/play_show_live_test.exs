@@ -949,6 +949,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         tei(
           source_desc: """
           <listWit>
+            <witness xml:id="H" n="H"><bibl type="manuscrito"><title>Manuscrito sin lugar ni fecha</title></bibl></witness>
             <witness xml:id="P3" n="P3"><bibl type="edicion_antigua"><title>Doce comedias</title><pubPlace>Madrid:</pubPlace><date>1653</date></bibl></witness>
             <witness xml:id="MP" n="MP"><bibl type="edicion_antigua"><title>Comedias</title><date>1735</date></bibl></witness>
           </listWit>
@@ -957,7 +958,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
           <div1 type="jornada" n="1"><head>Jornada I</head>
             <sp><speaker>FENISA</speaker>
               <l n="72">mucho la hermosura llama<app type="substantive" n="908"><lem wit="#H">llama<note>Corrección de <emph>Hartzenbusch</emph></note></lem><rdg wit="#P3">falta</rdg><rdg wit="#MP #X">infama</rdg><note>Por la rima.</note></app>,<note n="1" type="editor"><p>Glosa.</p></note></l>
-              <l n="73">lovely<app n="909"><rdg wit="#BRA #JOW">lively</rdg><rdg wit="#Dyce #POPE1">lowly</rdg><rdg wit="#">lonely</rdg></app> y más</l>
+              <l n="73">lovely<app n="909"><rdg wit="#BRA #JOW">lively</rdg><rdg/><rdg wit="#Dyce #POPE1">lowly</rdg><rdg wit="#">lonely</rdg></app> y más</l>
             </sp>
           </div1>
           """
@@ -1006,6 +1007,12 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
       [first, second] = view |> variant_buttons() |> LazyHTML.attribute("popovertarget")
 
+      # The variants are numbered in their own sequence, apart from the notes'.
+      assert view |> variant_buttons() |> LazyHTML.attribute("aria-label") ==
+               [t("Textual variant") <> " 1", t("Textual variant") <> " 2"]
+
+      # H is a witness with neither place nor date and a modern edition's siglum too: the
+      # witness's empty name must not hide the edition's.
       readings = fn id ->
         doc |> LazyHTML.query("##{id} p") |> Enum.map(&squished(LazyHTML.text(&1)))
       end
@@ -1017,6 +1024,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
                "Por la rima."
              ]
 
+      # An empty <rdg/> (a damaged entry, kept as written) prints no empty paragraph.
       assert readings.(second) == [
                "BRA (Bruster & Rasmussen, 2009) JOW (Taylor et al., 2016) lively",
                "Dyce (1831) POPE1 (1723) lowly",

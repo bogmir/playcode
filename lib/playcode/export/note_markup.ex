@@ -96,11 +96,13 @@ defmodule Playcode.Export.NoteMarkup do
   @doc """
   A variant's readings as HTML paragraphs, one per reading in order: each siglum in italics
   followed by what it names in parentheses (`Note.Reading`, `sigla`), the reading, and the
-  reading's own note in parentheses; then the entry's own note. The play page, the site and
-  the downloads print a variant so.
+  reading's own note in parentheses (a reading with nothing in it prints none); then the
+  entry's own note. The play page, the site and the downloads print a variant so.
   """
   def readings(note, format) do
-    Enum.map_join(note.readings, &"<p>#{reading(&1, format)}</p>") <>
+    readings = for reading <- note.readings, text = reading(reading, format), text != "", do: text
+
+    Enum.map_join(readings, &"<p>#{&1}</p>") <>
       Enum.map_join(Note.paragraphs(note), &"<p>#{inline(&1, [], format)}</p>")
   end
 

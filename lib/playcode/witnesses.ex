@@ -117,16 +117,19 @@ defmodule Playcode.Witnesses do
         select: e
       )
       |> Repo.all()
-      |> Map.new(&{&1.siglum, edition_name(&1)})
+      |> named(&edition_name/1)
 
     witnesses =
       from(w in Witness, where: w.play_id == ^play_id and not is_nil(w.siglum))
       |> Repo.all()
-      |> Map.new(&{&1.siglum, witness_name(&1)})
+      |> named(&witness_name/1)
 
-    editions
-    |> Map.merge(witnesses)
-    |> Map.reject(fn {_siglum, name} -> name == "" end)
+    Map.merge(editions, witnesses)
+  end
+
+  # Siglum => name, for the rows that have one: an empty name must not win a merge.
+  defp named(rows, name_of) do
+    for row <- rows, name = name_of.(row), name != "", into: %{}, do: {row.siglum, name}
   end
 
   # "London:" is a place as a title page prints it.
