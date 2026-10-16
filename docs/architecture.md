@@ -21,7 +21,8 @@ lib/
 │   │   ├── element.ex                # Speeches, verse lines, stage directions, prose (self-referencing tree)
 │   │   ├── element_character.ex      # Join table: element ↔ character (multi-speaker support)
 │   │   ├── inline_markup.ex          # The <<…>> italics and <stage> markers
-│   │   └── note.ex                   # In-text notes: a gloss anchored at an offset in a line, speaker or heading
+│   │   ├── note.ex                   # In-text notes: a gloss anchored at an offset in a line, speaker or heading; a variant of the critical apparatus is a note of type `variante`
+│   │   └── note/reading.ex           # A variant's reading: its witnesses, text and own note (embedded in the note)
 │   ├── statistics.ex                 # Compute & cache play statistics
 │   ├── bibliography.ex               # Corpus-wide bibliography: entries, links, grouping and order
 │   ├── bibliography/

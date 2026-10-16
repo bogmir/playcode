@@ -1,8 +1,9 @@
 # The critical apparatus (`<app>`): design
 
-Status: designed 2026-10-16, from the project's answers to questions 1-4 of
-`docs/stakeholder/preguntas.html`. The corpus analysis it rests on, and the `<code>` fragments
-that share its background, are in `docs/tei-apparatus-and-code.md`; this file is the design.
+Status: implemented, 2026-10-16 (commits 463f8dd to e3d2782), from the project's answers to
+questions 1-4 of `docs/stakeholder/preguntas.html`. The corpus analysis it rests on, and the
+`<code>` fragments that share its background, are in `docs/tei-apparatus-and-code.md`; this
+file is the design.
 
 ## The problem
 
