@@ -43,6 +43,9 @@ defmodule Playcode.Import.TeiImport do
     :form
   ]
 
+  @doc "The `Play` columns a re-import keeps: the ones the platform owns, not the TEI file."
+  def platform_owned, do: @platform_owned
+
   @doc """
   Imports a TEI-XML file from the given path into the database.
   Returns {:ok, play} or {:error, reason}.
