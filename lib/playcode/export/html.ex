@@ -13,7 +13,7 @@ defmodule Playcode.Export.Html do
   def generate(play) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
     characters = PlayContent.list_characters(play.id)
-    divisions = PlayContent.load_play_content(play.id)
+    divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
     {front, scene, back} = PlayLabels.split_paratexts(play.paratexts, divisions)
 
     """
@@ -252,8 +252,8 @@ defmodule Playcode.Export.Html do
         /* In-text notes: a number after the word, the act's notes listed after it */
         .nref { font-size: 0.7em; line-height: 0; }
         .nref a { text-decoration: none; }
-        .notes { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.9rem; }
-        .notes li p { margin: 0.3rem 0; }
+        .notes, .variants { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.9rem; }
+        .notes li p, .variants li p { margin: 0.3rem 0; }
 
         @media print {
           body { background: white; }

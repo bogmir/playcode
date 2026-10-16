@@ -227,6 +227,43 @@ defmodule PlaycodeWeb.ExportControllerTest do
            end)
   end
 
+  # As the play page prints them: an asterisk in the line, the readings after the act's
+  # notes; nothing for a play whose variants readers do not see.
+  test "the HTML and EPUB downloads mark each variant and list it after the act's notes",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso<app n="1"><lem wit="#A">Verso</lem><rdg wit="#B">Canto</rdg></app> de prueba<note n="1" type="editor"><p>Glosa.</p></note></l></sp></div1>)
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    doc = LazyHTML.from_document(html)
+
+    assert doc |> LazyHTML.query(~s(a[href="#var-1"])) |> LazyHTML.text() == "*"
+
+    assert doc |> LazyHTML.query("#var-1 p") |> Enum.map(&LazyHTML.text/1) == [
+             "A Verso",
+             "B Canto"
+           ]
+
+    assert html =~ ~r{id="note-1".*id="var-1"}s
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    assert epub =~ ~s(<a epub:type="noteref" href="#var-1">*</a>)
+
+    assert epub =~
+             ~s(<aside epub:type="footnote" id="var-1"><p><i>A</i> Verso</p><p><i>B</i> Canto</p></aside>)
+
+    {:ok, _} = Playcode.Catalogue.update_play(play, %{show_variants: false})
+    refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "var-1"
+  end
+
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.delete_play(play)
 
