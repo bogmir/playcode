@@ -131,8 +131,8 @@ direction of *The Spanish Tragedy* reads "`<sup>` Q4 `</sup>` [Draws his sword.]
 The three uses that mark a difference between printed witnesses become `<app>`s, told apart
 by `type`, so variants, Folio passages and Additions are read and written by one path. The
 importer will read the old HTML forms and the new TEI forms alike. The TEI forms for the Folio
-passages and the Additions are proposals to the editors, questions 36 and 37; both wait for
-their answers before they are built.
+passages and the Additions are proposals to the editors, questions 36 and 37. Question 36 was
+answered on 2026-10-16 (yes, for now); question 37 is open.
 
 - **Hamlet's Folio-only text** (question 5; the encoding, question 36): hidden, with a "Folio
   interpolations" switch showing it in grey between superscript F's, as before. A passage
@@ -148,6 +148,12 @@ their answers before they are built.
   needs the start-and-end form of the Additions, and so does the reading of today's file.
   The file also holds 263 F's and one `<sup>and</sup>`, so one F is unpaired. Hamlet is left
   for later.
+
+  **Question 36, answered 2026-10-16:** yes, for now, as better than what there is.
+  `type="folio"` means an interpolation the web edition can show or hide, which is the
+  switch above. The editor would judge it better on seeing how the whole apparatus is
+  encoded. So the passages inside one element can be built as proposed; the long ones share
+  the Additions' form, which question 37 leaves open.
 - **The Q4 Additions** (question 6; the encoding, question 37): a line in the margin beside
   the whole passage and a superscript Q4 at each end, in all four versions, wherever the text
   is printed. An Addition crosses speeches and scenes, so it is marked start to end:
@@ -155,6 +161,15 @@ their answers before they are built.
   from="#q4-1" to="#q4-1-end"><lem wit="#Q4"/><rdg wit="#Q1"/></app>`; the printed "Q4" is the
   `lem`'s witness. `<addSpan>` was set aside: it marks text added into one document, while an
   Addition is a difference between printings.
+
+  **Question 37, 2026-10-16: open.** The edition's base text is Q1, so the `<lem>` must name
+  Q1, not Q4 (`<lem wit="#Q1"/><rdg wit="#Q4"/>`), and two empty elements in a row are
+  unusual; the form could serve for the moment, but the editors are checking the TEI
+  Guidelines and the TEI mailing list. Naming Q1 brings out the question underneath: with
+  `from` and `to`, TEI reads the words between the anchors as the lemma's, and Q1 lacks
+  them, since the edition prints Q4's words inside a Q1 text. Whatever form they settle on,
+  the printed "Q4" can no longer be "the `lem`'s witness": it is Q4's, wherever the form
+  names it. Nothing is built for the Additions until they answer.
 
   The marks, read in full on 2026-10-16: 14 in English, 14 in French, 12 in Italian, 10 in
   Spanish, a start and an end for every Addition. One rule tells them apart: a "Q4" followed
@@ -181,7 +196,7 @@ their answers before they are built.
 
 The project's TEI files stay the master while Playcode is tested against the corpus;
 Playcode's export takes over only once it carries every feature of the files. Of the HTML
-fragments, The Rover's and the Spanish wrappers and Mariamne come first; the Folio passages
-and the Additions follow the answers to questions 36 and 37. The variants need neither and
-are built first (2026-10-16). The site is deployed
-as it stands, and each fix reaches it with the next Generate and Deploy.
+fragments, The Rover's and the Spanish wrappers and Mariamne come first; Hamlet's Folio passages
+inside one element can follow now (question 36); the long ones and the Additions wait on
+question 37. The variants needed neither and were built first (2026-10-16). The site is
+deployed as it stands, and each fix reaches it with the next Generate and Deploy.

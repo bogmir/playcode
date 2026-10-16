@@ -269,7 +269,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 37 questions, 17 of them answered (eight decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 37 questions, 18 of them answered (eight decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -454,7 +454,7 @@
       </div>
     </div>
 
-    <div class="q" data-q="q36" data-n="36">
+    <div class="q" data-q="q36" data-n="36" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">36</span>
       <div class="q-body">
         <h3>Follow-up to question 5, for Hamlet’s editor: will you encode the Folio passages this way?</h3>
@@ -463,10 +463,15 @@
         <p class="why">in place of today’s</p>
         <pre class="tei">O God, &lt;code&gt;&amp;lt;span class="folio"&amp;gt;&lt;/code&gt;&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;F&lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt;O&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;F&lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt;&lt;code&gt;&amp;lt;/span&amp;gt;&lt;/code&gt; God,</pre>
         <p class="why">The superscript F’s are no longer typed: the site prints them from <code>wit="#F1"</code>, in grey, when a reader switches the Folio interpolations on (question 5). A passage inside one line fits in one <code>&lt;app&gt;</code> like this. About 40 run across several lines or speeches (the longest across 26 speeches); those would be marked like an Addition, with an anchor at each end (question 37). The variants of question 2 stay <code>&lt;app&gt;</code>s as they are now, without <code>type="folio"</code>. Whatever you answer, Playcode keeps reading the file as it is today.</p>
+        <div class="answered">
+          <p><strong>Answered on 16 October 2026:</strong> yes, for now, better than what there is: <code>type="folio"</code> marks an interpolation the web edition can show or hide. The editor would judge it better on seeing how the whole critical apparatus is encoded. The passages inside one line can be built this way; the 40 or so that cross lines or speeches share the form of question 37, which is still open.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q36-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q36-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q36-o1"><input type="radio" id="q36-o1" name="q36-choice" value="Yes, I will encode them this way">Yes, I will encode them this way</label>
+            <label for="q36-o1"><input type="radio" id="q36-o1" name="q36-choice" value="Yes, I will encode them this way" checked>Yes, I will encode them this way</label>
             <label for="q36-o2"><input type="radio" id="q36-o2" name="q36-choice" value="I will use another form (described in my note)">I will use another form (described in my note)</label>
             <label for="q36-o3"><input type="radio" id="q36-o3" name="q36-choice" value="Not sure yet">Not sure yet</label>
           </div>
@@ -476,6 +481,7 @@
           <textarea id="q36-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -519,6 +525,7 @@
         <p class="why">in place of today’s</p>
         <pre class="tei">&lt;stage&gt;&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;Q4&lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt; [Draws his sword.] &lt;code&gt;&amp;lt;/sup&amp;gt;&lt;/code&gt;Q4&lt;code&gt;&amp;lt;sup&amp;gt;&lt;/code&gt;&lt;/stage&gt;</pre>
         <p class="why">For a long Addition, such as the Painter scene, the first anchor stands at its start and the second, with the <code>&lt;app&gt;</code>, at its end, scenes and speeches away. The superscript “Q4” is no longer typed: the site prints it at each anchor, from <code>wit="#Q4"</code>, beside the line in the margin of question 6. The same form serves Hamlet’s Folio passages (question 36), told apart by <code>type</code>. Whatever you answer, Playcode keeps reading the files as they are today.</p>
+        <p class="why"><strong>16 October 2026:</strong> not yet. The edition’s base text is Q1, so the <code>&lt;lem&gt;</code> must name Q1, not Q4; and two empty elements in a row are unusual. The form could serve for the moment, but the editors want time to check the TEI Guidelines or ask on the TEI mailing list. Naming Q1 brings out the question underneath: with <code>from</code> and <code>to</code>, TEI reads the words between the two anchors as the lemma’s, and Q1 does not have them, since the edition prints Q4’s words inside a Q1 text. Open until they answer; nothing is built for the Additions meanwhile.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
