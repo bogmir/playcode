@@ -166,3 +166,6 @@ msgstr "ya lo usa otro testimonio de esta obra"
 
 msgid "the scene of the action stands with the cast list"
 msgstr "el lugar de la acción va con el elenco"
+
+msgid "Only one reading can be the edition's"
+msgstr "Solo una lectura puede ser la de la edición"

@@ -79,42 +79,9 @@ v. 240 are empty `<app>`s; three readings carry `wit="#"`; one `to` points at
 
 ### Design (decided 2026-10-16)
 
-1. **Import**: the whole `<app>` leaves the line's text, as a `<note>` does, so the line reads
-   as the old site showed it. The entry is stored at its offset, after the word it annotates.
-2. **A kind of note**: a `play_notes` row of a new type, `variante` ("Textual variant",
-   "Variante textual"), keeping the `<app>`'s `n`, its type in a new `variant_type` column
-   (stored and written back, never shown), its own note as the body, its `to` when it has
-   one, and its readings in a new `readings` field (`embeds_many`, JSONB: `lemma` true or
-   false, `wit` as written, `text` with `<<italics>>`, the reading's own `note`). Offsets,
-   the carrying of offsets through edits, pop-ups and the content-version trigger are the
-   notes' own.
-3. **Display** (questions 1, 3 and 4): a superscript `*` after the word, apart from the
-   numbered notes, opening the readings as the old site listed them, each siglum followed
-   by a short name worked out from what it names: a witness's place and year
-   ("P3 (Madrid, 1653)", "MP (1735)"), a modern edition's editor's surname and year
-   ("H (Hartzenbusch, 1860)", "BRA (Bruster and Rasmussen, 2009)"), the year alone for a
-   siglum that is already the surname ("Dyce (1831)"), the siglum alone when it names
-   nothing. Shown by default, with a "Variants" switch to hide them, on the play page and
-   the site. The downloads, which have no pop-ups, list each act's variants after its
-   notes.
-4. **Hamlet** (question 2): a per-play setting, "Show variant readings", on by default, off
-   for EMOTHE0010 until its editor has finished; it hides the asterisks only, never the
-   Folio switch. Its entries, damaged ones included, are imported as they are and written
-   back. When it is switched on, its marker (the old site's `F` or `*`) is decided then.
-5. **Copies inside notes**: 51 of the 52 `<app>`s inside a `<note>` (EMOTHE0187 34, 0560 12,
-   0010 4, 0530 1) repeat the line's entry, same `n`, same readings. They are read as that
-   entry: the note keeps its words ("an learn me that"), and the export writes the entry
-   once, in the line. The 52nd (EMOTHE0530 v. 141, `n="496"`) exists only in the note on
-   "ne"; it moves into the line as a variant after that word.
-6. **Ranges**: the 11 entries with `to="#id"` show their asterisk where they sit, the pop-up
-   prints the note as written (the editors name the range in it: "vv. 13-14 Estos dos
-   versos…"), and `to` is kept and written back.
-7. **TEI round trip**: the export writes `<app type n to><lem wit>…</lem><rdg wit>…</rdg>
-   <note>…</note></app>` back at the note's offset from the stored data, as `build_note/1`
-   writes a `<note>` today. A test imports, exports, re-imports and exports again and
-   expects the same file, as for notes and inline stages.
-8. **Editor**: a variant is edited in the note editor, with its readings as a list (witness,
-   reading, comment) to add to, change or remove.
+Moved to its own spec, `superpowers/specs/2026-10-16-critical-apparatus-design.md`, with what a
+re-reading of the corpus added (the 62 copies inside notes, the readings' notes, the empty
+entries) and how each part is stored, written back and shown.
 
 ## `<code>`: literal HTML in the text
 
@@ -215,5 +182,6 @@ their answers before they are built.
 The project's TEI files stay the master while Playcode is tested against the corpus;
 Playcode's export takes over only once it carries every feature of the files. Of the HTML
 fragments, The Rover's and the Spanish wrappers and Mariamne come first; the Folio passages
-and the Additions follow the answers to questions 36 and 37; then the variants. The site is deployed
+and the Additions follow the answers to questions 36 and 37. The variants need neither and
+are built first (2026-10-16). The site is deployed
 as it stands, and each fix reaches it with the next Generate and Deploy.

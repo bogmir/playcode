@@ -75,6 +75,31 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
     end
   end
 
+  describe "variants" do
+    # Each panel follows its own play's Show variant readings.
+    test "a panel shows its play's variants unless that play has them off", %{conn: conn} do
+      body =
+        ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno<app n="1"><rdg wit="#B">dos</rdg></app> tres</l></sp></div1>)
+
+      original = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      translation = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+
+      {:ok, _} =
+        Playcode.Catalogue.update_play(translation, %{
+          parent_play_id: original.id,
+          relationship_type: "traduccion",
+          show_variants: false
+        })
+
+      # The translation's page opens with the original in the first panel.
+      {:ok, view, _html} = live(conn, ~p"/plays/#{translation.code}/compare")
+      variant = ~s(button[aria-label^="#{t("Textual variant")}"])
+
+      assert has_element?(view, "[data-panel='panel-0'] #{variant}")
+      refute has_element?(view, "[data-panel='panel-1'] #{variant}")
+    end
+  end
+
   describe "drafts" do
     test "a draft's comparison page is for staff only", %{conn: conn} do
       draft = TestFixtures.play_fixture(%{"title" => "Borrador comparado"})

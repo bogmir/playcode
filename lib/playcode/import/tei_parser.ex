@@ -21,8 +21,10 @@ defmodule Playcode.Import.TeiParser do
 
   An element is `%{type, position, notes, elements}` plus its columns, and a speech's
   `who` the xml_ids it names. A reference of the bibliography is its
-  `Bibliography.Entry.description/1` and where the play sits in it. A note is `%{offset, n, type, term, body}`. Nothing here
-  knows a row: ids, `play_id` and `origin` are the writer's.
+  `Bibliography.Entry.description/1` and where the play sits in it. A note is `%{offset, n, type, term, body}`. An entry of
+  the critical apparatus is a note of type "variante" that also carries `variant_type`,
+  `range_end` and `readings` (`%{lemma, wit, text, note}`), its `body` possibly nil. Nothing
+  here knows a row: ids, `play_id` and `origin` are the writer's.
 
   Handles UTF-16 encoded files (common in the EMOTHE corpus) by converting them to UTF-8
   before parsing with Saxy.
@@ -31,7 +33,7 @@ defmodule Playcode.Import.TeiParser do
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
   alias Playcode.Places
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{InlineMarkup, Note}
   alias Playcode.Witnesses
 
   require Logger
@@ -1331,13 +1333,13 @@ defmodule Playcode.Import.TeiParser do
   defp aside_delivery?(_), do: false
 
   # The spoken text of a verse line, read with note marks (text_content/2). An aside line
-  # is aside_text/1; with no <seg>, the line without its delivery <stage>.
+  # is aside_text/1; with no <seg>, the line without its delivery <stage>, its entries kept.
   defp verse_line_content({_name, _attrs, children} = line, true) do
     if aside_in_children?(children) do
       aside_text(line)
     else
       children
-      |> Enum.reject(&match?({"stage", _, _}, &1))
+      |> without_stages()
       |> pieces(:mark, &text_content(&1, :mark))
       |> squeeze()
     end
@@ -1393,7 +1395,7 @@ defmodule Playcode.Import.TeiParser do
 
   # A line or paragraph holding a <seg type="aside">. All aside, when every word is in a
   # seg: the segs' text, with the element's own notes and breaks, its stages dropped (the
-  # delivery, "(Aparte)", is what is_aside says). Partly aside: the whole text, each seg an
+  # delivery, "(Aparte)", is what is_aside says) but their entries kept (without_stages/1). Partly aside: the whole text, each seg an
   # <aside> marker (read_child/3).
   defp aside_text({_name, _attrs, children} = element) do
     if Enum.any?(children, &spoken_outside_aside?/1),
@@ -1404,13 +1406,14 @@ defmodule Playcode.Import.TeiParser do
   defp spoken_outside_aside?(text) when is_binary(text), do: String.trim(text) != ""
 
   defp spoken_outside_aside?({name, _, _} = child),
-    do: name not in ~w(stage note) and not aside_seg?(child) and text_content(child) != ""
+    do: name not in ~w(stage note app) and not aside_seg?(child) and text_content(child) != ""
 
   defp spoken_outside_aside?(_), do: false
 
   defp aside_content(children) do
     children
-    |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note lb), &1)))
+    |> without_stages()
+    |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note app lb), &1)))
     |> pieces(:mark, fn
       {"lb", attrs, _} -> line_break(attrs)
       seg -> text_content(seg, :mark)
@@ -1553,15 +1556,40 @@ defmodule Playcode.Import.TeiParser do
     |> String.trim()
   end
 
-  # Each child's text, read by `fun`; under :mark a <note> child is its mark instead.
+  # What leaves the play text and is stored at its offset: a note, and an entry of the
+  # critical apparatus.
+  @apart ~w(note app)
+
+  # `children` with each <stage> replaced by its own entries, where the stage stood: a line
+  # that drops its stages (the delivery, "(Aparte)", is what is_aside says) keeps their
+  # entries. A note inside the stage goes with it, and so does an entry that note copies.
+  defp without_stages(children) do
+    Enum.flat_map(children, fn
+      {"stage", _, _} = stage -> for {"app", _, _} = app <- outermost(stage, @apart), do: app
+      child -> [child]
+    end)
+  end
+
+  # Each child's text, read by `fun`. Under :mark (the play text) a <note> or <app> child is
+  # its mark instead; elsewhere (a note's own text) an <app> is left out, its neighbours
+  # joined as written: a note that copies its line's entry keeps the line's words.
   defp pieces(children, notes, fun) do
+    children = if notes == :mark, do: children, else: without(children, "app")
+
     children
     |> Enum.with_index()
     |> Enum.map(fn
-      {{"note", _, _} = note, i} when notes == :mark -> note_mark(note, children, i)
-      {text, _} when is_binary(text) -> String.trim(text)
-      {child, _} when is_tuple(child) -> fun.(child)
-      _ -> ""
+      {{name, _, _} = note, i} when notes == :mark and name in @apart ->
+        note_mark(note, children, i)
+
+      {text, _} when is_binary(text) ->
+        String.trim(text)
+
+      {child, _} when is_tuple(child) ->
+        fun.(child)
+
+      _ ->
+        ""
     end)
   end
 
@@ -1585,12 +1613,18 @@ defmodule Playcode.Import.TeiParser do
   # Returns the text and its notes (parse_note/2), each offset counting graphemes of the text
   # without its << and >> markers and stage tags, as InlineMarkup.plain/1 does. A note
   # whose mark the reading dropped (inside a stripped aside <stage>) is dropped with it.
-  # So is a note with no text.
+  # So is a note with no text. An entry inside a note that copies none of the element's
+  # comes out after the note (strays/2).
   # ponytail: two adjacent notes each with whitespace beside them ("a <note/><note/> b")
   # store "a  b" and the second note one grapheme later; the corpus has no note after a
   # space. Carry a pending space to the next text if one turns up.
   defp take_notes(marked, element) do
-    by_key = Map.new(nested_notes(element), &{Integer.to_string(:erlang.phash2(&1)), &1})
+    by_key = Map.new(outermost(element, @apart), &{Integer.to_string(:erlang.phash2(&1)), &1})
+
+    own =
+      for {"app", attrs, _} <- outermost(element, @apart),
+          into: MapSet.new(),
+          do: attr_value(attrs, "n")
 
     {text, found} =
       @note_mark
@@ -1616,8 +1650,19 @@ defmodule Playcode.Import.TeiParser do
     {text,
      found
      |> Enum.reverse()
-     |> Enum.flat_map(fn {offset, note} -> parse_note(note, min(offset, last)) end)}
+     |> Enum.flat_map(fn {offset, note} ->
+       offset = min(offset, last)
+       parse_note(note, offset) ++ Enum.flat_map(strays(note, own), &parse_note(&1, offset))
+     end)}
   end
+
+  # The <app>s inside a note that copy none of its element's entries (`own`, their `n`s):
+  # EMOTHE0530's n="496", only in the note on "ne". They move into the line, after the
+  # note; the others are copies of the line's entry, which the note's text leaves out.
+  defp strays({"note", _, _} = note, own),
+    do: note |> outermost(["app"]) |> Enum.reject(&(attr_value(elem(&1, 1), "n") in own))
+
+  defp strays(_app, _own), do: []
 
   @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<lb n="[A-Za-z0-9.\-]+"\/>/
 
@@ -1626,11 +1671,11 @@ defmodule Playcode.Import.TeiParser do
   # which needs the closing marker, cannot do it.
   defp plain_length(text), do: text |> String.replace(@inline_marker, "") |> String.length()
 
-  # The <note>s inside an element, not counting notes inside notes.
-  defp nested_notes({_name, _attrs, children}) do
+  # The elements named `names` inside `element`, not counting those inside them: a line's
+  # notes and entries, not a note's own entries or an entry's readings' notes.
+  defp outermost({_name, _attrs, children}, names) do
     Enum.flat_map(children, fn
-      {"note", _, _} = note -> [note]
-      {_, _, _} = child -> nested_notes(child)
+      {name, _, _} = child -> if name in names, do: [child], else: outermost(child, names)
       _text -> []
     end)
   end
@@ -1640,9 +1685,58 @@ defmodule Playcode.Import.TeiParser do
   defp text_and_notes(nil), do: {nil, []}
   defp text_and_notes(element), do: element |> text_content(:mark) |> take_notes(element)
 
-  # A note's own fields at `offset`, as a list: empty when the note has no text, since
-  # there is nothing to show (the empty notes of the EMOTHE0010 test file).
-  defp parse_note({"note", attrs, children}, offset) do
+  # A note's fields at `offset`, as a list: empty when the note has no text, since there is
+  # nothing to show (the empty notes of the EMOTHE0010 test file).
+  defp parse_note({"note", attrs, children} = note, offset) do
+    case note_text(note) do
+      nil ->
+        []
+
+      body ->
+        term = safe_text(find_child(children, "term"))
+
+        [
+          %{
+            offset: offset,
+            n: attr_value(attrs, "n"),
+            type: attr_value(attrs, "type"),
+            term: if(term in [nil, ""], do: nil, else: term),
+            body: body
+          }
+        ]
+    end
+  end
+
+  # An entry of the critical apparatus: a variant (Note.variant/0) at `offset`, its readings
+  # in order, each without its own note, which is the reading's; the entry's own note is its
+  # body. An empty entry is kept: Hamlet's damaged ones are written back as they are.
+  defp parse_note({"app", attrs, children}, offset) do
+    [
+      %{
+        offset: offset,
+        n: attr_value(attrs, "n"),
+        type: Note.variant(),
+        variant_type: attr_value(attrs, "type"),
+        range_end: attr_value(attrs, "to"),
+        body: note_text(find_child(children, "note")),
+        readings:
+          for {name, reading_attrs, reading_children} <- children, name in ~w(lem rdg) do
+            %{
+              lemma: name == "lem",
+              wit: attr_value(reading_attrs, "wit"),
+              text: text_content({name, reading_attrs, without(reading_children, "note")}),
+              note: note_text(find_child(reading_children, "note"))
+            }
+          end
+      }
+    ]
+  end
+
+  # A note's text: its paragraphs, a blank line between them, its <term> left out; nil for
+  # no note, or one with no text (a note of nothing but breaks, EMOTHE0299's <p><lb/></p>).
+  defp note_text(nil), do: nil
+
+  defp note_text({"note", attrs, children}) do
     body =
       case find_children(children, "p") do
         [] ->
@@ -1659,22 +1753,19 @@ defmodule Playcode.Import.TeiParser do
       end
       |> String.replace(@break, "\n")
 
-    term = safe_text(find_child(children, "term"))
+    if String.trim(body) == "", do: nil, else: body
+  end
 
-    # A note of nothing but breaks (EMOTHE0299's <p><lb/></p>) has no text either.
-    if String.trim(body) == "" do
-      []
-    else
-      [
-        %{
-          offset: offset,
-          n: attr_value(attrs, "n"),
-          type: attr_value(attrs, "type"),
-          term: if(term in [nil, ""], do: nil, else: term),
-          body: body
-        }
-      ]
-    end
+  # `children` without the `name` elements, the text either side joined as written: "is" and
+  # "»" around an <app> read "is»", not "is »".
+  defp without(children, name) do
+    children
+    |> Enum.reject(&match?({^name, _, _}, &1))
+    |> Enum.chunk_by(&is_binary/1)
+    |> Enum.flat_map(fn
+      [text | _] = texts when is_binary(text) -> [Enum.join(texts)]
+      elements -> elements
+    end)
   end
 
   defp safe_text(nil), do: nil

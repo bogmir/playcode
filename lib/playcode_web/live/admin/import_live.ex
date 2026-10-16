@@ -433,6 +433,13 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   defp field_label(:relationship_type), do: gettext("relationship")
   defp field_label(:parent_play_id), do: gettext("parent play")
   defp field_label(:is_complete), do: gettext("completeness")
+  defp field_label(:show_variants), do: gettext("variant readings")
+  defp field_label(:historical_time), do: gettext("historical time")
+  defp field_label(:historical_time_note), do: gettext("historical time note")
+  defp field_label(:composition_date_from), do: gettext("composition date (from)")
+  defp field_label(:composition_date_to), do: gettext("composition date (to)")
+  defp field_label(:composition_date_note), do: gettext("composition date note")
+  defp field_label(:form), do: gettext("form")
 
   defp upload_error_to_string(:too_large), do: gettext("File is too large (max 20MB)")
   defp upload_error_to_string(:not_accepted), do: gettext("Only .xml files are accepted")

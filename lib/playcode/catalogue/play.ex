@@ -25,7 +25,9 @@ defmodule Playcode.Catalogue.Play do
     * `deleted_at` and `content_version` are written only by the functions and the
       triggers named next to them.
 
-  `is_complete` decides what the static site publishes.
+  `is_complete` decides what the static site publishes. `show_variants` decides whether
+  readers see the play's textual variants; like `is_complete` it is Playcode's, never written
+  to or read from the TEI file.
   """
 
   use Ecto.Schema
@@ -65,6 +67,7 @@ defmodule Playcode.Catalogue.Play do
     field :pending_original_code, :string
     field :edition_title, :string
     field :is_complete, :boolean, default: false
+    field :show_variants, :boolean, default: true
     field :historical_time, :string
     field :historical_time_note, :string
     field :composition_date_from, :integer
@@ -195,6 +198,7 @@ defmodule Playcode.Catalogue.Play do
       :relationship_type,
       :edition_title,
       :is_complete,
+      :show_variants,
       :historical_time,
       :historical_time_note,
       :composition_date_from,

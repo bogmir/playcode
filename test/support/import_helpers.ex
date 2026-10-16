@@ -269,6 +269,7 @@ defmodule Playcode.ImportHelpers do
   end
 
   defp lined({"note", _, _}), do: ""
+  defp lined({"app", _, _}), do: ""
   defp lined({_name, _attrs, children}), do: Enum.map_join(children, &lined/1)
   defp lined(text) when is_binary(text), do: text
 
@@ -293,6 +294,7 @@ defmodule Playcode.ImportHelpers do
       |> tokens()
       |> Enum.flat_map_reduce("", fn
         {:note, note}, before -> {[note_map(note, name, before)], before}
+        {:app, _app}, before -> {[], before}
         text, before -> {[], before <> text}
       end)
 
@@ -302,10 +304,12 @@ defmodule Playcode.ImportHelpers do
   defp leaf_notes({_name, _, children}), do: Enum.flat_map(children, &leaf_notes/1)
   defp leaf_notes(_text), do: []
 
-  # An element's text and notes in order: text as binaries, each note as {:note, element}.
+  # An element's text, notes and entries in order: text as binaries, each note as
+  # {:note, element}, each entry of the critical apparatus as {:app, element}.
   defp tokens({_name, _, children}) do
     Enum.flat_map(children, fn
       {"note", _, _} = note -> [{:note, note}]
+      {"app", _, _} = app -> [{:app, app}]
       {_, _, _} = element -> tokens(element)
       text -> [text]
     end)
@@ -328,6 +332,68 @@ defmodule Playcode.ImportHelpers do
       text: text(note)
     }
   end
+
+  @doc """
+  Every `<app>` of the critical apparatus in the body, outside notes, in document order,
+  as a map: `in`, the tag of the line, paragraph, stage direction, speaker or heading it
+  sits in; `after`, that element's text before it (notes and entries left out, whitespace
+  collapsed); its `n`, `type` and `to`; `readings`, each `{tag, wit, text, note}`, the text
+  without the reading's note; and `note`, the text of its own note, or nil.
+  """
+  def xml_apps(xml) do
+    xml
+    |> parse()
+    |> descendants("body")
+    |> Enum.flat_map(&leaf_apps/1)
+  end
+
+  defp leaf_apps({name, _, _} = leaf) when name in @leaves do
+    {apps, _before} =
+      leaf
+      |> tokens()
+      |> Enum.flat_map_reduce("", fn
+        {:app, app}, before -> {[app_map(app, name, before)], before}
+        {:note, _note}, before -> {[], before}
+        text, before -> {[], before <> text}
+      end)
+
+    apps
+  end
+
+  defp leaf_apps({_name, _, children}), do: Enum.flat_map(children, &leaf_apps/1)
+  defp leaf_apps(_text), do: []
+
+  defp app_map({"app", attrs, children} = app, tag, before) do
+    attrs = Map.new(attrs)
+
+    %{
+      in: tag,
+      after: squash(before),
+      n: attrs["n"],
+      type: attrs["type"],
+      to: attrs["to"],
+      readings:
+        for {name, reading_attrs, reading_children} <- children, name in ~w(lem rdg) do
+          {notes, words} = Enum.split_with(reading_children, &match?({"note", _, _}, &1))
+
+          {name, Map.new(reading_attrs)["wit"], flat_text({name, [], words}),
+           Enum.map(notes, &flat_text/1) |> List.first()}
+        end,
+      note:
+        case children_named(app, "note") do
+          [note] -> flat_text(note)
+          [] -> nil
+        end
+    }
+  end
+
+  # All of an element's text, joined as written, whitespace collapsed.
+  defp flat_text({_name, _attrs, children}),
+    do: children |> Enum.map_join(&flat_text/1) |> squash()
+
+  defp flat_text(text) when is_binary(text), do: text
+
+  defp squash(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
 
   defp outside_notes({"note", _, _}, _tag), do: []
 

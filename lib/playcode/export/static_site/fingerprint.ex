@@ -24,6 +24,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
 
   # The modules outside StaticSite whose code shapes a page.
   @modules [
+    Playcode.Export.NoteMarkup,
     Playcode.Export.TeiXml,
     Playcode.Bibliography,
     Playcode.Bibliography.Citation,
@@ -36,6 +37,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.PlayContent.InlineMarkup,
     Playcode.PlayContent.Element,
     Playcode.PlayContent.Note,
+    Playcode.PlayContent.Note.Reading,
     Playcode.Places,
     Playcode.Places.Place,
     Playcode.Places.PlayPlace,

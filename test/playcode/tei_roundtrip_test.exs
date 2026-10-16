@@ -1263,6 +1263,271 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  describe "the critical apparatus" do
+    # A lemma with its own note, readings in italics, readings only with a range and the
+    # entry's note, and an empty entry (Hamlet has four). No punctuation follows an </emph>:
+    # the parser reads "<emph>x</emph>." as "<<x>> .", a matter of its own.
+    @apparatus """
+    <div1 type="jornada" n="1"><head>JORNADA PRIMERA</head>
+      <sp><speaker>FENISA</speaker>
+        <l n="72">mucho la hermosura llama<app type="substantive" n="908">
+            <lem wit="#H">llama<note>Corrección de <emph>Hartzenbusch</emph> aceptada.</note></lem>
+            <rdg wit="#P3">falta</rdg> <rdg wit="#MP">infama</rdg>
+          </app>,</l>
+        <l n="73">Barnardo.<app n="2"><lem wit="#Q2">Barnardo.</lem><rdg wit="#F1 #Q1"><emph>Barnardo?</emph></rdg></app> Bien</l>
+        <l n="74">lovely<app type="orthographical" n="3" to="#l75"><rdg wit="#Dyce #Collier">lively</rdg><note>vv. 74-75 Faltan en <emph>Q1</emph> y Q2.</note></app> y más</l>
+        <l n="75" xml:id="l75">sin nada<app n="4"/></l>
+      </sp>
+    </div1>
+    """
+
+    test "an entry leaves the line, which reads as the edition's text" do
+      xml = roundtrip(tei(body: @apparatus))
+
+      assert reading_texts(xml, "l") == [
+               "mucho la hermosura llama,",
+               "Barnardo. Bien",
+               "lovely y más",
+               "sin nada"
+             ]
+
+      # A reading's note is the reading's, not a note of the line.
+      assert xml_notes(xml) == []
+    end
+
+    test "an entry comes back after the same word, with its readings, their notes and its own" do
+      xml = roundtrip(tei(body: @apparatus))
+
+      assert [
+               %{
+                 in: "l",
+                 after: "mucho la hermosura llama",
+                 n: "908",
+                 type: "substantive",
+                 to: nil,
+                 readings: [
+                   {"lem", "#H", "llama", "Corrección de Hartzenbusch aceptada."},
+                   {"rdg", "#P3", "falta", nil},
+                   {"rdg", "#MP", "infama", nil}
+                 ],
+                 note: nil
+               },
+               %{
+                 after: "Barnardo.",
+                 n: "2",
+                 type: nil,
+                 readings: [
+                   {"lem", "#Q2", "Barnardo.", nil},
+                   {"rdg", "#F1 #Q1", "Barnardo?", nil}
+                 ]
+               },
+               %{
+                 after: "lovely",
+                 n: "3",
+                 type: "orthographical",
+                 to: "#l75",
+                 readings: [{"rdg", "#Dyce #Collier", "lively", nil}],
+                 note: "vv. 74-75 Faltan en Q1 y Q2."
+               },
+               %{after: "sin nada", n: "4", readings: [], note: nil}
+             ] = xml_apps(xml)
+
+      assert xml_texts(xml, "emph", within: "app") == ["Hartzenbusch", "Barnardo?", "Q1"]
+    end
+
+    test "importing a file again replaces its entries, never doubles them" do
+      path = tei(body: @apparatus) |> write_tmp!()
+
+      {:ok, _} = Playcode.Import.TeiImport.import_file(path)
+      {:ok, play} = Playcode.Import.TeiImport.import_file(path)
+
+      assert length(xml_apps(export_tei(play))) == 4
+    end
+
+    test "exporting, re-importing and exporting again changes nothing" do
+      first = tei(code: "APP1", body: @apparatus) |> roundtrip()
+      second = first |> String.replace("APP1", "APP2") |> roundtrip()
+
+      assert String.replace(second, "APP2", "APP1") == first
+    end
+
+    @placed """
+    <div1 type="acto" n="1"><head>ACTO<app n="1"><lem wit="#A">ACTO</lem><rdg wit="#B">JORNADA</rdg></app> I</head>
+      <sp><speaker>ANA<app n="2"><rdg wit="#B">ANNA</rdg></app></speaker>
+        <stage>Sale<app n="3"><rdg wit="#B">Entra</rdg></app> el rey</stage>
+        <l n="1">Dijo <stage>(en voz<app n="4"><rdg wit="#B">a voces</rdg></app> baja)</stage> y calló.</l>
+        <l n="2">un <emph>sueño<app n="5"><rdg wit="#B">cuento</rdg></app> breve</emph> fue</l>
+        <l n="3"><stage type="delivery">(Aparte.)</stage><seg type="aside">¡Ay de mí!</seg><app n="6"><rdg wit="#B">¡Oh!</rdg></app></l>
+        <l n="4">Calla, <seg type="aside">que viene<app n="7"><rdg wit="#B">llega</rdg></app></seg> el rey.</l>
+        <p>Buscad<app n="8"><rdg wit="#B">Mirad</rdg></app> por todas partes.</p>
+      </sp>
+    </div1>
+    """
+
+    test "an entry comes back where it was: heading, speaker, stage direction, inline stage, italics, asides, prose" do
+      xml = roundtrip(tei(body: @placed))
+
+      assert reading_texts(xml, "head") == ["ACTO I"]
+      assert reading_texts(xml, "speaker") == ["ANA"]
+      assert reading_texts(xml, "p") == ["Buscad por todas partes."]
+
+      # A line all aside stays so, its delivery stage dropped, though an entry follows the
+      # seg: the entry is not spoken text.
+      assert reading_texts(xml, "l") == [
+               "Dijo (en voz baja) y calló.",
+               "un sueño breve fue",
+               "¡Ay de mí!",
+               "Calla, que viene el rey."
+             ]
+
+      assert Enum.map(xml_apps(xml), &{&1.in, &1.after, &1.n}) == [
+               {"head", "ACTO", "1"},
+               {"speaker", "ANA", "2"},
+               {"stage", "Sale", "3"},
+               {"l", "Dijo (en voz", "4"},
+               {"l", "un sueño", "5"},
+               {"l", "¡Ay de mí!", "6"},
+               {"l", "Calla, que viene", "7"},
+               {"p", "Buscad", "8"}
+             ]
+
+      assert length(xml_elements(xml, "app", within: "emph")) == 1
+      assert length(xml_elements(xml, "app", within: "seg")) == 2
+    end
+
+    # 62 of the corpus's 63 entries inside notes copy their line's (same n).
+    test "a note that copies its line's entry keeps the line's words, and the entry is written once" do
+      copy = ~s(<app n="388"><rdg wit="#Bevington">an</rdg><rdg wit="#Q1">and</rdg></app>)
+
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1">an#{copy} learn me that<note n="1" type="editor"><term>an#{copy} learn me that</term><p>an#{copy} learn me that: if you teach me; Q2 «ho! Who is#{copy}»</p></note></l>
+      </sp></div1>
+      """
+
+      xml = roundtrip(tei(body: body))
+
+      assert reading_texts(xml, "l") == ["an learn me that"]
+
+      assert [
+               %{
+                 term: "an learn me that",
+                 paragraphs: ["an learn me that: if you teach me; Q2 «ho! Who is»"]
+               }
+             ] =
+               xml_notes(xml)
+
+      assert [%{after: "an", n: "388"}] = xml_apps(xml)
+      assert xml_elements(xml, "app", within: "note") == []
+    end
+
+    # EMOTHE0530, v. 141: n="496" is only in the note on "ne".
+    test "an entry found only in a note moves into the line, just after the note" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="141">ne<note n="1" type="editor"><term>ne</term><p>1623: <emph>n’en veulent</emph>; 1632: <emph>ne veulent<app type="substantive" n="496"><lem wit="#1632">ne veulent</lem><rdg wit="#1623b #1626a">n’en veulent</rdg></app></emph>.</p></note> veulent point.</l>
+      </sp></div1>
+      """
+
+      xml = roundtrip(tei(body: body))
+
+      assert reading_texts(xml, "l") == ["ne veulent point."]
+      assert [%{after: "ne", n: "1"}] = xml_notes(xml)
+
+      assert [
+               %{
+                 after: "ne",
+                 n: "496",
+                 readings: [
+                   {"lem", "#1632", "ne veulent", nil},
+                   {"rdg", "#1623b #1626a", "n’en veulent", nil}
+                 ]
+               }
+             ] = xml_apps(xml)
+
+      # The note first, then the entry, as they were found.
+      assert xml =~ ~r{<note n="1"[^>]*>.*?</note><app }s
+    end
+
+    test "every place, the copies and the moved entry: exporting, re-importing and exporting again changes nothing" do
+      body = """
+      #{@placed}
+      <div1 type="acto" n="2"><sp><speaker>A</speaker>
+        <l n="9">an<app n="388"><rdg wit="#B">an</rdg></app> learn<note n="1" type="editor"><term>an<app n="388"><rdg wit="#B">an</rdg></app> learn</term><p>Glosa.</p></note></l>
+        <l n="141">ne<note n="2" type="editor"><p>Ver <emph>ne veulent<app n="496"><rdg wit="#1623b">n’en veulent</rdg></app></emph>.</p></note> veulent.</l>
+      </sp></div1>
+      """
+
+      first = tei(code: "APP3", body: body) |> roundtrip()
+      second = first |> String.replace("APP3", "APP4") |> roundtrip()
+
+      assert String.replace(second, "APP4", "APP3") == first
+    end
+
+    # EMOTHE0187 n="481" and EMOTHE0560 n="1106": the entry sits in the "(Aparte)" stage that a
+    # line all aside drops. The stage goes with its words; the entry is not dropped with it, it
+    # stays at the line's start, where the stage was.
+    test "an entry inside the delivery stage of a line all aside is kept, and comes back the same" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1"><stage type="delivery">[Aside to Bungay<app type="substantive" n="481"><rdg wit="#Bevington">[Aside to Bungay]</rdg></app>]</stage><seg type="aside">I smell a tragedy.</seg></l>
+      </sp></div1>
+      """
+
+      first = tei(code: "APP5", body: body) |> roundtrip()
+
+      assert reading_texts(first, "l") == ["I smell a tragedy."]
+
+      assert [
+               %{
+                 in: "l",
+                 after: "",
+                 n: "481",
+                 type: "substantive",
+                 readings: [{"rdg", "#Bevington", "[Aside to Bungay]", nil}]
+               }
+             ] =
+               xml_apps(first)
+
+      second = first |> String.replace("APP5", "APP6") |> roundtrip()
+      assert String.replace(second, "APP6", "APP5") == first
+    end
+
+    # The reviewer's repro: a note inside the dropped stage copies the stage's entry. The note
+    # goes with the stage; its copy is not a second entry.
+    test "an entry in a dropped delivery stage is kept once when a note inside the stage copies it" do
+      entry = ~s(<app n="10"><rdg wit="#B">Aparte</rdg></app>)
+
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1"><stage type="delivery">(Aparte.#{entry}<note n="1" type="editor"><p>glosa #{entry}</p></note>)</stage><seg type="aside">Adios.</seg></l>
+      </sp></div1>
+      """
+
+      xml = roundtrip(tei(body: body))
+
+      assert reading_texts(xml, "l") == ["Adios."]
+      assert [%{n: "10", readings: [{"rdg", "#B", "Aparte", nil}]}] = xml_apps(xml)
+    end
+
+    # A line aside by its "(Aparte)" stage alone, no <seg>: the stage goes, the words stay.
+    test "an entry in the delivery stage of a line aside with no seg is kept, and comes back the same" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1"><stage type="delivery">(Aparte.<app n="9"><rdg wit="#B">Aparte</rdg></app>)</stage>Hola.</l>
+      </sp></div1>
+      """
+
+      first = tei(code: "APP7", body: body) |> roundtrip()
+
+      assert reading_texts(first, "l") == ["Hola."]
+      assert [%{in: "l", n: "9", readings: [{"rdg", "#B", "Aparte", nil}]}] = xml_apps(first)
+
+      second = first |> String.replace("APP7", "APP8") |> roundtrip()
+      assert String.replace(second, "APP8", "APP7") == first
+    end
+  end
+
   describe "HTML typed into the text" do
     @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
     @folio_close ~s(<code>&lt;/span&gt;</code>)

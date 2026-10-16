@@ -15,6 +15,7 @@ defmodule Playcode.Witnesses do
   alias Playcode.Bibliography.{Entry, Link}
   alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Repo
+  alias Playcode.Text
   alias Playcode.Witnesses.Witness
 
   @doc "The play's witnesses, in order."
@@ -98,6 +99,67 @@ defmodule Playcode.Witnesses do
 
     MapSet.new(Repo.all(witnesses) ++ Repo.all(editions))
   end
+
+  @doc """
+  What each siglum the play's variant readings may cite names, as readers see it after the
+  siglum: a witness's place and date as written ("Madrid, 1653", "1735"); else a modern
+  edition's editors' surnames and year ("Hartzenbusch, 1860", "Bruster & Rasmussen, 2009",
+  "Taylor et al., 2016"), the year alone when the siglum is the first surname or there
+  are no editors ("1831"). A siglum that names nothing is not in the map. Spec:
+  docs/superpowers/specs/2026-10-16-critical-apparatus-design.md.
+  """
+  def short_names(play_id) do
+    editions =
+      from(l in Link,
+        join: e in Entry,
+        on: e.id == l.entry_id,
+        where: l.play_id == ^play_id and not is_nil(e.siglum),
+        select: e
+      )
+      |> Repo.all()
+      |> named(&edition_name/1)
+
+    witnesses =
+      from(w in Witness, where: w.play_id == ^play_id and not is_nil(w.siglum))
+      |> Repo.all()
+      |> named(&witness_name/1)
+
+    Map.merge(editions, witnesses)
+  end
+
+  # Siglum => name, for the rows that have one: an empty name must not win a merge.
+  defp named(rows, name_of) do
+    for row <- rows, name = name_of.(row), name != "", into: %{}, do: {row.siglum, name}
+  end
+
+  # "London:" is a place as a title page prints it.
+  defp witness_name(witness) do
+    [witness.pub_place && String.trim_trailing(witness.pub_place, ":"), witness.date]
+    |> Enum.map(&Text.squeeze/1)
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(", ")
+  end
+
+  defp edition_name(entry) do
+    surnames =
+      if entry.monogr_editors,
+        do: entry.monogr_editors |> Entry.people() |> Enum.map(&surname/1),
+        else: []
+
+    editors =
+      case surnames do
+        [] -> nil
+        [first | _] when first == entry.siglum -> nil
+        [one] -> one
+        [one, two] -> "#{one} & #{two}"
+        [first | _] -> "#{first} et al."
+      end
+
+    [editors, Text.squeeze(entry.year_text)] |> Enum.reject(&is_nil/1) |> Enum.join(", ")
+  end
+
+  # "Hartzenbusch, J. E." is filed under Hartzenbusch.
+  defp surname(person), do: person |> String.split(",", parts: 2) |> hd() |> String.trim()
 
   # FileMaker's T03.1 leaves as TEI's {bibl@type, bibl@subtype}, in its own Spanish terms,
   # as S4's biblStruct types are.

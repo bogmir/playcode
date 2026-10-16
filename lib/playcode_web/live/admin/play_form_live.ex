@@ -656,6 +656,11 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           <div class="rounded-box bg-base-200 px-3 py-2">
             <div class="text-sm text-base-content/85">
               <.input field={@form[:is_complete]} type="checkbox" label={gettext("Complete")} />
+              <.input
+                field={@form[:show_variants]}
+                type="checkbox"
+                label={gettext("Show variant readings")}
+              />
             </div>
           </div>
         </div>

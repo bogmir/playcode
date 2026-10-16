@@ -189,8 +189,10 @@
   }
 }
 
-/* In-text notes: the number after a glossed word opens its note, a popover. */
-.play-text .nref {
+/* In-text notes: the number after a glossed word opens its note, a popover. A textual
+   variant's asterisk opens its readings; the Variants switch hides the asterisks. */
+.play-text .nref,
+.play-text .vref {
   font-size: 0.65em;
   line-height: 0;
   vertical-align: super;
@@ -199,7 +201,12 @@
   cursor: pointer;
 }
 
-.play-notes ol {
+.play-text[data-variants="off"] .vref {
+  display: none;
+}
+
+.play-notes ol,
+.play-notes ul {
   margin: 0;
   padding: 0;
 }

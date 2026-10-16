@@ -178,3 +178,6 @@ msgstr ""
 
 msgid "the scene of the action stands with the cast list"
 msgstr ""
+
+msgid "Only one reading can be the edition's"
+msgstr ""

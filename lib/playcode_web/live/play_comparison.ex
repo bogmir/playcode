@@ -28,7 +28,7 @@ defmodule PlaycodeWeb.PlayComparison do
   def build_panel(play) do
     %{
       play: play,
-      divisions: PlayContent.load_play_content(play.id),
+      divisions: PlayContent.load_play_content(play.id, variants: play.show_variants),
       characters: PlayContent.list_characters(play.id)
     }
   end

@@ -52,3 +52,30 @@ _Avoid_: section type, type
 **Before the text / after the text**:
 Where a paratext stands.
 _Avoid_: front and back (where the TEI file puts it), place (a place is in the gazetteer)
+
+### The critical apparatus
+
+**Variant**:
+A place in the text where the witnesses differ, and what each of them reads there: a TEI
+`<app>`. Readers see an asterisk after the word, which opens the readings. It is kept as a
+note of type `variante`, numbered apart from the notes (the notes' 1, 2, 3; the variants'
+own 1, 2, 3), and a play's switch hides them all. Not `variantes`, which is the type of
+three ordinary notes.
+_Avoid_: apparatus note, textual note, note (a note glosses a word; a variant lists what the
+witnesses read)
+
+**Reading**:
+What one witness, or several together, give at a variant: the witnesses' sigla, the text
+they read and, if the editor has one, a comment on it. A variant has one or more.
+_Avoid_: variant (the whole entry), version
+
+**Lemma**:
+The reading the edition follows, a TEI `<lem>`: at most one to a variant, and first. The
+variant's other readings are the `<rdg>`s.
+_Avoid_: edition's reading (the editor's own label for the checkbox), base text
+
+**Siglum**:
+The short name of a witness or of a modern edition: `P3`, `H`, `Dyce`. A reading names its
+witnesses by their sigla written with a `#` (`#H #P3`); readers see each siglum with what it
+names ("H (Hartzenbusch, 1860)"), where Playcode knows.
+_Avoid_: abbreviation, id

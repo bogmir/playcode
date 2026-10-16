@@ -84,6 +84,19 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert :form in preview.preserves_fields
   end
 
+  # Kept by every re-import; reported only when a curator has turned it off.
+  test "Show variant readings is reported as kept only when it is off", %{path: path} do
+    {:ok, play} = TeiImport.import_file(path)
+
+    assert {:ok, preview} = TeiImport.preview_import(path)
+    refute :show_variants in preview.preserves_fields
+
+    {:ok, _} = Catalogue.update_play(play, %{show_variants: false})
+
+    assert {:ok, preview} = TeiImport.preview_import(path)
+    assert :show_variants in preview.preserves_fields
+  end
+
   # A re-import replaces the file's rows, and an editor's fixes to them with them; the
   # preview says how many. A fresh import edits nothing (review focus 7), and a row typed
   # by hand is kept, so its edits do not count.

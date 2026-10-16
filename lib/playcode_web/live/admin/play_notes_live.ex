@@ -50,10 +50,18 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
   # A second submit (a double click) of a form that has closed.
   def handle_event("save", _params, %{assigns: %{editing: nil}} = socket), do: {:noreply, socket}
 
+  # A reading added or removed, or a field typed in: the form shows the rows as they stand.
+  def handle_event("change", %{"note" => params}, %{assigns: %{editing: %Note{} = note}} = socket) do
+    changeset = PlayContent.change_note(note, NotesComponent.note_params(note, params))
+    {:noreply, assign(socket, :form, to_form(changeset))}
+  end
+
+  def handle_event("change", _params, socket), do: {:noreply, socket}
+
   def handle_event("save", %{"note" => params}, socket) do
     note = socket.assigns.editing
 
-    case PlayContent.update_note(note, Map.take(params, ~w(offset type term body))) do
+    case PlayContent.update_note(note, NotesComponent.save_params(note, params)) do
       {:ok, saved} ->
         log(socket, "update", saved)
 
@@ -122,7 +130,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
 
     Enum.filter(entries, fn %{note: note} ->
       (type == "" or PlayLabels.note_type_key(note.type) == type) and
-        (q == "" or String.contains?(Bibliography.fold("#{note.body} #{note.term}"), q)) and
+        (q == "" or String.contains?(Bibliography.fold("#{Note.summary(note)} #{note.term}"), q)) and
         (no_term != "true" or note.term in [nil, ""])
     end)
   end
@@ -136,6 +144,10 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
 
   defp type_label("other"), do: PlayLabels.note_type_label(nil)
   defp type_label(type), do: PlayLabels.note_type_label(type)
+
+  # A note's number, or a variant's asterisk: variants are numbered apart from the notes, so
+  # a variant's own number would read like a note's.
+  defp marker(note), do: if(Note.variant?(note), do: "*", else: note.number)
 
   # The plain text the note hangs on, cut around the note: {before, after}.
   defp context(%{note: note, anchor: anchor}) do
@@ -154,6 +166,10 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
 
     {before, after_note}
   end
+
+  # A note's paragraphs; a variant's readings and note, on one line.
+  defp shown_paragraphs(note),
+    do: if(Note.variant?(note), do: [Note.summary(note)], else: Note.paragraphs(note))
 
   defp content_path(play, %Division{id: id}),
     do: ~p"/admin/plays/#{play.id}/content?division=#{id}"
@@ -255,7 +271,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
           ]}
         >
           <span class="note-number w-8 shrink-0 pt-0.5 text-right text-sm font-semibold tabular-nums text-primary">
-            {entry.note.number}
+            {marker(entry.note)}
           </span>
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
@@ -271,17 +287,19 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
             <p
               class="note-context mt-1.5 border-l-2 border-base-300 pl-3 font-serif text-sm text-base-content/60"
               phx-no-format
-            >{before}<sup class="px-0.5 font-sans font-semibold text-primary">{entry.note.number}</sup>{after_note}</p>
+            >{before}<sup class="px-0.5 font-sans font-semibold text-primary">{marker(entry.note)}</sup>{after_note}</p>
 
             <.form
               :if={@editing && @editing.id == entry.note.id}
               for={@form}
               id="note-form"
+              phx-change="change"
               phx-submit="save"
               class="mt-3 space-y-3"
             >
               <div class="grid gap-3 sm:grid-cols-3">
                 <.input
+                  :if={not Note.variant?(@editing)}
                   field={@form[:type]}
                   type="select"
                   label={gettext("Type")}
@@ -293,9 +311,24 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
                   label={gettext("After")}
                   options={NotesComponent.offset_options(@anchor, @editing)}
                 />
-                <.input field={@form[:term]} type="text" label={gettext("Term")} />
+                <.input
+                  :if={not Note.variant?(@editing)}
+                  field={@form[:term]}
+                  type="text"
+                  label={gettext("Term")}
+                />
               </div>
-              <.input field={@form[:body]} type="textarea" rows="8" label={gettext("Text")} />
+              <NotesComponent.readings_fields :if={Note.variant?(@editing)} form={@form} />
+              <.input
+                field={@form[:body]}
+                type="textarea"
+                rows="8"
+                label={
+                  if Note.variant?(@editing),
+                    do: gettext("Comment on the entry"),
+                    else: gettext("Text")
+                }
+              />
               <p class="text-xs text-base-content/50">
                 {gettext("A blank line starts a new paragraph; <<…>> marks italics.")}
               </p>
@@ -314,7 +347,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
               title={gettext("Click to show or hide the whole note")}
               class="note-body line-clamp-4 mt-2 cursor-pointer space-y-1.5 text-[15px] leading-relaxed text-base-content"
             >
-              <p :for={paragraph <- Note.paragraphs(entry.note)}><.marked text={paragraph} /></p>
+              <p :for={paragraph <- shown_paragraphs(entry.note)}><.marked text={paragraph} /></p>
             </div>
           </div>
           <div

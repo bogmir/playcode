@@ -14,7 +14,7 @@ defmodule Playcode.Export.Epub do
   def generate(play) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
     characters = PlayContent.list_characters(play.id)
-    divisions = PlayContent.load_play_content(play.id)
+    divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
     {front, scene, back} = PlayLabels.split_paratexts(play.paratexts, divisions)
 
     tmp_dir =

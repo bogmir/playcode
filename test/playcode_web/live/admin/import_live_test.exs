@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
   import Playcode.ImportHelpers
 
   alias Playcode.Catalogue
+  alias Playcode.Import.TeiImport
 
   setup %{conn: conn} do
     %{conn: log_in_user(conn, user_fixture(role: :researcher))}
@@ -156,6 +157,44 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
                  "%{count} row(s) from the file were edited by hand since its import: importing replaces them too.",
                  count: 1
                )
+    end
+
+    # The preview names every column `TeiImport` keeps (`TeiImport.platform_owned/0`, in that
+    # order); a column without a label crashed the page. A column added to the list fails here
+    # until it has a value to set and a label to read, not in production.
+    test "names the columns a curator set, which the import keeps", %{lv: lv, code: code} do
+      relative = play_fixture(%{"title" => "Original"})
+
+      curated = %{
+        language: {"en", "language"},
+        relationship_type: {"traduccion", "relationship"},
+        parent_play_id: {relative.id, "parent play"},
+        is_complete: {true, "completeness"},
+        show_variants: {false, "variant readings"},
+        historical_time: {"edad_media", "historical time"},
+        historical_time_note: {"Reinado de Juan I", "historical time note"},
+        composition_date_from: {1606, "composition date (from)"},
+        composition_date_to: {1607, "composition date (to)"},
+        composition_date_note: {"typed by a curator", "composition date note"},
+        form: {"mixed", "form"}
+      }
+
+      assert Enum.sort(Map.keys(curated)) == Enum.sort(TeiImport.platform_owned())
+
+      {:ok, _} =
+        code
+        |> Catalogue.get_play_by_code!()
+        |> Catalogue.update_play(Map.new(curated, fn {column, {value, _}} -> {column, value} end))
+
+      html = upload(lv, [{"again.xml", tei(code: code)}])
+
+      fields =
+        Enum.map_join(TeiImport.platform_owned(), ", ", fn column ->
+          {_value, label} = Map.fetch!(curated, column)
+          t(label)
+        end)
+
+      assert html =~ t("Keeps: %{fields}", fields: fields)
     end
 
     test "leaves it alone when cancelled", %{lv: lv, code: code} do
