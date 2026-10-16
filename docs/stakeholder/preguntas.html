@@ -266,9 +266,10 @@
   <header>
     <p class="eyebrow">Playcode · For the EMOTHE team · A running list</p>
     <h1>Questions for the project</h1>
-    <p class="lede">Decisions only the project can make, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
+    <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 37 questions, nine of them answered, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 16 October 2026. 37 questions, 17 of them answered (eight decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -706,7 +707,7 @@
       <li><strong>The performance’s place is not in the tables we have</strong>; it is in the request at the end of this page.</li>
     </ul>
 
-    <div class="q" data-q="q11" data-n="11">
+    <div class="q" data-q="q11" data-n="11" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">11</span>
       <div class="q-body">
         <h3>Where should a performance’s source be recorded?</h3>
@@ -715,10 +716,15 @@
         <p class="why"><strong>2. As a separate list of sources</strong>, built the same way. Performances stay apart from the bibliography, but a work cited by both is entered and corrected twice.</p>
         <p class="why"><strong>3. As free text on each performance</strong>, as FileMaker prints it. Simplest, but a correction to Wiggins means editing each of the 152 citations by hand.</p>
         <p class="why">The same FileMaker table also gives the sources of 365 witnesses (DEEP, Greg’s <i>Bibliography</i>, ESTC…), which are not imported yet; whatever you choose here would serve them too. We recommend the first.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> a work in the bibliography, each performance with its own volume and pages, the first way. It is how Playcode will store the citations; question 12, what readers see of them, is still yours.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q11-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q11-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q11-o1"><input type="radio" id="q11-o1" name="q11-choice" value="A work from the bibliography, with its own pages">1. A work from the bibliography, with its own pages</label>
+            <label for="q11-o1"><input type="radio" id="q11-o1" name="q11-choice" value="A work from the bibliography, with its own pages" checked>1. A work from the bibliography, with its own pages</label>
             <label for="q11-o2"><input type="radio" id="q11-o2" name="q11-choice" value="A separate list of sources">2. A separate list of sources</label>
             <label for="q11-o3"><input type="radio" id="q11-o3" name="q11-choice" value="Free text, as FileMaker prints it">3. Free text, as FileMaker prints it</label>
             <label for="q11-o4"><input type="radio" id="q11-o4" name="q11-choice" value="Not sure">Not sure</label>
@@ -729,6 +735,7 @@
           <textarea id="q11-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -736,7 +743,7 @@
       <span class="q-num" aria-hidden="true">12</span>
       <div class="q-body">
         <h3>Should a work cited for a performance also appear in the play’s bibliography?</h3>
-        <p class="why">This arises if the answer to question 11 is the first. None of these works is in any play’s bibliography today. If they joined, Wiggins would appear in the bibliography of 33 plays and CATCOM in 3; 50 plays would gain at least one entry. They are catalogues and databases, which fit none of the bibliography’s four groups (modern editions, criticism, translations, adaptations).</p>
+        <p class="why">Question 11 is decided the first way, so this arises. None of these works is in any play’s bibliography today. If they joined, Wiggins would appear in the bibliography of 33 plays and CATCOM in 3; 50 plays would gain at least one entry. They are catalogues and databases, which fit none of the bibliography’s four groups (modern editions, criticism, translations, adaptations).</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
@@ -846,7 +853,7 @@
   <section id="t-site" aria-labelledby="h-site">
     <h2 id="h-site">The public site</h2>
 
-    <div class="q" data-q="q15" data-n="15">
+    <div class="q" data-q="q15" data-n="15" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">15</span>
       <div class="q-body">
         <h3>Eleven plays are adaptations. How should the public site label them?</h3>
@@ -869,10 +876,15 @@
             </tbody>
           </table>
         </div>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> each by its own name, as the files call them: adaptation, and refundición when one comes. Three links in the table will be corrected: <i>Annabella</i> to Ford’s play (EMOTHE0283), <i>El pastor fido</i> to Guarini’s (EMOTHE0006), and <i>Las mocedades del Cid</i> shown as an original, linked to nothing. Its file calls it an adaptation of <i>Le Cid</i> and names Corneille as the original’s author; please correct that in your copy.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q15-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q15-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q15-o1"><input type="radio" id="q15-o1" name="q15-choice" value="Each by its own name: adaptation, refundición">Each by its own name: adaptation, and refundición when one comes</label>
+            <label for="q15-o1"><input type="radio" id="q15-o1" name="q15-choice" value="Each by its own name: adaptation, refundición" checked>Each by its own name: adaptation, and refundición when one comes</label>
             <label for="q15-o2"><input type="radio" id="q15-o2" name="q15-choice" value="As translations">As translations</label>
             <label for="q15-o3"><input type="radio" id="q15-o3" name="q15-choice" value="As originals">As originals, as now</label>
           </div>
@@ -882,6 +894,7 @@
           <textarea id="q15-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -902,15 +915,16 @@
             </tbody>
           </table>
         </div>
+        <p class="why"><strong>Our proposal for the fourth row</strong>, for you to correct: romance heroico and cuarteta asonantada with the romance; nona, oncena, cuarteta, quadra, copla, ovillejo, redondilla-quintilla de pie quebrado and pareados de pie quebrado with the Spanish stanzas; oitava, sestina, silva de pareados and soneto con estrambote with the Italianate forms; and a family of their own, traditional song, for canción tradicional, seguidilla, seguidilla con estribillo, zéjel, villancico, octosílabos con estribillo and cantiga. The couplets (pareado, pareados, pareado hexasílabo) stay in “Other”, since a couplet can be of any family.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q16-o1"><input type="radio" id="q16-o1" name="q16-choice" value="Right as it is">Right as it is</label>
+            <label for="q16-o1"><input type="radio" id="q16-o1" name="q16-choice" value="Right, with your proposal for the fourth row">Right, with your proposal for the fourth row</label>
             <label for="q16-o2"><input type="radio" id="q16-o2" name="q16-choice" value="Needs changes, see my note">Needs changes, see my note</label>
           </div>
         </fieldset>
         <div>
-          <label class="label" for="q16-text">Notes: say where the forms of the fourth row belong</label>
+          <label class="label" for="q16-text">Notes: any form we place wrongly, and where it belongs</label>
           <textarea id="q16-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
@@ -943,6 +957,9 @@
             </tbody>
           </table>
         </div>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026, for the other twelve:</strong> the names in the last column, and the two slips read as what they plainly are, <code>video</code> as a translator’s note and <code>nota_editor_digital</code> as a digital editor’s note. Only <code>falta_tipo</code> is still yours.</p>
+        </div>
         <fieldset>
           <legend>Answer for <code>falta_tipo</code></legend>
           <div class="options">
@@ -952,7 +969,7 @@
           </div>
         </fieldset>
         <div>
-          <label class="label" for="q17-text">Your names for the other kinds, or “yes” to ours</label>
+          <label class="label" for="q17-text">Notes, and any name in the table you would change</label>
           <textarea id="q17-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
@@ -1027,15 +1044,20 @@
       </div>
     </div>
 
-    <div class="q" data-q="q21" data-n="21">
+    <div class="q" data-q="q21" data-n="21" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">21</span>
       <div class="q-body">
         <h3>May we make the corrections listed on the credits page?</h3>
         <p class="why">Where one side is plainly right, we will correct Playcode to match it: the missing accent in 63 credits of “Tronch Pérez, Jesús”; “Ramírez Sánez” misspelt on <i>The Revenger’s Tragedy</i>; <i>Timon of Athens</i>, whose file credits “Editor1” and “Editor2” where FileMaker and the file’s own source name Jesús Tronch Pérez; and two plays where FileMaker names nobody and the file names someone. They go ahead unless you object.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> we make them. A re-import takes the credits from the file again, so they are made in our copies of the files, and we will send you the list of changes for yours.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q21-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q21-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q21-o1"><input type="radio" id="q21-o1" name="q21-choice" value="Yes, make them">Yes, make them</label>
+            <label for="q21-o1"><input type="radio" id="q21-o1" name="q21-choice" value="Yes, make them" checked>Yes, make them</label>
             <label for="q21-o2"><input type="radio" id="q21-o2" name="q21-choice" value="Not all of them, see my note">Not all of them, see my note</label>
           </div>
         </fieldset>
@@ -1044,6 +1066,7 @@
           <textarea id="q21-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1053,16 +1076,21 @@
     <p>Every EMOTHE file labels its play verse, prose or both, on the line that gives its size: <code>&lt;extent ana="verso"&gt;2749 versos&lt;/extent&gt;</code>, <code>ana="prosa"</code>, or <code>ana="versoprosa"</code> for verse and prose. Playcode reads only the number. It works the form out from the text instead, where one numbered verse line makes a play verse, and only a person in Playcode can call a play “verse and prose”. So the 41 plays labelled verse and prose show as verse, and the files Playcode writes label every play verse, a prose play as “0 versos”.</p>
     <p class="note">The full background, with the counts and the plays where label and text disagree: <a href="verso-y-prosa.html">Verse, prose or both in the TEI files</a>.</p>
 
-    <div class="q" data-q="q22" data-n="22">
+    <div class="q" data-q="q22" data-n="22" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">22</span>
       <div class="q-body">
         <h3>Where should a file say whether its play is in verse, prose or both?</h3>
         <p class="why"><strong>Today</strong> the files say it on <code>extent</code>, the size of the text, as an <code>ana</code> attribute. TEI accepts that, but it is the project’s own convention: <code>extent</code> is meant for a size, and <code>ana</code> for a pointer to an interpretation.</p>
         <p class="why"><strong>The alternative</strong> is TEI’s own place for classifying a text, <code>textClass</code>, where the files already give their CDU number. The three forms are declared once in the file’s header, and the play points at one of them: <code>&lt;catRef scheme="#forma" target="#versoprosa"/&gt;</code>. Other TEI projects, and tools that read TEI, look for a classification there. <code>extent</code> then keeps only the count, “2749 versos”.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> on <code>extent</code>, as the files do now. Playcode will read the label there and write it back there, so your files and the tools that read them stay as they are.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q22-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q22-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q22-o1"><input type="radio" id="q22-o1" name="q22-choice" value="On extent, as the files do now">On <code>extent</code>, as the files do now</label>
+            <label for="q22-o1"><input type="radio" id="q22-o1" name="q22-choice" value="On extent, as the files do now" checked>On <code>extent</code>, as the files do now</label>
             <label for="q22-o2"><input type="radio" id="q22-o2" name="q22-choice" value="In textClass, TEI’s classification; extent keeps only the count">In <code>textClass</code>, TEI’s classification; <code>extent</code> keeps only the count</label>
             <label for="q22-o3"><input type="radio" id="q22-o3" name="q22-choice" value="Both">Both</label>
             <label for="q22-o4"><input type="radio" id="q22-o4" name="q22-choice" value="Not sure">Not sure</label>
@@ -1073,6 +1101,7 @@
           <textarea id="q22-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1137,15 +1166,20 @@
     <p>Every verse line in the files carries an identifier of its own beside its number: <code>&lt;l xml:id="em0010-en-0001" n="3-4"&gt;Who’s there?&lt;/l&gt;</code>, the first line of <i>Hamlet</i>. There are two shapes: “em”, the play’s EMOTHE number, the language and a running number (<code>em0010-en-0001</code>, 239 plays), or the language and a running number alone (<code>es-0001</code>, 113 plays). The running number counts the lines in the order of the file, and no two lines of a play share one. Playcode reads them and writes them back unchanged, and shows them in its editor without letting anyone change them.</p>
     <p>The number of a line cannot do this job. A verse split between speakers is one number on two or three lines (9,851 numbers are shared this way), 59,347 verse lines have no number at all (songs, plays whose lines are not numbered), and some numbers follow a printed edition (“3-4” in <i>Hamlet</i>). The identifier names exactly one line. Within the files only <i>Hamlet</i>’s variant readings point at lines by it (<code>&lt;app to="#em0010-en-0136"&gt;</code>, 11 readings); outside them, anyone may use it to link to or cite a line of a published file. Nothing in Playcode or on the site uses it.</p>
 
-    <div class="q" data-q="q25" data-n="25">
+    <div class="q" data-q="q25" data-n="25" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">25</span>
       <div class="q-body">
         <h3>What identifier should a verse line added in Playcode get?</h3>
         <p class="why">Today it gets none, and the file Playcode writes gives that line none. Playcode could give it the next free number in the play’s own shape (<code>es-3679</code> in a play of 3,678 lines): never used before, so no link breaks, but out of order when the line is added in the first act. Numbering every line again in order would keep the running number true, but every link to a line after the new one would then point at the wrong line.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> the next free number in the play’s shape. No link to a line ever breaks, which matters more than the running number staying in order.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q25-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q25-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q25-o1"><input type="radio" id="q25-o1" name="q25-choice" value="The next free number in the play’s shape">The next free number in the play’s shape</label>
+            <label for="q25-o1"><input type="radio" id="q25-o1" name="q25-choice" value="The next free number in the play’s shape" checked>The next free number in the play’s shape</label>
             <label for="q25-o2"><input type="radio" id="q25-o2" name="q25-choice" value="Number every line again in order">Number every line again in order</label>
             <label for="q25-o3"><input type="radio" id="q25-o3" name="q25-choice" value="None: we do not use the identifiers">None: we do not use the identifiers</label>
             <label for="q25-o4"><input type="radio" id="q25-o4" name="q25-choice" value="Not sure">Not sure</label>
@@ -1156,6 +1190,7 @@
           <textarea id="q25-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1259,31 +1294,39 @@
         <h3>Which cast list is the play’s when it stands after the text?</h3>
         <p class="why">Two plays keep a cast list after the text. <i>Qué lástima que sea una puta</i> (EMOTHE0404) has two: one before the text, 17 names with no identifiers, and one after it, headed “[EDITORIAL CASTLIST”, 20 roles carrying the identifiers its 893 speeches point at. Playcode reads the first, so none of those speeches has a speaker and the play has no speaker statistics. emothe.uv.es prints both, the second after the text as another “Elenco”.</p>
         <p class="why"><i>Farsa de Inês Pereira</i> (EMOTHE0718) has only the one after the text, every role marked hidden. Playcode reads none, so its 282 speeches have no speaker either; emothe.uv.es prints none of it, as the roles are hidden.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> in both plays the list after the text is the play’s cast list, since the speeches point at its roles, and it stays after the text, where the file puts it (question 32). The roles of <i>Inês Pereira</i> stay hidden, as on emothe.uv.es. Still yours: the 17 names before the text of EMOTHE0404.</p>
+        </div>
         <fieldset>
-          <legend>Answer</legend>
+          <legend>Answer for the 17 names before the text of EMOTHE0404</legend>
           <div class="options">
-            <label for="q29-o1"><input type="radio" id="q29-o1" name="q29-choice" value="The list after the text is the play’s cast list, and stays after the text">The list after the text is the play’s cast list, and stays after the text</label>
-            <label for="q29-o2"><input type="radio" id="q29-o2" name="q29-choice" value="The list after the text is the play’s cast list, moved before the text where the other plays have theirs">The list after the text is the play’s cast list, moved before the text where the other plays have theirs</label>
+            <label for="q29-o1"><input type="radio" id="q29-o1" name="q29-choice" value="Leave them out: the list after the text replaces them">Leave them out: the list after the text replaces them</label>
+            <label for="q29-o2"><input type="radio" id="q29-o2" name="q29-choice" value="Print them before the text as well, as emothe.uv.es does">Print them before the text as well, as emothe.uv.es does</label>
             <label for="q29-o3"><input type="radio" id="q29-o3" name="q29-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
-          <label class="label" for="q29-text">Notes (and what to do with the 17 names before the text of EMOTHE0404)</label>
+          <label class="label" for="q29-text">Notes</label>
           <textarea id="q29-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
     </div>
 
-    <div class="q" data-q="q30" data-n="30">
+    <div class="q" data-q="q30" data-n="30" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">30</span>
       <div class="q-body">
         <h3>How should the sonnet after <i>Les Contents</i> be printed?</h3>
         <p class="why"><i>Les Contents</i> (EMOTHE0542) and its translation <i>Los contentos</i> (EMOTHE0743) end with a sonnet in praise of the author, “Réjouis-toi, Paris, œil unique de France…”: 14 lines and “FIN”, spoken by no character, filed as an epilogue. emothe.uv.es prints it after the text, as verse. Playcode reads only texts in prose after the text, so it leaves the sonnet out.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> after the text, as verse, not counted among the play’s verse lines, as emothe.uv.es printed it.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q30-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q30-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q30-o1"><input type="radio" id="q30-o1" name="q30-choice" value="After the text, as verse, not counted among the play’s verse lines">After the text, as verse, not counted among the play’s verse lines</label>
+            <label for="q30-o1"><input type="radio" id="q30-o1" name="q30-choice" value="After the text, as verse, not counted among the play’s verse lines" checked>After the text, as verse, not counted among the play’s verse lines</label>
             <label for="q30-o2"><input type="radio" id="q30-o2" name="q30-choice" value="After the text, as verse, counted among the play’s verse lines">After the text, as verse, counted among the play’s verse lines</label>
             <label for="q30-o3"><input type="radio" id="q30-o3" name="q30-choice" value="Only in the TEI file">Only in the TEI file</label>
             <label for="q30-o4"><input type="radio" id="q30-o4" name="q30-choice" value="Not sure">Not sure</label>
@@ -1294,6 +1337,7 @@
           <textarea id="q30-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1319,15 +1363,20 @@
       </div>
     </div>
 
-    <div class="q" data-q="q32" data-n="32">
+    <div class="q" data-q="q32" data-n="32" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">32</span>
       <div class="q-body">
         <h3>Should a text that follows the cast list be printed after it?</h3>
         <p class="why">28 plays give a title at the head of the text (“Título de cabecera”). In 20 it stands before the cast list; in 7, <i>Gorboduc</i> and <i>Don Lope de Cardona</i> among them, it stands after it, directly above the text. In <i>The Masque of Blackness</i> the address to the reader follows the cast list too. Playcode prints every such text above the cast list.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> where its file puts it, before or after the cast list, as Playcode already prints every other text around the play.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q32-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q32-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q32-o1"><input type="radio" id="q32-o1" name="q32-choice" value="Where its file puts it, before or after the cast list">Where its file puts it, before or after the cast list</label>
+            <label for="q32-o1"><input type="radio" id="q32-o1" name="q32-choice" value="Where its file puts it, before or after the cast list" checked>Where its file puts it, before or after the cast list</label>
             <label for="q32-o2"><input type="radio" id="q32-o2" name="q32-choice" value="The title at the head of the text always directly above the text; the rest above the cast list">The title at the head of the text always directly above the text; the rest above the cast list</label>
             <label for="q32-o3"><input type="radio" id="q32-o3" name="q32-choice" value="All above the cast list, as Playcode prints them now">All above the cast list, as Playcode prints them now</label>
             <label for="q32-o4"><input type="radio" id="q32-o4" name="q32-choice" value="Not sure">Not sure</label>
@@ -1338,6 +1387,7 @@
           <textarea id="q32-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1383,16 +1433,21 @@
       </div>
     </div>
 
-    <div class="q" data-q="q35" data-n="35">
+    <div class="q" data-q="q35" data-n="35" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">35</span>
       <div class="q-body">
         <h3>Should the files Playcode exports use TEI’s own elements for these texts?</h3>
         <p class="why">TEI has elements for some of them: <code>&lt;performance&gt;</code> for a performance notice, <code>&lt;argument&gt;</code>, <code>&lt;postscript&gt;</code>, <code>&lt;prologue&gt;</code> and <code>&lt;epilogue&gt;</code>. The files use <code>&lt;div type="noticia_representacion"&gt;</code> and the like, and Playcode writes those words back. TEI does not let every element stand where the file put its text: <code>&lt;performance&gt;</code> can, but <code>&lt;argument&gt;</code> and <code>&lt;postscript&gt;</code> cannot sit between sections. The scene of the action is already written as TEI’s <code>&lt;set&gt;</code>, as 17 files give it, also where the file says <code>&lt;div type="circunstancia_accion"&gt;</code>. Either way this changes the files you publish and any tool that reads them.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 16 October 2026:</strong> keep the project’s words, as Playcode writes them now. Your files and the tools that read them use those words, and the file comes back whole either way.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q35-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q35-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q35-o1"><input type="radio" id="q35-o1" name="q35-choice" value="Use TEI’s elements wherever TEI lets them stand where the file put the text">Use TEI’s elements wherever TEI lets them stand where the file put the text</label>
-            <label for="q35-o2"><input type="radio" id="q35-o2" name="q35-choice" value="Keep the project’s words, as Playcode writes them now">Keep the project’s words, as Playcode writes them now</label>
+            <label for="q35-o2"><input type="radio" id="q35-o2" name="q35-choice" value="Keep the project’s words, as Playcode writes them now" checked>Keep the project’s words, as Playcode writes them now</label>
             <label for="q35-o3"><input type="radio" id="q35-o3" name="q35-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
@@ -1401,6 +1456,7 @@
           <textarea id="q35-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1432,7 +1488,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 28 answered</span>
+        <span class="count" id="answered-count">0 of 20 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>

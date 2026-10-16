@@ -14,7 +14,7 @@ source and variant tables received) and 2026-10-11 (S3 done, S7 started).
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import; its one defect, four all-capitals sort titles, is in `docs/backlog.md` |
 | S3 — witnesses | **done** 2026-10-10 (`7e76c8f..0593021`): 508 witnesses on 106 plays imported on dev — `../specs/2026-10-10-s3-witnesses-design.md` |
-| S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays. **Waits on questions 11 and 12** in `docs/stakeholder/preguntas.html` (is a performance's source a bibliography entry), which decide its source model |
+| S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays. Question 11 decided 2026-10-16: a performance's source is a bibliography entry, the performance holding its own volume and pages. **Waits on question 12** in `docs/stakeholder/preguntas.html` (whether such a work also appears in the play's bibliography) |
 | S6 — characters | **blocked** by open question 7 (a TEI re-import replaces the cast list) |
 | S7 — credits | **done** 2026-10-11: no import; the cross-check found 18 credits our TEI import dropped (fixed) and 7 disagreements, asked as questions 18–21 — see below |
 | S8 — genre | **blocked**: the genre table (`T01.42_GeneroHier…`) has not arrived |

@@ -146,6 +146,7 @@ the note's paragraphs, filterable by type when the play uses two or more.
 ## Awaiting the project
 
 Questions only the project can answer, asked as questions 15-17 in `docs/stakeholder/preguntas.html`.
+Question 15 and most of 17 turned out to be the developer's, decided on 2026-10-16 (`docs/backlog.md`).
 Nothing here is built; each stays as it is until
 someone with the authority decides.
 
@@ -155,7 +156,8 @@ someone with the authority decides.
 the catalogue's Kind facet, its "translation" tag and the search page's Originals/Translations
 facet. The schema also allows `adaptacion` and `refundicion` (`Play.changeset/2`). Should an
 adaptation or a *refundición* be labelled as such, counted as a translation, or as an
-original? **Needs**: the stakeholders' answer; then a label per type and a facet value each.
+original? **Decided** 2026-10-16 (question 15): each by its own name, as the files call them;
+the work is in `docs/backlog.md`, *The kind of an adaptation*.
 
 ### Labels for the other note types
 
@@ -168,13 +170,15 @@ pop-ups and the Notes pages, and the type filter files them all under that one o
 wrote the note. **Needs**: the project's wording for each, or a decision to fold some into
 others (`nota_editor_digital` into `editor_digital`, `falta_tipo` into no type); FileMaker's
 `T07.261` may already hold it. Then a clause per type in `PlayLabels.note_type_label/1` and
-`Note.types/0`.
+`Note.types/0`. **Decided** 2026-10-16 (question 17) for all but `falta_tipo`: the names the
+questions page proposes, and the two slips read as `traductor` (`video`) and `editor_digital`.
 
 ### The grouping of verse forms into families
 
 The metrical synopsis colours passages by family: romance, Spanish stanzas, Italianate,
 other (`Playcode.Statistics.Metrics`, `@families`). The grouping is the design's, not a
 philologist's. In particular: where do `cuarteto`, `verso_suelto`, `copla_arte_mayor` and
-`pareados` belong? **Needs**: the project's philologists to confirm or correct the table in
+`pareados` belong? Question 16 now carries our placing of the forms that fall into "Other"
+(2026-10-16), for a yes or corrections. **Needs**: the project's philologists to confirm or correct the table in
 the redesign spec ("Statistics › Families"); then edit `@families` and bump
 `Playcode.Statistics` `@version` so cached statistics recompute.
