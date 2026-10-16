@@ -1632,6 +1632,16 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml =~ "</note>dos."
     end
 
+    # Regression: EMOTHE0299's note n=4171 is <p><lb/></p> and nothing else. Its body was
+    # "\n", which Note.changeset refuses as blank, and the whole play failed to import.
+    test "a note that holds nothing but a break is dropped, and the play still imports" do
+      xml =
+        roundtrip(speech(~s(<p>Uno<note n="1" type="editor"><p><lb/></p></note> dos.</p>)))
+
+      assert xml_notes(xml) == []
+      assert xml_lines(xml, "p") == [{%{}, "Uno dos."}]
+    end
+
     test "exporting, re-importing and exporting again changes nothing" do
       body =
         ~s(<p n="7">Uno, <lb/>dos <lb n="8"/>tres<note n="1" type="editor"><p>Glosa <lb/>larga.</p></note>.</p><p><lb/>Cuatro <emph>cinco <lb/>seis</emph>.</p>)
@@ -1764,6 +1774,27 @@ defmodule Playcode.TeiRoundtripTest do
 
       import_tei!(xml)
       assert length(Bibliography.list_links(play.id)) == 11
+    end
+
+    # A curator's Enter in the printed note: the export writes it as <lb/>, which the
+    # reader took for nothing, so "Véase\nFenisa." came back "VéaseFenisa." and the
+    # reference no longer matched its entry.
+    test "a printed note with a line break is still recognised on re-import" do
+      play = import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}"))
+
+      bibliography_fixture(
+        play,
+        Map.merge(@every_field, %{
+          "kind" => "criticism",
+          "monogr_title" => "Libro",
+          "public_note" => "Véase\n<<Fenisa>>."
+        })
+      )
+
+      xml = export_tei(play)
+
+      assert xml =~ "Véase<lb/><emph>Fenisa</emph>."
+      assert {:ok, %{bibliography_adds: []}} = TeiImport.preview_import(write_tmp!(xml))
     end
 
     # FileMaker keeps several people in one field; TEI gives each person an element.

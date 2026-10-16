@@ -1002,6 +1002,8 @@ defmodule Playcode.Import.TeiParser do
     do: element |> run() |> String.replace(~r/\s+/u, " ") |> String.trim()
 
   defp run(text) when is_binary(text), do: text
+  # A line break the export wrote for a curator's Enter: whitespace, as it was before.
+  defp run({"lb", _attrs, _children}), do: " "
 
   # The italics keep their spaces: the export wrote them on one line, so a space inside
   # an <emph> is the curator's ("<<Foo >>bar"), not indentation.
@@ -1633,7 +1635,8 @@ defmodule Playcode.Import.TeiParser do
 
     term = safe_text(find_child(children, "term"))
 
-    if body == "" do
+    # A note of nothing but breaks (EMOTHE0299's <p><lb/></p>) has no text either.
+    if String.trim(body) == "" do
       []
     else
       [

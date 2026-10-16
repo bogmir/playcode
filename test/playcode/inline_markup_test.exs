@@ -160,6 +160,16 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
                InlineMarkup.parts(~s(<stage>a <lb n="6"/>b</stage>))
     end
 
+    # The marker's "/>" runs into the italics' closing ">>": the closing must not be read
+    # from inside the marker, or the tag shows as text.
+    test "a number that ends an italic run stays a number inside it" do
+      assert InlineMarkup.parts(~s(<<sic <lb n="5"/>>>tail)) == [
+               %{text: "sic ", italic: true, stage: nil},
+               %{number: "5", text: "", italic: true, stage: nil},
+               %{text: "tail", italic: false, stage: nil}
+             ]
+    end
+
     test "plain drops the marker and keeps a line break" do
       assert InlineMarkup.plain(~s(<lb n="1319"/>Beggar, <lb n="1320"/>but\nthanks)) ==
                "Beggar, but\nthanks"

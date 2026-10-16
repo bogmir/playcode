@@ -59,8 +59,10 @@ defmodule Playcode.PlayContent.InlineMarkup do
     parts
   end
 
+  # A number marker is read whole inside the italics, so its "/>" cannot be taken for the
+  # start of their closing ">>" (`<<sic <lb n="5"/>>>`).
   defp italics(text, stage) do
-    ~r/<<(.*?)>>/s
+    ~r/<<((?:<lb n="[A-Za-z0-9.\-]+"\/>|.)*?)>>/s
     |> Regex.split(text, include_captures: true)
     |> Enum.flat_map(fn part ->
       case Regex.run(~r/\A<<(.*)>>\z/s, part) do
