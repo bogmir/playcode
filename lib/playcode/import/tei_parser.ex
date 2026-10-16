@@ -1333,13 +1333,13 @@ defmodule Playcode.Import.TeiParser do
   defp aside_delivery?(_), do: false
 
   # The spoken text of a verse line, read with note marks (text_content/2). An aside line
-  # is aside_text/1; with no <seg>, the line without its delivery <stage>.
+  # is aside_text/1; with no <seg>, the line without its delivery <stage>, its entries kept.
   defp verse_line_content({_name, _attrs, children} = line, true) do
     if aside_in_children?(children) do
       aside_text(line)
     else
       children
-      |> Enum.reject(&match?({"stage", _, _}, &1))
+      |> without_stages()
       |> pieces(:mark, &text_content(&1, :mark))
       |> squeeze()
     end
@@ -1395,7 +1395,7 @@ defmodule Playcode.Import.TeiParser do
 
   # A line or paragraph holding a <seg type="aside">. All aside, when every word is in a
   # seg: the segs' text, with the element's own notes and breaks, its stages dropped (the
-  # delivery, "(Aparte)", is what is_aside says). Partly aside: the whole text, each seg an
+  # delivery, "(Aparte)", is what is_aside says) but their entries kept (without_stages/1). Partly aside: the whole text, each seg an
   # <aside> marker (read_child/3).
   defp aside_text({_name, _attrs, children} = element) do
     if Enum.any?(children, &spoken_outside_aside?/1),
@@ -1410,13 +1410,9 @@ defmodule Playcode.Import.TeiParser do
 
   defp spoken_outside_aside?(_), do: false
 
-  # An entry in a stage the line drops is not dropped with it: it comes out where the stage was.
   defp aside_content(children) do
     children
-    |> Enum.flat_map(fn
-      {"stage", _, _} = stage -> outermost(stage, ["app"])
-      child -> [child]
-    end)
+    |> without_stages()
     |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note app lb), &1)))
     |> pieces(:mark, fn
       {"lb", attrs, _} -> line_break(attrs)
@@ -1563,6 +1559,16 @@ defmodule Playcode.Import.TeiParser do
   # What leaves the play text and is stored at its offset: a note, and an entry of the
   # critical apparatus.
   @apart ~w(note app)
+
+  # `children` with each <stage> replaced by its own entries, where the stage stood: a line
+  # that drops its stages (the delivery, "(Aparte)", is what is_aside says) keeps their
+  # entries. A note inside the stage goes with it, and so does an entry that note copies.
+  defp without_stages(children) do
+    Enum.flat_map(children, fn
+      {"stage", _, _} = stage -> for {"app", _, _} = app <- outermost(stage, @apart), do: app
+      child -> [child]
+    end)
+  end
 
   # Each child's text, read by `fun`. Under :mark (the play text) a <note> or <app> child is
   # its mark instead; elsewhere (a note's own text) an <app> is left out, its neighbours

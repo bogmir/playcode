@@ -1492,6 +1492,40 @@ defmodule Playcode.TeiRoundtripTest do
       second = first |> String.replace("APP5", "APP6") |> roundtrip()
       assert String.replace(second, "APP6", "APP5") == first
     end
+
+    # The reviewer's repro: a note inside the dropped stage copies the stage's entry. The note
+    # goes with the stage; its copy is not a second entry.
+    test "an entry in a dropped delivery stage is kept once when a note inside the stage copies it" do
+      entry = ~s(<app n="10"><rdg wit="#B">Aparte</rdg></app>)
+
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1"><stage type="delivery">(Aparte.#{entry}<note n="1" type="editor"><p>glosa #{entry}</p></note>)</stage><seg type="aside">Adios.</seg></l>
+      </sp></div1>
+      """
+
+      xml = roundtrip(tei(body: body))
+
+      assert reading_texts(xml, "l") == ["Adios."]
+      assert [%{n: "10", readings: [{"rdg", "#B", "Aparte", nil}]}] = xml_apps(xml)
+    end
+
+    # A line aside by its "(Aparte)" stage alone, no <seg>: the stage goes, the words stay.
+    test "an entry in the delivery stage of a line aside with no seg is kept, and comes back the same" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1"><stage type="delivery">(Aparte.<app n="9"><rdg wit="#B">Aparte</rdg></app>)</stage>Hola.</l>
+      </sp></div1>
+      """
+
+      first = tei(code: "APP7", body: body) |> roundtrip()
+
+      assert reading_texts(first, "l") == ["Hola."]
+      assert [%{in: "l", n: "9", readings: [{"rdg", "#B", "Aparte", nil}]}] = xml_apps(first)
+
+      second = first |> String.replace("APP7", "APP8") |> roundtrip()
+      assert String.replace(second, "APP8", "APP7") == first
+    end
   end
 
   describe "HTML typed into the text" do
