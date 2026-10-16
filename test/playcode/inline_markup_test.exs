@@ -144,6 +144,56 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
     end
   end
 
+  describe "line numbers and breaks" do
+    test "a number is a part of its own, with no text, where its marker stood" do
+      assert InlineMarkup.parts(~s(thanks, <lb n="1320"/>but)) == [
+               %{text: "thanks, ", italic: false, stage: nil},
+               %{number: "1320", text: "", italic: false, stage: nil},
+               %{text: "but", italic: false, stage: nil}
+             ]
+    end
+
+    test "a number inside italics or a stage belongs to them" do
+      assert [_, %{number: "5", italic: true}, _] = InlineMarkup.parts(~s(<<a <lb n="5"/>b>>))
+
+      assert [_, %{number: "6", stage: %{run: 0}}, _] =
+               InlineMarkup.parts(~s(<stage>a <lb n="6"/>b</stage>))
+    end
+
+    test "plain drops the marker and keeps a line break" do
+      assert InlineMarkup.plain(~s(<lb n="1319"/>Beggar, <lb n="1320"/>but\nthanks)) ==
+               "Beggar, but\nthanks"
+    end
+
+    test "a note placed around a number keeps the number" do
+      assert [%{text: "a "}, %{note: _}, %{number: "2"}, %{text: "b"}] =
+               InlineMarkup.parts(~s(a <lb n="2"/>b), [at(2)])
+    end
+
+    test "a paragraph's number is the marker at its very start" do
+      assert InlineMarkup.paragraph_number(~s(<lb n="1319"/>Beggar <lb n="1320"/>but)) ==
+               {"1319", ~s(Beggar <lb n="1320"/>but)}
+
+      assert InlineMarkup.paragraph_number(~s(Beggar <lb n="1320"/>but)) ==
+               {nil, ~s(Beggar <lb n="1320"/>but)}
+
+      assert InlineMarkup.paragraph_number(nil) == {nil, nil}
+    end
+
+    test "the marker is built as the importer stores it" do
+      assert InlineMarkup.number_marker("1311-2") == ~s(<lb n="1311-2"/>)
+    end
+
+    test "numbers_well_formed? accepts numbers and refuses any other <lb" do
+      assert InlineMarkup.numbers_well_formed?(nil)
+      assert InlineMarkup.numbers_well_formed?("no marker\nat all")
+      assert InlineMarkup.numbers_well_formed?(~s(a <lb n="1311-2"/>b <lb n="3610.01"/>c))
+      refute InlineMarkup.numbers_well_formed?("a <lb/>b")
+      refute InlineMarkup.numbers_well_formed?(~s(a <lb n="1 2"/>b))
+      refute InlineMarkup.numbers_well_formed?(~s(a <lb n="12">b))
+    end
+  end
+
   describe "junk text" do
     # A researcher can paste anything into the editor: a run of stages that never close
     # must cost time in proportion to its length, not its square (32 KB took 1.7 s).

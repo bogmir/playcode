@@ -125,6 +125,9 @@ msgstr "no puede ser anterior al año inicial"
 msgid "has a stage marker that is not well formed"
 msgstr "tiene una marca de acotación que no está bien formada"
 
+msgid "has a line number marker that is not well formed"
+msgstr "tiene una marca de número de línea que no está bien formada"
+
 msgid "at least one name is required"
 msgstr "se necesita al menos un nombre"
 

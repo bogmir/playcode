@@ -463,6 +463,31 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  describe "line numbers in the text" do
+    defp number_refusal,
+      do:
+        Gettext.dgettext(
+          PlaycodeWeb.Gettext,
+          "errors",
+          "has a line number marker that is not well formed"
+        )
+
+    # A break is typed with Enter; a bare <lb/> would print as literal text.
+    test "a bare <lb/> or a malformed number is refused, and the line is unchanged",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      assert edit(lv, "Segunda línea", "Segunda <lb/>línea") =~ number_refusal()
+
+      # A refusal leaves the quick edit open, its field still in place.
+      assert lv
+             |> element("form[id^='inline-edit-']")
+             |> render_submit(%{"value" => ~s(Segunda <lb n="1 2"/>línea)}) =~ number_refusal()
+
+      assert {"Segunda línea", 2} in lines(play)
+    end
+  end
+
   describe "a stage direction's kind and a verse's identifier" do
     setup %{conn: conn} do
       play =
