@@ -198,9 +198,13 @@ defmodule Playcode.Statistics.Metrics do
     [current | rest]
   end
 
+  # The closing tags (and number markers) that send a line through `InlineMarkup.spoken/1`.
+  @spoken_markers ["</stage>", "<lb ", "</aside>", "</folio>"]
+
   @doc """
-  Number of spoken words in element content: the `<<`/`>>` and aside markers, a printed
-  line's number and the words of an inline stage direction are not spoken.
+  Number of spoken words in element content: the `<<`/`>>` and aside markers, a Folio
+  passage's tags, a printed line's number and the words of an inline stage direction are
+  not spoken (a passage's words are).
   """
   def words(nil), do: 0
 
@@ -209,7 +213,7 @@ defmodule Playcode.Statistics.Metrics do
     # drop the italics markers, so do that, or nothing, without parsing the line.
     spoken =
       cond do
-        String.contains?(text, ["</stage>", "<lb ", "</aside>"]) -> InlineMarkup.spoken(text)
+        String.contains?(text, @spoken_markers) -> InlineMarkup.spoken(text)
         not (String.contains?(text, "<") or String.contains?(text, "&")) -> text
         true -> String.replace(text, ["<<", ">>", "&lt;&lt;", "&gt;&gt;"], "")
       end

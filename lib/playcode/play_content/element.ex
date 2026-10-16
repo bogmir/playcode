@@ -28,7 +28,9 @@ defmodule Playcode.PlayContent.Element do
   any other word a file gives.
 
   `content` is plain text with italics as `<<…>>` markers and a stage direction inside a
-  line or paragraph as `<stage type="…">…</stage>` (see `InlineMarkup`).
+  line or paragraph as `<stage type="…">…</stage>` (see `InlineMarkup`). A passage only the
+  Folio prints is `<folio>…</folio>` (`InlineMarkup`), in a line's, a paragraph's or a stage
+  direction's text, or a speech's `speaker_label`.
   `position` orders an element among its siblings.
 
   `is_aside` marks a line or paragraph spoken aside: all of it (`whole_aside?/1`), or,
@@ -111,7 +113,33 @@ defmodule Playcode.PlayContent.Element do
     )
     |> validate_stage_markers()
     |> validate_aside_markers()
+    |> validate_folio_markers()
     |> validate_number_markers()
+  end
+
+  # A Folio marker (InlineMarkup) is sound or refused, in the text of a line, a paragraph
+  # or a stage direction, or a speech's speaker label: printed anywhere else it would show
+  # its tags, and the export could not write it back.
+  defp validate_folio_markers(changeset) do
+    Enum.reduce(
+      [content: ~w(verse_line prose stage_direction), speaker_label: ~w(speech)],
+      changeset,
+      fn {field, types}, changeset ->
+        text = get_field(changeset, field)
+
+        cond do
+          not String.contains?(text || "", ["<folio", "</folio>"]) ->
+            changeset
+
+          get_field(changeset, :type) in types and
+              Playcode.PlayContent.InlineMarkup.folios_well_formed?(text) ->
+            changeset
+
+          true ->
+            add_error(changeset, field, "has a Folio marker that is not well formed")
+        end
+      end
+    )
   end
 
   # An aside marker, like a stage, is sound or refused, and only a line or a paragraph

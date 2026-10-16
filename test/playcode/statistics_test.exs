@@ -85,6 +85,7 @@ defmodule Playcode.StatisticsTest do
           "<<a>>b <<c>>",
           "Dulce &lt;&lt;sueño&gt;&gt; mío",
           "Dulce <aside>sueño</aside> mío",
+          "O God, <folio>O</folio> God,",
           "",
           "!?"
         ] do
@@ -97,6 +98,8 @@ defmodule Playcode.StatisticsTest do
     assert Metrics.words("<<a>>b c") == 2
     assert Metrics.words("Dulce <stage>(bajo)</stage> sueño") == 2
     assert Metrics.words("Dulce <aside><<sueño>></aside> mío") == 3
+    # A Folio passage's words count with the rest; its tags are no word.
+    assert Metrics.words("O God, <folio>O</folio> God,") == 4
     assert Metrics.words(nil) == 0
   end
 
