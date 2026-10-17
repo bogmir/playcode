@@ -760,7 +760,13 @@ defmodule Playcode.Export.StaticSitePlayTest do
     """
 
     test "are hidden by default, with a switch that shows them in grey between their F's" do
-      play = import_tei!(tei(body: @folio_body))
+      # Hamlet runs with its variant readings off, and that setting does not govern this switch.
+      {:ok, play} =
+        [body: @folio_body]
+        |> tei()
+        |> import_tei!()
+        |> Playcode.Catalogue.update_play(%{show_variants: false})
+
       dir = generate!([play], all: true)
       act = page(dir, play, "act-1.html")
 
