@@ -275,6 +275,28 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
       assert labelled.("<folio>a</folio><folio>b</folio>") == "[F]a[F][F]b[F]"
     end
 
+    # Hamlet v. 2632. With the stage directions hidden, the stage's words go and the F's
+    # beside them must go too: a label is in the stage direction of the first (or last)
+    # word of its passage, a space before it aside.
+    test "folio_labels/1 puts each label in the stage its passage's first or last word is in" do
+      stages = fn text ->
+        text
+        |> InlineMarkup.parts()
+        |> InlineMarkup.folio_labels()
+        |> Enum.filter(&Map.has_key?(&1, :label))
+        |> Enum.map(&(&1.stage && &1.stage.run))
+      end
+
+      assert stages.("<stage>[Calling within</stage><folio> <stage>“Hamlet!”</stage></folio>") ==
+               [1, 1]
+
+      assert stages.("<folio><stage>a</stage> b</folio>") == [0, nil]
+      assert stages.("<folio>a <stage>b</stage></folio>") == [nil, 0]
+      assert stages.("<stage>x</stage> <folio>O</folio>") == [nil, nil]
+      assert stages.(~s(<folio part="I"><stage>a</stage> b</folio>)) == [0]
+      assert stages.(~s(<folio part="F"><stage>a</stage> b</folio>)) == [nil]
+    end
+
     test "folio_labels/1 keeps its labels at a passage's two ends when a note sits inside it" do
       notes = [%{id: 1, offset: 3, position: 0}]
 

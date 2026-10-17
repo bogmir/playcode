@@ -2032,6 +2032,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             divisions={@preview_divisions}
             show_line_numbers={true}
             show_stage_directions={true}
+            show_folio={true}
           />
         </div>
       </div>

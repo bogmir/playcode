@@ -216,23 +216,32 @@ defmodule Playcode.PlayContent.InlineMarkup do
 
   @doc """
   `parts` with an F where each Folio passage starts and where it ends, as readers see it:
-  `%{label: "F", text: "", italic: false, stage: nil, folio: folio}`. A piece with part
+  `%{label: "F", text: "", italic: false, stage: stage, folio: folio}`. A piece with part
   "M" or "F" opens no passage and one with "M" or "I" closes none: the passage goes on in
   the element before or after.
+
+  A label is in the stage direction its passage's first (opening) or last (closing) word
+  is in, a space aside, and has no stage when that word has none: hiding the stage
+  directions then hides the F's with the words they bracket.
   """
   def folio_labels(parts) do
     parts
     |> Enum.chunk_by(&folio_run/1)
     |> Enum.flat_map(fn
       [%{folio: folio} | _] = run ->
-        label = %{label: "F", text: "", italic: false, stage: nil, folio: folio}
-        open = if folio.part in ["M", "F"], do: [], else: [label]
-        close = if folio.part in ["M", "I"], do: [], else: [label]
+        open = if folio.part in ["M", "F"], do: [], else: [folio_label(folio, run)]
+        close = if folio.part in ["M", "I"], do: [], else: [folio_label(folio, Enum.reverse(run))]
         open ++ run ++ close
 
       outside ->
         outside
     end)
+  end
+
+  # `words`: the passage's parts, from the label's side inwards.
+  defp folio_label(folio, words) do
+    word = Enum.find(words, &(String.trim(Map.get(&1, :text, "")) != "")) || hd(words)
+    %{label: "F", text: "", italic: false, stage: word.stage, folio: folio}
   end
 
   defp folio_run(part) do

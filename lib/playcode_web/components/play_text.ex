@@ -49,6 +49,7 @@ defmodule PlaycodeWeb.Components.PlayText do
             show_asides={@show_asides}
             show_split_verses={@show_split_verses}
             show_verse_type={@show_verse_type}
+            show_folio={@show_folio}
             act_key={div_key}
           />
         </div>
@@ -67,6 +68,7 @@ defmodule PlaycodeWeb.Components.PlayText do
               show_asides={@show_asides}
               show_split_verses={@show_split_verses}
               show_verse_type={@show_verse_type}
+              show_folio={@show_folio}
               act_key={div_key}
             />
           </div>
@@ -151,6 +153,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
   attr :show_verse_type, :boolean, default: false
+  attr :show_folio, :boolean, default: false
   attr :act_key, :string, default: nil
 
   defp element_list(assigns) do
@@ -164,12 +167,18 @@ defmodule PlaycodeWeb.Components.PlayText do
           show_asides={@show_asides}
           show_split_verses={@show_split_verses}
           show_verse_type={@show_verse_type}
-          act_key={@act_key}
+          act_key={sync_act(@act_key, element, @show_folio)}
         />
       </div>
     </div>
     """
   end
+
+  # A speech that is all the Folio's, while the passages are hidden, has no box to scroll
+  # to: left out of the comparison's scroll sync (sync_scroll.mjs pairs speeches by their
+  # act key, so a keyed speech with no box would take another panel's place in the count).
+  defp sync_act(act_key, element, show_folio),
+    do: if(show_folio or not Element.folio_only?(element), do: act_key)
 
   attr :element, :map, required: true
   attr :show_line_numbers, :boolean, default: true
@@ -342,20 +351,22 @@ defmodule PlaycodeWeb.Components.PlayText do
     """
   end
 
-  # Hamlet's Folio passages: an F where one starts and ends, and its words, in grey; gone
-  # while the "Folio interpolations" switch is off (app.css), a note inside one with it.
-  defp part_html(%{label: label}, _show),
-    do: [~s(<sup class="folio folio-f">), escape(label), "</sup>"]
-
-  defp part_html(%{folio: _} = part, show),
-    do: [~s(<span class="folio">), part_html(Map.delete(part, :folio), show), "</span>"]
-
   # A piece of an inline stage direction, a note's number among them: in a span, and left
   # out while the stage directions are hidden.
   defp part_html(%{stage: %{}}, %{stage: false}), do: ""
 
   defp part_html(%{stage: %{}} = part, show),
     do: [~s(<span class="inline-stage">), part_html(%{part | stage: nil}, show), "</span>"]
+
+  # Hamlet's Folio passages: an F where one starts and ends, and its words, in grey; gone
+  # while the "Folio interpolations" switch is off (app.css), a note inside one with it.
+  # Inside a stage direction these come after the stage's own clauses, so the stage
+  # switch hides an F in one too.
+  defp part_html(%{label: label}, _show),
+    do: [~s(<sup class="folio folio-f">), escape(label), "</sup>"]
+
+  defp part_html(%{folio: _} = part, show),
+    do: [~s(<span class="folio">), part_html(Map.delete(part, :folio), show), "</span>"]
 
   # Where a printed line of the source starts; gone while the line numbers are hidden.
   defp part_html(%{number: _}, %{numbers: false}), do: ""

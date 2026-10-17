@@ -130,6 +130,68 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
     end
   end
 
+  describe "scroll sync and Hamlet's Folio passages" do
+    # A speech the hidden passages leave without words has no box to scroll to: if it kept
+    # data-sync-act, assets/js/sync_scroll.mjs would count it among the act's speeches and
+    # could pick it as the counterpart of the other panel's speech.
+    setup do
+      folio = ~s(<code>&lt;span class="folio"&gt;</code>)
+      folio_end = ~s(<code>&lt;/span&gt;</code>)
+      f = ~s(<code>&lt;sup&gt;</code>F<code>&lt;/sup&gt;</code>)
+
+      body = """
+      <div1 type="acto" n="1"><head>ACT I</head>
+        <sp><speaker>HAMLET</speaker><l n="1">uno</l></sp>
+        <sp><speaker>#{folio}#{f}GUILDENSTERN#{folio_end}</speaker><p n="2">#{folio}Solo el Folio.#{f}#{folio_end}</p></sp>
+        <sp><speaker>CLAUDIO</speaker><l n="3">tres</l></sp>
+      </div1>
+      """
+
+      original = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      translation = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+
+      {:ok, translation} =
+        Playcode.Catalogue.update_play(translation, %{
+          parent_play_id: original.id,
+          relationship_type: "traduccion"
+        })
+
+      %{original: original, translation: translation}
+    end
+
+    test "a speech that is all the Folio's is not paired, and the others still are",
+         %{conn: conn, translation: translation} do
+      {:ok, view, _html} = live(conn, ~p"/plays/#{translation.code}/compare")
+      page = view |> render() |> LazyHTML.from_fragment()
+
+      for panel <- ["panel-0", "panel-1"] do
+        speeches = LazyHTML.query(page, "[data-panel='#{panel}'] .speech")
+        assert Enum.count(speeches) == 3
+        assert LazyHTML.query(page, "[data-panel='#{panel}'] .speech.folio") |> Enum.count() == 1
+        assert sync_keys(page, panel, "data-sync-act") == ["act-0", "act-0"]
+
+        assert LazyHTML.query(page, "[data-panel='#{panel}'] .speech.folio[data-sync-act]")
+               |> Enum.count() == 0
+      end
+    end
+
+    test "it keeps its key while the passages are shown", %{translation: translation} do
+      divisions = Playcode.PlayContent.load_play_content(translation.id)
+
+      html =
+        render_component(&PlaycodeWeb.Components.PlayText.play_body/1,
+          divisions: divisions,
+          sync_keys: true,
+          show_folio: true
+        )
+
+      assert html
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(".speech[data-sync-act]")
+             |> Enum.count() == 3
+    end
+  end
+
   describe "drafts" do
     test "a draft's comparison page is for staff only", %{conn: conn} do
       draft = TestFixtures.play_fixture(%{"title" => "Borrador comparado"})
