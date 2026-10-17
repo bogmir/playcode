@@ -27,7 +27,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   asks again when the session drops before the build's end, and when the build is done
   scales both back with autostop on. After a code change every play is rebuilt, six
   minutes there and over two hours on the shared CPU. `deploy`, once the
-  preview is checked, is Deploy (`Release.deploy_site/0`). `scale-down` scales back by
+  preview is checked, is Deploy (`Release.deploy_site/0`), asking again the same way. `scale-down` scales back by
   itself, after an aborted run or build.
 
   The counts that check what the re-import was for, and the preview, stay with you
@@ -100,7 +100,19 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
     step("Generating the site")
     wake!()
-    generate_until_done(1)
+
+    case until_done(@generate, "site generated", "generate failed") do
+      :ok ->
+        :ok
+
+      :failed ->
+        Mix.raise(
+          "the build failed, above; the machines stay up. `generate` again, or `scale-down`"
+        )
+
+      :cut_off ->
+        Mix.raise("the build was cut off #{@attempts} times; see the machine's status above")
+    end
 
     step("Scaling back, autostop on")
     scale_down!()
@@ -114,11 +126,10 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     step("Deploying the site, autostop off")
     wake!()
     fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
-    output = ssh(@deploy)
+    result = until_done(@deploy, "site deployed", "deploy failed")
     fly!(~w(machine update #{@app_machine} --autostop=stop -a #{@app} --yes))
 
-    unless output =~ "site deployed",
-      do: Mix.raise("the deploy failed or did not finish; see above")
+    unless result == :ok, do: Mix.raise("the deploy failed or did not finish; see above")
   end
 
   def run(["scale-down"]) do
@@ -227,31 +238,32 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     end
   end
 
-  # A dropped session leaves the build running in the app: asking again queues a Generate
-  # behind it, which waits for it and then finds little or nothing left to do.
-  defp generate_until_done(attempt) when attempt > @attempts,
-    do: Mix.raise("the build was cut off #{@attempts} times; see the machine's status above")
+  # Runs a job of the app's site builder over SSH until its output says it ended, `done` or
+  # `failed`. A session that ends first is asked again: a dropped session leaves the job
+  # running in the app, and the second request waits behind it; an app just restarted
+  # (turning autostop off restarts it) answers `:noconnection` until it is up (2026-10-18).
+  defp until_done(command, done, failed, attempt \\ 1)
 
-  defp generate_until_done(attempt) do
-    output = ssh(@generate)
+  defp until_done(_command, _done, _failed, attempt) when attempt > @attempts, do: :cut_off
+
+  defp until_done(command, done, failed, attempt) do
+    output = ssh(command)
 
     cond do
-      output =~ "site generated" ->
+      output =~ done ->
         :ok
 
-      output =~ "generate failed" ->
-        Mix.raise(
-          "the build failed, above; the machines stay up. `generate` again, or `scale-down`"
-        )
+      output =~ failed ->
+        :failed
 
       true ->
         Mix.shell().info(
-          "\nThe session ended before the build (#{attempt} of #{@attempts}); again."
+          "\nThe session ended before the job did (#{attempt} of #{@attempts}); again."
         )
 
         stream(~w(machine status #{@app_machine} -a #{@app}))
         wake!()
-        generate_until_done(attempt + 1)
+        until_done(command, done, failed, attempt + 1)
     end
   end
 
