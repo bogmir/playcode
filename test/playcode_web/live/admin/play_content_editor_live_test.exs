@@ -423,6 +423,23 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       assert has_element?(lv, "#element-form", t("Words only the Folio prints: <folio>…</folio>"))
     end
 
+    # A Folio passage may also be a stage direction's words or a speaker label.
+    test "the stage direction and speech forms say how to type a Folio passage",
+         %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+      hint = t("Words only the Folio prints: <folio>…</folio>")
+
+      lv
+      |> element("#{card(lv, "Sale el Rey")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      assert has_element?(lv, "#element-form", hint)
+
+      lv |> element("[id^='el-speaker-']", "ANA") |> render_click()
+      assert has_element?(lv, "#element-form label", t("Speaker Label"))
+      assert has_element?(lv, "#element-form", hint)
+    end
+
     test "one typed into a line is a <stage> in the exported line", %{conn: conn, play: play} do
       lv = open_scene(conn, play)
 
