@@ -1202,7 +1202,7 @@ defmodule Playcode.Import.TeiParser do
   # an <emph> is the curator's ("<<Foo >>bar"), not indentation.
   defp run({name, attrs, children}) do
     text = Enum.map_join(children, &run/1)
-    if emph_element?(name, attrs), do: "<<" <> text <> ">>", else: text
+    if emph_element?(name, attrs), do: italics(text), else: text
   end
 
   defp run(_other), do: ""
@@ -1642,7 +1642,7 @@ defmodule Playcode.Import.TeiParser do
 
   defp text_content({name, attrs, children}, notes) do
     if emph_element?(name, attrs) do
-      "<<" <> extract_plain_text(children, notes) <> ">>"
+      children |> extract_plain_text(notes) |> italics()
     else
       children |> pieces(notes, &read_child(&1, notes, name)) |> squeeze()
     end
@@ -1650,6 +1650,10 @@ defmodule Playcode.Import.TeiParser do
 
   defp text_content(text, _notes) when is_binary(text), do: String.trim(text)
   defp text_content(_, _notes), do: ""
+
+  # An emphasis of nothing (EMOTHE0187's `<emph></emph>, if`) is no italics: kept as
+  # "<<>>", it came back from the export as a stray space, a different file each time.
+  defp italics(text), do: if(String.trim(text) == "", do: text, else: "<<" <> text <> ">>")
 
   @stage_parents ~w(l p seg)
   @leading_marks ~r/\A((?:\x{E000}\d+[sn]\x{E001} ?)*)(.*)\z/su

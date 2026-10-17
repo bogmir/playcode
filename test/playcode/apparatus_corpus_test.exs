@@ -3,7 +3,7 @@ defmodule Playcode.ApparatusCorpusTest do
   The six plays of the production corpus that carry a critical apparatus, read from
   doc/tei_corpus/ (git-ignored; without it nothing runs): every entry outside a note comes
   back as an entry, with EMOTHE0530's one found only in a note; none is left inside a note
-  or pasted into a line; and the export, imported again, gives the same entries and lines.
+  or pasted into a line; and the export, imported again, gives the same file.
   `mix test --include slow`.
   """
   use Playcode.DataCase, async: true
@@ -47,8 +47,7 @@ defmodule Playcode.ApparatusCorpusTest do
       {:ok, again} = first |> write_tmp!() |> TeiImport.import_file()
       second = export_tei(again)
 
-      assert xml_apps(second) == xml_apps(first)
-      assert reading_texts(second, "l") == reading_texts(first, "l")
+      assert second == first
 
       # Hamlet's 132 Folio passages: 119 inside one element, 13 across elements, each of
       # those with an F at its start and its end.
