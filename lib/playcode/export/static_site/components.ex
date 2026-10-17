@@ -996,6 +996,7 @@ defmodule Playcode.Export.StaticSite.Components do
     do:
       if(i > 0 and Enum.at(columns, i - 1)["act"] != Enum.at(columns, i)["act"], do: "act-start")
 
+  # The site's English word for each of Play.relationship_types/0.
   @kinds %{
     "traduccion" => "translation",
     "adaptacion" => "adaptation",
@@ -1004,7 +1005,8 @@ defmodule Playcode.Export.StaticSite.Components do
   }
 
   @doc "The site's word for a play's kind: original, translation, adaptation, refundicion or version."
-  def kind(%{relationship_type: type}), do: Map.get(@kinds, type, "original")
+  def kind(%{relationship_type: nil}), do: "original"
+  def kind(%{relationship_type: type}), do: Map.fetch!(@kinds, type)
 
   @doc ~s(A kind in a sentence: "adaptation", "refundición".)
   def kind_name("refundicion"), do: "refundición"

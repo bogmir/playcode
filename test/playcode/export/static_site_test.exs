@@ -217,6 +217,13 @@ defmodule Playcode.Export.StaticSiteTest do
     assert "Translation of #{original.title}" in texts(title_page(dir, translation), "p")
   end
 
+  # A kind added to Play.relationship_types/0 needs a word on the site, or kind/1 raises.
+  test "every kind a play can have has the site's word for it" do
+    for type <- Playcode.Catalogue.Play.relationship_types() do
+      refute StaticSite.Components.kind(%{relationship_type: type}) == "original", type
+    end
+  end
+
   # FileMaker linked some plays with no kind (the Faustus B-text under the A-text): the
   # play page names no relation for them, and "Original of" would be false.
   test "a play linked with no kind names no relation to the other" do

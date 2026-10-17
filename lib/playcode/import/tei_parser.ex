@@ -395,9 +395,6 @@ defmodule Playcode.Import.TeiParser do
     }
   end
 
-  # The kinds of play made from another, as a main title's @type names them.
-  @kinds ~w(traduccion adaptacion refundicion version)
-
   defp extract_play_attrs(file_desc, encoding_desc, profile_desc) do
     title_stmt = file_desc && find_child(elem(file_desc, 2), "titleStmt")
     publication_stmt = file_desc && find_child(elem(file_desc, 2), "publicationStmt")
@@ -408,7 +405,10 @@ defmodule Playcode.Import.TeiParser do
 
     # The main title: the one that says what kind of play this is (question 15), else the
     # first with no key or type, else the first with no key.
-    kind_title = Enum.find(titles, fn {_, attrs, _} -> attr_value(attrs, "type") in @kinds end)
+    kind_title =
+      Enum.find(titles, fn {_, attrs, _} ->
+        attr_value(attrs, "type") in Play.relationship_types()
+      end)
 
     plain_title =
       Enum.find(titles, fn {_, attrs, _} ->

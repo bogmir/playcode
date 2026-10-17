@@ -129,12 +129,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
      assign(socket, statistic: statistic) |> put_flash(:info, gettext("Statistics recomputed."))}
   end
 
-  defp relationship_type_label("traduccion"), do: gettext("Translation")
-  defp relationship_type_label("adaptacion"), do: gettext("Adaptation")
-  defp relationship_type_label("refundicion"), do: gettext("Reworking")
-  defp relationship_type_label("version"), do: gettext("Version")
-  defp relationship_type_label(_), do: ""
-
   defp error_to_string(:too_large), do: gettext("File is too large (max 10 MB).")
   defp error_to_string(:not_accepted), do: gettext("Only .docx files are accepted.")
   defp error_to_string(:too_many_files), do: gettext("Only one file allowed.")
@@ -404,7 +398,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         <div class="rounded-box border border-base-300 bg-base-100 p-4 text-sm shadow-sm space-y-3">
           <div :if={@play.relationship_type}>
             <span class="badge badge-outline badge-sm mr-2">
-              {relationship_type_label(@play.relationship_type)}
+              {PlayLabels.relationship_type_label(@play.relationship_type)}
             </span>
             <%= if @play.parent_play do %>
               <span>
@@ -436,7 +430,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                 </.link>
                 <span class="text-base-content/70">({derived.code})</span>
                 <span :if={derived.relationship_type} class="badge badge-ghost badge-xs ml-1">
-                  {relationship_type_label(derived.relationship_type)}
+                  {PlayLabels.relationship_type_label(derived.relationship_type)}
                 </span>
               </li>
             </ul>

@@ -272,16 +272,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     end
   end
 
-  defp relationship_type_options do
-    [
-      {gettext("— (Original / standalone)"), ""},
-      {gettext("Translation"), "traduccion"},
-      {gettext("Adaptation"), "adaptacion"},
-      {gettext("Reworking"), "refundicion"},
-      {gettext("Version"), "version"}
-    ]
-  end
-
   defp language_options do
     [
       {gettext("Spanish"), "es"},
@@ -456,7 +446,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
               <.input
                 field={@form[:relationship_type]}
                 type="select"
-                options={relationship_type_options()}
+                options={PlayLabels.relationship_type_options()}
               />
             </div>
             <div>

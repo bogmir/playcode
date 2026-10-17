@@ -148,33 +148,6 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Moves a character up or down in the list by swapping positions with its neighbor.
-  Direction is :up or :down.
-  """
-  def reorder_character(play_id, character_id, direction) do
-    characters = list_characters(play_id)
-    index = Enum.find_index(characters, &(&1.id == character_id))
-
-    target_index =
-      case direction do
-        :up -> index - 1
-        :down -> index + 1
-      end
-
-    if index && target_index >= 0 && target_index < length(characters) do
-      current = Enum.at(characters, index)
-      target = Enum.at(characters, target_index)
-
-      Repo.transaction(fn ->
-        current |> Character.changeset(%{position: target.position}) |> Repo.update!()
-        target |> Character.changeset(%{position: current.position}) |> Repo.update!()
-      end)
-    else
-      {:ok, :noop}
-    end
-  end
-
-  @doc """
   Reorders characters by assigning positions based on the given list of IDs.
   The first ID gets position 0, the second gets position 1, etc.
   """

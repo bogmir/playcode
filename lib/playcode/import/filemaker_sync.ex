@@ -106,7 +106,6 @@ defmodule Playcode.Import.FilemakerSync do
   disagree with the export. Without it they are left alone.
   """
   def apply_plan(plan, opts \\ []) do
-    user_id = Keyword.get(opts, :user_id)
     force = Keyword.get(opts, :force, false)
 
     plan
@@ -116,8 +115,8 @@ defmodule Playcode.Import.FilemakerSync do
 
       case Catalogue.update_play(play, change.sets) do
         {:ok, updated} ->
+          # No user: the sync runs from the backend, by mix task.
           ActivityLog.log!(%{
-            user_id: user_id,
             play_id: updated.id,
             action: "update",
             resource_type: "play",
@@ -174,7 +173,7 @@ defmodule Playcode.Import.FilemakerSync do
   # Kinds the index cannot say, since it knows only originals and translations: the
   # file's word wins (question 15), and so does the original the play is linked to. One
   # linked to none gets the index's: no source file names its original.
-  @file_kinds ~w(adaptacion refundicion version)
+  @file_kinds Play.relationship_types() -- ["traduccion"]
 
   # Families the index heads wrongly, since its head is a family's first editor, as
   # question 15 corrected them: each play's original by short code, nil for an original.

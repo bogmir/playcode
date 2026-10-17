@@ -323,7 +323,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             <%!-- Relationship badge --%>
             <div :if={@play.relationship_type} class="mt-2 text-xs text-base-content/70">
               <span class="badge badge-outline badge-xs">
-                {relationship_type_label(@play.relationship_type)}
+                {PlayLabels.relationship_type_label(@play.relationship_type)}
               </span>
               <%= if @play.parent_play do %>
                 <span>
@@ -346,7 +346,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                   {derived.title}
                 </.link>
                 <span :if={derived.relationship_type} class="text-base-content/70">
-                  ({relationship_type_label(derived.relationship_type)})
+                  ({PlayLabels.relationship_type_label(derived.relationship_type)})
                 </span>
               </span>
             </div>
@@ -651,12 +651,6 @@ defmodule PlaycodeWeb.PlayShowLive do
 
     current ++ children
   end
-
-  defp relationship_type_label("traduccion"), do: gettext("Translation")
-  defp relationship_type_label("adaptacion"), do: gettext("Adaptation")
-  defp relationship_type_label("refundicion"), do: gettext("Reworking")
-  defp relationship_type_label("version"), do: gettext("Version")
-  defp relationship_type_label(_), do: ""
 
   defp form_line(play) do
     case {Play.form(play), play.verse_count} do
