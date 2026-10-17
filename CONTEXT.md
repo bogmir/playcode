@@ -66,9 +66,10 @@ witnesses read)
 
 **Folio passage**:
 Words only the 1623 Folio prints, in Hamlet, whose base text is the Second Quarto. Kept as
-a `<folio>…</folio>` marker in the text it sits in (a TEI `<app type="folio">`), hidden from
-readers by default and shown in grey, between small F's, by a "Folio interpolations" switch
-that is not the variants'. Not a variant, which lists what several witnesses read at one place.
+a `<folio>…</folio>` marker in the text it sits in (a TEI `<app type="folio">`), hidden by
+default on the play page and the site (the downloads print it) and shown in grey, between
+small F's, by a "Folio interpolations" switch that is not the variants'. Not a variant, which
+lists what several witnesses read at one place.
 _Avoid_: Folio interpolation (the switch's own label), Folio-only text, addition (the Q4
 Additions of *The Spanish Tragedy* are another thing)
 
