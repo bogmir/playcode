@@ -1072,10 +1072,12 @@ defmodule Playcode.Export.TeiXml do
 
   # An italic piece and the italic pieces that follow it: adjacent italic runs
   # (`<<a>><<b>>`, which the importer would part with a space) and the halves of one a
-  # note split merge into a single <emph>. A note after an italic run ends it.
+  # note split merge into a single <emph>. A note after an italic run ends it, and so does
+  # a Folio passage, which holds its own italics.
   defp italic_run([piece | rest]) do
     case Enum.split_while(rest, &match?(%{note: _, italic: true}, &1)) do
-      {notes, [%{italic: true, stage: nil} | _] = more} ->
+      {notes, [%{italic: true, stage: nil} = next | _] = more}
+      when not is_map_key(next, :folio) ->
         {run, rest} = italic_run(more)
         {[piece | notes] ++ run, rest}
 

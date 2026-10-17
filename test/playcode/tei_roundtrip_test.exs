@@ -1863,6 +1863,29 @@ defmodule Playcode.TeiRoundtripTest do
       assert String.replace(second, "FOLE", "FOLD") == first
     end
 
+    # Italics touching a passage that opens or closes in italics stay two <emph>s: merged
+    # into one, the passage would be lost, its words read as the base text's.
+    test "a passage in italics beside italics outside it stays a passage" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="1">O <emph>dear</emph><app type="folio"><lem wit="#Q2"/><rdg wit="#F1"><emph>mother</emph></rdg></app> mine</l>
+        <l n="2">O <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"><emph>mother</emph></rdg></app><emph>dear</emph> mine</l>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOLH", body: body))
+
+      assert for(app <- xml_apps(first), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "mother", nil},
+               {"rdg", "#F1", "mother", nil}
+             ]
+
+      assert xml_texts(first, "emph") == ["dear", "mother", "mother", "dear"]
+
+      second = first |> String.replace("FOLH", "FOLI") |> roundtrip()
+      assert String.replace(second, "FOLI", "FOLH") == first
+    end
+
     # A note counts graphemes into the text without its markers, the Folio ones included:
     # the one after a passage stays after it.
     test "a note after a passage stays where it was" do
