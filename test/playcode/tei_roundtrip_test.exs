@@ -1718,6 +1718,97 @@ defmodule Playcode.TeiRoundtripTest do
              ]
     end
 
+    # Hamlet v. 2632: a passage opened and closed inside a <stage> that sits in a paragraph.
+    # A passage may hold a stage but a stage may not hold a passage, so the stage is cut
+    # around the passage into three, each the stage's type again (ruling of 2026-10-17).
+    # The file's spaces stay where it has them: the one after the label is the passage's,
+    # the first paragraph has none before the "]".
+    test "a passage inside an inline stage cuts the stage in three" do
+      body = """
+      <div1 type="acto" n="4"><sp><speaker>hamlet</speaker>
+        <p n="2631">Safely stowed. <stage type="delivery_">[Calling within#{@folio_open}#{@f} “Hamlet, Lord Hamlet!”#{@f}#{@folio_close}]</stage>
+          <lb n="2633"/>But soft.</p>
+        <p n="2640"><stage type="delivery">[Calling within#{@folio_open}#{@f}“Hamlet!”#{@f}#{@folio_close}]</stage></p>
+        <p n="2650">Who’s there? <stage type="delivery">#{@folio_open}#{@f}Within#{@f}#{@folio_close}</stage> Enter.</p>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOLB", body: body))
+      stage = fn words -> ~s(<stage type="delivery">#{words}</stage>) end
+
+      assert [%{loaded_elements: [%{children: [spaced, glued, whole]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert spaced.content ==
+               ~s(<lb n="2631"/>Safely stowed. ) <>
+                 stage.("[Calling within") <>
+                 "<folio> " <>
+                 stage.("“Hamlet, Lord Hamlet!”") <>
+                 "</folio>" <> stage.("]") <> ~s( <lb n="2633"/>But soft.)
+
+      assert glued.content ==
+               ~s(<lb n="2640"/>) <>
+                 stage.("[Calling within") <>
+                 "<folio>" <> stage.("“Hamlet!”") <> "</folio>" <> stage.("]")
+
+      # A stage that is all passage leaves the spaces the stage had around it.
+      assert whole.content ==
+               ~s(<lb n="2650"/>Who’s there? <folio>) <> stage.("Within") <> "</folio> Enter."
+
+      # The passage is an entry of the reading beside the stages it was cut from; the
+      # stages say what they said.
+      first = export_tei(play)
+
+      assert for(app <- xml_apps(first), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "“Hamlet, Lord Hamlet!”", nil},
+               {"rdg", "#F1", "“Hamlet!”", nil},
+               {"rdg", "#F1", "Within", nil}
+             ]
+
+      assert for(
+               {attrs, words} <- xml_elements(first, "stage", within: "body"),
+               do: {attrs["type"], words}
+             ) == [
+               {"delivery", "[Calling within"},
+               {"delivery", "“Hamlet, Lord Hamlet!”"},
+               {"delivery", "]"},
+               {"delivery", "[Calling within"},
+               {"delivery", "“Hamlet!”"},
+               {"delivery", "]"},
+               {"delivery", "Within"}
+             ]
+
+      second = first |> String.replace("FOLB", "FOLC") |> roundtrip()
+      assert String.replace(second, "FOLC", "FOLB") == first
+    end
+
+    # A reading that starts or ends with an element: the folio marker beside it gets no
+    # space the file does not have ("tight"), and a space it has stays ("loose", and
+    # "foo<folio> bar</folio>", which has no element beside it).
+    test "a folio app beside an element gains no space, and keeps the one it has" do
+      body = """
+      <div1 type="acto" n="4"><sp><speaker>hamlet</speaker>
+        <p n="1">tight <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"><stage type="delivery">within</stage></rdg></app> after</p>
+        <p n="2">loose <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"> <stage type="delivery">within</stage> </rdg></app> after</p>
+        <p n="3">foo<app type="folio"><lem wit="#Q2"/><rdg wit="#F1"> bar</rdg></app>.</p>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOLD", body: body))
+      stage = ~s(<stage type="delivery">within</stage>)
+
+      assert [%{loaded_elements: [%{children: [tight, loose, plain]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert tight.content == ~s(<lb n="1"/>tight <folio>#{stage}</folio> after)
+      assert loose.content == ~s(<lb n="2"/>loose <folio> #{stage} </folio> after)
+      assert plain.content == ~s(<lb n="3"/>foo<folio> bar</folio>.)
+
+      first = export_tei(play)
+      second = first |> String.replace("FOLD", "FOLE") |> roundtrip()
+      assert String.replace(second, "FOLE", "FOLD") == first
+    end
+
     # A note counts graphemes into the text without its markers, the Folio ones included:
     # the one after a passage stays after it.
     test "a note after a passage stays where it was" do

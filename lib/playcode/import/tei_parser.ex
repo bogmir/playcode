@@ -1684,7 +1684,34 @@ defmodule Playcode.Import.TeiParser do
 
     case String.trim(words) do
       "" -> lead
-      words -> lead <> open <> words <> close
+      words -> lead <> wrap(words, open, close)
+    end
+  end
+
+  defp wrap(words, "<stage" <> _ = open, close), do: cut_around_folios(words, open, close)
+  defp wrap(words, open, close), do: open <> words <> close
+
+  # A passage may hold a stage but a stage may not hold a passage (InlineMarkup), so a
+  # passage read inside a stage cuts it: the words before it, the passage's words and the
+  # words after it are a stage each, the passage around its own, the same type again. A
+  # space beside a piece stays where the file put it, outside the tags.
+  defp cut_around_folios(words, open, close) do
+    ~r{<folio>.*?</folio>}su
+    |> Regex.split(words, include_captures: true)
+    |> Enum.map_join(fn
+      "<folio>" <> rest ->
+        "<folio>" <>
+          in_stage(String.replace_suffix(rest, "</folio>", ""), open, close) <> "</folio>"
+
+      piece ->
+        in_stage(piece, open, close)
+    end)
+  end
+
+  defp in_stage(piece, open, close) do
+    case String.trim(piece) do
+      "" -> piece
+      words -> String.replace(piece, words, open <> words <> close, global: false)
     end
   end
 
@@ -1742,11 +1769,51 @@ defmodule Playcode.Import.TeiParser do
   # after, as the text read before it was kept had them.
   defp squeeze(pieces) do
     pieces
-    |> Enum.join(" ")
+    |> join_pieces()
     |> String.replace(~r/\s+/, " ")
     |> String.replace(~r/ ?\x{E002} ?/u, @break)
     |> String.replace(~r/(<lb n="[^"]*"\/>) /, "\\1")
     |> String.trim()
+  end
+
+  @folio_tag_first ~r/\A\s*<\/?folio(?: part="[IMF]")?>/
+  @folio_tag_last ~r/<\/?folio(?: part="[IMF]")?>\s*\z/
+
+  # A text trimmed, but for the white space beside a Folio tag at its edge: it is the
+  # file's own, and join_pieces/1 adds none there.
+  defp trim_beside_folio(text) do
+    words = String.trim(text)
+
+    if String.contains?(words, "folio") do
+      [lead, trail] = String.split(text, words, parts: 2)
+      lead = if text =~ @folio_tag_first, do: lead, else: ""
+      trail = if text =~ @folio_tag_last, do: trail, else: ""
+      lead <> words <> trail
+    else
+      words
+    end
+  end
+
+  # An element's piece with the space that parts it from its neighbours, which a Folio tag
+  # at its edge (a stage that is all passage) would lose to join_pieces/1.
+  defp space_beside_folio(piece) do
+    piece = if piece =~ @folio_tag_first, do: " " <> piece, else: piece
+    if piece =~ @folio_tag_last, do: piece <> " ", else: piece
+  end
+
+  # The pieces of a text as one string, a space between them, but none beside a Folio tag
+  # at a piece's edge, where the white space is the file's own (trim_beside_folio/1): a
+  # passage whose reading starts or ends with an element gains no space around it.
+  defp join_pieces(pieces) do
+    pieces
+    |> Enum.chunk_every(2, 1)
+    |> Enum.map_join(fn
+      [piece, next] ->
+        if piece =~ @folio_tag_last or next =~ @folio_tag_first, do: piece, else: piece <> " "
+
+      [piece] ->
+        piece
+    end)
   end
 
   # What leaves the play text and is stored at its offset: a note, and an entry of the
@@ -1776,10 +1843,10 @@ defmodule Playcode.Import.TeiParser do
         note_mark(note, children, i)
 
       {text, _} when is_binary(text) ->
-        String.trim(text)
+        trim_beside_folio(text)
 
       {child, _} when is_tuple(child) ->
-        fun.(child)
+        child |> fun.() |> space_beside_folio()
 
       _ ->
         ""
