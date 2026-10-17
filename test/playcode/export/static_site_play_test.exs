@@ -139,6 +139,25 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert LazyHTML.text(full) =~ "Señor, despierta."
   end
 
+  # Regression: Hamlet and 47 other files leave every act's head empty and number it in
+  # `n`; the contents, the page titles and the links between pages all said just "Act".
+  test "an act with no heading is named by its type and its number" do
+    {play, dir} =
+      publish!("""
+      <div1 type="Act" n="1"><head/><sp><speaker>A</speaker><l n="1">one</l></sp></div1>
+      <div1 type="Act" n="2"><head/><sp><speaker>B</speaker><l n="2">two</l></sp></div1>
+      <div1 type="prologue"><head/><sp><speaker>C</speaker><l n="3">three</l></sp></div1>
+      """)
+
+    second = page(dir, play, "act-2.html")
+
+    assert texts(second, ~s(nav[aria-label="Contents"] a)) ==
+             ["Title page", "Act I", "Act II", "Prologue", "Full text", "Statistics"]
+
+    assert texts(second, ~s(a[rel="prev"])) |> Enum.uniq() == ["← Act I"]
+    assert texts(second, "title") |> hd() =~ "Act II"
+  end
+
   test "a play that numbers each scene from 1 still gives every line its own anchor" do
     {play, dir} =
       publish!("""
