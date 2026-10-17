@@ -20,6 +20,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     *"resume: true"*) cat "$d/run.$(grep -c 'resume: true' "$d/calls")" 2>/dev/null ;;
     *generate_site*) cat "$d/generate.$(grep -c generate_site "$d/calls")" 2>/dev/null ;;
     *deploy_site*) cat "$d/deploy" ;;
+    *"machine list"*) cat "$d/sizes" 2>/dev/null || echo '[]' ;;
   esac
   """
 
@@ -155,14 +156,19 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
   end
 
   describe "generate" do
-    test "builds the site on the machines the run left up, then scales back", %{dir: dir} do
+    # It used to build on whatever machines it found, counting on `run` to have left them
+    # scaled up; on its own, after a code change, it built on the shared CPU, where a full
+    # rebuild takes over two hours instead of six minutes (2026-10-17).
+    test "scales both machines up, builds the site, then scales back", %{dir: dir} do
       answer(dir, "generate.1", "371/371 EMOTHE0999\nsite generated: %{plays: 371}\n")
 
       Mix.Task.rerun("playcode.fly.reimport", ["generate"])
 
       assert_in_order(calls(dir), [
-        "machine start 7847063c04e7e8 -a playcode",
+        "machine update d8d14e7b0465d8 --vm-size performance-1x -a emothe-db-1g --yes",
+        "scale vm performance-1x -a playcode",
         "machine update 7847063c04e7e8 --autostop=off -a playcode --yes",
+        "machine start 7847063c04e7e8 -a playcode",
         "Playcode.Release.generate_site()",
         "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes",
         "scale vm shared-cpu-1x --vm-memory 1024 -a playcode",
@@ -170,6 +176,26 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       ])
 
       assert output() =~ "mix playcode.fly.reimport deploy"
+    end
+
+    # A resize restarts the machine, the database's ending whatever it was serving.
+    test "after a run, leaves the machines on performance-1x as they are", %{dir: dir} do
+      answer(
+        dir,
+        "sizes",
+        Jason.encode!([
+          %{id: "d8d14e7b0465d8", config: %{guest: %{cpu_kind: "performance", cpus: 1}}},
+          %{id: "7847063c04e7e8", config: %{guest: %{cpu_kind: "performance", cpus: 1}}}
+        ])
+      )
+
+      answer(dir, "generate.1", "site generated: %{changed: 0}\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["generate"])
+
+      calls = calls(dir)
+      assert Enum.any?(calls, &(&1 =~ "generate_site"))
+      refute Enum.any?(calls, &(&1 =~ "performance-1x"))
     end
 
     # The build goes on in the app when the SSH session drops; asking again waits for it.

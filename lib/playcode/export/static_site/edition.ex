@@ -91,12 +91,7 @@ defmodule Playcode.Export.StaticSite.Edition do
         n = Map.get(counts, base, 0) + 1
         slug = if base == "act" or n > 1, do: "#{base}-#{n}", else: base
 
-        title =
-          if division.title,
-            do: InlineMarkup.plain(division.title),
-            else: String.capitalize(division.type)
-
-        page = %{slug: slug, title: title, division: division, scene: nil, split: false}
+        page = %{slug: slug, title: title(division), division: division, scene: nil, split: false}
         {page, Map.put(counts, base, n)}
       end)
 
@@ -124,6 +119,16 @@ defmodule Playcode.Export.StaticSite.Edition do
       split: false
     }
   end
+
+  # A division's heading. With none, its type, and an act's number as the file gives it, in
+  # Roman numerals as the corpus writes its headings ("Act I"): 48 files leave every act's
+  # head empty and number it in `n`.
+  defp title(%{title: title}) when title not in [nil, ""], do: InlineMarkup.plain(title)
+
+  defp title(%{type: type, number: n}) when is_integer(n) and n > 0,
+    do: "#{String.capitalize(type)}#{if type in Metrics.act_types(), do: " #{roman(n)}"}"
+
+  defp title(division), do: String.capitalize(division.type)
 
   @doc "A scene's heading, or its number when it has none."
   def scene_title(%{title: nil} = scene), do: "Scene #{scene.position + 1}"
@@ -178,7 +183,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   # A line's, or a speech's first line's, citation; a scene heading's scene; otherwise the
   # title of the page the note is on.
   defp note_ref(%Division{} = scene, %{scene: scene, division: division}, _item, _refs, _title),
-    do: "#{division.title || String.capitalize(division.type)}, #{scene_title(scene)}"
+    do: "#{title(division)}, #{scene_title(scene)}"
 
   defp note_ref(_anchor, _at, %{element: element}, refs, _title), do: refs[element.id]
   defp note_ref(_anchor, _at, nil, _refs, title), do: title
@@ -269,7 +274,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   end
 
   defp where(%{act: act}) when is_integer(act), do: roman(act)
-  defp where(%{division: division}), do: division.title || String.capitalize(division.type)
+  defp where(%{division: division}), do: title(division)
 
   # The content of a split verse's earlier fragments, rendered invisible before an M or
   # F fragment so it starts where the previous fragment ended. Content, markers and all:

@@ -34,6 +34,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{@title}</title>
+        <%!-- Not stamped like the links below: it must match style.css's url(), or the font is fetched twice. --%>
         <link
           rel="preload"
           href={@root <> "assets/fonts/source-serif-4-400-latin.woff2"}
@@ -41,8 +42,8 @@ defmodule Playcode.Export.StaticSite.Components do
           type="font/woff2"
           crossorigin
         />
-        <link rel="stylesheet" href={@root <> "assets/style.css"} />
-        <script src={@root <> "assets/site.js"} defer>
+        <link rel="stylesheet" href={@root <> "assets/style.css?v=" <> @site.assets} />
+        <script src={@root <> "assets/site.js?v=" <> @site.assets} defer>
         </script>
       </head>
       <body data-ln="5" data-fo="off">

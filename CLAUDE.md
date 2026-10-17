@@ -264,6 +264,7 @@ The full write-up is `docs/static-site.md`; the rules that bite when you change 
 - **Every build and deploy goes through `Playcode.Export.SiteBuilder`, one job at a time.** Two builds at once drop a play from the incremental index; a deploy during a build pushes half a site. `mix playcode.export.site` runs in its own VM, unserialised: pass `-o` while a server is building.
 - **The search normaliser has two halves that must agree**: `StaticSite.Search` and `EMOTHE.normalise` in `site.js`, both run against `test/fixtures/search_normalisation.json`. `node --test test/js/*.test.mjs` runs the browser halves; CI runs it after `mix test`.
 - **Generate rebuilds only what changed** (`build.json`, `StaticSite.Fingerprint`). There is no forced full rebuild: a play Generate misses is a tracking bug. `fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access.
+- **A page links a style or script as `assets/…?v=` and `@site.assets`**, the assets' stamp, which an asset change moves in every page in place; an unstamped link lets a returning reader's browser pair new pages with an old stylesheet. The font preload is the exception (it must match `style.css`'s `url()`).
 - **Size budgets** for `style.css` (25 KB), `site.js` and `search.js` (15 KB each) and the fonts (300 KB) are asserted in `static_site_test.exs`.
 - **`assets/js/sync_scroll.mjs` is the comparison's one scroll-sync implementation**: the compare pages' hook imports it and `Export.CompareHtml` inlines it at compile time.
 

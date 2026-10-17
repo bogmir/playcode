@@ -22,9 +22,11 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   times when a run stops part way, and leaves the machines up. When a play fails it
   stops; `run` again retries only what is left.
 
-  `generate` is Generate on `/admin/export` (`Release.generate_site/0`), on the machines
-  the run left up, asking again when the session drops before the build's end; when the
-  build is done it scales both machines back with autostop on. `deploy`, once the
+  `generate` is Generate on `/admin/export` (`Release.generate_site/0`) on performance-1x:
+  it scales both machines up, as `prepare` does (a machine `run` left up stays as it is),
+  asks again when the session drops before the build's end, and when the build is done
+  scales both back with autostop on. After a code change every play is rebuilt, six
+  minutes there and over two hours on the shared CPU. `deploy`, once the
   preview is checked, is Deploy (`Release.deploy_site/0`). `scale-down` scales back by
   itself, after an aborted run or build.
 
@@ -93,9 +95,11 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   end
 
   def run(["generate"]) do
-    step("Generating the site, autostop off")
+    step("Scaling up, autostop off")
+    scale_up!()
+
+    step("Generating the site")
     wake!()
-    fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
     generate_until_done(1)
 
     step("Scaling back, autostop on")
@@ -174,11 +178,22 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     end
   end
 
-  # A database restart ends whatever is running, so the database goes first.
+  # A database restart ends whatever is running, so the database goes first. A machine
+  # already on performance-1x, as `run` leaves both, is not resized: that restarts it.
   defp scale_up! do
-    fly!(~w(machine update #{@db_machine} --vm-size performance-1x -a #{@db} --yes))
-    fly!(~w(scale vm performance-1x -a #{@app}))
+    unless performance?(@db, @db_machine),
+      do: fly!(~w(machine update #{@db_machine} --vm-size performance-1x -a #{@db} --yes))
+
+    unless performance?(@app, @app_machine), do: fly!(~w(scale vm performance-1x -a #{@app}))
     fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
+  end
+
+  defp performance?(app, machine) do
+    {json, 0} = System.cmd(flyctl(), ~w(machine list -a #{app} --json))
+
+    json
+    |> Jason.decode!()
+    |> Enum.any?(&(&1["id"] == machine and &1["config"]["guest"]["cpu_kind"] == "performance"))
   end
 
   defp scale_down! do

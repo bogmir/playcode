@@ -37,7 +37,7 @@ decisions, after the dry run, after the counts and after the preview, stay with 
 ```bash
 mix playcode.fly.reimport prepare     # steps 2-5 below, then stops
 mix playcode.fly.reimport run         # steps 6 and 7; the machines stay up
-mix playcode.fly.reimport generate    # step 10's Generate, then step 9
+mix playcode.fly.reimport generate    # scales up, step 10's Generate, then step 9
 mix playcode.fly.reimport deploy      # step 10's Deploy, after the preview
 mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or build
 ```
@@ -56,11 +56,15 @@ mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or bu
    and `run` again, which re-imports only what is left. Either way the machines stay
    scaled up, for the build.
 4. **Check** what the change was for (step 8).
-5. **`generate`** is Generate on `/admin/export`, run over SSH on the machines still scaled
-   up (performance-1x builds faster) with autostop off, and waits for the build's end,
+5. **`generate`** is Generate on `/admin/export`, run over SSH on performance-1x with
+   autostop off: it scales both machines up as `prepare` does, leaving one already there
+   (after `run`) as it is, since a resize restarts it. It waits for the build's end,
    printing its progress. When the session drops before it, it asks again: the build goes
    on in the app, and the second Generate waits behind it. When the build is done it
-   scales both machines back and turns autostop on; when it fails they stay up.
+   scales both machines back and turns autostop on; when it fails they stay up. It also
+   stands alone: after a deploy that changed the site's code every play is rebuilt, six
+   minutes on performance-1x and over two hours on the shared CPU (2026-10-17), so run
+   `generate`, not the export page's button.
 6. **Check the preview** on `/admin/export`, then **`deploy`**: Deploy, over SSH, with
    autostop off while it pushes and back on after it.
 
