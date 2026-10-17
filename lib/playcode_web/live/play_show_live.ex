@@ -655,6 +655,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   defp relationship_type_label("traduccion"), do: gettext("Translation")
   defp relationship_type_label("adaptacion"), do: gettext("Adaptation")
   defp relationship_type_label("refundicion"), do: gettext("Reworking")
+  defp relationship_type_label("version"), do: gettext("Version")
   defp relationship_type_label(_), do: ""
 
   defp form_line(play) do

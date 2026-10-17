@@ -61,6 +61,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
   defp relationship_label("traduccion"), do: gettext("translation")
   defp relationship_label("adaptacion"), do: gettext("adaptation")
   defp relationship_label("refundicion"), do: gettext("refundición")
+  defp relationship_label("version"), do: gettext("version")
   defp relationship_label(_), do: nil
 
   @impl true

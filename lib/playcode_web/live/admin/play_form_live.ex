@@ -277,7 +277,8 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       {gettext("— (Original / standalone)"), ""},
       {gettext("Translation"), "traduccion"},
       {gettext("Adaptation"), "adaptacion"},
-      {gettext("Reworking"), "refundicion"}
+      {gettext("Reworking"), "refundicion"},
+      {gettext("Version"), "version"}
     ]
   end
 
