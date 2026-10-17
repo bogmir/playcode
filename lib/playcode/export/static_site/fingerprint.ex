@@ -7,8 +7,8 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   It covers the code (`module_info(:md5)` of `modules/0`), the English translations, the
   versions of the libraries that render and encode the pages, and the `:version` option.
   Not the files under `priv/static_site` (styles, scripts, fonts): no page embeds anything
-  of them but their fixed paths, so they have their own hash, `assets/1`, and a change to
-  them alone is copied, not rebuilt. Not `build_date`: a page's footer says when that page
+  of them but their links, stamped with the start of their own hash, `assets/1`, so a
+  change to them alone is copied and the stamps moved in place, not rebuilt. Not `build_date`: a page's footer says when that page
   was written. The play data is `plays.content_version`'s.
 
   Not `PlaycodeWeb.Gettext`'s code: it is compiled from every locale's translations, so a

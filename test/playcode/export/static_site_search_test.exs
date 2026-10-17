@@ -458,6 +458,9 @@ defmodule Playcode.Export.StaticSiteSearchTest do
 
     assert page |> LazyHTML.query(~s(form[hidden][role="search"])) |> Enum.count() == 1
     assert page |> LazyHTML.query("noscript") |> LazyHTML.text() =~ "Search needs JavaScript"
-    assert "assets/search.js" in (page |> LazyHTML.query("script") |> LazyHTML.attribute("src"))
+
+    # Each link carries the assets' stamp, `?v=` (site_builder_test.exs); the path is the point here.
+    srcs = page |> LazyHTML.query("script") |> LazyHTML.attribute("src")
+    assert "assets/search.js" in Enum.map(srcs, &(&1 |> String.split("?") |> hd()))
   end
 end

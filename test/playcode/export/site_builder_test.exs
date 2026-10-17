@@ -212,7 +212,8 @@ defmodule Playcode.Export.SiteBuilderTest do
   defp plant(play), do: File.write!(sentinel(play), "")
   defp rewritten?(play), do: not File.exists?(sentinel(play))
 
-  # The site as a build with other assets left it: its record says so, and a file is gone.
+  # The site as a build with other assets left it: its record says so, a file is gone, and
+  # every page links the assets with that build's stamp.
   defp stale_assets! do
     dir = StaticSite.output_dir()
     path = Path.join(dir, "build.json")
@@ -223,6 +224,20 @@ defmodule Playcode.Export.SiteBuilderTest do
     )
 
     File.rm!(Path.join([dir, "assets", "style.css"]))
+
+    for page <- pages() do
+      File.write!(page, Regex.replace(~r/\?v=[0-9a-f]+/, File.read!(page), "?v=000000000000"))
+    end
+  end
+
+  defp pages, do: Path.wildcard(Path.join(StaticSite.output_dir(), "**/*.html"))
+
+  # The stamps the pages link the assets with, each once.
+  defp stamps do
+    pages()
+    |> Enum.flat_map(&Regex.scan(~r/assets\/[\w.\/-]+\?v=([0-9a-f]+)/, File.read!(&1)))
+    |> Enum.map(fn [_link, stamp] -> stamp end)
+    |> Enum.uniq()
   end
 
   defp complete_plays(n), do: for(_ <- 1..n, do: play_fixture(%{"is_complete" => true}))
@@ -288,18 +303,39 @@ defmodule Playcode.Export.SiteBuilderTest do
   end
 
   # A deploy that changed only priv/static_site (styles, scripts, fonts) made the next
-  # Generate rebuild every play, minutes of CPU, for files no page embeds anything of.
-  test "Generate updates the assets alone when only they changed" do
+  # Generate rebuild every play, minutes of CPU, for files no page embeds anything of but
+  # their links. Those carry the assets' stamp, so a browser fetches the new ones instead
+  # of pairing the pages with the styles it kept from an old visit (Hamlet's line numbers
+  # and Folio passages, 2026-10-17): the links are moved to the new stamp in place.
+  test "Generate updates the assets alone when only they changed, and every link to them" do
     [a] = complete_plays(1)
     assert :started = SiteBuilder.generate([])
     assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+    assert [stamp] = stamps()
     plant(a)
     stale_assets!()
 
     assert :started = SiteBuilder.generate([])
     assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 0}}}, 10_000
     refute rewritten?(a)
+    assert stamps() == [stamp]
     assert File.exists?(Path.join([StaticSite.output_dir(), "assets", "style.css"]))
+    refute StaticSite.assets_changed?(StaticSite.output_dir())
+  end
+
+  test "a Generate that rewrites one play moves every page's links to the new assets" do
+    [a, b] = complete_plays(2)
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
+    assert [stamp] = stamps()
+    plant(b)
+    stale_assets!()
+
+    {:ok, _} = Catalogue.update_play(a, %{"title" => "Revised"})
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 1}}}, 10_000
+    refute rewritten?(b)
+    assert stamps() == [stamp]
     refute StaticSite.assets_changed?(StaticSite.output_dir())
   end
 

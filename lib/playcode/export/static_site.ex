@@ -69,7 +69,7 @@ defmodule Playcode.Export.StaticSite do
           detail: "Writing assets..."
         })
 
-        write_assets(dir)
+        copy_assets(dir)
         site = site(opts, MapSet.new(plays, & &1.code))
 
         results =
@@ -190,7 +190,7 @@ defmodule Playcode.Export.StaticSite do
         |> build_plays(dir, site)
 
       plays = published_plays(dir)
-      write_assets(dir)
+      refresh_assets(dir, built)
       write_catalogue(plays, dir, opts)
       opts[:on_published].()
       written = added ++ refreshed
@@ -276,11 +276,12 @@ defmodule Playcode.Export.StaticSite do
 
   @doc """
   Copies `priv/static_site` into the site at `dir` and records it in `build.json`; no
-  page is written, since none embeds anything of those files but their paths.
+  page is rebuilt, since none embeds anything of those files but their links, which are
+  moved to the new stamp in place.
   """
   def update_assets(dir) do
     built = read_build(dir)
-    write_assets(dir)
+    refresh_assets(dir, built)
 
     write_build(
       dir,
@@ -342,6 +343,7 @@ defmodule Playcode.Export.StaticSite do
     %{
       version: opts[:version],
       build_date: opts[:build_date],
+      assets: assets_stamp(),
       published: published,
       play_count: MapSet.size(published)
     }
@@ -352,10 +354,35 @@ defmodule Playcode.Export.StaticSite do
   defp load_plays(codes, all?) when is_list(codes),
     do: load_plays(nil, all?) |> Enum.filter(&(&1.code in codes))
 
-  defp write_assets(dir) do
+  # Pages link the styles and scripts with `?v=` and this stamp: new assets are a new URL,
+  # so a browser never pairs new pages with the styles it kept from an earlier visit.
+  defp assets_stamp, do: String.slice(Fingerprint.assets(), 0, 12)
+
+  # A stamped link: the asset's path, then its stamp.
+  @stamped ~r{(assets/[\w./-]+)\?v=[0-9a-f]+}
+
+  defp copy_assets(dir) do
     assets = Path.join(dir, "assets")
     File.rm_rf!(assets)
     File.cp_r!(Application.app_dir(:playcode, "priv/static_site"), assets)
+  end
+
+  # Copies the assets into a site whose pages may link others (`built`, its build.json),
+  # then moves every page's links to the new stamp, in place: an asset change alone
+  # rebuilds no page. Run again after a crash part way, it moves the pages still behind,
+  # since build.json records the new assets only after it.
+  defp refresh_assets(dir, built) do
+    copy_assets(dir)
+
+    if built.assets != Fingerprint.assets() do
+      stamp = assets_stamp()
+
+      for page <- Path.wildcard(Path.join(dir, "**/*.html")),
+          html = File.read!(page),
+          restamped = Regex.replace(@stamped, html, "\\1?v=#{stamp}"),
+          restamped != html,
+          do: File.write!(page, restamped)
+    end
   end
 
   # Prepares, writes and indexes one play; generate/1 runs several at once. The locale

@@ -106,9 +106,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
     refute read!(dir, "plays/#{play.code}/act-1.html") =~ "&lt;&lt;"
     assert act |> LazyHTML.query("#l3") |> LazyHTML.text() =~ "uno & <script>alert(1)</script>"
 
-    assert act |> LazyHTML.query("script") |> LazyHTML.attribute("src") == [
-             "../../assets/site.js"
-           ]
+    # The link carries the assets' stamp, `?v=` (site_builder_test.exs); the path is the point here.
+    assert [src] = act |> LazyHTML.query("script") |> LazyHTML.attribute("src")
+    assert String.starts_with?(src, "../../assets/site.js?v=")
 
     assert act |> LazyHTML.query("#l3 script") |> Enum.empty?()
     assert read!(dir, "plays/#{play.code}/act-1.html") =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
