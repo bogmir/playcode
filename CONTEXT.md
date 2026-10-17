@@ -66,7 +66,9 @@ witnesses read)
 
 **Folio passage**:
 Words only the 1623 Folio prints, in Hamlet, whose base text is the Second Quarto. Kept as
-a `<folio>…</folio>` marker in the text it sits in (a TEI `<app type="folio">`), hidden by
+a `<folio>…</folio>` marker in the text it sits in (in the TEI file an `<app type="folio">`
+when it is inside one element; one that crosses elements is written in the file's own marks
+until question 37 settles a TEI form), hidden by
 default on the play page and the site (the downloads print it) and shown in grey, between
 small F's, by a "Folio interpolations" switch that is not the variants'. Not a variant, which
 lists what several witnesses read at one place.
