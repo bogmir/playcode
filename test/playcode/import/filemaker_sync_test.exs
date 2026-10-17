@@ -67,15 +67,29 @@ defmodule Playcode.Import.FilemakerSyncTest do
       refute Map.has_key?(sets, :parent_play_id)
     end
 
-    test "a wrong relationship on an original is cleared" do
+    # It cleared an adaptation too until question 15: the file's kind wins now (below).
+    test "a wrong translation on an original is cleared" do
       original =
         play("EMOTHE0038_AntonyAndCleopatra", %{
           "language" => "en",
-          "relationship_type" => "adaptacion"
+          "relationship_type" => "traduccion"
         })
 
       assert [%{sets: %{relationship_type: nil}}] =
                FilemakerSync.plan(index(), [original]).changes
+    end
+
+    # Question 15: the file's kind wins; FileMaker's index knows only originals and
+    # translations. With no parent stored, FileMaker would link it otherwise.
+    test "an adaptation stays one, with the original it has" do
+      original = play("EMOTHE0038_AntonyAndCleopatra", Map.put(dated(), "language", "en"))
+      adaptation = play("EMOTHE0052_AntonioYCleopatra", %{"relationship_type" => "adaptacion"})
+
+      for change <- FilemakerSync.plan(index(), [original, adaptation]).changes,
+          change.code == "EMOTHE0052" do
+        refute Map.has_key?(change.sets, :relationship_type)
+        refute Map.has_key?(change.sets, :parent_play_id)
+      end
     end
 
     test "a code absent from the index is reported, not failed" do

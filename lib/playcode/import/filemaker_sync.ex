@@ -9,7 +9,8 @@ defmodule Playcode.Import.FilemakerSync do
 
     * **Derived fields** — `language`, `relationship_type`, `parent_play_id`. The
       published index is authoritative, so a difference is an error in our data and
-      gets overwritten.
+      gets overwritten; but the index knows only originals and translations, so an
+      adaptation, refundición or version keeps its kind and its original (question 15).
     * **Curated fields** — `historical_time`, `historical_time_note` and the three
       `composition_date_*` columns. A researcher is expected to edit these in the admin
       form, so the export is a bootstrap: a blank column is filled, a disagreement is
@@ -170,12 +171,21 @@ defmodule Playcode.Import.FilemakerSync do
     Map.new(sets, fn {key, value} -> {Atom.to_string(key), value} end)
   end
 
+  # Kinds the index cannot say, since it knows only originals and translations: the
+  # file's word wins (question 15), and so does the original the play is linked to.
+  @file_kinds ~w(adaptacion refundicion version)
+
   defp changes_for(play, version, by_code) do
     %{
       language: language_for(version),
       relationship_type: relationship_for(version),
       parent_play_id: parent_for(version, by_code)
     }
+    |> Map.drop(
+      if play.relationship_type in @file_kinds,
+        do: [:relationship_type, :parent_play_id],
+        else: []
+    )
     |> Enum.reject(fn {_key, value} -> value == @keep end)
     |> Enum.reject(fn {key, value} -> Map.get(play, key) == value end)
     |> Map.new()
