@@ -1901,6 +1901,27 @@ defmodule Playcode.TeiRoundtripTest do
       assert reading_texts(first, "l") == ["O God, God, be"]
     end
 
+    # A note strictly inside a passage is one of the Folio's words' notes: it goes back
+    # inside the reading, between the words it sat between.
+    test "a note inside a passage stays inside its reading" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O<note n="1"><p>An oath.</p></note> O</rdg></app> God,</l>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOLJ", body: body))
+
+      assert [%{readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O O", "An oath."}]}] =
+               xml_apps(first)
+
+      assert [{%{"wit" => "#F1"}, "O An oath. O"}] = xml_elements(first, "rdg")
+      assert reading_texts(first, "l") == ["O God, God,"]
+
+      second = first |> String.replace("FOLJ", "FOLK") |> roundtrip()
+      assert String.replace(second, "FOLK", "FOLJ") == first
+    end
+
     # The form a re-encoded file will use (question 36) reads as the same passage. An
     # <app type="folio"> of any other shape is an entry of the apparatus, kept as written:
     # read as a passage, its witness would be lost. Both come back as the same <app>, so
