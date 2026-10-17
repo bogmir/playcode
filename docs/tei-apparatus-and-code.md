@@ -174,7 +174,11 @@ answered on 2026-10-16 (yes, for now); question 37 is open.
   - *Written back:* a passage inside one element as that `<app type="folio">` (119 in
     Hamlet); one across elements in the file's own form, one span to an element and an F at
     its start (`I`) and end (`F`), until question 37 settles a TEI one. Exporting, importing
-    and exporting again gives the same file, with the two damaged spots mended.
+    and exporting again gives the same file, with the two damaged spots mended. The export
+    pairs a crossing passage's pieces in reading order, not by their stored parts alone: two
+    neighbouring texts join when the first ends in an `I` or `M` piece and the second starts
+    with an `M` or `F` one, and a piece joined on neither side goes out as the `<app>`. So an
+    edit inside a passage (a piece deleted, a text put between two) cannot unbalance the file.
   - One passage, v. 2632 (`[Calling within<F> “Hamlet, Lord Hamlet!”<F>]`), sits inside an
     inline stage direction in a paragraph. It is stored and written back as three stages
     (before, inside the passage, after), each with the stage's type where the source has one.

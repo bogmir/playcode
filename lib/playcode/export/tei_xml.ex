@@ -7,7 +7,7 @@ defmodule Playcode.Export.TeiXml do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Paratext
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
   alias Playcode.Witnesses
   import XmlBuilder, except: [element: 2, element: 3]
 
@@ -741,7 +741,9 @@ defmodule Playcode.Export.TeiXml do
   # --- Text ---
 
   defp build_text(play, characters, divisions) do
-    body_divisions = Enum.filter(divisions, fn d -> d.type in @body_types end)
+    body_divisions =
+      divisions |> Enum.filter(fn d -> d.type in @body_types end) |> with_folio_parts()
+
     cast_heading = Enum.find_value(divisions, &(&1.type == "elenco" && &1.title))
 
     {back, front} = play.paratexts |> Enum.sort_by(& &1.position) |> Enum.split_with(& &1.back)
@@ -808,6 +810,89 @@ defmodule Playcode.Export.TeiXml do
         cast_list ++ Enum.map(scenes, &paratext_element/1)
     )
   end
+
+  # A passage that crosses elements is a piece in each (InlineMarkup), and the file marks
+  # where it starts and where it ends with an F. The export pairs the pieces again in the
+  # order the file is read, not by their stored parts alone: an edit can delete the piece
+  # before or after one, or put a text between two, and the stored parts would then write
+  # an F with no partner, which the import reads as the start of a passage, inverting every
+  # one after it. Two neighbouring texts join when the last piece of the first is part "I"
+  # or "M" and the first piece of the second is part "M" or "F". Each run of joined pieces
+  # then opens once and closes once, and a piece joined on neither side is a passage of its
+  # own, written as the <app>.
+  defp with_folio_parts(divisions) do
+    {_divisions, texts} = map_reduce_texts(divisions, [], &{&1, [&1 | &2]})
+
+    if Enum.any?(texts, &String.contains?(&1, "<folio part=")) do
+      parts =
+        ([nil | Enum.reverse(texts)] ++ [nil])
+        |> Enum.chunk_every(3, 1, :discard)
+        |> Enum.map(fn [before, text, next] ->
+          rejoined(text, joined?(before, text), joined?(text, next))
+        end)
+
+      {divisions, []} =
+        map_reduce_texts(divisions, parts, fn _text, [text | rest] -> {text, rest} end)
+
+      divisions
+    else
+      divisions
+    end
+  end
+
+  # Whether `text` and the `next` one join. A part says where its piece stands
+  # (Element.changeset): an "I" or "M" piece ends its text, an "M" or "F" one starts it.
+  defp joined?(nil, _next), do: false
+  defp joined?(_text, nil), do: false
+
+  defp joined?(text, next) do
+    String.contains?(text, [~s(<folio part="I">), ~s(<folio part="M">)]) and
+      String.contains?(next, [~s(<folio part="M">), ~s(<folio part="F">)])
+  end
+
+  # `text` with the parts its joins give its pieces: the first ("M" or "F") comes from the
+  # text before only when joined to it, the last ("I" or "M") goes on only when joined to
+  # the next.
+  defp rejoined(text, open_before, goes_on) do
+    Regex.replace(~r/<folio part="([IMF])">/, text, fn _tag, part ->
+      folio_tag(part in ~w(M F) and open_before, part in ~w(I M) and goes_on)
+    end)
+  end
+
+  defp folio_tag(true, true), do: ~s(<folio part="M">)
+  defp folio_tag(true, false), do: ~s(<folio part="F">)
+  defp folio_tag(false, true), do: ~s(<folio part="I">)
+  defp folio_tag(false, false), do: "<folio>"
+
+  # The texts of the body that may hold a piece, in the order the file reads them, each
+  # through `fun` with an accumulator: a speech's label, then its lines, paragraphs and
+  # stage directions. Headings and trailers hold none, and the import reads through them.
+  defp map_reduce_texts(nodes, acc, fun) when is_list(nodes),
+    do: Enum.map_reduce(nodes, acc, &map_reduce_texts(&1, &2, fun))
+
+  defp map_reduce_texts(%Division{} = division, acc, fun) do
+    {elements, acc} = map_reduce_texts(division.loaded_elements, acc, fun)
+    {children, acc} = map_reduce_texts(division.children, acc, fun)
+    {%{division | loaded_elements: elements, children: children}, acc}
+  end
+
+  defp map_reduce_texts(%Element{type: type} = element, acc, fun)
+       when type in ~w(speech line_group) do
+    {label, acc} = map_reduce_text(element.speaker_label, acc, fun)
+    {children, acc} = map_reduce_texts(element.children, acc, fun)
+    {%{element | speaker_label: label, children: children}, acc}
+  end
+
+  defp map_reduce_texts(%Element{type: type} = element, acc, fun)
+       when type in ~w(verse_line prose stage_direction) do
+    {content, acc} = map_reduce_text(element.content, acc, fun)
+    {%{element | content: content}, acc}
+  end
+
+  defp map_reduce_texts(other, acc, _fun), do: {other, acc}
+
+  defp map_reduce_text(text, acc, _fun) when text in [nil, ""], do: {text, acc}
+  defp map_reduce_text(text, acc, fun), do: fun.(text, acc)
 
   # A text's line breaks as <lb/>, wherever they fall, inside an <emph> or a <stage> too:
   # the italics and stages are read first, so a break cannot leave their markers as text.
