@@ -1059,6 +1059,17 @@ defmodule Playcode.Export.TeiXml do
       ])
     ]
 
+  # A piece of a passage that crosses elements: the file's own form, until question 37
+  # settles a TEI one. One span around the element's words; the F where the passage starts
+  # (part "I") or ends ("F").
+  defp folio_nodes(part, words) do
+    label = [element(:code, "<sup>"), "F", element(:code, "</sup>")]
+
+    [element(:code, ~s(<span class="folio">))] ++
+      if(part == "I", do: label, else: []) ++
+      words ++ if(part == "F", do: label, else: []) ++ [element(:code, "</span>")]
+  end
+
   # An italic piece and the italic pieces that follow it: adjacent italic runs
   # (`<<a>><<b>>`, which the importer would part with a space) and the halves of one a
   # note split merge into a single <emph>. A note after an italic run ends it.

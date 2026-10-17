@@ -201,8 +201,9 @@ defmodule Playcode.Import.TeiParser do
 
   defp passages({name, attrs, children} = element, inside) do
     if inside or labelled?(element) do
-      {marks, inside} = label_marks(children, inside)
-      {{name, attrs, marks |> folio_tags() |> merge_text()}, inside}
+      {marks, still_inside} = label_marks(children, inside)
+      attrs = attrs ++ folio_edges(inside, still_inside, marks)
+      {{name, attrs, marks |> folio_tags() |> merge_text()}, still_inside}
     else
       {without_folio_wrappers(element), inside}
     end
@@ -265,13 +266,51 @@ defmodule Playcode.Import.TeiParser do
     {child ++ marks, inside}
   end
 
-  # The marks as marker text: a passage opened and closed here is <folio>…</folio>.
+  # The attributes that say a passage open before this element runs into it, and one open
+  # after it runs out of it: its text, once read, starts with <folio part="F"> (part "M"
+  # when no label here closes it) and ends with </folio> (with_folio_edges/2).
+  @folio_lead "playcode-folio-lead"
+  @folio_trail "playcode-folio-trail"
+
+  defp folio_edges(inside, still_inside, marks) do
+    lead =
+      cond do
+        inside and :close not in marks -> [{@folio_lead, "M"}]
+        inside -> [{@folio_lead, "F"}]
+        true -> []
+      end
+
+    if still_inside, do: lead ++ [{@folio_trail, "true"}], else: lead
+  end
+
+  # The marks as marker text: a passage opened and closed here is <folio>…</folio>; one
+  # opened here and still open at the end is part "I", closed when the text is read.
   defp folio_tags(marks) do
-    Enum.map(marks, fn
-      :open -> "<folio>"
-      :close -> "</folio>"
-      other -> other
-    end)
+    {tags, _closed_later} =
+      marks
+      |> Enum.reverse()
+      |> Enum.map_reduce(false, fn
+        :close, _closed_later -> {"</folio>", true}
+        :open, true -> {"<folio>", false}
+        :open, false -> {~s(<folio part="I">), false}
+        other, closed_later -> {other, closed_later}
+      end)
+
+    Enum.reverse(tags)
+  end
+
+  # `text`, the text of an element read, with the edges its passage gives it.
+  defp with_folio_edges(text, _attrs) when text in [nil, ""], do: text
+
+  defp with_folio_edges(text, attrs) do
+    lead =
+      case attr_value(attrs, @folio_lead) do
+        nil -> ""
+        part -> ~s(<folio part="#{part}">)
+      end
+
+    trail = if attr_value(attrs, @folio_trail), do: "</folio>", else: ""
+    lead <> text <> trail
   end
 
   # Touching text nodes as one, so a marker sits against the words beside it.
@@ -1388,12 +1427,13 @@ defmodule Playcode.Import.TeiParser do
   # --- Speech ---
 
   defp speech(attrs, children, pos) do
-    {speaker_label, notes} = text_and_notes(find_child(children, "speaker"))
+    speaker = find_child(children, "speaker")
+    {label, notes} = text_and_notes(speaker)
 
     %{
       type: "speech",
       position: pos,
-      speaker_label: speaker_label,
+      speaker_label: with_folio_edges(label, speaker && elem(speaker, 1)),
       who: who(attr_value(attrs, "who")),
       notes: notes,
       elements: speech_content(children)
@@ -1451,7 +1491,7 @@ defmodule Playcode.Import.TeiParser do
     %{
       type: "verse_line",
       position: pos,
-      content: content,
+      content: with_folio_edges(content, attrs),
       line_number: parse_int(attr_value(attrs, "n")),
       line_id: attr_value(attrs, "xml:id") || attr_value(attrs, "id"),
       part: attr_value(attrs, "part"),
@@ -1510,7 +1550,7 @@ defmodule Playcode.Import.TeiParser do
     %{
       type: "stage_direction",
       position: pos,
-      content: content,
+      content: with_folio_edges(content, attrs),
       stage_type: stage_type(attrs),
       notes: notes,
       elements: []
@@ -1526,6 +1566,7 @@ defmodule Playcode.Import.TeiParser do
     is_aside = aside_in_children?(children)
     marked = if is_aside, do: aside_text(para), else: text_content(para, :mark)
     {content, notes} = take_notes(marked, para)
+    content = with_folio_edges(content, attrs)
     # p@n: the number of the paragraph's first printed line, a marker at its very start.
     content =
       if content == "", do: content, else: printed_line(attr_value(attrs, "n")) <> content

@@ -1609,6 +1609,115 @@ defmodule Playcode.TeiRoundtripTest do
       assert String.replace(second, "FOL2", "FOL1") == first
     end
 
+    # 13 of Hamlet's 132 passages cross elements, the longest 14 speeches. Each element is a
+    # piece with its part, written back in the file's own form until question 37 settles a
+    # TEI one: one span per element, an F where the passage starts and where it ends.
+    test "a passage across speeches and stage directions goes back in the file's form" do
+      body = """
+      <div1 type="acto" n="2"><head>ACT II</head>
+        <sp><speaker>hamlet</speaker>
+          <p n="1284">Then is doomsday near. #{@folio_open}#{@f}Let me question more: what have #{@folio_close}
+            <lb n="1286"/>#{@folio_open}you deserved?#{@folio_close}</p>
+        </sp>
+        <sp><speaker>#{@folio_open}guildenstern#{@folio_close}</speaker>
+          <p n="1288">#{@folio_open}Prison, my lord?#{@folio_close}</p>
+        </sp>
+        <sp><speaker>#{@folio_open}hamlet#{@folio_close}</speaker>
+          <p n="1289">#{@folio_open}Denmark’s a prison.#{@f}#{@folio_close} But, in the beaten way</p>
+        </sp>
+        <stage type="entrance">Lords attendant.] #{@folio_open}#{@f}with #{@folio_close}</stage>
+        <stage type="entrance">#{@folio_open}his Guard carrying torches.#{@folio_close}</stage>
+        <stage type="entrance">#{@folio_open}Sound a Flourish.#{@f}#{@folio_close}</stage>
+      </div1>
+      """
+
+      first = roundtrip(tei(code: "FOL7", body: body))
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "p") == [
+               "Then is doomsday near. #{span}<sup>F</sup>Let me question more: what have you deserved?</span>",
+               "#{span}Prison, my lord?</span>",
+               "#{span}Denmark’s a prison.<sup>F</sup></span> But, in the beaten way"
+             ]
+
+      assert reading_texts(first, "speaker") == [
+               "hamlet",
+               "#{span}guildenstern</span>",
+               "#{span}hamlet</span>"
+             ]
+
+      assert reading_texts(first, "stage") == [
+               "Lords attendant.] #{span}<sup>F</sup>with</span>",
+               "#{span}his Guard carrying torches.</span>",
+               "#{span}Sound a Flourish.<sup>F</sup></span>"
+             ]
+
+      # A paragraph's own number stays its own.
+      assert for({attrs, _} <- xml_elements(first, "p", within: "body"), do: attrs["n"]) ==
+               ~w(1284 1288 1289)
+
+      assert xml_apps(first) == []
+
+      second = first |> String.replace("FOL7", "FOL8") |> roundtrip()
+      assert String.replace(second, "FOL8", "FOL7") == first
+    end
+
+    # The lines of a passage are pieces like any other element, a note in one staying where
+    # it was: the tags count nothing in its offset.
+    test "a passage across verse lines goes back a span to a line" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>hamlet</speaker>
+        <lg type="redondilla">
+          <l n="10">As in a dream #{@folio_open}#{@f}that went</l>
+          <l n="11">#{@folio_open}on through <note n="1"><p>A dream.</p></note>the night</l>
+          <l n="12">#{@folio_open}till morning#{@f}#{@folio_close}, and so</l>
+        </lg>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOL9", body: body))
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "l") == [
+               "As in a dream #{span}<sup>F</sup>that went</span>",
+               "#{span}on through the night</span>",
+               "#{span}till morning<sup>F</sup></span>, and so"
+             ]
+
+      assert [%{in: "l", n: "1", after: ~s(<span class="folio">on through)}] = xml_notes(first)
+
+      second = first |> String.replace("FOL9", "FOLA") |> roundtrip()
+      assert String.replace(second, "FOLA", "FOL9") == first
+    end
+
+    # Hamlet's file has three slips in its marks: a </span> set before the passage's words
+    # (v. 3057), a span opened twice (v. 1322) and a closing label typed "and" (v. 3315).
+    # The labels say where each passage runs; the "and" is kept as the passage's last word
+    # until the editor says otherwise (question 39).
+    test "the labels, not the spans, say where a passage runs" do
+      body = """
+      <div1 type="acto" n="5"><sp><speaker>hamlet</speaker>
+        <p n="3057">my sudden #{@folio_open}#{@f}#{@folio_close}and more strange#{@f}#{@folio_close} return.</p>
+        <p n="3315">I do not lie in’t, #{@folio_open}#{@f}Oh!#{@sup_open}and#{@sup_close}#{@folio_close} yet it is mine.</p>
+        <p n="1322">to th’court? #{@folio_open}#{@folio_open}#{@f}for, by my fay#{@f}#{@folio_close} I cannot</p>
+      </sp></div1>
+      """
+
+      xml = roundtrip(tei(body: body))
+
+      assert for(app <- xml_apps(xml), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "and more strange", nil},
+               {"rdg", "#F1", "Oh! and", nil},
+               {"rdg", "#F1", "for, by my fay", nil}
+             ]
+
+      assert reading_texts(xml, "p") == [
+               "my sudden return.",
+               "I do not lie in’t, yet it is mine.",
+               "to th’court? I cannot"
+             ]
+    end
+
     # A note counts graphemes into the text without its markers, the Folio ones included:
     # the one after a passage stays after it.
     test "a note after a passage stays where it was" do
