@@ -31,17 +31,20 @@ which also puts `playcode` back to its usual size.
 
 ## The run
 
-Two commands do the mechanical steps, run from this directory with flyctl; the two
-decisions, after the dry run and after the counts, stay with a person.
+Four commands do the mechanical steps, run from this directory with flyctl; the three
+decisions, after the dry run, after the counts and after the preview, stay with a person.
 
 ```bash
 mix playcode.fly.reimport prepare     # steps 2-5 below, then stops
-mix playcode.fly.reimport run         # steps 6, 7 and 9
-mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run
+mix playcode.fly.reimport run         # steps 6 and 7; the machines stay up
+mix playcode.fly.reimport generate    # step 10's Generate, then step 9
+mix playcode.fly.reimport deploy      # step 10's Deploy, after the preview
+mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or build
 ```
 
 1. **Deploy the code** (step 1 below).
-2. **`prepare`** snapshots the database volume and waits for the snapshot, uploads
+2. **`prepare`** snapshots the database volume and waits for the snapshot, starts the app
+   if the proxy stopped it for want of traffic (on 2026-10-17 the upload found no VM), uploads
    `doc/tei_corpus/` (`--dir` for another folder) and checks the count on the machine,
    scales both machines up with autostop off, and runs the dry run, printing each play as
    it is read. It ends by listing the lines that need a look (hand fixes the re-import
@@ -49,10 +52,17 @@ mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run
    none. Step 5 says what to do with them. Running `prepare` again is safe.
 3. **`run`** re-imports every play not imported since its file was uploaded
    (`resume: true`). When a run stops part way it shows the machine's status, starts it,
-   and runs again, three times at most. When a play fails it stops with the machines
-   still scaled up: fix the cause and `run` again, which re-imports only what is left.
-   When none fails it scales both machines back and turns autostop on.
-4. **Check** what the change was for (step 8), then **Generate** the site (step 10).
+   and runs again, three times at most. When a play fails it stops: fix the cause
+   and `run` again, which re-imports only what is left. Either way the machines stay
+   scaled up, for the build.
+4. **Check** what the change was for (step 8).
+5. **`generate`** is Generate on `/admin/export`, run over SSH on the machines still scaled
+   up (performance-1x builds faster) with autostop off, and waits for the build's end,
+   printing its progress. When the session drops before it, it asks again: the build goes
+   on in the app, and the second Generate waits behind it. When the build is done it
+   scales both machines back and turns autostop on; when it fails they stay up.
+6. **Check the preview** on `/admin/export`, then **`deploy`**: Deploy, over SSH, with
+   autostop off while it pushes and back on after it.
 
 The machines' ids are constants in `lib/mix/tasks/playcode.fly.reimport.ex`; a new
 machine or volume means editing them there and in the table above.
@@ -161,15 +171,16 @@ What the commands do, for when one of them fails part way, or something new is n
     page, not by Generate ("Add every complete play" adds them all in one batch). On 2026-10-15 that was 212 of the 373 complete plays, about four
     minutes on performance-1x, 560 MB of memory. Then Deploy, after checking the preview.
 
-    Start it from the export page and keep the page open: its connection is the web traffic
-    that keeps autostop away. Started over `bin/playcode rpc`, with no page open, a build
-    sends no traffic, and after `run` has turned autostop back on the proxy stops the app in
-    the middle of it (2026-10-16, ten minutes into a four-play Generate). From a shell, keep
-    a request going while it runs (`curl -s https://playcode.fly.dev/plays` every 20
-    seconds), or Generate before `run` scales back.
+    `generate` and `deploy` do both over SSH (`Playcode.Release.generate_site/0` and
+    `deploy_site/0`, which wait for the builder's job and print its end). By hand, from the
+    export page, keep the page open: its connection is the web traffic that keeps autostop
+    away. A build started over `bin/playcode rpc` with autostop on sends no traffic, and the
+    proxy stops the app in the middle of it (2026-10-16, ten minutes into a four-play
+    Generate); the commands turn autostop off first. Deploy only pushes what Generate built:
+    on 2026-10-17 a Deploy pressed before Generate sent the build of the day before again.
 
 ## Why it is not all one command
 
 Each decision above is one someone should see: the snapshot exists, the dry run shows no
-hand fixes, the counts match. `prepare` stops before the first; the counts and Generate
-come after `run`.
+hand fixes, the counts match, the preview is right. `prepare` stops before the first; the
+counts come after `run`, the preview after `generate`, and only `deploy` publishes.

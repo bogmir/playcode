@@ -18,6 +18,8 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     *"snapshots list"*) cat "$d/snapshots" ;;
     *dry_run*) cat "$d/dry_run" ;;
     *"resume: true"*) cat "$d/run.$(grep -c 'resume: true' "$d/calls")" 2>/dev/null ;;
+    *generate_site*) cat "$d/generate.$(grep -c generate_site "$d/calls")" 2>/dev/null ;;
+    *deploy_site*) cat "$d/deploy" ;;
   esac
   """
 
@@ -94,6 +96,8 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       assert_in_order(calls, [
         "volumes snapshots create vol_40l3p92ozj187o94 -a emothe-db-1g",
         "volumes snapshots list vol_40l3p92ozj187o94 -a emothe-db-1g --json",
+        # An app stopped for want of traffic has no VM to upload to (2026-10-17).
+        "machine start 7847063c04e7e8 -a playcode",
         "ssh sftp put",
         "tar xzmf /data/tei.tgz -C /data/tei",
         "machine update d8d14e7b0465d8 --vm-size performance-1x -a emothe-db-1g --yes",
@@ -113,22 +117,25 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
   end
 
   describe "run" do
-    test "runs again after a run that stopped part way, then scales back", %{dir: dir} do
+    # It used to scale back at the end; the machines now stay up for `generate`, which
+    # builds the site faster on them and scales back after it (2026-10-17).
+    test "runs again after a run that stopped part way, and leaves the machines up",
+         %{dir: dir} do
       answer(dir, "run.1", "372 file(s) in /data/tei\nError: ssh shell: connection closed\n")
       answer(dir, "run.2", "372 file(s) in /data/tei\nimported 300, skipped 72, failed 0\n")
 
       Mix.Task.rerun("playcode.fly.reimport", ["run"])
 
-      assert_in_order(calls(dir), [
+      calls = calls(dir)
+
+      assert_in_order(calls, [
         ~s[import_tei("/data/tei", force: true, resume: true)],
         "machine start 7847063c04e7e8 -a playcode",
-        ~s[import_tei("/data/tei", force: true, resume: true)],
-        "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes",
-        "scale vm shared-cpu-1x --vm-memory 1024 -a playcode",
-        "machine update d8d14e7b0465d8 --vm-size shared-cpu-1x --vm-memory 512 -a emothe-db-1g --yes"
+        ~s[import_tei("/data/tei", force: true, resume: true)]
       ])
 
-      assert output() =~ "Generate"
+      refute Enum.any?(calls, &(&1 =~ "shared-cpu-1x"))
+      assert output() =~ "mix playcode.fly.reimport generate"
     end
 
     test "stops at failed plays and keeps the machines scaled up", %{dir: dir} do
@@ -144,6 +151,74 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
 
       refute Enum.any?(calls(dir), &(&1 =~ "shared-cpu-1x"))
       assert output() =~ "EMOTHE0002: %DBConnection.ConnectionError"
+    end
+  end
+
+  describe "generate" do
+    test "builds the site on the machines the run left up, then scales back", %{dir: dir} do
+      answer(dir, "generate.1", "371/371 EMOTHE0999\nsite generated: %{plays: 371}\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["generate"])
+
+      assert_in_order(calls(dir), [
+        "machine start 7847063c04e7e8 -a playcode",
+        "machine update 7847063c04e7e8 --autostop=off -a playcode --yes",
+        "Playcode.Release.generate_site()",
+        "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes",
+        "scale vm shared-cpu-1x --vm-memory 1024 -a playcode",
+        "machine update d8d14e7b0465d8 --vm-size shared-cpu-1x --vm-memory 512 -a emothe-db-1g --yes"
+      ])
+
+      assert output() =~ "mix playcode.fly.reimport deploy"
+    end
+
+    # The build goes on in the app when the SSH session drops; asking again waits for it.
+    test "asks again after a session that dropped before the build's end", %{dir: dir} do
+      answer(dir, "generate.1", "100/371 EMOTHE0100\nError: ssh shell: connection closed\n")
+      answer(dir, "generate.2", "site generated: %{changed: 0}\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["generate"])
+
+      calls = calls(dir)
+      assert Enum.count(calls, &(&1 =~ "generate_site")) == 2
+      assert Enum.any?(calls, &(&1 =~ "shared-cpu-1x"))
+    end
+
+    test "stops at a failed build and keeps the machines up", %{dir: dir} do
+      answer(dir, "generate.1", "generate failed: :enospc\n")
+
+      assert_raise Mix.Error, ~r/build failed/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["generate"])
+      end
+
+      refute Enum.any?(calls(dir), &(&1 =~ "shared-cpu-1x"))
+    end
+  end
+
+  describe "deploy" do
+    test "wakes the app, pushes the built site, and puts autostop back", %{dir: dir} do
+      answer(dir, "deploy", "deploy: pushing\nsite deployed: %{sha: \"abc\"}\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["deploy"])
+
+      assert_in_order(calls(dir), [
+        "machine start 7847063c04e7e8 -a playcode",
+        "machine update 7847063c04e7e8 --autostop=off -a playcode --yes",
+        "Playcode.Release.deploy_site()",
+        "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes"
+      ])
+
+      assert output() =~ "site deployed"
+    end
+
+    test "says so when the push fails, autostop back on all the same", %{dir: dir} do
+      answer(dir, "deploy", "deploy failed: \"rejected\"\n")
+
+      assert_raise Mix.Error, ~r/deploy failed/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["deploy"])
+      end
+
+      assert Enum.any?(calls(dir), &(&1 =~ "--autostop=stop"))
     end
   end
 end

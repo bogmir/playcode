@@ -8,21 +8,28 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
       mix playcode.fly.reimport prepare [--dir doc/tei_corpus]
       mix playcode.fly.reimport run
+      mix playcode.fly.reimport generate
+      mix playcode.fly.reimport deploy
       mix playcode.fly.reimport scale-down
 
-  `prepare` snapshots the database volume, uploads the corpus, scales both machines up
-  with autostop off, runs the dry run, and stops: it lists the plays whose hand fixes the
-  re-import would lose, for a person to look at with the project. Running it again is
-  safe; a new upload starts the re-import over.
+  `prepare` snapshots the database volume, wakes the app, uploads the corpus, scales both
+  machines up with autostop off, runs the dry run, and stops: it lists the plays whose
+  hand fixes the re-import would lose, for a person to look at with the project. Running
+  it again is safe; a new upload starts the re-import over.
 
   `run` re-imports every play not imported since its file was uploaded
   (`Release.import_tei/2` with `force: true, resume: true`), running again up to three
-  times when a run stops part way. When no play fails it scales both machines back;
-  when one does, it stops with the machines up, and `run` again retries only what is
-  left. `scale-down` scales back by itself, after an aborted run.
+  times when a run stops part way, and leaves the machines up. When a play fails it
+  stops; `run` again retries only what is left.
 
-  The counts that check what the re-import was for, and Generate on `/admin/export`,
-  stay with you (steps 8 and 10 of the runbook).
+  `generate` is Generate on `/admin/export` (`Release.generate_site/0`), on the machines
+  the run left up, asking again when the session drops before the build's end; when the
+  build is done it scales both machines back with autostop on. `deploy`, once the
+  preview is checked, is Deploy (`Release.deploy_site/0`). `scale-down` scales back by
+  itself, after an aborted run or build.
+
+  The counts that check what the re-import was for, and the preview, stay with you
+  (steps 8 and 10 of the runbook).
   """
 
   use Mix.Task
@@ -37,6 +44,8 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
   @dry_run ~s[bin/playcode rpc 'Playcode.Release.import_tei("#{@remote_dir}", dry_run: true, force: true)']
   @import ~s[bin/playcode rpc 'Playcode.Release.import_tei("#{@remote_dir}", force: true, resume: true)']
+  @generate ~s[bin/playcode rpc 'Playcode.Release.generate_site()']
+  @deploy ~s[bin/playcode rpc 'Playcode.Release.deploy_site()']
 
   # A dry run's lines a person decides on: hand fixes the re-import loses, an archived
   # play it restores, a file it cannot read.
@@ -53,6 +62,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     snapshot!()
 
     step("Uploading #{length(files)} file(s) from #{dir}")
+    wake!()
     upload!(dir, files)
 
     step("Scaling up, autostop off")
@@ -77,9 +87,34 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     step("Re-importing")
     import_until_done(1)
 
+    Mix.shell().info(
+      "\nDone; the machines stay up. Check the counts, then: mix playcode.fly.reimport generate"
+    )
+  end
+
+  def run(["generate"]) do
+    step("Generating the site, autostop off")
+    wake!()
+    fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
+    generate_until_done(1)
+
     step("Scaling back, autostop on")
     scale_down!()
-    Mix.shell().info("\nDone. Check the counts, then Generate the site on /admin/export.")
+
+    Mix.shell().info(
+      "\nDone. Check the preview on /admin/export, then: mix playcode.fly.reimport deploy"
+    )
+  end
+
+  def run(["deploy"]) do
+    step("Deploying the site, autostop off")
+    wake!()
+    fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
+    output = ssh(@deploy)
+    fly!(~w(machine update #{@app_machine} --autostop=stop -a #{@app} --yes))
+
+    unless output =~ "site deployed",
+      do: Mix.raise("the deploy failed or did not finish; see above")
   end
 
   def run(["scale-down"]) do
@@ -87,8 +122,11 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     scale_down!()
   end
 
-  def run(_args),
-    do: Mix.raise("usage: mix playcode.fly.reimport prepare [--dir DIR] | run | scale-down")
+  def run(_args) do
+    Mix.raise(
+      "usage: mix playcode.fly.reimport prepare [--dir DIR] | run | generate | deploy | scale-down"
+    )
+  end
 
   defp snapshot! do
     requested = DateTime.add(DateTime.utc_now(), -60)
@@ -169,10 +207,42 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
       nil ->
         Mix.shell().info("\nThe run stopped before its end (#{attempt} of #{@attempts}); again.")
         stream(~w(machine status #{@app_machine} -a #{@app}))
-        stream(~w(machine start #{@app_machine} -a #{@app}))
+        wake!()
         import_until_done(attempt + 1)
     end
   end
+
+  # A dropped session leaves the build running in the app: asking again queues a Generate
+  # behind it, which waits for it and then finds little or nothing left to do.
+  defp generate_until_done(attempt) when attempt > @attempts,
+    do: Mix.raise("the build was cut off #{@attempts} times; see the machine's status above")
+
+  defp generate_until_done(attempt) do
+    output = ssh(@generate)
+
+    cond do
+      output =~ "site generated" ->
+        :ok
+
+      output =~ "generate failed" ->
+        Mix.raise(
+          "the build failed, above; the machines stay up. `generate` again, or `scale-down`"
+        )
+
+      true ->
+        Mix.shell().info(
+          "\nThe session ended before the build (#{attempt} of #{@attempts}); again."
+        )
+
+        stream(~w(machine status #{@app_machine} -a #{@app}))
+        wake!()
+        generate_until_done(attempt + 1)
+    end
+  end
+
+  # An app the proxy stopped for want of traffic has no VM to SSH into; starting one that
+  # runs only says so.
+  defp wake!, do: stream(~w(machine start #{@app_machine} -a #{@app}))
 
   defp created_after?(timestamp, time) do
     case DateTime.from_iso8601(timestamp || "") do
