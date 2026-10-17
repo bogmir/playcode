@@ -43,8 +43,8 @@ defmodule Playcode.Import.Filemaker do
 
   # Wider than this is a data-entry error in the export, not a dating: the widest real
   # header is 13 years (=1612 - =1625). Skipped rather than reported as a conflict,
-  # because a conflict is tickable in /admin/filemaker and a force-write of a bad span
-  # is precisely what this guard exists to prevent.
+  # because `--force` overwrites every conflict, and a force-write of a bad span is
+  # precisely what this guard exists to prevent.
   @max_composition_span 40
 
   # <li>Antigüedad clásica<br/>Note: First century BC.…</li> — one item of a rendered

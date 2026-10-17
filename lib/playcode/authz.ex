@@ -32,7 +32,7 @@ defmodule Playcode.Authz do
 
   @admin_actions @researcher_actions ++
                    ~w(purge_play manage_users view_activity_log deploy_site
-                      view_dashboard import_filemaker)a
+                      view_dashboard)a
 
   @doc """
   Returns true when `user` may perform `action`, optionally on `resource`.

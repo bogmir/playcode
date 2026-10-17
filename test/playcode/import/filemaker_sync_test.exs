@@ -1,9 +1,8 @@
 defmodule Playcode.Import.FilemakerSyncTest do
   @moduledoc """
   The sync's rules, one combination per test, against the tracked FileMaker
-  samples as `Filemaker.load_index/1` and `load_versions/1` read them. The
-  upload, preview and apply journey is asserted in
-  test/playcode_web/live/admin/filemaker_sync_live_test.exs.
+  samples as `Filemaker.load_index/1` and `load_versions/1` read them. The mix
+  task that runs it is asserted in test/mix/tasks_test.exs.
   """
   use Playcode.DataCase, async: true
 

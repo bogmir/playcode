@@ -192,7 +192,9 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   `UserAuth.require_permission/2`.
 - **Researchers** get every content action (plays, content, editors, sources, import, export
   download, archive). **Admins** additionally get purge, user management, activity log, site
-  deploy, the dashboard and the FileMaker sync (`:import_filemaker`).
+  deploy and the dashboard. The FileMaker imports run from the backend (mix tasks, and
+  `Playcode.Release` on Fly); the `/admin/filemaker` upload page was removed on 2026-10-18,
+  its S1/S2 sync done.
 - **A draft (`is_complete: false`) is for staff only.** `/plays/:code`, its compare page and
   `/export/:id/*` pass `complete: not can?(user, :view_drafts)` to the Catalogue read, so a
   visitor gets a 404 and staff keep the preview the admin pages link to. Related plays

@@ -8,7 +8,7 @@ source and variant tables received) and 2026-10-11 (S3 done, S7 started).
 | S0 — corpus baseline | **done** — `archive/README.md` |
 | S0b — soft delete, re-importable plays | **done** — `archive/README.md` |
 | S1 — work families and language | **done** — `archive/README.md` |
-| Admin sync page (`/admin/filemaker`) | **done** — see below |
+| Admin sync page (`/admin/filemaker`) | **removed** 2026-10-18: S1 and S2 were run through it and are done; S3 and S4 run from the backend on the `ctce_dades` tables, and so do the slices left |
 | S2 — version metadata | **done** 2026-10-08: S2a and S2c shipped, S2d dropped — `archive/README.md`, `../specs/2026-08-05-s2c-composition-date-design.md` |
 | S2d — collection | **dropped** 2026-10-08: not a category in use; the code prefix already says EMOTHE, ARTELOPE or HIE — see below |
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
@@ -27,11 +27,11 @@ slice learned that its plan did not say. Read that before starting a new slice.
 
 ## How a sync is run
 
-Two front doors onto the same pure domain layer (`Playcode.Import.Filemaker` +
-`Playcode.Import.FilemakerSync`):
+From the backend: `mix playcode.import.filemaker [--dry-run] [--force] [--path ...]` over the pure
+domain layer (`Playcode.Import.Filemaker` + `Playcode.Import.FilemakerSync`), and for a later slice
+its own mix task plus a `Playcode.Release` function for Fly (S3, S4).
 
-- `mix playcode.import.filemaker [--dry-run] [--force] [--path ...]` — the terminal path, for a bulk
-  apply against a file on the server.
+Until 2026-10-18 there was a second door, removed once S1 and S2 were done:
 - **`/admin/filemaker`** — `PlaycodeWeb.Admin.FilemakerSyncLive`. Upload the NDJSON export, read the
   diff, tick individual conflicts, apply. Permission `:import_filemaker`, **admin only** and
   deliberately not researcher-level: a sync is corpus-wide and its force path overwrites curated
@@ -944,9 +944,8 @@ Fixed once here so every slice looks the same:
 - **HTML parsing with `Regex`.** There is no HTML library in `mix.exs` and this is a fixed,
   machine-generated markup shape. Do not add Floki for it.
 - **Dry run first.** Every sync mix task takes `--dry-run` and prints the report without writing.
-  Since 2026-08-03 the same review happens in the browser at `/admin/filemaker`, which previews
-  before it applies and can accept conflicts one at a time. That page is the review mechanism for
-  the researchers; `--dry-run` is the one for us.
+  From 2026-08-03 to 2026-10-18 the same review could happen in the browser at `/admin/filemaker`,
+  removed once S1 and S2 were done; `--dry-run` is the review now.
 - **Never create plays.** A FileMaker record with no matching play is reported as unmatched and
   skipped. No stub plays, ever.
 - **Never touch Artelope.** `AL####` codes are absent from the export; they must come out of every

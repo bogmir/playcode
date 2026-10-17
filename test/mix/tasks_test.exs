@@ -244,7 +244,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert Catalogue.get_play!(play.id).language == "en"
     end
 
-    # Same rule as /admin/filemaker and every Catalogue read.
+    # Same rule as every Catalogue read.
     test "an archived play is left out", %{play: play} do
       {:ok, _} = Catalogue.delete_play(play)
 

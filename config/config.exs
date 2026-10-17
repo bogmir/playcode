@@ -15,13 +15,6 @@ config :playcode, PlaycodeWeb.Gettext,
   default_locale: "es",
   locales: ~w(es en)
 
-# .ndjson has no registered MIME type by default; the FileMaker sync upload
-# (lib/playcode_web/live/admin/filemaker_sync_live.ex) needs it for allow_upload's
-# accept list.
-config :mime, :types, %{
-  "application/x-ndjson" => ["ndjson"]
-}
-
 # Configure the endpoint
 config :playcode, PlaycodeWeb.Endpoint,
   url: [host: "localhost"],

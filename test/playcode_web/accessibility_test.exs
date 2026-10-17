@@ -96,7 +96,6 @@ defmodule PlaycodeWeb.AccessibilityTest do
     /admin/users
     /admin/activity-log
     /admin/export
-    /admin/filemaker
   )
 
   for path <- @pages do

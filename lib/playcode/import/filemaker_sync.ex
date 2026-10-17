@@ -19,8 +19,8 @@ defmodule Playcode.Import.FilemakerSync do
   and anything the project never published — come back under `:missing`.
 
   A dating the export carries but the parse refused comes back under `:skipped`, which
-  is read-only: `apply_plan/2` ignores it, and unlike a conflict there is nothing to
-  tick, because the whole point is that the value is not fit to write.
+  is read-only: `apply_plan/2` ignores it, even under `force: true`, because the whole
+  point is that the value is not fit to write.
   """
 
   import Ecto.Query
@@ -213,7 +213,7 @@ defmodule Playcode.Import.FilemakerSync do
   end
 
   # A dating the parse refused — too wide a span, or a header with no year. Its own
-  # bucket rather than :conflicts, because a conflict is tickable in /admin/filemaker and
+  # bucket rather than :conflicts, because `force: true` overwrites every conflict and
   # force-writing a bad span is exactly what the guard exists to prevent.
   defp skipped_for(%{composition_date_skipped: {reason, value}}, play, code) do
     [%{play_id: play.id, code: code, title: play.title, reason: reason, value: value}]

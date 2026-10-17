@@ -40,7 +40,6 @@ defmodule PlaycodeWeb.AuthorizationTest do
     {"/admin/export", :admin},
     {"/admin/export/download-zip", :admin},
     {"/admin/export/preview/index.html", :admin},
-    {"/admin/filemaker", :admin},
     {"/admin/dashboard", :admin}
   ]
 
@@ -105,7 +104,7 @@ defmodule PlaycodeWeb.AuthorizationTest do
     # A live navigation stays in the :admin live_session, so no router plug runs:
     # only each LiveView's own on_mount stands between a researcher and the page.
     test "a researcher cannot live-navigate to an admin-only page", %{personas: personas} do
-      for path <- ~w(/admin/users /admin/activity-log /admin/export /admin/filemaker) do
+      for path <- ~w(/admin/users /admin/activity-log /admin/export) do
         {:ok, lv, _html} = live(conn_for(personas.researcher), ~p"/admin/plays")
 
         assert {:error, {:redirect, %{to: "/"}}} = live_redirect(lv, to: path),

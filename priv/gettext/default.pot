@@ -211,7 +211,6 @@ msgstr ""
 msgid "Choose one or more TEI-XML files from your computer."
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:169
 #: lib/playcode_web/live/admin/import_live.ex:356
 #: lib/playcode_web/live/admin/play_form_live.ex:426
 #: lib/playcode_web/live/admin/play_list_live.ex:202
@@ -245,7 +244,7 @@ msgstr ""
 msgid "Current password"
 msgstr ""
 
-#: lib/playcode_web/components/layouts.ex:347
+#: lib/playcode_web/components/layouts.ex:341
 #, elixir-autogen, elixir-format
 msgid "Dashboard"
 msgstr ""
@@ -383,13 +382,12 @@ msgstr ""
 msgid "English"
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:336
 #: lib/playcode_web/live/admin/import_live.ex:447
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr ""
 
-#: lib/playcode_web/components/layouts.ex:326
+#: lib/playcode_web/components/layouts.ex:320
 #: lib/playcode_web/live/admin/play_detail_live.ex:154
 #, elixir-autogen, elixir-format
 msgid "Export"
@@ -419,7 +417,6 @@ msgstr ""
 msgid "File"
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:333
 #: lib/playcode_web/live/admin/import_live.ex:444
 #, elixir-autogen, elixir-format
 msgid "File is too large (max 20MB)"
@@ -518,7 +515,6 @@ msgstr ""
 msgid "Keep me logged in"
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:371
 #: lib/playcode_web/live/admin/place_form_component.ex:256
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:409
 #: lib/playcode_web/live/admin/play_form_live.ex:570
@@ -997,7 +993,6 @@ msgstr ""
 msgid "Text"
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:170
 #: lib/playcode_web/live/admin/import_live.ex:355
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:419
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:429
@@ -2002,7 +1997,7 @@ msgstr ""
 msgid "User Management"
 msgstr ""
 
-#: lib/playcode_web/components/layouts.ex:341
+#: lib/playcode_web/components/layouts.ex:335
 #: lib/playcode_web/live/admin/user_list_live.ex:267
 #, elixir-autogen, elixir-format
 msgid "Users"
@@ -2792,7 +2787,6 @@ msgstr ""
 msgid "Historical Time Note"
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:374
 #: lib/playcode_web/live/play_show_live.ex:410
 #, elixir-autogen, elixir-format
 msgid "Historical time"
@@ -2930,17 +2924,17 @@ msgstr ""
 msgid "You do not have access to that page."
 msgstr ""
 
-#: lib/playcode_web/components/layouts.ex:332
+#: lib/playcode_web/components/layouts.ex:326
 #, elixir-autogen, elixir-format
 msgid "Activity"
 msgstr ""
 
-#: lib/playcode_web/components/layouts.ex:323
+#: lib/playcode_web/components/layouts.ex:317
 #, elixir-autogen, elixir-format
 msgid "Site"
 msgstr ""
 
-#: lib/playcode_web/components/layouts.ex:338
+#: lib/playcode_web/components/layouts.ex:332
 #, elixir-autogen, elixir-format
 msgid "System"
 msgstr ""
@@ -3095,154 +3089,6 @@ msgstr ""
 #: lib/playcode_web/live/admin/user_list_live.ex:165
 #, elixir-autogen, elixir-format
 msgid "Invitation created, but the email could not be sent to %{email}. Resend it once mail delivery works."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:252
-#, elixir-autogen, elixir-format
-msgid "%{count} play(s) already match"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:261
-#, elixir-autogen, elixir-format
-msgid "%{count} play(s) are not in the published index"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:158
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:164
-#, elixir-autogen, elixir-format
-msgid "%{count} play(s) to update"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:205
-#, elixir-autogen, elixir-format
-msgid "%{count} value(s) already set by a researcher"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:388
-#, elixir-autogen, elixir-format
-msgid "(blank)"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:310
-#, elixir-autogen, elixir-format
-msgid "Applied"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:303
-#, elixir-autogen, elixir-format
-msgid "Apply"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:361
-#, elixir-autogen, elixir-format
-msgid "Cannot read the file"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:171
-#, elixir-autogen, elixir-format
-msgid "Changes"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:305
-#, elixir-autogen, elixir-format
-msgid "Discard"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:296
-#, elixir-autogen, elixir-format
-msgid "Everything already matches the export."
-msgstr ""
-
-#: lib/playcode_web/components/layouts.ex:317
-#, elixir-autogen, elixir-format
-msgid "FileMaker"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:21
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:117
-#, elixir-autogen, elixir-format
-msgid "FileMaker sync"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:375
-#, elixir-autogen, elixir-format
-msgid "Historical time note"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:353
-#, elixir-autogen, elixir-format
-msgid "No FileMaker records found in that file. Is it the right export?"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:266
-#, elixir-autogen, elixir-format
-msgid "Nothing is created for these. A play can be absent from the index and still have research metadata to fill, in which case it is listed above as well."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:131
-#, elixir-autogen, elixir-format
-msgid "One .ndjson file, as exported from FileMaker."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:334
-#, elixir-autogen, elixir-format
-msgid "Only .ndjson files are accepted"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:373
-#, elixir-autogen, elixir-format
-msgid "Parent play"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:145
-#, elixir-autogen, elixir-format
-msgid "Preview changes"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:372
-#, elixir-autogen, elixir-format
-msgid "Relationship"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:129
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:137
-#, elixir-autogen, elixir-format
-msgid "Select the export"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:324
-#, elixir-autogen, elixir-format
-msgid "Sync another export"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:210
-#, elixir-autogen, elixir-format
-msgid "These are left alone unless you tick them. For research metadata the export is a starting point, not the authority."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:108
-#, elixir-autogen, elixir-format
-msgid "Updated %{count} play(s)."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:335
-#, elixir-autogen, elixir-format
-msgid "Upload one file at a time"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:120
-#, elixir-autogen, elixir-format
-msgid "Upload the FileMaker export, review what it would change, then apply it."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:230
-#, elixir-autogen, elixir-format
-msgid "keep %{current}"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:233
-#, elixir-autogen, elixir-format
-msgid "the export says %{indexed}"
 msgstr ""
 
 #: lib/playcode_web/live/admin/place_form_component.ex:240
@@ -3554,11 +3400,6 @@ msgstr ""
 msgid "Search for a place first."
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:277
-#, elixir-autogen, elixir-format
-msgid "%{count} dating(s) not imported"
-msgstr ""
-
 #: lib/playcode_web/live/admin/play_form_live.ex:752
 #, elixir-autogen, elixir-format
 msgid "Competing datings, and the evidence for each"
@@ -3574,25 +3415,9 @@ msgstr ""
 msgid "Composition Date"
 msgstr ""
 
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:380
 #: lib/playcode_web/live/admin/play_form_live.ex:747
 #, elixir-autogen, elixir-format
 msgid "Composition Date Note"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:280
-#, elixir-autogen, elixir-format
-msgid "The export gives no usable years for these — an implausible span, or a header with no date in it. Nothing is written and there is nothing to tick: enter the dating by hand if you have it."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:376
-#, elixir-autogen, elixir-format
-msgid "Composition Date (from)"
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:377
-#, elixir-autogen, elixir-format
-msgid "Composition Date (to)"
 msgstr ""
 
 #: lib/playcode_web/controllers/page_html/home.html.heex:10
@@ -4264,11 +4089,6 @@ msgstr[1] ""
 #: lib/playcode_web/live/admin/live_helpers.ex:21
 #, elixir-autogen, elixir-format
 msgid "That item no longer exists. The list has been refreshed."
-msgstr ""
-
-#: lib/playcode_web/live/admin/filemaker_sync_live.ex:357
-#, elixir-autogen, elixir-format
-msgid "Cannot read the file: record %{record} is malformed."
 msgstr ""
 
 #: lib/playcode_web/controllers/export_controller.ex:55
