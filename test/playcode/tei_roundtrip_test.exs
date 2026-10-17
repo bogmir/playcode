@@ -1248,6 +1248,23 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(xml, "emph", within: "note") == ["erróneamente", "\"partes …\""]
     end
 
+    # Regression: EMOTHE0187's notes 2115 and 2320 open with an emphasis of nothing. It
+    # was stored as "<<>>, if"; the first export wrote "<p> , if", the second "<p>, if",
+    # so the export of the export differed from the first.
+    test "an emphasis of nothing is dropped, and the export of the export is the same" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1">and if<note n="2115" type="editor"><p><emph></emph>, if (OED conj. 2).</p></note> he come</l>
+      </sp></div1>
+      """
+
+      first = tei(code: "EMPH1", body: body) |> roundtrip()
+      second = first |> String.replace("EMPH1", "EMPH2") |> roundtrip()
+
+      assert [%{paragraphs: [", if (OED conj. 2)."]}] = xml_notes(first)
+      assert String.replace(second, "EMPH2", "EMPH1") == first
+    end
+
     test "importing a file again replaces its notes, never doubles them" do
       path =
         tei(
