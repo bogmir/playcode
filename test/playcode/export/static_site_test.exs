@@ -217,6 +217,24 @@ defmodule Playcode.Export.StaticSiteTest do
     assert "Translation of #{original.title}" in texts(title_page(dir, translation), "p")
   end
 
+  # The family list said only each play's language: an adaptation read as a translation.
+  test "an original's title page says what kind of play each of its family is" do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "title" => "Le Menteur",
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    roles = texts(title_page(generate!([original, translation, adaptation]), original), ".role")
+
+    assert Enum.any?(roles, &(&1 =~ "adaptation"))
+    assert Enum.any?(roles, &(&1 =~ "translation"))
+  end
+
   # A kind added to Play.relationship_types/0 needs a word on the site, or kind/1 raises.
   test "every kind a play can have has the site's word for it" do
     for type <- Playcode.Catalogue.Play.relationship_types() do

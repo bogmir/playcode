@@ -111,6 +111,37 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert "adaptation" in texts(index, "[data-play] .tag")
   end
 
+  # Under its original, an entry used to say only its language: an adaptation read as one
+  # more translation.
+  test "an entry under its original says what kind of play it is" do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    index = html!(generate!([original, translation, adaptation]), "index.html")
+    # Each entry's tags, by the play its title links.
+    entries =
+      for entry <- LazyHTML.query(index, "[data-play]"),
+          do:
+            {entry |> LazyHTML.query("a") |> LazyHTML.attribute("href") |> hd(),
+             texts(entry, ".tag")}
+
+    tags = fn play ->
+      Enum.find_value(entries, fn {href, tags} ->
+        String.contains?(href, "#{play.code}/") && tags
+      end)
+    end
+
+    assert "adaptation" in tags.(adaptation)
+    assert "translation" in tags.(translation)
+    refute "translation" in tags.(original)
+  end
+
   test "titles and authors are escaped" do
     play = play_fixture(%{"is_complete" => true, "title" => "Tom & <Jerry>"})
 
