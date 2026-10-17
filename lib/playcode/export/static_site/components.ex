@@ -218,9 +218,14 @@ defmodule Playcode.Export.StaticSite.Components do
   def family(assigns) do
     published? = &(&1 && MapSet.member?(assigns.published, &1.code))
 
+    # A play linked with no kind (FileMaker linked a few) names no relation, as the play
+    # page does: "Original of" would be false.
+    named? = kind(assigns.play) != "original"
+
     assigns =
       assign(assigns,
-        original: if(published?.(assigns.play.parent_play), do: assigns.play.parent_play),
+        original:
+          if(named? and published?.(assigns.play.parent_play), do: assigns.play.parent_play),
         translations: Enum.filter(assigns.play.derived_plays, published?)
       )
 

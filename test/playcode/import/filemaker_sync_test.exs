@@ -80,16 +80,67 @@ defmodule Playcode.Import.FilemakerSyncTest do
     end
 
     # Question 15: the file's kind wins; FileMaker's index knows only originals and
-    # translations. With no parent stored, FileMaker would link it otherwise.
+    # translations. The index would make it a translation of EMOTHE0038.
     test "an adaptation stays one, with the original it has" do
+      original = play("EMOTHE0038_AntonyAndCleopatra", Map.put(dated(), "language", "en"))
+      other = play("AL9998_OtraObra")
+
+      adaptation =
+        play("EMOTHE0052_AntonioYCleopatra", %{
+          "relationship_type" => "adaptacion",
+          "parent_play_id" => other.id
+        })
+
+      assert "EMOTHE0052" in FilemakerSync.plan(index(), [original, other, adaptation]).unchanged
+    end
+
+    # No source file names its original (none carries a relatedItem), so on a fresh
+    # database the index's family is the only one an adaptation has.
+    test "an adaptation with no original gets the one the index names" do
       original = play("EMOTHE0038_AntonyAndCleopatra", Map.put(dated(), "language", "en"))
       adaptation = play("EMOTHE0052_AntonioYCleopatra", %{"relationship_type" => "adaptacion"})
 
-      for change <- FilemakerSync.plan(index(), [original, adaptation]).changes,
-          change.code == "EMOTHE0052" do
-        refute Map.has_key?(change.sets, :relationship_type)
-        refute Map.has_key?(change.sets, :parent_play_id)
-      end
+      assert [%{code: "EMOTHE0052", sets: sets}] =
+               FilemakerSync.plan(index(), [original, adaptation]).changes
+
+      assert sets == %{parent_play_id: original.id}
+    end
+
+    # The index heads a family with its first editor: it put Ford's 'Tis Pity under
+    # Maeterlinck's adaptation of it, and Las mocedades del Cid under Le Cid, which
+    # adapts it. Question 15 corrected both.
+    test "a family question 15 corrected stays so" do
+      ford = play("EMOTHE0283_TisPityShesAWhore", %{"language" => "en"})
+
+      annabella =
+        play("EMOTHE0317_Annabella", %{
+          "language" => "fr",
+          "relationship_type" => "adaptacion",
+          "parent_play_id" => ford.id
+        })
+
+      corneille = play("EMOTHE9008_LeCid", %{"language" => "fr"})
+      castro = play("EMOTHE0141_LasMocedadesDelCid")
+
+      ford_family = [%{code: "EMOTHE0317", role: :editor}, %{code: "EMOTHE0283", role: :editor}]
+      cid_family = [%{code: "EMOTHE9008", role: :editor}, %{code: "EMOTHE0141", role: :editor}]
+
+      index =
+        Map.new(
+          [
+            {"EMOTHE0283", "en", ford_family},
+            {"EMOTHE0317", "fr", ford_family},
+            {"EMOTHE9008", "fr", cid_family},
+            {"EMOTHE0141", "es", cid_family}
+          ],
+          fn {code, lang, family} ->
+            {code, %{code: code, lang: lang, role: :editor, family: family}}
+          end
+        )
+
+      plan = FilemakerSync.plan(index, [ford, annabella, corneille, castro])
+
+      assert plan.changes == []
     end
 
     test "a code absent from the index is reported, not failed" do

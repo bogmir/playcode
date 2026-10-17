@@ -217,6 +217,18 @@ defmodule Playcode.Export.StaticSiteTest do
     assert "Translation of #{original.title}" in texts(title_page(dir, translation), "p")
   end
 
+  # FileMaker linked some plays with no kind (the Faustus B-text under the A-text): the
+  # play page names no relation for them, and "Original of" would be false.
+  test "a play linked with no kind names no relation to the other" do
+    original = play_fixture(%{"is_complete" => true})
+    linked = play_fixture(%{"is_complete" => true, "parent_play_id" => original.id})
+
+    refute Enum.any?(
+             texts(title_page(generate!([original, linked]), linked), "p"),
+             &String.ends_with?(&1, " of #{original.title}")
+           )
+  end
+
   test "adding or removing a translation updates its original's title page" do
     %{original: original, translation: translation} = translation_family_fixture()
     dir = generate!([original])

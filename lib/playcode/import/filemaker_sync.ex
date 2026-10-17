@@ -172,20 +172,45 @@ defmodule Playcode.Import.FilemakerSync do
   end
 
   # Kinds the index cannot say, since it knows only originals and translations: the
-  # file's word wins (question 15), and so does the original the play is linked to.
+  # file's word wins (question 15), and so does the original the play is linked to. One
+  # linked to none gets the index's: no source file names its original.
   @file_kinds ~w(adaptacion refundicion version)
 
+  # Families the index heads wrongly, since its head is a family's first editor, as
+  # question 15 corrected them: each play's original by short code, nil for an original.
+  # Ford's 'Tis Pity was under Maeterlinck's adaptation of it, Guarini's Il pastor fido
+  # under Calderón's auto, and Las mocedades del Cid under Le Cid, which adapts it.
+  # Migration 20261018100000 made the same corrections to the plays already stored.
+  @corrected_originals %{
+    "EMOTHE0283" => nil,
+    "EMOTHE0284" => "EMOTHE0283",
+    "EMOTHE0317" => "EMOTHE0283",
+    "EMOTHE0404" => "EMOTHE0283",
+    "EMOTHE0006" => nil,
+    "EMOTHE0210" => "EMOTHE0006",
+    "EMOTHE0286" => "EMOTHE0006",
+    "EMOTHE0298" => "EMOTHE0006",
+    "EMOTHE0141" => nil
+  }
+
   defp changes_for(play, version, by_code) do
+    file_kind? = play.relationship_type in @file_kinds
+
     %{
       language: language_for(version),
-      relationship_type: relationship_for(version),
-      parent_play_id: parent_for(version, by_code)
+      relationship_type: if(file_kind?, do: @keep, else: relationship_for(version)),
+      parent_play_id:
+        cond do
+          Map.has_key?(@corrected_originals, version.code) ->
+            original_id(@corrected_originals[version.code], by_code)
+
+          file_kind? and play.parent_play_id ->
+            @keep
+
+          true ->
+            parent_for(version, by_code)
+        end
     }
-    |> Map.drop(
-      if play.relationship_type in @file_kinds,
-        do: [:relationship_type, :parent_play_id],
-        else: []
-    )
     |> Enum.reject(fn {_key, value} -> value == @keep end)
     |> Enum.reject(fn {key, value} -> Map.get(play, key) == value end)
     |> Map.new()
@@ -241,6 +266,15 @@ defmodule Playcode.Import.FilemakerSync do
   defp relationship_for(%{role: :editor}), do: nil
   defp relationship_for(%{role: :translator}), do: "traduccion"
   defp relationship_for(_version), do: @keep
+
+  defp original_id(nil, _by_code), do: nil
+
+  defp original_id(code, by_code) do
+    case Map.fetch(by_code, code) do
+      {:ok, original} -> original.id
+      :error -> @keep
+    end
+  end
 
   defp parent_for(version, by_code) do
     head = Enum.find(version.family, &(&1.role == :editor))
