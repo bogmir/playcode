@@ -15,7 +15,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Statistics
@@ -64,6 +64,8 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:show_verse_type, false)
      |> assign(:show_variants, true)
      |> assign(:has_variants, divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1))
+     |> assign(:show_folio, false)
+     |> assign(:has_folio, Element.folio_passages?(divisions))
      |> assign(:active_tab, :text)
      |> assign(:sidebar_open, true)
      |> assign(:breadcrumbs, [
@@ -95,6 +97,10 @@ defmodule PlaycodeWeb.PlayShowLive do
 
   def handle_event("toggle_variants", _, socket) do
     {:noreply, assign(socket, :show_variants, !socket.assigns.show_variants)}
+  end
+
+  def handle_event("toggle_folio", _, socket) do
+    {:noreply, assign(socket, :show_folio, !socket.assigns.show_folio)}
   end
 
   def handle_event("switch_tab", %{"tab" => tab}, socket) do
@@ -269,6 +275,17 @@ defmodule PlaycodeWeb.PlayShowLive do
                   phx-click="toggle_variants"
                   class="checkbox checkbox-xs checkbox-primary"
                 /> {gettext("Variants")}
+              </label>
+              <label
+                :if={@has_folio}
+                class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70"
+              >
+                <input
+                  type="checkbox"
+                  checked={@show_folio}
+                  phx-click="toggle_folio"
+                  class="checkbox checkbox-xs checkbox-primary"
+                /> {gettext("Folio interpolations")}
               </label>
             </div>
           </div>
@@ -525,6 +542,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               show_split_verses={@show_split_verses}
               show_verse_type={@show_verse_type}
               show_variants={@show_variants}
+              show_folio={@show_folio}
             />
             <.paratexts paratexts={@back_paratexts} id_prefix="back-paratext" />
           </div>

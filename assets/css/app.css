@@ -205,6 +205,23 @@
   display: none;
 }
 
+/* Hamlet's Folio passages: grey, a superscript F where each starts and ends; gone, with
+   any line or speech left without words, while the "Folio interpolations" switch is off. */
+.play-text .folio {
+  color: oklch(from var(--color-base-content) l c h / 0.7);
+}
+
+.play-text .folio-f {
+  font-size: 0.65em;
+  line-height: 0;
+  vertical-align: super;
+  padding: 0 0.1em;
+}
+
+.play-text[data-folio="off"] .folio {
+  display: none;
+}
+
 .play-notes ol,
 .play-notes ul {
   margin: 0;

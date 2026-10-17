@@ -20,11 +20,16 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_split_verses, :boolean, default: true
   attr :show_verse_type, :boolean, default: false
   attr :show_variants, :boolean, default: true
+  attr :show_folio, :boolean, default: false
   attr :sync_keys, :boolean, default: false
 
   def play_body(assigns) do
     ~H"""
-    <div class="play-text" data-variants={if @show_variants, do: "on", else: "off"}>
+    <div
+      class="play-text"
+      data-variants={if @show_variants, do: "on", else: "off"}
+      data-folio={if @show_folio, do: "on", else: "off"}
+    >
       <div
         :for={{division, div_key} <- sync_keyed(@divisions, @sync_keys)}
         class="mb-8 scroll-mt-16"
@@ -178,10 +183,17 @@ defmodule PlaycodeWeb.Components.PlayText do
     ~H"""
     <div
       :if={!@element.is_aside || @show_asides}
-      class={["speech mt-3 mb-5", @element.is_aside && "pl-6 aside-border"]}
+      class={[
+        "speech mt-3 mb-5",
+        @element.is_aside && "pl-6 aside-border",
+        Element.folio_only?(@element) && "folio"
+      ]}
       data-sync-act={@act_key}
     >
-      <div :if={@element.speaker_label} class="speaker mb-1">
+      <div
+        :if={@element.speaker_label}
+        class={["speaker mb-1", InlineMarkup.whole_folio?(@element.speaker_label) && "folio"]}
+      >
         <.inline_content text={@element.speaker_label} notes={@element.notes} />
       </div>
       <div :for={child <- Map.get(@element, :children, [])}>
@@ -201,7 +213,7 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   defp render_element(%{element: %{type: "line_group"}} = assigns) do
     ~H"""
-    <div class="line-group">
+    <div class={["line-group", Element.folio_only?(@element) && "folio"]}>
       <div
         :if={@show_verse_type && @element.verse_type}
         class="flex items-baseline gap-2 ml-1 sm:ml-4 -mb-0.5"
@@ -228,7 +240,10 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   defp render_element(%{element: %{type: "verse_line"}} = assigns) do
     ~H"""
-    <div class="verse-line flex items-baseline gap-1 sm:gap-2 ml-1 sm:ml-4">
+    <div class={[
+      "verse-line flex items-baseline gap-1 sm:gap-2 ml-1 sm:ml-4",
+      Element.folio_only?(@element) && "folio"
+    ]}>
       <span class={[
         "flex-1",
         @element.rend == "indent" && "pl-8",
@@ -260,7 +275,13 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   defp render_element(%{element: %{type: "stage_direction"}} = assigns) do
     ~H"""
-    <div :if={@show_stage_directions} class="stage-direction text-center my-4 px-2 sm:px-8">
+    <div
+      :if={@show_stage_directions}
+      class={[
+        "stage-direction text-center my-4 px-2 sm:px-8",
+        Element.folio_only?(@element) && "folio"
+      ]}
+    >
       (<.inline_content text={@element.content} notes={@element.notes} />)
     </div>
     """
@@ -270,7 +291,7 @@ defmodule PlaycodeWeb.Components.PlayText do
     ~H"""
     <div
       :if={@show_asides or not Element.whole_aside?(@element)}
-      class="ml-1 sm:ml-4 mb-2 text-justify"
+      class={["ml-1 sm:ml-4 mb-2 text-justify", Element.folio_only?(@element) && "folio"]}
     >
       <.inline_content
         text={@element.content}
@@ -307,7 +328,12 @@ defmodule PlaycodeWeb.Components.PlayText do
   """
   def inline_content(assigns) do
     show = %{stage: assigns.show_stage, numbers: assigns.show_numbers}
-    html = assigns.text |> InlineMarkup.parts(assigns.notes) |> Enum.map(&part_html(&1, show))
+
+    html =
+      assigns.text
+      |> InlineMarkup.parts(assigns.notes)
+      |> InlineMarkup.folio_labels()
+      |> Enum.map(&part_html(&1, show))
 
     assigns = assign(assigns, :html, html)
 
@@ -315,6 +341,14 @@ defmodule PlaycodeWeb.Components.PlayText do
     <span phx-no-format>{Phoenix.HTML.raw(@html)}</span>
     """
   end
+
+  # Hamlet's Folio passages: an F where one starts and ends, and its words, in grey; gone
+  # while the "Folio interpolations" switch is off (app.css), a note inside one with it.
+  defp part_html(%{label: label}, _show),
+    do: [~s(<sup class="folio folio-f">), escape(label), "</sup>"]
+
+  defp part_html(%{folio: _} = part, show),
+    do: [~s(<span class="folio">), part_html(Map.delete(part, :folio), show), "</span>"]
 
   # A piece of an inline stage direction, a note's number among them: in a span, and left
   # out while the stage directions are hidden.

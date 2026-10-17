@@ -40,6 +40,8 @@ defmodule Playcode.PlayContent.Element do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Playcode.PlayContent.InlineMarkup
+
   @stage_types ~w(setting entrance exit business novelistic delivery modifier location mixed)
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -78,6 +80,39 @@ defmodule Playcode.PlayContent.Element do
   @doc "True when every word of the element is spoken aside: no marker says which are."
   def whole_aside?(%{is_aside: aside, content: content}),
     do: aside and not String.contains?(content || "", "<aside>")
+
+  @doc """
+  True when every word of `element` is the Folio's alone (`InlineMarkup.whole_folio?/1`):
+  a line's, a paragraph's or a stage direction's text; a speech's speaker label, if it has
+  one, and all its parts; all a line group's lines. Readers who hide the Folio's passages
+  see none of it.
+  """
+  def folio_only?(%{type: type} = element) when type in ~w(speech line_group) do
+    children = children_of(element)
+    label = Map.get(element, :speaker_label)
+
+    children != [] and Enum.all?(children, &folio_only?/1) and
+      (label in [nil, ""] or InlineMarkup.whole_folio?(label))
+  end
+
+  def folio_only?(element), do: InlineMarkup.whole_folio?(Map.get(element, :content))
+
+  @doc "True when an element of `divisions`, as `PlayContent.load_play_content/2` gives them, holds a Folio passage."
+  def folio_passages?(divisions) do
+    Enum.any?(divisions, fn division ->
+      Enum.any?(Map.get(division, :loaded_elements, []), &holds_folio?/1) or
+        folio_passages?(children_of(division))
+    end)
+  end
+
+  defp holds_folio?(element) do
+    Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, "<folio"))) or
+      Enum.any?(children_of(element), &holds_folio?/1)
+  end
+
+  # What `load_play_content/2` loaded: a verse line's children are not.
+  defp children_of(%{children: children}) when is_list(children), do: children
+  defp children_of(_), do: []
 
   @doc """
   Returns the ordered list of characters from preloaded element_characters.

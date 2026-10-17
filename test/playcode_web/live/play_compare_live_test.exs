@@ -100,6 +100,36 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
     end
   end
 
+  describe "Hamlet's Folio passages" do
+    # The comparison has no switch: a panel hides the passages, as the play page does by
+    # default. The hiding is the stylesheet's, so the observable stand-in is the panel's
+    # data-folio and the class its words carry.
+    test "a panel shows them hidden, and offers no switch", %{conn: conn} do
+      folio = ~s(<code>&lt;span class="folio"&gt;</code>)
+      folio_end = ~s(<code>&lt;/span&gt;</code>)
+      f = ~s(<code>&lt;sup&gt;</code>F<code>&lt;/sup&gt;</code>)
+
+      body =
+        ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno #{folio}#{f}dos#{f}#{folio_end} tres</l></sp></div1>)
+
+      original = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      translation = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+
+      {:ok, _} =
+        Playcode.Catalogue.update_play(translation, %{
+          parent_play_id: original.id,
+          relationship_type: "traduccion"
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{translation.code}/compare")
+
+      assert has_element?(view, "[data-panel='panel-1'] [data-folio='off']")
+      assert has_element?(view, "[data-panel='panel-1'] span.folio", "dos")
+      refute has_element?(view, "[data-folio='on']")
+      refute has_element?(view, "label", t("Folio interpolations"))
+    end
+  end
+
   describe "drafts" do
     test "a draft's comparison page is for staff only", %{conn: conn} do
       draft = TestFixtures.play_fixture(%{"title" => "Borrador comparado"})
