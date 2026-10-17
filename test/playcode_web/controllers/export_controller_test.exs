@@ -272,6 +272,67 @@ defmodule PlaycodeWeb.ExportControllerTest do
     refute epub.() =~ "var-1"
   end
 
+  # The downloads have no switch, so they print Hamlet's Folio passages, in grey between
+  # their F's, rather than lose them (question 38).
+  describe "Hamlet's Folio passages" do
+    defp epub_text(conn, play) do
+      {:ok, files} =
+        :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+      Enum.map_join(files, fn {_name, content} -> content end)
+    end
+
+    test "the HTML and EPUB downloads print one in grey between its F's", %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body:
+              ~s(<div1 type="acto" n="1"><sp><speaker>HAMLET</speaker><l n="316">O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O</rdg></app> God,</l></sp></div1>)
+          )
+        )
+        |> Playcode.TestFixtures.mark_complete!()
+
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+
+      assert html =~
+               ~s(O God, <sup class="folio">F</sup><span class="folio">O</span><sup class="folio">F</sup> God,)
+
+      assert html =~ ".folio { color: #666; }"
+
+      epub = epub_text(conn, play)
+      assert epub =~ ~s(<span class="folio">O</span>)
+      assert epub =~ ".folio { color: #666; }"
+    end
+
+    # Hamlet v. 2632: a passage inside an inline stage direction. The stage's span wraps
+    # the passage's, as on the play page and the site, so an F stands inside the stage.
+    test "the downloads put the F's of a passage inside a stage direction in its span",
+         %{conn: conn} do
+      folio = ~s(<code>&lt;span class="folio"&gt;</code>)
+      folio_end = ~s(<code>&lt;/span&gt;</code>)
+      f = ~s(<code>&lt;sup&gt;</code>F<code>&lt;/sup&gt;</code>)
+
+      play =
+        import_tei!(
+          tei(
+            body:
+              ~s(<div1 type="acto" n="4"><sp><speaker>hamlet</speaker><p n="2631">Safely stowed. <stage type="delivery_">[Calling within#{folio}#{f} “Hamlet, Lord Hamlet!”#{f}#{folio_end}]</stage></p></sp></div1>)
+          )
+        )
+        |> Playcode.TestFixtures.mark_complete!()
+
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+
+      assert html =~ ~s(<span class="stage"><sup class="folio">F</sup></span>)
+
+      assert html =~
+               ~s(<span class="stage"><span class="folio">“Hamlet, Lord Hamlet!”</span></span>)
+
+      epub = epub_text(conn, play)
+      assert epub =~ ~s(<span class="stage"><sup class="folio">F</sup></span>)
+    end
+  end
+
   test "an archived play cannot be downloaded", %{conn: conn, play: play} do
     {:ok, _} = Playcode.Catalogue.delete_play(play)
 

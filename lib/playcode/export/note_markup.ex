@@ -1,9 +1,11 @@
 defmodule Playcode.Export.NoteMarkup do
   @moduledoc """
   A line's text as HTML for the HTML (and so PDF) and EPUB downloads: italics as `<em>`,
-  an inline stage direction as `<span class="stage">`, each in-text note as a reference
-  to its endnote and each variant as an asterisk to its entry, and an act's notes as
-  endnotes, its variants after them.
+  an inline stage direction as `<span class="stage">`, each of Hamlet's Folio passages as a
+  `<span class="folio">` between two `<sup class="folio">F</sup>`, each in-text note as a
+  reference to its endnote and each variant as an asterisk to its entry, and an act's notes
+  as endnotes, its variants after them. The downloads have no Folio switch, so they always
+  print the passages, in grey (question 38).
   `:html` links a superscript number or asterisk to its endnote or entry and back; `:epub`
   marks them `noteref` and `footnote`, which e-readers show as pop-ups. The labels are English, as
   the rest of the downloads are. `readings/2` prints a variant's readings, for the play
@@ -16,14 +18,27 @@ defmodule Playcode.Export.NoteMarkup do
   @doc """
   `text`, with `<<…>>` italics as `<em>`, each inline stage direction in a `<span class="stage">`
   (a note's number inside it when the note falls inside the stage), and its `notes`, as escaped HTML;
-  each line break a `<br>` (`<br/>` in the EPUB), each printed line's number a `span.pn`.
+  each line break a `<br>` (`<br/>` in the EPUB), each printed line's number a `span.pn`, and
+  each Folio passage's words a `span.folio` between its F's.
   """
-  def inline(text, notes, format),
-    do: text |> InlineMarkup.parts(notes) |> Enum.map_join(&part(&1, format))
+  def inline(text, notes, format) do
+    text
+    |> InlineMarkup.parts(notes)
+    |> InlineMarkup.folio_labels()
+    |> Enum.map_join(&part(&1, format))
+  end
 
   # A piece of an inline stage direction, a note's number among them.
   defp part(%{stage: %{}} = part, format),
     do: ~s(<span class="stage">) <> part(%{part | stage: nil}, format) <> "</span>"
+
+  # Hamlet's Folio passages: an F where one starts and ends, and its words, in grey. Inside
+  # a stage direction these come after the stage's own clause, so the stage's span wraps
+  # them, as on the play page and the site.
+  defp part(%{label: label}, _format), do: ~s(<sup class="folio">#{escape(label)}</sup>)
+
+  defp part(%{folio: _} = part, format),
+    do: ~s(<span class="folio">) <> part(Map.delete(part, :folio), format) <> "</span>"
 
   defp part(%{note: note}, format), do: ref(note, Note.variant?(note), format)
 

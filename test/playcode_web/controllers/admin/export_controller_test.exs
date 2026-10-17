@@ -126,6 +126,42 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert String.trim(out) == "1"
   end
 
+  # The download has no switch either: a passage that opens at a speaker label prints in
+  # grey between its F's, the label's italics as italics (question 38).
+  test "the comparison page prints a Folio passage from a speaker label in grey",
+       %{conn: conn, play: play} do
+    folio = ~s(<code>&lt;span class="folio"&gt;</code>)
+    folio_end = ~s(<code>&lt;/span&gt;</code>)
+    f = ~s(<code>&lt;sup&gt;</code>F<code>&lt;/sup&gt;</code>)
+
+    other =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>#{folio}#{f}guildenstern#{folio_end}</speaker><p>#{folio}Prison, my lord?#{f}#{folio_end}</p></sp></div1>)
+        )
+      )
+
+    body =
+      conn
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{other.id},#{play.id}"]}")
+      |> response(200)
+
+    assert body =~
+             ~s(<div class="speaker"><sup class="folio">F</sup><span class="folio">guildenstern</span></div>)
+
+    assert body =~ ~s(<span class="folio">Prison, my lord?</span><sup class="folio">F</sup>)
+    assert body =~ ".folio { color: #666; }"
+    refute body =~ "&lt;folio"
+
+    # Nothing is hidden, so even a speech that is all the Folio's keeps its act key and
+    # assets/js/sync_scroll.mjs pairs it as any other: the sync needs no change.
+    assert body
+           |> LazyHTML.from_document()
+           |> LazyHTML.query("[data-panel='panel-0'] .speech[data-sync-act]")
+           |> Enum.count() == 1
+  end
+
   describe "a play with an inline stage direction" do
     setup do
       play =
