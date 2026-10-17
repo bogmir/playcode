@@ -7,7 +7,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   """
 
   alias Playcode.{Bibliography, Catalogue, PlayContent, Statistics}
-  alias Playcode.PlayContent.{Division, InlineMarkup, Note}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
   alias Playcode.Statistics.Metrics
 
   defstruct [
@@ -24,7 +24,8 @@ defmodule Playcode.Export.StaticSite.Edition do
     :passage_starts,
     :page_of,
     :notes,
-    :variants
+    :variants,
+    :folio
   ]
 
   @doc "Loads play `id` and everything the site derives from it."
@@ -52,7 +53,8 @@ defmodule Playcode.Export.StaticSite.Edition do
       passage_starts: passage_starts(Metrics.passages(items)),
       page_of: page_of(pages, items),
       notes: notes(divisions, items, pages, refs),
-      variants: divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1)
+      variants: divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1),
+      folio: Element.folio_passages?(divisions)
     }
   end
 

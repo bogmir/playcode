@@ -93,7 +93,7 @@
     if (!tools) return;
     var body = document.body;
     tools.hidden = false;
-    ['ln', 'sd', 'vf', 'va'].forEach(function (key) { var v = remembered(key); if (v) body.setAttribute('data-' + key, v); });
+    ['ln', 'sd', 'vf', 'va', 'fo'].forEach(function (key) { var v = remembered(key); if (v) body.setAttribute('data-' + key, v); });
 
     var buttons = tools.querySelectorAll('[data-ln-set]');
     buttons.forEach(function (button) {

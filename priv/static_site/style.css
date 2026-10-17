@@ -141,6 +141,9 @@ body[data-sd="off"] .sd { display: none; }
 body[data-sd="off"] .sdi { display: none; }
 body[data-vf="off"] .l .vf { display: none; }
 body[data-va="off"] .vref { display: none; }
+.fo { color: var(--muted); }
+.fl { font-size: .65em; line-height: 0; vertical-align: super; }
+body[data-fo="off"] .fo { display: none; }
 
 /* Statistics */
 .tiles { display: flex; flex-wrap: wrap; margin: 1.25rem 0 .5rem; padding: .25rem 0; border-block: 1px solid var(--hair); }

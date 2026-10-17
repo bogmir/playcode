@@ -739,4 +739,104 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert opened_by(act, "Editor's note 1") == ["note-1"]
     end
   end
+
+  describe "Hamlet's Folio passages" do
+    @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
+    @folio_close ~s(<code>&lt;/span&gt;</code>)
+    @f ~s(<code>&lt;sup&gt;</code>F<code>&lt;/sup&gt;</code>)
+
+    # A passage in a line, a line all the Folio's, and a passage that opens at a speaker
+    # label and closes at the end of the speech, so the whole speech is the Folio's.
+    @folio_body """
+    <div1 type="acto" n="1"><head>ACT I</head>
+      <sp><speaker>HAMLET</speaker>
+        <l n="316">O God, #{@folio_open}#{@f}O#{@f}#{@folio_close} God,</l>
+        <l n="481">#{@folio_open}#{@f}For he himself is subject to his birth:#{@f}#{@folio_close}</l>
+      </sp>
+      <sp><speaker>#{@folio_open}#{@f}guildenstern#{@folio_close}</speaker>
+        <p>#{@folio_open}Prison, my lord?#{@f}#{@folio_close}</p>
+      </sp>
+    </div1>
+    """
+
+    test "are hidden by default, with a switch that shows them in grey between their F's" do
+      play = import_tei!(tei(body: @folio_body))
+      dir = generate!([play], all: true)
+      act = page(dir, play, "act-1.html")
+
+      assert act |> LazyHTML.query(~s(input[data-toggle="fo"])) |> Enum.count() == 1
+      assert act |> LazyHTML.query(~s(input[data-toggle="fo"][checked])) |> Enum.count() == 0
+      assert act |> LazyHTML.query(~s(body[data-fo="off"])) |> Enum.count() == 1
+      assert act |> LazyHTML.query("sup.fl") |> Enum.map(&LazyHTML.text/1) == ~w(F F F F F F)
+      assert act |> LazyHTML.query("span.fo") |> Enum.map(&LazyHTML.text/1) |> hd() == "O"
+      assert act |> LazyHTML.query(".l.fo") |> Enum.count() == 1
+      assert act |> LazyHTML.query("p.pr.fo") |> Enum.count() == 1
+      assert act |> LazyHTML.query(".sp.fo") |> Enum.count() == 1
+      assert act |> LazyHTML.query("p.spk.fo") |> Enum.count() == 1
+
+      # style.css hides what the class marks while the switch is off; site.js remembers it.
+      assert read!(dir, "assets/style.css") =~ ~s(body[data-fo="off"] .fo)
+      assert read!(dir, "assets/site.js") =~ ~s('fo'])
+    end
+
+    # Each kind of element that can be the Folio's wholly goes with its words; a group with
+    # one line the Quarto shares keeps its wrapper.
+    test "a stage direction and a line group that are all the Folio's go, a mixed group stays" do
+      body = """
+      <div1 type="acto" n="1">
+        <stage type="entrance">#{@folio_open}#{@f}Sound a Flourish.#{@f}#{@folio_close}</stage>
+        <sp><speaker>HAMLET</speaker>
+          <lg>
+            <l n="2">#{@folio_open}#{@f}One line,#{@f}#{@folio_close}</l>
+            <l n="3">#{@folio_open}#{@f}and two.#{@f}#{@folio_close}</l>
+          </lg>
+          <lg>
+            <l n="4">#{@folio_open}#{@f}A line#{@f}#{@folio_close} the Quarto has too.</l>
+            <l n="5">#{@folio_open}#{@f}and two.#{@f}#{@folio_close}</l>
+          </lg>
+        </sp>
+      </div1>
+      """
+
+      play = import_tei!(tei(body: body))
+      act = page(generate!([play], all: true), play, "act-1.html")
+
+      assert act |> LazyHTML.query("p.sd.fo") |> Enum.count() == 1
+      assert act |> LazyHTML.query(".lg") |> Enum.count() == 2
+      assert [group] = act |> LazyHTML.query(".lg.fo") |> Enum.map(&LazyHTML.text/1)
+      assert group =~ "One line," and group =~ "and two."
+
+      # no speech is the Folio's alone: the second group has words of the Quarto's
+      assert act |> LazyHTML.query(".sp.fo") |> Enum.count() == 0
+    end
+
+    test "a passage inside an inline stage direction nests in it, so the stage switch hides its F's" do
+      body = """
+      <div1 type="acto" n="1">
+        <sp><speaker>HAMLET</speaker>
+          <l n="1">Go <stage type="delivery">#{@folio_open}#{@f}aside#{@f}#{@folio_close}</stage> on.</l>
+        </sp>
+      </div1>
+      """
+
+      play = import_tei!(tei(body: body))
+      act = page(generate!([play], all: true), play, "act-1.html")
+
+      assert act |> LazyHTML.query(".sdi > span.fo") |> Enum.count() == 1
+      assert act |> LazyHTML.query(".sdi sup.fl") |> Enum.count() == 2
+    end
+
+    test "a play with none has no switch" do
+      play =
+        import_tei!(
+          tei(
+            body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>)
+          )
+        )
+
+      act = page(generate!([play], all: true), play, "act-1.html")
+
+      assert act |> LazyHTML.query(~s(input[data-toggle="fo"])) |> Enum.count() == 0
+    end
+  end
 end
