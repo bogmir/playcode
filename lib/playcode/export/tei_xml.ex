@@ -1064,10 +1064,10 @@ defmodule Playcode.Export.TeiXml do
   # (part "I") or ends ("F").
   defp folio_nodes(part, words) do
     label = [element(:code, "<sup>"), "F", element(:code, "</sup>")]
+    opening = [element(:code, ~s(<span class="folio">))] ++ if(part == "I", do: label, else: [])
+    closing = if(part == "F", do: label, else: []) ++ [element(:code, "</span>")]
 
-    [element(:code, ~s(<span class="folio">))] ++
-      if(part == "I", do: label, else: []) ++
-      words ++ if(part == "F", do: label, else: []) ++ [element(:code, "</span>")]
+    opening ++ words ++ closing
   end
 
   # An italic piece and the italic pieces that follow it: adjacent italic runs

@@ -1690,6 +1690,60 @@ defmodule Playcode.TeiRoundtripTest do
       assert String.replace(second, "FOLA", "FOL9") == first
     end
 
+    # A passage may open at a speaker label and close inside the speech's own paragraph
+    # (v. 3223 and 3224, the grave-diggers; the second pair below), so in the Q2 text the
+    # rest of that paragraph carries no label. The speaker label is a piece like a line.
+    test "a passage from a speaker label to the middle of a paragraph" do
+      body = """
+      <div1 type="acto" n="5"><sp><speaker>2 clown</speaker>
+          <p n="3221">Was he a gentleman?</p>
+        </sp>
+        <sp><speaker>#{@folio_open}#{@f}2 clown#{@folio_close}</speaker>
+          <p n="3223">#{@folio_open}Why, he had none.#{@folio_close}</p>
+        </sp>
+        <sp><speaker>#{@folio_open}1 clown#{@folio_close}</speaker>
+          <p n="3224">#{@folio_open}What, art a heathen?#{@f}#{@folio_close} I’ll put another question to thee.</p>
+        </sp>
+        <sp><speaker>#{@folio_open}#{@f}2 clown#{@folio_close}</speaker>
+          <p n="3226">#{@folio_open}Go to.#{@f}#{@folio_close} Say on.</p>
+        </sp>
+      </div1>
+      """
+
+      play = import_tei!(tei(code: "FOLF", body: body))
+      folio = fn part, words -> ~s(<folio part="#{part}">#{words}</folio>) end
+
+      assert [%{loaded_elements: [_, opens, middle, short]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert opens.speaker_label == folio.("I", "2 clown")
+      assert [%{content: ~s(<lb n="3223"/>) <> piece}] = opens.children
+      assert piece == folio.("M", "Why, he had none.")
+
+      assert middle.speaker_label == folio.("M", "1 clown")
+
+      assert [%{content: ~s(<lb n="3224"/>) <> piece}] = middle.children
+      assert piece == folio.("F", "What, art a heathen?") <> " I’ll put another question to thee."
+
+      assert short.speaker_label == folio.("I", "2 clown")
+      assert [%{content: ~s(<lb n="3226"/>) <> piece}] = short.children
+      assert piece == folio.("F", "Go to.") <> " Say on."
+
+      first = export_tei(play)
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "speaker") ==
+               [
+                 "2 clown",
+                 "#{span}<sup>F</sup>2 clown</span>",
+                 "#{span}1 clown</span>",
+                 "#{span}<sup>F</sup>2 clown</span>"
+               ]
+
+      second = first |> String.replace("FOLF", "FOLG") |> roundtrip()
+      assert String.replace(second, "FOLG", "FOLF") == first
+    end
+
     # Hamlet's file has three slips in its marks: a </span> set before the passage's words
     # (v. 3057), a span opened twice (v. 1322) and a closing label typed "and" (v. 3315).
     # The labels say where each passage runs; the "and" is kept as the passage's last word
