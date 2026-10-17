@@ -569,6 +569,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       set_version(lv, "9.9")
       assert has_element?(lv, "#site-changed")
       assert render(lv) =~ t("Rebuilds the %{count} plays in the site.", count: 2)
+      # Over two hours from this button on production (2026-10-17); the command takes minutes.
+      assert render(lv) =~ "mix playcode.fly.reimport generate"
 
       # "Generation Complete" shows only for a full build: starting one hides it first.
       generate(lv)

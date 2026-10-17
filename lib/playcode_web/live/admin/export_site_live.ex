@@ -697,8 +697,18 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       MapSet.size(exported) == 0 ->
         gettext("Builds every complete play.")
 
+      # On production's shared CPU a full rebuild took over two hours (2026-10-17); the
+      # command scales up, builds in minutes and scales back.
       site_changed? ->
-        gettext("Rebuilds the %{count} plays in the site.", count: MapSet.size(exported))
+        Enum.join(
+          [
+            gettext("Rebuilds the %{count} plays in the site.", count: MapSet.size(exported)),
+            gettext(
+              "On production's shared CPU that takes over two hours: after the deploy, run mix playcode.fly.reimport generate instead, at a quiet hour, which builds on a faster machine in minutes."
+            )
+          ],
+          " "
+        )
 
       MapSet.size(changed) == 0 and removed == 0 and not assets_changed? ->
         gettext("Every play in the site is up to date.")
