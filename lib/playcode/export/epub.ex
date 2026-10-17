@@ -489,6 +489,7 @@ defmodule Playcode.Export.Epub do
 
     /* Hamlet's Folio passages: in grey, between their F's */
     .folio { color: #666; }
+    sup.folio { font-size: 0.7em; line-height: 0; }
 
     .trailer { text-align: center; margin: 1.5em 0 0.5em; }
 

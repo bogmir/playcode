@@ -253,7 +253,8 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert html =~ ~r{id="note-1".*id="var-1"}s
 
     # The asterisk is styled as the note's number is (the CSS has no browser to test in).
-    assert html =~ ".nref, .vref {"
+    # (The rule also names the Folio F's, `sup.folio`, which are as small.)
+    assert html =~ ".nref, .vref, sup.folio {"
 
     epub = fn ->
       {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
@@ -299,9 +300,13 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
       assert html =~ ".folio { color: #666; }"
 
+      # The F is as small as a note's number, or a browser-default `sup` widens the line.
+      assert html =~ ".nref, .vref, sup.folio { font-size: 0.7em; line-height: 0; }"
+
       epub = epub_text(conn, play)
       assert epub =~ ~s(<span class="folio">O</span>)
       assert epub =~ ".folio { color: #666; }"
+      assert epub =~ "sup.folio { font-size: 0.7em; line-height: 0; }"
     end
 
     # Hamlet v. 2632: a passage inside an inline stage direction. The stage's span wraps

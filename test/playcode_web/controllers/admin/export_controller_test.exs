@@ -152,6 +152,7 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
 
     assert body =~ ~s(<span class="folio">Prison, my lord?</span><sup class="folio">F</sup>)
     assert body =~ ".folio { color: #666; }"
+    assert body =~ "sup.folio { font-size: 0.7em; line-height: 0; }"
     refute body =~ "&lt;folio"
 
     # Nothing is hidden, so even a speech that is all the Folio's keeps its act key and
@@ -160,6 +161,26 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
            |> LazyHTML.from_document()
            |> LazyHTML.query("[data-panel='panel-0'] .speech[data-sync-act]")
            |> Enum.count() == 1
+  end
+
+  # The speaker label holds `<<...>>` italics as any text the importer reads does, and the
+  # download used to print its markers; it prints them as italics now, escaping the rest.
+  test "the comparison page prints a speaker label's italics, and escapes the rest",
+       %{conn: conn, play: play} do
+    other =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker><emph>Rey</emph> &amp; co</speaker><l n="1">Verso</l></sp></div1>)
+        )
+      )
+
+    body =
+      conn
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{other.id},#{play.id}"]}")
+      |> response(200)
+
+    assert body =~ ~s(<div class="speaker"><em>Rey</em> &amp; co</div>)
   end
 
   describe "a play with an inline stage direction" do
