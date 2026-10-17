@@ -321,8 +321,8 @@ mix playcode.import.tei --force     # re-import every file, updating in place
 mix playcode.import.tei --force --resume  # ...except plays imported since their file was written
 ```
 
-On Fly, `mix playcode.fly.reimport prepare` and then `run`, from this directory
-(`docs/production-reimport.md`).
+On Fly, `mix playcode.fly.reimport prepare`, `run`, `generate` and, after the preview,
+`deploy`, from this directory (`docs/production-reimport.md`).
 
 Correct `language`, `relationship_type` and `parent_play_id` from the FileMaker published index,
 and bootstrap `historical_time`/`historical_time_note` from the version records

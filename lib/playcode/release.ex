@@ -1,6 +1,7 @@
 defmodule Playcode.Release do
   @moduledoc false
 
+  alias Playcode.Export.{SiteBuilder, StaticSite}
   alias Playcode.Import.{Bibliography, FilemakerSync, TeiCorpus, Witnesses}
 
   @app :playcode
@@ -119,6 +120,79 @@ defmodule Playcode.Release do
       TeiCorpus.run(files, Keyword.take(opts, [:force, :resume]), report)
     end
   end
+
+  @doc """
+  Generate on `/admin/export`, from the console: brings the static site up to date with
+  the app's one builder (`SiteBuilder.generate/1`, the version the site was built with)
+  and waits for it, printing its progress, so an SSH session can stand in for the open
+  page. Returns `:ok` or `{:error, reason}`.
+
+      bin/playcode rpc 'Playcode.Release.generate_site()'
+  """
+  def generate_site do
+    dir = StaticSite.output_dir()
+    version = StaticSite.built_version(dir) || to_string(Application.spec(@app, :vsn))
+    await_site_job(:generate, fn -> SiteBuilder.generate(version: version) end)
+  end
+
+  @doc """
+  Deploy on `/admin/export`, from the console: pushes the built site to `STATIC_SITE_REPO`
+  and waits for the push. Returns `:ok` or `{:error, reason}`.
+
+      bin/playcode rpc 'Playcode.Release.deploy_site()'
+  """
+  def deploy_site do
+    case Application.get_env(@app, :static_site_deploy, [])[:repo] do
+      repo when repo in [nil, ""] ->
+        IO.puts("deploy failed: set STATIC_SITE_REPO where Playcode runs")
+        {:error, :no_repo}
+
+      repo ->
+        await_site_job(:deploy, fn -> SiteBuilder.deploy(repo) end)
+    end
+  end
+
+  # Subscribed before asking, so the job's start is heard even when it runs at once; a
+  # job of the same kind already running ends before ours starts.
+  defp await_site_job(job, request) do
+    SiteBuilder.subscribe()
+    if request.() == :queued, do: IO.puts("#{job}: queued behind the builder's current job")
+    await_start(job)
+  end
+
+  defp await_start(job) do
+    receive do
+      {:site_builder, :started, ^job} -> await_end(job)
+    end
+  end
+
+  defp await_end(job) do
+    receive do
+      {:site_builder, :progress, :generate, %{current: current, total: total} = info} ->
+        if current == total or rem(current, 25) == 0,
+          do: IO.puts("#{current}/#{total} #{info[:detail]}")
+
+        await_end(job)
+
+      {:site_builder, :progress, :deploy, status} ->
+        IO.puts("deploy: #{status}")
+        await_end(job)
+
+      {:site_builder, :done, ^job, {:ok, result}} ->
+        IO.puts("site #{past(job)}: #{inspect(result)}")
+
+      {:site_builder, :done, ^job, {:error, reason}} ->
+        IO.puts("#{job} failed: #{inspect(reason)}")
+        {:error, reason}
+
+      {:site_builder, :failed, ^job, reason} ->
+        IO.puts("#{job} failed: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  defp past(:generate), do: "generated"
+  defp past(:deploy), do: "deployed"
 
   defp repos do
     Application.fetch_env!(@app, :ecto_repos)
