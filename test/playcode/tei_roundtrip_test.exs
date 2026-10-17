@@ -1529,6 +1529,9 @@ defmodule Playcode.TeiRoundtripTest do
   end
 
   describe "HTML typed into the text" do
+    alias Playcode.PlayContent
+    alias Playcode.PlayContent.{InlineMarkup, Note}
+
     @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
     @folio_close ~s(<code>&lt;/span&gt;</code>)
     @sup_open ~s(<code>&lt;sup&gt;</code>)
@@ -1565,29 +1568,593 @@ defmodule Playcode.TeiRoundtripTest do
       assert last =~ "¡Mera nadería, señor!"
     end
 
-    # Hamlet's Folio passages run from one superscript F to the next, across speeches, and
-    # its wrappers mark each element of a passage. They wait for the editor's answer to
-    # question 36; dropping the wrappers now would lose where a passage's inner lines are.
-    test "a file that marks Folio passages with a superscript F keeps its wrappers" do
-      xml =
-        roundtrip(
-          tei(
-            body: """
-            <div1 type="acto" n="1"><head>ACT II</head>
-              <sp><speaker>HAMLET</speaker>
-                <p>#{@folio_open}#{@sup_open}F#{@sup_close}Denmark's a prison.#{@folio_close}</p>
-              </sp>
-              <sp><speaker>ROSENCRANTZ</speaker>
-                <p>#{@folio_open}Then is the world one.#{@sup_open}F#{@sup_close}#{@folio_close}</p>
-              </sp>
-            </div1>
-            """
-          )
-        )
+    @f "#{@sup_open}F#{@sup_close}"
 
-      assert [prison, world] = reading_texts(xml, "p")
-      assert prison =~ ~s(<span class="folio">)
-      assert world =~ ~s(<span class="folio">)
+    # Hamlet's Folio passages (questions 5 and 36): the words only the 1623 Folio prints,
+    # between two superscript F's. They used to stay as typed (this replaces "a file that
+    # marks Folio passages with a superscript F keeps its wrappers"). A passage inside one
+    # element is now the <app type="folio"> question 36 agreed, the spans gone, the words
+    # spaced as the file spaces them.
+    test "a passage inside one element goes back as an app the base text lacks" do
+      body = """
+      <div1 type="acto" n="1"><head>ACT I</head>
+        <sp><speaker>HAMLET</speaker>
+          <l n="316">O God, #{@folio_open}#{@f}O#{@f}#{@folio_close} God,</l>
+          <l n="435">Very like#{@folio_open}#{@f}, very like#{@f}#{@folio_close}. Stayed it long?</l>
+          <p n="1223">blessing, but #{@folio_open}#{@f}not#{@f}#{@folio_close} as your daughter
+            <lb n="1224"/>may conceive. <seg type="aside">’A is far gone, #{@folio_open}#{@f}far gone,#{@f}#{@folio_close} and truly</seg></p>
+        </sp>
+        <stage type="business">Enter a king and a queen, #{@folio_open}#{@f}very lovingly,#{@f}#{@folio_close} the queen embracing</stage>
+      </div1>
+      """
+
+      first = roundtrip(tei(code: "FOL1", body: body))
+
+      refute first =~ "span"
+      assert reading_texts(first, "l") == ["O God, God,", "Very like. Stayed it long?"]
+
+      assert for(app <- xml_apps(first), do: {app.in, app.type, app.readings}) == [
+               {"l", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O", nil}]},
+               {"l", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", ", very like", nil}]},
+               {"p", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "not", nil}]},
+               {"p", "folio", [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "far gone,", nil}]},
+               {"stage", "folio",
+                [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "very lovingly,", nil}]}
+             ]
+
+      # The aside keeps the Folio words inside it.
+      assert [{_attrs, "’A is far gone, far gone, and truly"}] = xml_elements(first, "seg")
+
+      second = first |> String.replace("FOL1", "FOL2") |> roundtrip()
+      assert String.replace(second, "FOL2", "FOL1") == first
+    end
+
+    # 13 of Hamlet's 132 passages cross elements, the longest 14 speeches. Each element is a
+    # piece with its part, written back in the file's own form until question 37 settles a
+    # TEI one: one span per element, an F where the passage starts and where it ends.
+    test "a passage across speeches and stage directions goes back in the file's form" do
+      body = """
+      <div1 type="acto" n="2"><head>ACT II</head>
+        <sp><speaker>hamlet</speaker>
+          <p n="1284">Then is doomsday near. #{@folio_open}#{@f}Let me question more: what have #{@folio_close}
+            <lb n="1286"/>#{@folio_open}you deserved?#{@folio_close}</p>
+        </sp>
+        <sp><speaker>#{@folio_open}guildenstern#{@folio_close}</speaker>
+          <p n="1288">#{@folio_open}Prison, my lord?#{@folio_close}</p>
+        </sp>
+        <sp><speaker>#{@folio_open}hamlet#{@folio_close}</speaker>
+          <p n="1289">#{@folio_open}Denmark’s a prison.#{@f}#{@folio_close} But, in the beaten way</p>
+        </sp>
+        <stage type="entrance">Lords attendant.] #{@folio_open}#{@f}with #{@folio_close}</stage>
+        <stage type="entrance">#{@folio_open}his Guard carrying torches.#{@folio_close}</stage>
+        <stage type="entrance">#{@folio_open}Sound a Flourish.#{@f}#{@folio_close}</stage>
+      </div1>
+      """
+
+      first = roundtrip(tei(code: "FOL7", body: body))
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "p") == [
+               "Then is doomsday near. #{span}<sup>F</sup>Let me question more: what have you deserved?</span>",
+               "#{span}Prison, my lord?</span>",
+               "#{span}Denmark’s a prison.<sup>F</sup></span> But, in the beaten way"
+             ]
+
+      assert reading_texts(first, "speaker") == [
+               "hamlet",
+               "#{span}guildenstern</span>",
+               "#{span}hamlet</span>"
+             ]
+
+      assert reading_texts(first, "stage") == [
+               "Lords attendant.] #{span}<sup>F</sup>with</span>",
+               "#{span}his Guard carrying torches.</span>",
+               "#{span}Sound a Flourish.<sup>F</sup></span>"
+             ]
+
+      # A paragraph's own number stays its own.
+      assert for({attrs, _} <- xml_elements(first, "p", within: "body"), do: attrs["n"]) ==
+               ~w(1284 1288 1289)
+
+      assert xml_apps(first) == []
+
+      second = first |> String.replace("FOL7", "FOL8") |> roundtrip()
+      assert String.replace(second, "FOL8", "FOL7") == first
+    end
+
+    # The lines of a passage are pieces like any other element, a note in one staying where
+    # it was: the tags count nothing in its offset.
+    test "a passage across verse lines goes back a span to a line" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>hamlet</speaker>
+        <lg type="redondilla">
+          <l n="10">As in a dream #{@folio_open}#{@f}that went</l>
+          <l n="11">#{@folio_open}on through <note n="1"><p>A dream.</p></note>the night</l>
+          <l n="12">#{@folio_open}till morning#{@f}#{@folio_close}, and so</l>
+        </lg>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOL9", body: body))
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "l") == [
+               "As in a dream #{span}<sup>F</sup>that went</span>",
+               "#{span}on through the night</span>",
+               "#{span}till morning<sup>F</sup></span>, and so"
+             ]
+
+      assert [%{in: "l", n: "1", after: ~s(<span class="folio">on through)}] = xml_notes(first)
+
+      second = first |> String.replace("FOL9", "FOLA") |> roundtrip()
+      assert String.replace(second, "FOLA", "FOL9") == first
+    end
+
+    # A passage may open at a speaker label and close inside the speech's own paragraph
+    # (v. 3223 and 3224, the grave-diggers; the second pair below), so in the Q2 text the
+    # rest of that paragraph carries no label. The speaker label is a piece like a line.
+    test "a passage from a speaker label to the middle of a paragraph" do
+      body = """
+      <div1 type="acto" n="5"><sp><speaker>2 clown</speaker>
+          <p n="3221">Was he a gentleman?</p>
+        </sp>
+        <sp><speaker>#{@folio_open}#{@f}2 clown#{@folio_close}</speaker>
+          <p n="3223">#{@folio_open}Why, he had none.#{@folio_close}</p>
+        </sp>
+        <sp><speaker>#{@folio_open}1 clown#{@folio_close}</speaker>
+          <p n="3224">#{@folio_open}What, art a heathen?#{@f}#{@folio_close} I’ll put another question to thee.</p>
+        </sp>
+        <sp><speaker>#{@folio_open}#{@f}2 clown#{@folio_close}</speaker>
+          <p n="3226">#{@folio_open}Go to.#{@f}#{@folio_close} Say on.</p>
+        </sp>
+      </div1>
+      """
+
+      play = import_tei!(tei(code: "FOLF", body: body))
+      folio = fn part, words -> ~s(<folio part="#{part}">#{words}</folio>) end
+
+      assert [%{loaded_elements: [_, opens, middle, short]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert opens.speaker_label == folio.("I", "2 clown")
+      assert [%{content: ~s(<lb n="3223"/>) <> piece}] = opens.children
+      assert piece == folio.("M", "Why, he had none.")
+
+      assert middle.speaker_label == folio.("M", "1 clown")
+
+      assert [%{content: ~s(<lb n="3224"/>) <> piece}] = middle.children
+      assert piece == folio.("F", "What, art a heathen?") <> " I’ll put another question to thee."
+
+      assert short.speaker_label == folio.("I", "2 clown")
+      assert [%{content: ~s(<lb n="3226"/>) <> piece}] = short.children
+      assert piece == folio.("F", "Go to.") <> " Say on."
+
+      first = export_tei(play)
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "speaker") ==
+               [
+                 "2 clown",
+                 "#{span}<sup>F</sup>2 clown</span>",
+                 "#{span}1 clown</span>",
+                 "#{span}<sup>F</sup>2 clown</span>"
+               ]
+
+      second = first |> String.replace("FOLF", "FOLG") |> roundtrip()
+      assert String.replace(second, "FOLG", "FOLF") == first
+    end
+
+    # The texts of the play in the order a file reads them, speaker labels included.
+    defp texts(play) do
+      for division <- PlayContent.load_play_content(play.id),
+          element <- division.loaded_elements,
+          text <- element_texts(element),
+          do: text
+    end
+
+    defp element_texts(%{type: "speech"} = speech),
+      do: [speech | Enum.flat_map(speech.children, &element_texts/1)]
+
+    defp element_texts(%{type: "line_group"} = group),
+      do: Enum.flat_map(group.children, &element_texts/1)
+
+    defp element_texts(element), do: [element]
+
+    # A crossing passage is a piece in each text, and an edit may take away the piece
+    # before or after one, or put a text between two. The export reads each piece's part
+    # from its neighbours, so the file always closes what it opens, and the passages after
+    # the edit come back as they were.
+    test "a crossing passage whose last piece is deleted goes out closed where it now ends" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>hamlet</speaker>
+        <l n="1">Q2 one #{@folio_open}#{@f}F open#{@folio_close}</l>
+        <l n="2">#{@folio_open}F middle#{@folio_close}</l>
+        <l n="3">#{@folio_open}F close#{@f}#{@folio_close} Q2 three</l>
+        <l n="4">Q2 four</l>
+        <l n="5">Q2 five #{@folio_open}#{@f}F2 open#{@folio_close}</l>
+        <l n="6">#{@folio_open}F2 close#{@f}#{@folio_close} Q2 six</l>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOLL", body: body))
+      {:ok, _} = play |> texts() |> Enum.at(3) |> PlayContent.delete_element()
+      PlayContent.refresh_derived(play.id)
+
+      first = export_tei(play)
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "l") == [
+               "Q2 one #{span}<sup>F</sup>F open</span>",
+               "#{span}F middle<sup>F</sup></span>",
+               "Q2 four",
+               "Q2 five #{span}<sup>F</sup>F2 open</span>",
+               "#{span}F2 close<sup>F</sup></span> Q2 six"
+             ]
+
+      second = first |> String.replace("FOLL", "FOLM") |> roundtrip()
+      assert String.replace(second, "FOLM", "FOLL") == first
+    end
+
+    test "a line put inside a crossing passage parts it in two" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>hamlet</speaker>
+        <lg type="redondilla">
+          <l n="10">As in a dream #{@folio_open}#{@f}that went</l>
+          <l n="11">#{@folio_open}on through the night</l>
+          <l n="12">#{@folio_open}till morning#{@f}#{@folio_close}, and so</l>
+          <l n="13">Q2 #{@folio_open}#{@f}again#{@f}#{@folio_close} after</l>
+        </lg>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOLN", body: body))
+      [_speech, first_line | _] = texts(play)
+      PlayContent.shift_element_positions(first_line.division_id, first_line.parent_id, 1)
+
+      {:ok, _} =
+        PlayContent.create_element(%{
+          play_id: play.id,
+          division_id: first_line.division_id,
+          parent_id: first_line.parent_id,
+          type: "verse_line",
+          content: "A line put in",
+          position: 1
+        })
+
+      PlayContent.refresh_derived(play.id)
+      first = export_tei(play)
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "l") == [
+               "As in a dream",
+               "A line put in",
+               "#{span}<sup>F</sup>on through the night</span>",
+               "#{span}till morning<sup>F</sup></span>, and so",
+               "Q2 after"
+             ]
+
+      assert for(app <- xml_apps(first), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "that went", nil},
+               {"rdg", "#F1", "again", nil}
+             ]
+
+      second = first |> String.replace("FOLN", "FOLO") |> roundtrip()
+      assert String.replace(second, "FOLO", "FOLN") == first
+    end
+
+    # A speaker label that is all of a passage's first piece (v. 3226), right after a piece
+    # that goes on: deleting v. 3224 leaves "1 clown" open before "2 clown" opens again.
+    test "a piece left open before a speaker label that opens a passage is closed" do
+      body = """
+      <div1 type="acto" n="5">
+        <sp><speaker>#{@folio_open}#{@f}2 clown#{@folio_close}</speaker>
+          <p n="3223">#{@folio_open}Why, he had none.#{@folio_close}</p>
+        </sp>
+        <sp><speaker>#{@folio_open}1 clown#{@folio_close}</speaker>
+          <p n="3224">#{@folio_open}What, art a heathen?#{@f}#{@folio_close} I’ll put another question to thee.</p>
+        </sp>
+        <sp><speaker>#{@folio_open}#{@f}2 clown#{@folio_close}</speaker>
+          <p n="3226">#{@folio_open}Go to.#{@f}#{@folio_close} Say on.</p>
+        </sp>
+        <sp><speaker>1 clown</speaker><p n="3227">Q2 words.</p></sp>
+      </div1>
+      """
+
+      play = import_tei!(tei(code: "FOLP", body: body))
+      {:ok, _} = play |> texts() |> Enum.at(3) |> PlayContent.delete_element()
+      PlayContent.refresh_derived(play.id)
+
+      first = export_tei(play)
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "speaker") == [
+               "#{span}<sup>F</sup>2 clown</span>",
+               "#{span}1 clown<sup>F</sup></span>",
+               "#{span}<sup>F</sup>2 clown</span>",
+               "1 clown"
+             ]
+
+      assert reading_texts(first, "p") == [
+               "#{span}Why, he had none.</span>",
+               "#{span}Go to.<sup>F</sup></span> Say on.",
+               "Q2 words."
+             ]
+
+      second = first |> String.replace("FOLP", "FOLQ") |> roundtrip()
+      assert String.replace(second, "FOLQ", "FOLP") == first
+    end
+
+    # The mirror: a stage direction that is all of a passage's last piece ("Sound a
+    # Flourish."), right before a piece that closes one, once the piece opening that one
+    # is deleted.
+    test "a piece left closing after a stage direction that closes a passage is its own" do
+      body = """
+      <div1 type="acto" n="2">
+        <stage type="entrance">Lords attendant.] #{@folio_open}#{@f}with #{@folio_close}</stage>
+        <stage type="entrance">#{@folio_open}his Guard carrying torches.#{@folio_close}</stage>
+        <stage type="entrance">#{@folio_open}Sound a Flourish.#{@f}#{@folio_close}</stage>
+        <stage type="entrance">Q2 #{@folio_open}#{@f}opens#{@folio_close}</stage>
+        <stage type="entrance">#{@folio_open}closes#{@f}#{@folio_close} Q2 again</stage>
+        <stage type="entrance">Q2 last</stage>
+      </div1>
+      """
+
+      play = import_tei!(tei(code: "FOLR", body: body))
+      {:ok, _} = play |> texts() |> Enum.at(3) |> PlayContent.delete_element()
+      PlayContent.refresh_derived(play.id)
+
+      first = export_tei(play)
+      span = ~s(<span class="folio">)
+
+      assert reading_texts(first, "stage") == [
+               "Lords attendant.] #{span}<sup>F</sup>with</span>",
+               "#{span}his Guard carrying torches.</span>",
+               "#{span}Sound a Flourish.<sup>F</sup></span>",
+               "Q2 again",
+               "Q2 last"
+             ]
+
+      assert for(app <- xml_apps(first), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "closes", nil}
+             ]
+
+      second = first |> String.replace("FOLR", "FOLS") |> roundtrip()
+      assert String.replace(second, "FOLS", "FOLR") == first
+    end
+
+    # Hamlet's file has three slips in its marks: a </span> set before the passage's words
+    # (v. 3057), a span opened twice (v. 1322) and a closing label typed "and" (v. 3315).
+    # The labels say where each passage runs; the "and" is kept as the passage's last word
+    # until the editor says otherwise (question 39).
+    test "the labels, not the spans, say where a passage runs" do
+      body = """
+      <div1 type="acto" n="5"><sp><speaker>hamlet</speaker>
+        <p n="3057">my sudden #{@folio_open}#{@f}#{@folio_close}and more strange#{@f}#{@folio_close} return.</p>
+        <p n="3315">I do not lie in’t, #{@folio_open}#{@f}Oh!#{@sup_open}and#{@sup_close}#{@folio_close} yet it is mine.</p>
+        <p n="1322">to th’court? #{@folio_open}#{@folio_open}#{@f}for, by my fay#{@f}#{@folio_close} I cannot</p>
+      </sp></div1>
+      """
+
+      xml = roundtrip(tei(body: body))
+
+      assert for(app <- xml_apps(xml), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "and more strange", nil},
+               {"rdg", "#F1", "Oh! and", nil},
+               {"rdg", "#F1", "for, by my fay", nil}
+             ]
+
+      assert reading_texts(xml, "p") == [
+               "my sudden return.",
+               "I do not lie in’t, yet it is mine.",
+               "to th’court? I cannot"
+             ]
+    end
+
+    # Hamlet v. 2632: a passage opened and closed inside a <stage> that sits in a paragraph.
+    # A passage may hold a stage but a stage may not hold a passage, so the stage is cut
+    # around the passage into three, each the stage's type again (ruling of 2026-10-17).
+    # The file's spaces stay where it has them: the one after the label is the passage's,
+    # the first paragraph has none before the "]".
+    test "a passage inside an inline stage cuts the stage in three" do
+      body = """
+      <div1 type="acto" n="4"><sp><speaker>hamlet</speaker>
+        <p n="2631">Safely stowed. <stage type="delivery_">[Calling within#{@folio_open}#{@f} “Hamlet, Lord Hamlet!”#{@f}#{@folio_close}]</stage>
+          <lb n="2633"/>But soft.</p>
+        <p n="2640"><stage type="delivery">[Calling within#{@folio_open}#{@f}“Hamlet!”#{@f}#{@folio_close}]</stage></p>
+        <p n="2650">Who’s there? <stage type="delivery">#{@folio_open}#{@f}Within#{@f}#{@folio_close}</stage> Enter.</p>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOLB", body: body))
+      stage = fn words -> ~s(<stage type="delivery">#{words}</stage>) end
+
+      assert [%{loaded_elements: [%{children: [spaced, glued, whole]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert spaced.content ==
+               ~s(<lb n="2631"/>Safely stowed. ) <>
+                 stage.("[Calling within") <>
+                 "<folio> " <>
+                 stage.("“Hamlet, Lord Hamlet!”") <>
+                 "</folio>" <> stage.("]") <> ~s( <lb n="2633"/>But soft.)
+
+      assert glued.content ==
+               ~s(<lb n="2640"/>) <>
+                 stage.("[Calling within") <>
+                 "<folio>" <> stage.("“Hamlet!”") <> "</folio>" <> stage.("]")
+
+      # A stage that is all passage leaves the spaces the stage had around it.
+      assert whole.content ==
+               ~s(<lb n="2650"/>Who’s there? <folio>) <> stage.("Within") <> "</folio> Enter."
+
+      # The passage is an entry of the reading beside the stages it was cut from; the
+      # stages say what they said.
+      first = export_tei(play)
+
+      assert for(app <- xml_apps(first), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "“Hamlet, Lord Hamlet!”", nil},
+               {"rdg", "#F1", "“Hamlet!”", nil},
+               {"rdg", "#F1", "Within", nil}
+             ]
+
+      assert for(
+               {attrs, words} <- xml_elements(first, "stage", within: "body"),
+               do: {attrs["type"], words}
+             ) == [
+               {"delivery", "[Calling within"},
+               {"delivery", "“Hamlet, Lord Hamlet!”"},
+               {"delivery", "]"},
+               {"delivery", "[Calling within"},
+               {"delivery", "“Hamlet!”"},
+               {"delivery", "]"},
+               {"delivery", "Within"}
+             ]
+
+      second = first |> String.replace("FOLB", "FOLC") |> roundtrip()
+      assert String.replace(second, "FOLC", "FOLB") == first
+    end
+
+    # A reading that starts or ends with an element: the folio marker beside it gets no
+    # space the file does not have ("tight"), and a space it has stays ("loose", and
+    # "foo<folio> bar</folio>", which has no element beside it).
+    test "a folio app beside an element gains no space, and keeps the one it has" do
+      body = """
+      <div1 type="acto" n="4"><sp><speaker>hamlet</speaker>
+        <p n="1">tight <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"><stage type="delivery">within</stage></rdg></app> after</p>
+        <p n="2">loose <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"> <stage type="delivery">within</stage> </rdg></app> after</p>
+        <p n="3">foo<app type="folio"><lem wit="#Q2"/><rdg wit="#F1"> bar</rdg></app>.</p>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOLD", body: body))
+      stage = ~s(<stage type="delivery">within</stage>)
+
+      assert [%{loaded_elements: [%{children: [tight, loose, plain]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert tight.content == ~s(<lb n="1"/>tight <folio>#{stage}</folio> after)
+      assert loose.content == ~s(<lb n="2"/>loose <folio> #{stage} </folio> after)
+      assert plain.content == ~s(<lb n="3"/>foo<folio> bar</folio>.)
+
+      first = export_tei(play)
+      second = first |> String.replace("FOLD", "FOLE") |> roundtrip()
+      assert String.replace(second, "FOLE", "FOLD") == first
+    end
+
+    # Italics touching a passage that opens or closes in italics stay two <emph>s: merged
+    # into one, the passage would be lost, its words read as the base text's.
+    test "a passage in italics beside italics outside it stays a passage" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="1">O <emph>dear</emph><app type="folio"><lem wit="#Q2"/><rdg wit="#F1"><emph>mother</emph></rdg></app> mine</l>
+        <l n="2">O <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"><emph>mother</emph></rdg></app><emph>dear</emph> mine</l>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOLH", body: body))
+
+      assert for(app <- xml_apps(first), do: List.last(app.readings)) == [
+               {"rdg", "#F1", "mother", nil},
+               {"rdg", "#F1", "mother", nil}
+             ]
+
+      assert xml_texts(first, "emph") == ["dear", "mother", "mother", "dear"]
+
+      second = first |> String.replace("FOLH", "FOLI") |> roundtrip()
+      assert String.replace(second, "FOLI", "FOLH") == first
+    end
+
+    # A note counts graphemes into the text without its markers, the Folio ones included:
+    # the one after a passage stays after it.
+    test "a note after a passage stays where it was" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">O God, #{@folio_open}#{@f}O#{@f}#{@folio_close} God,<note n="1"><p>An oath.</p></note> be</l>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOL5", body: body))
+
+      assert [%{in: "l", after: "O God, God,", n: "1"}] = xml_notes(first)
+      assert reading_texts(first, "l") == ["O God, God, be"]
+    end
+
+    # A note strictly inside a passage is one of the Folio's words' notes: it goes back
+    # inside the reading, between the words it sat between.
+    test "a note inside a passage stays inside its reading" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O<note n="1"><p>An oath.</p></note> O</rdg></app> God,</l>
+      </sp></div1>
+      """
+
+      first = roundtrip(tei(code: "FOLJ", body: body))
+
+      assert [%{readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O O", "An oath."}]}] =
+               xml_apps(first)
+
+      assert [{%{"wit" => "#F1"}, "O An oath. O"}] = xml_elements(first, "rdg")
+      assert reading_texts(first, "l") == ["O God, God,"]
+
+      second = first |> String.replace("FOLJ", "FOLK") |> roundtrip()
+      assert String.replace(second, "FOLK", "FOLJ") == first
+    end
+
+    # The form a re-encoded file will use (question 36) reads as the same passage. An
+    # <app type="folio"> of any other shape is an entry of the apparatus, kept as written:
+    # read as a passage, its witness would be lost. Both come back as the same <app>, so
+    # the stored lines say which was read as which: a passage is words in the line's text,
+    # an entry a note of the line.
+    test "the app form reads back as the passage; any other folio app stays an entry" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">O God, <app type="folio"><lem wit="#Q2"/><rdg wit="#F1">O</rdg></app> God,</l>
+        <l n="319">Fie, <app type="folio"><lem wit="#Q2"/><rdg wit="#F2">fie,</rdg></app> ’tis</l>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOL3", body: body))
+      first = export_tei(play)
+
+      assert [
+               %{type: "folio", readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O", nil}]},
+               %{type: "folio", readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F2", "fie,", nil}]}
+             ] = xml_apps(first)
+
+      assert reading_texts(first, "l") == ["O God, God,", "Fie, ’tis"]
+
+      assert [%{loaded_elements: [%{children: [passage, entry]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert InlineMarkup.plain(passage.content) == "O God, O God,"
+      assert passage.notes == []
+      assert [%{} = variant] = entry.notes
+      assert Note.variant?(variant)
+
+      second = first |> String.replace("FOL3", "FOL4") |> roundtrip()
+      assert String.replace(second, "FOL4", "FOL3") == first
+    end
+
+    # A reading with no word would be an empty passage, which the line refuses (and the
+    # import with it): it stays the entry of the apparatus it was before.
+    test "a folio app whose reading has no word stays an entry, and the import goes on" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>HAMLET</speaker>
+        <l n="316">One <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"/></app> two</l>
+        <l n="319">Three <app type="folio"><lem wit="#Q2"/><rdg wit="#F1"> </rdg></app> four</l>
+      </sp></div1>
+      """
+
+      play = import_tei!(tei(code: "FOL6", body: body))
+
+      assert [%{loaded_elements: [%{children: [first, second]}]}] =
+               PlayContent.load_play_content(play.id)
+
+      assert [%{type: "folio"}, %{type: "folio"}] = xml_apps(export_tei(play))
+      assert InlineMarkup.plain(first.content) == "One two"
+      assert InlineMarkup.plain(second.content) == "Three four"
+      assert [%{}] = first.notes
+      assert [%{}] = second.notes
     end
   end
 

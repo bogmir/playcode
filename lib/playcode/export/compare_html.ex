@@ -203,6 +203,10 @@ defmodule Playcode.Export.CompareHtml do
 
         .stage { font-style: italic; color: #555; }
 
+        /* Hamlet's Folio passages: in grey, between their F's */
+        .folio { color: #666; }
+        sup.folio { font-size: 0.7em; line-height: 0; }
+
         .trailer { text-align: center; margin: 1rem 0 0.5rem; }
 
         /* Prose */
@@ -380,7 +384,8 @@ defmodule Playcode.Export.CompareHtml do
 
     speaker =
       if el.speaker_label,
-        do: "        <div class=\"speaker\">#{escape(el.speaker_label)}</div>\n",
+        do:
+          "        <div class=\"speaker\">#{NoteMarkup.inline(el.speaker_label, [], :html)}</div>\n",
         else: ""
 
     children = Map.get(el, :children, []) |> Enum.map(&render_element(&1, nil)) |> Enum.join()

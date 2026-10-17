@@ -128,6 +128,9 @@ msgstr "tiene una marca de acotación que no está bien formada"
 msgid "has an aside marker that is not well formed"
 msgstr "tiene una marca de aparte que no está bien formada"
 
+msgid "has a Folio marker that is not well formed"
+msgstr "tiene una marca del Folio que no está bien formada"
+
 msgid "has a line number marker that is not well formed"
 msgstr "tiene una marca de número de línea que no está bien formada"
 

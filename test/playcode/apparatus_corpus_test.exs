@@ -36,7 +36,9 @@ defmodule Playcode.ApparatusCorpusTest do
       {:ok, play} = TeiImport.import_file(@path)
       first = export_tei(play)
 
-      assert length(xml_apps(first)) == @entries[@code]
+      assert first |> xml_apps() |> Enum.reject(&(&1.type == "folio")) |> length() ==
+               @entries[@code]
+
       assert xml_elements(first, "app", within: "note") == []
 
       if pasted = @pasted[@code],
@@ -47,6 +49,14 @@ defmodule Playcode.ApparatusCorpusTest do
 
       assert xml_apps(second) == xml_apps(first)
       assert reading_texts(second, "l") == reading_texts(first, "l")
+
+      # Hamlet's 132 Folio passages: 119 inside one element, 13 across elements, each of
+      # those with an F at its start and its end.
+      if @code == "EMOTHE0010" do
+        assert Enum.count(xml_apps(first), &(&1.type == "folio")) == 119
+        assert first |> xml_texts("code") |> Enum.count(&(&1 == "<sup>")) == 26
+        assert xml_texts(second, "code") == xml_texts(first, "code")
+      end
     end
   end
 end

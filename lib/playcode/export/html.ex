@@ -249,8 +249,11 @@ defmodule Playcode.Export.Html do
         /* A stage direction inside a line */
         .stage { font-style: italic; color: #555; }
 
+        /* Hamlet's Folio passages: in grey, between their F's */
+        .folio { color: #666; }
+
         /* In-text notes: a number after the word, the act's notes listed after it */
-        .nref, .vref { font-size: 0.7em; line-height: 0; }
+        .nref, .vref, sup.folio { font-size: 0.7em; line-height: 0; }
         .nref a, .vref a { text-decoration: none; }
         .notes, .variants { margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #ddd; font-size: 0.9rem; }
         .notes li p, .variants li p { margin: 0.3rem 0; }

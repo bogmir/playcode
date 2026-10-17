@@ -154,6 +154,36 @@ answered on 2026-10-16 (yes, for now); question 37 is open.
   switch above. The editor would judge it better on seeing how the whole apparatus is
   encoded. So the passages inside one element can be built as proposed; the long ones share
   the Additions' form, which question 37 leaves open.
+
+  **Built 2026-10-16 to 17** (`superpowers/specs/2026-10-16-hamlet-folio-passages-design.md`,
+  `history.md`), with these departures from the plan above. A full read of the file counts
+  264 labels, 263 "F" and one "and", which pair into **132 passages: 119 inside one element,
+  13 across elements** (2 to 28 elements, the longest 14 speeches), where the first count said
+  131 and 42. The marker is a plain `<folio>…</folio>` in the text it sits in, with no
+  attributes but `part="I|M|F"` where a passage crosses elements (`I` its start, `M` a whole
+  element, `F` its end), in a line's, paragraph's or stage direction's text or a speech's
+  speaker label. Unlike the plan, the word count includes the Folio words (search finds
+  them too), and the downloads, which have no switch, print the passages in grey between
+  their F's (question 38).
+  - *Read:* in a file with superscript labels, the labels in document order alternately open
+    and close a passage; an "F" label's text is dropped, any other word is kept before the
+    passage's end (v. 3315, `Oh!<sup>and</sup>`, reads "Oh! and": question 39). The
+    `<span class="folio">` strings are not read, so the slips in v. 3057 (a `</span>` too
+    early) and v. 1322 (a span opened twice) change nothing. An `<app type="folio">` of exactly
+    the proposed shape, in any file, is the same marker; any other stays a variant.
+  - *Written back:* a passage inside one element as that `<app type="folio">` (119 in
+    Hamlet); one across elements in the file's own form, one span to an element and an F at
+    its start (`I`) and end (`F`), until question 37 settles a TEI one. Exporting, importing
+    and exporting again gives the same file, with the two damaged spots mended. The export
+    pairs a crossing passage's pieces in reading order, not by their stored parts alone: two
+    neighbouring texts join when the first ends in an `I` or `M` piece and the second starts
+    with an `M` or `F` one, and a piece joined on neither side goes out as the `<app>`. So an
+    edit inside a passage (a piece deleted, a text put between two) cannot unbalance the file.
+  - One passage, v. 2632 (`[Calling within<F> “Hamlet, Lord Hamlet!”<F>]`), sits inside an
+    inline stage direction in a paragraph. It is stored and written back as three stages
+    (before, inside the passage, after), each with the stage's type where the source has one.
+  - Still open: the Additions and the TEI form of the 13 long passages (question 37); the
+    statistics of the Q2 text alone (`backlog.md`).
 - **The Q4 Additions** (question 6; the encoding, question 37): a line in the margin beside
   the whole passage and a superscript Q4 at each end, in all four versions, wherever the text
   is printed. An Addition crosses speeches and scenes, so it is marked start to end:
@@ -196,7 +226,8 @@ answered on 2026-10-16 (yes, for now); question 37 is open.
 
 The project's TEI files stay the master while Playcode is tested against the corpus;
 Playcode's export takes over only once it carries every feature of the files. Of the HTML
-fragments, The Rover's and the Spanish wrappers and Mariamne come first; Hamlet's Folio passages
-inside one element can follow now (question 36); the long ones and the Additions wait on
-question 37. The variants needed neither and were built first (2026-10-16). The site is
+fragments, The Rover's and the Spanish wrappers and Mariamne came first; Hamlet's Folio passages
+followed (2026-10-16 to 17), the ones inside one element as `<app type="folio">` (question 36)
+and the long ones in the file's own form; the Additions, and a TEI form for the long passages,
+wait on question 37. The variants needed neither and were built first (2026-10-16). The site is
 deployed as it stands, and each fix reaches it with the next Generate and Deploy.

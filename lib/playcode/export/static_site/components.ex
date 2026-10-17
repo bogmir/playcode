@@ -45,7 +45,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <script src={@root <> "assets/site.js"} defer>
         </script>
       </head>
-      <body data-ln="5">
+      <body data-ln="5" data-fo="off">
         <header class="bar">
           <a class="wordmark" href={@root <> "index.html"}>EMOTHE</a>
           <nav aria-label="Site">
@@ -119,6 +119,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <label><input type="checkbox" data-toggle="vf" checked /> Verse forms</label>
       <label :if={@edition.variants}>
         <input type="checkbox" data-toggle="va" checked /> Variants
+      </label>
+      <label :if={@edition.folio}>
+        <input type="checkbox" data-toggle="fo" /> Folio interpolations
       </label>
       <%= if @cast != [] do %>
         <h2>Highlight</h2>
@@ -520,8 +523,8 @@ defmodule Playcode.Export.StaticSite.Components do
     assigns = assign(assigns, :who, who(assigns.el))
 
     ~H"""
-    <div class="sp" data-who={@who}>
-      <p :if={@el.speaker_label} class="spk">
+    <div class={["sp", Element.folio_only?(@el) && "fo"]} data-who={@who}>
+      <p :if={@el.speaker_label} class={["spk", InlineMarkup.whole_folio?(@el.speaker_label) && "fo"]}>
         <.inline text={@el.speaker_label} notes={@el.notes} />
       </p>
       <.el :for={child <- @el.children} el={child} edition={@edition} />
@@ -531,7 +534,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   defp el(%{el: %{type: "line_group"}} = assigns) do
     ~H"""
-    <div class="lg">
+    <div class={["lg", Element.folio_only?(@el) && "fo"]}>
       <.el :for={child <- @el.children} el={child} edition={@edition} />
     </div>
     """
@@ -550,19 +553,23 @@ defmodule Playcode.Export.StaticSite.Components do
       )
 
     ~H"""
-    <div phx-no-format class={["l", @el.rend == "indent" && "indent"]} id={@anchor}><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true"><.inline text={@ghost} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
+    <div
+      phx-no-format
+      class={["l", @el.rend == "indent" && "indent", Element.folio_only?(@el) && "fo"]}
+      id={@anchor}
+    ><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true"><.inline text={@ghost} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
     """
   end
 
   defp el(%{el: %{type: "stage_direction"}} = assigns) do
     ~H"""
-    <p class="sd" id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
+    <p phx-no-format class={["sd", Element.folio_only?(@el) && "fo"]} id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
     """
   end
 
   defp el(%{el: %{type: "prose"}} = assigns) do
     ~H"""
-    <p class="pr" id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
+    <p phx-no-format class={["pr", Element.folio_only?(@el) && "fo"]} id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
     """
   end
 
@@ -591,7 +598,8 @@ defmodule Playcode.Export.StaticSite.Components do
   through it too.
   """
   def inline(assigns) do
-    assigns = assign(assigns, :parts, InlineMarkup.parts(assigns.text, assigns.notes))
+    parts = assigns.text |> InlineMarkup.parts(assigns.notes) |> InlineMarkup.folio_labels()
+    assigns = assign(assigns, :parts, parts)
 
     # Built as iodata, not a template: the formatter indents EEx blocks, and the
     # whitespace it adds between a word and its <em> would be visible.
@@ -604,6 +612,14 @@ defmodule Playcode.Export.StaticSite.Components do
   # "Stage directions" toggle hides.
   defp part(%{stage: %{}} = part),
     do: [~s(<span class="sdi">), part(%{part | stage: nil}), "</span>"]
+
+  # Hamlet's Folio passages: an F where one starts and ends, and its words, in grey; gone
+  # while the "Folio interpolations" toggle is off, its default (style.css). Inside a stage
+  # direction these come after the stage's own clause, so hiding the stage hides its F's.
+  defp part(%{label: label}), do: [~s(<sup class="fo fl">), escape(label), "</sup>"]
+
+  defp part(%{folio: _} = part),
+    do: [~s(<span class="fo">), part(Map.delete(part, :folio)), "</span>"]
 
   # Where a printed line of the source starts, in prose: its number, which the "Line
   # numbers" control hides (style.css), every fifth kept by "5". Not a link: a play that

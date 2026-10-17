@@ -422,6 +422,37 @@ defmodule Playcode.Export.StaticSiteTest do
     refute File.read!(Path.join([dir, "assets", "style.css"])) =~ ~r/url\(\s*["']?https?:/
   end
 
+  # The muted grey prints the Folio passages, the notes' heads and every caption: WCAG AA
+  # asks 4.5:1 for text, in the light theme and the dark one.
+  test "the muted grey reads at 4.5:1 on the paper in both themes" do
+    dir = generate!([complete_play()])
+    css = File.read!(Path.join([dir, "assets", "style.css"]))
+    tokens = fn name -> for [_, hex] <- Regex.scan(~r/--#{name}: #(\w{6})/, css), do: hex end
+    themes = Enum.zip(tokens.("muted"), tokens.("paper"))
+
+    assert length(themes) == 2
+
+    for {muted, paper} <- themes do
+      assert contrast(muted, paper) >= 4.5, "##{muted} on ##{paper}"
+    end
+  end
+
+  # WCAG 2's contrast ratio of two sRGB colours, as six hex digits.
+  defp contrast(a, b) do
+    [light, dark] = Enum.sort([luminance(a), luminance(b)], :desc)
+    (light + 0.05) / (dark + 0.05)
+  end
+
+  defp luminance(hex) do
+    [r, g, b] =
+      for <<channel::binary-size(2) <- hex>> do
+        c = String.to_integer(channel, 16) / 255
+        if c <= 0.04045, do: c / 12.92, else: :math.pow((c + 0.055) / 1.055, 2.4)
+      end
+
+    0.2126 * r + 0.7152 * g + 0.0722 * b
+  end
+
   test "a generated site reports its largest page and its index sizes" do
     %{play: play} = play_with_structure_fixture()
     dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")

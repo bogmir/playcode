@@ -204,6 +204,129 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
     end
   end
 
+  describe "a Folio passage" do
+    test "is a run of parts of its own, with its part; the text around it has none" do
+      assert [%{text: "O God, "} = before, %{text: "O", folio: %{part: nil, run: 0}}, following] =
+               InlineMarkup.parts("O God, <folio>O</folio> God,")
+
+      refute Map.has_key?(before, :folio)
+      assert %{text: " God,"} = following
+      refute Map.has_key?(following, :folio)
+
+      assert [%{text: "unto", folio: %{part: "I", run: 0}}] =
+               InlineMarkup.parts(~s(<folio part="I">unto</folio>))
+    end
+
+    test "holds italics, stages and printed lines' numbers" do
+      assert [
+               %{text: "Within", stage: %{type: "delivery"}, folio: %{part: "F", run: 0}},
+               %{text: "Mother", italic: true, folio: %{run: 0}},
+               %{number: "12", folio: %{run: 0}}
+             ] =
+               InlineMarkup.parts(
+                 ~s(<folio part="F"><stage type="delivery">Within</stage><<Mother>><lb n="12"/></folio>)
+               )
+    end
+
+    test "a stage inside it and one outside are two runs" do
+      assert [%{stage: %{run: 0}}, %{stage: %{run: 1}, folio: %{run: 0}}] =
+               InlineMarkup.parts("<stage>a</stage><folio><stage>b</stage></folio>")
+    end
+
+    test "a note inside it goes with it; one at either edge stays outside" do
+      notes = for offset <- [7, 8, 10], do: %{id: offset, offset: offset, position: 0}
+      placed = InlineMarkup.parts("O God, <folio>O O</folio> God,", notes)
+
+      folio_of = fn id ->
+        placed |> Enum.find(&match?(%{note: %{id: ^id}}, &1)) |> Map.get(:folio)
+      end
+
+      assert folio_of.(7) == nil
+      assert %{run: 0} = folio_of.(8)
+      assert folio_of.(10) == nil
+    end
+
+    test "a note between two pieces of one passage goes with it" do
+      notes = [%{id: 1, offset: 2, position: 0}]
+
+      assert [
+               %{text: "a ", folio: %{run: 0}},
+               %{note: %{id: 1}, folio: %{run: 0}},
+               %{text: "b", italic: true, folio: %{run: 0}},
+               %{text: " c", folio: %{run: 0}}
+             ] = InlineMarkup.parts("<folio>a <<b>> c</folio>", notes)
+    end
+
+    test "folio_labels/1 marks where a passage starts and ends, not a part's inner edge" do
+      labelled = fn text ->
+        text
+        |> InlineMarkup.parts()
+        |> InlineMarkup.folio_labels()
+        |> Enum.map_join(fn
+          %{label: label} -> "[#{label}]"
+          %{text: text} -> text
+        end)
+      end
+
+      assert labelled.("O God, <folio>O</folio> God,") == "O God, [F]O[F] God,"
+      assert labelled.(~s(her. <folio part="I">She kneels</folio>)) == "her. [F]She kneels"
+      assert labelled.(~s(<folio part="M">Prison, my lord?</folio>)) == "Prison, my lord?"
+      assert labelled.(~s(<folio part="F">him.</folio> He takes)) == "him.[F] He takes"
+      assert labelled.("<folio>a</folio><folio>b</folio>") == "[F]a[F][F]b[F]"
+    end
+
+    # Hamlet v. 2632. With the stage directions hidden, the stage's words go and the F's
+    # beside them must go too: a label is in the stage direction of the first (or last)
+    # word of its passage, a space before it aside.
+    test "folio_labels/1 puts each label in the stage its passage's first or last word is in" do
+      stages = fn text ->
+        text
+        |> InlineMarkup.parts()
+        |> InlineMarkup.folio_labels()
+        |> Enum.filter(&Map.has_key?(&1, :label))
+        |> Enum.map(&(&1.stage && &1.stage.run))
+      end
+
+      assert stages.("<stage>[Calling within</stage><folio> <stage>“Hamlet!”</stage></folio>") ==
+               [1, 1]
+
+      assert stages.("<folio><stage>a</stage> b</folio>") == [0, nil]
+      assert stages.("<folio>a <stage>b</stage></folio>") == [nil, 0]
+      assert stages.("<stage>x</stage> <folio>O</folio>") == [nil, nil]
+      assert stages.(~s(<folio part="I"><stage>a</stage> b</folio>)) == [0]
+      assert stages.(~s(<folio part="F"><stage>a</stage> b</folio>)) == [nil]
+    end
+
+    test "folio_labels/1 keeps its labels at a passage's two ends when a note sits inside it" do
+      notes = [%{id: 1, offset: 3, position: 0}]
+
+      assert "a <folio>O O</folio> b"
+             |> InlineMarkup.parts(notes)
+             |> InlineMarkup.folio_labels()
+             |> Enum.map(fn
+               %{label: label} -> label
+               %{note: %{id: id}} -> {:note, id}
+               %{text: text} -> text
+             end) == ["a ", "F", "O", {:note, 1}, " O", "F", " b"]
+    end
+
+    test "plain and spoken keep its words and drop its tags" do
+      text = "Very like<folio>, very like</folio>. Stayed it long?"
+      assert InlineMarkup.plain(text) == "Very like, very like. Stayed it long?"
+      assert InlineMarkup.spoken(text) == "Very like, very like. Stayed it long?"
+    end
+
+    test "whole_folio?/1: every word in a passage, a paragraph's own number aside" do
+      assert InlineMarkup.whole_folio?(~s(<folio part="M">Prison, my lord?</folio>))
+      assert InlineMarkup.whole_folio?(~s(<lb n="1288"/><folio part="M">Prison?</folio>))
+      assert InlineMarkup.whole_folio?("<folio>For he himself is subject to his birth:</folio>")
+      refute InlineMarkup.whole_folio?("O God, <folio>O</folio> God,")
+      refute InlineMarkup.whole_folio?("no passage")
+      refute InlineMarkup.whole_folio?("<folio> </folio>")
+      refute InlineMarkup.whole_folio?(nil)
+    end
+  end
+
   describe "junk text" do
     # A researcher can paste anything into the editor: a run of stages that never close
     # must cost time in proportion to its length, not its square (32 KB took 1.7 s).

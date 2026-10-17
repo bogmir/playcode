@@ -1060,4 +1060,206 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       refute has_element?(plain_view, "label", t("Variants"))
     end
   end
+
+  describe "Hamlet's Folio passages" do
+    @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
+    @folio_close ~s(<code>&lt;/span&gt;</code>)
+    @f ~s(<code>&lt;sup&gt;</code>F<code>&lt;/sup&gt;</code>)
+
+    # A passage in a line, a line all the Folio's, and a passage that opens at a speaker
+    # label and closes at the end of the speech, so the whole speech is the Folio's.
+    @folio_body """
+    <div1 type="acto" n="1"><head>ACT I</head>
+      <sp><speaker>HAMLET</speaker>
+        <l n="316">O God, #{@folio_open}#{@f}O#{@f}#{@folio_close} God,</l>
+        <l n="481">#{@folio_open}#{@f}For he himself is subject to his birth:#{@f}#{@folio_close}</l>
+      </sp>
+      <sp><speaker>#{@folio_open}#{@f}guildenstern#{@folio_close}</speaker>
+        <p>#{@folio_open}Prison, my lord?#{@f}#{@folio_close}</p>
+      </sp>
+    </div1>
+    """
+
+    setup %{conn: conn} do
+      play = [body: @folio_body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      %{play: play, view: view}
+    end
+
+    test "are hidden until the switch shows them, in grey between their F's", %{view: view} do
+      assert has_element?(view, "label", t("Folio interpolations"))
+      assert has_element?(view, ~s(#play-tab-text [data-folio="off"]))
+
+      text = view |> render() |> LazyHTML.from_fragment() |> LazyHTML.query("#play-tab-text")
+
+      assert text |> LazyHTML.query("sup.folio") |> Enum.map(&LazyHTML.text/1) == ~w(F F F F F F)
+
+      assert text |> LazyHTML.query("span.folio") |> Enum.map(&LazyHTML.text/1) |> Enum.take(1) ==
+               ["O"]
+
+      # The line all the Folio's, and the speech all the Folio's, go with their words.
+      assert text |> LazyHTML.query(".verse-line.folio") |> Enum.count() == 1
+      assert text |> LazyHTML.query(".speech.folio") |> Enum.count() == 1
+
+      render_click(view, "toggle_folio")
+      assert has_element?(view, ~s(#play-tab-text [data-folio="on"]))
+    end
+
+    test "is not governed by Show variant readings", %{conn: conn, play: play} do
+      {:ok, play} = Playcode.Catalogue.update_play(play, %{show_variants: false})
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      assert has_element?(view, "label", t("Folio interpolations"))
+    end
+
+    # Each kind of element that can be the Folio's wholly goes with its words: the class is
+    # how the stylesheet finds it, and a speech or group with one Folio line and one other
+    # keeps its wrapper.
+    test "a stage direction, a paragraph, a line group and a speaker label that are all the Folio's go",
+         %{conn: conn} do
+      body = """
+      <div1 type="acto" n="1"><head>ACT I</head>
+        <stage type="entrance">#{@folio_open}#{@f}Sound a Flourish.#{@f}#{@folio_close}</stage>
+        <sp><speaker>HAMLET</speaker>
+          <p n="1">#{@folio_open}#{@f}Denmark’s a prison.#{@f}#{@folio_close}</p>
+          <lg>
+            <l n="2">#{@folio_open}#{@f}One line,#{@f}#{@folio_close}</l>
+            <l n="3">#{@folio_open}#{@f}and two.#{@f}#{@folio_close}</l>
+          </lg>
+          <lg>
+            <l n="4">#{@folio_open}#{@f}A line#{@f}#{@folio_close} the Quarto has too.</l>
+            <l n="5">#{@folio_open}#{@f}and two.#{@f}#{@folio_close}</l>
+          </lg>
+        </sp>
+        <sp><speaker>#{@folio_open}#{@f}guildenstern#{@f}#{@folio_close}</speaker>
+          <p n="6">My lord?</p>
+        </sp>
+        <sp><speaker>CLAUDIUS</speaker>
+          <p n="7">#{@folio_open}#{@f}Only the Folio has this.#{@f}#{@folio_close}</p>
+        </sp>
+      </div1>
+      """
+
+      play = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      text = view |> render() |> LazyHTML.from_fragment() |> LazyHTML.query("#play-tab-text")
+
+      folio_words = fn selector ->
+        text |> LazyHTML.query(selector) |> Enum.map(&LazyHTML.text/1)
+      end
+
+      assert [flourish] = folio_words.(".stage-direction.folio")
+      assert flourish =~ "Flourish"
+
+      assert [prison, only] = folio_words.(".text-justify.folio")
+      assert prison =~ "prison" and only =~ "Only the Folio"
+
+      assert [group] = folio_words.(".line-group.folio")
+      assert group =~ "One line," and group =~ "and two."
+      assert folio_words.(".line-group") |> length() == 2
+
+      assert [speaker] = folio_words.(".speaker.folio")
+      assert speaker =~ "guildenstern"
+
+      # No speech is the Folio's alone: Hamlet's has a line the Quarto shares, the second
+      # speaker's paragraph is not the Folio's, and Claudius's only paragraph is, but his
+      # name is not.
+      assert folio_words.(".speech.folio") == []
+    end
+
+    test "a label that is the Folio's goes alone when the Quarto's words follow it", %{conn: conn} do
+      body = """
+      <div1 type="acto" n="5">
+        <sp><speaker>#{@folio_open}#{@f}2 clown#{@folio_close}</speaker>
+          <p n="3224">#{@folio_open}What, art a heathen?#{@f}#{@folio_close} I’ll put another question to thee.</p>
+        </sp>
+      </div1>
+      """
+
+      play = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      # Off: the label goes and the speech stays, with the Quarto's words in it.
+      assert has_element?(view, ~s(#play-tab-text [data-folio="off"]))
+      assert has_element?(view, ".speaker.folio", "2 clown")
+      refute has_element?(view, ".speech.folio")
+      assert has_element?(view, ".speech", "I’ll put another question to thee.")
+
+      # On: nothing is hidden, so both show.
+      render_click(view, "toggle_folio")
+      assert has_element?(view, ~s(#play-tab-text [data-folio="on"]))
+      assert has_element?(view, ".speaker", "2 clown")
+      assert has_element?(view, ".speech span.folio", "What, art a heathen?")
+    end
+
+    test "a note inside a passage sits inside the part that is hidden, one outside it does not",
+         %{conn: conn} do
+      body = """
+      <div1 type="acto" n="1">
+        <sp><speaker>HAMLET</speaker>
+          <l n="316">O God, #{@folio_open}#{@f}O<note n="1" type="editor"><p>An oath.</p></note> hear#{@f}#{@folio_close} God,<note n="2" type="editor"><p>Plain.</p></note></l>
+        </sp>
+      </div1>
+      """
+
+      play = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      note = fn n -> ~s(button[aria-label="#{t("Editor's note")} #{n}"]) end
+
+      assert has_element?(view, ~s(#play-tab-text [data-folio="off"]))
+      assert has_element?(view, "span.folio #{note.(1)}")
+      assert has_element?(view, note.(2))
+      refute has_element?(view, "span.folio #{note.(2)}")
+    end
+
+    # Hamlet v. 2632, a passage inside an inline stage direction.
+    test "with the stage directions hidden, the F's of a passage inside one go with it",
+         %{conn: conn} do
+      body = """
+      <div1 type="acto" n="4"><sp><speaker>hamlet</speaker>
+        <p n="2631">Safely stowed. <stage type="delivery_">[Calling within#{@folio_open}#{@f} “Hamlet, Lord Hamlet!”#{@f}#{@folio_close}]</stage> But soft.</p>
+      </sp></div1>
+      """
+
+      play = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      f_labels = fn ->
+        view |> render() |> LazyHTML.from_fragment() |> LazyHTML.query("sup.folio")
+      end
+
+      assert Enum.count(f_labels.()) == 2
+
+      render_click(view, "toggle_stage_directions")
+      assert Enum.count(f_labels.()) == 0
+      refute render(view) =~ "Calling within"
+    end
+
+    test "a passage in a scene shows the switch", %{conn: conn} do
+      body = """
+      <div1 type="acto" n="1"><head>ACT I</head>
+        <div2 type="escena" n="1"><head>Scene 1</head>
+          <sp><speaker>HAMLET</speaker><l n="1">O God, #{@folio_open}#{@f}O#{@f}#{@folio_close} God,</l></sp>
+        </div2>
+      </div1>
+      """
+
+      play = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      assert has_element?(view, "label", t("Folio interpolations"))
+    end
+
+    test "a play with no Folio passage has no switch", %{conn: conn} do
+      plain =
+        [body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>)]
+        |> tei()
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, plain_view, _html} = live(conn, ~p"/plays/#{plain.code}")
+      refute has_element?(plain_view, "label", t("Folio interpolations"))
+    end
+  end
 end

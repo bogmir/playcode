@@ -28,7 +28,9 @@ defmodule Playcode.PlayContent.Element do
   any other word a file gives.
 
   `content` is plain text with italics as `<<…>>` markers and a stage direction inside a
-  line or paragraph as `<stage type="…">…</stage>` (see `InlineMarkup`).
+  line or paragraph as `<stage type="…">…</stage>` (see `InlineMarkup`). A passage only the
+  Folio prints is `<folio>…</folio>` (`InlineMarkup`), in a line's, a paragraph's or a stage
+  direction's text, or a speech's `speaker_label`.
   `position` orders an element among its siblings.
 
   `is_aside` marks a line or paragraph spoken aside: all of it (`whole_aside?/1`), or,
@@ -37,6 +39,8 @@ defmodule Playcode.PlayContent.Element do
 
   use Ecto.Schema
   import Ecto.Changeset
+
+  alias Playcode.PlayContent.InlineMarkup
 
   @stage_types ~w(setting entrance exit business novelistic delivery modifier location mixed)
 
@@ -78,6 +82,39 @@ defmodule Playcode.PlayContent.Element do
     do: aside and not String.contains?(content || "", "<aside>")
 
   @doc """
+  True when every word of `element` is the Folio's alone (`InlineMarkup.whole_folio?/1`):
+  a line's, a paragraph's or a stage direction's text; a speech's speaker label, if it has
+  one, and all its parts; all a line group's lines. Readers who hide the Folio's passages
+  see none of it.
+  """
+  def folio_only?(%{type: type} = element) when type in ~w(speech line_group) do
+    children = children_of(element)
+    label = Map.get(element, :speaker_label)
+
+    children != [] and Enum.all?(children, &folio_only?/1) and
+      (label in [nil, ""] or InlineMarkup.whole_folio?(label))
+  end
+
+  def folio_only?(element), do: InlineMarkup.whole_folio?(Map.get(element, :content))
+
+  @doc "True when an element of `divisions`, as `PlayContent.load_play_content/2` gives them, holds a Folio passage."
+  def folio_passages?(divisions) do
+    Enum.any?(divisions, fn division ->
+      Enum.any?(Map.get(division, :loaded_elements, []), &holds_folio?/1) or
+        folio_passages?(children_of(division))
+    end)
+  end
+
+  defp holds_folio?(element) do
+    Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, "<folio"))) or
+      Enum.any?(children_of(element), &holds_folio?/1)
+  end
+
+  # What `load_play_content/2` loaded: a verse line's children are not.
+  defp children_of(%{children: children}) when is_list(children), do: children
+  defp children_of(_), do: []
+
+  @doc """
   Returns the ordered list of characters from preloaded element_characters.
   """
   def characters(%__MODULE__{element_characters: ecs}) when is_list(ecs) do
@@ -111,7 +148,33 @@ defmodule Playcode.PlayContent.Element do
     )
     |> validate_stage_markers()
     |> validate_aside_markers()
+    |> validate_folio_markers()
     |> validate_number_markers()
+  end
+
+  # A Folio marker (InlineMarkup) is sound or refused, in the text of a line, a paragraph
+  # or a stage direction, or a speech's speaker label: printed anywhere else it would show
+  # its tags, and the export could not write it back.
+  defp validate_folio_markers(changeset) do
+    Enum.reduce(
+      [content: ~w(verse_line prose stage_direction), speaker_label: ~w(speech)],
+      changeset,
+      fn {field, types}, changeset ->
+        text = get_field(changeset, field)
+
+        cond do
+          not String.contains?(text || "", ["<folio", "</folio>"]) ->
+            changeset
+
+          get_field(changeset, :type) in types and
+              InlineMarkup.folios_well_formed?(text) ->
+            changeset
+
+          true ->
+            add_error(changeset, field, "has a Folio marker that is not well formed")
+        end
+      end
+    )
   end
 
   # An aside marker, like a stage, is sound or refused, and only a line or a paragraph

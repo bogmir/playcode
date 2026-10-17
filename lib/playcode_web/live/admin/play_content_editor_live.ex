@@ -2032,6 +2032,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             divisions={@preview_divisions}
             show_line_numbers={true}
             show_stage_directions={true}
+            show_folio={true}
           />
         </div>
       </div>
@@ -2874,6 +2875,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             <span class="label-text font-medium">{gettext("Speaker Label")}</span>
           </label>
           <.input field={@form[:speaker_label]} type="text" placeholder={gettext("e.g. ANA")} />
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext("Words only the Folio prints: <folio>…</folio>")}
+          </p>
         </div>
         <div class="mb-4">
           <label class="label">
@@ -2951,6 +2955,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             rows="3"
             placeholder={gettext("Stage direction text...")}
           />
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext("Words only the Folio prints: <folio>…</folio>")}
+          </p>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -2990,6 +2997,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           {gettext("Words spoken aside: <aside>…</aside>")}
         </p>
         <p class="mt-1 text-xs text-base-content/70">
+          {gettext("Words only the Folio prints: <folio>…</folio>")}
+        </p>
+        <p class="mt-1 text-xs text-base-content/70">
           {gettext("Number of a printed line in the text: <lb n=\"1320\"/>")}
         </p>
       </div>
@@ -3019,6 +3029,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           </p>
           <p class="mt-1 text-xs text-base-content/70">
             {gettext("Words spoken aside: <aside>…</aside>")}
+          </p>
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext("Words only the Folio prints: <folio>…</folio>")}
           </p>
         </div>
         <div class="grid grid-cols-2 gap-4">

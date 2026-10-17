@@ -317,4 +317,86 @@ defmodule Playcode.PlayContentTest do
       assert %{content: [^message]} = errors_on(changeset)
     end
   end
+
+  describe "a Folio marker in an element's text" do
+    setup do
+      %{play: play, scene: scene, line_group: line_group} =
+        TestFixtures.play_with_structure_fixture()
+
+      attrs = fn content ->
+        %{
+          play_id: play.id,
+          division_id: scene.id,
+          parent_id: line_group.id,
+          type: "verse_line",
+          content: content,
+          position: 9
+        }
+      end
+
+      %{attrs: attrs}
+    end
+
+    test "is kept in a line, a paragraph, a stage direction and a speaker label",
+         %{attrs: attrs} do
+      for {type, field, text} <- [
+            {"verse_line", :content, "O God, <folio>O</folio> God,"},
+            {"prose", :content, ~s(<lb n="1288"/><folio part="M">Prison, my lord?</folio>)},
+            {"stage_direction", :content, ~s(her. <folio part="I">She kneels</folio>)},
+            {"speech", :speaker_label, ~s(<folio part="I">hamlet</folio>)}
+          ] do
+        assert {:ok, element} =
+                 attrs.(nil)
+                 |> Map.merge(%{type: type})
+                 |> Map.put(field, text)
+                 |> PlayContent.create_element()
+
+        assert Map.fetch!(element, field) == text
+      end
+    end
+
+    test "may sit inside an aside, which it makes an aside of the line", %{attrs: attrs} do
+      content = "<aside>O God, <folio>O</folio></aside> God,"
+
+      assert {:ok, %{content: ^content, is_aside: true}} =
+               PlayContent.create_element(attrs.(content))
+    end
+
+    test "is refused when it is not sound, or not where a passage can stand",
+         %{attrs: attrs} do
+      message = "has a Folio marker that is not well formed"
+
+      for content <- [
+            "<folio>sin cerrar",
+            "a</folio>b",
+            "<folio></folio>",
+            "<folio> </folio>",
+            ~s(a <folio><lb n="1"/></folio> b),
+            "a <folio><<>></folio> b",
+            "<folio>a <folio>b</folio></folio>",
+            ~s(<folio part="X">a</folio>),
+            "<<a <folio>b>></folio>",
+            "<stage>(a <folio>b</folio>)</stage>",
+            "<folio>a <aside>b</aside></folio>",
+            ~s(<folio part="I">a</folio> b),
+            ~s(a <folio part="F">b</folio>),
+            ~s(a <folio part="M">b</folio>)
+          ] do
+        assert {:error, changeset} = PlayContent.create_element(attrs.(content))
+        assert %{content: [^message]} = errors_on(changeset), content
+      end
+
+      assert {:error, changeset} =
+               PlayContent.create_element(%{attrs.("<folio>Vase</folio>") | type: "trailer"})
+
+      assert %{content: [^message]} = errors_on(changeset)
+
+      assert {:error, changeset} =
+               attrs.(nil)
+               |> Map.merge(%{type: "speech", speaker_label: "<folio>hamlet"})
+               |> PlayContent.create_element()
+
+      assert %{speaker_label: [^message]} = errors_on(changeset)
+    end
+  end
 end
