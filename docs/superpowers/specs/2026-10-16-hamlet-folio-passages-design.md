@@ -1,6 +1,12 @@
 # Hamlet's Folio passages: design
 
-Status: designed 2026-10-16, from the project's answers to questions 5 (hidden, with a switch
+Status: implemented 2026-10-16 to 2026-10-17 (commits 8f11454, 03a4932 the marker; 3ed177c, acf9815 a passage inside one element;
+2be2088, a111e47, ae54006 passages across elements, and v. 2632; 6d04562, 025a022 the play page; b8de76e, 64594b6 the site;
+0963c94, 348952a the downloads; then the editor's hint and the docs). One departure: the design counts v. 2632 among the 6
+passages in a stage direction, but it sits inside an inline stage direction in a paragraph, and is stored and written back as
+three stages (`docs/backlog.md`).
+
+Designed 2026-10-16, from the project's answers to questions 5 (hidden, with a switch
 showing them in grey, as before) and 36 (the proposed `<app type="folio">`, yes for now) of
 `docs/stakeholder/preguntas.html`. Question 37, the form of a passage that crosses elements,
 is still open; this design writes those back in the file's own form until it is settled. The

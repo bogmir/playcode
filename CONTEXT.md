@@ -64,6 +64,14 @@ three ordinary notes.
 _Avoid_: apparatus note, textual note, note (a note glosses a word; a variant lists what the
 witnesses read)
 
+**Folio passage**:
+Words only the 1623 Folio prints, in Hamlet, whose base text is the Second Quarto. Kept as
+a `<folio>…</folio>` marker in the text it sits in (a TEI `<app type="folio">`), hidden from
+readers by default and shown in grey, between small F's, by a "Folio interpolations" switch
+that is not the variants'. Not a variant, which lists what several witnesses read at one place.
+_Avoid_: Folio interpolation (the switch's own label), Folio-only text, addition (the Q4
+Additions of *The Spanish Tragedy* are another thing)
+
 **Reading**:
 What one witness, or several together, give at a variant: the witnesses' sigla, the text
 they read and, if the editor has one, a comment on it. A variant has one or more.
