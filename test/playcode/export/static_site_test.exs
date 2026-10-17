@@ -200,6 +200,23 @@ defmodule Playcode.Export.StaticSiteTest do
     refute "../#{unpublished.code}/index.html" in hrefs(page)
   end
 
+  # Question 15: an adaptation says so; every derived play used to say "Translation of".
+  test "a derived play's title page names its kind and the play it comes from" do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    dir = generate!([original, translation, adaptation])
+
+    assert "Adaptation of #{original.title}" in texts(title_page(dir, adaptation), "p")
+    assert "Translation of #{original.title}" in texts(title_page(dir, translation), "p")
+  end
+
   test "adding or removing a translation updates its original's title page" do
     %{original: original, translation: translation} = translation_family_fixture()
     dir = generate!([original])

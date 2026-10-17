@@ -84,3 +84,11 @@ test('a line is looked up in the chunk the build wrote it to', () => {
   assert.equal(S.chunkKey('EMOTHE0001', S.NOTE_BASE + 99), 'EMOTHE0001/n0');
   assert.equal(S.chunkKey('EMOTHE0001', S.NOTE_BASE + 100), 'EMOTHE0001/n1');
 });
+
+// Question 15: each kind by its own name; every non-original used to be a translation.
+test('the Kind facet names each kind', () => {
+  assert.equal(S.kindLabel('original'), 'Originals');
+  assert.equal(S.kindLabel('translation'), 'Translations');
+  assert.equal(S.kindLabel('adaptation'), 'Adaptations');
+  assert.equal(S.kindLabel('version'), 'Versions');
+});

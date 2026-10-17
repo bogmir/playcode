@@ -89,6 +89,28 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert text =~ "la vida es sueño"
   end
 
+  # Question 15: each kind by its own name. Every non-original used to be a translation.
+  test "an adaptation is called one in its entry, its tag and the Kind facet" do
+    original = play_fixture(%{"is_complete" => true, "title" => "La verdad sospechosa"})
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "title" => "Le Menteur",
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    # With no original in the site, it heads an entry of its own, which carries the tag.
+    alone = play_fixture(%{"is_complete" => true, "relationship_type" => "adaptacion"})
+    index = html!(generate!([original, adaptation, alone]), "index.html")
+
+    kinds = index |> LazyHTML.query("[data-play]") |> LazyHTML.attribute("data-kind")
+    assert Enum.sort(kinds) == ["adaptation", "adaptation", "original"]
+    assert "Adaptations 2" in texts(index, "[data-facets] label")
+    assert "adaptation" in texts(index, "[data-play] .tag")
+  end
+
   test "titles and authors are escaped" do
     play = play_fixture(%{"is_complete" => true, "title" => "Tom & <Jerry>"})
 

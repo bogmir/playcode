@@ -615,7 +615,10 @@ defmodule Playcode.Export.StaticSite do
       {"kind", "Kind",
        options(plays, &Components.kind/1, %{
          "original" => "Originals",
-         "translation" => "Translations"
+         "translation" => "Translations",
+         "adaptation" => "Adaptations",
+         "refundicion" => "Refundiciones",
+         "version" => "Versions"
        })},
       {"coll", "Collection",
        options(plays, &Components.collection/1, %{"EMOTHE" => "EMOTHE", "ARTELOPE" => "ARTELOPE"})}

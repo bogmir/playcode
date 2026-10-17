@@ -228,7 +228,8 @@ defmodule Playcode.Export.StaticSite.Components do
     <section :if={@original || @translations != []}>
       <h2>Work family</h2>
       <p :if={@original}>
-        Translation of <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
+        {String.capitalize(kind_name(kind(@play)))} of
+        <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
       </p>
       <ul :if={@translations != []}>
         <li :for={translation <- @translations}>
@@ -990,8 +991,19 @@ defmodule Playcode.Export.StaticSite.Components do
     do:
       if(i > 0 and Enum.at(columns, i - 1)["act"] != Enum.at(columns, i)["act"], do: "act-start")
 
-  def kind(%{relationship_type: nil}), do: "original"
-  def kind(_play), do: "translation"
+  @kinds %{
+    "traduccion" => "translation",
+    "adaptacion" => "adaptation",
+    "refundicion" => "refundicion",
+    "version" => "version"
+  }
+
+  @doc "The site's word for a play's kind: original, translation, adaptation, refundicion or version."
+  def kind(%{relationship_type: type}), do: Map.get(@kinds, type, "original")
+
+  @doc ~s(A kind in a sentence: "adaptation", "refundición".)
+  def kind_name("refundicion"), do: "refundición"
+  def kind_name(kind), do: kind
 
   def collection(%{code: "AL" <> _}), do: "ARTELOPE"
   def collection(_play), do: "EMOTHE"
@@ -1019,7 +1031,7 @@ defmodule Playcode.Export.StaticSite.Components do
         {@play.title}
       </a>
       <span class="code">{@play.code}</span>
-      <span :if={@lead and kind(@play) == "translation"} class="tag">translation</span>
+      <span :if={@lead and kind(@play) != "original"} class="tag">{kind_name(kind(@play))}</span>
       <span class="meta">{entry_meta(@play)}</span>
       <span :if={@lead} class="author">{@play.author_name}</span>
     </div>
