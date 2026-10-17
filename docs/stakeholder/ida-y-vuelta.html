@@ -829,7 +829,6 @@
       <table class="homes">
         <thead><tr><th scope="col">Part of the play</th><th scope="col">Kept today in</th><th scope="col">Proposed TEI home</th></tr></thead>
         <tbody>
-          <tr><th scope="row">An adaptation or a <i>refundición</i></th><td data-label="Kept today in">Playcode</td><td data-label="Proposed TEI home"><code>title type="adaptacion"</code>, <code>"refundicion"</code>, as <code>"traduccion"</code> is today</td></tr>
           <tr><th scope="row">Verse, prose or mixed</th><td data-label="Kept today in">The files, on <code>extent</code>, which Playcode does not read; Playcode, when set by hand</td><td data-label="Proposed TEI home"><code>extent ana="verso"</code>, <code>"prosa"</code> or <code>"versoprosa"</code>, as the files do now; or the TEI’s own classification, <code>textClass/catRef</code>, beside the CDU number: <a href="preguntas.html#t-form">question 22</a></td></tr>
           <tr><th scope="row">A cast list per act or part</th><td data-label="Kept today in">The TEI files only: Playcode does not record which list a character is in</td><td data-label="Proposed TEI home">one <code>div type="elenco"/castList</code> per list, once Playcode keeps the link</td></tr>
           <tr><th scope="row">Historical performances</th><td data-label="Kept today in">FileMaker</td><td data-label="Proposed TEI home"><code>front/performance</code>, the cast as <code>castList/castItem/actor</code>, the source as a <code>bibl</code></td></tr>
@@ -844,7 +843,7 @@
   <section aria-labelledby="h-next">
     <h2 id="h-next">What happens next</h2>
     <ol class="next">
-      <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: the kind of an adaptation or a <i>refundición</i> and a play’s several cast lists. The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
+      <li><strong>Write the rest into the file</strong>, as proposed in <a href="#h-tei">Into the TEI</a>: a play’s several cast lists (the kind of an adaptation or a <i>refundición</i> has been written as the main title’s <code>type</code> since 18 October 2026). The parts still to come from FileMaker (performances, genre, places) go into the file from the start.</li>
       <li><strong>An automated check</strong> that exports a play with every part filled in, imports it into an empty Playcode and compares, so that nothing added later can be lost the same way.</li>
     </ol>
     <p class="note">Neither needs a decision from the team. The parts not in Playcode yet, at the end of the table, are projects of their own: the HTML in the text, the performances, the form, verse or prose, and what the downloads print wait on the team’s answers in the <a href="preguntas.html">questions for the project</a>, and the genre on FileMaker’s genre table.</p>
