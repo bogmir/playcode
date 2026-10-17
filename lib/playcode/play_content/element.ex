@@ -167,7 +167,7 @@ defmodule Playcode.PlayContent.Element do
             changeset
 
           get_field(changeset, :type) in types and
-              Playcode.PlayContent.InlineMarkup.folios_well_formed?(text) ->
+              InlineMarkup.folios_well_formed?(text) ->
             changeset
 
           true ->

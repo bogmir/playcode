@@ -371,6 +371,8 @@ defmodule Playcode.PlayContentTest do
             "a</folio>b",
             "<folio></folio>",
             "<folio> </folio>",
+            ~s(a <folio><lb n="1"/></folio> b),
+            "a <folio><<>></folio> b",
             "<folio>a <folio>b</folio></folio>",
             ~s(<folio part="X">a</folio>),
             "<<a <folio>b>></folio>",

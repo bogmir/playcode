@@ -307,12 +307,16 @@ defmodule Playcode.PlayContent.InlineMarkup do
     edges = String.trim(edges)
 
     not (String.contains?(without_folios, ["<folio", "</folio>"]) or
+           Enum.any?(Regex.scan(@folio, text), &wordless?/1) or
            Regex.match?(~r/<<(?:(?!>>).)*?<\/?folio/s, text) or
            Regex.match?(~r/<stage[^>]*>(?:(?!<\/stage>).)*?<\/?folio/s, text) or
            Regex.match?(~r/<folio[^>]*>(?:(?!<\/folio>).)*?<\/?aside>/s, text) or
            Regex.match?(~r/<folio part="[IM]">(?:(?!<\/folio>).)*<\/folio>\s*\S/s, edges) or
            Regex.match?(~r/\S\s*<folio part="[MF]">/s, edges))
   end
+
+  # A passage whose markers hold nothing but tags: a printed line's number, empty italics.
+  defp wordless?([_whole, _part, words]), do: words |> plain() |> String.trim() == ""
 
   @doc "True when every `<lb` in `text` is a well-formed number marker."
   def numbers_well_formed?(nil), do: true
