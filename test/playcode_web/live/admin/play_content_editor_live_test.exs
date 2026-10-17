@@ -420,6 +420,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
              )
 
       assert has_element?(lv, "#element-form", t("Words spoken aside: <aside>…</aside>"))
+      assert has_element?(lv, "#element-form", t("Words only the Folio prints: <folio>…</folio>"))
     end
 
     test "one typed into a line is a <stage> in the exported line", %{conn: conn, play: play} do

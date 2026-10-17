@@ -2991,6 +2991,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           {gettext("Words spoken aside: <aside>…</aside>")}
         </p>
         <p class="mt-1 text-xs text-base-content/70">
+          {gettext("Words only the Folio prints: <folio>…</folio>")}
+        </p>
+        <p class="mt-1 text-xs text-base-content/70">
           {gettext("Number of a printed line in the text: <lb n=\"1320\"/>")}
         </p>
       </div>
@@ -3020,6 +3023,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           </p>
           <p class="mt-1 text-xs text-base-content/70">
             {gettext("Words spoken aside: <aside>…</aside>")}
+          </p>
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext("Words only the Folio prints: <folio>…</folio>")}
           </p>
         </div>
         <div class="grid grid-cols-2 gap-4">
