@@ -312,12 +312,6 @@ defmodule PlaycodeWeb.Layouts do
            to: "/admin/places",
            icon: "hero-map-pin-micro",
            action: :manage_places
-         },
-         %{
-           label: gettext("FileMaker"),
-           to: "/admin/filemaker",
-           icon: "hero-circle-stack-micro",
-           action: :import_filemaker
          }
        ]},
       {gettext("Site"),

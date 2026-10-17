@@ -192,7 +192,9 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   `UserAuth.require_permission/2`.
 - **Researchers** get every content action (plays, content, editors, sources, import, export
   download, archive). **Admins** additionally get purge, user management, activity log, site
-  deploy, the dashboard and the FileMaker sync (`:import_filemaker`).
+  deploy and the dashboard. The FileMaker imports run from the backend (mix tasks, and
+  `Playcode.Release` on Fly); the `/admin/filemaker` upload page was removed on 2026-10-18,
+  its S1/S2 sync done.
 - **A draft (`is_complete: false`) is for staff only.** `/plays/:code`, its compare page and
   `/export/:id/*` pass `complete: not can?(user, :view_drafts)` to the Catalogue read, so a
   visitor gets a 404 and staff keep the preview the admin pages link to. Related plays
@@ -230,6 +232,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note; words with no year are a note alone); read on first import only, since the columns are `@platform_owned`
 - `teiHeader/profileDesc/settingDesc/setting/time` -> historical time (`@type` the period, the text its note), beside the place links in the same `setting`; first import only, like the dating
 - `teiHeader/fileDesc/notesStmt/note` -> `plays.edition_notes`, one text per note, `<lb/>` a line break; on every import, like the title. In the play form and the file only: emothe.uv.es shows none, and readers seeing them waits on question 26
+- `teiHeader/fileDesc/titleStmt/title[@type]` `traduccion`, `adaptacion`, `refundicion` or `version` -> the main title, and its type the play's `relationship_type` (first import only, `@platform_owned`); written back as the main title's `type`. `version` is kept as a kind until question 40 is answered
 - `teiHeader/fileDesc/notesStmt/relatedItem[@type="original"]/@target` -> the original's short code; a first import links the two whichever arrives first (`Catalogue.link_waiting_translations/0`), and never replaces an original already set
 - `teiHeader/profileDesc/textClass/classCode[@scheme="#CDU"]` <- written from the language (with `encodingDesc/classDecl/taxonomy[@xml:id="CDU"]`), never read: the CDU number follows the language one for one, and Portuguese has none
 - `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading; `castItem/actor` -> `characters.actor`, the original cast, edited in the content editor and printed nowhere, as on emothe.uv.es (question 28)
@@ -336,7 +339,9 @@ mix playcode.import.filemaker --force     # also overwrite curated conflicts
 ```
 
 The derived fields (`language`, `relationship_type`, `parent_play_id`) overwrite unconditionally —
-the index is authoritative. The curated fields (`historical_time`, `historical_time_note`) are
+the index is authoritative — but for what it cannot say: it knows only originals and translations, so
+an adaptation, refundición or version keeps its kind and its original (filled when it has none), and
+the families question 15 corrected stay so (`FilemakerSync`'s `@corrected_originals`). The curated fields (`historical_time`, `historical_time_note`) are
 fill-only: written when blank, reported as a conflict when they differ, overwritten only under
 `--force`.
 

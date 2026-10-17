@@ -200,6 +200,60 @@ defmodule Playcode.Export.StaticSiteTest do
     refute "../#{unpublished.code}/index.html" in hrefs(page)
   end
 
+  # Question 15: an adaptation says so; every derived play used to say "Translation of".
+  test "a derived play's title page names its kind and the play it comes from" do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    dir = generate!([original, translation, adaptation])
+
+    assert "Adaptation of #{original.title}" in texts(title_page(dir, adaptation), "p")
+    assert "Translation of #{original.title}" in texts(title_page(dir, translation), "p")
+  end
+
+  # The family list said only each play's language: an adaptation read as a translation.
+  test "an original's title page says what kind of play each of its family is" do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "title" => "Le Menteur",
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    roles = texts(title_page(generate!([original, translation, adaptation]), original), ".role")
+
+    assert Enum.any?(roles, &(&1 =~ "adaptation"))
+    assert Enum.any?(roles, &(&1 =~ "translation"))
+  end
+
+  # A kind added to Play.relationship_types/0 needs a word on the site, or kind/1 raises.
+  test "every kind a play can have has the site's word for it" do
+    for type <- Playcode.Catalogue.Play.relationship_types() do
+      refute StaticSite.Components.kind(%{relationship_type: type}) == "original", type
+    end
+  end
+
+  # FileMaker linked some plays with no kind (the Faustus B-text under the A-text): the
+  # play page names no relation for them, and "Original of" would be false.
+  test "a play linked with no kind names no relation to the other" do
+    original = play_fixture(%{"is_complete" => true})
+    linked = play_fixture(%{"is_complete" => true, "parent_play_id" => original.id})
+
+    refute Enum.any?(
+             texts(title_page(generate!([original, linked]), linked), "p"),
+             &String.ends_with?(&1, " of #{original.title}")
+           )
+  end
+
   test "adding or removing a translation updates its original's title page" do
     %{original: original, translation: translation} = translation_family_fixture()
     dir = generate!([original])

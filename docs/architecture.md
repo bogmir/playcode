@@ -131,7 +131,6 @@ lib/
 - `GET /admin/export/download-zip` - Download generated static site as .zip (`:deploy_site`)
 - `GET /admin/export/preview/*path` - Browse the built `_site/` before downloading or deploying; redirects to `/admin/export` when nothing is built (`:deploy_site`)
 - `GET /admin/dashboard` - LiveDashboard (`:view_dashboard`)
-- `GET /admin/filemaker` - Sync the FileMaker export: upload, preview the diff, apply (`:import_filemaker`)
 - `GET /admin/places` - Corpus-global gazetteer: places, their names, hierarchy and authority links (`:manage_places`)
 - `GET /admin/plays/:id/places` - The play's place index: role, order, notes (`:manage_places`)
 - `GET /admin/plays/:id/notes` - A play's in-text notes in reading order: filter by type, words or no term; edit type, word, term and text in place; delete; open the line in Content (`?element=`/`?division=` opens its modal), where notes are added (`:edit_content`)

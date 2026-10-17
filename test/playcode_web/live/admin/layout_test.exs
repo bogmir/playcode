@@ -4,7 +4,7 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
   import Phoenix.LiveViewTest
   import Playcode.TestFixtures
 
-  @admin_only ~w(/admin/filemaker /admin/export /admin/activity-log /admin/users /admin/dashboard)
+  @admin_only ~w(/admin/export /admin/activity-log /admin/users /admin/dashboard)
 
   defp sidebar_links?(lv, paths), do: Enum.map(paths, &has_element?(lv, "aside a[href='#{&1}']"))
 

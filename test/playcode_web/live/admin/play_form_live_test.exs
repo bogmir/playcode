@@ -87,6 +87,17 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     assert Catalogue.get_play!(play.id).title == "Updated Title"
   end
 
+  # Question 40: what three files call a version is kept as a kind until the project says
+  # what it is; then a curator changes it here.
+  test "a play's kind can be set to a version", %{conn: conn} do
+    play = play_fixture()
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+    save(view, %{"relationship_type" => "version"})
+
+    assert Catalogue.get_play!(play.id).relationship_type == "version"
+  end
+
   test "a play's form can be set by hand, and later edits to its text keep it",
        %{conn: conn} do
     %{play: play, line_group: line_group, scene: scene} = play_with_structure_fixture()

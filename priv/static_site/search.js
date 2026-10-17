@@ -96,6 +96,10 @@
     return out;
   };
 
+  // The Kind facet's names, by the kind the index gives a play (StaticSite.Components.kind/1).
+  var KINDS = { original: 'Originals', translation: 'Translations', adaptation: 'Adaptations', refundicion: 'Refundiciones', version: 'Versions' };
+  S.kindLabel = function (kind) { return KINDS[kind] || kind; };
+
   if (!root.document) return;
 
   var FIRST_PLAYS = 10, FIRST_LINES = 5;
@@ -104,7 +108,7 @@
   var FACETS = [
     ['language', 'Language', function (play) { return play.language_name; }],
     ['author', 'Author', function (play) { return play.author || '—'; }],
-    ['kind', 'Kind', function (play) { return play.kind === 'original' ? 'Originals' : 'Translations'; }],
+    ['kind', 'Kind', function (play) { return S.kindLabel(play.kind); }],
     ['type', 'Text', function (play, kind) { return TYPES[kind]; }]
   ];
 
@@ -267,7 +271,8 @@
     link.href = 'plays/' + play.code + '/index.html';
     heading.appendChild(link);
     section.appendChild(heading);
-    var meta = [play.author, play.kind === 'translation' ? 'translation' : null, total + (total === 1 ? ' line' : ' lines')];
+    var kind = play.kind === 'original' ? null : play.kind === 'refundicion' ? 'refundición' : play.kind;
+    var meta = [play.author, kind, total + (total === 1 ? ' line' : ' lines')];
     section.appendChild(el('p', 'group-meta', meta.filter(Boolean).join(' · ')));
     var list = el('ol', 'hits');
     lines.forEach(function (l) {

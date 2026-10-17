@@ -89,6 +89,59 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert text =~ "la vida es sueño"
   end
 
+  # Question 15: each kind by its own name. Every non-original used to be a translation.
+  test "an adaptation is called one in its entry, its tag and the Kind facet" do
+    original = play_fixture(%{"is_complete" => true, "title" => "La verdad sospechosa"})
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "title" => "Le Menteur",
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    # With no original in the site, it heads an entry of its own, which carries the tag.
+    alone = play_fixture(%{"is_complete" => true, "relationship_type" => "adaptacion"})
+    index = html!(generate!([original, adaptation, alone]), "index.html")
+
+    kinds = index |> LazyHTML.query("[data-play]") |> LazyHTML.attribute("data-kind")
+    assert Enum.sort(kinds) == ["adaptation", "adaptation", "original"]
+    assert "Adaptations 2" in texts(index, "[data-facets] label")
+    assert "adaptation" in texts(index, "[data-play] .tag")
+  end
+
+  # Under its original, an entry used to say only its language: an adaptation read as one
+  # more translation.
+  test "an entry under its original says what kind of play it is" do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    adaptation =
+      play_fixture(%{
+        "is_complete" => true,
+        "parent_play_id" => original.id,
+        "relationship_type" => "adaptacion"
+      })
+
+    index = html!(generate!([original, translation, adaptation]), "index.html")
+    # Each entry's tags, by the play its title links.
+    entries =
+      for entry <- LazyHTML.query(index, "[data-play]"),
+          do:
+            {entry |> LazyHTML.query("a") |> LazyHTML.attribute("href") |> hd(),
+             texts(entry, ".tag")}
+
+    tags = fn play ->
+      Enum.find_value(entries, fn {href, tags} ->
+        String.contains?(href, "#{play.code}/") && tags
+      end)
+    end
+
+    assert "adaptation" in tags.(adaptation)
+    assert "translation" in tags.(translation)
+    refute "translation" in tags.(original)
+  end
+
   test "titles and authors are escaped" do
     play = play_fixture(%{"is_complete" => true, "title" => "Tom & <Jerry>"})
 

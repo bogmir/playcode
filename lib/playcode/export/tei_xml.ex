@@ -103,9 +103,8 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp build_title_stmt(play) do
-    # Main title — use type="traduccion" if this is a translation
-    main_title_attrs =
-      if play.relationship_type == "traduccion", do: %{type: "traduccion"}, else: %{}
+    # The main title's type is the kind of play: traduccion, adaptacion, refundicion, version
+    main_title_attrs = if play.relationship_type, do: %{type: play.relationship_type}, else: %{}
 
     titles = [element(:title, main_title_attrs, play.title)]
 

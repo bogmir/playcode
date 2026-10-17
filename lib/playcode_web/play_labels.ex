@@ -251,6 +251,18 @@ defmodule PlaycodeWeb.PlayLabels do
   def verse_family_label("italianate"), do: gettext("Italianate")
   def verse_family_label(_other), do: gettext("Other")
 
+  @doc "The name of a kind of play made from another (`Play.relationship_types/0`)."
+  def relationship_type_label("traduccion"), do: gettext("Translation")
+  def relationship_type_label("adaptacion"), do: gettext("Adaptation")
+  def relationship_type_label("refundicion"), do: gettext("Reworking")
+  def relationship_type_label("version"), do: gettext("Version")
+
+  @doc "The kinds for the play form's select, an original first."
+  def relationship_type_options do
+    [{gettext("— (Original / standalone)"), ""}] ++
+      Enum.map(Play.relationship_types(), &{relationship_type_label(&1), &1})
+  end
+
   @doc "The singular name of an act division type; an unknown one as stored."
   def act_label("acto"), do: gettext("Acto")
   def act_label("jornada"), do: gettext("Jornada")

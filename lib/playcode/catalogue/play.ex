@@ -7,8 +7,9 @@ defmodule Playcode.Catalogue.Play do
   `<idno type="EMOTHE">`, not the application.
 
   Plays form families. An original has a nil `relationship_type`. A translation,
-  adaptation or reworking (`traduccion`, `adaptacion`, `refundicion`) points at it
-  through `parent_play_id`. A TEI file names the original by its `short_code/1`; while no
+  adaptation or reworking (`relationship_types/0`) points at it through
+  `parent_play_id`; `version` is what three files call their play, kept until question
+  40 says whether it is a kind. A TEI file names the original by its `short_code/1`; while no
   play has that code, `pending_original_code` holds it, and
   `Catalogue.link_waiting_translations/0` links the two when the original arrives.
 
@@ -168,6 +169,15 @@ defmodule Playcode.Catalogue.Play do
 
   def composition_year_range, do: @composition_year_range
 
+  @relationship_types ~w(traduccion adaptacion refundicion version)
+
+  @doc """
+  The kinds of play made from another, as a TEI file's main title names them
+  (`<title type="adaptacion">`): the values of `relationship_type`. `version` is kept until
+  question 40 says whether it is one.
+  """
+  def relationship_types, do: @relationship_types
+
   def changeset(play, attrs) do
     play
     |> cast(attrs, [
@@ -210,7 +220,7 @@ defmodule Playcode.Catalogue.Play do
     |> validate_required([:title, :code])
     |> validate_inclusion(:language, @valid_languages)
     |> validate_number(:verse_count, greater_than_or_equal_to: 0)
-    |> validate_inclusion(:relationship_type, ~w(traduccion adaptacion refundicion))
+    |> validate_inclusion(:relationship_type, @relationship_types)
     |> validate_inclusion(:form, @forms)
     |> validate_inclusion(:historical_time, @historical_times)
     |> validate_number(:composition_date_from,

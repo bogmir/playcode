@@ -218,22 +218,28 @@ defmodule Playcode.Export.StaticSite.Components do
   def family(assigns) do
     published? = &(&1 && MapSet.member?(assigns.published, &1.code))
 
+    # A play linked with no kind (FileMaker linked a few) names no relation, as the play
+    # page does: "Original of" would be false.
+    named? = kind(assigns.play) != "original"
+
     assigns =
       assign(assigns,
-        original: if(published?.(assigns.play.parent_play), do: assigns.play.parent_play),
-        translations: Enum.filter(assigns.play.derived_plays, published?)
+        original:
+          if(named? and published?.(assigns.play.parent_play), do: assigns.play.parent_play),
+        derived: Enum.filter(assigns.play.derived_plays, published?)
       )
 
     ~H"""
-    <section :if={@original || @translations != []}>
+    <section :if={@original || @derived != []}>
       <h2>Work family</h2>
       <p :if={@original}>
-        Translation of <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
+        {String.capitalize(kind_name(kind(@play)))} of
+        <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
       </p>
-      <ul :if={@translations != []}>
-        <li :for={translation <- @translations}>
-          <a href={"../#{translation.code}/index.html"}><cite>{translation.title}</cite></a>
-          <span class="role">{Play.language_name(translation.language)}</span>
+      <ul :if={@derived != []}>
+        <li :for={play <- @derived}>
+          <a href={"../#{play.code}/index.html"}><cite>{play.title}</cite></a>
+          <span class="role">{family_role(play)}</span>
         </li>
       </ul>
     </section>
@@ -990,8 +996,30 @@ defmodule Playcode.Export.StaticSite.Components do
     do:
       if(i > 0 and Enum.at(columns, i - 1)["act"] != Enum.at(columns, i)["act"], do: "act-start")
 
+  # The site's English word for each of Play.relationship_types/0.
+  @kinds %{
+    "traduccion" => "translation",
+    "adaptacion" => "adaptation",
+    "refundicion" => "refundicion",
+    "version" => "version"
+  }
+
+  @doc "The site's word for a play's kind: original, translation, adaptation, refundicion or version."
   def kind(%{relationship_type: nil}), do: "original"
-  def kind(_play), do: "translation"
+  def kind(%{relationship_type: type}), do: Map.fetch!(@kinds, type)
+
+  # A play's language in its family list, and its kind when it has one: "Français,
+  # adaptation". FileMaker linked a few plays with no kind.
+  defp family_role(play) do
+    case kind(play) do
+      "original" -> Play.language_name(play.language)
+      kind -> "#{Play.language_name(play.language)}, #{kind_name(kind)}"
+    end
+  end
+
+  @doc ~s(A kind in a sentence: "adaptation", "refundición".)
+  def kind_name("refundicion"), do: "refundición"
+  def kind_name(kind), do: kind
 
   def collection(%{code: "AL" <> _}), do: "ARTELOPE"
   def collection(_play), do: "EMOTHE"
@@ -1019,7 +1047,7 @@ defmodule Playcode.Export.StaticSite.Components do
         {@play.title}
       </a>
       <span class="code">{@play.code}</span>
-      <span :if={@lead and kind(@play) == "translation"} class="tag">translation</span>
+      <span :if={kind(@play) != "original"} class="tag">{kind_name(kind(@play))}</span>
       <span class="meta">{entry_meta(@play)}</span>
       <span :if={@lead} class="author">{@play.author_name}</span>
     </div>

@@ -40,6 +40,23 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
       assert render(view) =~ original.title
     end
 
+    # Question 15 made The Shy Courtier an adaptation; it must still open beside its original.
+    test "auto-includes the parent panel when viewing an adaptation", %{conn: conn} do
+      original = TestFixtures.play_fixture(%{"title" => "El vergonzoso", "is_complete" => true})
+
+      adaptation =
+        TestFixtures.play_fixture(%{
+          "parent_play_id" => original.id,
+          "relationship_type" => "adaptacion",
+          "is_complete" => true
+        })
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{adaptation.code}/compare")
+
+      assert view |> element("[data-panel='panel-1']") |> has_element?()
+      assert render(view) =~ "El vergonzoso"
+    end
+
     test "add_play and remove_panel manage panels", %{conn: conn} do
       %{original: original, translation: translation} = TestFixtures.translation_family_fixture()
 

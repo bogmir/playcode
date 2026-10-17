@@ -403,9 +403,12 @@ defmodule Playcode.Import.TeiParser do
     titles = if title_stmt, do: find_children(elem(title_stmt, 2), "title"), else: []
     authors = if title_stmt, do: find_children(elem(title_stmt, 2), "author"), else: []
 
-    # Title selection: prefer <title type="traduccion">, then first <title> without key/type, then fallback
-    traduccion_title =
-      Enum.find(titles, fn {_, attrs, _} -> attr_value(attrs, "type") == "traduccion" end)
+    # The main title: the one that says what kind of play this is (question 15), else the
+    # first with no key or type, else the first with no key.
+    kind_title =
+      Enum.find(titles, fn {_, attrs, _} ->
+        attr_value(attrs, "type") in Play.relationship_types()
+      end)
 
     plain_title =
       Enum.find(titles, fn {_, attrs, _} ->
@@ -413,7 +416,7 @@ defmodule Playcode.Import.TeiParser do
       end)
 
     main_title =
-      traduccion_title || plain_title ||
+      kind_title || plain_title ||
         Enum.find(titles, fn {_, attrs, _} -> !has_attr?(attrs, "key") end)
 
     sort_title = Enum.find(titles, fn {_, attrs, _} -> attr_value(attrs, "key") == "orden" end)
@@ -425,8 +428,7 @@ defmodule Playcode.Import.TeiParser do
     edition_title_el =
       Enum.find(titles, fn {_, attrs, _} -> attr_value(attrs, "type") == "edicion" end)
 
-    # Determine relationship type from title types
-    relationship_type = if traduccion_title, do: "traduccion", else: nil
+    relationship_type = kind_title && attr_value(elem(kind_title, 1), "type")
 
     # Extract sponsor and funder from titleStmt
     sponsor_el = if title_stmt, do: find_child(elem(title_stmt, 2), "sponsor"), else: nil

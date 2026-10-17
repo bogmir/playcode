@@ -58,11 +58,6 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
   defp page_params("", page), do: [page: page]
   defp page_params(search, page), do: [search: search, page: page]
 
-  defp relationship_label("traduccion"), do: gettext("translation")
-  defp relationship_label("adaptacion"), do: gettext("adaptation")
-  defp relationship_label("refundicion"), do: gettext("refundición")
-  defp relationship_label(_), do: nil
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -124,11 +119,10 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
                 {derived.author_name}
               </span>
             </.link>
-            <span
-              :if={relationship_label(derived.relationship_type)}
-              class="badge badge-ghost badge-xs"
-            >
-              {relationship_label(derived.relationship_type)}
+            <span :if={derived.relationship_type} class="badge badge-ghost badge-xs">
+              {derived.relationship_type
+              |> PlaycodeWeb.PlayLabels.relationship_type_label()
+              |> String.downcase()}
             </span>
             <.export_buttons play={derived} />
           </div>

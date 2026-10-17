@@ -365,12 +365,6 @@ defmodule Playcode.Accounts do
   def protected_admin?(_), do: false
 
   @doc """
-  Returns true if the user has confirmed their email address.
-  """
-  def confirmed?(%User{confirmed_at: confirmed_at}), do: not is_nil(confirmed_at)
-  def confirmed?(_), do: false
-
-  @doc """
   Returns true if the user may log in: confirmed and not deactivated.
   """
   def active?(%User{confirmed_at: confirmed_at, deactivated_at: nil})

@@ -34,13 +34,14 @@ defmodule PlaycodeWeb.PlayComparison do
   end
 
   @doc """
-  Builds the initial panel list for a play. When the play is a translation with a
-  parent, the parent play is prepended as the first (left) panel.
+  Builds the initial panel list for a play. When the play is a translation, adaptation,
+  refundición or version with a parent, the parent play is prepended as the first (left)
+  panel.
   """
   def build_initial_panels(play, family) do
     panels = [build_panel(play)]
 
-    if play.relationship_type == "traduccion" && play.parent_play_id do
+    if play.relationship_type && play.parent_play_id do
       case Enum.find(family, &(&1.id == play.parent_play_id)) do
         nil -> panels
         parent -> [build_panel(Catalogue.get_play_with_all!(parent.id)) | panels]

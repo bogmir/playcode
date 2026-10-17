@@ -20,6 +20,7 @@ defmodule Playcode.Import.TeiParserTest do
     {Playcode.Bibliography.Entry, :pub_type_from_tei, 1},
     {Playcode.Catalogue.Play, :composition_year_range, 0},
     {Playcode.Catalogue.Play, :historical_times, 0},
+    {Playcode.Catalogue.Play, :relationship_types, 0},
     {Playcode.Catalogue.Play, :short_code, 1},
     {Playcode.Catalogue.Play, :valid_languages, 0},
     {Playcode.Places, :slugify, 1},

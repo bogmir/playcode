@@ -339,6 +339,27 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # Question 15: each kind by its own name, as the files call them. 11 files call their play
+  # an adaptation and 3 a version (question 40); only "traduccion" used to be read.
+  describe "the kind of play a title names" do
+    alias Playcode.Catalogue
+
+    for kind <- ~w(adaptacion refundicion version) do
+      test "a #{kind} is read from its title and written back there" do
+        play =
+          import_tei!(tei(title_stmt: ~s(<title type="#{unquote(kind)}">Le Menteur</title>)))
+
+        assert %{relationship_type: unquote(kind), title: "Le Menteur"} =
+                 Catalogue.get_play!(play.id)
+
+        assert {%{"type" => unquote(kind)}, "Le Menteur"} in xml_elements(
+                 export_tei(play),
+                 "title"
+               )
+      end
+    end
+  end
+
   describe "the play a translation translates" do
     alias Playcode.Catalogue
 

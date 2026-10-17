@@ -9,7 +9,8 @@ defmodule Playcode.Import.FilemakerSync do
 
     * **Derived fields** — `language`, `relationship_type`, `parent_play_id`. The
       published index is authoritative, so a difference is an error in our data and
-      gets overwritten.
+      gets overwritten; but the index knows only originals and translations, so an
+      adaptation, refundición or version keeps its kind and its original (question 15).
     * **Curated fields** — `historical_time`, `historical_time_note` and the three
       `composition_date_*` columns. A researcher is expected to edit these in the admin
       form, so the export is a bootstrap: a blank column is filled, a disagreement is
@@ -19,8 +20,8 @@ defmodule Playcode.Import.FilemakerSync do
   and anything the project never published — come back under `:missing`.
 
   A dating the export carries but the parse refused comes back under `:skipped`, which
-  is read-only: `apply_plan/2` ignores it, and unlike a conflict there is nothing to
-  tick, because the whole point is that the value is not fit to write.
+  is read-only: `apply_plan/2` ignores it, even under `force: true`, because the whole
+  point is that the value is not fit to write.
   """
 
   import Ecto.Query
@@ -105,7 +106,6 @@ defmodule Playcode.Import.FilemakerSync do
   disagree with the export. Without it they are left alone.
   """
   def apply_plan(plan, opts \\ []) do
-    user_id = Keyword.get(opts, :user_id)
     force = Keyword.get(opts, :force, false)
 
     plan
@@ -115,8 +115,8 @@ defmodule Playcode.Import.FilemakerSync do
 
       case Catalogue.update_play(play, change.sets) do
         {:ok, updated} ->
+          # No user: the sync runs from the backend, by mix task.
           ActivityLog.log!(%{
-            user_id: user_id,
             play_id: updated.id,
             action: "update",
             resource_type: "play",
@@ -170,11 +170,45 @@ defmodule Playcode.Import.FilemakerSync do
     Map.new(sets, fn {key, value} -> {Atom.to_string(key), value} end)
   end
 
+  # Kinds the index cannot say, since it knows only originals and translations: the
+  # file's word wins (question 15), and so does the original the play is linked to. One
+  # linked to none gets the index's: no source file names its original.
+  @file_kinds Play.relationship_types() -- ["traduccion"]
+
+  # Families the index heads wrongly, since its head is a family's first editor, as
+  # question 15 corrected them: each play's original by short code, nil for an original.
+  # Ford's 'Tis Pity was under Maeterlinck's adaptation of it, Guarini's Il pastor fido
+  # under Calderón's auto, and Las mocedades del Cid under Le Cid, which adapts it.
+  # Migration 20261018100000 made the same corrections to the plays already stored.
+  @corrected_originals %{
+    "EMOTHE0283" => nil,
+    "EMOTHE0284" => "EMOTHE0283",
+    "EMOTHE0317" => "EMOTHE0283",
+    "EMOTHE0404" => "EMOTHE0283",
+    "EMOTHE0006" => nil,
+    "EMOTHE0210" => "EMOTHE0006",
+    "EMOTHE0286" => "EMOTHE0006",
+    "EMOTHE0298" => "EMOTHE0006",
+    "EMOTHE0141" => nil
+  }
+
   defp changes_for(play, version, by_code) do
+    file_kind? = play.relationship_type in @file_kinds
+
     %{
       language: language_for(version),
-      relationship_type: relationship_for(version),
-      parent_play_id: parent_for(version, by_code)
+      relationship_type: if(file_kind?, do: @keep, else: relationship_for(version)),
+      parent_play_id:
+        cond do
+          Map.has_key?(@corrected_originals, version.code) ->
+            original_id(@corrected_originals[version.code], by_code)
+
+          file_kind? and play.parent_play_id ->
+            @keep
+
+          true ->
+            parent_for(version, by_code)
+        end
     }
     |> Enum.reject(fn {_key, value} -> value == @keep end)
     |> Enum.reject(fn {key, value} -> Map.get(play, key) == value end)
@@ -213,7 +247,7 @@ defmodule Playcode.Import.FilemakerSync do
   end
 
   # A dating the parse refused — too wide a span, or a header with no year. Its own
-  # bucket rather than :conflicts, because a conflict is tickable in /admin/filemaker and
+  # bucket rather than :conflicts, because `force: true` overwrites every conflict and
   # force-writing a bad span is exactly what the guard exists to prevent.
   defp skipped_for(%{composition_date_skipped: {reason, value}}, play, code) do
     [%{play_id: play.id, code: code, title: play.title, reason: reason, value: value}]
@@ -231,6 +265,15 @@ defmodule Playcode.Import.FilemakerSync do
   defp relationship_for(%{role: :editor}), do: nil
   defp relationship_for(%{role: :translator}), do: "traduccion"
   defp relationship_for(_version), do: @keep
+
+  defp original_id(nil, _by_code), do: nil
+
+  defp original_id(code, by_code) do
+    case Map.fetch(by_code, code) do
+      {:ok, original} -> original.id
+      :error -> @keep
+    end
+  end
 
   defp parent_for(version, by_code) do
     head = Enum.find(version.family, &(&1.role == :editor))
