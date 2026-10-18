@@ -1,16 +1,18 @@
 defmodule Playcode.CompleteCopyTest do
   @moduledoc """
   The TEI file is a complete copy of a play (`CLAUDE.md`): a play with every part filled
-  in, exported and imported into an empty Playcode, comes back whole.
+  in, exported and imported into an empty Playcode, comes back whole. First an ordinary
+  play, made of what most of the corpus holds; then the encodings only a few plays use,
+  Hamlet's among them.
 
   The fixpoint tests in `tei_roundtrip_test.exs` compare the XML with itself, so a column
-  the export never writes passes them. This one compares the play: it is read back
-  through the contexts' public functions, every column of every row but those in
-  `@dropped`, so a new column joins the comparison without anyone adding it. That reaches
-  past what a TEI consumer observes, on purpose: an export cannot show what it leaves out.
+  the export never writes passes them. These compare the play: it is read back through
+  the contexts' public functions, every column of every row but those in `@dropped`, so
+  a new column joins the comparison without anyone adding it. That reaches past what a
+  TEI consumer observes, on purpose: an export cannot show what it leaves out.
 
-  A new column is written to the file, dropped below with the reason, or listed in
-  `known_gaps/0` with the item of `docs/backlog.md` that will close it.
+  A new column is written to the file, dropped below with the reason, or listed among a
+  test's known gaps with the item of `docs/backlog.md` that will close it.
   """
   use Playcode.DataCase, async: true
 
@@ -35,41 +37,14 @@ defmodule Playcode.CompleteCopyTest do
   # site. Dropped by schema, not by name: every other `note` is the play's.
   @private %{Bibliography.Entry => [:note], Bibliography.Link => [:note]}
 
-  test "a play with every part filled in comes back whole from its TEI file" do
+  test "an ordinary play comes back whole from its TEI file" do
     original = play_fixture(%{"code" => "CCO#{System.unique_integer([:positive])}"})
+    {built, imported} = round_trip(fn -> ordinary_play(original) end)
 
-    # Built in a transaction rolled back, so the import meets an empty Playcode. The
-    # bibliography and the places are shared by the corpus: purging only the play would
-    # leave them for the import to link to instead of reading them from the file. Repo is
-    # reached for directly because no context opens a transaction for a caller.
-    {:error, {built, xml}} =
-      Playcode.Repo.transaction(fn ->
-        play = build_play(original)
-        Playcode.Repo.rollback({snapshot(play.id), export_tei(play)})
-      end)
-
-    assert Places.list_places() == []
-
-    imported = import_tei!(xml)
-
-    expected =
-      Enum.reduce(known_gaps(), built, fn {_item, path, lose}, snapshot ->
-        update_in(snapshot, Enum.map(path, &step/1), lose)
-      end)
-
-    assert differences(expected, snapshot(imported.id)) == []
-  end
-
-  # A list index in a known gap's path; at!/1 raises on an index that is gone, so a gap
-  # whose row has moved fails instead of patching nothing.
-  defp step(index) when is_integer(index), do: Access.at!(index)
-  defp step(key), do: key
-
-  # What the round trip loses today: {the item of docs/backlog.md that closes it, the
-  # path in the snapshot, what the round trip makes of the value there}. Closing a gap
-  # turns the test red until its entry goes.
-  defp known_gaps do
-    [
+    # What the round trip loses today: {the item of docs/backlog.md that closes it, the
+    # path in the snapshot, what the round trip makes of the value there}. Closing a gap
+    # turns the test red until its entry goes.
+    known_gaps = [
       {"Verse, prose or mixed", [:play, :form], fn _form -> nil end},
       # The credits come back in the order of the file's sections: the principal
       # investigator, the title statement's editors, then the statements of responsibility.
@@ -77,19 +52,59 @@ defmodule Playcode.CompleteCopyTest do
        &Enum.sort_by(&1, fn %{role: role} -> credit_section(role) end)},
       {"Italics before punctuation gain a space", [:paratexts, 0, :content],
        &String.replace(&1, ">>,", ">> ,")}
-      # "A second cast list": Playcode cannot hold one yet, so this play has none to lose.
     ]
+
+    assert differences(with_gaps(built, known_gaps), imported) == []
   end
+
+  test "a play encoded as only a few are comes back whole from its TEI file" do
+    # "A second cast list" is the known gap of this kind of play: Playcode cannot hold one
+    # yet, so the play has none to lose.
+    {built, imported} = round_trip(&rare_play/0)
+
+    assert differences(built, imported) == []
+  end
+
+  # Builds a play with `build`, snapshots it, exports it and imports the file into an
+  # empty Playcode. Returns {the play built, the play imported}, as snapshots.
+  defp round_trip(build) do
+    # Built in a transaction rolled back, so the import meets an empty Playcode. The
+    # bibliography and the places are shared by the corpus: purging only the play would
+    # leave them for the import to link to instead of reading them from the file. Repo is
+    # reached for directly because no context opens a transaction for a caller.
+    {:error, {built, xml}} =
+      Playcode.Repo.transaction(fn ->
+        play = build.()
+        Playcode.Repo.rollback({snapshot(play.id), export_tei(play)})
+      end)
+
+    assert Places.list_places() == []
+
+    {built, xml |> import_tei!() |> Map.fetch!(:id) |> snapshot()}
+  end
+
+  defp with_gaps(built, known_gaps) do
+    Enum.reduce(known_gaps, built, fn {_item, path, lose}, snapshot ->
+      update_in(snapshot, Enum.map(path, &step/1), lose)
+    end)
+  end
+
+  # A list index in a known gap's path; at!/1 raises on an index that is gone, so a gap
+  # whose row has moved fails instead of patching nothing.
+  defp step(index) when is_integer(index), do: Access.at!(index)
+  defp step(key), do: key
 
   defp credit_section("principal"), do: 0
   defp credit_section(role) when role in ~w(translator researcher critical_editor), do: 1
   defp credit_section(_role), do: 2
 
-  # --- The play ---
+  # --- The plays ---
 
-  # Every part of a play that the file carries (docs/stakeholder/ida-y-vuelta.html), each
-  # column off its default, built through the contexts as the admin pages build it.
-  defp build_play(original) do
+  # What most of the corpus holds (docs/stakeholder/ida-y-vuelta.html), each column off its
+  # default, built through the contexts as the admin pages build it: a translation with
+  # its credits, source, witnesses and bibliography, a dedication, a cast list, and an act
+  # of verse with its split lines, asides, stage directions and notes.
+  defp ordinary_play(original) do
     {:ok, play} =
       Catalogue.create_play(%{
         title: "La comedia completa",
@@ -121,7 +136,6 @@ defmodule Playcode.CompleteCopyTest do
         composition_date_from: 1605,
         composition_date_to: 1607,
         composition_date_note: "hacia 1606",
-        edition_notes: ["Una nota sobre la edición.", "Otra nota,\nen dos líneas."],
         revisions: [
           %{
             date: "2021",
@@ -133,36 +147,14 @@ defmodule Playcode.CompleteCopyTest do
         ]
       })
 
-    build_credits(play)
-    build_witnesses(play)
-    build_bibliography(play)
-    build_places(play)
-    build_paratexts(play)
-    characters = build_cast(play)
-    build_text(play, characters)
-
-    PlayContent.refresh_derived(play.id)
-    play
-  end
-
-  defp build_credits(play) do
-    for {role, name, organization} <- [
-          {"translator", "Sanderson, John D.", "Universidad de Málaga"},
-          {"critical_editor", "Crítico, Carlos", "Universidad de Valencia"},
-          {"digital_editor", "Amelang, David J.", nil},
-          {"editor", "Editora, Elena", "Laboratorio"},
-          {"reviewer", "Revisor, Raúl", nil},
-          {"principal", "Oleza Simó, Joan", nil},
-          {"researcher", "Investigadora, Inés", "Instituto"}
-        ] do
-      {:ok, _} =
-        Catalogue.create_play_editor(%{
-          play_id: play.id,
-          role: role,
-          person_name: name,
-          organization: organization
-        })
-    end
+    credits!(play, [
+      {"translator", "Sanderson, John D.", "Universidad de Málaga"},
+      {"critical_editor", "Crítico, Carlos", "Universidad de Valencia"},
+      {"digital_editor", "Amelang, David J.", nil},
+      {"editor", "Editora, Elena", "Laboratorio"},
+      {"reviewer", "Revisor, Raúl", nil},
+      {"principal", "Oleza Simó, Joan", nil}
+    ])
 
     {:ok, _} =
       Catalogue.create_play_source(%{
@@ -178,9 +170,142 @@ defmodule Playcode.CompleteCopyTest do
         language: "Español",
         distributor: "Canon 60"
       })
+
+    witnesses!(play)
+    bibliography!(play)
+
+    paratexts!(play, [
+      %{
+        kind: "dedicatoria",
+        heading: "DEDICATORIA",
+        content: "Al <<lector>>,\ncon afecto.\n\nSegundo párrafo."
+      },
+      %{kind: "lugar_accion", heading: "ESCENA:", content: "Un bosque de Venecia."}
+    ])
+
+    [ana, blas, _criado] =
+      cast!(play, [
+        %{xml_id: "ANA", name: "Ana", description: "dama <<joven>>"},
+        %{xml_id: "BLAS", name: "Blas"},
+        %{xml_id: "CRIADO", name: "Criado", is_hidden: true}
+      ])
+
+    {act, scene} = act_and_scene!(play)
+    note!(play, %{division_id: act.id, offset: 4, n: "1", type: "editor", body: "El acto."})
+
+    stage =
+      element!(scene, %{type: "stage_direction", stage_type: "entrance", content: "Salen."})
+
+    note!(play, %{element_id: stage.id, offset: 5, n: "2", type: "autor", body: "Salen."})
+
+    speech = element!(scene, %{type: "speech", speaker_label: "ANA Y BLAS"})
+    PlayContent.set_element_characters(speech.id, [ana.id, blas.id])
+
+    note!(play, %{
+      element_id: speech.id,
+      offset: 3,
+      n: "3",
+      type: "traductor",
+      term: "y",
+      body: "Hablan a la vez.\n\nSegundo párrafo."
+    })
+
+    group = element!(scene, speech, %{type: "line_group", verse_type: "redondilla"})
+
+    verse!(scene, group, %{content: "Uno", line_number: 1, line_id: "cc-0001", part: "I"})
+    verse!(scene, group, %{content: "dos", line_number: 1, line_id: "cc-0002", part: "F"})
+
+    verse!(scene, group, %{
+      content: "tres <stage type=\"business\">Llora.</stage> sigue",
+      line_number: 2,
+      line_id: "cc-0003",
+      rend: "indent"
+    })
+
+    verse!(scene, group, %{content: "cuatro todo aparte", line_number: 3, is_aside: true})
+
+    noted = verse!(scene, group, %{content: "cinco <<en cursiva>>", line_number: 4})
+    note!(play, %{element_id: noted.id, offset: 5, n: "4", type: "editor", body: "Cinco."})
+
+    element!(scene, speech, %{type: "prose", content: "Prosa en una línea,\nen otra."})
+    element!(act, %{type: "trailer", content: "FIN DEL PRIMER ACTO"})
+
+    PlayContent.refresh_derived(play.id)
+    play
   end
 
-  defp build_witnesses(play) do
+  # What only a few plays use: Hamlet's variant readings and Folio passages, the printed
+  # lines of prose, a line partly aside, the original cast, the notes on the edition, a
+  # paratext after the text or a heading alone, the places of the action, and what
+  # Playcode alone holds (a researcher credit, text nobody speaks inside a scene).
+  defp rare_play do
+    {:ok, play} =
+      Catalogue.create_play(%{
+        title: "Una comedia rara",
+        code: "CR#{System.unique_integer([:positive])}",
+        edition_notes: ["Una nota sobre la edición.", "Otra nota,\nen dos líneas."]
+      })
+
+    credits!(play, [{"researcher", "Investigadora, Inés", "Instituto"}])
+    places!(play)
+
+    paratexts!(play, [
+      %{kind: "head_title", heading: "UNA COMEDIA RARA"},
+      %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", back: true}
+    ])
+
+    [blas] = cast!(play, [%{xml_id: "BLAS", name: "Blas", actor: "Mr. Betterton"}])
+
+    {_act, scene} = act_and_scene!(play)
+    speech = element!(scene, %{type: "speech", speaker_label: "BLAS"})
+    PlayContent.set_element_characters(speech.id, [blas.id])
+    group = element!(scene, speech, %{type: "line_group"})
+
+    varied = verse!(scene, group, %{content: "Uno", line_number: 1, line_id: "cr-0001"})
+
+    note!(play, %{
+      element_id: varied.id,
+      offset: 3,
+      n: "1",
+      type: "variante",
+      variant_type: "sustitucion",
+      range_end: "#cr-0002",
+      body: "Variante dudosa.",
+      readings: [
+        %{lemma: true, wit: "#Q2", text: "Uno"},
+        %{wit: "#F1", text: "Un", note: "Errata."}
+      ]
+    })
+
+    verse!(scene, group, %{content: "dos <folio>del Folio</folio> fin", line_id: "cr-0002"})
+    verse!(scene, group, %{content: "tres <aside>a medias</aside> dicho", line_number: 2})
+
+    element!(scene, speech, %{
+      type: "prose",
+      content: "Prosa en la línea <lb n=\"12\"/>que el impreso numera."
+    })
+
+    element!(scene, %{type: "prose", content: "Una pantomima sin voz."})
+
+    PlayContent.refresh_derived(play.id)
+    play
+  end
+
+  # --- Their parts ---
+
+  defp credits!(play, credits) do
+    for {role, name, organization} <- credits do
+      {:ok, _} =
+        Catalogue.create_play_editor(%{
+          play_id: play.id,
+          role: role,
+          person_name: name,
+          organization: organization
+        })
+    end
+  end
+
+  defp witnesses!(play) do
     for {siglum, type} <- [{"A", "manuscript"}, {"B", "early_edition"}] do
       {:ok, _} =
         Playcode.Witnesses.create_witness(%{
@@ -200,7 +325,7 @@ defmodule Playcode.CompleteCopyTest do
     end
   end
 
-  defp build_bibliography(play) do
+  defp bibliography!(play) do
     {:ok, _} =
       Bibliography.create_entry_for_play(
         play.id,
@@ -245,7 +370,7 @@ defmodule Playcode.CompleteCopyTest do
       })
   end
 
-  defp build_places(play) do
+  defp places!(play) do
     parent = place_fixture(%{"name" => "Italia", "type" => "country"})
 
     place =
@@ -268,36 +393,17 @@ defmodule Playcode.CompleteCopyTest do
       Places.link_place(play.id, place.id, %{"role" => "mentioned", "note" => "Se nombra."})
   end
 
-  defp build_paratexts(play) do
-    for attrs <- [
-          %{
-            kind: "dedicatoria",
-            heading: "DEDICATORIA",
-            content: "Al <<lector>>,\ncon afecto.\n\nSegundo párrafo."
-          },
-          %{kind: "head_title", heading: "LA COMEDIA COMPLETA"},
-          %{kind: "lugar_accion", heading: "ESCENA:", content: "Un bosque de Venecia."},
-          %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", back: true}
-        ] do
+  defp paratexts!(play, paratexts) do
+    for attrs <- paratexts do
       {:ok, _} = Catalogue.create_paratext(Map.put(attrs, :play_id, play.id))
     end
   end
 
-  defp build_cast(play) do
-    {:ok, _} =
-      PlayContent.create_division(%{
-        play_id: play.id,
-        type: "elenco",
-        title: "DRAMATIS PERSONAE",
-        position: 0
-      })
+  # The cast list, under its heading; returns the characters.
+  defp cast!(play, characters) do
+    division!(play, %{type: "elenco", title: "DRAMATIS PERSONAE", position: 0})
 
-    for {attrs, position} <-
-          Enum.with_index([
-            %{xml_id: "ANA", name: "Ana", description: "dama <<joven>>"},
-            %{xml_id: "BLAS", name: "Blas", actor: "Mr. Betterton"},
-            %{xml_id: "CRIADO", name: "Criado", is_hidden: true}
-          ]) do
+    for {attrs, position} <- Enum.with_index(characters) do
       {:ok, character} =
         PlayContent.create_character(Map.merge(attrs, %{play_id: play.id, position: position}))
 
@@ -305,21 +411,11 @@ defmodule Playcode.CompleteCopyTest do
     end
   end
 
-  defp build_text(play, [ana, blas, _criado]) do
-    {:ok, act} =
-      PlayContent.create_division(%{
-        play_id: play.id,
-        type: "acto",
-        number: 1,
-        title: "ACTO PRIMERO",
-        position: 1
-      })
+  defp act_and_scene!(play) do
+    act = division!(play, %{type: "acto", number: 1, title: "ACTO PRIMERO", position: 1})
 
-    note!(play, %{division_id: act.id, offset: 4, n: "1", type: "editor", body: "El acto."})
-
-    {:ok, scene} =
-      PlayContent.create_division(%{
-        play_id: play.id,
+    scene =
+      division!(play, %{
         parent_id: act.id,
         type: "escena",
         number: 1,
@@ -327,88 +423,33 @@ defmodule Playcode.CompleteCopyTest do
         position: 0
       })
 
-    in_scene = %{play_id: play.id, division_id: scene.id}
-
-    stage =
-      element!(in_scene, %{type: "stage_direction", stage_type: "entrance", content: "Salen."})
-
-    note!(play, %{element_id: stage.id, offset: 5, n: "2", type: "autor", body: "Salen."})
-
-    speech = element!(in_scene, %{type: "speech", speaker_label: "ANA Y BLAS"})
-    PlayContent.set_element_characters(speech.id, [ana.id, blas.id])
-
-    note!(play, %{
-      element_id: speech.id,
-      offset: 3,
-      n: "3",
-      type: "traductor",
-      term: "y",
-      body: "Hablan a la vez.\n\nSegundo párrafo."
-    })
-
-    in_speech = Map.put(in_scene, :parent_id, speech.id)
-    group = element!(in_speech, %{type: "line_group", verse_type: "redondilla"})
-    in_group = Map.put(in_scene, :parent_id, group.id)
-
-    first =
-      verse!(in_group, %{
-        content: "Uno <<en cursiva>>",
-        line_number: 1,
-        line_id: "cc-0001",
-        part: "I"
-      })
-
-    note!(play, %{
-      element_id: first.id,
-      offset: 3,
-      n: "4",
-      type: "variante",
-      variant_type: "sustitucion",
-      range_end: "#cc-0002",
-      body: "Variante dudosa.",
-      readings: [
-        %{lemma: true, wit: "#A", text: "Uno"},
-        %{wit: "#B", text: "Un", note: "Errata."}
-      ]
-    })
-
-    verse!(in_group, %{content: "dos", line_number: 1, line_id: "cc-0002", part: "F"})
-
-    verse!(in_group, %{
-      content: "tres <stage type=\"business\">Llora.</stage> sigue",
-      line_number: 2,
-      line_id: "cc-0003",
-      rend: "indent"
-    })
-
-    verse!(in_group, %{content: "cuatro todo aparte", line_number: 3, is_aside: true})
-
-    verse!(in_group, %{content: "cinco <aside>a medias</aside> dicho", line_number: 4})
-
-    noted =
-      verse!(in_group, %{content: "seis <folio>del Folio</folio> fin", line_number: 5})
-
-    note!(play, %{element_id: noted.id, offset: 4, n: "5", type: "editor", body: "Seis."})
-
-    element!(in_speech, %{
-      type: "prose",
-      content: "Prosa en una línea,\nen otra <lb n=\"12\"/>y en la impresa."
-    })
-
-    element!(in_scene, %{type: "prose", content: "Una pantomima sin voz."})
-    element!(%{play_id: play.id, division_id: act.id}, %{type: "trailer", content: "FIN"})
+    {act, scene}
   end
 
-  defp element!(within, attrs) do
-    position = PlayContent.next_element_position(within.division_id, within[:parent_id])
+  defp division!(play, attrs) do
+    {:ok, division} = PlayContent.create_division(Map.put(attrs, :play_id, play.id))
+    division
+  end
+
+  # An element at the end of `division`, or of `parent` inside it.
+  defp element!(division, parent \\ nil, attrs) do
+    parent_id = parent && parent.id
 
     {:ok, element} =
-      PlayContent.create_element(within |> Map.merge(attrs) |> Map.put(:position, position))
+      attrs
+      |> Map.merge(%{
+        play_id: division.play_id,
+        division_id: division.id,
+        parent_id: parent_id,
+        position: PlayContent.next_element_position(division.id, parent_id)
+      })
+      |> PlayContent.create_element()
 
     element
   end
 
-  defp verse!(within, attrs), do: element!(within, Map.put(attrs, :type, "verse_line"))
+  defp verse!(division, group, attrs),
+    do: element!(division, group, Map.put(attrs, :type, "verse_line"))
 
   defp note!(play, attrs) do
     {:ok, note} = PlayContent.create_note(Map.put(attrs, :play_id, play.id))
