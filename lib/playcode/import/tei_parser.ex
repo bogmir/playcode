@@ -699,25 +699,7 @@ defmodule Playcode.Import.TeiParser do
       end
 
     # availability_note: only the <p> text, not the licence text
-    availability_text =
-      case availability do
-        {_, _, avail_children} ->
-          avail_children
-          |> Enum.filter(fn
-            {"p", _, _} -> true
-            _ -> false
-          end)
-          |> Enum.map(&text_content/1)
-          |> Enum.join("\n\n")
-          |> String.trim()
-          |> case do
-            "" -> nil
-            t -> t
-          end
-
-        _ ->
-          safe_text(availability)
-      end
+    availability_text = paragraphs(availability)
 
     {
       safe_text(pub_place),
@@ -737,9 +719,24 @@ defmodule Playcode.Import.TeiParser do
     editorial_decl = find_child(children, "editorialDecl")
 
     {
-      safe_text(project_desc),
-      safe_text(editorial_decl)
+      paragraphs(project_desc),
+      paragraphs(editorial_decl)
     }
+  end
+
+  # The <p>s of an element, parted by a blank line; nil when they hold no text.
+  defp paragraphs(nil), do: nil
+
+  defp paragraphs({_name, _attrs, children}) do
+    children
+    |> find_children("p")
+    |> Enum.map(&text_content/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.join("\n\n")
+    |> case do
+      "" -> nil
+      text -> text
+    end
   end
 
   # --- Editors ---
