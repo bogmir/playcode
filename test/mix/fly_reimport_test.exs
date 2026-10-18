@@ -16,7 +16,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     *"sftp put"*) cp "$4" "$d/uploaded.tgz" ;;
     *"wc -l"*) tar tzf "$d/uploaded.tgz" | grep -c xml ;;
     *"snapshots list"*) cat "$d/snapshots" ;;
-    *dry_run*) cat "$d/dry_run" ;;
+    *dry_run*) cat "$d/dry_run.$(grep -c dry_run "$d/calls")" 2>/dev/null || cat "$d/dry_run" ;;
     *"resume: true"*) cat "$d/run.$(grep -c 'resume: true' "$d/calls")" 2>/dev/null ;;
     *generate_site*) cat "$d/generate.$(grep -c generate_site "$d/calls")" 2>/dev/null ;;
     *deploy_site*) cat "$d/deploy.$(grep -c deploy_site "$d/calls")" 2>/dev/null ;;
@@ -114,6 +114,46 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       assert out =~ ~r/look.*\n.*EMOTHE0002 .*undoes 2 hand edit/i
       refute out =~ ~r/look.*\n.*EMOTHE0001/i
       assert out =~ "mix playcode.fly.reimport run"
+    end
+
+    # On 2026-10-18 the dry run's RPC reached an app still restarting from the resize,
+    # and prepare said "Nothing needs a look" over output that held no dry run at all.
+    test "a dry run that did not answer is asked again before anything is called clean",
+         %{dir: dir, corpus: corpus} do
+      answer(dir, "dry_run.1", """
+      --rpc-eval : RPC failed with reason :noconnection
+      Error: ssh shell: Process exited with status 1
+      """)
+
+      answer(dir, "dry_run.2", """
+      2 file(s) in /data/tei
+        EMOTHE0001  replaces 3 division(s), 40 element(s), 5 character(s), 2 TEI record(s)
+
+      dry run, nothing written — 0 new, 2 already imported, 0 unreadable
+      """)
+
+      Mix.Task.rerun("playcode.fly.reimport", ["prepare", "--dir", corpus])
+
+      assert_in_order(calls(dir), [
+        ~s[import_tei("/data/tei", dry_run: true, force: true)],
+        "machine start 7847063c04e7e8 -a playcode",
+        ~s[import_tei("/data/tei", dry_run: true, force: true)]
+      ])
+
+      assert output() =~ "Nothing needs a look."
+    end
+
+    test "a dry run that never answers stops prepare, which calls nothing clean",
+         %{dir: dir, corpus: corpus} do
+      for n <- 1..3 do
+        answer(dir, "dry_run.#{n}", "--rpc-eval : RPC failed with reason :noconnection\n")
+      end
+
+      assert_raise Mix.Error, ~r/dry run/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["prepare", "--dir", corpus])
+      end
+
+      refute output() =~ "Nothing needs a look"
     end
   end
 
