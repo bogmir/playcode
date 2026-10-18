@@ -134,6 +134,14 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   defp error_to_string(:too_many_files), do: gettext("Only one file allowed.")
   defp error_to_string(other), do: inspect(other)
 
+  # One change of the file's revision history on a line: "2021 · Muñoz Pons, Carlos · Revisión…".
+  defp revision(change) do
+    [change.date, Enum.join(change.people, "; "), change.description, change.note]
+    |> Enum.reject(&(&1 in [nil, ""]))
+    |> Enum.join(" · ")
+    |> Playcode.PlayContent.InlineMarkup.plain()
+  end
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -371,6 +379,12 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           <div :if={@play.edition_title} class="md:col-span-2">
             <span class="font-medium">{gettext("Edition title:")}</span>
             <span class="text-base-content/70">{@play.edition_title}</span>
+          </div>
+          <div :if={@play.revisions != []} class="md:col-span-2">
+            <span class="font-medium">{gettext("Revisions:")}</span>
+            <ul id="revisions" class="text-base-content/70">
+              <li :for={change <- @play.revisions}>{revision(change)}</li>
+            </ul>
           </div>
           <div :if={@play.licence_url || @play.licence_text} class="md:col-span-2">
             <span class="font-medium">{gettext("Licence:")}</span>

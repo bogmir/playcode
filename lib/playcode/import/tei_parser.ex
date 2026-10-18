@@ -386,7 +386,10 @@ defmodule Playcode.Import.TeiParser do
     profile_desc = find_child(children, "profileDesc")
 
     %{
-      play: extract_play_attrs(file_desc, find_child(children, "encodingDesc"), profile_desc),
+      play:
+        file_desc
+        |> extract_play_attrs(find_child(children, "encodingDesc"), profile_desc)
+        |> Map.put(:revisions, revisions(find_child(children, "revisionDesc"))),
       editors: editors(file_desc),
       sources: sources(file_desc),
       witnesses: witnesses(file_desc),
@@ -611,6 +614,29 @@ defmodule Playcode.Import.TeiParser do
       nil -> []
     end
   end
+
+  # <revisionDesc><change>: who revised the file and when, as the files write it: a <date>,
+  # the revisers' <persName>s and the words saying what was done (the rest of its text,
+  # italics as <<…>>), or a <note> saying it. A change with nothing in it (an empty <date/> alone, 44 files) is no change.
+  defp revisions(nil), do: []
+
+  defp revisions({_name, _attrs, children}) do
+    children
+    |> find_children("change")
+    |> Enum.map(fn {name, attrs, parts} ->
+      %{
+        date: safe_text(find_child(parts, "date")),
+        people:
+          parts |> find_children("persName") |> Enum.map(&safe_text/1) |> Enum.reject(&(&1 == "")),
+        description: safe_text({name, attrs, Enum.reject(parts, &revision_part?/1)}),
+        note: safe_text(find_child(parts, "note"))
+      }
+    end)
+    |> Enum.reject(fn change -> change |> Map.values() |> Enum.all?(&(&1 in [nil, "", []])) end)
+  end
+
+  defp revision_part?({tag, _, _}), do: tag in ~w(date persName note)
+  defp revision_part?(_text), do: false
 
   # <notesStmt><relatedItem type="original" target="EMOTHE0530"/>: the play this one
   # translates, by its short code. The import waits for it

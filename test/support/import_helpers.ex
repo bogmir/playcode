@@ -43,6 +43,7 @@ defmodule Playcode.ImportHelpers do
           #{if opts[:source_desc], do: "<sourceDesc>#{opts[:source_desc]}</sourceDesc>"}
         </fileDesc>
         #{if opts[:profile_desc], do: "<profileDesc>#{opts[:profile_desc]}</profileDesc>"}
+        #{if opts[:revision_desc], do: "<revisionDesc>#{opts[:revision_desc]}</revisionDesc>"}
       </teiHeader>
       <text>
         <front>#{opts[:front]}</front>

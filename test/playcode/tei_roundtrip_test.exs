@@ -339,6 +339,77 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # <revisionDesc>: who revised the file and when. 351 of the production files have one
+  # <change>, 267 of them "Revisión de la obra en formato TEI-XML" by Carlos Muñoz Pons;
+  # EMOTHE0090 says what was done in a <note>, and 83 hold only a date, empty in 44. A
+  # change with nothing in it is no change.
+  describe "the revision history" do
+    alias Playcode.Catalogue
+
+    test "each change comes back: its date, its revisers, its words, italics too, and its note" do
+      n = System.unique_integer([:positive])
+
+      play =
+        import_tei!(
+          tei(
+            code: "RV#{n}",
+            revision_desc: """
+            <change>
+              <date>2021</date>
+              <persName>Muñoz Pons, Carlos</persName>
+              <persName>Tronch Pérez, Jesús</persName>
+              Revisión de la obra
+                en formato <emph>TEI-XML</emph>
+            </change>
+            <change><note>Con correcciones a cargo de Guillermo Carrascón.</note><date>2025</date></change>
+            <change><date></date> </change>
+            <change><date/></change>
+            """
+          )
+        )
+
+      changes = [
+        %{
+          date: "2021",
+          people: ["Muñoz Pons, Carlos", "Tronch Pérez, Jesús"],
+          description: "Revisión de la obra en formato <<TEI-XML>>",
+          note: nil
+        },
+        %{
+          date: "2025",
+          people: [],
+          description: nil,
+          note: "Con correcciones a cargo de Guillermo Carrascón."
+        }
+      ]
+
+      revisions = fn play ->
+        Enum.map(
+          Catalogue.get_play!(play.id).revisions,
+          &Map.take(&1, [:date, :people, :description, :note])
+        )
+      end
+
+      assert revisions.(play) == changes
+
+      # Written back as the files write it: the date, the revisers, then the words.
+      xml = export_tei(play)
+
+      assert xml_texts(xml, "change") == [
+               "2021 Muñoz Pons, Carlos Tronch Pérez, Jesús Revisión de la obra en formato TEI-XML",
+               "2025 Con correcciones a cargo de Guillermo Carrascón."
+             ]
+
+      assert xml_texts(xml, "persName", within: "change") ==
+               ["Muñoz Pons, Carlos", "Tronch Pérez, Jesús"]
+
+      assert xml_texts(xml, "emph", within: "change") == ["TEI-XML"]
+
+      copy = xml |> String.replace("RV#{n}", "RC#{n}") |> import_tei!()
+      assert revisions.(copy) == changes
+    end
+  end
+
   # Question 15: each kind by its own name, as the files call them. 11 files call their play
   # an adaptation and 3 a version (question 40); only "traduccion" used to be read.
   describe "the kind of play a title names" do
