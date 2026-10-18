@@ -269,7 +269,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 18 October 2026. 40 questions, 19 of them answered (nine decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 18 October 2026. 41 questions, 19 of them answered (nine decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -289,6 +289,7 @@
       <li><a href="#t-provenance">Where the digital text came from</a><span class="nums">27</span></li>
       <li><a href="#t-original-cast">The original cast</a><span class="nums">28</span></li>
       <li><a href="#t-paratexts">Texts around the play</a><span class="nums">29–35</span></li>
+      <li><a href="#t-not-plays">Texts that are not plays</a><span class="nums">41</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
@@ -1544,6 +1545,39 @@
         </div>
         <p class="status" aria-live="polite"></p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-not-plays" aria-labelledby="h-not-plays">
+    <h2 id="h-not-plays">Texts that are not plays</h2>
+
+    <div class="q" id="q41" data-q="q41" data-n="41">
+      <span class="q-num" aria-hidden="true">41</span>
+      <div class="q-body">
+        <h3>The <i>Arte nuevo</i> and its three translations are encoded as a one-act play. How should a text that is not a play be encoded?</h3>
+        <p class="why">The files of Lope’s <i>Arte nuevo de hacer comedias en este tiempo</i> (EMOTHE0002) and of its Italian, French and English translations (EMOTHE0024, 0025 and 0116), a treatise in verse, use the play template: the whole poem is one act (<code>&lt;div1 type="Act"&gt;</code>, headed “Acto I”, “Atto I”, “Acte I” and “Act I”), the line “Dirigido a la Academia de Madrid” is a stage direction, and its 389 lines are one speech with no speaker. No other file in the corpus has this shape.</p>
+        <p class="why">emothe.uv.es never prints an act’s heading in the text (a play’s acts appear only in its index, and a single act has none), so there the act does not show and the line reads as a dedication. Playcode prints the headings the file gives, so the treatise reads as a play in one act, “Acto I”, spoken by nobody.</p>
+        <p class="why">Two TEI encodings show the dedication and no act. In the first the dedication is a section before the text, as in the plays that have one, and the poem a division with no heading, its stanzas outside any speech:</p>
+        <pre class="tei">&lt;front&gt;&lt;div type="dedicatoria"&gt;&lt;p&gt;Dirigido a la Academia de Madrid&lt;/p&gt;&lt;/div&gt;&lt;/front&gt;
+&lt;body&gt;&lt;div type="poema"&gt;&lt;lg&gt;…&lt;/lg&gt; …&lt;/div&gt;&lt;/body&gt;</pre>
+        <p class="why">In the second the dedication stays where the poem opens, as TEI’s opener:</p>
+        <pre class="tei">&lt;body&gt;&lt;div type="poema"&gt;&lt;opener&gt;&lt;salute&gt;Dirigido a la Academia de Madrid&lt;/salute&gt;&lt;/opener&gt;&lt;lg&gt;…&lt;/lg&gt; …&lt;/div&gt;&lt;/body&gt;</pre>
+        <p class="why">Playcode already reads the first one’s dedication; either needs a small change for the poem to print with no heading. Nothing changes until the team answers, and then the four files are corrected and imported again.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q41-o1"><input type="radio" id="q41-o1" name="q41-choice" value="The dedication before the text, the poem a division with no heading">The dedication before the text, the poem a division with no heading</label>
+            <label for="q41-o2"><input type="radio" id="q41-o2" name="q41-choice" value="The dedication as the poem's opener">The dedication as the poem’s opener</label>
+            <label for="q41-o3"><input type="radio" id="q41-o3" name="q41-choice" value="Keep the files as they are">Keep the files as they are</label>
+            <label for="q41-o4"><input type="radio" id="q41-o4" name="q41-choice" value="Another encoding (in the notes)">Another encoding (in the notes)</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q41-text">Notes</label>
+          <textarea id="q41-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
       </div>
     </div>
   </section>
