@@ -26,7 +26,9 @@ defmodule Playcode.PlayContent.Note do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  @types ~w(traductor editor editor_critico editor_digital autor)
+  @types ~w(traductor editor editor_critico editor_digital autor latinismo toponimo_aludido
+              toponimo_accion atrezzo oficio vestuario espacio gesto_movimiento
+              efectos_especiales variantes)
 
   # The type of an entry of the critical apparatus. Not "variantes", an ordinary note's.
   @variant "variante"
