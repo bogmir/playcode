@@ -26,7 +26,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   # (missing from FileMaker) first.
   @funder Enum.join(
             [
-              ~s[Ministerio de Ciencia e Innovación – Agencia Estatal de Investigación -FEDER/ERDF: "EMOTHE: Segunda fase del teatro español y europeo de los siglos XVI y XVII: patrimonio y bases de datos (ASODAT Tercera Fase)" ref. PID2022-136431NB-C65],
+              ~s[Ministerio de Ciencia e Innovación – Agencia Estatal de Investigación -FEDER/ERDF: "EMOTHE: Segunda fase del teatro español y europeo de los siglos XVI y XVII: patrimonio y bases de datos (ASODAT Tercera Fase)" ref. PID2022-136431NB-C65 (2023-09-01 / 2027-08-31)],
               ~s["Teatro español y europeo de los siglos XVI y XVII: patrimonio y bases de datos" (EMOTHE) ref. PID2019-104045GB-C54 (2020-06-01 / 2023-05-31)],
               ~s[Ministerio de Ciencia, Innovación y Universidades, Ministerio de Economía y Competitividad – Agencia Estatal de Investigación -FEDER/ERDF: "Teatro europeo de los siglos XVI y XVII: patrimonio y bases de datos" (EMOTHE) ref. FFI2016-80314-P (2016-12-30 /2019-12-31)],
               ~s[Programa Estatal Redes de Excelencia, "Red del Patrimonio Teatral Clásico Español", ref. FFI2015-71441-REDC (2015-12-01 / 2017-11-30)],
@@ -50,6 +50,26 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     "publisher" => "ARTELOPE/EMOTHE Universitat de València",
     "authority" => "Universitat de València - Estudi General. http://www.uv.es",
     "pub_place" => "Valencia"
+  }
+
+  # The acknowledgement the funding agency asks of every edition, worded by the team in
+  # each language; a play in a language not here starts without one.
+  @funding_notes %{
+    "es" =>
+      {"Nota a esta edición digital",
+       "Esta publicación es parte del proyecto I+D+i «EMOTHE: Second Phase of Early Modern Spanish and European Theatre: heritage and databases (ASODAT Third Phase)», referencia PID2022-136431NB-C65, financiado por MICIN/AEI/10.13039/501100011033 y por FEDER Una manera de hacer Europa."},
+    "en" =>
+      {"Note on this digital edition",
+       "This publication is part of the research project «EMOTHE: Second Phase of Early Modern Spanish and European Theatre: heritage and databases (ASODAT Third Phase)», reference PID2022-136431NB-C65, funded by MICIN/AEI/10.13039/501100011033 and by the European Regional Development Fund (ERDF)."},
+    "fr" =>
+      {"Note sur cette édition numérique",
+       "Cette publication fait partie du projet I+D+i «EMOTHE: Second Phase of Early Modern Spanish and European Theatre: heritage and databases (ASODAT Third Phase)», référence PID2022-136431NB-C65 financé par MICIN/AEI/10.13039/501100011033 et FEDER/ERDF."},
+    "it" =>
+      {"Nota a questa edizione digitale",
+       "Questa pubblicazione fa parte del progetto di ricerca I+D+i «EMOTHE: Second Phase of Early Modern Spanish and European Theatre: heritage and databases (ASODAT Third Phase)», riferimento PID2022-136431NB-C65, finanziato dal MICIN/AEI/10.13039/501100011033 e dal FESR/ERDF."},
+    "pt" =>
+      {"Nota sobre esta edição digital",
+       "Esta publicação faz parte do projeto de investigação I+D+i «EMOTHE: Second Phase of Early Modern Spanish and European Theatre: heritage and databases (ASODAT Third Phase)», referência PID2022-136431NB-C65, financiado pelo MICIN/AEI/10.13039/501100011033 e pelo FEDER/ERDF."}
   }
 
   @impl true
@@ -265,6 +285,8 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   defp save_play(socket, :new, play_params) do
     case Catalogue.create_play_from_form(play_params) do
       {:ok, play} ->
+        add_funding_note(play)
+
         LiveHelpers.log_activity(socket, "create", "play", play.id, %{
           title: play.title,
           code: play.code
@@ -295,6 +317,18 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
       {:error, %Ecto.Changeset{} = changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
+    end
+  end
+
+  defp add_funding_note(play) do
+    with {heading, content} <- @funding_notes[play.language] do
+      {:ok, _} =
+        Catalogue.create_paratext(%{
+          play_id: play.id,
+          kind: "nota_edicion_digital",
+          heading: heading,
+          content: content
+        })
     end
   end
 
