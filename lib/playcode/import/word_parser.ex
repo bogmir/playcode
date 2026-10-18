@@ -611,16 +611,18 @@ defmodule Playcode.Import.WordParser do
         Repo.delete_all(from e in Element, where: e.play_id == ^play_id)
         Repo.delete_all(from d in Division, where: d.play_id == ^play_id)
         Repo.delete_all(from c in Character, where: c.play_id == ^play_id)
-        Repo.delete_all(from n in Paratext, where: n.play_id == ^play_id)
+        # Only the front matter an import wrote: a paratext typed by hand, the note on the
+        # digital edition a new play starts with among them, stays.
+        Repo.delete_all(from n in Paratext, where: n.play_id == ^play_id and n.origin == "word")
 
-        # Store front matter as paratext
         if front_matter do
           Catalogue.create_paratext(%{
             play_id: play_id,
             kind: "nota_edicion_digital",
             heading: "Front matter",
             content: front_matter,
-            position: 0
+            position: 0,
+            origin: "word"
           })
         end
 

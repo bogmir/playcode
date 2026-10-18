@@ -335,6 +335,29 @@ defmodule Playcode.Import.WordParserTest do
     assert xml_texts(xml, "role") == ["RICARDO"]
   end
 
+  # A play is made in the form, which gives it a note on the digital edition, and its
+  # text then imported from Word, maybe more than once.
+  test "importing again replaces its front matter and keeps a paratext typed by hand" do
+    play = play_fixture()
+
+    {:ok, _} =
+      Playcode.Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "dedicatoria",
+        heading: "Al lector"
+      })
+
+    import_word(["Antigua portada", "{e}Escena 1", "{p}FEBO  {v}Hello."], play)
+    xml = import_word(["Nueva portada", "{e}Escena 1", "{p}FEBO  {v}Hello."], play)
+
+    paratexts =
+      for {%{"type" => type}, text} <- xml_elements(xml, "div", within: "front"),
+          type != "elenco",
+          do: text
+
+    assert Enum.sort(paratexts) == ["Al lector", "Front matter Nueva portada"]
+  end
+
   test "statistics count each character's speeches" do
     play = play_fixture()
 

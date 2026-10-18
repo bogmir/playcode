@@ -20,13 +20,14 @@ defmodule Playcode.Catalogue do
 
   @per_page 25
 
-  @origins ~w(tei manual filemaker)
+  @origins ~w(tei manual filemaker word)
 
   @doc """
   Where a play's editors, sources and paratexts came from.
 
-  A TEI re-import replaces only the rows it created itself (`"tei"`); anything a
-  researcher typed or a FileMaker slice wrote survives untouched.
+  A TEI re-import replaces only the rows it created itself (`"tei"`), and a Word import
+  only the front matter it wrote (`"word"`); anything a researcher typed or a FileMaker
+  slice wrote survives untouched.
   """
   def origins, do: @origins
 
