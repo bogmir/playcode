@@ -1345,6 +1345,24 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(xml, "emph", within: "note") == ["erróneamente", "\"partes …\""]
     end
 
+    # La tragedia española's note on "Belona" is typed "video", Marta la piadosa's one
+    # "nota_editor_digital": slips for a translator's and a digital editor's (question 17).
+    test "a slip in a note's kind comes back as the kind it is" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><sp><speaker>A</speaker>
+              <l n="1">Belona<note n="1" type="video"><p>Diosa.</p></note></l>
+              <l n="2">Marta<note n="2" type="nota_editor_digital"><p>Errata.</p></note></l>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert Enum.map(xml_notes(xml), & &1.type) == ["traductor", "editor_digital"]
+    end
+
     # Regression: EMOTHE0187's notes 2115 and 2320 open with an emphasis of nothing. It
     # was stored as "<<>>, if"; the first export wrote "<p> , if", the second "<p>, if",
     # so the export of the export differed from the first.
