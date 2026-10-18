@@ -25,8 +25,8 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   `generate` is Generate on `/admin/export` (`Release.generate_site/0`) on performance-1x:
   it scales both machines up, as `prepare` does (a machine `run` left up stays as it is),
   asks again when the session drops before the build's end, and when the build is done
-  scales both back with autostop on. After a code change every play is rebuilt, six
-  minutes there and over two hours on the shared CPU. `deploy`, once the
+  scales both back with autostop on. After a code change every play is rebuilt, six to
+  ten minutes there and over two hours on the shared CPU. `deploy`, once the
   preview is checked, is Deploy (`Release.deploy_site/0`), asking again the same way. `scale-down` scales back by
   itself, after an aborted run or build.
 
@@ -71,9 +71,22 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     scale_up!()
 
     step("Dry run")
-    lines = ssh(@dry_run) |> String.split("\n")
 
-    case Enum.filter(lines, &(&1 =~ @needs_a_look)) do
+    # Only a dry run that reached its summary can be called clean: an app still restarting
+    # from the resize answers `:noconnection`, which flags nothing (2026-10-18).
+    output =
+      case until_done(@dry_run, "dry run, nothing written", nil) do
+        {:ok, output} ->
+          output
+
+        :cut_off ->
+          Mix.raise(
+            "the dry run did not answer #{@attempts} times; see the machine's status above. " <>
+              "Nothing was imported: `prepare` again"
+          )
+      end
+
+    case output |> String.split("\n") |> Enum.filter(&(&1 =~ @needs_a_look)) do
       [] ->
         Mix.shell().info("\nNothing needs a look.")
 
@@ -102,7 +115,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     wake!()
 
     case until_done(@generate, "site generated", "generate failed") do
-      :ok ->
+      {:ok, _output} ->
         :ok
 
       :failed ->
@@ -129,7 +142,8 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     result = until_done(@deploy, "site deployed", "deploy failed")
     fly!(~w(machine update #{@app_machine} --autostop=stop -a #{@app} --yes))
 
-    unless result == :ok, do: Mix.raise("the deploy failed or did not finish; see above")
+    unless match?({:ok, _output}, result),
+      do: Mix.raise("the deploy failed or did not finish; see above")
   end
 
   def run(["scale-down"]) do
@@ -238,10 +252,11 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     end
   end
 
-  # Runs a job of the app's site builder over SSH until its output says it ended, `done` or
-  # `failed`. A session that ends first is asked again: a dropped session leaves the job
-  # running in the app, and the second request waits behind it; an app just restarted
-  # (turning autostop off restarts it) answers `:noconnection` until it is up (2026-10-18).
+  # Runs a command over SSH until its output says it ended, `done` (`{:ok, output}`) or
+  # `failed`, when given. A session that ends first is asked again: a dropped session leaves
+  # a site job running in the app, and the second request waits behind it; an app just
+  # restarted (a resize or autostop off restarts it) answers `:noconnection` until it is up
+  # (2026-10-18).
   defp until_done(command, done, failed, attempt \\ 1)
 
   defp until_done(_command, _done, _failed, attempt) when attempt > @attempts, do: :cut_off
@@ -251,9 +266,9 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
     cond do
       output =~ done ->
-        :ok
+        {:ok, output}
 
-      output =~ failed ->
+      failed && output =~ failed ->
         :failed
 
       true ->

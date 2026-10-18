@@ -47,9 +47,12 @@ mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or bu
    if the proxy stopped it for want of traffic (on 2026-10-17 the upload found no VM), uploads
    `doc/tei_corpus/` (`--dir` for another folder) and checks the count on the machine,
    scales both machines up with autostop off, and runs the dry run, printing each play as
-   it is read. It ends by listing the lines that need a look (hand fixes the re-import
-   would lose, an archived play it restores, a file it cannot read) or saying there are
-   none. Step 5 says what to do with them. Running `prepare` again is safe.
+   it is read. The resize restarts the app, and a dry run that reaches it too soon answers
+   `:noconnection`: it is asked again, and `prepare` stops if it never reaches its summary
+   (on 2026-10-18 it said "Nothing needs a look" over no dry run at all). It ends by listing
+   the lines that need a look (hand fixes the re-import would lose, an archived play it
+   restores, a file it cannot read) or saying there are none. Step 5 says what to do with
+   them. Running `prepare` again is safe.
 3. **`run`** re-imports every play not imported since its file was uploaded
    (`resume: true`). When a run stops part way it shows the machine's status, starts it,
    and runs again, three times at most. When a play fails it stops: fix the cause
@@ -62,8 +65,9 @@ mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or bu
    printing its progress. When the session drops before it, it asks again: the build goes
    on in the app, and the second Generate waits behind it. When the build is done it
    scales both machines back and turns autostop on; when it fails they stay up. It also
-   stands alone: after a deploy that changed the site's code every play is rebuilt, six
-   minutes on performance-1x and over two hours on the shared CPU (2026-10-17), so run
+   stands alone: after a deploy that changed the site's code every play is rebuilt, six to
+   ten minutes on performance-1x and over two hours on the shared CPU (2026-10-17, 373 plays
+   in ten minutes on 2026-10-18), so run
    `generate`, not the export page's button.
 6. **Check the preview** on `/admin/export`, then **`deploy`**: Deploy, over SSH, with
    autostop off while it pushes and back on after it. It asks again as `generate` does: turning
@@ -130,7 +134,8 @@ What the commands do, for when one of them fails part way, or something new is n
    A note on dev: a backfill script's `update_all` also counts as edited (152 sources and 13
    characters on 2026-10-15); production had none.
 
-6. **The run.** About 5 plays a minute on performance-1x, so a little over an hour for 372.
+6. **The run.** About 48 plays a minute on performance-1x since the importer writes a
+   play's text in bulk: 8 minutes for 372 on 2026-10-18 (5 a minute, over an hour, before).
 
    ```bash
    ~/.fly/bin/flyctl ssh console -a playcode -C "bin/playcode rpc 'Playcode.Release.import_tei(\"/data/tei\", force: true)'" > /tmp/run.log
