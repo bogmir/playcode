@@ -52,6 +52,35 @@ defmodule Playcode.Import.TeiImportTest do
     end
   end
 
+  # One statement per row made a big play's import thousands of round trips (7,565 for
+  # AL0788), all inside the one transaction production's 60-second timeout covers.
+  test "the queries an import makes do not grow with the length of its text" do
+    front = """
+    <div type="elenco"><castList>
+      <castItem><role xml:id="ANA">Ana</role></castItem>
+      <castItem><role xml:id="BLAS">Blas</role></castItem>
+    </castList></div>
+    """
+
+    block = """
+    <sp who="#ANA #BLAS"><speaker>ANA Y BLAS</speaker>
+      <lg type="redondilla"><l n="1">Uno<note n="1" type="editor"><p>Nota.</p></note></l><l n="2">dos</l></lg>
+      <p>Prosa.</p></sp>
+    <stage>Sale.</stage>
+    """
+
+    queries = fn copies ->
+      body =
+        ~s(<div1 type="acto" n="1"><head>I</head><div2 type="escena" n="1"><head>1</head>) <>
+          String.duplicate(block, copies) <> "</div2></div1>"
+
+      xml = tei(front: front, body: body)
+      count_queries(fn -> {:ok, _play} = TeiImport.import_file(write_tmp!(xml)) end)
+    end
+
+    assert queries.(1) == queries.(20)
+  end
+
   test "a UTF-16 LE file with a BOM imports" do
     xml = tei(title: "UTF16 Test", code: "UTF16LE")
     utf16 = <<0xFF, 0xFE>> <> :unicode.characters_to_binary(xml, :utf8, {:utf16, :little})
@@ -262,4 +291,30 @@ defmodule Playcode.Import.TeiImportTest do
 
     assert Statistics.get_statistics(play.id).data["total_verses"] == 2
   end
+
+  # The queries `fun` makes from this process, counted through the repo's telemetry.
+  defp count_queries(fun) do
+    id = make_ref()
+    :telemetry.attach(id, [:playcode, :repo, :query], &__MODULE__.relay_query/4, self())
+
+    try do
+      fun.()
+    after
+      :telemetry.detach(id)
+    end
+
+    Stream.repeatedly(fn ->
+      receive do
+        :query -> 1
+      after
+        0 -> nil
+      end
+    end)
+    |> Enum.take_while(& &1)
+    |> length()
+  end
+
+  @doc false
+  def relay_query(_event, _measurements, _metadata, test),
+    do: if(self() == test, do: send(test, :query))
 end

@@ -17,7 +17,7 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
   alias Playcode.Import.TeiParser
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Character, Division, Element, Note}
+  alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, Note}
   alias Playcode.Places
   alias Playcode.Repo
   alias Playcode.Witnesses
@@ -219,7 +219,7 @@ defmodule Playcode.Import.TeiImport do
     Enum.each(tei.paratexts, &Catalogue.create_paratext(tei_row(&1, play)))
 
     cast = Map.new(PlayContent.list_characters(play.id), &{&1.xml_id, &1.id})
-    Enum.each(tei.divisions, &write_division(&1, play, nil, cast))
+    write_text(tei.divisions, play, cast)
     write_bibliography(tei.bibliography, play)
 
     # Recompute verse_count from actual verse_line elements (the TEI header
@@ -440,49 +440,106 @@ defmodule Playcode.Import.TeiImport do
 
   # --- Text ---
 
-  # A division, the notes in its heading, its elements, then its subdivisions. Positions
-  # come from the file; parents from where the row sits in the tree.
-  defp write_division(division, play, parent_id, cast) do
-    attrs =
-      division
-      |> Map.drop([:notes, :elements, :divisions])
-      |> Map.merge(%{play_id: play.id, parent_id: parent_id})
+  # The text in a handful of statements, not one per row: an import is one transaction,
+  # and production's database timeout covers all of it (7,565 round trips for AL0788).
+  # Every row is checked by its changeset as `PlayContent` would create it, given its id
+  # here so its children can point at it, then written with insert_all, parents first.
+  defp write_text(divisions, play, cast) do
+    rows =
+      Enum.reduce(
+        divisions,
+        %{Division => [], Element => [], ElementCharacter => [], Note => []},
+        &collect_division(&1, play, nil, cast, &2)
+      )
 
-    row =
-      case PlayContent.create_division(attrs) do
-        {:ok, row} -> row
-        {:error, cs} -> Repo.rollback({:division_create_failed, cs})
-      end
+    now = DateTime.utc_now(:second)
 
-    write_notes(division.notes, %{division_id: row.id}, play)
-    Enum.each(division.elements, &write_element(&1, play, row.id, nil, cast))
-    Enum.each(division.divisions, &write_division(&1, play, row.id, cast))
+    for schema <- [Division, Element, ElementCharacter, Note] do
+      rows |> Map.fetch!(schema) |> Enum.reverse() |> insert_rows(schema, now)
+    end
   end
 
-  defp write_element(element, play, division_id, parent_id, cast) do
-    attrs =
-      element
-      |> Map.drop([:who, :notes, :elements])
-      |> Map.merge(%{play_id: play.id, division_id: division_id, parent_id: parent_id})
-
+  # A division, the notes in its heading, its elements, then its subdivisions. Positions
+  # come from the file; parents from where the row sits in the tree.
+  defp collect_division(division, play, parent_id, cast, rows) do
     row =
-      case PlayContent.create_element(attrs) do
-        {:ok, row} ->
-          row
+      %Division{id: Ecto.UUID.generate()}
+      |> Division.changeset(
+        division
+        |> Map.drop([:notes, :elements, :divisions])
+        |> Map.merge(%{play_id: play.id, parent_id: parent_id})
+      )
+      |> checked(&{:division_create_failed, &1})
 
-        # The type is one of the parser's six, never a value from the file.
-        {:error, cs} ->
-          Repo.rollback({:element_create_failed, String.to_atom(element.type), cs})
+    rows = rows |> add(Division, row) |> collect_notes(division.notes, :division_id, row, play)
+    rows = Enum.reduce(division.elements, rows, &collect_element(&1, play, row.id, nil, cast, &2))
+    Enum.reduce(division.divisions, rows, &collect_division(&1, play, row.id, cast, &2))
+  end
+
+  defp collect_element(element, play, division_id, parent_id, cast, rows) do
+    row =
+      %Element{id: Ecto.UUID.generate()}
+      |> Element.changeset(
+        element
+        |> Map.drop([:who, :notes, :elements])
+        |> Map.merge(%{play_id: play.id, division_id: division_id, parent_id: parent_id})
+      )
+      # The type is one of the parser's six, never a value from the file.
+      |> checked(&{:element_create_failed, String.to_atom(element.type), &1})
+
+    speakers =
+      for {character_id, position} <- Enum.with_index(character_ids(element, cast)) do
+        %ElementCharacter{id: Ecto.UUID.generate()}
+        |> ElementCharacter.changeset(%{
+          element_id: row.id,
+          character_id: character_id,
+          position: position
+        })
+        |> checked(&{:element_character_create_failed, &1})
       end
 
-    write_notes(element.notes, %{element_id: row.id}, play)
+    rows = Enum.reduce(speakers, add(rows, Element, row), &add(&2, ElementCharacter, &1))
+    rows = collect_notes(rows, element.notes, :element_id, row, play)
 
-    case character_ids(element, cast) do
-      [] -> :ok
-      ids -> PlayContent.set_element_characters(row.id, ids)
+    Enum.reduce(element.elements, rows, &collect_element(&1, play, division_id, row.id, cast, &2))
+  end
+
+  # Notes in document order, each after the notes before it at the same offset, as
+  # `PlayContent.create_note/1` places them.
+  defp collect_notes(rows, notes, anchor, anchor_row, play) do
+    {rows, _next} =
+      Enum.reduce(notes, {rows, %{}}, fn note, {rows, next} ->
+        row =
+          %Note{id: Ecto.UUID.generate()}
+          |> Note.changeset(Map.merge(note, %{anchor => anchor_row.id, play_id: play.id}))
+          |> checked(&{:note_create_failed, &1})
+
+        position = Map.get(next, row.offset, 0)
+        {add(rows, Note, %{row | position: position}), Map.put(next, row.offset, position + 1)}
+      end)
+
+    rows
+  end
+
+  defp add(rows, schema, row), do: Map.update!(rows, schema, &[row | &1])
+
+  # The row a valid changeset makes; an invalid one rolls the import back with `error`.
+  defp checked(changeset, error) do
+    case Ecto.Changeset.apply_action(changeset, :insert) do
+      {:ok, row} -> row
+      {:error, changeset} -> Repo.rollback(error.(changeset))
     end
+  end
 
-    Enum.each(element.elements, &write_element(&1, play, division_id, row.id, cast))
+  # Every stored field, timestamps set, in batches well under Postgres's 65,535
+  # parameters a statement. Rows in the order given, so a parent precedes its children.
+  defp insert_rows(rows, schema, now) do
+    fields = schema.__schema__(:fields)
+
+    rows
+    |> Enum.map(&(&1 |> Map.take(fields) |> Map.merge(%{inserted_at: now, updated_at: now})))
+    |> Enum.chunk_every(1_000)
+    |> Enum.each(&Repo.insert_all(schema, &1))
   end
 
   # The characters a speech's `who` names. A ref to no one in the cast is dropped, and a
@@ -492,15 +549,4 @@ defmodule Playcode.Import.TeiImport do
     do: who |> Enum.map(&cast[&1]) |> Enum.reject(&is_nil/1) |> Enum.uniq()
 
   defp character_ids(_element, _cast), do: []
-
-  # Notes in document order: `create_note/1` puts each after the notes already at its
-  # offset.
-  defp write_notes(notes, anchor, play) do
-    Enum.each(notes, fn note ->
-      case PlayContent.create_note(note |> Map.merge(anchor) |> Map.put(:play_id, play.id)) do
-        {:ok, _note} -> :ok
-        {:error, cs} -> Repo.rollback({:note_create_failed, cs})
-      end
-    end)
-  end
 end
