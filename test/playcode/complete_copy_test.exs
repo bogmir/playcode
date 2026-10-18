@@ -46,8 +46,10 @@ defmodule Playcode.CompleteCopyTest do
     # turns the test red until its entry goes.
     known_gaps = [
       {"Verse, prose or mixed", [:play, :form], fn _form -> nil end},
-      # The credits come back in the order of the file's sections: the principal
-      # investigator, the title statement's editors, then the statements of responsibility.
+      # Not a gap to close but the file's limit, kept on purpose (docs/history.md): the
+      # principal investigator comes back first, as every file is read, and the edition
+      # statement's credits after the title statement's, an order TEI has no way to say.
+      # Within each statement the order survives.
       {"The order of the credits", [:editors],
        &Enum.sort_by(&1, fn %{role: role} -> credit_section(role) end)}
     ]
@@ -110,6 +112,7 @@ defmodule Playcode.CompleteCopyTest do
   defp step(index) when is_integer(index), do: Access.at!(index)
   defp step(key), do: key
 
+  # The ordinary play's respStmts are all the edition statement's.
   defp credit_section("principal"), do: 0
   defp credit_section(role) when role in ~w(translator researcher critical_editor), do: 1
   defp credit_section(_role), do: 2

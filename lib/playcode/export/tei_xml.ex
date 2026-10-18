@@ -30,6 +30,9 @@ defmodule Playcode.Export.TeiXml do
     "critical_editor" => "edicion_critica"
   }
 
+  # The roles written as a respStmt, in the titleStmt or the editionStmt.
+  @resp_roles ~w(editor digital_editor reviewer)
+
   @doc """
   The play's TEI document. `opts` may hand in `:divisions` (as
   `PlayContent.load_play_content/1` returns them) and `:characters` already loaded, as
@@ -176,30 +179,26 @@ defmodule Playcode.Export.TeiXml do
         []
       end
 
-    # Translators, researchers and the critical edition's editor as
-    # <editor role="…"><persName>…<orgName>…, the role the word TeiParser reads back.
-    title_editors =
-      for e <- play.editors, Map.has_key?(@title_editor_roles, e.role) do
-        org = if e.organization, do: [element(:orgName, e.organization)], else: []
+    # The credits in their order, which TeiParser reads back from the order of the
+    # editors and respStmts: translators, researchers and the critical edition's editor
+    # as <editor role="…"><persName>…<orgName>…, the role the word TeiParser reads back,
+    # and the editors, digital editors and reviewers of positions 100..199 as respStmts.
+    title_credits =
+      for e <- credits(play), title_credit?(e) do
+        if Map.has_key?(@title_editor_roles, e.role) do
+          org = if e.organization, do: [element(:orgName, e.organization)], else: []
 
-        element(:editor, %{role: @title_editor_roles[e.role]}, [
-          element(:persName, e.person_name) | org
-        ])
+          element(:editor, %{role: @title_editor_roles[e.role]}, [
+            element(:persName, e.person_name) | org
+          ])
+        else
+          resp_stmt(e)
+        end
       end
 
-    # respStmt for digital editors in titleStmt (from titleStmt import)
-    resp_stmts =
-      play.editors
-      |> Enum.filter(
-        &(&1.role in ["digital_editor", "editor", "reviewer"] and &1.position >= 100 and
-            &1.position < 200)
-      )
-      |> Enum.map(&resp_stmt/1)
-
+    # Last, as the files write it; TeiParser reads it back first, wherever it is.
     principal =
-      play.editors
-      |> Enum.filter(&(&1.role == "principal"))
-      |> Enum.map(fn e -> element(:principal, e.person_name) end)
+      for e <- credits(play), e.role == "principal", do: element(:principal, e.person_name)
 
     sponsor =
       if play.sponsor,
@@ -211,26 +210,28 @@ defmodule Playcode.Export.TeiXml do
         do: [element(:funder, [element(:orgName, play.funder)])],
         else: []
 
-    element(
-      :titleStmt,
-      titles ++
-        authors ++ title_editors ++ sponsor ++ funder ++ resp_stmts ++ principal
-    )
+    element(:titleStmt, titles ++ authors ++ sponsor ++ funder ++ title_credits ++ principal)
   end
 
   defp build_edition_stmt(play) do
-    # Positions 100..199 are titleStmt's respStmts, already written there by
-    # build_title_stmt/1. Writing them here too made a re-import create each one twice.
+    # The respStmts the titleStmt does not hold. Writing those here too made a re-import
+    # create each one twice.
     editors =
-      play.editors
-      |> Enum.filter(&(&1.role in ["editor", "digital_editor", "reviewer"]))
-      |> Enum.reject(&(&1.position in 100..199))
-      |> Enum.map(&resp_stmt/1)
+      for e <- credits(play), e.role in @resp_roles, not title_credit?(e), do: resp_stmt(e)
 
     element(:editionStmt, [
       element(:edition, "Edición electrónica de '#{play.title}'")
       | editors
     ])
+  end
+
+  defp credits(play), do: Enum.sort_by(play.editors, & &1.position)
+
+  # Where a credit is written: the titleStmt's translators, researchers and critical
+  # editor, and the respStmts a file gave there, which TeiParser numbers from 100.
+  defp title_credit?(editor) do
+    Map.has_key?(@title_editor_roles, editor.role) or
+      (editor.role in @resp_roles and editor.position in 100..199)
   end
 
   # The resp is the wording TeiParser reads the role back from: anything with "Edición"
