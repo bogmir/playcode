@@ -172,6 +172,8 @@ others (`nota_editor_digital` into `editor_digital`, `falta_tipo` into no type);
 `T07.261` may already hold it. Then a clause per type in `PlayLabels.note_type_label/1` and
 `Note.types/0`. **Decided** 2026-10-16 (question 17) for all but `falta_tipo`: the names the
 questions page proposes, and the two slips read as `traductor` (`video`) and `editor_digital`.
+**Built** 2026-10-18 (*The names of the kinds of note* in `docs/history.md`); `falta_tipo` still
+reads "Note" and waits on question 17.
 
 ### The grouping of verse forms into families
 
