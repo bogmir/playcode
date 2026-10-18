@@ -3160,6 +3160,31 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # An aside or a stage is set apart from the words beside it, and the punctuation after it
+  # was too: "Dimmi (ti priego) , dimmi", in 302 production texts (found 2026-10-18).
+  describe "punctuation right after an aside or a stage" do
+    test "keeps close, the words before still set apart" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>I</head><sp><speaker>A</speaker>
+              <l n="1">Dimmi <seg type="aside">(ti priego)</seg>, dimmi</l>
+              <l n="2">Señor <stage>(Dentro)</stage>, acudid</l>
+              <l n="3">Ya<stage>(Vase.)</stage>.</l>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "l") == [
+               "Dimmi (ti priego), dimmi",
+               "Señor (Dentro), acudid",
+               "Ya (Vase.)."
+             ]
+    end
+  end
+
   # The importer joined the pieces of a text with a space, so `un <emph>sueño</emph>, fue`
   # read "un sueño , fue": 4,470 times in 271 production files (found 2026-10-18).
   describe "italics right before punctuation" do
