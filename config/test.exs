@@ -11,7 +11,11 @@ config :playcode, Playcode.Repo,
   hostname: "localhost",
   database: "playcode_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
-  pool_size: System.schedulers_online() * 2
+  pool_size: System.schedulers_online() * 2,
+  # Production's (config/runtime.exs). A TEI import is one transaction, and the timeout
+  # covers the Elixir work inside it too: a big play sharing the CPU with the rest of the
+  # suite passed the default 15 s.
+  timeout: 60_000
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.

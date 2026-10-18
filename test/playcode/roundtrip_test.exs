@@ -762,10 +762,10 @@ default_fixtures = ~w(
   |> Enum.sort_by(&Path.basename/1)
   |> Enum.split_with(&(Path.basename(&1) in default_fixtures))
 
-# A whole play is imported in one transaction, which may hold its connection 15 s. Two
-# dozen imports at once on six cores outlast that, so at most `lanes` run side by side:
-# modules in one group never run together. The default fixtures come first, a lane each.
-lanes = max(div(System.schedulers_online(), 2), 1)
+# A whole play is imported in one transaction, CPU-bound in Elixir, so at most one import
+# per scheduler runs at a time: modules in one group never run together. The default
+# fixtures come first, a lane each.
+lanes = System.schedulers_online()
 
 for {path, i} <- Enum.with_index(default_paths ++ slow_paths) do
   code = Path.basename(path, ".xml")
