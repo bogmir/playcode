@@ -1903,15 +1903,22 @@ defmodule Playcode.Import.TeiParser do
   end
 
   # Whether the file writes `child` and `next` with no white space between them where one
-  # is an italic and the other a word or an italic: italics are formatting, so no space is
-  # added there. Any other element (a stage, an aside, a printed line's number) is set
-  # apart from its neighbours whatever the spacing.
+  # is an italic and the other a word or an italic (italics are formatting), or where an
+  # element is followed by closing punctuation ("(ti priego), dimmi"): no space is added
+  # there. Otherwise an element (a stage, an aside, a printed line's number) is set apart
+  # from its neighbours whatever the spacing.
   defp glued?(_child, nil), do: false
 
   defp glued?(child, next) do
-    ((italic?(child) and word_or_italic?(next)) or (italic?(next) and word_or_italic?(child))) and
+    (italic_beside_word?(child, next) or (is_tuple(child) and closing_punctuation?(next))) and
       not space_at?(child, :trail) and not space_at?(next, :lead)
   end
+
+  defp italic_beside_word?(child, next),
+    do: (italic?(child) and word_or_italic?(next)) or (italic?(next) and word_or_italic?(child))
+
+  defp closing_punctuation?(text) when is_binary(text), do: text =~ ~r/\A[,.;:!?)\]»…]/u
+  defp closing_punctuation?(_node), do: false
 
   defp word_or_italic?(node), do: is_binary(node) or italic?(node)
 
