@@ -477,17 +477,20 @@ defmodule Playcode.Export.StaticSiteTest do
   end
 
   # The muted grey prints the Folio passages, the notes' heads and every caption: WCAG AA
-  # asks 4.5:1 for text, in the light theme and the dark one.
-  test "the muted grey reads at 4.5:1 on the paper in both themes" do
+  # asks 4.5:1 for text, in the light theme and the dark one, on the paper, a raised box, a
+  # targeted line or note number (`--mark`) and a table's light rule (`--hair-2`).
+  test "the muted grey reads at 4.5:1 on every background in both themes" do
     dir = generate!([complete_play()])
     css = File.read!(Path.join([dir, "assets", "style.css"]))
     tokens = fn name -> for [_, hex] <- Regex.scan(~r/--#{name}: #(\w{6})/, css), do: hex end
-    themes = Enum.zip(tokens.("muted"), tokens.("paper"))
 
-    assert length(themes) == 2
+    for background <- ~w(paper raised mark hair-2) do
+      themes = Enum.zip(tokens.("muted"), tokens.(background))
+      assert length(themes) == 2
 
-    for {muted, paper} <- themes do
-      assert contrast(muted, paper) >= 4.5, "##{muted} on ##{paper}"
+      for {muted, colour} <- themes do
+        assert contrast(muted, colour) >= 4.5, "##{muted} on --#{background} ##{colour}"
+      end
     end
   end
 

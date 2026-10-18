@@ -467,9 +467,11 @@ defmodule Playcode.Import.TeiParser do
         attr_value(elem(main_author, 1), "ana")
       end
 
+    title = safe_text(main_title) |> normalize_imported_title()
+
     %{
-      title: safe_text(main_title) |> normalize_imported_title(),
-      title_sort: safe_text(sort_title),
+      title: title,
+      title_sort: safe_text(sort_title) |> normalize_sort_title(title),
       code: clean_code(code || "UNKNOWN"),
       original_title: safe_text(original_title_el),
       author_name: safe_text(main_author),
@@ -2162,6 +2164,24 @@ defmodule Playcode.Import.TeiParser do
       |> Enum.join()
     else
       normalized_title
+    end
+  end
+
+  # A sort title in capitals ("DISCRETA ENAMORADA LA") takes each word's case from the
+  # title-cased title, so the article put last keeps its capital ("Cid Le"); a word the
+  # title lacks ("COMEDIA FAMOSA DE") is title-cased on its own.
+  defp normalize_sort_title(nil, _title), do: nil
+
+  defp normalize_sort_title(sort_title, title) do
+    if all_caps_text?(sort_title) do
+      cased = Map.new(String.split(title || ""), &{String.upcase(&1), &1})
+
+      sort_title
+      |> normalize_imported_title()
+      |> String.split()
+      |> Enum.map_join(" ", &Map.get(cased, String.upcase(&1), &1))
+    else
+      sort_title
     end
   end
 
