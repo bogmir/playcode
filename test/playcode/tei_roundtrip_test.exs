@@ -3160,6 +3160,111 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # The importer joined the pieces of a text with a space, so `un <emph>sueño</emph>, fue`
+  # read "un sueño , fue": 4,470 times in 271 production files (found 2026-10-18).
+  describe "italics right before punctuation" do
+    test "keep the punctuation close, in a line, a paragraph and a dedication" do
+      xml =
+        roundtrip(
+          tei(
+            front:
+              ~s(<div type="dedicatoria"><head>D</head><p>Al <emph>lector</emph>, con afecto.</p></div>),
+            body: """
+            <div1 type="acto" n="1"><head>I</head><sp><speaker>A</speaker>
+              <l n="1">un <emph>sueño</emph>, fue</l>
+              <p>Prosa <emph>cursiva</emph>; y más.</p>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "l") == ["un sueño, fue"]
+      assert reading_texts(xml, "p") == ["Prosa cursiva; y más."]
+      assert xml =~ "<emph>lector</emph>, con afecto."
+    end
+
+    test "a space at an italic's own edge stays, and none appears where the file has none" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>I</head><sp><speaker>A</speaker>
+              <l n="1">Uno<emph> dos</emph></l>
+              <l n="2">tres<emph>cuatro</emph></l>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "l") == ["Uno dos", "trescuatro"]
+    end
+
+    # Glued to a stage or a printed line's number, an italic is still set apart from it:
+    # only words and other italics are glued (found by the branch's review).
+    test "an italic beside an inline stage or a line number is still set apart" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>I</head><sp><speaker>A</speaker>
+              <l n="1"><stage>(Cantan:)</stage><emph>A pescar salió</emph></l>
+              <l n="2"><emph>dos</emph><lb n="5"/>tres</l>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "l") == ["(Cantan:) A pescar salió", "dos tres"]
+    end
+
+    # The export merged adjacent italic runs, the importer having parted them with a space;
+    # glued, they now come back as two, the same each time.
+    test "two italics side by side stay two, and a second round trip changes nothing" do
+      body =
+        ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1"><emph>a</emph><emph>b</emph>, c</l></sp></div1>)
+
+      first = tei(code: "GLU1", body: body) |> roundtrip()
+      second = first |> String.replace("GLU1", "GLU2") |> roundtrip()
+
+      assert first =~ "<emph>a</emph><emph>b</emph>, c"
+      assert String.replace(second, "GLU2", "GLU1") == first
+    end
+
+    # EMOTHE0488 glues italics that end in a break: its export was no XML at all (found by
+    # the branch's review), and so was a note after a break inside one italic.
+    test "an italic ending in a break, glued to the next, exports as well-formed XML" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><sp><speaker>A</speaker>
+              <p><emph>a<lb/></emph><emph>b</emph></p>
+              <p><emph>c<lb/>d<note n="1" type="editor"><p>N.</p></note> e</emph></p>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert xml_lines(xml, "p") == [{%{}, "a | b"}, {%{}, "c | d e"}]
+    end
+
+    test "a note inside an italic right before punctuation keeps its place" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><sp><speaker>A</speaker>
+              <l n="1">un <emph>sueño<note n="1" type="editor"><p>Nota.</p></note></emph>, fue</l>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "l") == ["un sueño, fue"]
+      assert [%{after: "un sueño", in: "l"}] = xml_notes(xml)
+    end
+  end
+
   # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
   # re-importing that copy made a second editor: one more per round trip.
   test "exporting, re-importing and exporting again changes nothing" do
