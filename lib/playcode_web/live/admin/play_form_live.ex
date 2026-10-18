@@ -37,7 +37,10 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             "; "
           )
 
-  # The rest of the header FileMaker writes into every file, the same in all 372.
+  # The rest of the header FileMaker writes into a new file today, ARTELOPE's too. The
+  # sponsor, authority and place are every file's; the funder and publisher are the newest
+  # of the corpus's three (203 older files, the 19 ARTELOPE ones among them, name the
+  # Dirección General de Investigación and "Proyecto ARTELOPE").
   @header_defaults %{
     "editorial_declaration" =>
       "Las presentes ediciones digitales están basadas, en su mayor parte, en ediciones científicas de reconocido prestigio y se ha tratado, en la mayoría de ocasiones, de respetar sus criterios de edición. Solo en casos muy puntuales el editor digital ha introducido leves cambios de los que da cumplida cuenta en el apartado de \u201cNotas\u201d.",
@@ -111,9 +114,11 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   @impl true
-  def handle_event("validate", %{"play" => play_params}, socket) do
+  def handle_event("validate", %{"play" => play_params} = params, socket) do
+    # A new play's header texts follow the code as it is typed, filling what is blank;
+    # one the researcher empties stays empty.
     play_params =
-      if socket.assigns.live_action == :new,
+      if socket.assigns.live_action == :new and params["_target"] == ["play", "code"],
         do: maybe_apply_corpus_defaults(play_params),
         else: play_params
 

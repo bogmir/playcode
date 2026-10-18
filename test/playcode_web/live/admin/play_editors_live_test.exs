@@ -38,6 +38,35 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLiveTest do
     assert translators(play) == []
   end
 
+  # A file's credits are numbered from 100 and 200 (the statement they are written to),
+  # so the count of credits is no position after them.
+  test "a credit added here is listed after the file's", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          title_stmt:
+            ~s(<editor role="translator"><persName>Sanderson, John D.</persName></editor>),
+          file_desc: """
+          <editionStmt><edition>Edición</edition>
+            <respStmt><resp>Revisión</resp><persName>Revisor, Raúl</persName></respStmt>
+          </editionStmt>
+          """
+        )
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/editors")
+    lv |> element("button", t("Add editor")) |> render_click()
+
+    lv
+    |> form("#editor-form",
+      play_editor: %{"person_name" => "Nueva, Nora", "role" => "researcher"}
+    )
+    |> render_submit()
+
+    assert Enum.map(Playcode.Catalogue.get_play_with_all!(play.id).editors, & &1.person_name) ==
+             ["Sanderson, John D.", "Revisor, Raúl", "Nueva, Nora"]
+  end
+
   test "a critical edition's editor added here is credited as edicion_critica",
        %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/editors")

@@ -720,9 +720,10 @@ defmodule Playcode.Import.TeiParser do
     project_desc = find_child(children, "projectDesc")
     editorial_decl = find_child(children, "editorialDecl")
 
+    # Paragraphs nested deeper (<normalization><p>, which no corpus file has) read as one.
     {
-      paragraphs(project_desc),
-      paragraphs(editorial_decl)
+      paragraphs(project_desc) || safe_text(project_desc),
+      paragraphs(editorial_decl) || safe_text(editorial_decl)
     }
   end
 
@@ -743,7 +744,7 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Editors ---
 
-  # The principal investigator first (the files write it last), then the titleStmt's
+  # The principal investigators first (the files write them last), then the titleStmt's
   # <editor>s and respStmts in their order, from position 100, the range the export
   # writes back to the titleStmt, then the editionStmt's respStmts, from 200.
   defp editors(nil), do: []
@@ -751,34 +752,31 @@ defmodule Playcode.Import.TeiParser do
   defp editors({_name, _attrs, children}) do
     title_stmt = find_child(children, "titleStmt")
 
-    principal(title_stmt) ++
-      numbered(statement_credits(title_stmt), 100) ++
-      numbered(statement_credits(find_child(children, "editionStmt")), 200)
+    numbered(statement_credits(title_stmt, ~w(principal)), 0) ++
+      numbered(statement_credits(title_stmt, ~w(editor respStmt)), 100) ++
+      numbered(statement_credits(find_child(children, "editionStmt"), ~w(respStmt)), 200)
   end
 
-  defp statement_credits(nil), do: []
+  # The credits a statement's `tags` give, in their order.
+  defp statement_credits(nil, _tags), do: []
 
-  defp statement_credits({_name, _attrs, children}) do
+  defp statement_credits({_name, _attrs, children}, tags) do
     Enum.flat_map(children, fn
-      {"editor", attrs, editor_children} -> title_editor(attrs, editor_children)
-      {"respStmt", _attrs, resp_children} -> resp_stmt_editors(resp_children)
-      _ -> []
+      {tag, attrs, tag_children} -> if tag in tags, do: credit(tag, attrs, tag_children), else: []
+      _text -> []
     end)
   end
+
+  defp credit("principal", attrs, children),
+    do: [%{person_name: text_content({"principal", attrs, children}), role: "principal"}]
+
+  defp credit("editor", attrs, children), do: title_editor(attrs, children)
+  defp credit("respStmt", _attrs, children), do: resp_stmt_editors(children)
 
   defp numbered(editors, first) do
     editors
     |> Enum.with_index(first)
     |> Enum.map(fn {editor, position} -> Map.put(editor, :position, position) end)
-  end
-
-  defp principal(nil), do: []
-
-  defp principal({_name, _attrs, children}) do
-    case find_child(children, "principal") do
-      nil -> []
-      principal -> [%{person_name: text_content(principal), role: "principal", position: 0}]
-    end
   end
 
   # <editor role="…"> in titleStmt: translators, researchers and the editor of the
@@ -2166,19 +2164,28 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  # A sort title in capitals ("DISCRETA ENAMORADA LA") takes each word's case from the
-  # title-cased title, so the article put last keeps its capital ("Cid Le"); a word the
-  # title lacks ("COMEDIA FAMOSA DE") is title-cased on its own.
+  # A sort title in capitals is the title from some word on, its article put last
+  # ("DISCRETA ENAMORADA LA"). Each word takes the case of the title's next word that
+  # matches it, read round the title from the last match, so the article keeps its
+  # capital ("Cid Le") and a word repeated mid-title its small letter ("Fuerza de la
+  # Sangre La"); a word the title lacks ("COMEDIA FAMOSA DE") is title-cased on its own.
   defp normalize_sort_title(nil, _title), do: nil
 
   defp normalize_sort_title(sort_title, title) do
     if all_caps_text?(sort_title) do
-      cased = Map.new(String.split(title || ""), &{String.upcase(&1), &1})
+      words = ~r/[\p{L}\p{N}'’\-]+/u |> Regex.scan(title || "") |> List.flatten()
+      round = words ++ words
 
       sort_title
-      |> normalize_imported_title()
       |> String.split()
-      |> Enum.map_join(" ", &Map.get(cased, String.upcase(&1), &1))
+      |> Enum.map_reduce(0, fn word, from ->
+        case Enum.find_index(Enum.drop(round, from), &(String.upcase(&1) == word)) do
+          nil -> {format_title_segment(word, false), from}
+          index -> {Enum.at(round, from + index), from + index + 1}
+        end
+      end)
+      |> elem(0)
+      |> Enum.join(" ")
     else
       sort_title
     end

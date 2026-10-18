@@ -40,13 +40,16 @@ defmodule Playcode.Export.TeiXml do
   """
   def generate(play, opts \\ []) do
     play =
-      Playcode.Repo.preload(play, [
+      play
+      |> Playcode.Repo.preload([
         :editors,
         :sources,
         :paratexts,
         :witnesses,
         play_places: [place: :names]
       ])
+      # The credits are written in their order, which a preload does not keep.
+      |> Map.update!(:editors, &Enum.sort_by(&1, fn editor -> editor.position end))
 
     characters =
       Keyword.get_lazy(opts, :characters, fn -> PlayContent.list_characters(play.id) end)
@@ -184,21 +187,20 @@ defmodule Playcode.Export.TeiXml do
     # as <editor role="…"><persName>…<orgName>…, the role the word TeiParser reads back,
     # and the editors, digital editors and reviewers of positions 100..199 as respStmts.
     title_credits =
-      for e <- credits(play), title_credit?(e) do
-        if Map.has_key?(@title_editor_roles, e.role) do
-          org = if e.organization, do: [element(:orgName, e.organization)], else: []
+      for e <- play.editors, title_credit?(e) do
+        case @title_editor_roles[e.role] do
+          nil ->
+            resp_stmt(e)
 
-          element(:editor, %{role: @title_editor_roles[e.role]}, [
-            element(:persName, e.person_name) | org
-          ])
-        else
-          resp_stmt(e)
+          role ->
+            org = if e.organization, do: [element(:orgName, e.organization)], else: []
+            element(:editor, %{role: role}, [element(:persName, e.person_name) | org])
         end
       end
 
     # Last, as the files write it; TeiParser reads it back first, wherever it is.
     principal =
-      for e <- credits(play), e.role == "principal", do: element(:principal, e.person_name)
+      for e <- play.editors, e.role == "principal", do: element(:principal, e.person_name)
 
     sponsor =
       if play.sponsor,
@@ -217,15 +219,13 @@ defmodule Playcode.Export.TeiXml do
     # The respStmts the titleStmt does not hold. Writing those here too made a re-import
     # create each one twice.
     editors =
-      for e <- credits(play), e.role in @resp_roles, not title_credit?(e), do: resp_stmt(e)
+      for e <- play.editors, e.role in @resp_roles, not title_credit?(e), do: resp_stmt(e)
 
     element(:editionStmt, [
       element(:edition, "Edición electrónica de '#{play.title}'")
       | editors
     ])
   end
-
-  defp credits(play), do: Enum.sort_by(play.editors, & &1.position)
 
   # Where a credit is written: the titleStmt's translators, researchers and critical
   # editor, and the respStmts a file gave there, which TeiParser numbers from 100.
@@ -397,9 +397,11 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
-  # A text whose paragraphs are parted by a blank line, one <p> each.
-  defp paragraphs(text),
-    do: for(paragraph <- String.split(text, "\n\n", trim: true), do: element(:p, paragraph))
+  # A text whose paragraphs are parted by a blank line, one <p> each, its italics as <emph>.
+  defp paragraphs(text) do
+    for paragraph <- Note.paragraphs(text),
+        do: inline_element(:p, %{}, build_inline_content(paragraph))
+  end
 
   defp build_encoding_desc(play) do
     children = []
