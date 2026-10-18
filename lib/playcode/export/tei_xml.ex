@@ -72,8 +72,9 @@ defmodule Playcode.Export.TeiXml do
     )
   end
 
-  # The revision history, each change as the files write it: the date, the revisers, then
-  # the words saying what was done, a space between, so a reader of the text gets words.
+  # The revision history, each change in the order the files use: the date (an empty one
+  # if none, as 48 files have), the revisers, the words saying what was done, the note; a
+  # space between, so a reader of the text gets words.
   defp build_revision_desc(%{revisions: []}), do: []
 
   defp build_revision_desc(play) do

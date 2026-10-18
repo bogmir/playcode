@@ -219,7 +219,7 @@ defmodule Playcode.Catalogue.Play do
       :edition_notes
     ])
     |> update_change(:edition_notes, &squeeze_notes/1)
-    |> cast_embed(:revisions)
+    |> cast_embed(:revisions, sort_param: :revisions_order, drop_param: :revisions_delete)
     |> validate_required([:title, :code])
     |> validate_inclusion(:language, @valid_languages)
     |> validate_number(:verse_count, greater_than_or_equal_to: 0)
@@ -268,13 +268,6 @@ defmodule Playcode.Catalogue.Play do
   Changeset for manual form entry.
   """
   def form_changeset(play, attrs) do
-    changeset(play, drop_blank_revisions(attrs))
+    changeset(play, attrs)
   end
-
-  # The form shows an empty row for a new change of the revision history; a row left or
-  # made empty is no change.
-  defp drop_blank_revisions(%{"revisions" => rows} = attrs) when is_map(rows),
-    do: %{attrs | "revisions" => Map.reject(rows, fn {_i, row} -> Revision.blank?(row) end)}
-
-  defp drop_blank_revisions(attrs), do: attrs
 end

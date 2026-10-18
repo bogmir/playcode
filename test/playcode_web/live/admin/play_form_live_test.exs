@@ -206,49 +206,83 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     refute has_element?(view, "#play_edition_notes_1")
   end
 
-  # As with the notes, one row per change and an empty one for a new change; a row left or
-  # made empty is no change.
-  test "the revision history is changed, an emptied change removed and one added",
-       %{conn: conn} do
-    play =
-      import_tei!(
-        tei(
-          revision_desc: """
-          <change><date>2021</date> <persName>Muñoz Pons, Carlos</persName> Revisión</change>
-          <change><date>2016</date></change>
-          """
-        )
-      )
+  defp revisions(play) do
+    play.id
+    |> Catalogue.get_play!()
+    |> Map.fetch!(:revisions)
+    |> Enum.map(&{&1.date, &1.people, &1.description, &1.note})
+  end
 
+  defp history_play do
+    import_tei!(
+      tei(
+        revision_desc: """
+        <change><date>2021</date> <persName>Muñoz Pons, Carlos</persName> Revisión</change>
+        <change><date>2016</date></change>
+        """
+      )
+    )
+  end
+
+  # A row per change, "Add change" for a new one and Remove for one to go, as a variant's
+  # readings are edited; a row left empty is no change.
+  test "the revision history is changed, a change removed and one added", %{conn: conn} do
+    play = history_play()
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
-    blank = %{"date" => "", "people" => "", "description" => "", "note" => ""}
+
+    view |> form("#play-form") |> render_change(%{play: %{"revisions_delete" => ["0"]}})
+    view |> form("#play-form") |> render_change(%{play: %{"revisions_order" => ["0", "new"]}})
+
+    view
+    |> form("#play-form")
+    |> render_change(%{play: %{"revisions_order" => ["0", "1", "new"]}})
 
     save(view, %{
       "revisions" => %{
-        "0" => %{
-          blank
-          | "date" => "2021",
-            "people" => "Muñoz Pons, Carlos; Tronch Pérez, Jesús",
-            "description" => "Revisión"
-        },
-        "1" => blank,
-        "2" => %{
-          blank
-          | "date" => "2026",
-            "people" => "Mircea, Bogdan",
-            "note" => "Acotaciones corregidas."
-        }
+        "0" => %{"people" => "Muñoz Pons, Carlos; Tronch Pérez, Jesús"},
+        "1" => %{"date" => "2026", "people" => "Mircea, Bogdan", "note" => "Acotaciones."}
       }
     })
 
-    assert play.id
-           |> Catalogue.get_play!()
-           |> Map.fetch!(:revisions)
-           |> Enum.map(&{&1.date, &1.people, &1.description, &1.note}) ==
-             [
-               {"2021", "Muñoz Pons, Carlos; Tronch Pérez, Jesús", "Revisión", nil},
-               {"2026", "Mircea, Bogdan", nil, "Acotaciones corregidas."}
-             ]
+    assert revisions(play) == [
+             {"2016", "Muñoz Pons, Carlos; Tronch Pérez, Jesús", nil, nil},
+             {"2026", "Mircea, Bogdan", nil, "Acotaciones."}
+           ]
+  end
+
+  # Found by the review of 2026-10-18: blank rows were dropped while typing, so the rows
+  # after one being emptied moved up under the editor's cursor.
+  test "a change emptied while typing keeps the rows where they are, and goes on saving",
+       %{conn: conn} do
+    play = history_play()
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+    blank = %{"date" => "", "people" => "", "description" => "", "note" => ""}
+
+    view |> form("#play-form", play: %{"revisions" => %{"0" => blank}}) |> render_change()
+    assert has_element?(view, ~s(#play_revisions_1_date[value="2016"]))
+
+    save(view, %{"revisions" => %{"0" => blank}})
+    assert revisions(play) == [{"2016", nil, nil, nil}]
+  end
+
+  # Found by the review of 2026-10-18: a copy button rebuilt the form from the changeset,
+  # the revision history with it, and crashed the page.
+  test "a copy button keeps the revision history", %{conn: conn} do
+    play = history_play()
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+    render_click(view, "copy_field", %{"source" => "title", "target" => "original_title"})
+    save(view, %{})
+
+    assert Catalogue.get_play!(play.id).original_title == play.title
+
+    assert revisions(play) == [
+             {"2021", "Muñoz Pons, Carlos", "Revisión", nil},
+             {"2016", nil, nil, nil}
+           ]
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+    assert render_click(view, "copy_field", %{"source" => "title", "target" => "title_sort"})
   end
 
   test "half a composition date is refused", %{conn: conn} do

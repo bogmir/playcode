@@ -103,7 +103,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   def handle_event("save", %{"play" => play_params}, socket) do
-    save_play(socket, socket.assigns.live_action, play_params)
+    save_play(socket, socket.assigns.live_action, drop_blank_revisions(play_params))
   end
 
   def handle_event("suggest_parent", params, socket) do
@@ -184,15 +184,32 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   defp form_params_from_changeset(changeset) do
-    data = changeset.data
-    changes = changeset.changes
-
     Play.__schema__(:fields)
     |> Enum.reduce(%{}, fn field, acc ->
-      val = Map.get(changes, field, Map.get(data, field))
-      if val, do: Map.put(acc, Atom.to_string(field), val), else: acc
+      case Ecto.Changeset.get_field(changeset, field) do
+        nil -> acc
+        val -> Map.put(acc, Atom.to_string(field), form_param(field, val))
+      end
     end)
   end
+
+  # The revision history goes back as the rows the form sends, one per change.
+  defp form_param(:revisions, changes) do
+    for {change, i} <- Enum.with_index(changes),
+        into: %{},
+        do: {"#{i}", Map.take(change, Revision.__schema__(:fields))}
+  end
+
+  defp form_param(_field, val), do: val
+
+  # A change added and left empty, or emptied, is no change: dropped as Remove drops it.
+  # Only on save, so the rows never move while the editor is typing.
+  defp drop_blank_revisions(%{"revisions" => rows} = params) when is_map(rows) do
+    blank = for {i, row} <- rows, is_map(row), Revision.blank?(row), do: i
+    Map.update(params, "revisions_delete", blank, &(List.wrap(&1) ++ blank))
+  end
+
+  defp drop_blank_revisions(params), do: params
 
   @attribution_options ~w(fiable dudosa atribuida anónima apócrifa)
 
@@ -774,33 +791,37 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           </h3>
           <p class="text-xs text-base-content/70">
             {gettext(
-              "Who revised the TEI file and when, written in its header, not shown to readers. Separate several revisers with a semicolon; empty a row to remove its change."
+              "Who revised the TEI file and when, written in its header, not shown to readers. Separate several revisers with a semicolon."
             )}
           </p>
-          <div
-            :for={{row, i} <- Enum.with_index(revision_rows(@form))}
-            class="grid grid-cols-1 gap-2 md:grid-cols-[6rem_1fr_1fr_1fr]"
-          >
-            <div :for={
-              {key, label} <- [
-                {"date", gettext("Date")},
-                {"people", gettext("Revisers")},
-                {"description", gettext("What was done")},
-                {"note", gettext("Note")}
-              ]
-            }>
-              <label class="label" for={"play_revisions_#{i}_#{key}"}>
-                <span class="label-text font-medium">{label}</span>
-              </label>
-              <input
-                type="text"
-                id={"play_revisions_#{i}_#{key}"}
-                name={"play[revisions][#{i}][#{key}]"}
-                value={row[key]}
-                class="w-full input"
-              />
+          <.inputs_for :let={change} field={@form[:revisions]}>
+            <input type="hidden" name="play[revisions_order][]" value={change.index} />
+            <div class="grid grid-cols-1 items-end gap-2 md:grid-cols-[6rem_1fr_1fr_1fr_auto]">
+              <.input field={change[:date]} type="text" label={gettext("Date")} />
+              <.input field={change[:people]} type="text" label={gettext("Revisers")} />
+              <.input field={change[:description]} type="text" label={gettext("What was done")} />
+              <.input field={change[:note]} type="text" label={gettext("Note")} />
+              <button
+                type="button"
+                name="play[revisions_delete][]"
+                value={change.index}
+                phx-click={JS.dispatch("change")}
+                class="btn btn-ghost btn-xs text-error mb-2"
+              >
+                {gettext("Remove")}
+              </button>
             </div>
-          </div>
+          </.inputs_for>
+          <input type="hidden" name="play[revisions_delete][]" />
+          <button
+            type="button"
+            name="play[revisions_order][]"
+            value="new"
+            phx-click={JS.dispatch("change")}
+            class="btn btn-ghost btn-xs"
+          >
+            {gettext("Add change")}
+          </button>
         </div>
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
@@ -868,24 +889,5 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   defp edition_note_boxes(form) do
     notes = form.params["edition_notes"] || form[:edition_notes].value || []
     if List.last(notes) == "", do: notes, else: notes ++ [""]
-  end
-
-  # The same for the revision history: one row per change and an empty one for a new change,
-  # what was typed while the form is being edited.
-  defp revision_rows(form) do
-    rows =
-      case form.params["revisions"] do
-        %{} = typed ->
-          typed |> Enum.sort_by(fn {i, _} -> String.to_integer(i) end) |> Enum.map(&elem(&1, 1))
-
-        nil ->
-          for change <- Ecto.Changeset.get_field(form.source, :revisions) do
-            for key <- ~w(date people description note)a,
-                into: %{},
-                do: {"#{key}", Map.get(change, key)}
-          end
-      end
-
-    if rows != [] and Revision.blank?(List.last(rows)), do: rows, else: rows ++ [%{}]
   end
 end

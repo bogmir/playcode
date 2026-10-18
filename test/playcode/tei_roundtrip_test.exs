@@ -345,6 +345,7 @@ defmodule Playcode.TeiRoundtripTest do
   # change with nothing in it is no change.
   describe "the revision history" do
     alias Playcode.Catalogue
+    alias Playcode.PlayContent.InlineMarkup
 
     test "each change comes back: its date, its revisers, its words, italics too, and its note" do
       n = System.unique_integer([:positive])
@@ -358,6 +359,7 @@ defmodule Playcode.TeiRoundtripTest do
               <date>2021</date>
               <persName>Muñoz Pons, Carlos</persName>
               <persName>Tronch Pérez, Jesús</persName>
+              <persName/>
               Revisión de la obra
                 en formato <emph>TEI-XML</emph>
             </change>
@@ -372,7 +374,7 @@ defmodule Playcode.TeiRoundtripTest do
         %{
           date: "2021",
           people: "Muñoz Pons, Carlos; Tronch Pérez, Jesús",
-          description: "Revisión de la obra en formato <<TEI-XML>>",
+          description: "Revisión de la obra en formato TEI-XML",
           note: nil
         },
         %{
@@ -383,11 +385,13 @@ defmodule Playcode.TeiRoundtripTest do
         }
       ]
 
+      # The italics are the file's to show (the emph below), not the stored text's.
       revisions = fn play ->
-        Enum.map(
-          Catalogue.get_play!(play.id).revisions,
-          &Map.take(&1, [:date, :people, :description, :note])
-        )
+        for change <- Catalogue.get_play!(play.id).revisions do
+          change
+          |> Map.take([:date, :people, :description, :note])
+          |> Map.update!(:description, &(&1 && InlineMarkup.plain(&1)))
+        end
       end
 
       assert revisions.(play) == changes
@@ -407,6 +411,7 @@ defmodule Playcode.TeiRoundtripTest do
 
       copy = xml |> String.replace("RV#{n}", "RC#{n}") |> import_tei!()
       assert revisions.(copy) == changes
+      assert copy |> export_tei() |> xml_texts("emph", within: "change") == ["TEI-XML"]
     end
   end
 

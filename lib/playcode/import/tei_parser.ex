@@ -617,7 +617,11 @@ defmodule Playcode.Import.TeiParser do
 
   # <revisionDesc><change>: who revised the file and when, as the files write it: a <date>,
   # the revisers' <persName>s and the words saying what was done (the rest of its text,
-  # italics as <<…>>), or a <note> saying it. A change with nothing in it (an empty <date/> alone, 44 files) is no change.
+  # italics as <<…>>), or a <note> saying it. A change with nothing in it (an empty <date/>
+  # alone, 44 files) is no change.
+  # ponytail: one date, one note and the words after the revisers, the shape of all 351
+  # files; a change written as prose around its persNames, with a second note, or dated
+  # by @when needs a field of mixed content instead.
   defp revisions(nil), do: []
 
   defp revisions({_name, _attrs, children}) do
@@ -626,7 +630,7 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.map(fn {name, attrs, parts} ->
       %{
         date: safe_text(find_child(parts, "date")),
-        people: parts |> find_children("persName") |> Enum.map_join("; ", &safe_text/1),
+        people: people(find_children(parts, "persName")),
         description: safe_text({name, attrs, Enum.reject(parts, &revision_part?/1)}),
         note: safe_text(find_child(parts, "note"))
       }
