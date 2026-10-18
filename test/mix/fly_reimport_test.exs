@@ -19,7 +19,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     *dry_run*) cat "$d/dry_run" ;;
     *"resume: true"*) cat "$d/run.$(grep -c 'resume: true' "$d/calls")" 2>/dev/null ;;
     *generate_site*) cat "$d/generate.$(grep -c generate_site "$d/calls")" 2>/dev/null ;;
-    *deploy_site*) cat "$d/deploy" ;;
+    *deploy_site*) cat "$d/deploy.$(grep -c deploy_site "$d/calls")" 2>/dev/null ;;
     *"machine list"*) cat "$d/sizes" 2>/dev/null || echo '[]' ;;
   esac
   """
@@ -223,7 +223,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
 
   describe "deploy" do
     test "wakes the app, pushes the built site, and puts autostop back", %{dir: dir} do
-      answer(dir, "deploy", "deploy: pushing\nsite deployed: %{sha: \"abc\"}\n")
+      answer(dir, "deploy.1", "deploy: pushing\nsite deployed: %{sha: \"abc\"}\n")
 
       Mix.Task.rerun("playcode.fly.reimport", ["deploy"])
 
@@ -237,8 +237,21 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       assert output() =~ "site deployed"
     end
 
+    # Turning autostop off restarts the app, and the first call came before it answered
+    # (2026-10-18): asking again is what generate does when its session ends early.
+    test "asks again when the app is not up yet", %{dir: dir} do
+      answer(dir, "deploy.1", "--rpc-eval : RPC failed with reason :noconnection\n")
+      answer(dir, "deploy.2", "site deployed: %{sha: \"abc\"}\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["deploy"])
+
+      calls = calls(dir)
+      assert Enum.count(calls, &(&1 =~ "deploy_site")) == 2
+      assert List.last(calls) =~ "--autostop=stop"
+    end
+
     test "says so when the push fails, autostop back on all the same", %{dir: dir} do
-      answer(dir, "deploy", "deploy failed: \"rejected\"\n")
+      answer(dir, "deploy.1", "deploy failed: \"rejected\"\n")
 
       assert_raise Mix.Error, ~r/deploy failed/, fn ->
         Mix.Task.rerun("playcode.fly.reimport", ["deploy"])

@@ -61,6 +61,18 @@ defmodule Playcode.Export.DeployTest do
     assert page =~ "Deployed Play"
   end
 
+  # Regression: on production's shared CPU a deploy sat for half an hour on "Pushing":
+  # git's automatic gc repacked the 500 MB site while the push packed it again, both
+  # searching for deltas, on a sixteenth of a core (2026-10-18).
+  test "the push neither starts a gc nor searches for deltas" do
+    settings([])
+    assert {:ok, _url} = deploy("file://" <> bare_repo())
+
+    git_config = &System.cmd("git", ["-C", StaticSite.output_dir(), "config", "--get", &1])
+    assert git_config.("gc.auto") == {"0\n", 0}
+    assert git_config.("pack.window") == {"0\n", 0}
+  end
+
   # Regression: the site's .git outlives a deploy (on the volume), so a second deploy with
   # nothing new failed on "nothing to commit", though a retry after a failed push or
   # publish must still push the site and have it published.

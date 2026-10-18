@@ -66,7 +66,9 @@ mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or bu
    minutes on performance-1x and over two hours on the shared CPU (2026-10-17), so run
    `generate`, not the export page's button.
 6. **Check the preview** on `/admin/export`, then **`deploy`**: Deploy, over SSH, with
-   autostop off while it pushes and back on after it.
+   autostop off while it pushes and back on after it. It asks again as `generate` does: turning
+   autostop off restarts the app, and on 2026-10-18 the first call came before it answered
+   (`RPC failed with reason :noconnection`).
 
 The machines' ids are constants in `lib/mix/tasks/playcode.fly.reimport.ex`; a new
 machine or volume means editing them there and in the table above.
