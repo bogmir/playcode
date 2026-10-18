@@ -1446,11 +1446,11 @@ defmodule Playcode.Import.TeiParser do
   defp act_element({"trailer", _, _} = trailer, pos), do: trailer(trailer, pos)
   defp act_element(_other, _pos), do: nil
 
-  # A scene's speeches, stage directions and trailer, numbered from `first`. Nothing else
-  # in a scene is read.
+  # A scene's speeches, stage directions, trailer, and the paragraphs and stanzas nobody
+  # speaks, numbered from `first`. Nothing else in a scene is read.
   defp scene_content(children, first) do
     children
-    |> Enum.filter(&match?({name, _, _} when name in ~w(sp stage trailer), &1))
+    |> Enum.filter(&match?({name, _, _} when name in ~w(sp stage trailer p lg), &1))
     |> Enum.with_index(first)
     |> Enum.map(fn {child, pos} -> act_element(child, pos) end)
   end

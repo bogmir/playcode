@@ -24,6 +24,12 @@ defmodule Playcode.Export.TeiXml do
   @body_types ~w(acto jornada prologo argumento act acte play prologue induction epilogue
                  interlude dumb_show auto)
 
+  @title_editor_roles %{
+    "translator" => "translator",
+    "researcher" => "researcher",
+    "critical_editor" => "edicion_critica"
+  }
+
   @doc """
   The play's TEI document. `opts` may hand in `:divisions` (as
   `PlayContent.load_play_content/1` returns them) and `:characters` already loaded, as
@@ -170,21 +176,16 @@ defmodule Playcode.Export.TeiXml do
         []
       end
 
-    # Translators and the critical edition's editor as <editor role="…"><persName>…
-    translators =
-      play.editors
-      |> Enum.filter(&(&1.role == "translator"))
-      |> Enum.map(fn e ->
-        element(:editor, %{role: "translator"}, [element(:persName, e.person_name)])
-      end)
-
-    critical_editors =
-      play.editors
-      |> Enum.filter(&(&1.role == "critical_editor"))
-      |> Enum.map(fn e ->
+    # Translators, researchers and the critical edition's editor as
+    # <editor role="…"><persName>…<orgName>…, the role the word TeiParser reads back.
+    title_editors =
+      for e <- play.editors, Map.has_key?(@title_editor_roles, e.role) do
         org = if e.organization, do: [element(:orgName, e.organization)], else: []
-        element(:editor, %{role: "edicion_critica"}, [element(:persName, e.person_name) | org])
-      end)
+
+        element(:editor, %{role: @title_editor_roles[e.role]}, [
+          element(:persName, e.person_name) | org
+        ])
+      end
 
     # respStmt for digital editors in titleStmt (from titleStmt import)
     resp_stmts =
@@ -213,7 +214,7 @@ defmodule Playcode.Export.TeiXml do
     element(
       :titleStmt,
       titles ++
-        authors ++ translators ++ critical_editors ++ sponsor ++ funder ++ resp_stmts ++ principal
+        authors ++ title_editors ++ sponsor ++ funder ++ resp_stmts ++ principal
     )
   end
 
