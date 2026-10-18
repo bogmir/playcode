@@ -13,6 +13,8 @@ defmodule Playcode.Catalogue.Revision do
 
   alias Playcode.Text
 
+  @fields [:date, :people, :description, :note]
+
   @primary_key false
   embedded_schema do
     field :date, :string
@@ -22,15 +24,7 @@ defmodule Playcode.Catalogue.Revision do
   end
 
   def changeset(revision, attrs) do
-    revision
-    |> cast(attrs, [:date, :people, :description, :note])
-    |> update_change(:date, &Text.squeeze/1)
-    |> update_change(:people, &Text.squeeze/1)
-    |> update_change(:description, &Text.squeeze/1)
-    |> update_change(:note, &Text.squeeze/1)
+    changeset = cast(revision, attrs, @fields)
+    Enum.reduce(@fields, changeset, fn field, cs -> update_change(cs, field, &Text.squeeze/1) end)
   end
-
-  @doc "Whether a change says nothing: a row of the play form left empty is no change."
-  def blank?(params),
-    do: Enum.all?(~w(date people description note), &(Text.squeeze(params[&1]) == nil))
 end

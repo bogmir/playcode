@@ -631,15 +631,15 @@ defmodule Playcode.Import.TeiParser do
       %{
         date: safe_text(find_child(parts, "date")),
         people: people(find_children(parts, "persName")),
-        description: safe_text({name, attrs, Enum.reject(parts, &revision_part?/1)}),
+        description:
+          safe_text(
+            {name, attrs, parts |> without("date") |> without("persName") |> without("note")}
+          ),
         note: safe_text(find_child(parts, "note"))
       }
     end)
     |> Enum.reject(fn change -> change |> Map.values() |> Enum.all?(&(&1 in [nil, ""])) end)
   end
-
-  defp revision_part?({tag, _, _}), do: tag in ~w(date persName note)
-  defp revision_part?(_text), do: false
 
   # <notesStmt><relatedItem type="original" target="EMOTHE0530"/>: the play this one
   # translates, by its short code. The import waits for it

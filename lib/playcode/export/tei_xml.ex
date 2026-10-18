@@ -80,16 +80,21 @@ defmodule Playcode.Export.TeiXml do
   defp build_revision_desc(play) do
     changes =
       Enum.map(play.revisions, fn change ->
+        note =
+          if change.note,
+            do: [inline_element(:note, %{}, build_inline_content(change.note))],
+            else: []
+
         parts =
           [[element(:date, change.date || "")]] ++
-            Enum.map(Entry.people(change.people || ""), &[element(:persName, &1)]) ++
-            Enum.map(List.wrap(change.description), &List.wrap(build_inline_content(&1))) ++
-            Enum.map(
-              List.wrap(change.note),
-              &[inline_element(:note, %{}, build_inline_content(&1))]
-            )
+            people(change.people, &[element(:persName, &1)]) ++
+            [inline_children(change.description), note]
 
-        inline_element(:change, %{}, parts |> Enum.intersperse([" "]) |> Enum.concat())
+        inline_element(
+          :change,
+          %{},
+          parts |> Enum.reject(&(&1 == [])) |> Enum.intersperse([" "]) |> Enum.concat()
+        )
       end)
 
     [element(:revisionDesc, changes)]

@@ -14,6 +14,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   alias Playcode.Export.TeiXml
   alias Playcode.Import.WordParser
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Statistics
   alias PlaycodeWeb.PlayLabels
 
@@ -139,7 +140,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
     [change.date, change.people, change.description, change.note]
     |> Enum.reject(&is_nil/1)
     |> Enum.join(" · ")
-    |> Playcode.PlayContent.InlineMarkup.plain()
+    |> InlineMarkup.plain()
   end
 
   @impl true

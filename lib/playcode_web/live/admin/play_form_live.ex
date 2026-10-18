@@ -8,7 +8,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
-  alias Playcode.Catalogue.Revision
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
@@ -103,7 +102,10 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   def handle_event("save", %{"play" => play_params}, socket) do
-    save_play(socket, socket.assigns.live_action, drop_blank_revisions(play_params))
+    play_params =
+      LiveHelpers.drop_blank_rows(play_params, "revisions", ~w(date people description note))
+
+    save_play(socket, socket.assigns.live_action, play_params)
   end
 
   def handle_event("suggest_parent", params, socket) do
@@ -140,17 +142,14 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   def handle_event("copy_field", %{"source" => source, "target" => target}, socket) do
-    form_data = socket.assigns.form.source.changes
-    schema_data = socket.assigns.form.source.data
+    form = socket.assigns.form
+    value = Phoenix.HTML.Form.input_value(form, String.to_existing_atom(source)) || ""
 
-    source_atom = String.to_existing_atom(source)
-    value = Map.get(form_data, source_atom) || Map.get(schema_data, source_atom) || ""
+    # The form's last params, as typed, with the copied value: a field never typed in comes
+    # from the play.
+    changeset =
+      Catalogue.change_play_form(socket.assigns.play, Map.put(form.params, target, value))
 
-    # Update the form with the copied value
-    current_params = form_params_from_changeset(socket.assigns.form.source)
-    updated_params = Map.put(current_params, target, value)
-
-    changeset = Catalogue.change_play_form(socket.assigns.play, updated_params)
     {:noreply, assign(socket, form: to_form(Map.put(changeset, :action, :validate)))}
   end
 
@@ -182,34 +181,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       _ -> nil
     end
   end
-
-  defp form_params_from_changeset(changeset) do
-    Play.__schema__(:fields)
-    |> Enum.reduce(%{}, fn field, acc ->
-      case Ecto.Changeset.get_field(changeset, field) do
-        nil -> acc
-        val -> Map.put(acc, Atom.to_string(field), form_param(field, val))
-      end
-    end)
-  end
-
-  # The revision history goes back as the rows the form sends, one per change.
-  defp form_param(:revisions, changes) do
-    for {change, i} <- Enum.with_index(changes),
-        into: %{},
-        do: {"#{i}", Map.take(change, Revision.__schema__(:fields))}
-  end
-
-  defp form_param(_field, val), do: val
-
-  # A change added and left empty, or emptied, is no change: dropped as Remove drops it.
-  # Only on save, so the rows never move while the editor is typing.
-  defp drop_blank_revisions(%{"revisions" => rows} = params) when is_map(rows) do
-    blank = for {i, row} <- rows, is_map(row), Revision.blank?(row), do: i
-    Map.update(params, "revisions_delete", blank, &(List.wrap(&1) ++ blank))
-  end
-
-  defp drop_blank_revisions(params), do: params
 
   @attribution_options ~w(fiable dudosa atribuida anónima apócrifa)
 
@@ -795,7 +766,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             )}
           </p>
           <.inputs_for :let={change} field={@form[:revisions]}>
-            <input type="hidden" name="play[revisions_order][]" value={change.index} />
+            <input type="hidden" name={"#{@form.name}[revisions_order][]"} value={change.index} />
             <div class="grid grid-cols-1 items-end gap-2 md:grid-cols-[6rem_1fr_1fr_1fr_auto]">
               <.input field={change[:date]} type="text" label={gettext("Date")} />
               <.input field={change[:people]} type="text" label={gettext("Revisers")} />
@@ -803,7 +774,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
               <.input field={change[:note]} type="text" label={gettext("Note")} />
               <button
                 type="button"
-                name="play[revisions_delete][]"
+                name={"#{@form.name}[revisions_delete][]"}
                 value={change.index}
                 phx-click={JS.dispatch("change")}
                 class="btn btn-ghost btn-xs text-error mb-2"
@@ -812,10 +783,10 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
               </button>
             </div>
           </.inputs_for>
-          <input type="hidden" name="play[revisions_delete][]" />
+          <input type="hidden" name={"#{@form.name}[revisions_delete][]"} />
           <button
             type="button"
-            name="play[revisions_order][]"
+            name={"#{@form.name}[revisions_order][]"}
             value="new"
             phx-click={JS.dispatch("change")}
             class="btn btn-ghost btn-xs"
