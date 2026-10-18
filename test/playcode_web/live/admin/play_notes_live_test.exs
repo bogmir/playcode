@@ -145,6 +145,14 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
     view |> form("#notes-filter", filter: %{type: "variante"}) |> render_change()
     assert rows(view) == [row(variant), row(note)]
     assert texts(view, "##{row(note)} .note-type") == [t("Textual variant")]
+
+    # Not a type to choose: a note so typed would read like an entry of the apparatus
+    # without being one ("Add variant" makes those). The three notes keep theirs.
+    view |> element("##{row(note)} button", t("Edit")) |> render_click()
+    options = view |> doc() |> LazyHTML.query(~s(#note-form select[name="note[type]"] option))
+
+    refute t("Textual variant") in Enum.map(options, &String.trim(LazyHTML.text(&1)))
+    assert LazyHTML.attribute(LazyHTML.query(options, "[selected]"), "value") == ["variantes"]
   end
 
   # A reading with nothing in it (a damaged entry, kept as written) adds no stray " · ".

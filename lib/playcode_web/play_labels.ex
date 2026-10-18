@@ -54,7 +54,7 @@ defmodule PlaycodeWeb.PlayLabels do
   The type a note is filtered by: its own when it has a label (`Note.types/0`), else
   `"other"`, so the types the corpus carries without one (`falta_tipo`, …) are one plain
   Note, not several options that read the same. A variant is a key of its own, which the
-  files' ordinary notes of kind `variantes` share (question 17).
+  ordinary notes of kind `variantes` share (question 17), as they share its label.
   """
   def note_type_key(type) when type in ["variante", "variantes"], do: "variante"
   def note_type_key(type), do: if(type in Note.types(), do: type, else: "other")

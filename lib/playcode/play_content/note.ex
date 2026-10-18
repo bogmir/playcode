@@ -8,7 +8,8 @@ defmodule Playcode.PlayContent.Note do
 
   `n` is the source's number, kept for the TEI export and never shown: readers see
   `number`, which `PlayContent.load_play_content/1` fills in reading order. `type` is
-  TEI's (`types/0` lists the corpus's); the importer keeps whatever the file says.
+  TEI's (`types/0` lists the ones the admin offers); the importer keeps whatever the file
+  says but for two slips (`TeiParser.note_type/1`).
   `body` is paragraphs separated by a blank line, italics as `<<…>>`.
 
   A variant (`variant?/1`) is an entry of the critical apparatus, a TEI `<app>`: `n` its
@@ -26,9 +27,11 @@ defmodule Playcode.PlayContent.Note do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
+  # The types the admin offers. Not "variantes", three notes' in EMOTHE0560: labelled
+  # "Textual variant" (PlayLabels), it would read like an entry of the apparatus.
   @types ~w(traductor editor editor_critico editor_digital autor latinismo toponimo_aludido
               toponimo_accion atrezzo oficio vestuario espacio gesto_movimiento
-              efectos_especiales variantes)
+              efectos_especiales)
 
   # The type of an entry of the critical apparatus. Not "variantes", an ordinary note's.
   @variant "variante"
@@ -56,7 +59,7 @@ defmodule Playcode.PlayContent.Note do
     timestamps(type: :utc_datetime)
   end
 
-  @doc "The note types the corpus uses, as TEI spells them."
+  @doc "The note types the admin offers, as TEI spells them."
   def types, do: @types
 
   @doc "The `type` a variant is stored with: an entry of the critical apparatus, a TEI `<app>`."
