@@ -1847,17 +1847,21 @@ defmodule Playcode.Import.TeiParser do
     if piece =~ @folio_tag_last, do: piece <> " ", else: piece
   end
 
-  # The pieces of a text as one string, a space between them, but none beside a Folio tag
-  # at a piece's edge, where the white space is the file's own (trim_beside_folio/1): a
-  # passage whose reading starts or ends with an element gains no space around it.
+  # The pieces of a text as one string, a space between them, but none where the file
+  # glues an italic to its neighbour (`pieces/3`: "un <emph>sueño</emph>, fue" reads
+  # "sueño,", not "sueño ,"), and none beside a Folio tag at a piece's edge, where the white
+  # space is the file's own (trim_beside_folio/1): a passage whose reading starts or ends
+  # with an element gains no space around it.
   defp join_pieces(pieces) do
     pieces
     |> Enum.chunk_every(2, 1)
     |> Enum.map_join(fn
-      [piece, next] ->
-        if piece =~ @folio_tag_last or next =~ @folio_tag_first, do: piece, else: piece <> " "
+      [{piece, glued?}, {next, _}] ->
+        if glued? or piece =~ @folio_tag_last or next =~ @folio_tag_first,
+          do: piece,
+          else: piece <> " "
 
-      [piece] ->
+      [{piece, _glued?}] ->
         piece
     end)
   end
@@ -1884,19 +1888,44 @@ defmodule Playcode.Import.TeiParser do
 
     children
     |> Enum.with_index()
-    |> Enum.map(fn
-      {{name, _, _} = note, i} when notes == :mark and name in @apart ->
-        note_mark(note, children, i)
+    |> Enum.map(fn {child, i} ->
+      piece =
+        case child do
+          {name, _, _} when notes == :mark and name in @apart -> note_mark(child, children, i)
+          text when is_binary(text) -> trim_beside_folio(text)
+          child when is_tuple(child) -> child |> fun.() |> space_beside_folio()
+          _ -> ""
+        end
 
-      {text, _} when is_binary(text) ->
-        trim_beside_folio(text)
-
-      {child, _} when is_tuple(child) ->
-        child |> fun.() |> space_beside_folio()
-
-      _ ->
-        ""
+      {piece, glued?(child, Enum.at(children, i + 1))}
     end)
+  end
+
+  # Whether the file writes `child` and `next` with no white space between them where one
+  # of them is an italic: italics are formatting, so no space is added there. Any other
+  # element (a stage, an aside) is set apart from its neighbours whatever the spacing.
+  defp glued?(_child, nil), do: false
+
+  defp glued?(child, next) do
+    (italic?(child) or italic?(next)) and not space_at?(child, :trail) and
+      not space_at?(next, :lead)
+  end
+
+  defp italic?({name, attrs, _children}), do: emph_element?(name, attrs)
+  defp italic?(_text), do: false
+
+  # Whether `node`'s text starts (`:lead`) or ends (`:trail`) with white space, an
+  # element's own text, its notes and entries of the apparatus left out.
+  defp space_at?(text, :lead) when is_binary(text), do: text =~ ~r/\A\s/u
+  defp space_at?(text, :trail) when is_binary(text), do: text =~ ~r/\s\z/u
+
+  defp space_at?({_name, _attrs, children}, side) do
+    children = Enum.reject(children, &match?({name, _, _} when name in @apart, &1))
+
+    case if(side == :lead, do: List.first(children), else: List.last(children)) do
+      nil -> false
+      node -> space_at?(node, side)
+    end
   end
 
   # Where a note was in the text being read: "\u{E000}<key><s|n>\u{E001}". The key finds

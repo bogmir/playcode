@@ -3160,6 +3160,46 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # The importer joined the pieces of a text with a space, so `un <emph>sueño</emph>, fue`
+  # read "un sueño , fue": 4,470 times in 271 production files (found 2026-10-18).
+  describe "italics right before punctuation" do
+    test "keep the punctuation close, in a line, a paragraph and a dedication" do
+      xml =
+        roundtrip(
+          tei(
+            front:
+              ~s(<div type="dedicatoria"><head>D</head><p>Al <emph>lector</emph>, con afecto.</p></div>),
+            body: """
+            <div1 type="acto" n="1"><head>I</head><sp><speaker>A</speaker>
+              <l n="1">un <emph>sueño</emph>, fue</l>
+              <p>Prosa <emph>cursiva</emph>; y más.</p>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "l") == ["un sueño, fue"]
+      assert reading_texts(xml, "p") == ["Prosa cursiva; y más."]
+      assert xml =~ "<emph>lector</emph>, con afecto."
+    end
+
+    test "a space at an italic's own edge stays, and none appears where the file has none" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>I</head><sp><speaker>A</speaker>
+              <l n="1">Uno<emph> dos</emph></l>
+              <l n="2">tres<emph>cuatro</emph></l>
+            </sp></div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "l") == ["Uno dos", "trescuatro"]
+    end
+  end
+
   # Exporting used to write a titleStmt respStmt editor into editionStmt as well, and
   # re-importing that copy made a second editor: one more per round trip.
   test "exporting, re-importing and exporting again changes nothing" do

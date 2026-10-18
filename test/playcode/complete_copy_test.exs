@@ -49,9 +49,7 @@ defmodule Playcode.CompleteCopyTest do
       # The credits come back in the order of the file's sections: the principal
       # investigator, the title statement's editors, then the statements of responsibility.
       {"The order of the credits", [:editors],
-       &Enum.sort_by(&1, fn %{role: role} -> credit_section(role) end)},
-      {"Italics before punctuation gain a space", [:paratexts, 0, :content],
-       &String.replace(&1, ">>,", ">> ,")}
+       &Enum.sort_by(&1, fn %{role: role} -> credit_section(role) end)}
     ]
 
     assert differences(with_gaps(built, known_gaps), imported) == []
