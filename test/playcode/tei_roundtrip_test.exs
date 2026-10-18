@@ -10,7 +10,9 @@ defmodule Playcode.TeiRoundtripTest do
   use Playcode.DataCase, async: true
 
   import Playcode.ImportHelpers
-  import Playcode.TestFixtures, only: [bibliography_fixture: 2, bibliography_fixture: 3]
+
+  import Playcode.TestFixtures,
+    only: [bibliography_fixture: 2, bibliography_fixture: 3, play_fixture: 1]
 
   @rich_header [
     title: "Ricardo III",
@@ -171,6 +173,33 @@ defmodule Playcode.TeiRoundtripTest do
              ["Amelang, David J.", "Sanderson, John D.", "Revisor, Raúl"]
   end
 
+  test "two principal investigators both come back" do
+    xml =
+      roundtrip(
+        tei(title_stmt: "<principal>Oleza, Joan</principal><principal>Tronch, Jesús</principal>")
+      )
+
+    assert xml_texts(xml, "principal") == ["Oleza, Joan", "Tronch, Jesús"]
+  end
+
+  # The export writes a translator in the title statement only; one in the edition
+  # statement (no corpus file has one) was never read, and reading it would move it on the
+  # next round trip.
+  test "an <editor> in the edition statement is not read" do
+    xml =
+      roundtrip(
+        tei(
+          file_desc: """
+          <editionStmt><edition>Edición</edition>
+            <editor role="translator"><persName>Sanderson, John D.</persName></editor>
+          </editionStmt>
+          """
+        )
+      )
+
+    assert xml_texts(xml, "persName") == []
+  end
+
   # 18 corpus files credit two people in one respStmt (EMOTHE0211, 0679, 0718…); the
   # second used to be dropped, though FileMaker's credits name them both.
   test "a respStmt naming two people credits both, in order" do
@@ -232,6 +261,11 @@ defmodule Playcode.TeiRoundtripTest do
           {"LA DISCRETA ENAMORADA", "DISCRETA ENAMORADA LA", "Discreta Enamorada La"},
           {"EL LLEGAR EN OCASIÓN", "LLEGAR EN OCASIÓN COMEDIA FAMOSA DE EL",
            "Llegar en Ocasión Comedia Famosa de El"},
+          {"LA FUERZA DE LA SANGRE", "FUERZA DE LA SANGRE LA", "Fuerza de la Sangre La"},
+          {"EL MEJOR ALCALDE, EL REY", "MEJOR ALCALDE EL REY EL", "Mejor Alcalde el Rey El"},
+          {"DE FUERA VENDRÁ QUIEN DE CASA NOS ECHARÁ", "DE FUERA VENDRÁ QUIEN DE CASA NOS ECHARÁ",
+           "De Fuera Vendrá Quien de Casa Nos Echará"},
+          {"La fuerza de la sangre", "FUERZA DE LA SANGRE LA", "fuerza de la sangre La"},
           {"La verdad sospechosa", "verdad sospechosa La", "verdad sospechosa La"}
         ] do
       xml = roundtrip(tei(title: title, title_stmt: ~s(<title key="orden">#{sort_title}</title>)))
@@ -394,6 +428,51 @@ defmodule Playcode.TeiRoundtripTest do
                "La Biblioteca Digital EMOTHE supone la creación de una base de datos.",
                "Bogdan Mircea es responsable de Playcode."
              ]
+    end
+
+    test "the availability note and the editorial declaration keep theirs too" do
+      xml =
+        roundtrip(
+          tei(
+            publication_stmt: "<availability><p>Uno.</p><p>Dos.</p></availability>",
+            encoding_desc: "<editorialDecl><p>Tres.</p><p>Cuatro.</p></editorialDecl>"
+          )
+        )
+
+      assert xml_texts(xml, "p", within: "availability") == ["Uno.", "Dos."]
+      assert xml_texts(xml, "p", within: "editorialDecl") == ["Tres.", "Cuatro."]
+    end
+
+    test "keeps its italics" do
+      xml =
+        roundtrip(
+          tei(
+            encoding_desc: "<projectDesc><p>La <emph>Biblioteca</emph> Digital</p></projectDesc>"
+          )
+        )
+
+      assert xml_texts(xml, "emph", within: "projectDesc") == ["Biblioteca"]
+    end
+
+    # The TEI also nests the declaration's paragraphs in <normalization>, <correction>…;
+    # no corpus file does, so their text is read as one paragraph.
+    test "an editorial declaration whose paragraphs are nested is read whole" do
+      xml =
+        roundtrip(
+          tei(
+            encoding_desc:
+              "<editorialDecl><normalization><p>Se moderniza la ortografía.</p></normalization></editorialDecl>"
+          )
+        )
+
+      assert xml_texts(xml, "p", within: "editorialDecl") == ["Se moderniza la ortografía."]
+    end
+
+    # A textarea posts its line breaks as \r\n.
+    test "typed in a form, keeps its paragraphs" do
+      play = play_fixture(%{"project_description" => "Uno.\r\n\r\nDos."})
+
+      assert xml_texts(export_tei(play), "p", within: "projectDesc") == ["Uno.", "Dos."]
     end
   end
 

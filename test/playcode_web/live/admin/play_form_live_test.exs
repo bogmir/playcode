@@ -67,6 +67,36 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     assert xml_texts(xml, "pubPlace", within: "publicationStmt") == ["Valencia"]
   end
 
+  # The header texts fill a new play's form once; a researcher who empties one means it.
+  test "a header text emptied in a new play's form stays empty", %{conn: conn} do
+    code = "EMOTHE#{System.unique_integer([:positive])}"
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+    view |> form("#play-form", play: %{"funder" => ""}) |> render_change()
+    save(view, %{"title" => "Sémiramis", "code" => code})
+
+    assert code |> Catalogue.get_play_by_code!() |> export_tei() |> xml_texts("funder") == []
+  end
+
+  test "a code typed in a new play's form fills the header texts left blank", %{conn: conn} do
+    code = "AL#{System.unique_integer([:positive])}"
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+    view |> form("#play-form", play: %{"project_description" => ""}) |> render_change()
+
+    view
+    |> form("#play-form", play: %{"code" => code})
+    |> render_change(%{"_target" => ["play", "code"]})
+
+    save(view, %{"title" => "La discreta enamorada"})
+
+    assert [description] =
+             code
+             |> Catalogue.get_play_by_code!()
+             |> export_tei()
+             |> xml_texts("p", within: "projectDesc")
+
+    assert description =~ "El proyecto Artelope"
+  end
+
   # A TEI file names a translation's original by its short code; a play imported before
   # its original waits for it, and the original may well be typed in by hand.
   defp waiting_translation(original_code) do

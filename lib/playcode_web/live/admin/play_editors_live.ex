@@ -28,7 +28,8 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   @impl true
   def handle_event("new_editor", _, socket) do
     play = socket.assigns.play
-    next_pos = length(socket.assigns.editors)
+    # Last, after the file's credits, numbered from 100 and 200.
+    next_pos = Enum.max(Enum.map(socket.assigns.editors, & &1.position), fn -> -1 end) + 1
 
     changeset =
       Catalogue.change_play_editor(%PlayEditor{play_id: play.id, position: next_pos})
