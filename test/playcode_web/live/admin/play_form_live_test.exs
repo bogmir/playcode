@@ -13,6 +13,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
       tei: 1,
       write_tmp!: 1,
       xml_apps: 1,
+      xml_elements: 3,
       xml_texts: 2,
       xml_texts: 3
     ]
@@ -52,7 +53,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     assert blurb =~ "La Biblioteca Digital EMOTHE (antes denominada Colección de Textos"
     assert credit =~ ~r/^Bogdan Mircea .* Playcode, .* paralelo/
     assert [funder] = xml_texts(xml, "funder")
-    assert funder =~ ~r/^Ministerio .* PID2022-136431NB-C65; .* FFI2009-12730/
+
+    assert funder =~
+             ~r/^Ministerio .* PID2022-136431NB-C65 \(2023-09-01 \/ 2027-08-31\); .* FFI2009-12730/
 
     assert xml_texts(xml, "sponsor") == [
              "Plan Nacional de Investigación Científica, Desarrollo e Innovación Tecnológica (Plan Nacional de I+D+i)"
@@ -95,6 +98,40 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
              |> xml_texts("p", within: "projectDesc")
 
     assert description =~ "El proyecto Artelope"
+  end
+
+  # The acknowledgement the funding agency asks for, which readers see, in the play's
+  # language: a "Nota a esta edición digital" the team wrote by hand in 25 plays.
+  describe "a new play's note on the digital edition" do
+    defp new_play_front(conn, language) do
+      code = "EMOTHE#{System.unique_integer([:positive])}"
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+      save(view, %{"title" => "Sémiramis", "code" => code, "language" => language})
+
+      code
+      |> Catalogue.get_play_by_code!()
+      |> export_tei()
+      |> xml_elements("div", within: "front")
+    end
+
+    test "acknowledges the funding in the play's language", %{conn: conn} do
+      assert [{%{"type" => "nota_edicion_digital"}, note}] = new_play_front(conn, "fr")
+      assert note =~ ~r/^Note sur cette édition numérique Cette publication /
+    end
+
+    # The Italian wording first sent named the project before, PID2019-104045GB-C54.
+    for language <- ~w(es en fr it pt) do
+      test "names the current project in #{language}", %{conn: conn} do
+        assert [{%{"type" => "nota_edicion_digital"}, note}] =
+                 new_play_front(conn, unquote(language))
+
+        assert note =~ "PID2022-136431NB-C65"
+      end
+    end
+
+    test "is left out in a language with no wording yet", %{conn: conn} do
+      assert new_play_front(conn, "ca") == []
+    end
   end
 
   # A TEI file names a translation's original by its short code; a play imported before
