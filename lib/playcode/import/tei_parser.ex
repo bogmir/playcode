@@ -1786,6 +1786,17 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
+  # A <note>'s @type. Two are slips (question 17): La tragedia española's note on "Belona",
+  # typed "video", is a translator's, and Marta la piadosa's "nota_editor_digital" a
+  # digital editor's.
+  defp note_type(attrs) do
+    case attr_value(attrs, "type") do
+      "video" -> "traductor"
+      "nota_editor_digital" -> "editor_digital"
+      type -> type
+    end
+  end
+
   defp emph_element?("emph", _attrs), do: true
 
   defp emph_element?("hi", attrs),
@@ -1994,7 +2005,7 @@ defmodule Playcode.Import.TeiParser do
           %{
             offset: offset,
             n: attr_value(attrs, "n"),
-            type: attr_value(attrs, "type"),
+            type: note_type(attrs),
             term: if(term in [nil, ""], do: nil, else: term),
             body: body
           }

@@ -521,7 +521,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
     setup do
       {play, dir} =
         publish!("""
-        <div1 type="acto" n="1"><head>Acto I<note n="1" type="latinismo"><p>Del encabezado.</p></note></head>
+        <div1 type="acto" n="1"><head>Acto I<note n="1" type="falta_tipo"><p>Del encabezado.</p></note></head>
           <sp><speaker>ANA<note n="2" type="editor"><p>La dama.</p></note></speaker>
             <l n="1">Nous voyent<note n="3" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l>
             <l n="2">Ni un ratón se ha movido.<note n="4" type="traductor"><p>Expresión de soldado.</p></note></l>
@@ -539,7 +539,8 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       assert LazyHTML.attribute(items, "value") == ["1", "2", "3", "4"]
 
-      # A type with no label of its own (latinismo here; or none) is a plain Note.
+      # A type with no label of its own (falta_tipo here, the one kind question 17 left
+      # unnamed; or none) is a plain Note. It was latinismo, which has had a name since.
       assert LazyHTML.attribute(items, "data-type") == [
                "other",
                "editor",
@@ -617,6 +618,47 @@ defmodule Playcode.Export.StaticSitePlayTest do
     refute File.exists?(Path.join([none_dir, "plays", none.code, "notes.html"]))
     rail = page(none_dir, none, "index.html") |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
     refute "notes.html" in LazyHTML.attribute(rail, "href")
+  end
+
+  # Question 17 named every kind but falta_tipo, which is still a plain Note.
+  test "each kind of note the project named is shown by its name and filtered by itself" do
+    kinds =
+      ~w(latinismo toponimo_aludido toponimo_accion atrezzo oficio vestuario espacio gesto_movimiento efectos_especiales variantes falta_tipo)
+
+    lines =
+      kinds
+      |> Enum.with_index(1)
+      |> Enum.map_join(
+        "\n",
+        fn {kind, n} ->
+          ~s(<l n="#{n}">uno<note n="#{n}" type="#{kind}"><p>Glosa.</p></note></l>)
+        end
+      )
+
+    {play, dir} =
+      publish!(~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{lines}</sp></div1>))
+
+    notes = page(dir, play, "notes.html")
+
+    assert texts(notes, "ol[data-notes] > li > p:first-child b") == [
+             "Latinism",
+             "Place mentioned",
+             "Place of the action",
+             "Props",
+             "Trades and offices",
+             "Costume",
+             "Stage space",
+             "Gesture and movement",
+             "Special effects",
+             "Textual variant",
+             "Note"
+           ]
+
+    # variantes, an ordinary note, files with the critical apparatus's variants.
+    assert notes
+           |> LazyHTML.query("fieldset[data-note-filter] input")
+           |> LazyHTML.attribute("value") ==
+             ["" | Enum.take(kinds, 9)] ++ ["variante", "other"]
   end
 
   test "the title page lists the bibliography by kind, linked from the contents, without researchers' notes" do

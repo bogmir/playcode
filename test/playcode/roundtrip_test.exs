@@ -329,9 +329,14 @@ defmodule Playcode.RoundtripTest do
     |> Enum.reject(&(&1.text == ""))
     |> Enum.map(fn note ->
       tail = note.after |> String.replace(~r/\s+/u, "") |> String.slice(-12..-1//1)
-      {note.in, tail, note.n, note.type}
+      {note.in, tail, note.n, note_type(note.type)}
     end)
   end
+
+  # As the importer reads them: two notes' types are slips (question 17).
+  defp note_type("video"), do: "traductor"
+  defp note_type("nota_editor_digital"), do: "editor_digital"
+  defp note_type(type), do: type
 
   # No note's text is left in the text it glosses, the bug these checks came with
   # (Hamlet, act 5: a translator's note pasted after "partes …"). Notes under 30

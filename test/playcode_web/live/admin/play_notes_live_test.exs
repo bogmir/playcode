@@ -122,6 +122,39 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
            ] = xml_apps(export_tei(play))
   end
 
+  # EMOTHE0560 has both: the apparatus and three ordinary notes of kind "variantes".
+  test "a note of kind variantes is a textual variant, filtered with the variants",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">mucho la hermosura llama<app type="substantive" n="908"><lem wit="#H">llama</lem><rdg wit="#P3">falta</rdg></app>, y<note n="1" type="variantes"><p>P3 omite.</p></note></l></sp></div1>)
+        )
+      )
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(user_fixture(role: :researcher))
+      |> live(~p"/admin/plays/#{play.id}/notes")
+
+    [variant, note] = notes(play)
+
+    assert texts(view, "#notes-filter select option") == [t("All types"), t("Textual variant")]
+
+    view |> form("#notes-filter", filter: %{type: "variante"}) |> render_change()
+    assert rows(view) == [row(variant), row(note)]
+    assert texts(view, "##{row(note)} .note-type") == [t("Textual variant")]
+
+    # Not a type to choose: a note so typed would read like an entry of the apparatus
+    # without being one ("Add variant" makes those). The three notes keep theirs.
+    view |> element("##{row(note)} button", t("Edit")) |> render_click()
+    options = view |> doc() |> LazyHTML.query(~s(#note-form select[name="note[type]"] option))
+
+    refute t("Textual variant") in Enum.map(options, &String.trim(LazyHTML.text(&1)))
+    assert LazyHTML.attribute(LazyHTML.query(options, "[selected]"), "value") == ["variantes"]
+  end
+
   # A reading with nothing in it (a damaged entry, kept as written) adds no stray " · ".
   test "a variant's list entry skips a reading with nothing in it", %{conn: conn} do
     play =

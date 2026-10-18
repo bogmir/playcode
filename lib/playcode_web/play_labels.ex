@@ -38,22 +38,31 @@ defmodule PlaycodeWeb.PlayLabels do
   def note_type_label("editor_critico"), do: gettext("Critical editor's note")
   def note_type_label("editor_digital"), do: gettext("Digital editor's note")
   def note_type_label("autor"), do: gettext("Author's note")
-  def note_type_label("variante"), do: gettext("Textual variant")
+  def note_type_label("latinismo"), do: gettext("Latinism")
+  def note_type_label("toponimo_aludido"), do: gettext("Place mentioned")
+  def note_type_label("toponimo_accion"), do: gettext("Place of the action")
+  def note_type_label("atrezzo"), do: gettext("Props")
+  def note_type_label("oficio"), do: gettext("Trades and offices")
+  def note_type_label("vestuario"), do: gettext("Costume")
+  def note_type_label("espacio"), do: gettext("Stage space")
+  def note_type_label("gesto_movimiento"), do: gettext("Gesture and movement")
+  def note_type_label("efectos_especiales"), do: gettext("Special effects")
+  def note_type_label(type) when type in ["variante", "variantes"], do: gettext("Textual variant")
   def note_type_label(_other), do: gettext("Note")
 
   @doc """
   The type a note is filtered by: its own when it has a label (`Note.types/0`), else
-  `"other"`, so the many types the corpus carries without one (`latinismo`,
-  `falta_tipo`, …) are one plain Note, not several options that read the same. A variant
-  is a key of its own.
+  `"other"`, so the types the corpus carries without one (`falta_tipo`, …) are one plain
+  Note, not several options that read the same. A variant is a key of its own, which the
+  ordinary notes of kind `variantes` share (question 17), as they share its label.
   """
-  def note_type_key("variante"), do: "variante"
+  def note_type_key(type) when type in ["variante", "variantes"], do: "variante"
   def note_type_key(type), do: if(type in Note.types(), do: type, else: "other")
 
   @doc """
   `{label, type}` pairs for a select: an untyped note first, then the corpus's types; and
-  `current`, a type with no label of its own (`latinismo`, …), as itself, so saving a note's
-  other fields does not drop its type.
+  `current`, a type with no label of its own (`falta_tipo`, …), as itself, so saving a
+  note's other fields does not drop its type.
   """
   def note_type_options(current \\ nil) do
     [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]
