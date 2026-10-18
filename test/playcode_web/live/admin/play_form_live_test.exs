@@ -7,7 +7,15 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
   import Playcode.TestFixtures
 
   import Playcode.ImportHelpers,
-    only: [export_tei: 1, import_tei!: 1, tei: 1, write_tmp!: 1, xml_apps: 1]
+    only: [
+      export_tei: 1,
+      import_tei!: 1,
+      tei: 1,
+      write_tmp!: 1,
+      xml_apps: 1,
+      xml_texts: 2,
+      xml_texts: 3
+    ]
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
@@ -29,6 +37,34 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     created = Catalogue.get_play_by_code!(code)
     assert created.author_name == "Behavior Author"
     assert_redirect(view, ~p"/admin/plays/#{created.id}")
+  end
+
+  # The header FileMaker writes into every file, with today's funding project first
+  # (EMOTHE0753 was corrected by hand the same way) and Playcode credited for the files.
+  test "a new play starts with the project's header texts", %{conn: conn} do
+    code = "EMOTHE#{System.unique_integer([:positive])}"
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+    save(view, %{"title" => "Sémiramis", "code" => code})
+
+    xml = code |> Catalogue.get_play_by_code!() |> export_tei()
+
+    assert [blurb, credit] = xml_texts(xml, "p", within: "projectDesc")
+    assert blurb =~ "La Biblioteca Digital EMOTHE (antes denominada Colección de Textos"
+    assert credit =~ ~r/^Bogdan Mircea .* Playcode, .* paralelo/
+    assert [funder] = xml_texts(xml, "funder")
+    assert funder =~ ~r/^Ministerio .* PID2022-136431NB-C65; .* FFI2009-12730/
+
+    assert xml_texts(xml, "sponsor") == [
+             "Plan Nacional de Investigación Científica, Desarrollo e Innovación Tecnológica (Plan Nacional de I+D+i)"
+           ]
+
+    assert xml_texts(xml, "publisher") == ["ARTELOPE/EMOTHE Universitat de València"]
+
+    assert xml_texts(xml, "authority") == [
+             "Universitat de València - Estudi General. http://www.uv.es"
+           ]
+
+    assert xml_texts(xml, "pubPlace", within: "publicationStmt") == ["Valencia"]
   end
 
   # A TEI file names a translation's original by its short code; a play imported before

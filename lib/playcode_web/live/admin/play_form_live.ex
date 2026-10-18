@@ -13,9 +13,41 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   @al_project_description "El proyecto Artelope supone la creación de un banco de datos, argumentos y ediciones para un corpus fundamental del patrimonio literario español: el teatro de Lope de Vega y, extendido, en los últimos años, a Guillén de Castro."
 
-  @emothe_project_description "La Colección de Textos Clásicos Europeos (CTCE) supone la creación de una base de datos de Teatro canónico clásico europeo en diferentes idiomas, versiones y refundiciones, todas ellas hipervinculadas."
+  # FileMaker's blurb, with Playcode credited where FileMaker credited its programmer.
+  @emothe_project_description Enum.join(
+                                [
+                                  "La Biblioteca Digital EMOTHE (antes denominada Colección de Textos Clásicos Europeos (CTCE)) supone la creación de una base de datos de teatro clásico europeo en diferentes idiomas, versiones y refundiciones, todas ellas hipervinculadas.",
+                                  "Bogdan Mircea es responsable del desarrollo de Playcode, la plataforma que genera los archivos XML-TEI de las obras, sus estadísticas, su edición web y la visualización en paralelo de originales y traducciones."
+                                ],
+                                "\n\n"
+                              )
 
-  @default_editorial_declaration "Las presentes ediciones digitales están basadas, en su mayor parte, en ediciones científicas de reconocido prestigio y se ha tratado, en la mayoría de ocasiones, de respetar sus criterios de edición. Solo en casos muy puntuales el editor digital ha introducido leves cambios de los que da cumplida cuenta en el apartado de \u201cNotas\u201d."
+  # The projects that funded the corpus, as FileMaker lists them, with the current one
+  # (missing from FileMaker) first.
+  @funder Enum.join(
+            [
+              ~s[Ministerio de Ciencia e Innovación – Agencia Estatal de Investigación -FEDER/ERDF: "EMOTHE: Segunda fase del teatro español y europeo de los siglos XVI y XVII: patrimonio y bases de datos (ASODAT Tercera Fase)" ref. PID2022-136431NB-C65],
+              ~s["Teatro español y europeo de los siglos XVI y XVII: patrimonio y bases de datos" (EMOTHE) ref. PID2019-104045GB-C54 (2020-06-01 / 2023-05-31)],
+              ~s[Ministerio de Ciencia, Innovación y Universidades, Ministerio de Economía y Competitividad – Agencia Estatal de Investigación -FEDER/ERDF: "Teatro europeo de los siglos XVI y XVII: patrimonio y bases de datos" (EMOTHE) ref. FFI2016-80314-P (2016-12-30 /2019-12-31)],
+              ~s[Programa Estatal Redes de Excelencia, "Red del Patrimonio Teatral Clásico Español", ref. FFI2015-71441-REDC (2015-12-01 / 2017-11-30)],
+              ~s[Ministerio de Ciencia e Innovación, "Base de datos, argumentos y textos del teatro clásico español", ref. FFI2012-34347 (2013-02-01 / 2016-12-31)],
+              ~s[Ministerio de Ciencia e Innovación, "Patrimonio teatral clásico español: textos e instrumentos de investigación", ref. CSD 2009-00033 (2009-12-17 / 2014-12-13)],
+              ~s[Ministerio de Ciencia e Innovación, "ARTELOPE. Base de datos, argumentos y textos del teatro clásico español", ref. FFI2009-12730 (2010-01-01 / 2012-12-31)]
+            ],
+            "; "
+          )
+
+  # The rest of the header FileMaker writes into every file, the same in all 372.
+  @header_defaults %{
+    "editorial_declaration" =>
+      "Las presentes ediciones digitales están basadas, en su mayor parte, en ediciones científicas de reconocido prestigio y se ha tratado, en la mayoría de ocasiones, de respetar sus criterios de edición. Solo en casos muy puntuales el editor digital ha introducido leves cambios de los que da cumplida cuenta en el apartado de \u201cNotas\u201d.",
+    "sponsor" =>
+      "Plan Nacional de Investigación Científica, Desarrollo e Innovación Tecnológica (Plan Nacional de I+D+i)",
+    "funder" => @funder,
+    "publisher" => "ARTELOPE/EMOTHE Universitat de València",
+    "authority" => "Universitat de València - Estudi General. http://www.uv.es",
+    "pub_place" => "Valencia"
+  }
 
   @impl true
   def mount(_params, _session, socket) do
@@ -211,9 +243,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       end
 
     if corpus_project do
-      params
-      |> fill_if_blank("project_description", corpus_project)
-      |> fill_if_blank("editorial_declaration", @default_editorial_declaration)
+      @header_defaults
+      |> Map.put("project_description", corpus_project)
+      |> Enum.reduce(params, fn {key, value}, params -> fill_if_blank(params, key, value) end)
     else
       params
     end
