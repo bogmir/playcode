@@ -81,7 +81,7 @@ defmodule Playcode.Export.TeiXml do
       Enum.map(play.revisions, fn change ->
         parts =
           [[element(:date, change.date || "")]] ++
-            Enum.map(change.people, &[element(:persName, &1)]) ++
+            Enum.map(Entry.people(change.people || ""), &[element(:persName, &1)]) ++
             Enum.map(List.wrap(change.description), &List.wrap(build_inline_content(&1))) ++
             Enum.map(
               List.wrap(change.note),

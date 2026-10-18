@@ -371,13 +371,13 @@ defmodule Playcode.TeiRoundtripTest do
       changes = [
         %{
           date: "2021",
-          people: ["Muñoz Pons, Carlos", "Tronch Pérez, Jesús"],
+          people: "Muñoz Pons, Carlos; Tronch Pérez, Jesús",
           description: "Revisión de la obra en formato <<TEI-XML>>",
           note: nil
         },
         %{
           date: "2025",
-          people: [],
+          people: nil,
           description: nil,
           note: "Con correcciones a cargo de Guillermo Carrascón."
         }

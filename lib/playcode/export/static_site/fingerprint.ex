@@ -34,6 +34,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.Catalogue.Paratext,
     Playcode.Text,
     Playcode.Catalogue.Play,
+    Playcode.Catalogue.Revision,
     Playcode.PlayContent.InlineMarkup,
     Playcode.PlayContent.Element,
     Playcode.PlayContent.Note,

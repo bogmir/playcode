@@ -136,7 +136,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
 
   # One change of the file's revision history on a line: "2021 · Muñoz Pons, Carlos · Revisión…".
   defp revision(change) do
-    [change.date, Enum.join(change.people, "; "), change.description, change.note]
+    [change.date, change.people, change.description, change.note]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.join(" · ")
     |> Playcode.PlayContent.InlineMarkup.plain()

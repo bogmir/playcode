@@ -206,6 +206,51 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     refute has_element?(view, "#play_edition_notes_1")
   end
 
+  # As with the notes, one row per change and an empty one for a new change; a row left or
+  # made empty is no change.
+  test "the revision history is changed, an emptied change removed and one added",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          revision_desc: """
+          <change><date>2021</date> <persName>Muñoz Pons, Carlos</persName> Revisión</change>
+          <change><date>2016</date></change>
+          """
+        )
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+    blank = %{"date" => "", "people" => "", "description" => "", "note" => ""}
+
+    save(view, %{
+      "revisions" => %{
+        "0" => %{
+          blank
+          | "date" => "2021",
+            "people" => "Muñoz Pons, Carlos; Tronch Pérez, Jesús",
+            "description" => "Revisión"
+        },
+        "1" => blank,
+        "2" => %{
+          blank
+          | "date" => "2026",
+            "people" => "Mircea, Bogdan",
+            "note" => "Acotaciones corregidas."
+        }
+      }
+    })
+
+    assert play.id
+           |> Catalogue.get_play!()
+           |> Map.fetch!(:revisions)
+           |> Enum.map(&{&1.date, &1.people, &1.description, &1.note}) ==
+             [
+               {"2021", "Muñoz Pons, Carlos; Tronch Pérez, Jesús", "Revisión", nil},
+               {"2026", "Mircea, Bogdan", nil, "Acotaciones corregidas."}
+             ]
+  end
+
   test "half a composition date is refused", %{conn: conn} do
     play = play_fixture()
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")

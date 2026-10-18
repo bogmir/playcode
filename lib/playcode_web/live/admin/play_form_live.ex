@@ -8,6 +8,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.Revision
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
@@ -769,6 +770,41 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
           <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
+            {gettext("Revision history")}
+          </h3>
+          <p class="text-xs text-base-content/70">
+            {gettext(
+              "Who revised the TEI file and when, written in its header, not shown to readers. Separate several revisers with a semicolon; empty a row to remove its change."
+            )}
+          </p>
+          <div
+            :for={{row, i} <- Enum.with_index(revision_rows(@form))}
+            class="grid grid-cols-1 gap-2 md:grid-cols-[6rem_1fr_1fr_1fr]"
+          >
+            <div :for={
+              {key, label} <- [
+                {"date", gettext("Date")},
+                {"people", gettext("Revisers")},
+                {"description", gettext("What was done")},
+                {"note", gettext("Note")}
+              ]
+            }>
+              <label class="label" for={"play_revisions_#{i}_#{key}"}>
+                <span class="label-text font-medium">{label}</span>
+              </label>
+              <input
+                type="text"
+                id={"play_revisions_#{i}_#{key}"}
+                name={"play[revisions][#{i}][#{key}]"}
+                value={row[key]}
+                class="w-full input"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
             {gettext("Funding & Licence")}
           </h3>
           <div>
@@ -832,5 +868,24 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   defp edition_note_boxes(form) do
     notes = form.params["edition_notes"] || form[:edition_notes].value || []
     if List.last(notes) == "", do: notes, else: notes ++ [""]
+  end
+
+  # The same for the revision history: one row per change and an empty one for a new change,
+  # what was typed while the form is being edited.
+  defp revision_rows(form) do
+    rows =
+      case form.params["revisions"] do
+        %{} = typed ->
+          typed |> Enum.sort_by(fn {i, _} -> String.to_integer(i) end) |> Enum.map(&elem(&1, 1))
+
+        nil ->
+          for change <- Ecto.Changeset.get_field(form.source, :revisions) do
+            for key <- ~w(date people description note)a,
+                into: %{},
+                do: {"#{key}", Map.get(change, key)}
+          end
+      end
+
+    if rows != [] and Revision.blank?(List.last(rows)), do: rows, else: rows ++ [%{}]
   end
 end

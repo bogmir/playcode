@@ -268,6 +268,13 @@ defmodule Playcode.Catalogue.Play do
   Changeset for manual form entry.
   """
   def form_changeset(play, attrs) do
-    changeset(play, attrs)
+    changeset(play, drop_blank_revisions(attrs))
   end
+
+  # The form shows an empty row for a new change of the revision history; a row left or
+  # made empty is no change.
+  defp drop_blank_revisions(%{"revisions" => rows} = attrs) when is_map(rows),
+    do: %{attrs | "revisions" => Map.reject(rows, fn {_i, row} -> Revision.blank?(row) end)}
+
+  defp drop_blank_revisions(attrs), do: attrs
 end

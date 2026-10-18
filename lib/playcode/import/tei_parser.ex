@@ -626,13 +626,12 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.map(fn {name, attrs, parts} ->
       %{
         date: safe_text(find_child(parts, "date")),
-        people:
-          parts |> find_children("persName") |> Enum.map(&safe_text/1) |> Enum.reject(&(&1 == "")),
+        people: parts |> find_children("persName") |> Enum.map_join("; ", &safe_text/1),
         description: safe_text({name, attrs, Enum.reject(parts, &revision_part?/1)}),
         note: safe_text(find_child(parts, "note"))
       }
     end)
-    |> Enum.reject(fn change -> change |> Map.values() |> Enum.all?(&(&1 in [nil, "", []])) end)
+    |> Enum.reject(fn change -> change |> Map.values() |> Enum.all?(&(&1 in [nil, ""])) end)
   end
 
   defp revision_part?({tag, _, _}), do: tag in ~w(date persName note)
