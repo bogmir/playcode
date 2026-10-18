@@ -65,6 +65,24 @@ defmodule Playcode.CompleteCopyTest do
     assert differences(built, imported) == []
   end
 
+  # A new column joins the comparison by itself; a new table only when snapshot/1 reads it.
+  test "every table holding a play's rows is compared, or kept out of the file on purpose" do
+    compared = ~w(play_editors play_sources play_witnesses play_bibliography play_places
+                  play_paratexts characters play_divisions play_elements play_notes)
+
+    # Worked out from the text each time, and the platform's own audit trail.
+    kept_out = ~w(play_statistics activity_logs)
+
+    # Reads the schema itself: no context lists the tables.
+    %{rows: rows} =
+      Playcode.Repo.query!("""
+      SELECT table_name FROM information_schema.columns
+       WHERE table_schema = 'public' AND column_name = 'play_id'
+      """)
+
+    assert Enum.sort(List.flatten(rows)) -- (compared ++ kept_out) == []
+  end
+
   # Builds a play with `build`, snapshots it, exports it and imports the file into an
   # empty Playcode. Returns {the play built, the play imported}, as snapshots.
   defp round_trip(build) do
@@ -293,14 +311,17 @@ defmodule Playcode.CompleteCopyTest do
 
   # --- Their parts ---
 
+  # Each with its position, as the admin pages give one: rows that tie on it come back in
+  # whatever order Postgres finds them.
   defp credits!(play, credits) do
-    for {role, name, organization} <- credits do
+    for {{role, name, organization}, position} <- Enum.with_index(credits) do
       {:ok, _} =
         Catalogue.create_play_editor(%{
           play_id: play.id,
           role: role,
           person_name: name,
-          organization: organization
+          organization: organization,
+          position: position
         })
     end
   end
@@ -394,8 +415,9 @@ defmodule Playcode.CompleteCopyTest do
   end
 
   defp paratexts!(play, paratexts) do
-    for attrs <- paratexts do
-      {:ok, _} = Catalogue.create_paratext(Map.put(attrs, :play_id, play.id))
+    for {attrs, position} <- Enum.with_index(paratexts) do
+      {:ok, _} =
+        Catalogue.create_paratext(Map.merge(attrs, %{play_id: play.id, position: position}))
     end
   end
 

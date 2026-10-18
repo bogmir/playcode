@@ -108,7 +108,8 @@ see, not part of the edition, so a play imported from a file arrives as a draft 
 the rule: it builds an ordinary play and one with the rarer encodings, every column filled,
 exports them, imports the files into an empty Playcode and compares every column of every row.
 A new column joins that comparison by itself; it is written to the file, dropped there with the
-reason, or listed among the test's known gaps with its item in `docs/backlog.md`. **A TEI file names no FileMaker or Playcode identifier**:
+reason, or listed among the test's known gaps with its item in `docs/backlog.md`. A new table with a
+`play_id` fails the test's table check until its snapshot reads the table, or lists it as kept out. **A TEI file names no FileMaker or Playcode identifier**:
 no record numbers, no database ids. The only identifiers it gives are play codes (a translation's
 original, `EMOTHE0530`) and the ones TEI defines (sigla, the text's `xml:id`s); a FileMaker number
 stays in the installation FileMaker was imported into (decided 2026-10-13).
