@@ -47,7 +47,6 @@ Questions 29-35 in `docs/stakeholder/preguntas.html`; the design is `docs/superp
 
 ## Medium Priority
 
-- [ ] **Bulk inserts in the TEI importer** (measured 2026-10-18) - `TeiImport` writes every division, element, speaker link and note in a statement of its own (`create_element/1`, `set_element_characters/2`, `create_note/1` with its position lookup): about 6,000 round trips for AL0788 (5,679 elements), 2.6 s of its 3.9 s alone, all inside the import's one transaction. On Fly that transaction met the 60-second timeout when the shared CPU ran out (`docs/production-reimport.md`), which is why every re-import scales both machines up and is watched; the italics fix and the *Production rollout* items each need another. Keep every row's changeset (`Element.changeset` refuses malformed markers), then `insert_all` each level of the tree, note positions computed in memory; the round-trip tests are the safety net. About half a day; the estimate of a few tenths of a second per big play is to be measured
 - [ ] **Stage direction navigator** (`« N / M »`) - client-side JS hook to scroll between stage directions in play text
 
 ## Found by the corpus round trip (2026-10-09)
