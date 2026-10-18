@@ -8,6 +8,7 @@ defmodule PlaycodeWeb.Admin.LiveHelpers do
   import Phoenix.LiveView, only: [put_flash: 3]
 
   alias Playcode.ActivityLog
+  alias Playcode.Text
 
   @doc """
   Tells the user the item an event named is gone. Its id came from the browser: a
@@ -20,6 +21,27 @@ defmodule PlaycodeWeb.Admin.LiveHelpers do
       :error,
       gettext("That item no longer exists. The list has been refreshed.")
     )
+  end
+
+  @doc """
+  A form's embedded rows (`rows_key`, "readings") left empty, or emptied, dropped on save
+  as the row's Remove button drops it, through `<rows_key>_delete`: a row is empty when
+  every one of `fields` is. Only on save, so the rows never move while the editor types.
+  """
+  def drop_blank_rows(params, rows_key, fields) do
+    case params do
+      %{^rows_key => rows} when is_map(rows) ->
+        blank =
+          for {key, row} <- rows,
+              is_map(row),
+              Enum.all?(fields, &(Text.squeeze(row[&1]) == nil)),
+              do: key
+
+        Map.update(params, rows_key <> "_delete", blank, &(blank ++ List.wrap(&1)))
+
+      _ ->
+        params
+    end
   end
 
   @doc """

@@ -62,11 +62,42 @@ defmodule Playcode.Export.TeiXml do
   # --- Header ---
 
   defp build_header(play) do
-    element(:teiHeader, [
-      build_file_desc(play),
-      build_encoding_desc(play),
-      build_profile_desc(play)
-    ])
+    element(
+      :teiHeader,
+      [
+        build_file_desc(play),
+        build_encoding_desc(play),
+        build_profile_desc(play)
+      ] ++ build_revision_desc(play)
+    )
+  end
+
+  # The revision history, each change in the order the files use: the date (an empty one
+  # if none, as 48 files have), the revisers, the words saying what was done, the note; a
+  # space between, so a reader of the text gets words.
+  defp build_revision_desc(%{revisions: []}), do: []
+
+  defp build_revision_desc(play) do
+    changes =
+      Enum.map(play.revisions, fn change ->
+        note =
+          if change.note,
+            do: [inline_element(:note, %{}, build_inline_content(change.note))],
+            else: []
+
+        parts =
+          [[element(:date, change.date || "")]] ++
+            people(change.people, &[element(:persName, &1)]) ++
+            [inline_children(change.description), note]
+
+        inline_element(
+          :change,
+          %{},
+          parts |> Enum.reject(&(&1 == [])) |> Enum.intersperse([" "]) |> Enum.concat()
+        )
+      end)
+
+    [element(:revisionDesc, changes)]
   end
 
   defp build_file_desc(play) do

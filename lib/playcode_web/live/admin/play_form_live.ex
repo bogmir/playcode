@@ -102,6 +102,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   def handle_event("save", %{"play" => play_params}, socket) do
+    play_params =
+      LiveHelpers.drop_blank_rows(play_params, "revisions", ~w(date people description note))
+
     save_play(socket, socket.assigns.live_action, play_params)
   end
 
@@ -139,17 +142,14 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   def handle_event("copy_field", %{"source" => source, "target" => target}, socket) do
-    form_data = socket.assigns.form.source.changes
-    schema_data = socket.assigns.form.source.data
+    form = socket.assigns.form
+    value = Phoenix.HTML.Form.input_value(form, String.to_existing_atom(source)) || ""
 
-    source_atom = String.to_existing_atom(source)
-    value = Map.get(form_data, source_atom) || Map.get(schema_data, source_atom) || ""
+    # The form's last params, as typed, with the copied value: a field never typed in comes
+    # from the play.
+    changeset =
+      Catalogue.change_play_form(socket.assigns.play, Map.put(form.params, target, value))
 
-    # Update the form with the copied value
-    current_params = form_params_from_changeset(socket.assigns.form.source)
-    updated_params = Map.put(current_params, target, value)
-
-    changeset = Catalogue.change_play_form(socket.assigns.play, updated_params)
     {:noreply, assign(socket, form: to_form(Map.put(changeset, :action, :validate)))}
   end
 
@@ -180,17 +180,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       %{value: val} -> val
       _ -> nil
     end
-  end
-
-  defp form_params_from_changeset(changeset) do
-    data = changeset.data
-    changes = changeset.changes
-
-    Play.__schema__(:fields)
-    |> Enum.reduce(%{}, fn field, acc ->
-      val = Map.get(changes, field, Map.get(data, field))
-      if val, do: Map.put(acc, Atom.to_string(field), val), else: acc
-    end)
   end
 
   @attribution_options ~w(fiable dudosa atribuida anónima apócrifa)
@@ -765,6 +754,45 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
               class="w-full textarea"
             >{note}</textarea>
           </div>
+        </div>
+
+        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
+          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
+            {gettext("Revision history")}
+          </h3>
+          <p class="text-xs text-base-content/70">
+            {gettext(
+              "Who revised the TEI file and when, written in its header, not shown to readers. Separate several revisers with a semicolon."
+            )}
+          </p>
+          <.inputs_for :let={change} field={@form[:revisions]}>
+            <input type="hidden" name={"#{@form.name}[revisions_order][]"} value={change.index} />
+            <div class="grid grid-cols-1 items-end gap-2 md:grid-cols-[6rem_1fr_1fr_1fr_auto]">
+              <.input field={change[:date]} type="text" label={gettext("Date")} />
+              <.input field={change[:people]} type="text" label={gettext("Revisers")} />
+              <.input field={change[:description]} type="text" label={gettext("What was done")} />
+              <.input field={change[:note]} type="text" label={gettext("Note")} />
+              <button
+                type="button"
+                name={"#{@form.name}[revisions_delete][]"}
+                value={change.index}
+                phx-click={JS.dispatch("change")}
+                class="btn btn-ghost btn-xs text-error mb-2"
+              >
+                {gettext("Remove")}
+              </button>
+            </div>
+          </.inputs_for>
+          <input type="hidden" name={"#{@form.name}[revisions_delete][]"} />
+          <button
+            type="button"
+            name={"#{@form.name}[revisions_order][]"}
+            value="new"
+            phx-click={JS.dispatch("change")}
+            class="btn btn-ghost btn-xs"
+          >
+            {gettext("Add change")}
+          </button>
         </div>
 
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">

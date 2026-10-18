@@ -102,6 +102,35 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     refute error =~ "AutoDismiss"
   end
 
+  # The file's revision history (revisionDesc), for the people making the edition: readers
+  # see none of it.
+  test "the play's page says who revised its file and when", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          revision_desc: """
+          <change><date>2021</date> <persName>Muñoz Pons, Carlos</persName>
+            <persName>Tronch Pérez, Jesús</persName> Revisión de la obra en formato <emph>TEI-XML</emph></change>
+          <change><note>Con correcciones a cargo de Guillermo Carrascón.</note><date>2025</date></change>
+          """
+        )
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(
+             lv,
+             "#revisions li",
+             "2021 · Muñoz Pons, Carlos; Tronch Pérez, Jesús · Revisión de la obra en formato TEI-XML"
+           )
+
+    assert has_element?(
+             lv,
+             "#revisions li",
+             "2025 · Con correcciones a cargo de Guillermo Carrascón."
+           )
+  end
+
   test "every play tab links back to the list of plays", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/sources")
 

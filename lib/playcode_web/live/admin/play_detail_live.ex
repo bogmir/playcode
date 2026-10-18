@@ -14,6 +14,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   alias Playcode.Export.TeiXml
   alias Playcode.Import.WordParser
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Statistics
   alias PlaycodeWeb.PlayLabels
 
@@ -133,6 +134,14 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   defp error_to_string(:not_accepted), do: gettext("Only .docx files are accepted.")
   defp error_to_string(:too_many_files), do: gettext("Only one file allowed.")
   defp error_to_string(other), do: inspect(other)
+
+  # One change of the file's revision history on a line: "2021 · Muñoz Pons, Carlos · Revisión…".
+  defp revision(change) do
+    [change.date, change.people, change.description, change.note]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
+    |> InlineMarkup.plain()
+  end
 
   @impl true
   def render(assigns) do
@@ -371,6 +380,12 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           <div :if={@play.edition_title} class="md:col-span-2">
             <span class="font-medium">{gettext("Edition title:")}</span>
             <span class="text-base-content/70">{@play.edition_title}</span>
+          </div>
+          <div :if={@play.revisions != []} class="md:col-span-2">
+            <span class="font-medium">{gettext("Revisions:")}</span>
+            <ul id="revisions" class="text-base-content/70">
+              <li :for={change <- @play.revisions}>{revision(change)}</li>
+            </ul>
           </div>
           <div :if={@play.licence_url || @play.licence_text} class="md:col-span-2">
             <span class="font-medium">{gettext("Licence:")}</span>

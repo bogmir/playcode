@@ -8,9 +8,10 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
   use PlaycodeWeb, :live_component
 
   alias Phoenix.LiveView.JS
-  alias Playcode.{ActivityLog, PlayContent, Text}
+  alias Playcode.{ActivityLog, PlayContent}
   alias Playcode.PlayContent.{Division, Note}
   alias Playcode.PlayContent.Note.Reading
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -123,15 +124,10 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
   # keeps them. Only the editor's input is cleaned: a reading an import brought stays as written.
   @doc false
   def save_params(note, params) do
-    params = note_params(note, params)
-
-    with %{"readings" => rows} when is_map(rows) <- params do
-      blank = for {key, row} <- rows, blank_row?(row), do: key
-      Map.update(params, "readings_delete", blank, &(blank ++ &1))
-    end
+    note
+    |> note_params(params)
+    |> LiveHelpers.drop_blank_rows("readings", ~w(wit text note))
   end
-
-  defp blank_row?(row), do: Enum.all?(~w(wit text note), &(Text.squeeze(row[&1]) == nil))
 
   # One of this anchor's notes: the id comes from the browser, and the list in the socket
   # may be stale, so it is read afresh.
