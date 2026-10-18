@@ -339,6 +339,30 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # 103 production files describe the project in two paragraphs, FileMaker's blurb and
+  # its programmer's credit; read as one, they came back as a single <p>.
+  describe "the project description" do
+    test "keeps its paragraphs" do
+      xml =
+        roundtrip(
+          tei(
+            encoding_desc: """
+            <projectDesc>
+              <p>La Biblioteca Digital EMOTHE supone la creación
+                de una base de datos.</p>
+              <p>Bogdan Mircea es responsable de Playcode.</p>
+            </projectDesc>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "p", within: "projectDesc") == [
+               "La Biblioteca Digital EMOTHE supone la creación de una base de datos.",
+               "Bogdan Mircea es responsable de Playcode."
+             ]
+    end
+  end
+
   # <revisionDesc>: who revised the file and when. 351 of the production files have one
   # <change>, 267 of them "Revisión de la obra en formato TEI-XML" by Carlos Muñoz Pons;
   # EMOTHE0090 says what was done in a <note>, and 83 hold only a date, empty in 44. A

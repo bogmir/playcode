@@ -21,7 +21,7 @@ defmodule Playcode.ImportHelpers do
 
   Options: `:title`, `:code`, `:title_stmt`, `:file_desc` (between titleStmt and
   publicationStmt: editionStmt, extent), `:publication_stmt`, `:source_desc`,
-  `:profile_desc`, `:revision_desc` (the changes inside `revisionDesc`), `:front`, `:body`,
+  `:encoding_desc`, `:profile_desc`, `:revision_desc` (the changes inside `revisionDesc`), `:front`, `:body`,
   `:back`.
   """
   def tei(opts \\ []) do
@@ -43,6 +43,7 @@ defmodule Playcode.ImportHelpers do
           </publicationStmt>
           #{if opts[:source_desc], do: "<sourceDesc>#{opts[:source_desc]}</sourceDesc>"}
         </fileDesc>
+        #{if opts[:encoding_desc], do: "<encodingDesc>#{opts[:encoding_desc]}</encodingDesc>"}
         #{if opts[:profile_desc], do: "<profileDesc>#{opts[:profile_desc]}</profileDesc>"}
         #{if opts[:revision_desc], do: "<revisionDesc>#{opts[:revision_desc]}</revisionDesc>"}
       </teiHeader>

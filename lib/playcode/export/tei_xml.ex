@@ -285,7 +285,7 @@ defmodule Playcode.Export.TeiXml do
       []
       |> then(fn acc ->
         if play.availability_note,
-          do: acc ++ [element(:p, play.availability_note)],
+          do: acc ++ paragraphs(play.availability_note),
           else: acc
       end)
       |> then(fn acc ->
@@ -396,17 +396,21 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
+  # A text whose paragraphs are parted by a blank line, one <p> each.
+  defp paragraphs(text),
+    do: for(paragraph <- String.split(text, "\n\n", trim: true), do: element(:p, paragraph))
+
   defp build_encoding_desc(play) do
     children = []
 
     children =
       if play.project_description,
-        do: children ++ [element(:projectDesc, [element(:p, play.project_description)])],
+        do: children ++ [element(:projectDesc, paragraphs(play.project_description))],
         else: children
 
     children =
       if play.editorial_declaration,
-        do: children ++ [element(:editorialDecl, [element(:p, play.editorial_declaration)])],
+        do: children ++ [element(:editorialDecl, paragraphs(play.editorial_declaration))],
         else: children
 
     children = children ++ build_class_decl(play)
