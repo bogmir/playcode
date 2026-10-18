@@ -932,6 +932,9 @@ defmodule Playcode.Export.TeiXml do
   defp with_breaks(nodes) when is_list(nodes),
     do: Enum.flat_map(nodes, &List.wrap(with_breaks(&1)))
 
+  # XmlBuilder holds a string inside an element as a text node, {nil, nil, text}: not an
+  # element named nil (EMOTHE0488's glued italics ending in breaks exported as `<>…</>`).
+  defp with_breaks({nil, nil, text}) when is_binary(text), do: lines(text)
   defp with_breaks({name, attrs, content}), do: {name, attrs, with_breaks(content)}
   defp with_breaks(other), do: other
 
@@ -1186,13 +1189,13 @@ defmodule Playcode.Export.TeiXml do
     opening ++ words ++ closing
   end
 
-  # An italic piece and the italic pieces that follow it: adjacent italic runs
-  # (`<<a>><<b>>`, which the importer would part with a space) and the halves of one a
-  # note split merge into a single <emph>. A note after an italic run ends it, and so does
-  # a Folio passage, which holds its own italics.
+  # An italic piece and the italic pieces that follow it: the halves of one a note split
+  # merge into a single <emph>. Two runs side by side (`<<a>><<b>>`) stay two, as the file
+  # wrote them, which the importer now reads glued. A note after an italic run ends it, and
+  # so does a Folio passage, which holds its own italics.
   defp italic_run([piece | rest]) do
     case Enum.split_while(rest, &match?(%{note: _, italic: true}, &1)) do
-      {notes, [%{italic: true, stage: nil} = next | _] = more}
+      {[_ | _] = notes, [%{italic: true, stage: nil} = next | _] = more}
       when not is_map_key(next, :folio) ->
         {run, rest} = italic_run(more)
         {[piece | notes] ++ run, rest}

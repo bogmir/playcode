@@ -1887,8 +1887,9 @@ defmodule Playcode.Import.TeiParser do
     children = if notes == :mark, do: children, else: without(children, "app")
 
     children
+    |> Enum.zip(Enum.drop(children, 1) ++ [nil])
     |> Enum.with_index()
-    |> Enum.map(fn {child, i} ->
+    |> Enum.map(fn {{child, next}, i} ->
       piece =
         case child do
           {name, _, _} when notes == :mark and name in @apart -> note_mark(child, children, i)
@@ -1897,19 +1898,22 @@ defmodule Playcode.Import.TeiParser do
           _ -> ""
         end
 
-      {piece, glued?(child, Enum.at(children, i + 1))}
+      {piece, glued?(child, next)}
     end)
   end
 
   # Whether the file writes `child` and `next` with no white space between them where one
-  # of them is an italic: italics are formatting, so no space is added there. Any other
-  # element (a stage, an aside) is set apart from its neighbours whatever the spacing.
+  # is an italic and the other a word or an italic: italics are formatting, so no space is
+  # added there. Any other element (a stage, an aside, a printed line's number) is set
+  # apart from its neighbours whatever the spacing.
   defp glued?(_child, nil), do: false
 
   defp glued?(child, next) do
-    (italic?(child) or italic?(next)) and not space_at?(child, :trail) and
-      not space_at?(next, :lead)
+    ((italic?(child) and word_or_italic?(next)) or (italic?(next) and word_or_italic?(child))) and
+      not space_at?(child, :trail) and not space_at?(next, :lead)
   end
+
+  defp word_or_italic?(node), do: is_binary(node) or italic?(node)
 
   defp italic?({name, attrs, _children}), do: emph_element?(name, attrs)
   defp italic?(_text), do: false
