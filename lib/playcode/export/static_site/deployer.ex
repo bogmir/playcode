@@ -80,10 +80,19 @@ defmodule Playcode.Export.StaticSite.Deployer do
 
     steps = [
       {"Initializing git repository...", fn -> System.cmd("git", ["init"], git_opts) end},
+      # No automatic gc, which repacked the whole site while the push packed it, and no
+      # delta search: on production's shared CPU the two kept a push of the 500 MB site
+      # going for half an hour (2026-10-18). Files are still compressed.
       {"Configuring git...",
        fn ->
-         System.cmd("git", ["config", "user.email", "playcode-deploy@noreply"], git_opts)
-         System.cmd("git", ["config", "user.name", "EMOTHE Deploy"], git_opts)
+         [
+           {"user.email", "playcode-deploy@noreply"},
+           {"user.name", "EMOTHE Deploy"},
+           {"gc.auto", "0"},
+           {"pack.window", "0"}
+         ]
+         |> Enum.map(fn {key, value} -> System.cmd("git", ["config", key, value], git_opts) end)
+         |> Enum.find({"", 0}, fn {_output, code} -> code != 0 end)
        end},
       {"Staging files...", fn -> System.cmd("git", ["add", "-A"], git_opts) end},
       # Empty when nothing changed since the last deploy, whose .git the site keeps: a
