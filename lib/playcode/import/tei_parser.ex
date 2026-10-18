@@ -743,17 +743,33 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Editors ---
 
-  # The principal investigator, the titleStmt's <editor>s, then the respStmts of the
-  # titleStmt (from position 100) and of the editionStmt (from 200).
+  # The principal investigator first (the files write it last), then the titleStmt's
+  # <editor>s and respStmts in their order, from position 100, the range the export
+  # writes back to the titleStmt, then the editionStmt's respStmts, from 200.
   defp editors(nil), do: []
 
   defp editors({_name, _attrs, children}) do
     title_stmt = find_child(children, "titleStmt")
 
     principal(title_stmt) ++
-      title_editors(title_stmt) ++
-      resp_stmt_editors(title_stmt, 100) ++
-      resp_stmt_editors(find_child(children, "editionStmt"), 200)
+      numbered(statement_credits(title_stmt), 100) ++
+      numbered(statement_credits(find_child(children, "editionStmt")), 200)
+  end
+
+  defp statement_credits(nil), do: []
+
+  defp statement_credits({_name, _attrs, children}) do
+    Enum.flat_map(children, fn
+      {"editor", attrs, editor_children} -> title_editor(attrs, editor_children)
+      {"respStmt", _attrs, resp_children} -> resp_stmt_editors(resp_children)
+      _ -> []
+    end)
+  end
+
+  defp numbered(editors, first) do
+    editors
+    |> Enum.with_index(first)
+    |> Enum.map(fn {editor, position} -> Map.put(editor, :position, position) end)
   end
 
   defp principal(nil), do: []
@@ -767,35 +783,27 @@ defmodule Playcode.Import.TeiParser do
 
   # <editor role="…"> in titleStmt: translators, researchers and the editor of the
   # critical edition the text is based on. Any other role (canon60) is skipped.
-  defp title_editors(nil), do: []
+  defp title_editor(attrs, children) do
+    case editor_role(attr_value(attrs, "role")) do
+      nil ->
+        []
 
-  defp title_editors({_name, _attrs, children}) do
-    children
-    |> find_children("editor")
-    |> Enum.with_index(1)
-    |> Enum.flat_map(fn {{_, attrs, ed_children}, idx} ->
-      case editor_role(attr_value(attrs, "role")) do
-        nil ->
-          []
+      role ->
+        # Name may be in <persName> or direct text
+        person_name =
+          case find_child(children, "persName") do
+            nil -> text_content({"editor", attrs, children})
+            el -> text_content(el)
+          end
 
-        role ->
-          # Name may be in <persName> or direct text
-          person_name =
-            case find_child(ed_children, "persName") do
-              nil -> text_content({"editor", attrs, ed_children})
-              el -> text_content(el)
-            end
-
-          [
-            %{
-              person_name: person_name,
-              role: role,
-              organization: safe_text(find_child(ed_children, "orgName")),
-              position: idx
-            }
-          ]
-      end
-    end)
+        [
+          %{
+            person_name: person_name,
+            role: role,
+            organization: safe_text(find_child(children, "orgName"))
+          }
+        ]
+    end
   end
 
   defp editor_role("translator"), do: "translator"
@@ -804,23 +812,14 @@ defmodule Playcode.Import.TeiParser do
   defp editor_role("edicion_critica"), do: "critical_editor"
   defp editor_role(_role), do: nil
 
-  # Every <persName> of every respStmt, one editor each, numbered from `first`. The people
-  # of one respStmt share its resp and orgName.
-  defp resp_stmt_editors(nil, _first), do: []
+  # Every <persName> of a respStmt, one editor each, sharing its resp and orgName.
+  defp resp_stmt_editors(children) do
+    role = resp_role(safe_text(find_child(children, "resp")))
+    organization = safe_text(find_child(children, "orgName"))
 
-  defp resp_stmt_editors({_name, _attrs, children}, first) do
     children
-    |> find_children("respStmt")
-    |> Enum.flat_map(fn {_name, _attrs, resp_children} ->
-      role = resp_role(safe_text(find_child(resp_children, "resp")))
-      organization = safe_text(find_child(resp_children, "orgName"))
-
-      resp_children
-      |> find_children("persName")
-      |> Enum.map(&%{person_name: text_content(&1), role: role, organization: organization})
-    end)
-    |> Enum.with_index(first)
-    |> Enum.map(fn {editor, position} -> Map.put(editor, :position, position) end)
+    |> find_children("persName")
+    |> Enum.map(&%{person_name: text_content(&1), role: role, organization: organization})
   end
 
   defp resp_role(resp) when is_binary(resp) do

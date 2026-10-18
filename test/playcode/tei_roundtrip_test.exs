@@ -152,6 +152,25 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # The credits are printed in their order, which a file written by Playcode gives as the
+  # order of the title statement's editors and respStmts, interleaved; the corpus files
+  # write the editors first.
+  test "the title statement's credits keep their order, a respStmt before an editor too" do
+    xml =
+      roundtrip(
+        tei(
+          title_stmt: """
+          <respStmt><resp>Electronic edition</resp><persName>Amelang, David J.</persName></respStmt>
+          <editor role="translator"><persName>Sanderson, John D.</persName></editor>
+          <respStmt><resp>Revisión</resp><persName>Revisor, Raúl</persName></respStmt>
+          """
+        )
+      )
+
+    assert xml_texts(xml, "persName", within: "titleStmt") ==
+             ["Amelang, David J.", "Sanderson, John D.", "Revisor, Raúl"]
+  end
+
   # 18 corpus files credit two people in one respStmt (EMOTHE0211, 0679, 0718…); the
   # second used to be dropped, though FileMaker's credits name them both.
   test "a respStmt naming two people credits both, in order" do
