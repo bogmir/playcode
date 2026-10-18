@@ -385,6 +385,7 @@ defmodule Playcode.PlayContent do
   # pop-ups and the TEI export follow it, so a note must not tie with another.
   # ponytail: two curators adding at one word in the same instant can still tie; lock the
   # anchor's row if that ever happens.
+  # TeiImport.collect_notes/5 numbers an imported play's notes by the same rule.
   defp put_next_position(%{valid?: true} = changeset) do
     offset = Ecto.Changeset.get_field(changeset, :offset)
 

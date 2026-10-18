@@ -295,7 +295,14 @@ defmodule Playcode.Import.TeiImportTest do
   # The queries `fun` makes from this process, counted through the repo's telemetry.
   defp count_queries(fun) do
     id = make_ref()
-    :telemetry.attach(id, [:playcode, :repo, :query], &__MODULE__.relay_query/4, self())
+    counter = :counters.new(1, [])
+
+    :telemetry.attach(
+      id,
+      [:playcode, :repo, :query],
+      &__MODULE__.count_query/4,
+      {self(), counter}
+    )
 
     try do
       fun.()
@@ -303,18 +310,10 @@ defmodule Playcode.Import.TeiImportTest do
       :telemetry.detach(id)
     end
 
-    Stream.repeatedly(fn ->
-      receive do
-        :query -> 1
-      after
-        0 -> nil
-      end
-    end)
-    |> Enum.take_while(& &1)
-    |> length()
+    :counters.get(counter, 1)
   end
 
   @doc false
-  def relay_query(_event, _measurements, _metadata, test),
-    do: if(self() == test, do: send(test, :query))
+  def count_query(_event, _measurements, _metadata, {pid, counter}),
+    do: if(self() == pid, do: :counters.add(counter, 1, 1))
 end

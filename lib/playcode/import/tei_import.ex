@@ -444,6 +444,7 @@ defmodule Playcode.Import.TeiImport do
   # and production's database timeout covers all of it (7,565 round trips for AL0788).
   # Every row is checked by its changeset as `PlayContent` would create it, given its id
   # here so its children can point at it, then written with insert_all, parents first.
+  # Anything `PlayContent.create_*` does beyond its changeset does not reach this path.
   defp write_text(divisions, play, cast) do
     rows =
       Enum.reduce(
@@ -489,13 +490,12 @@ defmodule Playcode.Import.TeiImport do
 
     speakers =
       for {character_id, position} <- Enum.with_index(character_ids(element, cast)) do
-        %ElementCharacter{id: Ecto.UUID.generate()}
-        |> ElementCharacter.changeset(%{
+        %ElementCharacter{
+          id: Ecto.UUID.generate(),
           element_id: row.id,
           character_id: character_id,
           position: position
-        })
-        |> checked(&{:element_character_create_failed, &1})
+        }
       end
 
     rows = Enum.reduce(speakers, add(rows, Element, row), &add(&2, ElementCharacter, &1))

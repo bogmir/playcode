@@ -17,7 +17,13 @@ defmodule Playcode.ApplicationTest do
   # sixth of a TEI import's time. With no exporter its spans go nowhere.
   test "with no traces exporter, nothing times the repo's queries" do
     assert Application.get_env(:opentelemetry, :traces_exporter) == :none
-    assert :telemetry.list_handlers([:playcode, :repo, :query]) == []
+
+    # OpentelemetryEcto's own handler only: an async test may attach one of its own to
+    # count queries (TeiImportTest).
+    refute Enum.any?(
+             :telemetry.list_handlers([:playcode, :repo, :query]),
+             &match?({OpentelemetryEcto, _}, &1.id)
+           )
   end
 
   defp child_id({module, _opts}), do: module
