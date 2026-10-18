@@ -205,6 +205,21 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # Four files (EMOTHE0252, 0254, AL0590, AL0711) write their sort title in capitals too.
+  # Each word takes its case from the title-cased title, so the article put last keeps its
+  # capital, as in every other file's sort title ("Cid Le").
+  test "an all-capitals sort title is cased as the title is" do
+    for {title, sort_title, expected} <- [
+          {"LA DISCRETA ENAMORADA", "DISCRETA ENAMORADA LA", "Discreta Enamorada La"},
+          {"EL LLEGAR EN OCASIÓN", "LLEGAR EN OCASIÓN COMEDIA FAMOSA DE EL",
+           "Llegar en Ocasión Comedia Famosa de El"},
+          {"La verdad sospechosa", "verdad sospechosa La", "verdad sospechosa La"}
+        ] do
+      xml = roundtrip(tei(title: title, title_stmt: ~s(<title key="orden">#{sort_title}</title>)))
+      assert {%{"key" => "orden"}, expected} in xml_elements(xml, "title")
+    end
+  end
+
   test "the play's code is its archive key and identifier" do
     xml = roundtrip(tei(code: "AL0606"))
 

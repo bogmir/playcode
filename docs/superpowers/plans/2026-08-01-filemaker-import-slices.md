@@ -12,7 +12,7 @@ source and variant tables received) and 2026-10-11 (S3 done, S7 started).
 | S2 — version metadata | **done** 2026-10-08: S2a and S2c shipped, S2d dropped — `archive/README.md`, `../specs/2026-08-05-s2c-composition-date-design.md` |
 | S2d — collection | **dropped** 2026-10-08: not a category in use; the code prefix already says EMOTHE, ARTELOPE or HIE — see below |
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
-| S2f — titles | **dropped as an import** — nothing to import; its one defect, four all-capitals sort titles, is in `docs/backlog.md` |
+| S2f — titles | **dropped as an import** — nothing to import; its one defect, four all-capitals sort titles, fixed 2026-10-18 (`docs/history.md`) |
 | S3 — witnesses | **done** 2026-10-10 (`7e76c8f..0593021`): 508 witnesses on 106 plays imported on dev — `../specs/2026-10-10-s3-witnesses-design.md` |
 | S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays. Question 11 decided 2026-10-16: a performance's source is a bibliography entry, the performance holding its own volume and pages. **Waits on question 12** in `docs/stakeholder/preguntas.html` (whether such a work also appears in the play's bibliography) |
 | S6 — characters | **blocked** by open question 7 (a TEI re-import replaces the cast list) |
@@ -403,7 +403,7 @@ Two findings from that check that outlive S2f:
   emothe.uv.es shows FileMaker's work heading instead (`ALCALDE DE ZALAMEA, EL`), in the same order
   ours sorts. The one real defect is four sort titles in capitals (EMOTHE0252, EMOTHE0254, AL0590,
   AL0711), which the import title-cases in the title but not in the sort title. Cosmetic, since
-  sorting ignores case: `docs/backlog.md`.
+  sorting ignores case; fixed 2026-10-18 (`docs/history.md`).
 
 ### S3 — Witnesses (testimonios) *(done 2026-10-10, `7e76c8f..0593021` — `../specs/2026-10-10-s3-witnesses-design.md`)*
 
