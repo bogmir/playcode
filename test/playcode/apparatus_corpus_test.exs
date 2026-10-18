@@ -12,8 +12,6 @@ defmodule Playcode.ApparatusCorpusTest do
 
   alias Playcode.Import.TeiImport
 
-  @moduletag :slow
-
   # The entries outside notes (604 in all, 63 inside notes, 62 of those copies), plus
   # EMOTHE0530's moved one. 542 in all.
   @entries %{
@@ -28,34 +26,64 @@ defmodule Playcode.ApparatusCorpusTest do
   # What the old import made of a line (docs/tei-apparatus-and-code.md).
   @pasted %{"EMOTHE0560" => "llamafalta", "EMOTHE0010" => "Barnardo. Barnardo."}
 
-  for path <- Path.wildcard("doc/tei_corpus/EMOTHE0{010,187,435,460,530,560}_*.xml") do
-    @path path
-    @code path |> Path.basename() |> String.slice(0, 10)
+  # The file under a code of its own, in UTF-8: the corpus sweep imports Hamlet's fixture
+  # under the same code, and a play's code is unique, so two transactions holding it queue
+  # behind each other (the sweep's Hamlet passed the 60-second timeout).
+  defp own_copy(path) do
+    <<0xFF, 0xFE, utf16::binary>> = File.read!(path)
 
-    test "#{@code}: every entry comes back once, out of the text, and stays so" do
-      {:ok, play} = TeiImport.import_file(@path)
-      first = export_tei(play)
+    utf16
+    |> :unicode.characters_to_binary({:utf16, :little})
+    |> String.replace(
+      ~r/<title key="archivo">[^_<]+/,
+      ~s(<title key="archivo">APP#{System.unique_integer([:positive])})
+    )
+  end
 
-      assert first |> xml_apps() |> Enum.reject(&(&1.type == "folio")) |> length() ==
-               @entries[@code]
+  @doc "The checks of one play's file, run by its own module below."
+  def assert_entries(path) do
+    code = path |> Path.basename() |> String.slice(0, 10)
 
-      assert xml_elements(first, "app", within: "note") == []
+    {:ok, play} = path |> own_copy() |> write_tmp!() |> TeiImport.import_file()
+    refute play.code =~ "EMOTHE"
+    first = export_tei(play)
 
-      if pasted = @pasted[@code],
-        do: refute(Enum.any?(reading_texts(first, "l"), &String.contains?(&1, pasted)))
+    assert first |> xml_apps() |> Enum.reject(&(&1.type == "folio")) |> length() ==
+             @entries[code]
 
-      {:ok, again} = first |> write_tmp!() |> TeiImport.import_file()
-      second = export_tei(again)
+    assert xml_elements(first, "app", within: "note") == []
 
-      assert second == first
+    if pasted = @pasted[code],
+      do: refute(Enum.any?(reading_texts(first, "l"), &String.contains?(&1, pasted)))
 
-      # Hamlet's 132 Folio passages: 119 inside one element, 13 across elements, each of
-      # those with an F at its start and its end.
-      if @code == "EMOTHE0010" do
-        assert Enum.count(xml_apps(first), &(&1.type == "folio")) == 119
-        assert first |> xml_texts("code") |> Enum.count(&(&1 == "<sup>")) == 26
-        assert xml_texts(second, "code") == xml_texts(first, "code")
-      end
+    {:ok, again} = first |> write_tmp!() |> TeiImport.import_file()
+    second = export_tei(again)
+
+    assert second == first
+
+    # Hamlet's 132 Folio passages: 119 inside one element, 13 across elements, each of
+    # those with an F at its start and its end.
+    if code == "EMOTHE0010" do
+      assert Enum.count(xml_apps(first), &(&1.type == "folio")) == 119
+      assert first |> xml_texts("code") |> Enum.count(&(&1 == "<sup>")) == 26
+      assert xml_texts(second, "code") == xml_texts(first, "code")
     end
+  end
+end
+
+# A module per play, so the six run side by side: in one module they ran one after
+# another, 35 s, the slow suite's longest module.
+for path <- Path.wildcard("doc/tei_corpus/EMOTHE0{010,187,435,460,530,560}_*.xml") do
+  code = path |> Path.basename() |> String.slice(0, 10)
+
+  defmodule Module.concat(Playcode.ApparatusCorpusTest, code) do
+    use Playcode.DataCase, async: true
+
+    @moduletag :slow
+    @moduletag timeout: 120_000
+    @path path
+
+    test "#{code}: every entry comes back once, out of the text, and stays so",
+      do: Playcode.ApparatusCorpusTest.assert_entries(@path)
   end
 end
