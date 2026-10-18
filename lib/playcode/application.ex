@@ -7,10 +7,14 @@ defmodule Playcode.Application do
 
   @impl true
   def start(_type, _args) do
-    # Set up OpenTelemetry instrumentation
-    OpentelemetryBandit.setup()
-    OpentelemetryPhoenix.setup(adapter: :bandit)
-    OpentelemetryEcto.setup([:playcode, :repo])
+    # OpenTelemetry instrumentation, only when the spans go somewhere (dev's stdout,
+    # production's OTEL_TRACES_EXPORTER): OpentelemetryEcto alone costs every query about
+    # 55 µs, a sixth of a TEI import.
+    if Application.get_env(:opentelemetry, :traces_exporter, :none) != :none do
+      OpentelemetryBandit.setup()
+      OpentelemetryPhoenix.setup(adapter: :bandit)
+      OpentelemetryEcto.setup([:playcode, :repo])
+    end
 
     # ETS table for rate limiting (used by PlaycodeWeb.RateLimit)
     :ets.new(:playcode_rate_limit, [:set, :public, :named_table])

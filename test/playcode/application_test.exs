@@ -13,6 +13,13 @@ defmodule Playcode.ApplicationTest do
     assert position.(Playcode.Accounts.AdminBootstrap) > position.(Playcode.Repo)
   end
 
+  # OpentelemetryEcto's handler calls Repo.config/0 three times a query, about 55 µs: a
+  # sixth of a TEI import's time. With no exporter its spans go nowhere.
+  test "with no traces exporter, nothing times the repo's queries" do
+    assert Application.get_env(:opentelemetry, :traces_exporter) == :none
+    assert :telemetry.list_handlers([:playcode, :repo, :query]) == []
+  end
+
   defp child_id({module, _opts}), do: module
   defp child_id(module), do: module
 end

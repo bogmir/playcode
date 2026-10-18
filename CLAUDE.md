@@ -141,7 +141,7 @@ toponym no other test uses.
 - Elixir 1.19.5 / Erlang/OTP 28.1 (via asdf, see `.tool-versions`)
 - Phoenix 1.8.3, LiveView 1.1.22, Tailwind 4.x
 - PostgreSQL with UUID primary keys
-- OpenTelemetry (Phoenix, Ecto, Bandit auto-instrumented; stdout exporter in dev)
+- OpenTelemetry (Phoenix, Ecto, Bandit), instrumented only when `:opentelemetry, :traces_exporter` is not `:none`: every environment has `:none` today (production reads `OTEL_TRACES_EXPORTER`), and OpentelemetryEcto alone costs every query about 55 µs
 - Saxy for TEI-XML parsing, xml_builder for TEI-XML generation
 - ChromicPDF (headless Chrome) for PDF generation
 - Deployed on Fly.io (see *Production*)
