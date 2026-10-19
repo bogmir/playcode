@@ -578,6 +578,28 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert Enum.all?(logged, &(&1.metadata == %{"source" => "filemaker"}))
     end
 
+    test "a place the gazetteer already has is linked, not made again, and left as it was", %{
+      hamlet: hamlet
+    } do
+      elsinor = place_fixture(%{"name" => "Elsinor"})
+      names = Enum.map(elsinor.names, & &1.name)
+
+      out = run("playcode.import.places", ["--path", @places])
+
+      assert [link] = Places.list_play_places(hamlet.id)
+      assert link.place_id == elsinor.id
+
+      assert [_] =
+               Enum.filter(Places.list_places(), &(Places.display_name(&1, "es") == "Elsinor"))
+
+      assert %{parent_place_id: nil, names: after_names} = Places.get_place!(elsinor.id)
+      assert Enum.map(after_names, & &1.name) == names
+
+      # The place it had is not among the ones created.
+      assert [_, places, _links] = Regex.run(~r/created (\d+) places and (\d+) links/, out)
+      assert String.to_integer(places) == length(Places.list_places()) - 1
+    end
+
     test "a second run changes nothing", %{plays: plays} do
       run("playcode.import.places", ["--path", @places])
       places = length(Places.list_places())
