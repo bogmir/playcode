@@ -14,6 +14,7 @@ defmodule Playcode.Performances.Performance do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Playcode.Performances.CastMember
   alias Playcode.Text
 
   @primary_key {:id, :binary_id, autogenerate: true}
@@ -66,7 +67,9 @@ defmodule Playcode.Performances.Performance do
     belongs_to :historical_state, Playcode.Places.Place
     belongs_to :source, Playcode.Bibliography.Entry, foreign_key: :source_entry_id
 
-    has_many :cast, Playcode.Performances.CastMember, preload_order: [asc: :position]
+    has_many :cast, Playcode.Performances.CastMember,
+      preload_order: [asc: :position],
+      on_replace: :delete
 
     timestamps(type: :utc_datetime)
   end
@@ -129,6 +132,18 @@ defmodule Playcode.Performances.Performance do
     |> foreign_key_constraint(:place_id)
     |> foreign_key_constraint(:historical_state_id)
     |> foreign_key_constraint(:source_entry_id)
+  end
+
+  @doc """
+  Replaces the cast with `rows` (`%{"actor_id" => id, "role" => role}`), in the order given.
+  The performance must have its `cast` loaded.
+  """
+  def cast_changeset(performance, rows) do
+    rows = Enum.with_index(rows, fn row, position -> Map.put(row, "position", position) end)
+
+    performance
+    |> cast(%{"cast" => rows}, [])
+    |> cast_assoc(:cast, with: &CastMember.changeset/2)
   end
 
   # Line breaks and spaces as the TEI file gives them back (Playcode.Text.squeeze/1).

@@ -193,3 +193,12 @@ msgstr ""
 
 msgid "is already set on another performance of this play"
 msgstr ""
+
+msgid "is already the name of another company"
+msgstr ""
+
+msgid "needs a surname or a nickname"
+msgstr ""
+
+msgid "is already another actor"
+msgstr ""

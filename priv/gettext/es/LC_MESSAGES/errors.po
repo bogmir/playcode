@@ -184,3 +184,12 @@ msgstr "necesita una fecha, un lugar, una compañía o una nota"
 
 msgid "is already set on another performance of this play"
 msgstr "ya lo tiene otra representación de esta obra"
+
+msgid "is already the name of another company"
+msgstr "ya es el nombre de otra compañía"
+
+msgid "needs a surname or a nickname"
+msgstr "necesita un apellido o un apodo"
+
+msgid "is already another actor"
+msgstr "ya es otro actor"

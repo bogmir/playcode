@@ -9,9 +9,36 @@ defmodule Playcode.PerformancesTest do
   import Playcode.TestFixtures
 
   alias Playcode.Performances
-  alias Playcode.Performances.Performance
+  alias Playcode.Performances.{Actor, Performance}
 
   defp dates(play), do: play.id |> Performances.list_for_play() |> Enum.map(& &1.date_text)
+
+  # Company names are unique across the corpus, so two async tests naming the same company
+  # would queue on the index: every name here is made unique.
+  defp unique(name), do: "#{name} #{System.unique_integer([:positive])}"
+
+  defp company!(name) do
+    {:ok, company} = Performances.find_or_create_company(unique(name))
+    company
+  end
+
+  defp actor!(attrs) do
+    {:ok, actor} = Performances.find_or_create_actor(attrs)
+    actor
+  end
+
+  defp company_names, do: Enum.map(Performances.list_companies(), & &1.name)
+
+  defp cast(performance, actors) do
+    rows = for {actor, role} <- actors, do: %{"actor_id" => actor.id, "role" => role}
+    {:ok, performance} = Performances.put_cast(performance, rows)
+    performance
+  end
+
+  defp roles(play) do
+    [performance] = Performances.list_for_play(play.id)
+    Enum.map(performance.cast, & &1.role)
+  end
 
   describe "years/1" do
     test "reads FileMaker's dates" do
@@ -190,12 +217,322 @@ defmodule Playcode.PerformancesTest do
       assert errors_on(changeset).cast_from_cast_list ==
                ["is already set on another performance of this play"]
 
+      # Setting it on a second, existing performance is refused the same way.
+      second = performance_fixture(play, %{"note" => "Otra"})
+
+      assert {:error, changeset} =
+               Performances.update_performance(second, %{"cast_from_cast_list" => "true"})
+
+      assert errors_on(changeset).cast_from_cast_list ==
+               ["is already set on another performance of this play"]
+
       # Another play has its own, and the first may be edited and unset.
       assert performance_fixture(play_fixture(), %{"cast_from_cast_list" => "true"})
       assert {:ok, _} = Performances.update_performance(first, %{"note" => "Nota"})
 
       assert {:ok, _} =
                Performances.update_performance(first, %{"cast_from_cast_list" => "false"})
+    end
+  end
+
+  describe "companies" do
+    test "a company is found by its name whatever the case, else created" do
+      name = unique("The Duke’s Company")
+      {:ok, company} = Performances.find_or_create_company(name)
+
+      for same <- [name, String.downcase(name), "  #{name}  "] do
+        assert {:ok, %{id: id}} = Performances.find_or_create_company(same)
+        assert id == company.id
+      end
+
+      assert {:ok, other} = Performances.find_or_create_company(unique("The King’s Men"))
+      refute other.id == company.id
+      assert company_names() == Enum.sort([name, other.name])
+
+      assert {:error, changeset} = Performances.find_or_create_company("  ")
+      assert errors_on(changeset).name == ["can't be blank"]
+    end
+
+    test "are listed by name" do
+      for name <- ~w(Zeta Alfa Omega), do: company!(name)
+
+      assert company_names() |> Enum.map(&(&1 |> String.split() |> hd())) ==
+               ~w(Alfa Omega Zeta)
+    end
+
+    test "renaming one renames it for every performance that names it" do
+      company = company!("The Duke’s Company")
+      first = performance_fixture(play_fixture(), %{"company_id" => company.id})
+      second = performance_fixture(play_fixture(), %{"company_id" => company.id})
+      name = unique("The King’s Men")
+
+      assert {:ok, renamed} = Performances.update_company(company, %{"name" => name})
+      assert renamed.name == name
+
+      for performance <- [first, second],
+          do:
+            assert([%{company: %{name: ^name}}] = Performances.list_for_play(performance.play_id))
+
+      assert Performances.usage(renamed) == %{performances: 2, plays: 2}
+    end
+
+    test "usage counts a play once however many of its performances name the company" do
+      company = company!("Company")
+      play = play_fixture()
+      performance_fixture(play, %{"company_id" => company.id})
+      performance_fixture(play, %{"company_id" => company.id, "date_text" => "1611"})
+      performance_fixture(play_fixture(), %{"company_id" => company.id})
+
+      assert Performances.usage(company) == %{performances: 3, plays: 2}
+    end
+
+    test "a rename onto a name another company has is refused, a change of case on its own is not" do
+      company = company!("Company")
+      other = company!("Other")
+
+      assert {:error, changeset} =
+               Performances.update_company(company, %{"name" => String.upcase(other.name)})
+
+      assert errors_on(changeset).name == ["is already the name of another company"]
+
+      assert {:ok, renamed} =
+               Performances.update_company(company, %{"name" => String.upcase(company.name)})
+
+      assert renamed.name == String.upcase(company.name)
+    end
+
+    test "get_company/1 is nil for a malformed or missing id" do
+      company = company!("Company")
+
+      assert Performances.get_company(company.id).name == company.name
+      assert Performances.get_company("no-uuid") == nil
+      assert Performances.get_company(Ecto.UUID.generate()) == nil
+      assert Performances.get_company(nil) == nil
+    end
+  end
+
+  describe "actors" do
+    test "an actor is found by all four fields, else created" do
+      burbage = %{"surname" => "Burbage", "forename" => "Richard"}
+      actor = actor!(burbage)
+
+      assert actor!(burbage).id == actor.id
+      assert actor!(%{"surname" => "BURBAGE", "forename" => " richard "}).id == actor.id
+
+      with_nickname = actor!(Map.put(burbage, "nickname", "Dick"))
+      with_sex = actor!(Map.put(burbage, "sex", "man"))
+      assert length(Enum.uniq([actor.id, with_nickname.id, with_sex.id])) == 3
+      assert actor!(Map.put(burbage, "sex", "man")).id == with_sex.id
+    end
+
+    test "an actor needs a surname or a nickname" do
+      assert {:error, changeset} = Performances.find_or_create_actor(%{"forename" => "Jean"})
+      assert errors_on(changeset).surname == ["needs a surname or a nickname"]
+
+      assert {:error, changeset} = Performances.find_or_create_actor(%{"surname" => "  "})
+      assert errors_on(changeset).surname == ["needs a surname or a nickname"]
+
+      assert {:ok, _} = Performances.find_or_create_actor(%{"nickname" => "Rosimond"})
+    end
+
+    test "a sex is a man, a woman or none" do
+      assert {:error, changeset} =
+               Performances.find_or_create_actor(%{"surname" => "Lowin", "sex" => "other"})
+
+      assert errors_on(changeset).sex == ["is invalid"]
+
+      assert %{sex: nil} = actor!(%{"surname" => "Lowin", "sex" => ""})
+      assert %{sex: "woman"} = actor!(%{"surname" => "Betterton", "sex" => "woman"})
+    end
+
+    test "an actor reads as forename, surname, then the nickname in quotes" do
+      moliere =
+        actor!(%{"surname" => "Poquelin", "forename" => "Jean François", "nickname" => "Molière"})
+
+      assert Actor.display_name(moliere) == "Jean François Poquelin, “Molière”"
+      assert Actor.display_name(actor!(%{"nickname" => "Rosimond"})) == "Rosimond"
+      assert Actor.display_name(actor!(%{"surname" => "Lowin"})) == "Lowin"
+    end
+
+    test "are listed by surname, forename, then nickname, a nickname alone standing for the surname" do
+      for attrs <- [
+            %{"surname" => "Taylor", "forename" => "Joseph"},
+            %{"surname" => "Burbage", "forename" => "Richard", "nickname" => "Young Dick"},
+            %{"surname" => "Burbage", "forename" => "Richard"},
+            %{"surname" => "Taylor", "forename" => "John"},
+            %{"nickname" => "Gros-René"}
+          ],
+          do: actor!(attrs)
+
+      assert Performances.list_actors() |> Enum.map(&Actor.display_name/1) ==
+               [
+                 "Richard Burbage",
+                 "Richard Burbage, “Young Dick”",
+                 "Gros-René",
+                 "John Taylor",
+                 "Joseph Taylor"
+               ]
+    end
+
+    test "renaming one renames it for every performance that names it" do
+      actor = actor!(%{"surname" => "Hart", "forename" => "Charles Hart"})
+      first = cast(performance_fixture(play_fixture()), [{actor, "Otelo"}])
+      second = cast(performance_fixture(play_fixture()), [{actor, nil}])
+
+      assert {:ok, renamed} =
+               Performances.update_actor(actor, %{"surname" => "Hart", "forename" => "Charles"})
+
+      for performance <- [first, second] do
+        assert [%{cast: [%{actor: listed}]}] = Performances.list_for_play(performance.play_id)
+        assert Actor.display_name(listed) == "Charles Hart"
+      end
+
+      assert Performances.usage(renamed) == %{performances: 2, plays: 2}
+    end
+
+    test "a rename onto another actor's four fields is refused, one that changes only the case or the sex is not" do
+      actor = actor!(%{"surname" => "Taylor", "forename" => "John"})
+      other = actor!(%{"surname" => "John", "forename" => "Taylor"})
+
+      assert {:error, changeset} =
+               Performances.update_actor(other, %{"surname" => "taylor", "forename" => "JOHN"})
+
+      assert errors_on(changeset).surname == ["is already another actor"]
+
+      assert {:ok, _} = Performances.update_actor(actor, %{"surname" => "TAYLOR"})
+      assert {:ok, %{sex: "man"}} = Performances.update_actor(actor, %{"sex" => "man"})
+    end
+
+    test "get_actor/1 is nil for a malformed or missing id" do
+      actor = actor!(%{"surname" => "Burbage"})
+
+      assert Performances.get_actor(actor.id).surname == "Burbage"
+      assert Performances.get_actor("no-uuid") == nil
+      assert Performances.get_actor(Ecto.UUID.generate()) == nil
+      assert Performances.get_actor(nil) == nil
+    end
+  end
+
+  describe "a performance's cast" do
+    test "keeps the order it is given, and a new list replaces the old" do
+      [burbage, lowin, taylor] = for s <- ~w(Burbage Lowin Taylor), do: actor!(%{"surname" => s})
+      play = play_fixture()
+      performance = performance_fixture(play)
+
+      cast(performance, [{taylor, "Laertes"}, {burbage, "Hamlet"}, {lowin, "  "}])
+      assert [%{cast: cast}] = Performances.list_for_play(play.id)
+      assert Enum.map(cast, & &1.role) == ["Laertes", "Hamlet", nil]
+      assert Enum.map(cast, & &1.actor_id) == [taylor.id, burbage.id, lowin.id]
+
+      # Rows that share a position come back in no promised order, so check it is distinct.
+      assert Enum.map(cast, & &1.position) == [0, 1, 2]
+
+      cast(performance, [{lowin, "Polonius"}, {burbage, "Hamlet"}])
+      assert [%{cast: cast}] = Performances.list_for_play(play.id)
+      assert Enum.map(cast, & &1.role) == ["Polonius", "Hamlet"]
+
+      assert {:ok, %{cast: []}} = Performances.put_cast(performance, [])
+      assert [%{cast: []}] = Performances.list_for_play(play.id)
+    end
+
+    test "squeezes a role's spaces and line breaks" do
+      actor = actor!(%{"surname" => "Burbage"})
+
+      assert %{cast: [%{role: "Don Juan\nTenorio"}]} =
+               cast(performance_fixture(play_fixture()), [{actor, " Don  Juan\r\n Tenorio "}])
+    end
+
+    test "returns the performance with its cast and the actors" do
+      actor = actor!(%{"surname" => "Burbage"})
+      performance = performance_fixture(play_fixture())
+
+      assert {:ok, %{cast: [%{role: "Hamlet", actor: %{surname: "Burbage"}}]}} =
+               Performances.put_cast(performance, [
+                 %{"actor_id" => actor.id, "role" => "Hamlet"}
+               ])
+    end
+
+    test "refuses a row without an actor, with a malformed or missing one, and keeps the cast" do
+      actor = actor!(%{"surname" => "Burbage"})
+      play = play_fixture()
+      performance = cast(performance_fixture(play), [{actor, "Hamlet"}])
+
+      for row <- [
+            %{"role" => "Hamlet"},
+            %{"actor_id" => "no-uuid", "role" => "Hamlet"},
+            %{"actor_id" => Ecto.UUID.generate(), "role" => "Hamlet"}
+          ] do
+        assert {:error, changeset} =
+                 Performances.put_cast(performance, [%{"actor_id" => actor.id}, row])
+
+        refute changeset.valid?
+      end
+
+      assert roles(play) == ["Hamlet"]
+    end
+  end
+
+  describe "a company or actor no performance names" do
+    test "is deleted with the last performance that names it, and kept while another does" do
+      company = company!("Company")
+      actor = actor!(%{"surname" => "Burbage"})
+
+      first =
+        cast(performance_fixture(play_fixture(), %{"company_id" => company.id}), [{actor, nil}])
+
+      second =
+        cast(performance_fixture(play_fixture(), %{"company_id" => company.id}), [{actor, nil}])
+
+      assert {:ok, _} = Performances.delete_performance(first)
+      assert company_names() == [company.name]
+      assert [%{surname: "Burbage"}] = Performances.list_actors()
+
+      assert {:ok, _} = Performances.delete_performance(second)
+      assert Performances.list_companies() == []
+      assert Performances.list_actors() == []
+    end
+
+    test "is deleted when the performance is pointed at another company" do
+      first = company!("First")
+      second = company!("Second")
+      performance = performance_fixture(play_fixture(), %{"company_id" => first.id})
+      other = performance_fixture(play_fixture(), %{"company_id" => second.id})
+
+      assert {:ok, _} = Performances.update_performance(performance, %{"company_id" => second.id})
+      assert company_names() == [second.name]
+
+      # A change that fails deletes nothing, and one that leaves the company alone keeps it.
+      assert {:error, _} =
+               Performances.update_performance(other, %{
+                 "company_id" => first.id,
+                 "venue_type" => "theatre"
+               })
+
+      assert {:ok, _} = Performances.update_performance(other, %{"note" => "Nota"})
+      assert company_names() == [second.name]
+    end
+
+    test "an actor is deleted when the cast drops its last row, and kept while another names it" do
+      [burbage, lowin] = for s <- ~w(Burbage Lowin), do: actor!(%{"surname" => s})
+      performance = cast(performance_fixture(play_fixture()), [{burbage, "Hamlet"}, {lowin, nil}])
+      other = cast(performance_fixture(play_fixture()), [{burbage, "Otelo"}])
+
+      cast(performance, [{lowin, nil}])
+      assert Enum.map(Performances.list_actors(), & &1.surname) == ["Burbage", "Lowin"]
+
+      cast(performance, [])
+      assert Enum.map(Performances.list_actors(), & &1.surname) == ["Burbage"]
+
+      cast(other, [])
+      assert Performances.list_actors() == []
+    end
+
+    test "one a cast row still names stays when the cast is replaced by a list that keeps it" do
+      actor = actor!(%{"surname" => "Burbage"})
+      performance = cast(performance_fixture(play_fixture()), [{actor, "Hamlet"}])
+
+      cast(performance, [{actor, "Otelo"}])
+      assert Enum.map(Performances.list_actors(), & &1.id) == [actor.id]
     end
   end
 
