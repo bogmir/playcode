@@ -269,7 +269,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 19 October 2026. 41 questions, 20 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 19 October 2026. 43 questions, 20 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -290,6 +290,7 @@
       <li><a href="#t-original-cast">The original cast</a><span class="nums">28</span></li>
       <li><a href="#t-paratexts">Texts around the play</a><span class="nums">29–35</span></li>
       <li><a href="#t-not-plays">Texts that are not plays</a><span class="nums">41</span></li>
+      <li><a href="#t-cast-lists">Several cast lists</a><span class="nums">42–43</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
@@ -1590,6 +1591,87 @@
     </div>
   </section>
 
+  <section id="t-cast-lists" aria-labelledby="h-cast-lists">
+    <h2 id="h-cast-lists">Several cast lists</h2>
+    <p>Six files have more than one cast list. Two of them are question 29 (a list after the text), and one is a test file. The other four keep their lists one after another before the text, each in a section of its own (<code>&lt;div type="elenco"&gt;</code>), where every other play has one such section. Playcode reads all the lists of a play as one: every role becomes one of the play’s characters, and the play page prints all of them under each list’s heading, so <i>El galán Castrucho</i> shows its 42 roles three times. These two questions settle what each list is and how the files encode it; Playcode will follow the encoding you choose.</p>
+
+    <div class="q" id="q42" data-q="q42" data-n="42">
+      <span class="q-num" aria-hidden="true">42</span>
+      <div class="q-body">
+        <h3>Are the extra cast lists of three plays sections of one cast list, and how should the files encode them?</h3>
+        <p class="why"><i>’Tis Pity She’s a Whore</i> (EMOTHE0283) lists 16 men under “The Actors’ Names” and 5 women under “Women”, as the 1633 quarto does. <i>La Tragédie espagnole</i> (EMOTHE0112) follows its “Dramatis personae” of 39 with three short lists: the characters of the prologue (Andrea’s ghost and Revenge), of the dumb shows, and of Hieronimo’s play. <i>Le Malade imaginaire</i> (EMOTHE0714) has three, for the prologue, the comedy and the interludes, and the speeches of each part point at its own list. In all three plays no character is in two lists. emothe.uv.es prints the three lists of <i>Le Malade imaginaire</i> together before the text.</p>
+        <p class="why"><strong>A.</strong> One cast list section, as every other play has, with the parts as groups inside it, each with its heading:</p>
+        <pre class="tei">&lt;div type="elenco"&gt;&lt;head&gt;The Actors’ Names&lt;/head&gt;
+  &lt;castList&gt;
+    &lt;castItem&gt;…&lt;/castItem&gt; …
+    &lt;castGroup&gt;&lt;head&gt;Women&lt;/head&gt;&lt;castItem&gt;…&lt;/castItem&gt; …&lt;/castGroup&gt;
+  &lt;/castList&gt;
+&lt;/div&gt;</pre>
+        <p class="why"><strong>B.</strong> The files as they are: a section per list, one after another before the text, printed together.</p>
+        <pre class="tei">&lt;div type="elenco"&gt;&lt;head&gt;The Actors’ Names&lt;/head&gt;&lt;castList&gt;…&lt;/castList&gt;&lt;/div&gt;
+&lt;div type="elenco"&gt;&lt;head&gt;Women&lt;/head&gt;&lt;castList&gt;…&lt;/castList&gt;&lt;/div&gt;</pre>
+        <p class="why"><strong>C.</strong> If a list belongs before its own part (the interludes’ before the first interlude, say), it moves inside that part. TEI allows a cast list there but not the section around it (an act or an interlude cannot hold a <code>&lt;div&gt;</code>), so it would be the only kind of cast list in the corpus outside one:</p>
+        <pre class="tei">&lt;div1 type="interlude" n="1"&gt;&lt;head&gt;PREMIER INTERMÈDE&lt;/head&gt;
+  &lt;castList&gt;&lt;head&gt;PERSONNAGES DES INTERMÈDES&lt;/head&gt;&lt;castItem&gt;…&lt;/castItem&gt; …&lt;/castList&gt;
+  …</pre>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q42-o1"><input type="radio" id="q42-o1" name="q42-choice" value="A: one cast list section, the parts as groups inside it">A: one cast list section, the parts as groups inside it</label>
+            <label for="q42-o2"><input type="radio" id="q42-o2" name="q42-choice" value="B: a section per list, as the files are now">B: a section per list, as the files are now</label>
+            <label for="q42-o3"><input type="radio" id="q42-o3" name="q42-choice" value="C: some lists inside their own part (which ones, in the notes)">C: some lists inside their own part (which ones, in the notes)</label>
+            <label for="q42-o4"><input type="radio" id="q42-o4" name="q42-choice" value="Another encoding (in the notes)">Another encoding (in the notes)</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q42-text">Notes</label>
+          <textarea id="q42-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q43" data-q="q43" data-n="43">
+      <span class="q-num" aria-hidden="true">43</span>
+      <div class="q-body">
+        <h3>How should the figures of each act of <i>El galán Castrucho</i> be encoded?</h3>
+        <p class="why"><i>El galán Castrucho</i> (EMOTHE0555) has three lists before the text: “Figuras del primer acto” (16), “Figuras del segundo acto” (14) and “Figuras del tercero acto” (12). Each repeats the people of the others under a new identifier (ESCOBARILLO, ESCOBARILLO2, ESCOBARILLO3), and their descriptions change with the act: “Beltranico, que es Lucrecia” in the first, “Lucrecia, en figura de Beltranico” in the third. Yet the speeches of all three acts point at the first list: of 985, one points at the second (its soldiers) and none at the third. Nothing in the file ties a list to its act but its heading. emothe.uv.es prints each list at the head of its act.</p>
+        <p class="why">In A and B below, the people of the second and third lists point at the first list’s roles (<code>corresp</code>) rather than carry identifiers of their own, since the speeches treat them as the same people. If they are not the same people, please say so in the notes.</p>
+        <p class="why"><strong>A.</strong> The lists stay in their sections before the text, each pointing at its act, and Playcode prints each at the head of its act:</p>
+        <pre class="tei">&lt;div type="elenco" corresp="#acto2"&gt;&lt;head&gt;FIGURAS DEL SEGUNDO ACTO&lt;/head&gt;
+  &lt;castList&gt;&lt;castItem&gt;&lt;role corresp="#ESCOBARILLO"&gt;ESCOBARILLO&lt;/role&gt;&lt;/castItem&gt; …&lt;/castList&gt;
+&lt;/div&gt;
+…
+&lt;div1 type="act" n="2" xml:id="acto2"&gt;&lt;head&gt;Acto II&lt;/head&gt;</pre>
+        <p class="why"><strong>B.</strong> Each list inside its act, the first act’s keeping the identifiers. TEI allows a cast list there but not the section around it, so these would be the only cast lists in the corpus outside one:</p>
+        <pre class="tei">&lt;div1 type="act" n="2"&gt;&lt;head&gt;Acto II&lt;/head&gt;
+  &lt;castList&gt;&lt;head&gt;FIGURAS DEL SEGUNDO ACTO&lt;/head&gt;
+    &lt;castItem&gt;&lt;role corresp="#ESCOBARILLO"&gt;ESCOBARILLO&lt;/role&gt;&lt;/castItem&gt; …
+  &lt;/castList&gt;
+  &lt;sp who="#ESCOBARILLO"&gt;…</pre>
+        <p class="why"><strong>C.</strong> One cast list before the text (the first act’s, which already names all 16), and the figures of the second and third acts as a stage direction at the head of their act. <i>El cerco de Numancia</i> (EMOTHE0387) gives its “Interlocutores” this way at the head of each jornada, and Playcode already prints them:</p>
+        <pre class="tei">&lt;div1 type="act" n="2"&gt;&lt;head&gt;Acto II&lt;/head&gt;
+  &lt;stage&gt;FIGURAS DEL SEGUNDO ACTO: ESCOBARILLO, LUCRECIA, FORTUNA, …&lt;/stage&gt;</pre>
+        <p class="why"><strong>D.</strong> The file as it is: three sections before the text, printed together and tied to no act.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q43-o1"><input type="radio" id="q43-o1" name="q43-choice" value="A: the lists before the text, each pointing at its act">A: the lists before the text, each pointing at its act</label>
+            <label for="q43-o2"><input type="radio" id="q43-o2" name="q43-choice" value="B: each list inside its act">B: each list inside its act</label>
+            <label for="q43-o3"><input type="radio" id="q43-o3" name="q43-choice" value="C: one cast list; the other acts' figures as a stage direction, as in Numancia">C: one cast list; the other acts’ figures as a stage direction, as in <i>Numancia</i></label>
+            <label for="q43-o4"><input type="radio" id="q43-o4" name="q43-choice" value="D: the three sections as they are">D: the three sections as they are</label>
+            <label for="q43-o5"><input type="radio" id="q43-o5" name="q43-choice" value="Another encoding (in the notes)">Another encoding (in the notes)</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q43-text">Notes</label>
+          <textarea id="q43-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
   <section id="t-correct" aria-labelledby="h-correct">
     <h2 id="h-correct">Kinds to correct</h2>
     <p>Not questions: texts whose file gives them the wrong kind, so Playcode names them wrongly where they have no heading of their own. An editor can correct each one in Playcode’s admin, and the corrected kind goes into the file Playcode exports.</p>
@@ -1617,7 +1699,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 21 answered</span>
+        <span class="count" id="answered-count">0 of 23 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
