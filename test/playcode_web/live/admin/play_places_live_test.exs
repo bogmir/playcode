@@ -123,6 +123,17 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLiveTest do
       assert render(element(view, "#link-#{link.id}")) =~ "Madrid, Castilla, Europa"
       assert hd(Places.list_play_places(play.id)).historical_state_id == castilla.id
 
+      # A later save of the row (here only its note) submits the select as the page renders
+      # it: the chosen state must be the selected option, or the save would clear it.
+      view
+      |> form("#link-form-#{link.id}", play_place: %{"note" => "Act III"})
+      |> render_submit()
+
+      assert %{note: "Act III", historical_state_id: state_id} =
+               hd(Places.list_play_places(play.id))
+
+      assert state_id == castilla.id
+
       view
       |> form("#link-form-#{link.id}", play_place: %{"historical_state_id" => ""})
       |> render_submit()
