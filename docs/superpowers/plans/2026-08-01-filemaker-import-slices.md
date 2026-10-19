@@ -849,10 +849,10 @@ second one, and `bus_lugAccion` is no longer wanted.
 - **Command:** `mix playcode.import.places [--dry-run] [--path DIR]`, on Fly
   `Playcode.Release.import_places/2`; S3's shape (a dry run first, each play imported once,
   curators' edits kept).
-- **What it writes:** about 105 places, one Playcode place per real place (FileMaker's copies
-  merged, their old names kept), and the plays' links with origin `filemaker`: 150 links on the
-  106 plays we hold, 146 planned and 4 reported and skipped; 29 links on versions we do not hold
-  are reported. The 49 links of performances wait for S5.
+- **What it writes:** 100 places, 19 of them historical states, one Playcode place per real
+  place (FileMaker's copies merged, their old names kept), and the plays' links with origin
+  `filemaker`: 150 links on the 106 plays we hold, 146 planned and 4 reported and skipped; 29
+  links on versions we do not hold are reported. The 49 links of performances wait for S5.
 - **What it adds to Playcode:** `play_places.historical_state_id`, the state a place belonged to
   *in a given play* (the Roman Republic for Rome in *Antony and Cleopatra*), with its field on the
   Places tab, the line readers see ("Elsinor, Reino de Dinamarca, Europa (hoy Dinamarca)") and the
@@ -871,7 +871,7 @@ second one, and `bus_lugAccion` is no longer wanted.
 - **"Italian Peninsula vs Italy is an editorial question."** Decided: the cities sit under Italia
   today, and "Península itálica" is their links' historical state.
 - **The size.** 138 links and ~94 places; the tables hold 179 links on versions (150 on plays we
-  hold) and give about 105 places.
+  hold) and give 100 places, 19 of them historical states.
 - **Waiting for the ~300 plays.** Met: the corpus is 372 files.
 
 ## Shared conventions

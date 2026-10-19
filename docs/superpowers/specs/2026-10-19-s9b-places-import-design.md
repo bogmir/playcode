@@ -32,7 +32,7 @@ From the project owner, 2026-10-19:
 | 1 | FileMaker's copies of one place | One Playcode place per real place. Old names become historical names. Pairs that are not the same place stay apart, named in a hand list |
 | 2 | Historical states | Places of their own, type `country`, under their continent. A FileMaker "historical" country that is today's country under the same name merges with it |
 | 3 | FileMaker's bracketed places | Vague places, not "mentioned": role `setting`, a fitting type, no coordinates. The generic ones are shared fictional places. "Sin especificar" is no link |
-| 4 | How much of the gazetteer | Only the places our plays use, their parents and the modern records that give them their parents: about 105 |
+| 4 | How much of the gazetteer | Only the places our plays use, their parents and the modern records that give them their parents: 100, 19 of them historical states |
 | 5 | Language of names | Unchanged: the interface language on the play page, Spanish on the site |
 | 6 | FileMaker's free text (`espacio`) | The link's note, as written |
 | 7 | Existing places and re-runs | S3's rules: dry run first, existing links kept, existing places reused, each play imported once |
@@ -116,7 +116,7 @@ so the import's own report is the final word.
 | Naming only a continent | 6 (Friar Bacon, King Lear, Othello, Sofonisba, A Game at Chess, one more) |
 | Naming only a historical state | 18 (Castilla ×3, Reino de Inglaterra ×5, Reino de Escocia, Bretaña ×2, Reino de Nápoles ×2, Imperio romano, Bohemia, Illyria, República de Venecia ×2) |
 | No place at all | 3: "sin especificar" (Endymion, Everyman) and an empty link (0653) |
-| Places after merging | about 105: 46 cities, 19 historical states, 20 modern countries, 10 regions, 7 vague places, the continents |
+| Places after merging | 100 in the import's report (dev, 2026-10-19): 46 cities, 34 countries (19 of them historical states), 11 regions, 3 continents, 6 others (two forests, an island, a town, a district, the Costa de Tarragona) |
 
 ## The model
 
