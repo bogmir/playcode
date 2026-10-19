@@ -202,6 +202,10 @@ defmodule Playcode.Export.StaticSitePlayTest do
                ["I", "Unmarked", "6", "1"]
              ]
 
+      # Each form with its share, not a family of forms (removed 2026-10-19, question 16).
+      assert stats |> LazyHTML.query("#synopsis li") |> Enum.map(&squish(LazyHTML.text(&1))) ==
+               ["Redondilla 5 vv. · 83%", "Unmarked 1 vv. · 17%"]
+
       characters = rows(stats, "#characters tbody tr")
       assert Enum.map(characters, &hd/1) == ["Segismundo", "Criado 2", "Clarín", "Clotaldo"]
       assert ["Segismundo", "1", "5" | _] = hd(characters)

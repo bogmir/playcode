@@ -3458,11 +3458,6 @@ msgstr "Cuarteto"
 msgid "Endecasílabos sueltos"
 msgstr "Endecasílabos sueltos"
 
-#: lib/playcode_web/play_labels.ex:260
-#, elixir-autogen, elixir-format
-msgid "Italianate"
-msgstr "Italianate"
-
 #: lib/playcode_web/play_labels.ex:249
 #, elixir-autogen, elixir-format
 msgid "Pareado hexasílabo"
@@ -3487,11 +3482,6 @@ msgstr "Romancillo o endecha"
 #, elixir-autogen, elixir-format
 msgid "Sexteto-lira"
 msgstr "Sexteto-lira"
-
-#: lib/playcode_web/play_labels.ex:259
-#, elixir-autogen, elixir-format
-msgid "Spanish stanzas"
-msgstr "Spanish stanzas"
 
 #: lib/playcode_web/play_labels.ex:254
 #, elixir-autogen, elixir-format

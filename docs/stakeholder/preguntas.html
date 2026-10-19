@@ -269,7 +269,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 18 October 2026. 41 questions, 19 of them answered (nine decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 19 October 2026. 41 questions, 20 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -985,7 +985,7 @@
       </div>
     </div>
 
-    <div class="q" data-q="q16" data-n="16">
+    <div class="q" data-q="q16" data-n="16" data-answered="2026-10-19">
       <span class="q-num" aria-hidden="true">16</span>
       <div class="q-body">
         <h3>Is this grouping of verse forms into families right?</h3>
@@ -1003,11 +1003,18 @@
           </table>
         </div>
         <p class="why"><strong>Our proposal for the fourth row</strong>, for you to correct: romance heroico and cuarteta asonantada with the romance; nona, oncena, cuarteta, quadra, copla, ovillejo, redondilla-quintilla de pie quebrado and pareados de pie quebrado with the Spanish stanzas; oitava, sestina, silva de pareados and soneto con estrambote with the Italianate forms; and a family of their own, traditional song, for canción tradicional, seguidilla, seguidilla con estribillo, zéjel, villancico, octosílabos con estribillo and cantiga. The couplets (pareado, pareados, pareado hexasílabo) stay in “Other”, since a couplet can be of any family.</p>
+        <div class="answered">
+          <p><strong>Decided by Playcode on 19 October 2026:</strong> no families. The grouping was ours, and emothe.uv.es never had one. A band can tell only three colours apart, for colour-blind readers too, so they go to the three commonest forms: redondilla, romance and quintilla, 71% of the verse in the 41 plays with a synopsis. Every other form is grey, named on hover and in the table under the band, and the legend lists each form of the play with its share of the verse.</p>
+          <p>Built on 19 October 2026: readers see it once the site is generated again.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q16-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q16-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q16-o1"><input type="radio" id="q16-o1" name="q16-choice" value="Right, with your proposal for the fourth row">Right, with your proposal for the fourth row</label>
-            <label for="q16-o2"><input type="radio" id="q16-o2" name="q16-choice" value="Needs changes, see my note">Needs changes, see my note</label>
+            <label for="q16-o3"><input type="radio" id="q16-o3" name="q16-choice" value="No families: the three commonest forms coloured, the rest grey" checked>No families: the three commonest forms coloured, the rest grey</label>
+            <label for="q16-o1"><input type="radio" id="q16-o1" name="q16-choice" value="Right, with your proposal for the fourth row">Families, as in the table, with your proposal for the fourth row</label>
+            <label for="q16-o2"><input type="radio" id="q16-o2" name="q16-choice" value="Needs changes, see my note">Families, with changes, see my note</label>
           </div>
         </fieldset>
         <div>
@@ -1015,6 +1022,7 @@
           <textarea id="q16-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1609,7 +1617,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 20 answered</span>
+        <span class="count" id="answered-count">0 of 21 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>

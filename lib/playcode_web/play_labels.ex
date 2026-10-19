@@ -254,12 +254,6 @@ defmodule PlaycodeWeb.PlayLabels do
   def verse_form_label("unmarked"), do: gettext("Unmarked")
   def verse_form_label(other), do: other
 
-  @doc "The name of a metrical family from `Playcode.Statistics.Metrics.family/1`."
-  def verse_family_label("romance"), do: gettext("Romance")
-  def verse_family_label("spanish"), do: gettext("Spanish stanzas")
-  def verse_family_label("italianate"), do: gettext("Italianate")
-  def verse_family_label(_other), do: gettext("Other")
-
   @doc "The name of a kind of play made from another (`Play.relationship_types/0`)."
   def relationship_type_label("traduccion"), do: gettext("Translation")
   def relationship_type_label("adaptacion"), do: gettext("Adaptation")

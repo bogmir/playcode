@@ -14,23 +14,8 @@ defmodule Playcode.Statistics.Metrics do
   @unmarked [nil, "", "free", "nil"]
   @whole_verse [nil, "", "I"]
 
-  # ponytail: the grouping awaits review by the project's philologists (spec, open
-  # question 1). A form not listed here is "other".
-  @families %{
-    "romance" => ~w(romance romance_tirada romancillo_o_endecha),
-    "spanish" => ~w(redondilla quintilla decima copla_arte_mayor copla_estructura_abierta),
-    "italianate" => ~w(terceto octava_real soneto lira sexteto_lira silva silva_tirada
-                       cancion cancion_canzone endecasilabos_sueltos_tirada
-                       pareados_endecasilabos cuarteto verso_suelto)
-  }
-
   @doc "Division types that are acts."
   def act_types, do: @act_types
-
-  @doc ~S'The family of a verse form: "romance", "spanish", "italianate" or "other".'
-  def family(form) do
-    Enum.find_value(@families, "other", fn {family, forms} -> if form in forms, do: family end)
-  end
 
   @doc """
   The play's text as a flat list in reading order: a division's own elements, then
@@ -253,7 +238,6 @@ defmodule Playcode.Statistics.Metrics do
             %{
               "act" => p.act,
               "form" => p.form,
-              "family" => family(p.form),
               "from" => p.from,
               "to" => p.to
             }
