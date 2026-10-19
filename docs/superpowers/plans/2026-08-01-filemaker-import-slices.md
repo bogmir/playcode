@@ -1,7 +1,8 @@
 # FileMaker Import — Feature Slices (roadmap)
 
 **Status:** written 2026-08-01, revised 2026-09-25, 2026-10-10 (witness, performance,
-source and variant tables received) and 2026-10-11 (S3 done, S7 started).
+source and variant tables received), 2026-10-11 (S3 done, S7 started) and 2026-10-19 (the
+`T10*` place tables and the genre tables received, S9b built).
 
 | Slice | State |
 |---|---|
@@ -17,10 +18,10 @@ source and variant tables received) and 2026-10-11 (S3 done, S7 started).
 | S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays. Question 11 decided 2026-10-16: a performance's source is a bibliography entry, the performance holding its own volume and pages. **Waits on question 12** in `docs/stakeholder/preguntas.html` (whether such a work also appears in the play's bibliography) |
 | S6 — characters | **blocked** by open question 7 (a TEI re-import replaces the cast list) |
 | S7 — credits | **done** 2026-10-11: no import; the cross-check found 18 credits our TEI import dropped (fixed) and 7 disagreements, asked as questions 18–21 — see below |
-| S8 — genre | **blocked**: the genre table (`T01.42_GeneroHier…`) has not arrived |
+| S8 — genre | **unblocked** 2026-10-19: the genre tables arrived (`T01.42_Genero_Hieronimo`, `T01.43_GeneroAnnals`, `T14.1_GeneroLista`, `t14.1_Genero`); not designed yet |
 | S4 — bibliography | **done** 2026-10-07 (`e82c968..369a077`; designed the same day, after the project answered the research's questions: shared entries, a one-time import) — `../specs/2026-10-07-s4-bibliography-design.md` (research: `../specs/2026-09-25-s4-bibliography-research.md`) |
 | S9 — places | **Phase 1 done** (the app, no FileMaker code) — `docs/history.md` |
-| S9b — `pub_LugAccion` import | **scoped, waits on the `T10*` tables** (asked at the end of `docs/stakeholder/preguntas.html`) — 138 links / ~94 places at full corpus; the rest of EMOTHE is in (371 plays on dev, 2026-10-08). Tier 1 is buildable without them, but only once they are refused — see S9b, *Ordering* |
+| S9b — the places of action | **built** 2026-10-19 (`mix playcode.import.places`, `Playcode.Release.import_places/2`): 150 links on the 106 plays we hold, with the historical state each place belonged to — `../specs/2026-10-19-s9b-places-import-design.md`. Production waits on the owner's rollout (`docs/backlog.md`) |
 
 Completed plans live in `archive/`, with exactly what shipped, the commit list, and what each
 slice learned that its plan did not say. Read that before starting a new slice.
@@ -103,12 +104,12 @@ códigos TEI-XML…`), which means **our TEI fixtures are FileMaker output** bui
 | S3 witnesses | `T03` (witness ↔ version), `T03.1` type tree, `T03.2` attribution, `T03.3` holding library, `T13` information source | **received, complete** 2026-10-10; see S3 |
 | S4 bibliography | `T12` (links), `T12.1` (records), `T12.11` type, `T12.12` category, `T12.13` language, `T13.1` city, `T13.2` publisher | **received, complete** — `T12.1` with all 41 fields since 2026-10-02 |
 | S4 modern editions | `T04` (version ↔ `_k_IdEdicionModerna`, with the play's volume and pages), `T04.1` (editions: city, publisher, language, type, siglum), `T04.11` types, `T04.12` languages | **received, complete** 2026-10-02 |
-| S5 performances | `T11` (performance: company, `_k_IdCirEscenica`, information source, place, version), `T11.1` cast (actor, role), `T11.11` actor names, `T11.12` actor sex, `T11.22` actor roles, `T11.2` stage circumstance, `T11.3` company names, `T13` sources **received** 2026-10-10, all seven, plus `T13` (+`T13.3`) since 2026-10-01. `T11.2` is the value list behind `bus_repCircunstancia`, in Spanish and English. **Ask** for the place table `T11._k_IdObraAccionLugar` points at; see S5 |
+| S5 performances | `T11` (performance: company, `_k_IdCirEscenica`, information source, place, version), `T11.1` cast (actor, role), `T11.11` actor names, `T11.12` actor sex, `T11.22` actor roles, `T11.2` stage circumstance, `T11.3` company names, `T13` sources **received** 2026-10-10, all seven, plus `T13` (+`T13.3`) since 2026-10-01. `T11.2` is the value list behind `bus_repCircunstancia`, in Spanish and English. The place table `T11._k_IdObraAccionLugar` points at was **found** 2026-10-19: the 49 performance links in `T10_ObraAccionLugar`; see S5 |
 | S6 characters | `T07.31` (`_kp_IdPersonajeObra`, the speaker codes), `T07.311` (group ↔ member) | optional: would replace parsing `bus_personaje` for the completeness check; TEI stays the source |
 | S7 credits | `T07.5`, `T07.51`, `T07.511`–`.514` | **received**; see S7 |
 | S7 authors | `T02` (version ↔ author, with `_k_IdAutorFiabilidad`, `_k_IdAutorRol`), `T02.1` authors, `T02.2` attribution reliability, `T02.3` author roles | **ask** if attribution reliability is wanted; TEI carries `author_attribution` already |
-| S8 genre | `T01.42_GeneroHier…` (name cut off at the screenshot's edge) | **ask**: the genre table replaces the request for the `bus_genero` value lists |
-| S9b places | `T10` (version ↔ city, continent, vague location, country, region), `T10.11_Ciudad` / `_Continente` / `_Vaga` / `_Pais` / `_Region`, `T10.3_Region` (with ISO code and a language selector) | **ask**: replaces the request for a language-tagged `bus_lugAccion` |
+| S8 genre | `T01.42_Genero_Hieronimo`, `T01.43_GeneroAnnals`, `T14.1_GeneroLista`, `t14.1_Genero` (the first read as `T01.42_GeneroHier…`, cut off at the screenshot's edge) | **received** 2026-10-19: the genre tables replace the request for the `bus_genero` value lists |
+| S9b places | `T10_ObraAccionLugar` (version or performance ↔ its chain of places), `T10.1_Continente`, `T10.2_Pais`, `T10.3_Region`, `T10.4_Ciudad`, `T10.5_Locvaga` (vague places), `T10.11_NombreToponimo` (a name per language), `T10.X_TopoRelacion` (historical record → modern record), `T10.99_TipoToponimo` | **received** 2026-10-19, replacing the request for a language-tagged `bus_lugAccion`; imported by S9b |
 | Text, licence, paratexts | `T07.x` (text rows, divisions, variants, speakers, stage-direction and metre types), `T07.3` paratexts, `T07.52`/`.521` header notes (with `TeiLicencia_Xml`), `T07.54` licence | not needed: TEI stays the source of truth for the text |
 | TEI sources and distributor | `T07.53` (one row per TEI header, `TeiFuentes_Xml` = the generated `<sourceDesc>`), `T07.531` (the source: title, author, editor, translator, language, `Referencia`, distributor), `T07.532` (45 distributors) | **received** 2026-10-10. No import: FileMaker generated our files' `<sourceDesc>` from these, so the TEI already holds them. See "Sources, distributor, variants" under S3 |
 | Critical apparatus | `T07.7` (1,102 variants: lemma, type, comment, range end), `T07.71` (2,131 readings with their sigla) | **received** 2026-10-10. No import: anchored to text-markup rows we do not hold. Cross-check for the `<app>` work; see "Sources, distributor, variants" under S3 |
@@ -618,7 +619,8 @@ lacks, the proposed table, TEI mapping. Headlines:
     1 man, 2 woman, 3 unknown), the role played in `T11.22` (10 names: *Cléopâtre*, *Argan*)
   - **The place is missing.** `_k_IdObraAccionLugar` is set on 142 performances (18 distinct) and
     points at a place table not in the dump, and the published `Topónimo:` line is blank on every
-    row. Ask for it with S9b's `T10` tables, which it probably is
+    row. **Found 2026-10-19**: it is S9b's `T10_ObraAccionLugar`, whose 49 rows with
+    `_k_IdObraRepresentacion` link a performance to a place; S9b left them out, so S5 imports them
 - **The sources, measured 2026-10-11** (questions 11 and 12):
   - the 252 sourced performances point at 104 `T13` records (one, `105`, is missing from `T13`),
     which hold about 16 works: Wiggins is 81 records under ten title spellings, one per volume
@@ -714,7 +716,7 @@ is worth having if `play_editors` is ever normalised into a people table.
 These are **not** the people S4 needs. The translators and editors of *cited* works are a
 different relation, still unrequested on the FileMaker side.
 
-### S8 — Genre *(blocked)*
+### S8 — Genre *(tables received 2026-10-19, not designed)*
 
 **FileMaker (2026-10-02):** ask for the genre table itself, `T01.42_GeneroHier…` in
 `ctce_dades` (its name is cut off in the screenshot), instead of the value lists below. Artelope
@@ -765,7 +767,7 @@ difference between an import and a fortnight of data entry.
 
 #### The `bus_lugAccion` request *(added 2026-08-04, ask in the same message as the value lists)*
 
-**Superseded 2026-10-02.** The relationship graph shows places as structured tables: `T10`
+**Superseded 2026-10-02, closed 2026-10-19** (the tables arrived and S9b imports them). The relationship graph shows places as structured tables: `T10`
 (version ↔ city, continent, vague location, country, region), `T10.11_Ciudad` / `_Continente` /
 `_Vaga` / `_Pais` / `_Region`, and `T10.3_Region` with an ISO code and a language selector. Ask
 for those instead. They should give the containment chain and the per-language names that the
@@ -833,106 +835,44 @@ Two things were called "Phase 2" and they are not the same work, so they are spl
   catalogue browse-by-place, multiple authority links per place. **Not a FileMaker slice at all**;
   it touches no export field and belongs in its own spec. Scope is recorded in `docs/backlog.md` under
   "Places Phase 2". Not planned as of 2026-08-04, deliberately.
-- **S9b, the `pub_LugAccion` import** — what this roadmap promised. **Scoped, build it, see below**,
-  after the ~300-play import and ideally after `bus_lugAccion` arrives.
+- **S9b, the places of action** — what this roadmap promised. **Built 2026-10-19, see below.**
 
-#### S9b — the `pub_LugAccion` import *(scoped 2026-08-05, build it)*
+#### S9b — the places of action *(designed and built 2026-10-19)*
 
-**Size this against the future corpus, not the present one.** The plan is to import the other ~300
-plays (open question 5), so the target is the whole field, not the slice of it we happen to hold
-today:
+**The design is `../specs/2026-10-19-s9b-places-import-design.md`; it replaces everything this
+section said.** The `T10*` tables arrived on 2026-10-19, so the import reads FileMaker's own
+records (five levels, a name per language, each historical record paired with its modern one)
+instead of parsing `pub_LugAccion`, the published HTML line, and guessing which names in which
+languages were one place. The historical polities (the old tier 2) come in the same pass, not a
+second one, and `bus_lugAccion` is no longer wanted.
 
-| | Today (82 plays) | Full export |
-|---|---|---|
-| Plays with place data | 6 | **101** |
-| Place links (`<li>`) | 9 | **138** |
-| Distinct settlements | ~10 | **58** |
-| Distinct countries/regions | 6 | **31** |
-| Continents | 3 | 5 |
-| **Gazetteer rows** | ~16 | **~94** |
+- **Command:** `mix playcode.import.places [--dry-run] [--path DIR]`, on Fly
+  `Playcode.Release.import_places/2`; S3's shape (a dry run first, each play imported once,
+  curators' edits kept).
+- **What it writes:** 100 places, 19 of them historical states, one Playcode place per real
+  place (FileMaker's copies merged, their old names kept), and the plays' links with origin
+  `filemaker`: 150 links on the 106 plays we hold, 146 planned and 4 reported and skipped; 29
+  links on versions we do not hold are reported. The 49 links of performances wait for S5.
+- **What it adds to Playcode:** `play_places.historical_state_id`, the state a place belonged to
+  *in a given play* (the Roman Republic for Rome in *Antony and Cleopatra*), with its field on the
+  Places tab, the line readers see ("Elsinor, Reino de Dinamarca, Europa (hoy Dinamarca)") and the
+  TEI `<country ref>`.
 
-At 9 links, hand entry wins and this is not worth writing. At 138 links and a 94-row gazetteer it
-is clearly worth writing, and **the earlier "drop it" verdict was sized against the wrong corpus.**
-Max 5 places per play; `London` appears in 14 plays, `Madrid` in 9, `Rome` in 6 — which is precisely
-the shared-referent case the corpus-global gazetteer was built for.
+**What the earlier plan got wrong**, kept so it is not repeated:
 
-**It is one grammar, not fifteen shapes.** The fifteen "shapes" are one production with optional
-parts:
-
-```
-[ "(" ] settlement [ ")" ] "." { "[" region "]" "." } continent { "." note }
-   ↑ mentioned, not staged        ↑ 0, 1 or 2 of these      ↑ freeform Spanish
-```
-
-Verified against all 138 `<li>`: **135 parse cleanly**, with settlement, region chain, continent and
-`mentioned` flag each landing in the right slot. Distribution: 95 have a settlement and 43 do not
-(`[Germany]. Europe` is a country-level setting, which the model handles — a link to the country
-place); 116 have one bracketed region, 8 have two (`[Kent]. [United Kingdom]`), 14 have none;
-33 carry a trailing freeform note; 5 are parenthesised.
-
-The 3 that do not parse are the ones that *should* be reported rather than guessed at:
-
-```
-( bosco pastorale )      ← fictional, no continent → is_fictional, no parent
-( An island )            ← same
-. The play is "based on mythological events…" (Wiggins, 2013)   ← a citation, not a place
-```
-
-**One parse trap, found and fixed while measuring.** A parenthesised settlement is not always
-followed by a `.`, so splitting on `.` first yields `Miseno ) [Italy` as the settlement and loses the
-country. Peel the `( … )` before splitting. `( Miseno ) [Italy]. Europe`, `( Forest of Ardennes )
-[France]. Europe` and `( Costa de Tarragona ) [España]. Europa` all depend on this.
-
-**`( Miseno )` → `role: "mentioned"` is confirmed**, no longer "unconfirmed": five `<li>` use the
-parenthesis and every one reads as named-not-staged. Phase 1 already has that role.
-
-**The hard part is dedupe across languages, not parsing.** The same referent arrives under different
-surface forms depending on the row's language, and a naive `slugify` would create a row for each:
-
-```
-Europe / Europa              Africa / África / Afrique
-Spain / España               Germany / Alemania
-United Kingdom / Reino Unido Italy / Italia / Italie / Italian Peninsula / Península itálica
-```
-
-Import blindly and the gazetteer holds ~94 rows for perhaps 60 real referents — the exact drift
-Phase 1's no-name-column design exists to prevent, reintroduced by the importer. So:
-
-- `find_or_create_by_slug/1` **is not sufficient on its own** here. It matches on slug, and
-  `europe` and `europa` are different slugs.
-- The importer needs a **name-based lookup across languages** before it creates: `Places.find_by_name/1`
-  already exists and is the seam, but it is exact-match and single-language. Widening it, or adding
-  an alias pass, is the real work of this slice.
-- **`Italian Peninsula` vs `Italy` is an editorial question, not a string one** — they may be
-  deliberately different referents. Report the pair, do not merge it automatically.
-
-**Two tiers, and tier 2 is the one worth waiting for.** Wikidata's `P17` gives Rome's parent as
-modern `Italy`; `bus_lugAccion` says `Roman Republic`, which is the editorially right answer for a
-play set in antiquity, and it carries the names in five languages — which would also *solve the
-dedupe problem above*, because each name arrives language-tagged instead of having to be guessed.
-
-| Play | `pub_LugAccion` | `bus_lugAccion` |
-|---|---|---|
-| EMOTHE0010 | `[Denmark]` | Kingdom of Denmark |
-| EMOTHE0038 | `[Italy]`, `[Egypt]` | Roman Republic, Ptolemaic Egypt |
-| EMOTHE0281/0341/0346 | `[United Kingdom]` | Kingdom of England |
-| EMOTHE0337 | `[Israel]` | Roman Republic |
-
-- **Tier 1** — parse `pub_LugAccion`, create places from the modern names, link with `role`,
-  `position` and `origin: "filemaker"`, report every unparsed `<li>` and every cross-language
-  near-duplicate. Buildable from the export as it stands.
-- **Tier 2** — needs the language-tagged `bus_lugAccion` (request under S8). Replaces the modern
-  country with the historical polity and loads the five-language names. Verified the schema already
-  supports it with no change: `Europe > Roman Republic > Rome` resolves through `ancestors/2`, and
-  `place_names.is_historical` carries `Roman Republic` / `República romana` / `Repubblica romana`.
-
-**Ordering:** ask for `bus_lugAccion` first. If it arrives, build once and the dedupe problem largely
-dissolves. If it is refused, build tier 1 with the cross-language matching done by hand-reviewed
-report — and expect that report, not the parser, to be where the time goes.
-
-**Do not build this before the ~300 plays are imported** (open question 5). Running it against 82
-plays writes 9 links and then has to run again; running it once, after, writes 138 against a corpus
-that can actually use them.
+- **The brackets.** It read "( Miseno ) [Italy]. Europe" as *named, not staged*, `role:
+  "mentioned"`, "confirmed". The brackets mark a **vague place** (`T10.5_Locvaga`, *localización
+  vaga*): all 11 bracketed links are vague places and all 11 vague-place links are bracketed, and
+  the action happens there (the Forest of Arden, Bosworth). They import with role `setting`;
+  `mentioned` stays for curators.
+- **The hard part.** It was dedupe across languages by name. The tables name each record once, in
+  five languages; the hard part is FileMaker making a new record for a place whenever the country
+  around it changes (Rome is five records), settled by rules and two short hand lists in the spec.
+- **"Italian Peninsula vs Italy is an editorial question."** Decided: the cities sit under Italia
+  today, and "Península itálica" is their links' historical state.
+- **The size.** 138 links and ~94 places; the tables hold 179 links on versions (150 on plays we
+  hold) and give 100 places, 19 of them historical states.
+- **Waiting for the ~300 plays.** Met: the corpus is 372 files.
 
 ## Shared conventions
 
@@ -977,17 +917,19 @@ Ordered by what is actually blocking work.
    source, position)` stays an additive migration if attribution ever arrives. The question now
    applies to a future dating source, not this one. See S2c.
 3. ~~**Place of action requirements** — S9.~~ **Closed 2026-08-04** by building it: S9 Phase 1
-   shipped the gazetteer. The import is S9b, scoped and buildable — 6 plays, 9 links — and waits on
-   the `bus_lugAccion` request in (4) so it can load the historical polities in one pass.
+   shipped the gazetteer. The import is S9b, built 2026-10-19 on the `T10*` tables (the
+   `bus_lugAccion` request is dropped).
 4. **The remaining FileMaker tables** — S3, S4, S5, S8, S9b. Since 2026-10-02 these can be named
    exactly; see "The master database, mapped". One message should carry all of it:
    - ~~**S4:** `T12.1` with every field~~ — received 2026-10-02, all 41
    - ~~**S4 modern editions:** `T04`, `T04.1`, `T04.11`, `T04.12`~~ — received 2026-10-02
    - ~~**S5:** `T11`, `T11.1`, `T11.11`, `T11.12`, `T11.2`, `T11.22`, `T11.3`~~ — received
      2026-10-10; still missing, the place table behind `T11._k_IdObraAccionLugar`
-   - **S8:** the genre table (`T01.42_GeneroHier…`), instead of the value lists
-   - **S9b:** `T10`, `T10.11_*`, `T10.3_Region`, instead of a language-tagged `bus_lugAccion`;
-     probably also S5's missing place table
+   - ~~**S8:** the genre table (`T01.42_GeneroHier…`), instead of the value lists~~ — received
+     2026-10-19: `T01.42_Genero_Hieronimo`, `T01.43_GeneroAnnals`, `T14.1_GeneroLista`
+   - ~~**S9b:** `T10`, `T10.11_*`, `T10.3_Region`, instead of a language-tagged `bus_lugAccion`~~
+     — received 2026-10-19 (`T10*`), and with them S5's missing place table: the 49 performance
+     links in `T10_ObraAccionLugar`
    - ~~**S3:** where the testimonios live~~ — `T03*`, received 2026-10-10
    - **S3 questions** for the project: the 11 witnesses of Spanish plays attributed to Jodelle
      (question 13 in `docs/stakeholder/preguntas.html`; the test rows were settled by skipping
@@ -995,8 +937,8 @@ Ordered by what is actually blocking work.
    - **S5 questions** for the project: whether a performance's information source is a
      bibliography entry, and whether such a work also joins the play's bibliography (questions
      11 and 12)
-   - **The tables still missing** (`T10*`, the genre table, S5's place table) are listed at the
-     end of `docs/stakeholder/preguntas.html`
+   - ~~**The tables still missing** (`T10*`, the genre table, S5's place table)~~ — all received
+     2026-10-19; the end of `docs/stakeholder/preguntas.html` lists them as arrived
    - **S6 (optional):** `T07.31`, `T07.311`
    - **When asking, name the fields or say *Mover todo*:** the export dialog reuses the previous
      field selection, which is how `T12.1` first arrived with 26 of its 41 fields

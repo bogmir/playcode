@@ -237,6 +237,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept; `<lb/>` a line break in a field
 - `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note; words with no year are a note alone); read on first import only, since the columns are `@platform_owned`
 - `teiHeader/profileDesc/settingDesc/setting/time` -> historical time (`@type` the period, the text its note), beside the place links in the same `setting`; first import only, like the dating
+- `teiHeader/profileDesc/settingDesc/setting/placeName/country` -> the link's historical state (`play_places.historical_state_id`): `<country ref="#republica-romana"/>` for a state of type `country`, a nested `<placeName ref>` for any other (a region, Península itálica), the state and its ancestors in `listPlace`; read back by `TeiParser`'s `setting_links/1`. A re-import writes the state of the play's `tei` links from the file, so a file without one clears it; `filemaker` links are left alone
 - `teiHeader/fileDesc/notesStmt/note` -> `plays.edition_notes`, one text per note, `<lb/>` a line break; on every import, like the title. In the play form and the file only: emothe.uv.es shows none, and readers seeing them waits on question 26
 - `teiHeader/fileDesc/titleStmt/title[@type]` `traduccion`, `adaptacion`, `refundicion` or `version` -> the main title, and its type the play's `relationship_type` (first import only, `@platform_owned`); written back as the main title's `type`. `version` is kept as a kind until question 40 is answered
 - `teiHeader/fileDesc/notesStmt/relatedItem[@type="original"]/@target` -> the original's short code; a first import links the two whichever arrives first (`Catalogue.link_waiting_translations/0`), and never replaces an original already set
@@ -367,6 +368,16 @@ Its witnesses likewise (S3; `T03` and `T03.2` under `doc/ctce_dades/`); on Fly,
 ```bash
 mix playcode.import.witnesses --dry-run   # the plan, per play and per skip reason
 mix playcode.import.witnesses             # write it
+```
+
+Its places of action likewise, each link with the historical state its place belonged to (S9b; the
+`T10*` tables, read from `doc/ctce_dades/` or `--path DIR`). A re-run skips plays already imported, so a
+curator's deletions stay, and the links (origin `filemaker`) survive a TEI re-import; on Fly,
+`Playcode.Release.import_places/2`, `dry_run: true` first:
+
+```bash
+mix playcode.import.places --dry-run   # the plan, per play and per skip reason
+mix playcode.import.places             # write it
 ```
 
 The TEI header is not authoritative for language — every EMOTHE file carries `xml:lang="es"` for

@@ -35,6 +35,7 @@ defmodule Playcode.Export.TeiValidatorTest do
         {"line breaks and prose line numbers", &line_breaks/0},
         {"witnesses of every type", &witnesses/0},
         {"a historical time", &historical_time/0},
+        {"places with a historical state", &historical_state/0},
         {"an original cast", &original_cast/0},
         {"a scene of the action", &scene_of_the_action/0},
         {"a translation naming its original, after the edition's notes", &translation/0}
@@ -257,6 +258,36 @@ defmodule Playcode.Export.TeiValidatorTest do
     xml = export_tei(play)
 
     assert xml =~ ~s(<time type="siglo_xvi">)
+    xml
+  end
+
+  # Two links with a historical state: a country, inside the link's <placeName>, and a
+  # region, a nested <placeName>, both beside the link's note. Under a code of its own, for
+  # the same reason as the bibliography test.
+  defp historical_state do
+    play = own_copy(@fixture_file, "HS")
+
+    republic =
+      Playcode.TestFixtures.place_fixture(%{"name" => "República romana", "type" => "country"})
+
+    peninsula =
+      Playcode.TestFixtures.place_fixture(%{"name" => "Península itálica", "type" => "region"})
+
+    roma = Playcode.TestFixtures.place_fixture(%{"name" => "Roma"})
+    verona = Playcode.TestFixtures.place_fixture(%{"name" => "Verona"})
+
+    for {place, state, note} <- [{roma, republic, "Acto I."}, {verona, peninsula, nil}] do
+      {:ok, _} =
+        Playcode.Places.link_place(play.id, place.id, %{
+          "historical_state_id" => state.id,
+          "note" => note
+        })
+    end
+
+    xml = export_tei(play)
+
+    assert xml =~ ~s(<country ref="##{republic.slug}"/>)
+    assert xml =~ ~s(<placeName ref="##{peninsula.slug}"/>)
     xml
   end
 

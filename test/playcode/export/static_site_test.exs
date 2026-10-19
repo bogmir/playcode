@@ -346,6 +346,27 @@ defmodule Playcode.Export.StaticSiteTest do
     refute html =~ "Siglo XVII"
   end
 
+  test "a place's historical state is printed in the names' language, whatever the page's" do
+    play = complete_play()
+    europa = place_fixture(%{"name" => "Europa", "type" => "continent"})
+
+    espana =
+      place_fixture(%{"name" => "España", "type" => "country", "parent_place_id" => europa.id})
+
+    madrid = place_fixture(%{"name" => "Madrid", "parent_place_id" => espana.id})
+
+    castilla =
+      place_fixture(%{"name" => "Castilla", "type" => "region", "parent_place_id" => europa.id})
+
+    play_place_fixture(play, madrid, %{"historical_state_id" => castilla.id})
+
+    dir = Gettext.with_locale(PlaycodeWeb.Gettext, "en", fn -> generate!([play]) end)
+    html = read!(dir, "plays/#{play.code}/index.html")
+
+    assert html =~ "Madrid, Castilla, Europa (hoy España)"
+    refute html =~ "today"
+  end
+
   test "a play with no places has no places section" do
     play = complete_play()
 

@@ -1603,10 +1603,10 @@
 
   <section id="t-requests" aria-labelledby="h-requests">
     <h2 id="h-requests">FileMaker tables we still need</h2>
-    <p>Not questions, but they unblock the next pieces of work. One export can carry all of them.</p>
+    <p>Not questions, but they unblock the next pieces of work. The tables asked for before have arrived, so none is outstanding now; one export can carry any later request.</p>
     <ul class="requests">
-      <li><strong>The places tables:</strong> <code>T10</code>, the <code>T10.11</code> tables (city, continent, vague location, country, region) and <code>T10.3_Region</code>. They give each play its places of action, and very likely the place of a performance: 142 performances point at a place table that is not in the export.</li>
-      <li><strong>The genre table</strong>, <code>T01.42</code>, the genre hierarchy, instead of the value lists.</li>
+      <li><strong>The places tables</strong> (<code>T10</code>, its tables of cities, continents, vague locations, countries and regions, and the names of every place), <strong>arrived on 19 October</strong>. They give each play its places of action, with the state each place belonged to at the time. The places of performances were in them too: 49 of the links are performances’, the table 142 performances pointed at. Playcode is importing the plays’ places; the performances’ places wait for the performances (question 12).</li>
+      <li><strong>The genre tables</strong> (<code>T01.42</code>, <code>T01.43</code> and <code>T14.1</code>), <strong>arrived on 19 October</strong>, in place of the value lists. They wait for the genre to be built.</li>
       <li><strong>When exporting, choose every field</strong> (“Mover todo”). The export dialog remembers the previous selection, which is how one table first arrived with 26 of its 41 fields.</li>
     </ul>
   </section>

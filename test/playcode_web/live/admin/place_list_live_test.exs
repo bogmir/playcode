@@ -86,6 +86,25 @@ defmodule PlaycodeWeb.Admin.PlaceListLiveTest do
     assert Places.list_places() != []
   end
 
+  test "deleting a place a link names as its state says why", %{conn: conn} do
+    play = TestFixtures.play_fixture()
+    roma = TestFixtures.place_fixture(%{"name" => "Roma"})
+    state = TestFixtures.place_fixture(%{"name" => "República romana", "type" => "country"})
+    TestFixtures.play_place_fixture(play, roma, %{"historical_state_id" => state.id})
+
+    {:ok, view, _html} = live(log_in_researcher(conn), ~p"/admin/places")
+
+    html =
+      view |> element("button[phx-value-id='#{state.id}'][phx-click=delete]") |> render_click()
+
+    assert html =~
+             t(
+               "This place is still the historical state of a play's place. Change it there first."
+             )
+
+    assert Enum.any?(Places.list_places(), &(&1.id == state.id))
+  end
+
   test "an unreferenced place is deleted", %{conn: conn} do
     place = TestFixtures.place_fixture(%{"name" => "Roma"})
     {:ok, view, _html} = live(log_in_researcher(conn), ~p"/admin/places")

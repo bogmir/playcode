@@ -56,12 +56,16 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
     end
   end
 
+  # A blank state clears it; any other must still be in the gazetteer.
   def handle_event("update_link", %{"link_id" => id, "play_place" => params}, socket) do
     with_link(socket, id, fn link ->
-      case Places.update_play_place(link, params) do
-        {:ok, updated} ->
-          log(socket, "update", updated)
-          socket |> load_links() |> put_flash(:info, gettext("Place updated."))
+      with :ok <- known_state(params),
+           {:ok, updated} <- Places.update_play_place(link, params) do
+        log(socket, "update", updated)
+        socket |> load_links() |> put_flash(:info, gettext("Place updated."))
+      else
+        :gone ->
+          socket |> load_links() |> LiveHelpers.put_gone_flash()
 
         {:error, _changeset} ->
           put_flash(socket, :error, gettext("That change could not be saved."))
@@ -182,10 +186,32 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
     end
   end
 
+  defp known_state(%{"historical_state_id" => state_id}) when state_id not in ["", nil] do
+    if Places.get_place(state_id), do: :ok, else: :gone
+  end
+
+  defp known_state(_params), do: :ok
+
   defp load_links(socket) do
+    gazetteer = Places.gazetteer()
+    links = Places.list_play_places(socket.assigns.play.id)
+
     socket
-    |> assign(:links, Places.list_play_places(socket.assigns.play.id))
-    |> assign(:gazetteer, Places.gazetteer())
+    |> assign(:links, links)
+    |> assign(:gazetteer, gazetteer)
+    |> assign(:states, historical_states(gazetteer, links))
+  end
+
+  # The countries and regions a link can name as its place's historical state, by name, and any
+  # place of another type a link already names (a TEI file's state can be of any type): without
+  # its option the row would submit the blank one and a save would clear the state.
+  defp historical_states(gazetteer, links) do
+    named = MapSet.new(links, & &1.historical_state_id)
+
+    gazetteer
+    |> Map.values()
+    |> Enum.filter(&(&1.type in ~w(country region) or &1.id in named))
+    |> Enum.sort_by(&Places.display_name(&1, "es"))
   end
 
   @impl true
@@ -328,7 +354,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
             <div>
               <span class="font-medium">{Places.display_name(link.place, "es")}</span>
               <span class="block text-xs text-base-content/70">
-                {Places.breadcrumb(link.place, @gazetteer, "es")}
+                {Places.place_line(link, @gazetteer, "es")}
               </span>
             </div>
             <div class="flex gap-1">
@@ -377,6 +403,23 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
                   selected={link.role == value}
                 >
                   {label}
+                </option>
+              </select>
+            </div>
+            <div class="w-48">
+              <select
+                name="play_place[historical_state_id]"
+                class="select select-bordered select-sm w-full"
+                aria-label={gettext("Historical state")}
+              >
+                <option value="">{gettext("Historical state")}</option>
+                <option
+                  :for={state <- @states}
+                  :if={state.id != link.place_id}
+                  value={state.id}
+                  selected={link.historical_state_id == state.id}
+                >
+                  {Places.display_name(state, "es")}
                 </option>
               </select>
             </div>

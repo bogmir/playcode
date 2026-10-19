@@ -90,3 +90,11 @@ The short name of a witness or of a modern edition: `P3`, `H`, `Dyce`. A reading
 witnesses by their sigla written with a `#` (`#H #P3`); readers see each siglum with what it
 names ("H (Hartzenbusch, 1860)"), where Playcode knows.
 _Avoid_: abbreviation, id
+
+### Places
+
+**Historical state** (*estado histórico*):
+The state a place belonged to at the time of a play — Castilla, Reino de Inglaterra,
+República romana — or the wider area the editors name when they name no state (Península
+itálica). A place in the gazetteer like any other; a play's link names it.
+_Avoid_: polity, then part of, país histórico

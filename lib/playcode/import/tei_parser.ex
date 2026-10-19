@@ -12,7 +12,7 @@ defmodule Playcode.Import.TeiParser do
                     note, language, distributor, position}],
         witnesses: [%{siglum, witness_type, title, …}],
         places: [%{attrs: %{"slug" => …, …}, slug_declared: boolean, places: [place]}],
-        settings: [%{slug, role, position, note}],
+        settings: [%{slug, role, position, note, state}],
         characters: [%{xml_id, name, description, actor, is_hidden, position}],
         paratexts: [%{kind, heading, content, position, back}],
         divisions: [%{type, number, title, position, notes, elements, divisions}],
@@ -1102,13 +1102,27 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.with_index()
     |> Enum.map(fn {{_n, attrs, name_children}, index} ->
       %{
-        slug: attrs |> attr_value("ref") |> to_string() |> String.trim_leading("#"),
+        slug: ref_slug(attrs),
         role: attr_value(attrs, "ana") || "setting",
         position: index,
-        note: setting_note(name_children)
+        note: setting_note(name_children),
+        state: setting_state(name_children)
       }
     end)
   end
+
+  # A link's historical state is the `ref` of its first `<country>` or nested
+  # `<placeName>`: a nested one is the state, not another link.
+  defp setting_state(children) do
+    state = Enum.find(children, &match?({name, _, _} when name in ["country", "placeName"], &1))
+
+    case state && state |> elem(1) |> ref_slug() do
+      "" -> nil
+      slug -> slug
+    end
+  end
+
+  defp ref_slug(attrs), do: attrs |> attr_value("ref") |> to_string() |> String.trim_leading("#")
 
   # A link's note is a bare `<note>` inside `<setting>/<placeName>` — no `type`
   # attribute, and one tree level deeper than a place's own `<note type="place">`.

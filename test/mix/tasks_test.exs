@@ -15,6 +15,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
   alias Playcode.ActivityLog
   alias Playcode.Bibliography
   alias Playcode.Catalogue
+  alias Playcode.Places
   alias Playcode.Witnesses
 
   setup do
@@ -509,6 +510,136 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     test "a missing dump is refused" do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.witnesses", ["--path", "test/fixtures/filemaker/nope"])
+      end
+    end
+  end
+
+  describe "playcode.import.places" do
+    @places "test/fixtures/filemaker/places"
+
+    @place_plays ~w(
+      EMOTHE0005_LAminta EMOTHE0006_IlPastorFido EMOTHE0007_LaCalandria
+      EMOTHE0010_TheTragedyOfHamletPrinceOfDenmark EMOTHE0038_AntonyAndCleopatra
+      EMOTHE0151_AsYouLikeIt EMOTHE0153_TheTragedyOfRomeoAndJuliet
+      EMOTHE0262_TheShoemakersHoliday EMOTHE0337_TheTragedyOfMariam
+      EMOTHE0354_TheBrokenHeart EMOTHE0367_Endymion EMOTHE0394_EntreBobosAndaElJuego
+      EMOTHE0545_LaTraicionEnLaAmistad EMOTHE0653_TheShyCourtier
+      EMOTHE0697_TheTragedyOfOthelloTheMoorOfVenice
+    )
+
+    setup do
+      plays = Map.new(@place_plays, &{&1, play_fixture(%{"code" => &1})})
+
+      %{
+        plays: Map.values(plays),
+        hamlet: plays["EMOTHE0010_TheTragedyOfHamletPrinceOfDenmark"],
+        othello: plays["EMOTHE0697_TheTragedyOfOthelloTheMoorOfVenice"]
+      }
+    end
+
+    # The lines readers see for a play's places, in order.
+    defp place_lines(play) do
+      gazetteer = Places.gazetteer()
+      for link <- Places.list_play_places(play.id), do: Places.place_line(link, gazetteer, "es")
+    end
+
+    defp link_count(plays),
+      do: plays |> Enum.map(&length(Places.list_play_places(&1.id))) |> Enum.sum()
+
+    defp with_links(plays), do: Enum.count(plays, &(Places.list_play_places(&1.id) != []))
+
+    test "--dry-run prints the plan and writes nothing", %{plays: plays} do
+      out = run("playcode.import.places", ["--path", @places, "--dry-run"])
+
+      assert out =~ "Roma — República romana"
+      assert out =~ "dry run, nothing written"
+      assert Places.list_places() == []
+      assert link_count(plays) == 0
+    end
+
+    test "writes the places and the links, as readers will see them", %{
+      plays: plays,
+      hamlet: hamlet
+    } do
+      out = run("playcode.import.places", ["--path", @places])
+
+      assert [_, places, links] = Regex.run(~r/created (\d+) places and (\d+) links/, out)
+      assert String.to_integer(places) == length(Places.list_places())
+      assert String.to_integer(links) == link_count(plays)
+
+      assert place_lines(hamlet) == ["Elsinor, Reino de Dinamarca, Europa (hoy Dinamarca)"]
+
+      origins = for play <- plays, link <- Places.list_play_places(play.id), do: link.origin
+      assert Enum.uniq(origins) == ["filemaker"]
+
+      # One log entry per play that got links.
+      logged = ActivityLog.list_entries(action: "import", resource_type: "play_place")
+      assert length(logged) == with_links(plays)
+      assert Enum.all?(logged, &(&1.metadata == %{"source" => "filemaker"}))
+    end
+
+    test "a place the gazetteer already has is linked, not made again, and left as it was", %{
+      hamlet: hamlet
+    } do
+      elsinor = place_fixture(%{"name" => "Elsinor"})
+      names = Enum.map(elsinor.names, & &1.name)
+
+      out = run("playcode.import.places", ["--path", @places])
+
+      assert [link] = Places.list_play_places(hamlet.id)
+      assert link.place_id == elsinor.id
+
+      assert [_] =
+               Enum.filter(Places.list_places(), &(Places.display_name(&1, "es") == "Elsinor"))
+
+      assert %{parent_place_id: nil, names: after_names} = Places.get_place!(elsinor.id)
+      assert Enum.map(after_names, & &1.name) == names
+
+      # The place it had is not among the ones created.
+      assert [_, places, _links] = Regex.run(~r/created (\d+) places and (\d+) links/, out)
+      assert String.to_integer(places) == length(Places.list_places()) - 1
+    end
+
+    test "a second run changes nothing", %{plays: plays} do
+      run("playcode.import.places", ["--path", @places])
+      places = length(Places.list_places())
+      links = link_count(plays)
+
+      out = run("playcode.import.places", ["--path", @places])
+
+      assert out =~ "already imported: #{with_links(plays)} plays"
+      assert out =~ "created 0 places and 0 links"
+      assert length(Places.list_places()) == places
+      assert link_count(plays) == links
+    end
+
+    # As S3 and S4 learned: the play's filemaker links alone are no marker, since a curator
+    # may delete every one of them.
+    test "links a curator removed stay removed", %{hamlet: hamlet} do
+      run("playcode.import.places", ["--path", @places])
+      for link <- Places.list_play_places(hamlet.id), do: {:ok, _} = Places.unlink_place(link)
+
+      run("playcode.import.places", ["--path", @places])
+
+      assert Places.list_play_places(hamlet.id) == []
+    end
+
+    test "a play's own links stay, FileMaker's go after them", %{othello: othello} do
+      own = place_fixture()
+      play_place_fixture(othello, own)
+
+      run("playcode.import.places", ["--path", @places])
+
+      assert [first | imported] = Places.list_play_places(othello.id)
+      assert {first.place_id, first.position, first.origin} == {own.id, 0, "manual"}
+      assert length(imported) == 3
+      assert Enum.all?(imported, &(&1.origin == "filemaker"))
+      assert Enum.map(imported, & &1.position) == [1, 2, 3]
+    end
+
+    test "a missing dump is refused" do
+      assert_raise Mix.Error, ~r/cannot read/, fn ->
+        Mix.Task.rerun("playcode.import.places", ["--path", "test/fixtures/filemaker/nope"])
       end
     end
   end

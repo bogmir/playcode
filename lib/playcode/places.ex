@@ -15,6 +15,10 @@ defmodule Playcode.Places do
 
   @name_order [desc: :is_preferred, asc: :position, asc: :name]
 
+  # The word before a historical line's brackets, by the names' language. Not gettext: see
+  # `place_line/3`, and the gettext backend is not fingerprinted by the static site.
+  @today %{"es" => "hoy", "en" => "today"}
+
   # --- Places ---
 
   def change_place(%Place{} = place, attrs \\ %{}) do
@@ -47,6 +51,9 @@ defmodule Playcode.Places do
     |> Changeset.change()
     |> Changeset.no_assoc_constraint(:play_places,
       message: "is still used by one or more plays"
+    )
+    |> Changeset.no_assoc_constraint(:state_links,
+      message: "is the historical state of a play's place"
     )
     |> Changeset.no_assoc_constraint(:children, message: "is the parent of other places")
     |> Repo.delete()
@@ -81,12 +88,22 @@ defmodule Playcode.Places do
   end
 
   # Shared by list_places/1 and search_names/2 so the "Plays" column never blanks out
-  # depending on which one loaded the place.
+  # depending on which one loaded the place. A play counts for the places it links and
+  # for the historical states those links name, once each however many links say so.
   defp with_play_counts(places) do
+    in_places = from pp in PlayPlace, select: %{place_id: pp.place_id, play_id: pp.play_id}
+
+    in_states =
+      from pp in PlayPlace,
+        where: not is_nil(pp.historical_state_id),
+        select: %{place_id: pp.historical_state_id, play_id: pp.play_id}
+
     counts =
-      PlayPlace
-      |> group_by([pp], pp.place_id)
-      |> select([pp], {pp.place_id, count(pp.id)})
+      in_places
+      |> union(^in_states)
+      |> subquery()
+      |> group_by([link], link.place_id)
+      |> select([link], {link.place_id, count(link.play_id)})
       |> Repo.all()
       |> Map.new()
 
@@ -250,11 +267,57 @@ defmodule Playcode.Places do
   end
 
   @doc ~S(The place and its containers, `"Bosque, Transilvania, Rumanía, Europa"`.)
-  def breadcrumb(%Place{} = place, gazetteer, locale \\ "es") do
+  def breadcrumb(%Place{} = place, gazetteer, locale \\ "es"),
+    do: place |> chain_names(gazetteer, locale) |> Enum.join(", ")
+
+  # The place's name and its containers', innermost first, none blank.
+  defp chain_names(%Place{} = place, gazetteer, locale) do
     [place | Enum.reverse(ancestors(place, gazetteer))]
     |> Enum.map(&display_name(&1, locale))
     |> Enum.reject(&(&1 == ""))
-    |> Enum.join(", ")
+  end
+
+  @doc """
+  The line readers see for a play's place link. With no historical state it is the
+  `breadcrumb/3`. With one it is the place as it was then (its historical name in
+  `locale`, else its usual one), the state and the state's containers; then, in brackets,
+  the names the place's breadcrumb holds today that the line has not printed:
+  `"Roma, República romana, Europa (hoy Italia)"`.
+
+  `link.place` is loaded; the state is read from the `gazetteer/0` by id. The word before
+  the brackets follows the names' `locale`, not the page's gettext: the static site's
+  interface is English while its place names are Spanish.
+  """
+  def place_line(%PlayPlace{place: place, historical_state_id: state_id}, gazetteer, locale) do
+    case Map.fetch(gazetteer, state_id) do
+      {:ok, state} -> historical_line(place, state, gazetteer, locale)
+      :error -> breadcrumb(place, gazetteer, locale)
+    end
+  end
+
+  defp historical_line(place, state, gazetteer, locale) do
+    printed =
+      Enum.reject(
+        [historical_name(place, locale) | chain_names(state, gazetteer, locale)],
+        &(&1 == "")
+      )
+
+    line = Enum.join(printed, ", ")
+
+    case place |> chain_names(gazetteer, locale) |> Enum.reject(&(&1 in printed)) do
+      [] -> line
+      today -> "#{line} (#{Map.get(@today, locale, "hoy")} #{Enum.join(today, ", ")})"
+    end
+  end
+
+  defp historical_name(%Place{names: names} = place, locale) do
+    names
+    |> Enum.sort_by(& &1.position)
+    |> Enum.find(&(&1.is_historical and &1.language == locale))
+    |> case do
+      nil -> display_name(place, locale)
+      name -> name.name
+    end
   end
 
   @doc """

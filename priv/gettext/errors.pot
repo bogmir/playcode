@@ -167,6 +167,12 @@ msgstr ""
 msgid "is already linked to this play"
 msgstr ""
 
+msgid "cannot be the place itself"
+msgstr ""
+
+msgid "is the historical state of a play's place"
+msgstr ""
+
 msgid "needs an author, an editor or a title"
 msgstr ""
 
