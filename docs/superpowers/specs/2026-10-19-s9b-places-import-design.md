@@ -219,15 +219,20 @@ Nothing else in the 395 is imported.
    whose names all repeat the referent's (the four historical Romes) adds nothing. A record with
    no name in any language is reported and skipped, with its links.
 5. **Parents.** A place's parent is its referent's: a modern city's `_k_IdRegion`, else its
-   `_k_IdPais`, else its continent, each resolved through these same rules. A historical state's
-   is its continent. A twinless record outside the hand list gets the link's continent.
+   `_k_IdPais`, else its continent, each resolved through these same rules. A parent that turns
+   out to be a historical state is replaced by the state's one modern twin (the Costa de
+   Tarragona's Castilla becomes España), since the gazetteer is today's geography; a state with no
+   twin or several gives the continent instead, and the report lists the place. A historical
+   state's parent is its continent. A twinless record outside the hand list gets the link's
+   continent.
 6. **Vague places** get their type from a hand list (the Forest of Arden and Birnam Wood `forest`,
    Bosworth and the Costa de Tarragona `other`, Miseno `town`, Amalec `city`) and no
    coordinates, which is how Playcode already says "not pinned to a point". The two generic ones,
    "Una isla" and "bosque pastoril", are `is_fictional`, each one place shared by every play that
    uses it (the three pastoral plays share one wood). "Sin especificar" is no place.
 7. **The slug** (also the TEI `xml:id`) is `Places.slugify/1` of the Spanish name, or of the first
-   name there is: `republica-romana`, `elsinor`, `illyria`.
+   name there is: `republica-romana`, `elsinor`, `illyria`. The plan puts the Spanish name first
+   and leaves the slug blank, so `Places.create_place/1` derives it and suffixes a taken one.
 8. **Existing places are reused.** Before creating a place the plan looks for one already in the
    gazetteer with any of its names, in any language, case-insensitive (`Places.find_by_name/1` per
    name, or a query in the same spirit). A match is linked as it is, never changed: the gazetteer
@@ -239,10 +244,13 @@ Nothing else in the 395 is imported.
 - **The historical state** is the link's country when that country became a historical state
   (rule 3) and the link's place lies below it (a city, region or vague place). A link naming only
   a state links to the state, with no historical state ("Castilla, Europa"). A link whose country
-  merged with today's (Francia) has none. A link whose FileMaker place sits under the region
-  "Península itálica" (the two region records, 115 and 116, are one place, type `region`, under
-  Europa) gets that region as its historical state: *Romeo and Juliet*, *El anzuelo de Fenisa*,
-  *Every Man in His Humour*, *The Malcontent*, *La Mandragola*, *Rosmunda*, *Philaster*.
+  merged with today's (Francia) has none. A link whose FileMaker place sits under a region with
+  no country gets that region as its historical state (decision 14): "Península itálica" (region
+  records 115 and 116, one place, type `region`, under Europa) for *Romeo and Juliet*, *El anzuelo
+  de Fenisa*, *Every Man in His Humour*, *The Malcontent*, *La Mandragola*, *Rosmunda* and
+  *Philaster*; "Antigua Grecia" (133 and 134) for *Lacedaemon* in 0354, which reads "Lacedemonia,
+  Antigua Grecia, Europa (hoy Esparta, Grecia)". A link to such a region itself (Moldavia in 0343,
+  Palestina in 0779) links to the region, with no state.
 - **Role** `setting`, always; `mentioned` stays for curators.
 - **Note**: `espacio`, trimmed, as written. A continent-only link with text (A Game at Chess,
   "A chessboard, representing England and Spain.") keeps it the same way.
@@ -280,20 +288,24 @@ they differ:
 - **The historical line**: the place's historical name in the locale if it has one (else its
   usual name, `Places.display_name/2`), then the state, then the state's ancestors.
 - **The brackets**: the place's own breadcrumb (`Places.breadcrumb/3`) minus every name already
-  printed; no brackets when nothing is left. "hoy" is gettext ("today" in English).
+  printed; no brackets when nothing is left. The word follows the names' locale, not the page's
+  gettext: "hoy" for `"es"`, "today" for `"en"`. The site's interface is English while its place
+  names are Spanish, and "(today España)" would mix two languages in one line.
 - **A link with no state** prints `Places.breadcrumb/3` exactly as now.
 
-One function builds the line for both the play page (`PlayShowLive`, `@locale`) and the static
-site (`StaticSite.Components.place_links/1`, `"es"`), which print it where they print the
-breadcrumb now, note and badges unchanged. If it lands in a module the site's
-`StaticSite.Fingerprint` does not cover, add it there, or Generate will not rebuild the plays.
+One function, `Places.place_line/3`, builds the line for the play page (`PlayShowLive`,
+`@locale`), the static site (`StaticSite.Components.place_links/1`, `"es"`) and the admin row,
+which print it where they print the breadcrumb now, note and badges unchanged. `Playcode.Places`
+is in `StaticSite.Fingerprint`, so changing it rebuilds the plays; the two words live there as a
+map for the same reason (the gettext backend is not fingerprinted).
 
 ## The admin
 
 The play's Places tab (`PlayPlacesLive`) gains, on each link's row, a "Historical state" /
-"Estado histórico" field: the tab's place search, picking or clearing a place, saved with the
-row's role and note. A state chosen from the browser is resolved with `Places.get_place/1` (the
-access-control rule for ids from the browser). The row shows the line readers will see. Adding a
+"Estado histórico" select of the gazetteer's countries and regions (about fifty after the
+import; the tab's search exists because *every* place is too many for a select, which these are
+not), a blank option clearing it, saved with the row's role and note. A state chosen from the
+browser is resolved with `Places.get_place/1` (the access-control rule for ids from the browser). The row shows the line readers will see. Adding a
 link stays as it is; the state is set on the row afterwards.
 
 ## TEI
