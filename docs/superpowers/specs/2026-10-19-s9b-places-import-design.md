@@ -280,7 +280,7 @@ they differ:
 | Mariam (a state with no continent) | Jerusalén, República romana (hoy Israel, Asia) |
 | Romeo and Juliet (decision 14) | Verona, Península itálica, Europa (hoy Italia) |
 | La verdad sospechosa | Madrid, Castilla, Europa (hoy España) |
-| Antony and Cleopatra | Roma, República romana, Europa (hoy Italia) |
+| Antony and Cleopatra (a state with no parent) | Roma, República romana (hoy Italia, Europa) |
 | Othello | Chipre, República de Venecia, Europa |
 | As You Like It (no state) | Ardenas, Francia, Europa |
 | 0394 (a whole state) | Castilla, Europa |
