@@ -6,6 +6,10 @@ defmodule Playcode.Bibliography.Entry do
   article, chapter or section; `monogr_*` the book or journal it is in. A book alone fills
   only `monogr_*`. `note` is for researchers only (the project's answer, 2026-10-07);
   `public_note` is printed with the citation.
+
+  A `catalogue` (Wiggins, CATCOM) is the one kind that is no group of a play's bibliography:
+  only a performance cites it as its source, so `kinds/0` leaves it out and the changeset
+  accepts it.
   """
   use Ecto.Schema
   import Ecto.Changeset
@@ -16,6 +20,8 @@ defmodule Playcode.Bibliography.Entry do
 
   # Also the order a play's bibliography is shown in.
   @kinds ~w(modern_edition criticism translation adaptation)
+
+  @catalogue "catalogue"
 
   @pub_types ~w(article book_section scholarly_edition book proceedings prologue festschrift
                 electronic thesis collection)
@@ -182,7 +188,7 @@ defmodule Playcode.Bibliography.Entry do
     entry
     |> cast(attrs, @fields)
     |> validate_required([:kind])
-    |> validate_inclusion(:kind, @kinds)
+    |> validate_inclusion(:kind, [@catalogue | @kinds])
     |> validate_inclusion(:pub_type, @pub_types)
     |> validate_inclusion(:language, @languages)
     |> validate_named()

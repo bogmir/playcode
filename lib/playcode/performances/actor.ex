@@ -2,8 +2,9 @@ defmodule Playcode.Performances.Actor do
   @moduledoc """
   An actor named in a performance's cast, shared by every cast row that names them. A
   nickname stands for a name when there is no surname ("Molière", "Gros-René"); `sex` is
-  `"man"`, `"woman"` or nil (FileMaker's "desconocido"). Two actors never share all four
-  fields, compared ignoring case.
+  `"man"`, `"woman"` or nil (FileMaker's "desconocido"). Two actors never share all three
+  names, compared ignoring case; the sex is not part of who an actor is, so the same names
+  with and without a sex are one actor.
   """
 
   use Ecto.Schema
@@ -38,10 +39,10 @@ defmodule Playcode.Performances.Actor do
   end
 
   @doc """
-  The other actor with the changeset's four fields, or nil. An actor never twins itself.
+  The other actor with the changeset's three names, or nil. An actor never twins itself.
   """
   def twin(%Ecto.Changeset{} = changeset) do
-    Enum.reduce(@fields, from(a in __MODULE__, limit: 1), fn field, query ->
+    Enum.reduce(@names, from(a in __MODULE__, limit: 1), fn field, query ->
       value = get_field(changeset, field) || ""
 
       where(

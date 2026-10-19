@@ -312,7 +312,7 @@ defmodule Playcode.PerformancesTest do
   end
 
   describe "actors" do
-    test "an actor is found by all four fields, else created" do
+    test "an actor is found by surname, forename and nickname, else created" do
       burbage = %{"surname" => "Burbage", "forename" => "Richard"}
       actor = actor!(burbage)
 
@@ -320,9 +320,34 @@ defmodule Playcode.PerformancesTest do
       assert actor!(%{"surname" => "BURBAGE", "forename" => " richard "}).id == actor.id
 
       with_nickname = actor!(Map.put(burbage, "nickname", "Dick"))
-      with_sex = actor!(Map.put(burbage, "sex", "man"))
-      assert length(Enum.uniq([actor.id, with_nickname.id, with_sex.id])) == 3
-      assert actor!(Map.put(burbage, "sex", "man")).id == with_sex.id
+      other_forename = actor!(%{burbage | "forename" => "Cuthbert"})
+      assert length(Enum.uniq([actor.id, with_nickname.id, other_forename.id])) == 3
+    end
+
+    test "the sex is not part of who an actor is: the same names are one actor, whose sex is filled in" do
+      names = %{"surname" => "Du Parc", "forename" => "Marquise-Thérèse", "nickname" => "Mlle"}
+      actor = actor!(names)
+      assert actor.sex == nil
+
+      woman = actor!(Map.put(names, "sex", "woman"))
+      assert woman.id == actor.id
+      assert woman.sex == "woman"
+
+      # Found again with none, or with the other sex: the actor is not changed.
+      assert %{id: id, sex: "woman"} = actor!(names)
+      assert id == actor.id
+      assert %{id: ^id, sex: "woman"} = actor!(Map.put(names, "sex", "man"))
+      assert [%{sex: "woman"}] = Performances.list_actors()
+
+      # A sex that is no sex is refused whether the actor exists without one or not.
+      actor!(%{"surname" => "Lowin"})
+
+      for surname <- ["Lowin", "Taylor"] do
+        assert {:error, changeset} =
+                 Performances.find_or_create_actor(%{"surname" => surname, "sex" => "other"})
+
+        assert errors_on(changeset).sex == ["is invalid"]
+      end
     end
 
     test "an actor needs a surname or a nickname" do
@@ -390,7 +415,7 @@ defmodule Playcode.PerformancesTest do
       assert Performances.usage(renamed) == %{performances: 2, plays: 2}
     end
 
-    test "a rename onto another actor's four fields is refused, one that changes only the case or the sex is not" do
+    test "a rename onto another actor's names is refused, one that changes only the case or the sex is not" do
       actor = actor!(%{"surname" => "Taylor", "forename" => "John"})
       other = actor!(%{"surname" => "John", "forename" => "Taylor"})
 
@@ -533,6 +558,74 @@ defmodule Playcode.PerformancesTest do
 
       cast(performance, [{actor, "Otelo"}])
       assert Enum.map(Performances.list_actors(), & &1.id) == [actor.id]
+    end
+  end
+
+  describe "a performance's source" do
+    defp source?(entry), do: Playcode.Bibliography.get_entry(entry.id) != nil
+
+    test "is kept beside the performance's own volume and pages" do
+      source = catalogue_fixture(%{"volume" => "1", "pages" => "1-10"})
+
+      performance =
+        performance_fixture(play_fixture(), %{
+          "source_entry_id" => source.id,
+          "source_volume" => "6",
+          "source_pages" => "83"
+        })
+
+      assert %{source: %{volume: "1", pages: "1-10"}, source_volume: "6", source_pages: "83"} =
+               Performances.get_performance(performance.play_id, performance.id)
+    end
+
+    test "goes with the last performance that cites it" do
+      source = catalogue_fixture()
+      first = performance_fixture(play_fixture(), %{"source_entry_id" => source.id})
+      second = performance_fixture(play_fixture(), %{"source_entry_id" => source.id})
+
+      assert {:ok, _} = Performances.delete_performance(first)
+      assert source?(source)
+
+      assert {:ok, _} = Performances.delete_performance(second)
+      refute source?(source)
+    end
+
+    test "goes when the performance is pointed at another source or none" do
+      [first, second] = for _ <- 1..2, do: catalogue_fixture()
+      performance = performance_fixture(play_fixture(), %{"source_entry_id" => first.id})
+
+      assert {:ok, _} =
+               Performances.update_performance(performance, %{"source_entry_id" => second.id})
+
+      refute source?(first)
+      assert source?(second)
+
+      performance = Performances.get_performance(performance.play_id, performance.id)
+      assert {:ok, _} = Performances.update_performance(performance, %{"source_entry_id" => nil})
+      refute source?(second)
+    end
+
+    test "stays when a change fails or leaves it alone" do
+      [first, second] = for _ <- 1..2, do: catalogue_fixture()
+      performance = performance_fixture(play_fixture(), %{"source_entry_id" => first.id})
+
+      assert {:error, _} =
+               Performances.update_performance(performance, %{
+                 "source_entry_id" => second.id,
+                 "venue_type" => "theatre"
+               })
+
+      assert {:ok, _} = Performances.update_performance(performance, %{"note" => "Nota"})
+      assert source?(first)
+    end
+
+    test "stays when a play's bibliography links it" do
+      play = play_fixture()
+      link = bibliography_fixture(play)
+      performance = performance_fixture(play, %{"source_entry_id" => link.entry_id})
+
+      assert {:ok, _} = Performances.delete_performance(performance)
+      assert Playcode.Bibliography.get_entry(link.entry_id)
     end
   end
 

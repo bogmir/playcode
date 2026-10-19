@@ -118,6 +118,109 @@ defmodule Playcode.BibliographyTest do
     end
   end
 
+  describe "an entry a performance cites" do
+    defp found(term, play, opts \\ []),
+      do: term |> Bibliography.search_entries(play.id, 10, opts) |> Enum.map(& &1.id)
+
+    test "a catalogue is an entry the play's bibliography never shows or finds" do
+      play = play_fixture()
+
+      wiggins =
+        catalogue_fixture(%{
+          "monogr_author" => "Wiggins, Martin",
+          "monogr_title" => "British Drama"
+        })
+
+      performance_fixture(play, %{"source_entry_id" => wiggins.id})
+
+      assert Bibliography.list_for_play(play.id) == []
+      assert found("Wiggins", play) == []
+      assert found("Wiggins", play, kinds: :all) == [wiggins.id]
+    end
+
+    test "a search over every kind finds the play's own entries and the other plays' too" do
+      play = play_fixture()
+      own = bibliography_fixture(play, %{"monogr_title" => "Own Shakespeare"})
+
+      other =
+        bibliography_fixture(play_fixture(), %{
+          "kind" => "modern_edition",
+          "monogr_title" => "Other Shakespeare"
+        })
+
+      catalogue = catalogue_fixture(%{"monogr_title" => "Catalogue Shakespeare"})
+
+      assert found("Shakespeare", play) == [other.entry_id]
+
+      assert found("Shakespeare", play, kinds: :all) ==
+               [catalogue.id, other.entry_id, own.entry_id]
+    end
+
+    test "an entry a performance cites outlives the play's last link to it" do
+      hamlet = play_fixture()
+      link = bibliography_fixture(hamlet, %{"monogr_title" => "Cited volume"})
+      performance_fixture(play_fixture(), %{"source_entry_id" => link.entry_id})
+
+      assert {:ok, :unlinked} = Bibliography.unlink(link)
+      assert %{id: id} = Bibliography.get_entry(link.entry_id)
+      assert id == link.entry_id
+    end
+
+    test "the plays an entry is shared with include those whose performances cite it" do
+      hamlet = play_fixture()
+      antony = play_fixture()
+      link = bibliography_fixture(hamlet, %{"monogr_title" => "Cited volume"})
+      id = link.entry_id
+
+      # A play counts once, however many performances cite the entry, and once more
+      # for linking it as well.
+      performance_fixture(hamlet, %{"source_entry_id" => id})
+      performance_fixture(antony, %{"source_entry_id" => id})
+      performance_fixture(antony, %{"source_entry_id" => id, "date_text" => "1611"})
+
+      assert Enum.map(Bibliography.plays_for_entry(id), & &1.code) ==
+               Enum.sort([hamlet.code, antony.code])
+
+      assert Bibliography.link_counts([id]) == %{id => 2}
+    end
+
+    test "a catalogue is shared by the plays whose performances cite it" do
+      catalogue = catalogue_fixture()
+      plays = [play_fixture(), play_fixture(), play_fixture()]
+      for play <- plays, do: performance_fixture(play, %{"source_entry_id" => catalogue.id})
+
+      assert Enum.map(Bibliography.plays_for_entry(catalogue.id), & &1.code) ==
+               plays |> Enum.map(& &1.code) |> Enum.sort()
+
+      assert Bibliography.link_counts([catalogue.id, Ecto.UUID.generate()]) ==
+               %{catalogue.id => 3}
+    end
+
+    test "get_entry/1 is nil for a malformed or missing id" do
+      entry = catalogue_fixture()
+
+      assert Bibliography.get_entry(entry.id).id == entry.id
+      assert Bibliography.get_entry("no-uuid") == nil
+      assert Bibliography.get_entry(Ecto.UUID.generate()) == nil
+      assert Bibliography.get_entry(nil) == nil
+    end
+
+    test "delete_if_unused/1 deletes an entry nothing cites, and keeps one a link or a performance does" do
+      play = play_fixture()
+      linked = bibliography_fixture(play)
+      cited = catalogue_fixture()
+      performance_fixture(play, %{"source_entry_id" => cited.id})
+      unused = catalogue_fixture()
+
+      assert Bibliography.delete_if_unused(linked.entry_id) == :kept
+      assert Bibliography.delete_if_unused(cited.id) == :kept
+      assert Bibliography.delete_if_unused(unused.id) == :deleted
+      assert Bibliography.get_entry(unused.id) == nil
+      assert Bibliography.get_entry(linked.entry_id)
+      assert Bibliography.get_entry(cited.id)
+    end
+  end
+
   describe "search_entries/3" do
     test "finds entries by author, editor or title, leaving out the play's own" do
       hamlet = play_fixture()

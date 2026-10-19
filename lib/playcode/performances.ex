@@ -8,12 +8,15 @@ defmodule Playcode.Performances do
   A company or an actor is one record for every performance that names it, found by name
   or created (`find_or_create_company/1`, `find_or_create_actor/1`), renamed in place
   (`update_company/2`, `update_actor/2`), and deleted with the last performance that names
-  it: a write that lets one go deletes it in its own transaction (`delete_unused/1`).
+  it: a write that lets one go deletes it in its own transaction (`delete_unused/1`). The
+  performance's source is a bibliography entry, deleted with its last citation the same way
+  (`Playcode.Bibliography.delete_if_unused/1`).
   """
 
   import Ecto.Query
   import Ecto.Changeset, only: [get_field: 2, put_change: 3]
 
+  alias Playcode.Bibliography
   alias Playcode.Performances.{Actor, CastMember, Company, Performance}
   alias Playcode.Repo
 
@@ -64,7 +67,11 @@ defmodule Playcode.Performances do
   def update_performance(%Performance{} = performance, attrs) do
     Repo.transact(fn ->
       with {:ok, updated} <- performance |> Performance.changeset(attrs) |> Repo.update() do
-        delete_unused(companies: [performance.company_id])
+        delete_unused(
+          companies: [performance.company_id],
+          entries: [performance.source_entry_id]
+        )
+
         {:ok, updated}
       end
     end)
@@ -79,7 +86,12 @@ defmodule Playcode.Performances do
         )
 
       with {:ok, deleted} <- Repo.delete(performance) do
-        delete_unused(companies: [performance.company_id], actors: actor_ids)
+        delete_unused(
+          companies: [performance.company_id],
+          actors: actor_ids,
+          entries: [performance.source_entry_id]
+        )
+
         {:ok, deleted}
       end
     end)
@@ -151,15 +163,22 @@ defmodule Playcode.Performances do
   end
 
   @doc """
-  The actor with these `surname`, `forename`, `nickname` and `sex`, ignoring case, else a
+  The actor with these `surname`, `forename` and `nickname`, ignoring case, whatever `sex`
+  it was given (the sex is not who they are); an actor with none takes the one given. Else a
   new one.
   """
   def find_or_create_actor(attrs) do
     changeset = Actor.changeset(%Actor{}, attrs)
 
     case Actor.twin(changeset) do
-      %Actor{} = actor -> {:ok, actor}
-      nil -> Repo.insert(changeset)
+      nil ->
+        Repo.insert(changeset)
+
+      %Actor{sex: nil} = actor ->
+        actor |> Actor.changeset(%{"sex" => get_field(changeset, :sex)}) |> Repo.update()
+
+      %Actor{} = actor ->
+        {:ok, actor}
     end
   end
 
@@ -171,8 +190,8 @@ defmodule Playcode.Performances do
     do: company |> Company.changeset(attrs) |> Repo.update()
 
   @doc """
-  Corrects an actor, for every performance that names them. Another actor's four fields
-  are refused.
+  Corrects an actor, for every performance that names them. Another actor's surname,
+  forename and nickname are refused.
   """
   def update_actor(%Actor{} = actor, attrs),
     do: actor |> Actor.changeset(attrs) |> Repo.update()
@@ -193,7 +212,8 @@ defmodule Playcode.Performances do
   end
 
   # What a write let go of, in its own transaction: the companies and actors no performance
-  # names any more are deleted. `freed` is a keyword of id lists, `companies:` and `actors:`.
+  # names any more, and the source entries nothing cites, are deleted. `freed` is a keyword of
+  # id lists, `companies:`, `actors:` and `entries:`.
   defp delete_unused(freed) do
     company_ids = ids(freed, :companies)
     actor_ids = ids(freed, :actors)
@@ -211,6 +231,8 @@ defmodule Playcode.Performances do
         where: a.id in ^actor_ids,
         where: not exists(from m in CastMember, where: m.actor_id == parent_as(:actor).id)
     )
+
+    Enum.each(ids(freed, :entries), &Bibliography.delete_if_unused/1)
   end
 
   defp ids(freed, key), do: freed |> Keyword.get(key, []) |> Enum.reject(&is_nil/1)

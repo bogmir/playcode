@@ -312,6 +312,24 @@ defmodule Playcode.TestFixtures do
   end
 
   @doc """
+  A catalogue (Wiggins, CATCOM): an entry cited by performances and linked by no play.
+  """
+  def catalogue_fixture(attrs \\ %{}) do
+    {:ok, entry} =
+      Playcode.Bibliography.create_entry(
+        Map.merge(
+          %{
+            "kind" => "catalogue",
+            "monogr_title" => "Catálogo #{System.unique_integer([:positive])}"
+          },
+          attrs
+        )
+      )
+
+    entry
+  end
+
+  @doc """
   A performance of `play` (dated 1610 unless `attrs` say otherwise; string keys, as the
   forms send them).
   """

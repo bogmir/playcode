@@ -3,8 +3,9 @@ defmodule Playcode.Bibliography do
   The corpus-wide bibliography (S4): entries shared by every play that cites them, and
   each play's links to them. Spec: docs/superpowers/specs/2026-10-07-s4-bibliography-design.md.
 
-  An entry lives as long as some play links to it: `unlink/1` deletes it with its last
-  link, so there are never orphans to find.
+  An entry lives as long as some play links to it or some performance (S5) cites it as its
+  source: `delete_if_unused/1` deletes it with its last citation, so there are never
+  orphans to find.
   """
 
   import Ecto.Query
@@ -12,6 +13,7 @@ defmodule Playcode.Bibliography do
   alias Ecto.Multi
   alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue.Play
+  alias Playcode.Performances.Performance
   alias Playcode.Repo
 
   @searched [
@@ -26,6 +28,14 @@ defmodule Playcode.Bibliography do
   def change_entry(%Entry{} = entry, attrs \\ %{}), do: Entry.changeset(entry, attrs)
 
   def get_entry!(id), do: Repo.get!(Entry, id)
+
+  @doc "The entry `id`, or nil: the id arrives from the browser, so a malformed one is nil too."
+  def get_entry(id) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} -> Repo.get(Entry, id)
+      :error -> nil
+    end
+  end
 
   @doc """
   The play's link `id`, entry loaded, or nil. Scoped to the play because the id arrives
@@ -161,6 +171,9 @@ defmodule Playcode.Bibliography do
     |> Enum.reduce(%{}, fn {description, id}, found -> Map.put_new(found, description, id) end)
   end
 
+  @doc "A new entry no play links: a performance's source."
+  def create_entry(attrs), do: %Entry{} |> Entry.changeset(attrs) |> Repo.insert()
+
   def update_entry(%Entry{} = entry, attrs), do: entry |> Entry.changeset(attrs) |> Repo.update()
   def update_link(%Link{} = link, attrs), do: link |> Link.changeset(attrs) |> Repo.update()
 
@@ -171,60 +184,88 @@ defmodule Playcode.Bibliography do
     do: from(l in Link, where: l.play_id == ^play_id, select: l.entry_id) |> Repo.all()
 
   @doc """
-  Removes a play's link. `{:ok, :deleted}` when it was the entry's last, which goes with
-  it; `{:ok, :unlinked}` otherwise.
+  Removes a play's link. `{:ok, :deleted}` when it was the entry's last citation, which
+  goes with it; `{:ok, :unlinked}` otherwise.
   """
-  # ponytail: two curators removing an entry's last two links in the same instant can each
-  # still see the other's and leave an orphan; lock the entry row if that ever happens.
   def unlink(%Link{} = link) do
     Repo.transaction(fn ->
       Repo.delete!(link)
 
-      if Repo.exists?(from l in Link, where: l.entry_id == ^link.entry_id) do
-        :unlinked
-      else
-        Repo.delete_all(from e in Entry, where: e.id == ^link.entry_id)
-        :deleted
+      case delete_if_unused(link.entry_id) do
+        :deleted -> :deleted
+        :kept -> :unlinked
       end
     end)
   end
 
-  @doc "Every play linked to an entry, archived ones included, by code."
+  @doc """
+  Deletes the entry when no play links it and no performance cites it, so a write that lets
+  go of the entry's last citation leaves no orphan. `:deleted` or `:kept`.
+  """
+  # ponytail: two curators letting go of an entry's last two citations in the same instant can
+  # each still see the other's and leave an orphan; lock the entry row if that ever happens.
+  def delete_if_unused(entry_id) do
+    {deleted, _} =
+      Repo.delete_all(
+        from e in Entry,
+          as: :entry,
+          where: e.id == ^entry_id,
+          where: not exists(from l in Link, where: l.entry_id == parent_as(:entry).id),
+          where:
+            not exists(from p in Performance, where: p.source_entry_id == parent_as(:entry).id)
+      )
+
+    if deleted == 1, do: :deleted, else: :kept
+  end
+
+  @doc "Every play that links an entry or whose performances cite it, archived ones included, by code."
   def plays_for_entry(entry_id) do
     Play
-    |> join(:inner, [p], l in Link, on: l.play_id == p.id)
-    |> where([_p, l], l.entry_id == ^entry_id)
+    |> where([p], p.id in subquery(from c in citations([entry_id]), select: c.play_id))
     |> order_by([p], p.code)
     |> select([p], %{id: p.id, code: p.code, title: p.title})
     |> Repo.all()
   end
 
-  @doc "How many plays link each entry: `%{entry_id => count}`."
+  @doc "How many plays link or cite each entry: `%{entry_id => count}`."
   def link_counts([]), do: %{}
 
   def link_counts(entry_ids) do
-    Link
-    |> where([l], l.entry_id in ^entry_ids)
-    |> group_by([l], l.entry_id)
-    |> select([l], {l.entry_id, count(l.id)})
+    from(c in citations(entry_ids), group_by: c.entry_id, select: {c.entry_id, count(c.play_id)})
     |> Repo.all()
     |> Map.new()
   end
 
+  # One row per entry and play that links it or whose performances cite it, however often.
+  defp citations(entry_ids) do
+    links =
+      from l in Link,
+        where: l.entry_id in ^entry_ids,
+        select: %{entry_id: l.entry_id, play_id: l.play_id}
+
+    cited =
+      from p in Performance,
+        where: p.source_entry_id in ^entry_ids,
+        select: %{entry_id: p.source_entry_id, play_id: p.play_id}
+
+    subquery(union(links, ^cited))
+  end
+
   @doc """
   Entries whose authors, editors or titles contain `term`, leaving out those `play_id`
-  already has. `%` and `_` match themselves; a blank term finds nothing.
+  already has and catalogues, which no play's bibliography holds. `kinds: :all` is the
+  Performances tab's search, over every kind and the play's own entries too. `%` and `_`
+  match themselves; a blank term finds nothing.
   """
-  def search_entries(term, play_id, limit \\ 10) do
+  def search_entries(term, play_id, limit \\ 10, opts \\ []) do
     case term |> to_string() |> String.trim() |> String.replace(["%", "_"], "") do
       "" -> []
-      _ -> do_search(String.trim(term), play_id, limit)
+      _ -> do_search(String.trim(term), play_id, limit, Keyword.get(opts, :kinds))
     end
   end
 
-  defp do_search(term, play_id, limit) do
+  defp do_search(term, play_id, limit, kinds) do
     pattern = "%" <> String.replace(term, ~r/([\\%_])/, "\\\\\\1") <> "%"
-    on_play = from l in Link, where: l.play_id == ^play_id, select: l.entry_id
 
     matches =
       Enum.reduce(@searched, dynamic(false), fn field, acc ->
@@ -232,10 +273,18 @@ defmodule Playcode.Bibliography do
       end)
 
     Entry
-    |> where([e], e.id not in subquery(on_play))
+    |> for_bibliography(play_id, kinds)
     |> where(^matches)
     |> order_by([e], asc: e.monogr_title, asc: e.id)
     |> limit(^limit)
     |> Repo.all()
+  end
+
+  defp for_bibliography(query, _play_id, :all), do: query
+
+  defp for_bibliography(query, play_id, _kinds) do
+    on_play = from l in Link, where: l.play_id == ^play_id, select: l.entry_id
+
+    where(query, [e], e.kind in ^Entry.kinds() and e.id not in subquery(on_play))
   end
 end
