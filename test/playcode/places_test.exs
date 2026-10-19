@@ -249,6 +249,62 @@ defmodule Playcode.PlacesTest do
     end
   end
 
+  describe "historical state" do
+    setup do
+      play = play_fixture()
+      roma = place_fixture(%{"name" => "Roma"})
+      republica = place_fixture(%{"name" => "República romana", "type" => "country"})
+      %{play: play, roma: roma, republica: republica}
+    end
+
+    test "a link may name the historical state its place belonged to", %{
+      play: play,
+      roma: roma,
+      republica: republica
+    } do
+      {:ok, _} = Places.link_place(play.id, roma.id, %{"historical_state_id" => republica.id})
+
+      assert [link] = Places.list_play_places(play.id)
+      assert link.historical_state_id == republica.id
+    end
+
+    test "a place cannot be its own historical state", %{play: play, roma: roma} do
+      assert {:error, changeset} =
+               Places.link_place(play.id, roma.id, %{"historical_state_id" => roma.id})
+
+      assert errors_on(changeset).historical_state_id == ["cannot be the place itself"]
+    end
+
+    test "a state in use cannot be deleted", %{play: play, roma: roma, republica: republica} do
+      {:ok, _} = Places.link_place(play.id, roma.id, %{"historical_state_id" => republica.id})
+
+      assert {:error, changeset} = Places.delete_place(republica)
+
+      assert errors_on(changeset).state_links == ["is the historical state of a play's place"]
+    end
+
+    test "the play count counts the plays whose links name a place as their state", %{
+      play: play,
+      roma: roma,
+      republica: republica
+    } do
+      castilla = place_fixture(%{"name" => "Castilla", "type" => "country"})
+      miseno = place_fixture(%{"name" => "Miseno"})
+      other_play = play_fixture()
+
+      # Two links of one play under one state are one play.
+      {:ok, _} = Places.link_place(play.id, roma.id, %{"historical_state_id" => republica.id})
+      {:ok, _} = Places.link_place(play.id, miseno.id, %{"historical_state_id" => republica.id})
+      {:ok, _} = Places.link_place(other_play.id, castilla.id, %{})
+
+      counts = Map.new(Places.list_places(), &{&1.id, &1.play_count})
+
+      assert counts[republica.id] == 1
+      assert counts[castilla.id] == 1
+      assert counts[roma.id] == 1
+    end
+  end
+
   describe "what a place may hold" do
     defp names(list), do: Map.new(Enum.with_index(list), fn {n, i} -> {"#{i}", n} end)
 

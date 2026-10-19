@@ -48,6 +48,9 @@ defmodule Playcode.Places do
     |> Changeset.no_assoc_constraint(:play_places,
       message: "is still used by one or more plays"
     )
+    |> Changeset.no_assoc_constraint(:state_links,
+      message: "is the historical state of a play's place"
+    )
     |> Changeset.no_assoc_constraint(:children, message: "is the parent of other places")
     |> Repo.delete()
   end
@@ -81,12 +84,22 @@ defmodule Playcode.Places do
   end
 
   # Shared by list_places/1 and search_names/2 so the "Plays" column never blanks out
-  # depending on which one loaded the place.
+  # depending on which one loaded the place. A play counts for the places it links and
+  # for the historical states those links name, once each however many links say so.
   defp with_play_counts(places) do
+    in_places = from pp in PlayPlace, select: %{place_id: pp.place_id, play_id: pp.play_id}
+
+    in_states =
+      from pp in PlayPlace,
+        where: not is_nil(pp.historical_state_id),
+        select: %{place_id: pp.historical_state_id, play_id: pp.play_id}
+
     counts =
-      PlayPlace
-      |> group_by([pp], pp.place_id)
-      |> select([pp], {pp.place_id, count(pp.id)})
+      in_places
+      |> union(^in_states)
+      |> subquery()
+      |> group_by([link], link.place_id)
+      |> select([link], {link.place_id, count(link.play_id)})
       |> Repo.all()
       |> Map.new()
 

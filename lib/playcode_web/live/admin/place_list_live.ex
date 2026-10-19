@@ -71,6 +71,11 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
       changeset.errors[:play_places] ->
         gettext("This place is still used by a play. Unlink it there first.")
 
+      changeset.errors[:state_links] ->
+        gettext(
+          "This place is still the historical state of a play's place. Change it there first."
+        )
+
       changeset.errors[:children] ->
         gettext("This place contains other places. Move them out first.")
 

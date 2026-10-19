@@ -47,6 +47,8 @@ defmodule Playcode.Places.Place do
     has_many :names, Playcode.Places.PlaceName, on_replace: :delete
     has_many :play_places, Playcode.Places.PlayPlace
 
+    has_many :state_links, Playcode.Places.PlayPlace, foreign_key: :historical_state_id
+
     timestamps(type: :utc_datetime)
   end
 

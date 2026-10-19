@@ -165,6 +165,29 @@ defmodule Playcode.ContentVersionTest do
     refute moves?(elsewhere, note)
   end
 
+  # The state's names are printed in the play's line, so a rename reaches the play whose
+  # link names it, though the state is not the link's place.
+  test "an edit to a historical state moves every play whose places it names" do
+    state = place_fixture(%{"type" => "country"})
+    play = play_fixture()
+    play_place_fixture(play, place_fixture(), %{"historical_state_id" => state.id})
+    elsewhere = play_fixture()
+    play_place_fixture(elsewhere, place_fixture())
+
+    rename = fn ->
+      reloaded = Places.get_place!(state.id)
+      [name] = reloaded.names
+
+      Places.update_place(reloaded, %{
+        "slug" => reloaded.slug,
+        "names" => [%{"id" => name.id, "name" => "Imperio"}]
+      })
+    end
+
+    assert moves?(play, rename)
+    refute moves?(elsewhere, rename)
+  end
+
   test "an edit to a bibliography entry moves every play that cites it" do
     hamlet = play_fixture()
     antony = play_fixture()
