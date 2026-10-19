@@ -168,6 +168,35 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLiveTest do
       assert states.(link) =~ italia.id
     end
 
+    test "of another type than a country or region stays on its row when only the note is saved",
+         ctx do
+      %{conn: conn, play: play, europa: europa} = ctx
+
+      # A TEI file's nested placeName, or a curated place the import reuses, can be of any type.
+      toledo =
+        TestFixtures.place_fixture(%{
+          "name" => "Toledo",
+          "type" => "province",
+          "parent_place_id" => europa.id
+        })
+
+      illescas = TestFixtures.place_fixture(%{"name" => "Illescas", "type" => "city"})
+
+      link =
+        TestFixtures.play_place_fixture(play, illescas, %{"historical_state_id" => toledo.id})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/places")
+
+      view
+      |> form("#link-form-#{link.id}", play_place: %{"note" => "Act III"})
+      |> render_submit()
+
+      assert %{note: "Act III", historical_state_id: state_id} =
+               Enum.find(Places.list_play_places(play.id), &(&1.id == link.id))
+
+      assert state_id == toledo.id
+    end
+
     test "that is gone says so instead of saving", ctx do
       %{conn: conn, play: play, link: link} = ctx
       atlantida = TestFixtures.place_fixture(%{"name" => "Atlántida", "type" => "country"})

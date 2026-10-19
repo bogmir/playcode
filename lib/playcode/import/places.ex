@@ -386,8 +386,10 @@ defmodule Playcode.Import.Places do
   # The records the links reach, each once, in the order first reached.
   defp roots(candidates), do: candidates |> Enum.flat_map(&elem(&1, 2)) |> Enum.uniq()
 
-  # A play links a place once (the unique index): a later link to a place the play
-  # already has, from FileMaker or by hand, is a duplicate, its note joining the first's.
+  # A play links a place once (the unique index): a later link to a place the play already
+  # has, from FileMaker or by hand, is a duplicate. Its note joins the first's only when that
+  # is an earlier FileMaker link of this plan; a curator's link keeps its own note, and the
+  # duplicate shows only as a skipped label in the report.
   defp deduplicate(candidates, places) do
     existing = Map.new(places, &{&1.key, &1.existing})
     linked = linked_places()

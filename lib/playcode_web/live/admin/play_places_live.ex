@@ -194,18 +194,23 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
 
   defp load_links(socket) do
     gazetteer = Places.gazetteer()
+    links = Places.list_play_places(socket.assigns.play.id)
 
     socket
-    |> assign(:links, Places.list_play_places(socket.assigns.play.id))
+    |> assign(:links, links)
     |> assign(:gazetteer, gazetteer)
-    |> assign(:states, historical_states(gazetteer))
+    |> assign(:states, historical_states(gazetteer, links))
   end
 
-  # The countries and regions a link can name as its place's historical state, by name.
-  defp historical_states(gazetteer) do
+  # The countries and regions a link can name as its place's historical state, by name, and any
+  # place of another type a link already names (a TEI file's state can be of any type): without
+  # its option the row would submit the blank one and a save would clear the state.
+  defp historical_states(gazetteer, links) do
+    named = MapSet.new(links, & &1.historical_state_id)
+
     gazetteer
     |> Map.values()
-    |> Enum.filter(&(&1.type in ~w(country region)))
+    |> Enum.filter(&(&1.type in ~w(country region) or &1.id in named))
     |> Enum.sort_by(&Places.display_name(&1, "es"))
   end
 
