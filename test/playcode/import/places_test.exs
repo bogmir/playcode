@@ -19,7 +19,8 @@ defmodule Playcode.Import.PlacesTest do
             EMOTHE0010_TheTragedyOfHamletPrinceOfDenmark EMOTHE0038_AntonyAndCleopatra
             EMOTHE0151_AsYouLikeIt EMOTHE0153_TheTragedyOfRomeoAndJuliet
             EMOTHE0201_ElBurladorDeSevilla EMOTHE0231_Sofonisba
-            EMOTHE0262_TheShoemakersHoliday EMOTHE0337_TheTragedyOfMariam
+            EMOTHE0262_TheShoemakersHoliday EMOTHE0299_FrayBaconYFrayBungay
+            EMOTHE0337_TheTragedyOfMariam
             EMOTHE0354_TheBrokenHeart EMOTHE0367_Endymion EMOTHE0394_EntreBobosAndaElJuego
             EMOTHE0491_SaulLeFurieux EMOTHE0545_LaTraicionEnLaAmistad
             EMOTHE0559_LaGranSemiramis EMOTHE0653_TheShyCourtier
@@ -95,7 +96,7 @@ defmodule Playcode.Import.PlacesTest do
              {"en", "Helsingør", true, false},
              {"fr", "Elseneur", true, false},
              {"it", "Helsingør", true, false},
-             {"pt", "Helsingor", true, false},
+             {"pt", "Helsingør", true, false},
              {"en", "Elsinore", false, true},
              {"it", "Elsinora", false, true},
              {"pt", "Elsenor", false, true}
@@ -157,6 +158,9 @@ defmodule Playcode.Import.PlacesTest do
     assert named(plan, "Argel") == []
     assert [_] = named(plan, "Reino de Nápoles")
     assert {"en", "Balkh", true, false} in names(place(plan, "Balj"))
+    assert {"es", "Bactra", false, true} in names(place(plan, "Balj"))
+    assert {"en", "Amalek", true, false} in names(place(plan, "Amalec"))
+    assert {"pt", "Amaleque", true, false} in names(place(plan, "Amalec"))
     assert {"pt", "Cartago", true, false} in names(place(plan, "Cartago"))
 
     naples = names(place(plan, "Nápoles"))
@@ -166,13 +170,23 @@ defmodule Playcode.Import.PlacesTest do
     # A merged record's historical name is corrected too ("Lacedemoni")...
     assert {"it", "Lacedemone", false, true} in names(place(plan, "Esparta"))
 
-    # ...and one that then repeats the place's own name adds nothing ("forêt pastoral").
-    assert names(place(plan, "bosque pastoril")) == [
-             {"es", "bosque pastoril", true, false},
-             {"en", "pastoral wood", true, false},
-             {"fr", "forêt pastorale", true, false},
-             {"it", "bosco pastorale", true, false},
-             {"pt", "floresta pastoral", true, false}
+    # ...and one that then repeats the place's own name adds nothing ("forêt pastoral",
+    # "bosque pastoril" in small letters).
+    assert names(place(plan, "Bosque pastoril")) == [
+             {"es", "Bosque pastoril", true, false},
+             {"en", "Pastoral wood", true, false},
+             {"fr", "Forêt pastorale", true, false},
+             {"it", "Bosco pastorale", true, false},
+             {"pt", "Floresta pastoral", true, false}
+           ]
+
+    # A name the hand map drops is no name at all: Bohemia's Spanish "Boheme".
+    assert names(place(plan, "Bohemia")) == [
+             {"es", "Bohemia", true, false},
+             {"en", "Bohemia", true, false},
+             {"fr", "Bohême", true, false},
+             {"it", "Boemia", true, false},
+             {"pt", "Boémia", true, false}
            ]
   end
 
@@ -183,7 +197,7 @@ defmodule Playcode.Import.PlacesTest do
     assert place(plan, "Miseno").attrs["type"] == "town"
 
     assert %{attrs: %{"type" => "forest", "is_fictional" => true}} =
-             place(plan, "bosque pastoril")
+             place(plan, "Bosque pastoril")
 
     assert place(plan, "Ardenas").attrs["is_fictional"] == false
     assert named(plan, "sin especificar") == []
@@ -214,7 +228,7 @@ defmodule Playcode.Import.PlacesTest do
              "Italian Peninsula (T10.3:116)",
              "Ancient Greece (T10.3:134)",
              "Palestine (T10.3:118)",
-             "Amalec (T10.5:104)",
+             "Amalek (T10.5:104)",
              "Carthage (T10.4:219)"
            ]
 

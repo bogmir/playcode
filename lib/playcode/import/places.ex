@@ -88,45 +88,76 @@ defmodule Playcode.Import.Places do
     {4, "181"} => {2, "1219"}
   }
 
-  # FileMaker's spelling slips, corrected wherever the record's names are read: a record's
-  # name in a language (owner's decision, 2026-10-19). FileMaker's text in each comment.
+  # FileMaker's names as written, by record and language, and the name to read instead: its
+  # spelling slips, and names nobody would print (owner's decisions, 2026-10-19). Applied
+  # wherever the names are read, so a correction reaches a place whichever record brings
+  # the name. nil drops the name.
   @names %{
-    # Argel, the city of Algiers, for the country
-    {2, "1171"} => %{"es" => "Argelia"},
-    # it Castilia; pt Castilla, the Spanish name
-    {2, "1367"} => %{"it" => "Castiglia", "pt" => "Castela"},
-    # Reino de Napoles
-    {2, "1378"} => %{"es" => "Reino de Nápoles"},
-    # Espagna (the historical Spain)
-    {2, "1382"} => %{"it" => "Spagna"},
-    # Bohemia, the Spanish name, in all three languages
-    {2, "1393"} => %{"fr" => "Bohême", "it" => "Boemia", "pt" => "Boémia"},
-    # Royaum de Numidie
-    {2, "1412"} => %{"fr" => "Royaume de Numidie"},
-    # Péninsule Italienne, in both records
-    {3, "115"} => %{"fr" => "Péninsule italienne"},
-    {3, "116"} => %{"fr" => "Péninsule italienne"},
-    # fr Le Marches, it le Marche (the historical Marches)
-    {3, "139"} => %{"fr" => "Les Marches", "it" => "Le Marche"},
-    # fr Napoles; pt Napoli, the Italian name
-    {4, "77"} => %{"fr" => "Naples", "pt" => "Nápoles"},
-    # Jérusalem, the French name (the historical Jerusalem)
-    {4, "156"} => %{"pt" => "Jerusalém"},
-    # Lacedemoni, the Lacedaemonians
-    {4, "182"} => %{"it" => "Lacedemone"},
-    # Balkh (o Balj)
-    {4, "185"} => %{"es" => "Balj"},
-    # Padua, in both records
-    {4, "207"} => %{"pt" => "Pádua"},
-    {4, "208"} => %{"pt" => "Pádua"},
-    # Constantina, the Spanish name, in all three languages
-    {4, "215"} => %{"en" => "Constantine", "fr" => "Constantine", "it" => "Costantina"},
-    # Cartgao
-    {4, "219"} => %{"pt" => "Cartago"},
-    # forêt pastoral (the historical pastoral wood)
-    {5, "84"} => %{"fr" => "forêt pastorale"},
-    # foresta pastoral, the Italian word
-    {5, "85"} => %{"pt" => "floresta pastoral"}
+    # the city of Algiers, for the country
+    {{2, "1171"}, "es", "Argel"} => "Argelia",
+    # the country, not the island
+    {{2, "1186"}, "it", "Gran Bretagna"} => "Regno Unito",
+    {{2, "1367"}, "en", "Castille"} => "Castile",
+    {{2, "1367"}, "it", "Castilia"} => "Castiglia",
+    # the Spanish name
+    {{2, "1367"}, "pt", "Castilla"} => "Castela",
+    {{2, "1378"}, "es", "Reino de Napoles"} => "Reino de Nápoles",
+    # the historical Spain
+    {{2, "1382"}, "it", "Espagna"} => "Spagna",
+    # Bohemia: the Spanish name in three languages, and an alternate that is no Spanish
+    {{2, "1393"}, "fr", "Bohemia"} => "Bohême",
+    {{2, "1393"}, "it", "Bohemia"} => "Boemia",
+    {{2, "1393"}, "pt", "Bohemia"} => "Boémia",
+    {{2, "1393"}, "es", "Boheme"} => nil,
+    {{2, "1412"}, "fr", "Royaum de Numidie"} => "Royaume de Numidie",
+    {{3, "115"}, "fr", "Péninsule Italienne"} => "Péninsule italienne",
+    {{3, "116"}, "fr", "Péninsule Italienne"} => "Péninsule italienne",
+    # Latium: today's region is Lazio in English, the ancient one Lacio in Spanish
+    {{3, "137"}, "en", "Lazio"} => "Latium",
+    {{3, "137"}, "es", "Latium"} => "Lacio",
+    {{3, "138"}, "en", "Latium"} => "Lazio",
+    # the historical Marches
+    {{3, "139"}, "fr", "Le Marches"} => "Les Marches",
+    {{3, "139"}, "it", "le Marche"} => "Le Marche",
+    {{4, "77"}, "fr", "Napoles"} => "Naples",
+    # the Italian name
+    {{4, "77"}, "pt", "Napoli"} => "Nápoles",
+    {{4, "92"}, "pt", "Helsingor"} => "Helsingør",
+    {{4, "132"}, "pt", "Sárdis"} => "Sardes",
+    {{4, "133"}, "pt", "Sárdis"} => "Sardes",
+    {{4, "134"}, "pt", "Sárdis"} => "Sardes",
+    {{4, "138"}, "pt", "Oostende"} => "Ostende",
+    {{4, "139"}, "pt", "Oostende"} => "Ostende",
+    # the French name, in the historical Jerusalem
+    {{4, "156"}, "pt", "Jérusalem"} => "Jerusalém",
+    # the Lacedaemonians, for the city
+    {{4, "182"}, "it", "Lacedemoni"} => "Lacedemone",
+    {{4, "184"}, "es", "Batra"} => "Bactra",
+    {{4, "185"}, "es", "Balkh (o Balj)"} => "Balj",
+    {{4, "207"}, "pt", "Padua"} => "Pádua",
+    {{4, "208"}, "pt", "Padua"} => "Pádua",
+    # Constantina: the Spanish name in three languages
+    {{4, "215"}, "en", "Constantina"} => "Constantine",
+    {{4, "215"}, "fr", "Constantina"} => "Constantine",
+    {{4, "215"}, "it", "Constantina"} => "Costantina",
+    {{4, "219"}, "pt", "Cartgao"} => "Cartago",
+    # the pastoral wood, the historical record and today's, capitalised as a place's name;
+    # "foresta" is Italian
+    {{5, "84"}, "es", "bosque pastoril"} => "Bosque pastoril",
+    {{5, "84"}, "en", "pastoral wood"} => "Pastoral wood",
+    {{5, "84"}, "fr", "forêt pastoral"} => "Forêt pastorale",
+    {{5, "84"}, "it", "bosco pastorale"} => "Bosco pastorale",
+    {{5, "84"}, "pt", "floresta pastoral"} => "Floresta pastoral",
+    {{5, "85"}, "es", "bosque pastoril"} => "Bosque pastoril",
+    {{5, "85"}, "en", "pastoral wood"} => "Pastoral wood",
+    {{5, "85"}, "fr", "forêt pastorale"} => "Forêt pastorale",
+    {{5, "85"}, "it", "bosco pastorale"} => "Bosco pastorale",
+    {{5, "85"}, "pt", "foresta pastoral"} => "Floresta pastoral",
+    # Amalec, the historical record and today's
+    {{5, "104"}, "en", "Amalec"} => "Amalek",
+    {{5, "104"}, "pt", "Amalec"} => "Amaleque",
+    {{5, "105"}, "en", "Amalec"} => "Amalek",
+    {{5, "105"}, "pt", "Amalec"} => "Amaleque"
   }
 
   # A place's type where its level's says too little (rule 6): Old Ford, Sicilia, the Forest
@@ -144,7 +175,7 @@ defmodule Playcode.Import.Places do
     {5, "91"} => "island"
   }
 
-  # bosque pastoril, Una isla: no real referent, one place shared by every play using it.
+  # Bosque pastoril, Una isla: no real referent, one place shared by every play using it.
   @fictional MapSet.new([{5, "85"}, {5, "91"}])
 
   # sin especificar
@@ -483,7 +514,7 @@ defmodule Playcode.Import.Places do
       names:
         data.names
         |> Enum.map(&name/1)
-        |> Enum.reject(&(&1.name == ""))
+        |> Enum.reject(&(&1.name in [nil, ""]))
         |> Enum.sort_by(&{&1.alternate, @language_order[&1.language]})
         |> Enum.group_by(& &1.record),
       twins:
@@ -503,7 +534,7 @@ defmodule Playcode.Import.Places do
 
     %{
       record: record,
-      name: @names[record][language] || row["nombreToponimo"],
+      name: Map.get(@names, {record, language, row["nombreToponimo"]}, row["nombreToponimo"]),
       language: language,
       alternate: row["esAlternativo"] == "1",
       historical: row["esHistorico"] == "1"
