@@ -104,15 +104,19 @@ defmodule Playcode.Import.Places do
     {{2, "1378"}, "es", "Reino de Napoles"} => "Reino de Nápoles",
     # the historical Spain
     {{2, "1382"}, "it", "Espagna"} => "Spagna",
+    # a straight apostrophe, where the Kingdom of England has ’
+    {{2, "1387"}, "fr", "Royaume d'Écosse"} => "Royaume d’Écosse",
     # Bohemia: the Spanish name in three languages, and an alternate that is no Spanish
     {{2, "1393"}, "fr", "Bohemia"} => "Bohême",
     {{2, "1393"}, "it", "Bohemia"} => "Boemia",
     {{2, "1393"}, "pt", "Bohemia"} => "Boémia",
     {{2, "1393"}, "es", "Boheme"} => nil,
+    # the other four languages name the kingdom
+    {{2, "1398"}, "pt", "Macedónia Antiga"} => "Reino da Macedónia",
     {{2, "1412"}, "fr", "Royaum de Numidie"} => "Royaume de Numidie",
     {{3, "115"}, "fr", "Péninsule Italienne"} => "Péninsule italienne",
     {{3, "116"}, "fr", "Péninsule Italienne"} => "Péninsule italienne",
-    # Latium: today's region is Lazio in English, the ancient one Lacio in Spanish
+    # FileMaker has Lazio and Latium the other way round in English; Spanish is Lacio for both
     {{3, "137"}, "en", "Lazio"} => "Latium",
     {{3, "137"}, "es", "Latium"} => "Lacio",
     {{3, "138"}, "en", "Latium"} => "Lazio",
