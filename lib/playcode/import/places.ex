@@ -5,7 +5,7 @@ defmodule Playcode.Import.Places do
   "From FileMaker records to places" this module follows.
 
   `load/1` reads the T10 tables. `plan/2` decides what to write: it reads the database but
-  never writes.
+  never writes. `report/1` prints the plan.
 
   FileMaker keeps one table per level (`T10.1` continents to `T10.5` vague places), and each
   record carries the ids of the places around it, so a new record is made whenever the
@@ -15,11 +15,22 @@ defmodule Playcode.Import.Places do
   place per real place, the *referent* of each record: a historical record's modern twin,
   to which it adds its own names as historical ones. A historical country that shares no
   name with its twin is a historical state, a place of its own under its continent.
+
+  Each FileMaker link on a play we hold becomes a link to the place, with the state the
+  place was in, in that play. A play the import has written to before (a `filemaker` link,
+  or its "import" row in the activity log, which outlives the links) is skipped whole, so
+  a curator's deletions stick.
   """
 
+  import Ecto.Query
+
+  alias Playcode.ActivityLog
   alias Playcode.Catalogue.Play
   alias Playcode.Import.FilemakerXml
   alias Playcode.Places
+  alias Playcode.Places.Place
+  alias Playcode.Places.PlayPlace
+  alias Playcode.Repo
 
   @default_dir "doc/ctce_dades"
 
@@ -146,6 +157,13 @@ defmodule Playcode.Import.Places do
   the gazetteer's place it is instead, `existing`, found under any of its names. A reused
   place is never changed, so its parent is left to the gazetteer: nil here.
 
+  `links` holds the plays' new links in FileMaker's order: the `play_id` and `code`, the
+  `place` and its historical `state` (keys into `places`), the `note`, and FileMaker's
+  `ref`, `"T10:<id>"`. `skipped` holds the links left out, by reason (`no_place`, `empty`,
+  `duplicate`, `nameless`), as `"EMOTHE0367 T10:1083: <FileMaker's text>"`. `not_held`
+  counts the links on versions we do not hold; `already_imported` names the plays skipped
+  whole. A performance's links are not a version's: they wait for the performances (S5).
+
   The rest are report lines: `merged`, the merges that bring a name the place lacks
   ("Elsinore → Helsingør"); `twinless`, historical records with no modern twin and no entry
   in the hand lists; `no_country`, places with no country between them and their continent;
@@ -153,11 +171,48 @@ defmodule Playcode.Import.Places do
   """
   def plan(data, plays) do
     world = world(data)
-    roots = data.links |> held(plays) |> Enum.flat_map(&reached(world, &1)) |> Enum.uniq()
+    imported = imported_play_ids()
+    by_code = Enum.group_by(plays, &Play.short_code(&1.code))
+
+    empty = %{
+      candidates: [],
+      skipped: %{no_place: [], empty: [], duplicate: [], nameless: []},
+      already_imported: MapSet.new(),
+      not_held: 0
+    }
+
+    acc =
+      data.links
+      |> Enum.filter(&id(&1, "_k_IdObraTitulo"))
+      |> Enum.sort_by(&String.to_integer(&1["_kp_IdObraAccionLugar"]))
+      |> Enum.reduce(empty, fn row, acc ->
+        case Map.get(by_code, version_code(row["_k_IdObraTitulo"]), []) do
+          [] -> %{acc | not_held: acc.not_held + 1}
+          plays -> Enum.reduce(plays, acc, &take(&2, world, imported, row, &1))
+        end
+      end)
+
+    candidates = Enum.reverse(acc.candidates)
+    roots = roots(candidates)
     places = places(world, roots)
+    {links, duplicates} = deduplicate(candidates, places)
+
+    # A duplicate may have been the only link to reach a record: plan without it.
+    {roots, places} =
+      case roots(links) do
+        ^roots -> {roots, places}
+        fewer -> {fewer, places(world, fewer)}
+      end
 
     %{
       places: places,
+      links: Enum.map(links, &elem(&1, 0)),
+      skipped:
+        acc.skipped
+        |> Map.new(fn {reason, labels} -> {reason, Enum.reverse(labels)} end)
+        |> Map.put(:duplicate, duplicates),
+      not_held: acc.not_held,
+      already_imported: acc.already_imported |> MapSet.to_list() |> Enum.sort(),
       merged: merged(world, roots),
       twinless: for(key <- roots, twinless?(world, key), do: describe(world, key)),
       no_country: no_country(world, places),
@@ -165,23 +220,156 @@ defmodule Playcode.Import.Places do
     }
   end
 
-  # The links on the plays we hold, in FileMaker's order.
-  defp held(links, plays) do
-    held = MapSet.new(plays, &Play.short_code(&1.code))
+  @doc "The plan as lines of text, for the mix task and the release."
+  def report(plan) do
+    by_key = Map.new(plan.places, &{&1.key, &1})
+    name = &place_name(by_key[&1])
 
-    links
-    |> Enum.filter(&MapSet.member?(held, version_code(&1["_k_IdObraTitulo"])))
-    |> Enum.sort_by(&String.to_integer(&1["_kp_IdObraAccionLugar"]))
+    per_play =
+      for link <- Enum.sort_by(plan.links, & &1.code) do
+        "#{link.code}  #{name.(link.place)}" <>
+          if(link.state, do: " — #{name.(link.state)}", else: "")
+      end
+
+    to_create =
+      for %{existing: nil} = place <- plan.places do
+        "#{name.(place.key)} (#{place.attrs["type"]})" <>
+          if(place.parent, do: " in #{name.(place.parent)}", else: "")
+      end
+
+    plays = plan.links |> Enum.uniq_by(& &1.play_id) |> length()
+
+    skipped =
+      for {reason, labels} <- Enum.sort(plan.skipped),
+          line <- section("skipped, #{reason}", labels),
+          do: line
+
+    per_play ++
+      ["", "links: #{length(plan.links)} on #{plays} plays"] ++
+      section("places to create", to_create) ++
+      section("places reused", plan.reused) ++
+      section("merged", plan.merged) ++
+      section("twinless", plan.twinless) ++
+      section("no country", plan.no_country) ++
+      skipped ++
+      [
+        "links on versions not held: #{plan.not_held}",
+        "already imported: #{length(plan.already_imported)} plays #{Enum.join(plan.already_imported, ", ")}"
+      ]
   end
 
-  # The records a link names, and the place a state it names alone stands for.
-  defp reached(world, link) do
-    chain = chain(link)
+  defp section(title, lines), do: ["#{title}: #{length(lines)}" | Enum.map(lines, &("  " <> &1))]
 
-    Enum.filter(
-      chain ++ List.wrap(@state_links[List.first(chain)]),
-      &(Map.has_key?(world.records, &1) and not MapSet.member?(@no_place, &1))
-    )
+  defp place_name(%{existing: %Place{} = place}), do: Places.display_name(place, "es")
+  defp place_name(%{attrs: %{"names" => [first | _]}}), do: first["name"]
+
+  # A FileMaker link on `play`: a candidate link with its label and the records it
+  # reaches, or a skipped one; nothing for a play already imported.
+  defp take(acc, world, imported, row, play) do
+    if MapSet.member?(imported, play.id) do
+      %{acc | already_imported: MapSet.put(acc.already_imported, play.code)}
+    else
+      case linked_place(world, row) do
+        {:ok, deepest, place} ->
+          link = %{
+            play_id: play.id,
+            code: play.code,
+            place: place,
+            state: state(world, row, deepest),
+            note: value(row["espacio"]),
+            ref: "T10:" <> row["_kp_IdObraAccionLugar"]
+          }
+
+          reached =
+            Enum.filter(chain(row) ++ [place, link.state], &Map.has_key?(world.records, &1))
+
+          %{acc | candidates: [{link, link_label(row), reached} | acc.candidates]}
+
+        {:skip, reason} ->
+          %{acc | skipped: Map.update!(acc.skipped, reason, &[link_label(row) | &1])}
+      end
+    end
+  end
+
+  # The place a link names, the referent of its deepest record (or of the place a state
+  # it names alone stands for), or why it names none: nothing, "sin especificar", or a
+  # place with no name.
+  defp linked_place(world, row) do
+    case chain(row) do
+      [] ->
+        {:skip, :empty}
+
+      [deepest | _outer] ->
+        place = referent(world, @state_links[deepest] || deepest)
+
+        cond do
+          MapSet.member?(@no_place, deepest) -> {:skip, :no_place}
+          names(world, place) == [] -> {:skip, :nameless}
+          true -> {:ok, deepest, place}
+        end
+    end
+  end
+
+  # The historical state of a link's place in its play: the state a link naming only a
+  # state stands in (@state_links), else the link's country when that is a state and the
+  # place lies below it, else the countryless area the link or the place's record names
+  # ("Península itálica", decision 14).
+  defp state(world, row, {level, _id} = deepest) do
+    country = if id = id(row, "_k_IdPais"), do: {2, id}
+
+    cond do
+      Map.has_key?(@state_links, deepest) -> world.states[deepest]
+      level > 2 and state?(world, country) -> world.states[country]
+      level > 3 -> area(world, row, deepest)
+      true -> nil
+    end
+  end
+
+  defp area(world, row, deepest) do
+    region = id(row, "_k_IdRegion") || id(world.records[deepest], "_k_IdRegion")
+    record = region && world.records[{3, region}]
+
+    if record && !id(record, "_k_IdPais"), do: referent(world, {3, region})
+  end
+
+  # The records the links reach, each once, in the order first reached.
+  defp roots(candidates), do: candidates |> Enum.flat_map(&elem(&1, 2)) |> Enum.uniq()
+
+  # A play links a place once (the unique index): a later link to a place the play
+  # already has, from FileMaker or by hand, is a duplicate, its note joining the first's.
+  defp deduplicate(candidates, places) do
+    existing = Map.new(places, &{&1.key, &1.existing})
+    linked = linked_places()
+
+    # The gazetteer's place when reused, else the one the plan creates.
+    same = fn link ->
+      case existing[link.place] do
+        nil -> {link.play_id, link.place}
+        place -> {link.play_id, place.id}
+      end
+    end
+
+    {kept, duplicates} =
+      Enum.reduce(candidates, {[], []}, fn {link, label, _reached} = candidate,
+                                           {kept, duplicates} ->
+        cond do
+          MapSet.member?(linked, same.(link)) ->
+            {kept, [label | duplicates]}
+
+          index = Enum.find_index(kept, &(same.(elem(&1, 0)) == same.(link))) ->
+            {List.update_at(kept, index, &join_note(&1, link.note)), [label | duplicates]}
+
+          true ->
+            {[candidate | kept], duplicates}
+        end
+      end)
+
+    {Enum.reverse(kept), Enum.reverse(duplicates)}
+  end
+
+  defp join_note({link, label, reached}, note) do
+    joined = [link.note, note] |> Enum.reject(&is_nil/1) |> Enum.join("\n\n")
+    {%{link | note: value(joined)}, label, reached}
   end
 
   # The T10 tables indexed: each record by key, its names sorted (main names in
@@ -428,6 +616,51 @@ defmodule Playcode.Import.Places do
       MapSet.new(names(world, a), & &1.name),
       MapSet.new(names(world, b), & &1.name)
     )
+  end
+
+  # FileMaker's line for a link, for a person to find it by: "EMOTHE0367 T10:1083: ( unspecified ) …".
+  defp link_label(row) do
+    text =
+      [row["denominacionAntigua"], row["espacio"]] |> Enum.map(&value/1) |> Enum.reject(&is_nil/1)
+
+    "#{version_code(row["_k_IdObraTitulo"])} T10:#{row["_kp_IdObraAccionLugar"]}: #{Enum.join(text, " ")}"
+  end
+
+  defp id(row, field), do: value(row[field])
+
+  defp value(nil), do: nil
+
+  defp value(text) do
+    case String.trim(text) do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  # A play is done once the import has written to it. Its filemaker links alone are no
+  # marker: a curator may delete every one, and the next run must not bring them back. The
+  # activity-log row the import writes per play survives that.
+  defp imported_play_ids do
+    logged =
+      ActivityLog.Entry
+      |> where([a], a.action == "import" and a.resource_type == "play_place")
+      |> where([a], fragment("?->>'source'", a.metadata) == "filemaker")
+      |> select([a], a.play_id)
+
+    PlayPlace
+    |> where([pp], pp.origin == "filemaker")
+    |> select([pp], pp.play_id)
+    |> union(^logged)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
+  # `{play_id, place_id}` for every link the plays already have.
+  defp linked_places do
+    PlayPlace
+    |> select([pp], {pp.play_id, pp.place_id})
+    |> Repo.all()
+    |> MapSet.new()
   end
 
   # The play code FileMaker's version id stands for: 38 is EMOTHE0038.
