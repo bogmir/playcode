@@ -86,6 +86,96 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLiveTest do
              "Roma, República romana, Europa (hoy Italia)"
   end
 
+  describe "a link's historical state" do
+    setup %{conn: conn} do
+      {conn, play} = setup_play(conn)
+      europa = TestFixtures.place_fixture(%{"name" => "Europa", "type" => "continent"})
+
+      castilla =
+        TestFixtures.place_fixture(%{
+          "name" => "Castilla",
+          "type" => "country",
+          "parent_place_id" => europa.id
+        })
+
+      madrid =
+        TestFixtures.place_fixture(%{
+          "name" => "Madrid",
+          "type" => "city",
+          "parent_place_id" => europa.id
+        })
+
+      link = TestFixtures.play_place_fixture(play, madrid)
+
+      %{conn: conn, play: play, europa: europa, castilla: castilla, madrid: madrid, link: link}
+    end
+
+    test "is chosen, then cleared, on its row", ctx do
+      %{conn: conn, play: play, castilla: castilla, link: link} = ctx
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/places")
+
+      view
+      |> form("#link-form-#{link.id}",
+        play_place: %{"role" => "setting", "historical_state_id" => castilla.id}
+      )
+      |> render_submit()
+
+      assert render(element(view, "#link-#{link.id}")) =~ "Madrid, Castilla, Europa"
+      assert hd(Places.list_play_places(play.id)).historical_state_id == castilla.id
+
+      view
+      |> form("#link-form-#{link.id}", play_place: %{"historical_state_id" => ""})
+      |> render_submit()
+
+      assert is_nil(hd(Places.list_play_places(play.id)).historical_state_id)
+    end
+
+    test "is offered from countries and regions only, never the link's own place", ctx do
+      %{conn: conn, play: play, link: link, europa: europa, castilla: castilla, madrid: madrid} =
+        ctx
+
+      peninsula = TestFixtures.place_fixture(%{"name" => "Península itálica", "type" => "region"})
+      italia = TestFixtures.place_fixture(%{"name" => "Italia", "type" => "country"})
+      italia_link = TestFixtures.play_place_fixture(play, italia)
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/places")
+
+      # The select's options carry the places' ids, so the test names no markup whitespace.
+      states = fn link ->
+        element(view, "#link-form-#{link.id} select[aria-label='#{t("Historical state")}']")
+        |> render()
+      end
+
+      offered = states.(italia_link)
+      assert offered =~ castilla.id
+      assert offered =~ peninsula.id
+      refute offered =~ madrid.id
+      refute offered =~ europa.id
+
+      # A country is no state of itself: the changeset would refuse it, so it is not offered.
+      refute states.(italia_link) =~ italia.id
+      assert states.(link) =~ italia.id
+    end
+
+    test "that is gone says so instead of saving", ctx do
+      %{conn: conn, play: play, link: link} = ctx
+      atlantida = TestFixtures.place_fixture(%{"name" => "Atlántida", "type" => "country"})
+      {:ok, _} = Places.delete_place(atlantida)
+
+      for id <- [atlantida.id, "not-a-uuid"] do
+        {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/places")
+
+        assert view
+               |> element("#link-form-#{link.id}")
+               |> render_submit(%{"play_place" => %{"historical_state_id" => id}}) =~
+                 t("That item no longer exists. The list has been refreshed."),
+               id
+
+        assert is_nil(hd(Places.list_play_places(play.id)).historical_state_id)
+      end
+    end
+  end
+
   test "links reorder", %{conn: conn} do
     {conn, play} = setup_play(conn)
     roma = TestFixtures.place_fixture(%{"name" => "Roma"})

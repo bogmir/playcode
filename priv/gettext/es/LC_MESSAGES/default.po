@@ -25,7 +25,7 @@ msgstr "Acciones"
 
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:359
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1155
-#: lib/playcode_web/live/admin/play_places_live.ex:293
+#: lib/playcode_web/live/admin/play_places_live.ex:314
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr "Añadir"
@@ -801,7 +801,7 @@ msgstr "Recalcular"
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:594
 #: lib/playcode_web/live/admin/play_compare_live.ex:170
 #: lib/playcode_web/live/admin/play_form_live.ex:853
-#: lib/playcode_web/live/admin/play_places_live.ex:357
+#: lib/playcode_web/live/admin/play_places_live.ex:378
 #: lib/playcode_web/live/play_compare_live.ex:172
 #, elixir-autogen, elixir-format
 msgid "Remove"
@@ -832,7 +832,7 @@ msgstr "Restableciendo..."
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:3057
 #: lib/playcode_web/live/admin/play_editors_live.ex:235
 #: lib/playcode_web/live/admin/play_notes_live.ex:339
-#: lib/playcode_web/live/admin/play_places_live.ex:392
+#: lib/playcode_web/live/admin/play_places_live.ex:430
 #: lib/playcode_web/live/admin/play_sources_live.ex:257
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:178
 #, elixir-autogen, elixir-format
@@ -1590,7 +1590,7 @@ msgstr "Canción"
 #: lib/playcode_web/live/admin/activity_log_live.ex:285
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2315
 #: lib/playcode_web/live/admin/play_form_live.ex:528
-#: lib/playcode_web/live/admin/play_places_live.ex:237
+#: lib/playcode_web/live/admin/play_places_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "Clear"
 msgstr "Limpiar"
@@ -1752,8 +1752,8 @@ msgid "Reworking"
 msgstr "Refundición"
 
 #: lib/playcode_web/live/admin/play_editors_live.ex:200
-#: lib/playcode_web/live/admin/play_places_live.ex:280
-#: lib/playcode_web/live/admin/play_places_live.ex:372
+#: lib/playcode_web/live/admin/play_places_live.ex:301
+#: lib/playcode_web/live/admin/play_places_live.ex:393
 #: lib/playcode_web/live/admin/user_list_live.ex:245
 #: lib/playcode_web/live/admin/user_list_live.ex:273
 #, elixir-autogen, elixir-format
@@ -3084,7 +3084,7 @@ msgstr "Se creó la invitación, pero no se pudo enviar el correo a %{email}. Vu
 msgid "A place with this name already exists."
 msgstr "Ya existe un lugar con este nombre."
 
-#: lib/playcode_web/live/admin/play_places_live.ex:221
+#: lib/playcode_web/live/admin/play_places_live.ex:242
 #, elixir-autogen, elixir-format
 msgid "Add an existing place"
 msgstr "Añadir un lugar existente"
@@ -3197,12 +3197,12 @@ msgstr "Nombres"
 
 #: lib/playcode_web/live/admin/place_form_component.ex:198
 #: lib/playcode_web/live/admin/place_list_live.ex:113
-#: lib/playcode_web/live/admin/play_places_live.ex:205
+#: lib/playcode_web/live/admin/play_places_live.ex:226
 #, elixir-autogen, elixir-format
 msgid "New place"
 msgstr "Nuevo lugar"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:318
+#: lib/playcode_web/live/admin/play_places_live.ex:339
 #, elixir-autogen, elixir-format
 msgid "No places recorded for this play."
 msgstr "No hay lugares registrados para esta obra."
@@ -3212,7 +3212,7 @@ msgstr "No hay lugares registrados para esta obra."
 msgid "No places yet."
 msgstr "Todavía no hay lugares."
 
-#: lib/playcode_web/live/admin/play_places_live.ex:388
+#: lib/playcode_web/live/admin/play_places_live.ex:426
 #, elixir-autogen, elixir-format
 msgid "Note, e.g. Act III only"
 msgstr "Nota, p. ej. solo en el acto III"
@@ -3232,7 +3232,7 @@ msgstr "Otro"
 msgid "Place added."
 msgstr "Lugar añadido."
 
-#: lib/playcode_web/live/admin/play_places_live.ex:166
+#: lib/playcode_web/live/admin/play_places_live.ex:170
 #, elixir-autogen, elixir-format
 msgid "Place created and added."
 msgstr "Lugar creado y añadido."
@@ -3242,7 +3242,7 @@ msgstr "Lugar creado y añadido."
 msgid "Place deleted."
 msgstr "Lugar eliminado."
 
-#: lib/playcode_web/live/admin/play_places_live.ex:90
+#: lib/playcode_web/live/admin/play_places_live.ex:94
 #, elixir-autogen, elixir-format
 msgid "Place removed."
 msgstr "Lugar eliminado del texto."
@@ -3252,7 +3252,7 @@ msgstr "Lugar eliminado del texto."
 msgid "Place saved."
 msgstr "Lugar guardado."
 
-#: lib/playcode_web/live/admin/play_places_live.ex:64
+#: lib/playcode_web/live/admin/play_places_live.ex:65
 #, elixir-autogen, elixir-format
 msgid "Place updated."
 msgstr "Lugar actualizado."
@@ -3262,7 +3262,7 @@ msgstr "Lugar actualizado."
 #: lib/playcode_web/live/admin/place_list_live.ex:22
 #: lib/playcode_web/live/admin/place_list_live.ex:106
 #: lib/playcode_web/live/admin/play_places_live.ex:22
-#: lib/playcode_web/live/admin/play_places_live.ex:198
+#: lib/playcode_web/live/admin/play_places_live.ex:219
 #: lib/playcode_web/live/play_show_live.ex:441
 #: lib/playcode_web/live/play_show_live.ex:605
 #, elixir-autogen, elixir-format
@@ -3284,7 +3284,7 @@ msgstr "Provincia"
 msgid "Region"
 msgstr "Región"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:354
+#: lib/playcode_web/live/admin/play_places_live.ex:375
 #, elixir-autogen, elixir-format
 msgid "Remove this place from the play?"
 msgstr "¿Quitar este lugar de la obra?"
@@ -3305,7 +3305,7 @@ msgid "Search Wikidata"
 msgstr "Buscar en Wikidata"
 
 #: lib/playcode_web/live/admin/place_list_live.ex:131
-#: lib/playcode_web/live/admin/play_places_live.ex:250
+#: lib/playcode_web/live/admin/play_places_live.ex:271
 #, elixir-autogen, elixir-format
 msgid "Search any name, in any language"
 msgstr "Buscar cualquier nombre, en cualquier idioma"
@@ -3321,7 +3321,7 @@ msgstr "Escenario"
 msgid "Slug"
 msgstr "Identificador"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:67
+#: lib/playcode_web/live/admin/play_places_live.ex:71
 #, elixir-autogen, elixir-format
 msgid "That change could not be saved."
 msgstr "No se pudo guardar ese cambio."
@@ -3357,7 +3357,7 @@ msgstr "Este lugar todavía se usa en una obra. Quítalo allí primero."
 msgid "Town"
 msgstr "Villa"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:201
+#: lib/playcode_web/live/admin/play_places_live.ex:222
 #, elixir-autogen, elixir-format
 msgid "Where this play is set, and the places it names."
 msgstr "Dónde se sitúa la obra y los lugares que menciona."
@@ -3372,12 +3372,12 @@ msgstr "Identificador de Wikidata"
 msgid "— none —"
 msgstr "— ninguno —"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:311
+#: lib/playcode_web/live/admin/play_places_live.ex:332
 #, elixir-autogen, elixir-format
 msgid "Create %{name}"
 msgstr "Crear «%{name}»"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:303
+#: lib/playcode_web/live/admin/play_places_live.ex:324
 #, elixir-autogen, elixir-format
 msgid "No places found"
 msgstr "No se encontraron lugares"
@@ -4269,13 +4269,13 @@ msgstr "Filtrar por hablante"
 msgid "Menu"
 msgstr "Menú"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:347
+#: lib/playcode_web/live/admin/play_places_live.ex:368
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:220
 #, elixir-autogen, elixir-format
 msgid "Move down"
 msgstr "Bajar"
 
-#: lib/playcode_web/live/admin/play_places_live.ex:339
+#: lib/playcode_web/live/admin/play_places_live.ex:360
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:212
 #, elixir-autogen, elixir-format
 msgid "Move up"
@@ -4877,3 +4877,9 @@ msgstr "Oficios y cargos"
 #, elixir-autogen, elixir-format
 msgid "This place is still the historical state of a play's place. Change it there first."
 msgstr "Este lugar todavía es el estado histórico del lugar de una obra. Cámbialo allí primero."
+
+#: lib/playcode_web/live/admin/play_places_live.ex:408
+#: lib/playcode_web/live/admin/play_places_live.ex:410
+#, elixir-autogen, elixir-format
+msgid "Historical state"
+msgstr "Estado histórico"
