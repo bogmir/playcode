@@ -5,7 +5,7 @@ defmodule Playcode.Import.Places do
   "From FileMaker records to places" this module follows.
 
   `load/1` reads the T10 tables. `plan/2` decides what to write: it reads the database but
-  never writes. `report/1` prints the plan.
+  never writes. `report/1` prints the plan and `apply_plan/2` writes it.
 
   FileMaker keeps one table per level (`T10.1` continents to `T10.5` vague places), and each
   record carries the ids of the places around it, so a new record is made whenever the
@@ -220,6 +220,39 @@ defmodule Playcode.Import.Places do
     }
   end
 
+  @doc """
+  Writes the plan in one transaction: the places it creates, parents first, then each
+  play's links in FileMaker's order (after any the play already has), then one activity-log
+  entry per play, which marks the play as imported for good. Returns
+  `{:ok, %{places: created, links: n}}`; a reused place is mapped, not counted.
+  """
+  def apply_plan(plan, opts \\ []) do
+    Repo.transaction(
+      fn ->
+        ids = Enum.reduce(plan.places, %{}, &create_place/2)
+
+        Enum.each(plan.links, &link_place!(&1, ids))
+
+        plan.links
+        |> Enum.group_by(& &1.play_id)
+        |> Enum.each(fn {play_id, links} ->
+          ActivityLog.log!(%{
+            user_id: opts[:user_id],
+            play_id: play_id,
+            action: "import",
+            resource_type: "play_place",
+            resource_id: play_id,
+            changes: %{"links" => length(links)},
+            metadata: %{"source" => "filemaker"}
+          })
+        end)
+
+        %{places: Enum.count(plan.places, &is_nil(&1.existing)), links: length(plan.links)}
+      end,
+      timeout: :infinity
+    )
+  end
+
   @doc "The plan as lines of text, for the mix task and the release."
   def report(plan) do
     by_key = Map.new(plan.places, &{&1.key, &1})
@@ -256,6 +289,24 @@ defmodule Playcode.Import.Places do
         "links on versions not held: #{plan.not_held}",
         "already imported: #{length(plan.already_imported)} plays #{Enum.join(plan.already_imported, ", ")}"
       ]
+  end
+
+  # `ids` maps a planned place's key to the id of the place it is in the gazetteer.
+  defp create_place(%{existing: %Place{id: id}, key: key}, ids), do: Map.put(ids, key, id)
+
+  defp create_place(%{key: key, attrs: attrs, parent: parent}, ids) do
+    {:ok, place} = Places.create_place(Map.put(attrs, "parent_place_id", parent && ids[parent]))
+    Map.put(ids, key, place.id)
+  end
+
+  defp link_place!(link, ids) do
+    {:ok, _} =
+      Places.link_place(link.play_id, ids[link.place], %{
+        "historical_state_id" => link.state && ids[link.state],
+        "note" => link.note,
+        "role" => "setting",
+        "origin" => "filemaker"
+      })
   end
 
   defp section(title, lines), do: ["#{title}: #{length(lines)}" | Enum.map(lines, &("  " <> &1))]
