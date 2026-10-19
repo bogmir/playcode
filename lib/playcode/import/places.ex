@@ -14,7 +14,8 @@ defmodule Playcode.Import.Places do
   pairs a historical record (its names `esHistorico`) with a modern one. The plan makes one
   place per real place, the *referent* of each record: a historical record's modern twin,
   to which it adds its own names as historical ones. A historical country that shares no
-  name with its twin is a historical state, a place of its own under its continent.
+  name with its twin is a historical state, a place of its own under its continent. A name
+  FileMaker misspelt is read as corrected by hand (`@names`).
 
   Each FileMaker link on a play we hold becomes a link to the place, with the state the
   place was in, in that play. A play the import has written to before (a `filemaker` link,
@@ -70,8 +71,10 @@ defmodule Playcode.Import.Places do
     {5, "82"} => {2, "1177"}
   }
 
-  # Today's parent where FileMaker's modern record lacks the country.
+  # Today's parent where FileMaker's modern record leaves it out.
   @parents %{
+    # Amalec → Palestina
+    {5, "104"} => {3, "118"},
     # Helsingør → Dinamarca
     {4, "92"} => {2, "1168"},
     # Esparta → Grecia
@@ -83,6 +86,47 @@ defmodule Playcode.Import.Places do
     {4, "170"} => {2, "1219"},
     {4, "172"} => {2, "1219"},
     {4, "181"} => {2, "1219"}
+  }
+
+  # FileMaker's spelling slips, corrected wherever the record's names are read: a record's
+  # name in a language (owner's decision, 2026-10-19). FileMaker's text in each comment.
+  @names %{
+    # Argel, the city of Algiers, for the country
+    {2, "1171"} => %{"es" => "Argelia"},
+    # it Castilia; pt Castilla, the Spanish name
+    {2, "1367"} => %{"it" => "Castiglia", "pt" => "Castela"},
+    # Reino de Napoles
+    {2, "1378"} => %{"es" => "Reino de Nápoles"},
+    # Espagna (the historical Spain)
+    {2, "1382"} => %{"it" => "Spagna"},
+    # Bohemia, the Spanish name, in all three languages
+    {2, "1393"} => %{"fr" => "Bohême", "it" => "Boemia", "pt" => "Boémia"},
+    # Royaum de Numidie
+    {2, "1412"} => %{"fr" => "Royaume de Numidie"},
+    # Péninsule Italienne, in both records
+    {3, "115"} => %{"fr" => "Péninsule italienne"},
+    {3, "116"} => %{"fr" => "Péninsule italienne"},
+    # fr Le Marches, it le Marche (the historical Marches)
+    {3, "139"} => %{"fr" => "Les Marches", "it" => "Le Marche"},
+    # fr Napoles; pt Napoli, the Italian name
+    {4, "77"} => %{"fr" => "Naples", "pt" => "Nápoles"},
+    # Jérusalem, the French name (the historical Jerusalem)
+    {4, "156"} => %{"pt" => "Jerusalém"},
+    # Lacedemoni, the Lacedaemonians
+    {4, "182"} => %{"it" => "Lacedemone"},
+    # Balkh (o Balj)
+    {4, "185"} => %{"es" => "Balj"},
+    # Padua, in both records
+    {4, "207"} => %{"pt" => "Pádua"},
+    {4, "208"} => %{"pt" => "Pádua"},
+    # Constantina, the Spanish name, in all three languages
+    {4, "215"} => %{"en" => "Constantine", "fr" => "Constantine", "it" => "Costantina"},
+    # Cartgao
+    {4, "219"} => %{"pt" => "Cartago"},
+    # forêt pastoral (the historical pastoral wood)
+    {5, "84"} => %{"fr" => "forêt pastorale"},
+    # foresta pastoral, the Italian word
+    {5, "85"} => %{"pt" => "floresta pastoral"}
   }
 
   # A place's type where its level's says too little (rule 6): Old Ford, Sicilia, the Forest
@@ -454,10 +498,13 @@ defmodule Playcode.Import.Places do
   end
 
   defp name(row) do
+    record = {String.to_integer(row["_k_IdTipoToponimo"]), row["_k_IdToponimo"]}
+    language = @languages[row["_k_IdIdioma"]]
+
     %{
-      record: {String.to_integer(row["_k_IdTipoToponimo"]), row["_k_IdToponimo"]},
-      name: row["nombreToponimo"],
-      language: @languages[row["_k_IdIdioma"]],
+      record: record,
+      name: @names[record][language] || row["nombreToponimo"],
+      language: language,
       alternate: row["esAlternativo"] == "1",
       historical: row["esHistorico"] == "1"
     }

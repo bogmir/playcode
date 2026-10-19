@@ -22,20 +22,26 @@
 #   0697        Othello's Venetian Cyprus, twice; a link naming only a continent
 #   0367, 0653  "sin especificar", no place; an empty link
 #   0418        a version no play holds
+#   0201, 0231, FileMaker's spelling slips, corrected by the hand map: the Kingdom of Naples and
+#   0559, 0749  Naples, Algeria (Constantina's country, Cirta in the Kingdom of Numidia),
+#               Balkh (from Batra), Carthage
+#   0491        Amalec, given Palestina as its parent by hand
 
 alias Playcode.Import.FilemakerXml
 
 dump = "doc/ctce_dades"
 out = Path.dirname(__ENV__.file)
 
-versions = ~w(5 6 7 10 38 151 153 262 337 354 367 394 545 653 697 418)
+versions = ~w(5 6 7 10 38 151 153 201 231 262 337 354 367 394 491 545 559 653 697 749 418)
 
 # Every record named in Playcode.Import.Places' hand lists, so each resolves here.
 hand_listed =
   for {level, ids} <- [
-        {2, ~w(1164 1168 1177 1198 1219 1385)},
-        {4, ~w(70 92 110 111 113 132 152 159 161 163 170 172 181 183 198 200 201 202 203 219)},
-        {5, ~w(82 85 87 89 91 98 102 104)}
+        {2, ~w(1164 1168 1171 1177 1198 1219 1367 1378 1382 1385 1393 1412)},
+        {3, ~w(115 116 118 139)},
+        {4,
+         ~w(70 77 92 110 111 113 132 152 156 159 161 163 170 172 181 182 183 185 198 200 201 202 203 207 208 215 219)},
+        {5, ~w(82 84 85 87 89 91 98 102 104)}
       ],
       id <- ids,
       do: {level, id}

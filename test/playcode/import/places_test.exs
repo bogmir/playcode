@@ -18,10 +18,12 @@ defmodule Playcode.Import.PlacesTest do
             EMOTHE0005_LAminta EMOTHE0006_IlPastorFido EMOTHE0007_LaCalandria
             EMOTHE0010_TheTragedyOfHamletPrinceOfDenmark EMOTHE0038_AntonyAndCleopatra
             EMOTHE0151_AsYouLikeIt EMOTHE0153_TheTragedyOfRomeoAndJuliet
+            EMOTHE0201_ElBurladorDeSevilla EMOTHE0231_Sofonisba
             EMOTHE0262_TheShoemakersHoliday EMOTHE0337_TheTragedyOfMariam
             EMOTHE0354_TheBrokenHeart EMOTHE0367_Endymion EMOTHE0394_EntreBobosAndaElJuego
-            EMOTHE0545_LaTraicionEnLaAmistad EMOTHE0653_TheShyCourtier
-            EMOTHE0697_TheTragedyOfOthelloTheMoorOfVenice
+            EMOTHE0491_SaulLeFurieux EMOTHE0545_LaTraicionEnLaAmistad
+            EMOTHE0559_LaGranSemiramis EMOTHE0653_TheShyCourtier
+            EMOTHE0697_TheTragedyOfOthelloTheMoorOfVenice EMOTHE0749_ElSacrificioDeDido
           ),
           do: play_fixture(%{"code" => code})
 
@@ -139,6 +141,41 @@ defmodule Playcode.Import.PlacesTest do
     assert parent(plan, "Península itálica") == "Europa"
   end
 
+  test "a vague place FileMaker files under its continent alone gets its region by hand", ctx do
+    plan = plan(ctx)
+
+    assert parent(plan, "Amalec") == "Palestina"
+    assert parent(plan, "Palestina") == "Asia"
+    assert links(plan, "EMOTHE0491_SaulLeFurieux") == [{"Amalec", nil}]
+  end
+
+  test "FileMaker's spelling slips are corrected, whichever record brings the name", ctx do
+    plan = plan(ctx)
+
+    # "Argel" is the city of Algiers; the country, Constantina's, is Argelia.
+    assert parent(plan, "Constantina") == "Argelia"
+    assert named(plan, "Argel") == []
+    assert [_] = named(plan, "Reino de Nápoles")
+    assert {"en", "Balkh", true, false} in names(place(plan, "Balj"))
+    assert {"pt", "Cartago", true, false} in names(place(plan, "Cartago"))
+
+    naples = names(place(plan, "Nápoles"))
+    assert {"fr", "Naples", true, false} in naples
+    assert {"pt", "Nápoles", true, false} in naples
+
+    # A merged record's historical name is corrected too ("Lacedemoni")...
+    assert {"it", "Lacedemone", false, true} in names(place(plan, "Esparta"))
+
+    # ...and one that then repeats the place's own name adds nothing ("forêt pastoral").
+    assert names(place(plan, "bosque pastoril")) == [
+             {"es", "bosque pastoril", true, false},
+             {"en", "pastoral wood", true, false},
+             {"fr", "forêt pastorale", true, false},
+             {"it", "bosco pastorale", true, false},
+             {"pt", "floresta pastoral", true, false}
+           ]
+  end
+
   test "vague places are typed, the generic ones fictional and shared", ctx do
     plan = plan(ctx)
 
@@ -171,7 +208,15 @@ defmodule Playcode.Import.PlacesTest do
     plan = plan(ctx)
 
     assert plan.twinless == []
-    assert plan.no_country == ["Italian Peninsula (T10.3:116)", "Ancient Greece (T10.3:134)"]
+
+    # Amalec is under Palestina by hand, and Palestina has no country either: both are listed.
+    assert plan.no_country == [
+             "Italian Peninsula (T10.3:116)",
+             "Ancient Greece (T10.3:134)",
+             "Palestine (T10.3:118)",
+             "Amalec (T10.5:104)",
+             "Carthage (T10.4:219)"
+           ]
 
     # Without its T10.X pair, Mariam's Jerusalem is a record of its own, under its continent.
     plan =
