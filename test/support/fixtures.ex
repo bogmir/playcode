@@ -310,4 +310,17 @@ defmodule Playcode.TestFixtures do
     {:ok, link} = Playcode.Bibliography.create_entry_for_play(play.id, entry_attrs, link_attrs)
     link
   end
+
+  @doc """
+  A performance of `play` (dated 1610 unless `attrs` say otherwise; string keys, as the
+  forms send them).
+  """
+  def performance_fixture(play, attrs \\ %{}) do
+    {:ok, performance} =
+      Playcode.Performances.create_performance(
+        Map.merge(%{"play_id" => play.id, "date_text" => "1610"}, attrs)
+      )
+
+    performance
+  end
 end

@@ -8,7 +8,8 @@ defmodule Playcode.ContentVersionTest do
 
   import Playcode.TestFixtures
 
-  alias Playcode.{Bibliography, Catalogue, PlayContent, Places, Statistics}
+  alias Playcode.{Bibliography, Catalogue, PlayContent, Performances, Places, Statistics}
+  alias Playcode.Performances.{Actor, CastMember, Company}
 
   # Postgres moves a play once per transaction, and the sandbox runs the whole test in
   # one. This stands in for the commit between two edits. It reaches past the contexts
@@ -206,6 +207,142 @@ defmodule Playcode.ContentVersionTest do
     assert moves?(hamlet, edit)
     assert moves?(antony, edit)
     refute moves?(elsewhere, edit)
+  end
+
+  describe "performances" do
+    test "a performance moves its play" do
+      play = play_fixture()
+      elsewhere = play_fixture()
+      performance = performance_fixture(play)
+      next_transaction()
+      elsewhere_before = version(elsewhere)
+
+      edits = [
+        insert: fn -> performance_fixture(play, %{"date_text" => "1611"}) end,
+        update: fn -> Performances.update_performance(performance, %{"note" => "Nota"}) end,
+        delete: fn -> Performances.delete_performance(performance) end
+      ]
+
+      for {what, edit} <- edits do
+        assert moves?(play, edit), "#{what} did not move the play's version"
+      end
+
+      assert version(elsewhere) == elsewhere_before
+    end
+
+    # A company, an actor and a cast row have no context yet: the Repo writes them.
+    test "a cast row moves the performance's play" do
+      play = play_fixture()
+      elsewhere = play_fixture()
+      performance = performance_fixture(play)
+      performance_fixture(elsewhere)
+      actor = Playcode.Repo.insert!(%Actor{surname: "Burbage"})
+      next_transaction()
+      elsewhere_before = version(elsewhere)
+
+      row = fn ->
+        Playcode.Repo.insert!(%CastMember{
+          performance_id: performance.id,
+          actor_id: actor.id,
+          role: "Hamlet",
+          position: 0
+        })
+      end
+
+      assert moves?(play, row)
+      [%{cast: [member]}] = Performances.list_for_play(play.id)
+
+      role = fn -> Playcode.Repo.update!(Ecto.Changeset.change(member, role: "Laertes")) end
+      assert moves?(play, role)
+      assert moves?(play, fn -> Playcode.Repo.delete!(member) end)
+
+      assert version(elsewhere) == elsewhere_before
+    end
+
+    test "renaming a company or an actor moves every play whose performances name it" do
+      company = Playcode.Repo.insert!(%Company{name: "King's Men"})
+      actor = Playcode.Repo.insert!(%Actor{surname: "Burbage"})
+      hamlet = play_fixture()
+      othello = play_fixture()
+      elsewhere = play_fixture()
+
+      performance_fixture(hamlet, %{"company_id" => company.id})
+      cast = performance_fixture(othello)
+
+      performance_fixture(elsewhere, %{
+        "company_id" => Playcode.Repo.insert!(%Company{name: "Other"}).id
+      })
+
+      Playcode.Repo.insert!(%CastMember{performance_id: cast.id, actor_id: actor.id, position: 0})
+
+      # A new name each time: an update that changes nothing sends no UPDATE at all.
+      unique = fn -> "Name #{System.unique_integer([:positive])}" end
+
+      company_edit = fn ->
+        Playcode.Repo.update!(Ecto.Changeset.change(company, name: unique.()))
+      end
+
+      actor_edit = fn ->
+        Playcode.Repo.update!(Ecto.Changeset.change(actor, surname: unique.()))
+      end
+
+      assert moves?(hamlet, company_edit)
+      refute moves?(othello, company_edit)
+      refute moves?(elsewhere, company_edit)
+
+      assert moves?(othello, actor_edit)
+      refute moves?(hamlet, actor_edit)
+      refute moves?(elsewhere, actor_edit)
+    end
+
+    test "an edit to a source entry moves the plays whose performances cite it" do
+      citing = play_fixture()
+      elsewhere = play_fixture()
+      entry = bibliography_fixture(play_fixture(), %{"monogr_title" => "Wiggins"}).entry_id
+      performance_fixture(citing, %{"source_entry_id" => entry})
+      performance_fixture(elsewhere)
+
+      edit = fn ->
+        Bibliography.update_entry(Bibliography.get_entry!(entry), %{
+          "year_text" => "#{System.unique_integer([:positive])}"
+        })
+      end
+
+      assert moves?(citing, edit)
+      refute moves?(elsewhere, edit)
+    end
+
+    test "an edit to a place moves the plays performed there or anywhere inside it, or in a state it names" do
+      country = place_fixture(%{"type" => "country"})
+      city = place_fixture(%{"parent_place_id" => country.id})
+      state = place_fixture(%{"type" => "country"})
+      inside = play_fixture()
+      named_state = play_fixture()
+      elsewhere = play_fixture()
+      performance_fixture(inside, %{"place_id" => city.id})
+
+      performance_fixture(named_state, %{
+        "place_id" => place_fixture().id,
+        "historical_state_id" => state.id
+      })
+
+      performance_fixture(elsewhere, %{"place_id" => place_fixture().id})
+
+      edit = fn place ->
+        fn ->
+          Places.update_place(Places.get_place!(place.id), %{
+            "note" => "Nota #{System.unique_integer([:positive])}"
+          })
+        end
+      end
+
+      assert moves?(inside, edit.(country))
+      refute moves?(named_state, edit.(country))
+      assert moves?(named_state, edit.(state))
+      refute moves?(inside, edit.(state))
+      refute moves?(elsewhere, edit.(country))
+      refute moves?(elsewhere, edit.(state))
+    end
   end
 
   test "caching a play's statistics does not move it" do

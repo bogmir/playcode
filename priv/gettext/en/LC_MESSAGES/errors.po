@@ -190,3 +190,9 @@ msgstr ""
 
 msgid "Only one reading can be the edition's"
 msgstr ""
+
+msgid "needs a date, a venue, a company or a note"
+msgstr ""
+
+msgid "is already set on another performance of this play"
+msgstr ""
