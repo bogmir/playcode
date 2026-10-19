@@ -15,7 +15,7 @@ source and variant tables received), 2026-10-11 (S3 done, S7 started) and 2026-1
 | S2e — `legacy_url` | **dropped** — derivable from code + filename, see below |
 | S2f — titles | **dropped as an import** — nothing to import; its one defect, four all-capitals sort titles, fixed 2026-10-18 (`docs/history.md`) |
 | S3 — witnesses | **done** 2026-10-10 (`7e76c8f..0593021`): 508 witnesses on 106 plays imported on dev — `../specs/2026-10-10-s3-witnesses-design.md` |
-| S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays. Question 11 decided 2026-10-16: a performance's source is a bibliography entry, the performance holding its own volume and pages. **Waits on question 12** in `docs/stakeholder/preguntas.html` (whether such a work also appears in the play's bibliography) |
+| S5 — performances | data received 2026-10-10 (`T11*`) except the performance's place; 243 performances on 59 plays. Question 11 decided 2026-10-16: a performance's source is a bibliography entry, the performance holding its own volume and pages. Question 12 answered 2026-10-19: such a work is cited only beside the performance, never in the play's bibliography; nothing blocks the slice |
 | S6 — characters | **blocked** by open question 7 (a TEI re-import replaces the cast list) |
 | S7 — credits | **done** 2026-10-11: no import; the cross-check found 18 credits our TEI import dropped (fixed) and 7 disagreements, asked as questions 18–21 — see below |
 | S8 — genre | **unblocked** 2026-10-19: the genre tables arrived (`T01.42_Genero_Hieronimo`, `T01.43_GeneroAnnals`, `T14.1_GeneroLista`, `t14.1_Genero`); not designed yet |
@@ -934,9 +934,9 @@ Ordered by what is actually blocking work.
    - **S3 questions** for the project: the 11 witnesses of Spanish plays attributed to Jodelle
      (question 13 in `docs/stakeholder/preguntas.html`; the test rows were settled by skipping
      them, and `TES2` was cleared)
-   - **S5 questions** for the project: whether a performance's information source is a
+   - ~~**S5 questions** for the project: whether a performance's information source is a
      bibliography entry, and whether such a work also joins the play's bibliography (questions
-     11 and 12)
+     11 and 12)~~ — 11 decided 2026-10-16, 12 answered 2026-10-19: only beside the performance
    - ~~**The tables still missing** (`T10*`, the genre table, S5's place table)~~ — all received
      2026-10-19; the end of `docs/stakeholder/preguntas.html` lists them as arrived
    - **S6 (optional):** `T07.31`, `T07.311`

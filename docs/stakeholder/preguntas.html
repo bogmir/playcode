@@ -269,7 +269,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 19 October 2026. 43 questions, 20 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 19 October 2026. 43 questions, 22 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -804,15 +804,20 @@
       </div>
     </div>
 
-    <div class="q" data-q="q12" data-n="12">
+    <div class="q" data-q="q12" data-n="12" data-answered="2026-10-19">
       <span class="q-num" aria-hidden="true">12</span>
       <div class="q-body">
         <h3>Should a work cited for a performance also appear in the play’s bibliography?</h3>
         <p class="why">Question 11 is decided the first way, so this arises. None of these works is in any play’s bibliography today. If they joined, Wiggins would appear in the bibliography of 33 plays and CATCOM in 3; 50 plays would gain at least one entry. They are catalogues and databases, which fit none of the bibliography’s four groups (modern editions, criticism, translations, adaptations).</p>
+        <div class="answered">
+          <p><strong>Answered on 19 October 2026:</strong> only beside the performance. Wiggins, CATCOM and the other catalogues are cited with the performances that use them and stay out of the plays’ bibliographies.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q12-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q12-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q12-o1"><input type="radio" id="q12-o1" name="q12-choice" value="Only beside the performance">Only beside the performance</label>
+            <label for="q12-o1"><input type="radio" id="q12-o1" name="q12-choice" value="Only beside the performance" checked>Only beside the performance</label>
             <label for="q12-o2"><input type="radio" id="q12-o2" name="q12-choice" value="Also in the bibliography, among the critical studies">Also in the bibliography, among the critical studies</label>
             <label for="q12-o3"><input type="radio" id="q12-o3" name="q12-choice" value="Also in the bibliography, in a group of their own (catalogues and databases)">Also in the bibliography, in a group of their own (catalogues and databases)</label>
             <label for="q12-o4"><input type="radio" id="q12-o4" name="q12-choice" value="Not sure">Not sure</label>
@@ -823,6 +828,7 @@
           <textarea id="q12-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1208,13 +1214,17 @@
         <h3>When a file’s label and its text disagree, which should Playcode follow?</h3>
         <p class="why">They disagree on 91 plays. 33 labelled prose hold a song or a few quoted lines of verse, so Playcode calls them verse: the Italian <i>Giulio Cesare</i> (EMOTHE0252), in prose but for 3 lines, shows as “3 verses”. 17 labelled verse have no numbered verse line, so Playcode calls them prose: <i>La tragedia del vengador</i> (EMOTHE0279). And the 41 labelled verse and prose show as verse. The 45 files that count speeches and the 8 with no label say nothing either way; Playcode would go on working their form out from the text.</p>
         <p class="why">Working it out from the text today, Playcode counts only verse lines that carry a number, so 17 plays whose verse lines have none show as prose, among them <i>As You Like It</i> (1,235 verse lines). Whichever answer you give, the rule will count every verse line; how much verse makes a play verse, or “verse and prose”, is part of this question: 13 of the 17 are prose plays with a few songs or quoted lines.</p>
+        <div class="answered">
+          <p><strong>Answered on 19 October 2026:</strong> the text, as now; “verse and prose” only when set by hand. The 33 plays labelled prose that Playcode shows as verse should stay prose, or better, take a new form, “prose with occasional verse”. And the form of every play is to be revised, not only these 91: in FileMaker the choice of verse or prose could not always be changed when a play was entered, so a wrong one was sometimes left.</p>
+          <p>For that revision we will send you the list of every play, with its label, how much of its text is verse and the form Playcode gives it. A form set by hand in Playcode stays through every re-import. Still yours: where “prose with occasional verse” ends.</p>
+        </div>
+        <p class="why">Measured by length, 29 of the 33 hold between 0.1% and 5.4% of their text in verse: their songs and quoted lines. The other four hold far more, and read as verse and prose: <i>Sophonisba</i> (EMOTHE0271) 14%, <i>La finzione veritiera</i> (EMOTHE0045) 20%, <i>La novella della vecchia</i> (EMOTHE0302) 32% and <i>The Shoemaker’s Holiday</i> (EMOTHE0262) 43%. Across the 393 plays, 42 hold no verse at all and 71 hold some, under a tenth of their text; among those 71 are 15 labelled verse (<i>The Man of Mode</i>, <i>Endymion</i>…) and three labelled verse and prose (<i>The Way of the World</i>, <i>Love for Love</i>, <i>Comédia d’Os Vilhalpandos</i>). Nearest the line: <i>Bartholomew Fair</i> 6%, <i>Eastward Ho!</i> 8%, <i>Le Songe d’une nuit d’été</i> 11% and <i>Le Malade imaginaire</i> 12%. Above it a play is verse until it is set by hand as verse and prose: 60 plays hold between a tenth and nine tenths of their text in verse, <i>Hamlet</i> among them (65%).</p>
         <fieldset>
-          <legend>Answer</legend>
+          <legend>Answer for where “prose with occasional verse” ends</legend>
           <div class="options">
-            <label for="q23-o1"><input type="radio" id="q23-o1" name="q23-choice" value="The label: it is the editor’s judgement">The label: it is the editor’s judgement</label>
-            <label for="q23-o2"><input type="radio" id="q23-o2" name="q23-choice" value="The label, but send us the 91 to check first">The label, but send us the 91 to check first</label>
-            <label for="q23-o3"><input type="radio" id="q23-o3" name="q23-choice" value="The text, as now; “verse and prose” only when set by hand">The text, as now; “verse and prose” only when set by hand</label>
-            <label for="q23-o4"><input type="radio" id="q23-o4" name="q23-choice" value="Not sure">Not sure</label>
+            <label for="q23-o1"><input type="radio" id="q23-o1" name="q23-choice" value="Under a tenth of the text in verse (71 plays)">Under a tenth of the text in verse (71 plays)</label>
+            <label for="q23-o2"><input type="radio" id="q23-o2" name="q23-choice" value="Another line (in the notes)">Another line (in the notes)</label>
+            <label for="q23-o3"><input type="radio" id="q23-o3" name="q23-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -1235,18 +1245,19 @@
       <div class="q-body">
         <h3>Which of these should the downloads print as well?</h3>
         <p class="why">Each is on the play page and the published site, and in none of the downloads. A download may be meant to carry what the edition holds, or only the play, with the rest left to the site. Tick any.</p>
+        <div class="answered">
+          <p><strong>Answered on 19 October 2026:</strong> for a translation, the play it translates; the publication details, the licence, the project and the identifiers; and, for a critical edition, its witnesses. Not the bibliography, the places of the action, the verse forms or the statistics, and not “Procedencia”, which became obsolete once the provenance went into the source’s bibliographic reference.</p>
+          <p><strong>Decided by Playcode on 19 October 2026:</strong> no file marks a critical edition, so, as you suggest, a play counts as one when it has variant readings (<code>&lt;app&gt;</code>) or a critical apparatus after the text. That is seven plays today: <i>Hamlet</i>, <i>Friar Bacon and Friar Bungay</i>, <i>El bastardo Mudarra</i>, <i>Everyman</i>, <i>Les Amours tragiques de Pyrame et Thisbé</i>, <i>La discreta enamorada</i> and <i>She Would If She Could</i>; name any other in the notes. An adaptation prints its original as a translation does. Your answer leaves out the editorial statement, the same paragraph in every file (“Las presentes ediciones digitales están basadas, en su mayor parte, en ediciones científicas…”), so the downloads leave it out; say so in the notes if they should print it.</p>
+          <p>Still yours: whether the play page and the published site stop printing “Procedencia” too.</p>
+        </div>
+        <p class="why">They print it under the source for the 91 plays whose file names one, as the older pages of emothe.uv.es did; its newer pages leave it out. In about 60 of them the source’s reference already says it (“Texto incluido en la base Canon 60 - TC/12”); in about 30 it does not, Gallica’s 15 among them, so printing it nowhere would lose it for their readers unless their references say it first. The files keep it either way. If no reader sees it, <a href="#q27">question 27</a> needs no answer.</p>
         <fieldset>
-          <legend>Answer</legend>
+          <legend>Answer for “Procedencia” on the play page and the site</legend>
           <div class="options">
-            <label for="q24-o1"><input type="checkbox" id="q24-o1" name="q24-choice" value="The witnesses: manuscripts and early printings (510 on 107 plays)">The witnesses: manuscripts and early printings (510 on 107 plays)</label>
-            <label for="q24-o2"><input type="checkbox" id="q24-o2" name="q24-choice" value="The bibliography (2,804 references on 115 plays)">The bibliography (2,804 references on 115 plays)</label>
-            <label for="q24-o3"><input type="checkbox" id="q24-o3" name="q24-choice" value="The places of the action">The places of the action</label>
-            <label for="q24-o4"><input type="checkbox" id="q24-o4" name="q24-choice" value="For a translation, the play it translates">For a translation, the play it translates</label>
-            <label for="q24-o5"><input type="checkbox" id="q24-o5" name="q24-choice" value="The verse forms: redondilla, romance…">The verse forms: redondilla, romance…</label>
-            <label for="q24-o6"><input type="checkbox" id="q24-o6" name="q24-choice" value="The statistics">The statistics</label>
-            <label for="q24-o7"><input type="checkbox" id="q24-o7" name="q24-choice" value="The publication details, the licence, the project and editorial statements and the identifiers">The publication details, the licence, the project and editorial statements and the identifiers</label>
-            <label for="q24-o9"><input type="checkbox" id="q24-o9" name="q24-choice" value="Where the digital text came from (“Procedencia”: Gallica, Canon 60…; 91 plays)">Where the digital text came from (“Procedencia”: Gallica, Canon 60…; 91 plays)</label>
-            <label for="q24-o8"><input type="checkbox" id="q24-o8" name="q24-choice" value="None: the downloads are for reading the play">None: the downloads are for reading the play</label>
+            <label for="q24-o1"><input type="radio" id="q24-o1" name="q24-choice" value="Print it nowhere; the files keep it">Print it nowhere; the files keep it</label>
+            <label for="q24-o2"><input type="radio" id="q24-o2" name="q24-choice" value="Print it nowhere once those 30 references say it: send us the list">Print it nowhere once those 30 references say it: send us the list</label>
+            <label for="q24-o3"><input type="radio" id="q24-o3" name="q24-choice" value="Go on printing it on the play page and the site, as now">Go on printing it on the play page and the site, as now</label>
+            <label for="q24-o4"><input type="radio" id="q24-o4" name="q24-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
         <div>
@@ -1331,11 +1342,12 @@
     <h2 id="h-provenance">Where the digital text came from</h2>
     <p>152 files say, beside the edition the text was taken from, where its digital text came from: <code>&lt;distributor&gt;IntraText Digital Library&lt;/distributor&gt;</code> (<i>L’Aminta</i>, EMOTHE0005). Canon 60 (30 plays), Gallica (15), the TC/12 groups, Internet Shakespeare Editions, Folger Digital Texts, Project Gutenberg… emothe.uv.es prints it as “Procedencia” under the source on the pages of its older layout, and its newer pages leave it out. Playcode now keeps it, writes it back to the file, and prints it under the source on the play page and the published site.</p>
 
-    <div class="q" data-q="q27" data-n="27">
+    <div class="q" id="q27" data-q="q27" data-n="27">
       <span class="q-num" aria-hidden="true">27</span>
       <div class="q-body">
         <h3>What does “Texto base” mean as the provenance of a text?</h3>
         <p class="why">59 files give it, among them <i>Hamlet</i> (EMOTHE0010), <i>Arte nuevo de hacer comedias</i> (EMOTHE0002) and <i>La vida es sueño</i> (EMOTHE0020). Two more give “ProcedenciaFuente” (<i>El pastor fido</i>, EMOTHE0298, and <i>Fray Bacon y fray Bungay</i>, EMOTHE0299), the name of the field rather than a value, and one gives nothing (<i>Le berger fidelle</i>, EMOTHE0286). emothe.uv.es printed “Procedencia: Texto base” where its layout shows the line. In FileMaker, “Texto base” is one of the 45 entries of the list the files’ provenance was chosen from, beside Gallica and Canon 60, so it was picked on purpose; “ProcedenciaFuente” is not in that list. Until you answer, Playcode keeps these values in the files and prints none of them.</p>
+        <p class="why">The answer to <a href="#t-downloads">question 24</a> calls “Procedencia” obsolete, and its last part asks whether readers should see it anywhere. If not, this question needs no answer.</p>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
@@ -1488,16 +1500,21 @@
       </div>
     </div>
 
-    <div class="q" data-q="q33" data-n="33">
+    <div class="q" data-q="q33" data-n="33" data-answered="2026-10-19">
       <span class="q-num" aria-hidden="true">33</span>
       <div class="q-body">
         <h3>Where should the texts written for this edition be printed?</h3>
         <p class="why">Playcode prints each text around a play where its file puts it, before or after the text. Some were printed in the play’s early edition: the dedication, the licence to print, the address to the reader. Others were written for this edition: the editor’s introduction, the note on the digital edition, the translator’s note, the appendices (<i>Everyman</i>’s “The Early Texts: Analysis” and “Editorial Procedures”, the critical apparatus of <i>She Would If She Could</i>).</p>
+        <div class="answered">
+          <p><strong>Answered on 19 October 2026:</strong> where the file puts them, as Playcode prints them now, before or after the text. Before or after the cast list follows with <a href="#t-paratexts">question 32</a>.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q33-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q33-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q33-o1"><input type="radio" id="q33-o1" name="q33-choice" value="Beside the editors, sources and witnesses, as “about this edition”, leaving around the text only what its first readers saw">Beside the editors, sources and witnesses, as “about this edition”, leaving around the text only what its first readers saw</label>
-            <label for="q33-o2"><input type="radio" id="q33-o2" name="q33-choice" value="Where the file puts them, as Playcode prints them now">Where the file puts them, as Playcode prints them now</label>
+            <label for="q33-o2"><input type="radio" id="q33-o2" name="q33-choice" value="Where the file puts them, as Playcode prints them now" checked>Where the file puts them, as Playcode prints them now</label>
             <label for="q33-o3"><input type="radio" id="q33-o3" name="q33-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
@@ -1506,6 +1523,7 @@
           <textarea id="q33-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1687,7 +1705,7 @@
     <h2 id="h-requests">FileMaker tables we still need</h2>
     <p>Not questions, but they unblock the next pieces of work. The tables asked for before have arrived, so none is outstanding now; one export can carry any later request.</p>
     <ul class="requests">
-      <li><strong>The places tables</strong> (<code>T10</code>, its tables of cities, continents, vague locations, countries and regions, and the names of every place), <strong>arrived on 19 October</strong>. They give each play its places of action, with the state each place belonged to at the time. The places of performances were in them too: 49 of the links are performances’, the table 142 performances pointed at. Playcode is importing the plays’ places; the performances’ places wait for the performances (question 12).</li>
+      <li><strong>The places tables</strong> (<code>T10</code>, its tables of cities, continents, vague locations, countries and regions, and the names of every place), <strong>arrived on 19 October</strong>. They give each play its places of action, with the state each place belonged to at the time. The places of performances were in them too: 49 of the links are performances’, the table 142 performances pointed at. Playcode has imported the plays’ places; the performances’ places come with the performances, which question 12’s answer unblocks.</li>
       <li><strong>The genre tables</strong> (<code>T01.42</code>, <code>T01.43</code> and <code>T14.1</code>), <strong>arrived on 19 October</strong>, in place of the value lists. They wait for the genre to be built.</li>
       <li><strong>When exporting, choose every field</strong> (“Mover todo”). The export dialog remembers the previous selection, which is how one table first arrived with 26 of its 41 fields.</li>
     </ul>
@@ -1699,7 +1717,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 23 answered</span>
+        <span class="count" id="answered-count">0 of 21 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
