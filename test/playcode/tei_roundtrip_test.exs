@@ -753,6 +753,123 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # A link's place as it was in this play (S9b): a place of the gazetteer, a country inside
+  # the link's <placeName>, any other kind a nested <placeName>.
+  describe "the historical state of a place" do
+    defp state_file(state_type, link, opts \\ []) do
+      tei(
+        Keyword.take(opts, [:code]) ++
+          [
+            profile_desc: """
+            <settingDesc>
+              <listPlace>
+                <place xml:id="rt-hs-europa" type="continent">
+                  <placeName xml:lang="es">Europa</placeName>
+                  <place xml:id="rt-hs-italia" type="country">
+                    <placeName xml:lang="es">Italia</placeName>
+                    <place xml:id="rt-hs-roma" type="city"><placeName xml:lang="es">Roma</placeName></place>
+                  </place>
+                  <place xml:id="rt-hs-republica-romana" type="#{state_type}">
+                    <placeName xml:lang="es">República romana</placeName>
+                  </place>
+                </place>
+              </listPlace>
+              <setting>#{link}</setting>
+            </settingDesc>
+            """
+          ]
+      )
+    end
+
+    defp with_country,
+      do:
+        ~s(<placeName ref="#rt-hs-roma" ana="setting"><country ref="#rt-hs-republica-romana"/><note>Acto I.</note></placeName>)
+
+    defp without_state,
+      do: ~s(<placeName ref="#rt-hs-roma" ana="setting"><note>Acto I.</note></placeName>)
+
+    defp place_ids(xml),
+      do: for({%{"xml:id" => id}, _} <- xml_elements(xml, "place", within: "listPlace"), do: id)
+
+    test "a country comes back inside the link's placeName, and the state in listPlace" do
+      xml = roundtrip(state_file("country", with_country()))
+
+      assert xml_elements(xml, "country", within: "setting") ==
+               [{%{"ref" => "#rt-hs-republica-romana"}, ""}]
+
+      assert xml_texts(xml, "note", within: "setting") == ["Acto I."]
+      assert "rt-hs-republica-romana" in place_ids(xml)
+    end
+
+    test "a state that is not a country is a nested placeName" do
+      link =
+        ~s(<placeName ref="#rt-hs-roma" ana="setting"><placeName ref="#rt-hs-republica-romana"/></placeName>)
+
+      xml = roundtrip(state_file("region", link))
+
+      assert xml_elements(xml, "placeName", within: "setting") ==
+               [
+                 {%{"ref" => "#rt-hs-roma", "ana" => "setting"}, ""},
+                 {%{"ref" => "#rt-hs-republica-romana"}, ""}
+               ]
+
+      assert xml_elements(xml, "country", within: "setting") == []
+      assert "rt-hs-republica-romana" in place_ids(xml)
+    end
+
+    # The link is the file's, the state a guess: one nobody declared, or the place itself
+    # (which the changeset refuses, and the link would go with it), is dropped alone.
+    test "a state the file does not declare, or the place itself, is dropped, the link kept" do
+      for state <- ["rt-hs-nowhere", "rt-hs-roma"] do
+        link =
+          ~s(<placeName ref="#rt-hs-roma" ana="setting"><country ref="##{state}"/></placeName>)
+
+        xml = roundtrip(state_file("country", link))
+
+        assert xml_elements(xml, "placeName", within: "setting") ==
+                 [{%{"ref" => "#rt-hs-roma", "ana" => "setting"}, ""}],
+               state
+
+        assert xml_elements(xml, "country", within: "setting") == []
+      end
+    end
+
+    # A place named twice is one link, the later naming refreshing the earlier (its role,
+    # position and note already do), so a later one with no state clears the earlier's.
+    test "a place named twice keeps what its last link says, the state too" do
+      first =
+        ~s(<placeName ref="#rt-hs-roma" ana="setting"><country ref="#rt-hs-republica-romana"/></placeName>)
+
+      second = ~s(<placeName ref="#rt-hs-roma" ana="mentioned"/>)
+
+      xml = roundtrip(state_file("country", first <> second))
+
+      assert xml_elements(xml, "placeName", within: "setting") ==
+               [{%{"ref" => "#rt-hs-roma", "ana" => "mentioned"}, ""}]
+
+      assert xml_elements(xml, "country", within: "setting") == []
+    end
+
+    # The file is the truth for the links it wrote (every production file lacks the state):
+    # a re-import clears theirs. A curator's link (origin "manual") is theirs to keep.
+    test "a file without the state clears it from the file's own links, never from a curator's" do
+      own = import_tei!(state_file("country", with_country(), code: "HSOWN"))
+      assert [_] = xml_elements(export_tei(own), "country", within: "setting")
+
+      own = import_tei!(state_file("country", without_state(), code: "HSOWN"))
+      assert xml_elements(export_tei(own), "country", within: "setting") == []
+
+      curated = import_tei!(state_file("country", with_country(), code: "HSCUR"))
+      [link] = curated.play_places
+      {:ok, _} = Playcode.Places.update_play_place(link, %{"origin" => "manual"})
+
+      curated = import_tei!(state_file("country", without_state(), code: "HSCUR"))
+
+      assert xml_elements(export_tei(curated), "country", within: "setting") ==
+               [{%{"ref" => "#rt-hs-republica-romana"}, ""}]
+    end
+  end
+
   describe "the cast list" do
     test "keeps ids, names, descriptions and hidden characters, in order" do
       xml =

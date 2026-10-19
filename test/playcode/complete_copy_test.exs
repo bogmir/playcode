@@ -30,8 +30,9 @@ defmodule Playcode.CompleteCopyTest do
   # complete copy of a play*): whether the play is complete, and whether its variants are
   # shown, the two switches for what readers see.
   @dropped ~w(id play_id parent_id division_id element_id entry_id place_id parent_place_id
-              parent_play_id position origin filemaker_id inserted_at updated_at
-              content_version deleted_at pending_original_code is_complete show_variants)a
+              historical_state_id parent_play_id position origin filemaker_id inserted_at
+              updated_at content_version deleted_at pending_original_code is_complete
+              show_variants)a
 
   # The researchers' private notes, never written to the file: it is published with the
   # site. Dropped by schema, not by name: every other `note` is the play's.
@@ -411,8 +412,14 @@ defmodule Playcode.CompleteCopyTest do
         "parent_place_id" => parent.id
       })
 
+    state = place_fixture(%{"name" => "República de Venecia", "type" => "country"})
+
     {:ok, _} =
-      Places.link_place(play.id, place.id, %{"role" => "mentioned", "note" => "Se nombra."})
+      Places.link_place(play.id, place.id, %{
+        "role" => "mentioned",
+        "note" => "Se nombra.",
+        "historical_state_id" => state.id
+      })
   end
 
   defp paratexts!(play, paratexts) do
@@ -522,17 +529,23 @@ defmodule Playcode.CompleteCopyTest do
         end,
       places:
         for link <- play.play_places do
-          ancestors = Enum.map(Places.ancestors(link.place, gazetteer), &place/1)
+          state = link.historical_state_id && Map.fetch!(gazetteer, link.historical_state_id)
 
           link
           |> fields()
-          |> Map.put(:place, link.place |> place() |> Map.put(:ancestors, ancestors))
+          |> Map.put(:place, place_with_ancestors(link.place, gazetteer))
+          |> Map.put(:historical_state, state && place_with_ancestors(state, gazetteer))
         end,
       divisions: Enum.map(PlayContent.load_play_content(play_id), &division/1)
     }
   end
 
   defp place(place), do: place |> fields() |> Map.put(:names, Enum.map(place.names, &fields/1))
+
+  defp place_with_ancestors(place, gazetteer) do
+    ancestors = Enum.map(Places.ancestors(place, gazetteer), &place/1)
+    place |> place() |> Map.put(:ancestors, ancestors)
+  end
 
   defp division(division) do
     division

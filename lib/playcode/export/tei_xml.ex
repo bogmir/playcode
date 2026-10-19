@@ -510,32 +510,27 @@ defmodule Playcode.Export.TeiXml do
     end
   end
 
-  # Two elements, on purpose. `listPlace` nests every place the play needs *plus every
-  # ancestor*, so containment is complete — which means a `<place>` may be a pure
-  # container. `setting` is therefore what says which of them the play actually
-  # references, because "the leaves are the settings" is wrong: a play can be set in
-  # Italy itself.
+  # Two elements, on purpose. `listPlace` nests every place the play needs (each link's
+  # place and its historical state) *plus every ancestor*, so containment is complete —
+  # which means a `<place>` may be a pure container. `setting` is therefore what says
+  # which of them the play actually references, because "the leaves are the settings" is
+  # wrong: a play can be set in Italy itself.
   defp build_places(%{play_places: [_ | _] = links}) do
     gazetteer = Playcode.Places.gazetteer()
     ordered = Enum.sort_by(links, fn link -> {link.role != "setting", link.position} end)
 
-    roots =
+    needed =
       ordered
-      |> Enum.map(& &1.place)
-      |> Enum.flat_map(fn place ->
-        [place | Playcode.Places.ancestors(place, gazetteer)]
-      end)
+      |> Enum.flat_map(&[&1.place, Map.get(gazetteer, &1.historical_state_id)])
+      |> Enum.reject(&is_nil/1)
+      |> Enum.flat_map(&[&1 | Playcode.Places.ancestors(&1, gazetteer)])
       |> Enum.uniq_by(& &1.id)
-      |> Enum.filter(&is_nil(&1.parent_place_id))
 
-    wanted =
-      ordered
-      |> Enum.map(& &1.place)
-      |> Enum.flat_map(fn place -> [place | Playcode.Places.ancestors(place, gazetteer)] end)
-      |> MapSet.new(& &1.id)
+    wanted = MapSet.new(needed, & &1.id)
+    roots = Enum.filter(needed, &is_nil(&1.parent_place_id))
 
     {[element(:listPlace, Enum.map(roots, &build_place(&1, gazetteer, wanted)))],
-     Enum.map(ordered, &build_setting_ref/1)}
+     Enum.map(ordered, &build_setting_ref(&1, gazetteer))}
   end
 
   defp build_places(_play), do: {[], []}
@@ -600,7 +595,7 @@ defmodule Playcode.Export.TeiXml do
   defp build_place_note(%{note: ""}), do: []
 
   # type="place" disambiguates this from the link-note nested inside <setting>/<placeName>
-  # (see build_setting_ref/1) — same element name, different scope, and a bare <note>
+  # (see build_setting_ref/2) — same element name, different scope, and a bare <note>
   # sitting among <placeName>/<location>/<idno>/<place> siblings would otherwise be
   # unreadable to a parser without positional guesswork.
   defp build_place_note(place), do: [element(:note, %{type: "place"}, place.note)]
@@ -609,17 +604,25 @@ defmodule Playcode.Export.TeiXml do
   # convention, chosen over `@type` because `@type` on a `<placeName>` already means
   # historical-versus-current inside `<listPlace>`, and one attribute with two meanings
   # in one file is how a parser acquires a bug.
-  defp build_setting_ref(link) do
+  #
+  # The link's historical state comes first, as TEI's `<country>` for a country and a
+  # nested `<placeName>` for any other kind; the note stays a bare `<note>` after it.
+  defp build_setting_ref(link, gazetteer) do
     attrs = [{"ref", "##{link.place.slug}"}, {"ana", link.role}]
+    state = Map.get(gazetteer, link.historical_state_id)
 
-    case link.note do
-      note when is_binary(note) and note != "" ->
-        element(:placeName, attrs, [element(:note, note)])
-
-      _ ->
-        element(:placeName, attrs, nil)
-    end
+    element(:placeName, attrs, build_state_ref(state) ++ build_link_note(link.note))
   end
+
+  defp build_state_ref(nil), do: []
+
+  defp build_state_ref(%{type: "country"} = state),
+    do: [element(:country, %{ref: "##{state.slug}"})]
+
+  defp build_state_ref(state), do: [element(:placeName, %{ref: "##{state.slug}"})]
+
+  defp build_link_note(note) when is_binary(note) and note != "", do: [element(:note, note)]
+  defp build_link_note(_note), do: []
 
   # --- Back: the paratexts after the text, then the bibliography (S4) ---
 

@@ -408,10 +408,13 @@ defmodule Playcode.Import.TeiImport do
           Logger.warning("TEI import: setting references unknown place #{inspect(setting.slug)}")
 
         place ->
+          # The state is always passed, nil included: a link the file wrote is refreshed
+          # to what the file says, a file without a state clearing the old one.
           link_attrs = %{
             "role" => setting.role,
             "position" => setting.position,
             "note" => setting.note,
+            "historical_state_id" => historical_state_id(setting.state, place),
             "origin" => "tei"
           }
 
@@ -436,6 +439,25 @@ defmodule Playcode.Import.TeiImport do
           end
       end
     end)
+  end
+
+  # The state a link names, by slug as its place is. One the file does not declare, or the
+  # place itself (the changeset refuses it, and the link would be lost), is no state.
+  defp historical_state_id(nil, _place), do: nil
+
+  defp historical_state_id(slug, place) do
+    case Repo.get_by(Places.Place, slug: slug) do
+      %{id: id} when id != place.id ->
+        id
+
+      _ ->
+        Logger.warning(
+          "TEI import: #{inspect(place.slug)} names #{inspect(slug)} as its historical state, " <>
+            "which is unknown or the place itself"
+        )
+
+        nil
+    end
   end
 
   # --- Text ---
