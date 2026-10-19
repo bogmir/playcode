@@ -199,6 +199,21 @@ Nothing else in the 395 is imported.
      their links' historical state (decision 14, below).
    - Moldavia and Palestina stay as FileMaker has them, regions under their continent with no
      country: neither maps to one country today.
+   - Amalec (vague place 104; *Saül le furieux*, 0491, links its historical record 105), which
+     FileMaker files under Asia alone → parent Palestina (region 118), the place *Saúl el furioso*
+     (0779) links (owner's decision, 2026-10-19). Palestina has no country, so the dry run still
+     lists Amalec among the places with none.
+   The hand list also corrects FileMaker's spelling slips, which the import would otherwise copy
+   into the gazetteer for good (owner's decision, 2026-10-19): a record's name in one language,
+   wherever that record's names are read, so the correction reaches a place whether the record
+   is its referent or merged into it. On our plays: "Argel" (the city of Algiers) for the
+   country Argelia, whose slug is then `argelia`; "Reino de Napoles"; "Balkh (o Balj)" for
+   Spanish "Balj"; Portuguese "Cartgao" for Carthage; French "Napoles" and Portuguese "Napoli"
+   for Naples; names in another language's spelling (Bohemia in French, Italian and Portuguese;
+   Constantina in English, French and Italian; Portuguese "Jérusalem", "Castilla", "foresta
+   pastoral"); misspellings ("Castilia", "Espagna", "Royaum de Numidie", "Lacedemoni", "Le
+   Marches", "forêt pastoral", Portuguese "Padua"); and capitals ("Péninsule Italienne", "le
+   Marche").
    The dry run lists every historical record that is twinless and not in the list, and every
    place that would end up with no country between it and its continent, so the list is complete
    before the real run. Continents are their own referents and are not reported.
@@ -216,7 +231,9 @@ Nothing else in the 395 is imported.
    as further names. Every other record merged into it adds, with `is_historical`, each name
    whose language has no name with the same text yet: Helsingør (Spanish "Elsinor" already) gains
    English Elsinore, Italian Elsinora and Portuguese Elsenor. A record
-   whose names all repeat the referent's (the four historical Romes) adds nothing. A record with
+   whose names all repeat the referent's (the four historical Romes) adds nothing, and nor does a
+   name that repeats it once corrected (rule 2): the historical Spain's Italian "Espagna" is
+   "Spagna", España's own, so Spain gains no historical Italian name. A record with
    no name in any language is reported and skipped, with its links.
 5. **Parents.** A place's parent is its referent's: a modern city's `_k_IdRegion`, else its
    `_k_IdPais`, else its continent, each resolved through these same rules. A parent that turns
