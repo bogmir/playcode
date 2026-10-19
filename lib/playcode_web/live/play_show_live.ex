@@ -442,7 +442,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               <dd>
                 <ul class="space-y-1">
                   <li :for={link <- sorted_places(@play.play_places)}>
-                    <span>{Places.breadcrumb(link.place, @gazetteer, @locale)}</span>
+                    <span>{Places.place_line(link, @gazetteer, @locale)}</span>
                     <span :if={link.role == "mentioned"} class="text-xs text-base-content/70">
                       ({PlayLabels.place_role_label(link.role)})
                     </span>

@@ -328,7 +328,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
             <div>
               <span class="font-medium">{Places.display_name(link.place, "es")}</span>
               <span class="block text-xs text-base-content/70">
-                {Places.breadcrumb(link.place, @gazetteer, "es")}
+                {Places.place_line(link, @gazetteer, "es")}
               </span>
             </div>
             <div class="flex gap-1">

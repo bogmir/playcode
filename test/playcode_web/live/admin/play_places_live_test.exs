@@ -58,6 +58,34 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLiveTest do
     assert updated.note == "Named, not staged."
   end
 
+  test "a link's row shows the line readers see, historical state and all", %{conn: conn} do
+    {conn, play} = setup_play(conn)
+    europa = TestFixtures.place_fixture(%{"name" => "Europa", "type" => "continent"})
+
+    italia =
+      TestFixtures.place_fixture(%{
+        "name" => "Italia",
+        "type" => "country",
+        "parent_place_id" => europa.id
+      })
+
+    roma = TestFixtures.place_fixture(%{"name" => "Roma", "parent_place_id" => italia.id})
+
+    republica =
+      TestFixtures.place_fixture(%{
+        "name" => "República romana",
+        "type" => "country",
+        "parent_place_id" => europa.id
+      })
+
+    link = TestFixtures.play_place_fixture(play, roma, %{"historical_state_id" => republica.id})
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/places")
+
+    assert render(element(view, "#link-#{link.id}")) =~
+             "Roma, República romana, Europa (hoy Italia)"
+  end
+
   test "links reorder", %{conn: conn} do
     {conn, play} = setup_play(conn)
     roma = TestFixtures.place_fixture(%{"name" => "Roma"})

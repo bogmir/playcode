@@ -768,6 +768,39 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       assert :binary.match(places, "Roma") < :binary.match(places, "Miseno")
     end
 
+    test "a place's historical state is printed, today's names in brackets", %{conn: conn} do
+      play = Playcode.TestFixtures.play_fixture()
+      europa = Playcode.TestFixtures.place_fixture(%{"name" => "Europa", "type" => "continent"})
+
+      italia =
+        Playcode.TestFixtures.place_fixture(%{
+          "name" => "Italia",
+          "type" => "country",
+          "parent_place_id" => europa.id
+        })
+
+      roma =
+        Playcode.TestFixtures.place_fixture(%{"name" => "Roma", "parent_place_id" => italia.id})
+
+      republica =
+        Playcode.TestFixtures.place_fixture(%{
+          "name" => "República romana",
+          "type" => "country",
+          "parent_place_id" => europa.id
+        })
+
+      Playcode.TestFixtures.play_place_fixture(play, roma, %{
+        "historical_state_id" => republica.id
+      })
+
+      TestFixtures.mark_complete!(play)
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      assert render(element(view, "#meta-places")) =~
+               "Roma, República romana, Europa (hoy Italia)"
+    end
+
     test "a fictional place is marked", %{conn: conn} do
       play = Playcode.TestFixtures.play_fixture()
 

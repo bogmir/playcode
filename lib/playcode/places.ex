@@ -15,6 +15,10 @@ defmodule Playcode.Places do
 
   @name_order [desc: :is_preferred, asc: :position, asc: :name]
 
+  # The word before a historical line's brackets, by the names' language. Not gettext: see
+  # `place_line/3`, and the gettext backend is not fingerprinted by the static site.
+  @today %{"es" => "hoy", "en" => "today"}
+
   # --- Places ---
 
   def change_place(%Place{} = place, attrs \\ %{}) do
@@ -263,11 +267,57 @@ defmodule Playcode.Places do
   end
 
   @doc ~S(The place and its containers, `"Bosque, Transilvania, Rumanía, Europa"`.)
-  def breadcrumb(%Place{} = place, gazetteer, locale \\ "es") do
+  def breadcrumb(%Place{} = place, gazetteer, locale \\ "es"),
+    do: place |> chain_names(gazetteer, locale) |> Enum.join(", ")
+
+  # The place's name and its containers', innermost first, none blank.
+  defp chain_names(%Place{} = place, gazetteer, locale) do
     [place | Enum.reverse(ancestors(place, gazetteer))]
     |> Enum.map(&display_name(&1, locale))
     |> Enum.reject(&(&1 == ""))
-    |> Enum.join(", ")
+  end
+
+  @doc """
+  The line readers see for a play's place link. With no historical state it is the
+  `breadcrumb/3`. With one it is the place as it was then (its historical name in
+  `locale`, else its usual one), the state and the state's containers; then, in brackets,
+  the names the place's breadcrumb holds today that the line has not printed:
+  `"Roma, República romana, Europa (hoy Italia)"`.
+
+  `link.place` is loaded; the state is read from the `gazetteer/0` by id. The word before
+  the brackets follows the names' `locale`, not the page's gettext: the static site's
+  interface is English while its place names are Spanish.
+  """
+  def place_line(%PlayPlace{place: place, historical_state_id: state_id}, gazetteer, locale) do
+    case Map.fetch(gazetteer, state_id) do
+      {:ok, state} -> historical_line(place, state, gazetteer, locale)
+      :error -> breadcrumb(place, gazetteer, locale)
+    end
+  end
+
+  defp historical_line(place, state, gazetteer, locale) do
+    printed =
+      Enum.reject(
+        [historical_name(place, locale) | chain_names(state, gazetteer, locale)],
+        &(&1 == "")
+      )
+
+    line = Enum.join(printed, ", ")
+
+    case place |> chain_names(gazetteer, locale) |> Enum.reject(&(&1 in printed)) do
+      [] -> line
+      today -> "#{line} (#{Map.get(@today, locale, "hoy")} #{Enum.join(today, ", ")})"
+    end
+  end
+
+  defp historical_name(%Place{names: names} = place, locale) do
+    names
+    |> Enum.sort_by(& &1.position)
+    |> Enum.find(&(&1.is_historical and &1.language == locale))
+    |> case do
+      nil -> display_name(place, locale)
+      name -> name.name
+    end
   end
 
   @doc """

@@ -305,6 +305,107 @@ defmodule Playcode.PlacesTest do
     end
   end
 
+  describe "place_line/3" do
+    # The line a reader sees for a play's link: the place's chain, or, with a historical
+    # state, the place as it was then and today's names in brackets.
+    defp place(name, parent \\ nil, type \\ "city") do
+      place_fixture(%{"name" => name, "type" => type, "parent_place_id" => parent && parent.id})
+    end
+
+    defp line(place, state, locale) do
+      play = play_fixture()
+      play_place_fixture(play, place, %{"historical_state_id" => state && state.id})
+      [link] = Places.list_play_places(play.id)
+      Places.place_line(link, Places.gazetteer(), locale)
+    end
+
+    test "a link with no state prints the breadcrumb" do
+      europa = place("Europa", nil, "continent")
+      francia = place("Francia", europa, "country")
+      ardenas = place("Ardenas", francia, "region")
+
+      assert line(ardenas, nil, "es") == "Ardenas, Francia, Europa"
+    end
+
+    test "the place's historical name, the state, the state's ancestors, then today's names that differ" do
+      europa =
+        place_fixture(%{
+          "type" => "continent",
+          "names" => [
+            %{"name" => "Europa", "language" => "es", "is_preferred" => "true"},
+            %{"name" => "Europe", "language" => "en", "is_preferred" => "true"}
+          ]
+        })
+
+      dinamarca =
+        place_fixture(%{
+          "type" => "country",
+          "parent_place_id" => europa.id,
+          "names" => [
+            %{"name" => "Dinamarca", "language" => "es", "is_preferred" => "true"},
+            %{"name" => "Denmark", "language" => "en", "is_preferred" => "true"}
+          ]
+        })
+
+      helsingor =
+        place_fixture(%{
+          "parent_place_id" => dinamarca.id,
+          "names" => [
+            %{"name" => "Elsinor", "language" => "es", "is_preferred" => "true"},
+            %{"name" => "Helsingør", "language" => "en", "is_preferred" => "true"},
+            %{"name" => "Elsinore", "language" => "en", "is_historical" => "true"}
+          ]
+        })
+
+      reino =
+        place_fixture(%{
+          "type" => "country",
+          "parent_place_id" => europa.id,
+          "names" => [
+            %{"name" => "Reino de Dinamarca", "language" => "es", "is_preferred" => "true"},
+            %{"name" => "Kingdom of Denmark", "language" => "en", "is_preferred" => "true"}
+          ]
+        })
+
+      assert line(helsingor, reino, "es") == "Elsinor, Reino de Dinamarca, Europa (hoy Dinamarca)"
+
+      assert line(helsingor, reino, "en") ==
+               "Elsinore, Kingdom of Denmark, Europe (today Helsingør, Denmark)"
+    end
+
+    test "no brackets when today's names are all printed already" do
+      europa = place("Europa", nil, "continent")
+      chipre = place("Chipre", europa)
+      venecia = place("República de Venecia", europa, "country")
+
+      assert line(chipre, venecia, "es") == "Chipre, República de Venecia, Europa"
+    end
+
+    test "a state with no continent leaves today's continent in the brackets" do
+      asia = place("Asia", nil, "continent")
+      israel = place("Israel", asia, "country")
+      jerusalen = place("Jerusalén", israel)
+      romana = place("República romana", nil, "country")
+
+      assert line(jerusalen, romana, "es") == "Jerusalén, República romana (hoy Israel, Asia)"
+    end
+
+    test "a state with no name in the locale prints the name it has" do
+      europa = place("Europa", nil, "continent")
+      croacia = place("Croacia", europa, "country")
+      ragusa = place("Ragusa", croacia)
+
+      illyria =
+        place_fixture(%{
+          "type" => "country",
+          "parent_place_id" => europa.id,
+          "names" => [%{"name" => "Illyria", "language" => "en", "is_preferred" => "true"}]
+        })
+
+      assert line(ragusa, illyria, "es") == "Ragusa, Illyria, Europa (hoy Croacia)"
+    end
+  end
+
   describe "what a place may hold" do
     defp names(list), do: Map.new(Enum.with_index(list), fn {n, i} -> {"#{i}", n} end)
 

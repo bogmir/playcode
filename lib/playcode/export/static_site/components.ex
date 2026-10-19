@@ -305,7 +305,7 @@ defmodule Playcode.Export.StaticSite.Components do
     links
     |> Enum.sort_by(&{&1.role != "setting", &1.position})
     |> Enum.map(
-      &{Playcode.Places.breadcrumb(&1.place, gazetteer, "es"), &1.role == "mentioned", &1.note}
+      &{Playcode.Places.place_line(&1, gazetteer, "es"), &1.role == "mentioned", &1.note}
     )
   end
 
