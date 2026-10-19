@@ -412,7 +412,16 @@ defmodule Playcode.CompleteCopyTest do
         "parent_place_id" => parent.id
       })
 
-    state = place_fixture(%{"name" => "República de Venecia", "type" => "country"})
+    # The state sits under a continent the link's place does not: its own ancestors must reach
+    # the file as well as the place's.
+    continent = place_fixture(%{"name" => "Europa", "type" => "continent"})
+
+    state =
+      place_fixture(%{
+        "name" => "República de Venecia",
+        "type" => "country",
+        "parent_place_id" => continent.id
+      })
 
     {:ok, _} =
       Places.link_place(play.id, place.id, %{
