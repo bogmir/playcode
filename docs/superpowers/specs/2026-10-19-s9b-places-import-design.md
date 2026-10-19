@@ -203,17 +203,27 @@ Nothing else in the 395 is imported.
      FileMaker files under Asia alone → parent Palestina (region 118), the place *Saúl el furioso*
      (0779) links (owner's decision, 2026-10-19). Palestina has no country, so the dry run still
      lists Amalec among the places with none.
-   The hand list also corrects FileMaker's spelling slips, which the import would otherwise copy
-   into the gazetteer for good (owner's decision, 2026-10-19): a record's name in one language,
-   wherever that record's names are read, so the correction reaches a place whether the record
-   is its referent or merged into it. On our plays: "Argel" (the city of Algiers) for the
-   country Argelia, whose slug is then `argelia`; "Reino de Napoles"; "Balkh (o Balj)" for
-   Spanish "Balj"; Portuguese "Cartgao" for Carthage; French "Napoles" and Portuguese "Napoli"
-   for Naples; names in another language's spelling (Bohemia in French, Italian and Portuguese;
-   Constantina in English, French and Italian; Portuguese "Jérusalem", "Castilla", "foresta
-   pastoral"); misspellings ("Castilia", "Espagna", "Royaum de Numidie", "Lacedemoni", "Le
-   Marches", "forêt pastoral", Portuguese "Padua"); and capitals ("Péninsule Italienne", "le
-   Marche").
+   The hand list also corrects FileMaker's names, which the import would otherwise copy into the
+   gazetteer for good (owner's decisions, 2026-10-19): a record's name in one language, as
+   FileMaker writes it, and the name to read instead, or none. It applies wherever that
+   record's names are read, so the correction reaches a place whether the record is its
+   referent or merged into it. On our plays:
+   - slips: "Argel" (the city of Algiers) for the country Argelia, whose slug is then
+     `argelia`; "Reino de Napoles"; "Balkh (o Balj)" for Spanish "Balj"; Portuguese "Cartgao";
+     "Castilia", "Espagna", "Royaum de Numidie", "Lacedemoni" (the Lacedaemonians), "Le
+     Marches", "forêt pastoral", Portuguese "Padua"; capitals ("Péninsule Italienne", "le
+     Marche");
+   - another language's name: French "Napoles" and Portuguese "Napoli" for Naples; Bohemia in
+     French, Italian and Portuguese; Constantina in English, French and Italian; Portuguese
+     "Jérusalem", "Castilla", "foresta pastoral", "Oostende";
+   - the name the project prints: Italian "Regno Unito" for the country, not "Gran Bretagna";
+     English Castile, Amalek, Portuguese Amaleque, Helsingør, Sardes; Spanish "Bactra" for the
+     ancient Balkh, not "Batra"; English Lazio for today's region and Latium for the ancient
+     one, which FileMaker has the other way round, and Spanish Lacio for both;
+   - the pastoral wood capitalised as a place's name ("Bosque pastoril", "Pastoral wood"…), its
+     slug still `bosque-pastoril`;
+   - Bohemia's Spanish alternate "Boheme" dropped.
+   A missing name stays missing: filling one is a curator's job, or Wikidata's.
    The dry run lists every historical record that is twinless and not in the list, and every
    place that would end up with no country between it and its continent, so the list is complete
    before the real run. Continents are their own referents and are not reported.
@@ -245,7 +255,7 @@ Nothing else in the 395 is imported.
 6. **Vague places** get their type from a hand list (the Forest of Arden and Birnam Wood `forest`,
    Bosworth and the Costa de Tarragona `other`, Miseno `town`, Amalec `city`) and no
    coordinates, which is how Playcode already says "not pinned to a point". The two generic ones,
-   "Una isla" and "bosque pastoril", are `is_fictional`, each one place shared by every play that
+   "Una isla" and "Bosque pastoril", are `is_fictional`, each one place shared by every play that
    uses it (the three pastoral plays share one wood). "Sin especificar" is no place.
 7. **The slug** (also the TEI `xml:id`) is `Places.slugify/1` of the Spanish name, or of the first
    name there is: `republica-romana`, `elsinor`, `illyria`. The plan puts the Spanish name first
