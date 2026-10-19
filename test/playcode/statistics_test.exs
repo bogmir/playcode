@@ -144,11 +144,12 @@ defmodule Playcode.StatisticsTest do
           )
         )
 
+      # A passage names no family of forms: the families were removed on 2026-10-19
+      # (question 16).
       assert Statistics.get_statistics(play.id).data["metrical_passages"] == [
                %{
                  "act" => 1,
                  "form" => "redondilla",
-                 "family" => "spanish",
                  "from" => 1,
                  "to" => 8,
                  "verses" => 8
@@ -156,7 +157,6 @@ defmodule Playcode.StatisticsTest do
                %{
                  "act" => 1,
                  "form" => "romance_tirada",
-                 "family" => "romance",
                  "from" => 9,
                  "to" => 10,
                  "verses" => 2
@@ -164,7 +164,6 @@ defmodule Playcode.StatisticsTest do
                %{
                  "act" => 2,
                  "form" => "romance_tirada",
-                 "family" => "romance",
                  "from" => 11,
                  "to" => 11,
                  "verses" => 1
@@ -172,7 +171,6 @@ defmodule Playcode.StatisticsTest do
                %{
                  "act" => 2,
                  "form" => "unmarked",
-                 "family" => "other",
                  "from" => 12,
                  "to" => 12,
                  "verses" => 1

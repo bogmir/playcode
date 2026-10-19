@@ -181,6 +181,6 @@ The metrical synopsis colours passages by family: romance, Spanish stanzas, Ital
 other (`Playcode.Statistics.Metrics`, `@families`). The grouping is the design's, not a
 philologist's. In particular: where do `cuarteto`, `verso_suelto`, `copla_arte_mayor` and
 `pareados` belong? Question 16 now carries our placing of the forms that fall into "Other"
-(2026-10-16), for a yes or corrections. **Needs**: the project's philologists to confirm or correct the table in
-the redesign spec ("Statistics › Families"); then edit `@families` and bump
-`Playcode.Statistics` `@version` so cached statistics recompute.
+(2026-10-16), for a yes or corrections. **Decided** 2026-10-19 (question 16, by Playcode): no
+families. The three commonest forms keep a colour each and every other form is grey.
+**Built** the same day (*No verse-form families* in `docs/history.md`).

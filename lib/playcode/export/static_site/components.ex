@@ -758,23 +758,35 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
+  # The corpus's three commonest forms, 71% of its verse, keep a colour each and every
+  # other form is grey: three colours are as many as the band can tell apart (question 16).
+  @coloured_forms %{
+    "redondilla" => "f-redondilla",
+    "romance" => "f-romance",
+    "romance_tirada" => "f-romance",
+    "quintilla" => "f-quintilla"
+  }
+
+  defp form_colour(form), do: Map.get(@coloured_forms, form, "f-other")
+
   attr :passages, :list, required: true
 
   def synopsis(assigns) do
     total = assigns.passages |> Enum.map(& &1["verses"]) |> Enum.sum() |> max(1)
 
-    families =
+    # By label, so romance and romance_tirada, both "Romance", are one form.
+    forms =
       assigns.passages
-      |> Enum.group_by(& &1["family"])
-      |> Enum.map(fn {family, passages} ->
-        {family, passages |> Enum.map(& &1["verses"]) |> Enum.sum()}
+      |> Enum.group_by(&PlayLabels.verse_form_label(&1["form"]))
+      |> Enum.map(fn {label, [first | _] = passages} ->
+        {label, form_colour(first["form"]), passages |> Enum.map(& &1["verses"]) |> Enum.sum()}
       end)
-      |> Enum.sort_by(&(-elem(&1, 1)))
+      |> Enum.sort_by(&(-elem(&1, 2)))
 
     assigns =
       assign(assigns,
         segments: segments(assigns.passages, total),
-        families: families,
+        forms: forms,
         total: total
       )
 
@@ -792,7 +804,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <%= for segment <- @segments do %>
           <span :if={segment.sep} class="sep"></span>
           <span
-            class={["pass", "f-" <> segment.family]}
+            class={["pass", segment.colour]}
             style={"flex-grow: #{segment.verses}"}
             title={segment.title}
           >
@@ -801,9 +813,11 @@ defmodule Playcode.Export.StaticSite.Components do
         <% end %>
       </div>
       <ul class="legend">
-        <li :for={{family, verses} <- @families}>
-          <i class={"sw f-" <> family}></i><b>{PlayLabels.verse_family_label(family)}</b>
-          {number(verses)} vv. · {percent(verses, @total)}
+        <li :for={{label, colour, verses} <- @forms}>
+          <i class={["sw", colour]}></i><b>{label}</b> {number(verses)} vv. · {percent(
+            verses,
+            @total
+          )}
         </li>
       </ul>
       <table>
@@ -819,7 +833,7 @@ defmodule Playcode.Export.StaticSite.Components do
           <tr :for={passage <- @passages}>
             <td>{passage["act"] && Edition.roman(passage["act"])}</td>
             <td>
-              <i class={"sw f-" <> passage["family"]}></i>{PlayLabels.verse_form_label(
+              <i class={["sw", form_colour(passage["form"])]}></i>{PlayLabels.verse_form_label(
                 passage["form"]
               )}
             </td>
@@ -843,7 +857,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
       %{
         sep: i > 0 and Enum.at(passages, i - 1)["act"] != passage["act"],
-        family: passage["family"],
+        colour: form_colour(passage["form"]),
         verses: passage["verses"],
         title: "#{label} · vv. #{range(passage)} · #{passage["verses"]} verses",
         label: if(passage["verses"] / total > 0.06, do: label)
@@ -949,7 +963,7 @@ defmodule Playcode.Export.StaticSite.Components do
                 title={column_title(column)}
                 class={act_start(@columns, i)}
               >
-                <i :if={column["family"]} class={"sw f-" <> column["family"]}></i>
+                <i :if={column["form"]} class={["sw", form_colour(column["form"])]}></i>
                 <span class="sr-only">{column_title(column)}</span>
               </th>
             </tr>
