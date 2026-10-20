@@ -221,16 +221,14 @@ defmodule Playcode.Import.TeiImport do
     Enum.each(tei.places, &write_place(&1, nil))
     write_settings(tei.settings, play)
 
-    Enum.each(
-      tei.characters,
-      &PlayContent.create_character_unless_exists(Map.put(&1, :play_id, play.id))
-    )
+    Enum.each(tei.characters, &insert_character(Map.put(&1, :play_id, play.id)))
 
     Enum.each(tei.paratexts, &Catalogue.create_paratext(tei_row(&1, play)))
     write_performances(tei.performances, play)
 
     cast = Map.new(PlayContent.list_characters(play.id), &{&1.xml_id, &1.id})
     write_text(tei.divisions, play, cast)
+    write_cast_entries(play)
     write_bibliography(tei.bibliography, play)
 
     # Recompute verse_count from actual verse_line elements (the TEI header
@@ -238,6 +236,39 @@ defmodule Playcode.Import.TeiImport do
     # the play as that left it rather than the stale struct from before.
     {:ok, play} = Catalogue.update_verse_count(play.id)
     play
+  end
+
+  # A role repeating an xml:id under the same name is the same character; under another
+  # name, a character of its own with a suffixed id.
+  defp insert_character(attrs, n \\ 1) do
+    xml_id = if n == 1, do: attrs.xml_id, else: "#{attrs.xml_id}_#{n}"
+
+    case PlayContent.find_character_by_xml_id(attrs.play_id, xml_id) do
+      nil -> %Character{} |> Character.changeset(%{attrs | xml_id: xml_id}) |> Repo.insert!()
+      %Character{name: name} when name == attrs.name -> :ok
+      _other -> insert_character(attrs, n + 1)
+    end
+  end
+
+  # Every character in the file's first cast list, in the order the file gives them.
+  defp write_cast_entries(play) do
+    case PlayContent.list_cast_lists(play.id) do
+      [] ->
+        :ok
+
+      [list | _] ->
+        for character <- PlayContent.list_characters(play.id) do
+          {:ok, _} =
+            PlayContent.create_entry(%{
+              play_id: play.id,
+              cast_list_id: list.id,
+              character_id: character.id,
+              name: character.name,
+              description: character.description,
+              position: character.position
+            })
+        end
+    end
   end
 
   # Every editor, source, note, witness and performance the importer creates is stamped

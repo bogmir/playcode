@@ -51,6 +51,10 @@ defmodule Playcode.ContentVersionTest do
         })
       end,
       character: fn -> PlayContent.update_character(character, %{name: "BETA"}) end,
+      cast_entry: fn ->
+        [%{entries: [entry]}] = PlayContent.list_cast_lists(play.id)
+        PlayContent.update_entry(entry, %{description: "un criado"})
+      end,
       speaker: fn -> PlayContent.set_element_characters(speech.id, []) end,
       editor: fn ->
         Catalogue.create_play_editor(%{

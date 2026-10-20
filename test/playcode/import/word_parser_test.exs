@@ -326,6 +326,15 @@ defmodule Playcode.Import.WordParserTest do
              ["elenco"]
   end
 
+  test "the import makes one cast list holding every character" do
+    play = play_fixture()
+    import_word(["{e}Escena 1", "{p}FEBO  {v}Hello.", "{p}ANA  {v}Bye."], play)
+
+    assert [list] = Playcode.PlayContent.list_cast_lists(play.id)
+    assert Enum.map(list.entries, & &1.name) == ~w(FEBO ANA)
+    assert length(Playcode.PlayContent.list_characters(play.id)) == 2
+  end
+
   test "importing again replaces the text and the characters" do
     play = play_fixture()
     import_word(["{e}Escena 1", "{p}FEBO  {v}Hello."], play)

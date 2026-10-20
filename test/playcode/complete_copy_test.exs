@@ -35,7 +35,8 @@ defmodule Playcode.CompleteCopyTest do
   @dropped ~w(id play_id parent_id division_id element_id entry_id place_id parent_place_id
               historical_state_id parent_play_id position origin filemaker_id inserted_at
               updated_at content_version deleted_at pending_original_code is_complete
-              show_variants source_entry_id company_id actor_id performance_id)a
+              show_variants source_entry_id company_id actor_id performance_id
+              cast_list_id character_id)a
 
   # The researchers' private notes, never written to the file: it is published with the
   # site. Dropped by schema, not by name: every other `note` is the play's.
@@ -73,7 +74,7 @@ defmodule Playcode.CompleteCopyTest do
   test "every table holding a play's rows is compared, or kept out of the file on purpose" do
     compared = ~w(play_editors play_sources play_witnesses play_bibliography play_places
                   play_paratexts characters play_divisions play_elements play_notes
-                  play_performances)
+                  play_performances cast_list_entries)
 
     # Worked out from the text each time, and the platform's own audit trail.
     kept_out = ~w(play_statistics activity_logs)
@@ -612,9 +613,17 @@ defmodule Playcode.CompleteCopyTest do
           |> Map.put(:historical_state, state && place_with_ancestors(state, gazetteer))
         end,
       performances: Enum.map(Performances.list_for_play(play_id), &performance(&1, gazetteer)),
-      divisions: Enum.map(PlayContent.load_play_content(play_id), &division/1)
+      divisions: Enum.map(PlayContent.load_play_content(play_id), &division/1),
+      cast_lists:
+        for list <- PlayContent.list_cast_lists(play_id) do
+          list |> fields() |> Map.put(:entries, Enum.map(list.entries, &entry/1))
+        end
     }
   end
+
+  # The character an entry names by its id in the file, never the database's.
+  defp entry(entry),
+    do: entry |> fields() |> Map.put(:character, entry.character && entry.character.xml_id)
 
   # The company, actors and source by value, their ids being dropped; the source as the file
   # carries it (`Entry.description/1`: the researchers' note stays out).

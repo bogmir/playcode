@@ -626,29 +626,29 @@ defmodule Playcode.Import.WordParser do
           })
         end
 
-        # Auto-create characters from unique speaker labels
-        character_map = create_characters_from_acts(acts, play_id)
+        # The cast list, after the front matter, holding a character per speaker label
+        speaker_labels = speaker_labels(acts)
 
-        # Auto-create elenco division if characters were found
-        elenco_offset =
-          if character_map != %{} do
-            PlayContent.create_division(%{
-              play_id: play_id,
-              type: "elenco",
-              title: "Dramatis Personae",
-              position: 0
-            })
+        {character_map, first_act_position} =
+          if speaker_labels != [] do
+            {:ok, cast_list} =
+              PlayContent.create_division(%{
+                play_id: play_id,
+                type: "elenco",
+                title: "Dramatis Personae",
+                position: 1
+              })
 
-            1
+            {create_characters(speaker_labels, play_id, cast_list.id), 2}
           else
-            0
+            {%{}, 1}
           end
 
         # Create structure in DB
         verse_counter_ref = :counters.new(1, [:atomics])
 
         # Use reduce to track act numbering (skip prologo/epilogue)
-        Enum.with_index(acts, elenco_offset)
+        Enum.with_index(acts, first_act_position)
         |> Enum.reduce(1, fn {act, act_pos}, act_number ->
           is_numbered = act.type not in ["prologo", "epilogue", "induction"]
 
@@ -707,9 +707,7 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
-  defp create_characters_from_acts(acts, play_id) do
-    alias Playcode.PlayContent
-
+  defp speaker_labels(acts) do
     scene_elements =
       acts
       |> Enum.flat_map(& &1.scenes)
@@ -719,11 +717,14 @@ defmodule Playcode.Import.WordParser do
       acts
       |> Enum.flat_map(&Map.get(&1, :_direct_elements, []))
 
-    speaker_labels =
-      (scene_elements ++ direct_elements)
-      |> Enum.filter(&(&1.type == "speech" && &1[:speaker_label] && &1.speaker_label != ""))
-      |> Enum.map(& &1.speaker_label)
-      |> Enum.uniq()
+    (scene_elements ++ direct_elements)
+    |> Enum.filter(&(&1.type == "speech" && &1[:speaker_label] && &1.speaker_label != ""))
+    |> Enum.map(& &1.speaker_label)
+    |> Enum.uniq()
+  end
+
+  defp create_characters(speaker_labels, play_id, cast_list_id) do
+    alias Playcode.PlayContent
 
     speaker_labels
     |> Enum.with_index()
@@ -733,7 +734,8 @@ defmodule Playcode.Import.WordParser do
           play_id: play_id,
           xml_id: character_xml_id(label, idx),
           name: label,
-          position: idx
+          position: idx,
+          cast_list_id: cast_list_id
         })
 
       Map.put(acc, label, char.id)

@@ -29,6 +29,10 @@ defmodule Playcode.PlayContent.Division do
     has_many :elements, Playcode.PlayContent.Element
     has_many :notes, Playcode.PlayContent.Note, preload_order: [asc: :offset, asc: :position]
 
+    has_many :entries, Playcode.PlayContent.CastListEntry,
+      foreign_key: :cast_list_id,
+      preload_order: [asc: :position, asc: :id]
+
     field :loaded_elements, {:array, :map}, virtual: true, default: []
 
     timestamps(type: :utc_datetime)

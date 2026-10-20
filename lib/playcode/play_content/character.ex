@@ -3,9 +3,12 @@ defmodule Playcode.PlayContent.Character do
   A character in the play's cast list (`<castList>`).
 
   `xml_id` is the identifier speeches cite: `<sp who="#don_diego">`. It is unique within
-  the play. `description` is the `<roleDesc>`; `actor` the `<actor>` who played the part
-  at the first performance, kept and written back but printed nowhere, as emothe.uv.es
-  prints none (question 28). `position` is the order in the cast list.
+  the play. Each cast list naming the character holds an entry of its own
+  (`Playcode.PlayContent.CastListEntry`); `name`, `description` (the `<roleDesc>`) and
+  `position` are copies of its first entry's in outline order, kept in step by
+  `PlayContent.sync_characters/1`, for wherever Playcode names a speaker. `actor` is the
+  `<actor>` who played the part at the first performance, kept and written back but
+  printed nowhere, as emothe.uv.es prints none (question 28).
 
   A hidden character (`is_hidden`, TEI `ana="oculto"`) may speak, but every printed cast
   list leaves it out.
@@ -29,6 +32,7 @@ defmodule Playcode.PlayContent.Character do
 
     belongs_to :play, Playcode.Catalogue.Play
     has_many :element_characters, Playcode.PlayContent.ElementCharacter
+    has_many :entries, Playcode.PlayContent.CastListEntry
 
     many_to_many :elements, Playcode.PlayContent.Element,
       join_through: Playcode.PlayContent.ElementCharacter

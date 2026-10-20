@@ -12,7 +12,18 @@ defmodule Playcode.PlayContent do
 
   import Ecto.Query
   alias Playcode.Repo
-  alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, InlineMarkup, Note}
+  alias Playcode.Catalogue.Paratext
+
+  alias Playcode.PlayContent.{
+    CastListEntry,
+    Character,
+    Division,
+    Element,
+    ElementCharacter,
+    InlineMarkup,
+    Note
+  }
+
   alias Playcode.Witnesses
 
   @pubsub Playcode.PubSub
@@ -69,12 +80,63 @@ defmodule Playcode.PlayContent do
   def get_character(play_id, id), do: get_play_row(Character, play_id, id)
 
   @doc """
-  Creates a character; `attrs` carry its `play_id`. Its `xml_id` must be unique in the play.
+  Creates a character with its entry in a cast list; `attrs` carry its `play_id`, and may
+  carry the list's `cast_list_id`, the entry's `group_heading` and `position`. With no list
+  named, the entry goes in the play's first, made at the head of the outline when the play
+  has none. Its `xml_id` must be unique in the play.
   """
   def create_character(attrs) do
-    %Character{}
-    |> Character.changeset(attrs)
-    |> Repo.insert()
+    Repo.transaction(fn ->
+      with {:ok, character} <- %Character{} |> Character.changeset(attrs) |> Repo.insert(),
+           {:ok, _entry} <-
+             create_entry(%{
+               play_id: character.play_id,
+               cast_list_id: attr(attrs, :cast_list_id) || first_cast_list_id(character.play_id),
+               character_id: character.id,
+               name: character.name,
+               description: character.description,
+               group_heading: attr(attrs, :group_heading),
+               position: attr(attrs, :position)
+             }) do
+        Repo.get!(Character, character.id)
+      else
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  defp attr(attrs, key), do: Map.get(attrs, key) || Map.get(attrs, to_string(key))
+
+  defp first_cast_list_id(play_id) do
+    case list_cast_lists(play_id) do
+      [list | _] ->
+        list.id
+
+      [] ->
+        {:ok, list} =
+          create_division(%{play_id: play_id, type: "elenco", position: head_position(play_id)})
+
+        list.id
+    end
+  end
+
+  # A position before every top-level item of the play: its divisions and its paratexts.
+  defp head_position(play_id) do
+    first =
+      Enum.min(
+        [
+          Repo.one(
+            from d in Division,
+              where: d.play_id == ^play_id and is_nil(d.parent_id),
+              select: min(d.position)
+          ),
+          Repo.one(from p in Paratext, where: p.play_id == ^play_id, select: min(p.position))
+        ]
+        |> Enum.reject(&is_nil/1),
+        fn -> 1 end
+      )
+
+    first - 1
   end
 
   @doc """
@@ -128,7 +190,34 @@ defmodule Playcode.PlayContent do
   Updates a character.
   """
   def update_character(%Character{} = character, attrs) do
-    character |> Character.changeset(attrs) |> Repo.update()
+    Repo.transaction(fn ->
+      with {:ok, character} <- character |> Character.changeset(attrs) |> Repo.update() do
+        case first_entry(character) do
+          nil ->
+            :ok
+
+          entry ->
+            entry
+            |> CastListEntry.changeset(%{
+              name: character.name,
+              description: character.description
+            })
+            |> Repo.update!()
+        end
+
+        sync_characters(character.play_id)
+        Repo.get!(Character, character.id)
+      else
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
+  end
+
+  defp first_entry(%Character{id: id, play_id: play_id}) do
+    play_id
+    |> list_cast_lists()
+    |> Enum.flat_map(& &1.entries)
+    |> Enum.find(&(&1.character_id == id))
   end
 
   @doc """
@@ -142,9 +231,11 @@ defmodule Playcode.PlayContent do
   Shifts all character positions up by 1 to make room at position 0.
   """
   def shift_character_positions(play_id) do
-    Character
+    CastListEntry
     |> where(play_id: ^play_id)
     |> Repo.update_all(inc: [position: 1])
+
+    sync_characters(play_id)
   end
 
   @doc """
@@ -156,11 +247,115 @@ defmodule Playcode.PlayContent do
       ordered_ids
       |> Enum.with_index()
       |> Enum.each(fn {id, position} ->
-        Character
-        |> where(id: ^id, play_id: ^play_id)
+        CastListEntry
+        |> where(character_id: ^id, play_id: ^play_id)
         |> Repo.update_all(set: [position: position, updated_at: DateTime.utc_now()])
       end)
+
+      sync_characters(play_id)
     end)
+  end
+
+  # --- Cast lists ---
+
+  @doc """
+  The play's cast lists (its `elenco` divisions) in outline order: a list before, between
+  or after the acts by its own position, a list inside an act at its act's place, then by
+  its own. Each with its entries in order, their characters loaded.
+  """
+  def list_cast_lists(play_id) do
+    Division
+    |> where(play_id: ^play_id, type: "elenco")
+    |> join(:left, [d], act in Division, on: act.id == d.parent_id)
+    |> order_by([d, act],
+      asc: coalesce(act.position, d.position),
+      asc: fragment("? IS NOT NULL", d.parent_id),
+      asc: d.position,
+      asc: d.id
+    )
+    |> preload(entries: :character)
+    |> Repo.all()
+  end
+
+  @doc "As `get_character/2`, for a cast list: nil for any division that is not one."
+  def get_cast_list(play_id, id) do
+    case get_division(play_id, id) do
+      %Division{type: "elenco"} = list -> list
+      _other -> nil
+    end
+  end
+
+  @doc "As `get_character/2`, for a cast list entry."
+  def get_entry(play_id, id), do: get_play_row(CastListEntry, play_id, id)
+
+  @doc """
+  Creates an entry; `attrs` carry its `play_id` and `cast_list_id`, and its `character_id`
+  unless it names no one. With no `position` it stands last in its list.
+  """
+  def create_entry(attrs) do
+    attrs = Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
+
+    attrs =
+      if attrs["position"] in [nil, ""],
+        do: Map.put(attrs, "position", next_entry_position(attrs["cast_list_id"])),
+        else: attrs
+
+    with {:ok, entry} <- %CastListEntry{} |> CastListEntry.changeset(attrs) |> Repo.insert() do
+      sync_characters(entry.play_id)
+      {:ok, entry}
+    end
+  end
+
+  defp next_entry_position(cast_list_id) do
+    CastListEntry
+    |> where(cast_list_id: ^cast_list_id)
+    |> select([e], coalesce(max(e.position), -1) + 1)
+    |> Repo.one()
+  end
+
+  @doc "An entry's changeset, for a form."
+  def change_entry(%CastListEntry{} = entry, attrs \\ %{}),
+    do: CastListEntry.changeset(entry, attrs)
+
+  @doc "Updates an entry; its character follows when it is the character's first."
+  def update_entry(%CastListEntry{} = entry, attrs) do
+    with {:ok, entry} <- entry |> CastListEntry.changeset(attrs) |> Repo.update() do
+      sync_characters(entry.play_id)
+      {:ok, entry}
+    end
+  end
+
+  @doc """
+  Copies each character's name, description and place from its first entry in outline
+  order: the name the speaker pickers and the statistics give, the description the API
+  gives, the order the characters are listed in. Only a character that differs is written.
+  """
+  def sync_characters(play_id) do
+    firsts =
+      play_id
+      |> list_cast_lists()
+      |> Enum.flat_map(& &1.entries)
+      |> Enum.filter(& &1.character_id)
+      |> Enum.uniq_by(& &1.character_id)
+      |> Enum.with_index()
+
+    for {entry, position} <- firsts,
+        character = entry.character,
+        {character.name, character.description, character.position} !=
+          {entry.name, entry.description, position} do
+      Character
+      |> where(id: ^character.id)
+      |> Repo.update_all(
+        set: [
+          name: entry.name,
+          description: entry.description,
+          position: position,
+          updated_at: DateTime.utc_now(:second)
+        ]
+      )
+    end
+
+    :ok
   end
 
   # --- Divisions ---
