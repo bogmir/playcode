@@ -30,7 +30,7 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `text/front/div` -> a paratext keeping its `@type` as its kind (`circunstancia_accion` is read as `lugar_accion`, `nota` and no type as `nota_edicion_digital`), kept when it has a heading or paragraphs; `<lb/>` a line break, an empty line between two a paragraph break
 - `text/front/set` -> the scene of the action (not a paratext, but kept in `play_paratexts` with kind `lugar_accion`), written back as `<set>` where the outline puts it, and printed there
 - `text/back/div` -> a paratext or a cast list after the text, written back before the bibliography; not read: a div holding `lg` (the sonnet, question 30)
-- `text/body/div1` of a type that is not a part of the text (`loa`, `elenco`…) -> a paratext or a cast list between two acts, where it stands
+- `text/body/div1` of a type that is not a part of the text (`loa`, `elenco`…), holding only a heading and paragraphs -> a paratext or a cast list between two acts, where it stands. A paratext whose kind is also a division's type (`prologo`, `argumento`) is written there with `ana="paratexto"`, which the import reads, or it would come back a division; no source file has one
 - `text/body/div1[@type="acto"]` -> act divisions
 - `text/body/div1/div2[@type="escena"]` -> scene subdivisions
 - `sp` -> speech elements with `who` -> character reference

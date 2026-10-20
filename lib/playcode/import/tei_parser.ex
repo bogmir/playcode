@@ -1201,7 +1201,7 @@ defmodule Playcode.Import.TeiParser do
     do: for(scene <- paratext("lugar_accion", children, pos), do: {:paratext, scene})
 
   defp read_slot({:body, _name, type, attrs, children} = slot, pos) do
-    if paratext_div1?(type, children),
+    if paratext_div1?(type, attrs, children),
       do: read_slot(put_elem(slot, 0, :front), pos),
       else: [{:division, act(type, attrs, children, pos)}]
   end
@@ -1212,9 +1212,10 @@ defmodule Playcode.Import.TeiParser do
 
   # A div1 between the acts holding only a heading and paragraphs is a paratext, as
   # Playcode writes one there, unless its type is a division's: Gorboduc's dumb shows and
-  # La Silvanira's inductions are divisions of the text.
-  defp paratext_div1?(type, children) do
-    type not in Division.body_types() and
+  # La Silvanira's inductions are divisions of the text. A paratext whose kind is a
+  # division's type too (`prologo`, `argumento`) says so, `ana="paratexto"`.
+  defp paratext_div1?(type, attrs, children) do
+    (attr_value(attrs, "ana") == "paratexto" or type not in Division.body_types()) and
       Enum.all?(children, &(not is_tuple(&1) or elem(&1, 0) in ~w(head p)))
   end
 

@@ -1241,6 +1241,30 @@ defmodule Playcode.TeiRoundtripTest do
                ["front/titlePage", "front/div[dedicatoria]", "front/div[elenco]"]
     end
 
+    # `prologo` and `argumento` are a paratext's kinds and a division's types both.
+    test "an argument between two acts comes back a paratext, not a division" do
+      play = play_fixture(%{})
+      division!(play, %{type: "acto", number: 1, title: "ACTO I", position: 0})
+      division!(play, %{type: "acto", number: 2, title: "ACTO II", position: 2})
+
+      {:ok, _} =
+        Catalogue.create_paratext(%{
+          play_id: play.id,
+          kind: "argumento",
+          heading: "ARGUMENTO",
+          content: "Lo que sucede después.",
+          position: 1
+        })
+
+      back = import_tei!(export_tei(play))
+
+      assert [%{kind: "argumento", heading: "ARGUMENTO"}] = Catalogue.list_paratexts(back.id)
+      assert Enum.map(PlayContent.list_top_divisions(back.id), & &1.type) == ~w(acto acto)
+
+      assert text_order(export_tei(back)) ==
+               ["front/titlePage", "body/div1[acto]", "body/div1[argumento]", "body/div1[acto]"]
+    end
+
     test "a scene of the action after the text comes back after it" do
       play = play_fixture(%{})
       act = division!(play, %{type: "acto", number: 1, title: "ACTO", position: 0})

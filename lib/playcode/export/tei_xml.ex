@@ -1183,9 +1183,19 @@ defmodule Playcode.Export.TeiXml do
     case {Paratext.scene?(paratext.kind), section} do
       {true, :front} -> element(:set, content)
       {true, _section} -> element(tag, %{type: "circunstancia_accion"}, content)
-      {false, _section} -> element(tag, %{type: paratext.kind}, content)
+      {false, _section} -> element(tag, paratext_attrs(paratext.kind, section), content)
     end
   end
+
+  # Between the acts a paratext whose kind is also a division's type (`prologo`,
+  # `argumento`) says it is one, `ana="paratexto"`, or the import would read a division.
+  defp paratext_attrs(kind, :body) do
+    if kind in Division.body_types(),
+      do: %{type: kind, ana: "paratexto"},
+      else: %{type: kind}
+  end
+
+  defp paratext_attrs(kind, _section), do: %{type: kind}
 
   # An act: its heading, the cast lists that open it before any element (a bare castList,
   # its head inside), its own elements, then its scenes and its other lists in their order,
