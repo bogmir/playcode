@@ -256,6 +256,24 @@ defmodule PlaycodeWeb.ExportControllerTest do
            end)
   end
 
+  # Question 41: the Arte nuevo's dedication, the poem's opener, before its first line.
+  test "a poem's opener is printed before its lines", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div type="poema"><opener><salute>Dirigido a la Academia de Madrid</salute></opener><lg><l n="1">Mándanme, ingenios nobles</l></lg></div>)
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    assert html =~ ~r{Dirigido a la Academia de Madrid.*Mándanme, ingenios nobles}s
+    assert epub =~ ~r{Dirigido a la Academia de Madrid.*Mándanme, ingenios nobles}s
+  end
+
   # Question 30: the sonnet after Les Contents, as verse, with its closing formula.
   test "a paratext in verse is printed with its closing formula", %{conn: conn} do
     play =

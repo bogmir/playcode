@@ -1540,6 +1540,7 @@ defmodule Playcode.Import.TeiParser do
   defp act_element({"p", _, _} = para, pos), do: prose(para, pos)
   defp act_element({"lg", attrs, children}, pos), do: line_group(attrs, children, pos)
   defp act_element({"trailer", _, _} = trailer, pos), do: trailer(trailer, pos)
+  defp act_element({"opener", _, _} = opener, pos), do: opener(opener, pos)
   defp act_element(_other, _pos), do: nil
 
   # A scene's speeches, stage directions, trailer, and the paragraphs and stanzas nobody
@@ -1687,6 +1688,12 @@ defmodule Playcode.Import.TeiParser do
   defp trailer(trailer, pos) do
     {content, notes} = text_and_notes(trailer)
     %{type: "trailer", position: pos, content: content, notes: notes, elements: []}
+  end
+
+  # The opening formula: its salute, the only part of an opener the corpus writes.
+  defp opener({_name, _attrs, children}, pos) do
+    {content, notes} = text_and_notes(find_child(children, "salute"))
+    %{type: "opener", position: pos, content: content, notes: notes, elements: []}
   end
 
   defp prose({_name, attrs, children} = para, pos) do

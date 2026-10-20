@@ -1025,4 +1025,20 @@ defmodule Playcode.Export.StaticSiteTest do
     assert page =~
              ~r{SONNET.*Réjouis-toi, Paris,<br/?>Un de tes citoyens.*<p class="tr">FIN</p>}s
   end
+
+  # Question 41: the Arte nuevo, a poem with no heading, its dedication its opener.
+  test "a poem prints its opener and no heading" do
+    play =
+      tei(
+        body:
+          ~s(<div type="poema"><opener><salute>Dirigido a la Academia de Madrid</salute></opener><lg><l n="1">Mándanme, ingenios nobles</l></lg></div>)
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = read!(generate!([play]), "plays/#{play.code}/text.html")
+
+    assert page =~ ~r{Dirigido a la Academia de Madrid.*Mándanme, ingenios nobles}s
+    refute page =~ ~s(class="act-head")
+  end
 end

@@ -683,7 +683,8 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
-  defp el(%{el: %{type: "trailer"}} = assigns) do
+  # An opening formula (the Arte nuevo's dedication) or a closing one, centred alike.
+  defp el(%{el: %{type: type}} = assigns) when type in ~w(opener trailer) do
     ~H"""
     <p class="tr" id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
     """

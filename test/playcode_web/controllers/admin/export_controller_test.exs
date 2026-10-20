@@ -113,6 +113,21 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert response(conn, 200) =~ "FIN DEL PRIMER ACTO"
   end
 
+  # Question 41: the Arte nuevo and its translations, compared, each poem's dedication.
+  test "a downloaded comparison prints a poem's opener", %{conn: conn, play: play} do
+    poem =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div type="poema"><opener><salute>Dirigido a la Academia de Madrid</salute></opener><lg><l n="1">Mándanme, ingenios nobles</l></lg></div>)
+        )
+      )
+
+    conn = get(conn, ~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{poem.id}"]}")
+
+    assert response(conn, 200) =~ "Dirigido a la Academia de Madrid"
+  end
+
   # The page is opened from disk, so its sync script must carry the matcher inline and
   # its speeches the act keys the matcher reads, as on the live compare page.
   test "a downloaded comparison keys speeches by act, and its sync script runs alone",

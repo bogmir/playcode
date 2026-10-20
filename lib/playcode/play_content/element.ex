@@ -11,6 +11,8 @@ defmodule Playcode.PlayContent.Element do
       show or a stanza that opens a prologue.
     * A `trailer` is a division's closing formula ("FIN DEL PRIMER ACTO"), exported
       last in its division.
+    * An `opener` is a division's opening formula, TEI's `<opener><salute>`: the *Arte
+      nuevo*'s dedication, "Dirigido a la Academia de Madrid" (question 41).
     * `unrecognized` comes only from the Word importer.
 
   A speech's speakers are `element_characters`, kept in order, because `<sp who>` can
@@ -144,7 +146,7 @@ defmodule Playcode.PlayContent.Element do
     |> validate_required([:type])
     |> validate_inclusion(
       :type,
-      ~w(speech stage_direction verse_line prose line_group trailer unrecognized)
+      ~w(speech stage_direction verse_line prose line_group opener trailer unrecognized)
     )
     |> validate_stage_markers()
     |> validate_aside_markers()

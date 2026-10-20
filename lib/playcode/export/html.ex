@@ -464,7 +464,8 @@ defmodule Playcode.Export.Html do
     "        <div class=\"prose-block\">#{NoteMarkup.inline(el.content, el.notes, :html)}</div>\n"
   end
 
-  defp render_element(%{type: "trailer"} = el) do
+  # An opening formula (the Arte nuevo's dedication) or a closing one, centred alike.
+  defp render_element(%{type: type} = el) when type in ~w(opener trailer) do
     "        <div class=\"trailer\">#{NoteMarkup.inline(el.content, el.notes, :html)}</div>\n"
   end
 

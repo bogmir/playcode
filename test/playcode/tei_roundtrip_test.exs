@@ -1147,6 +1147,70 @@ defmodule Playcode.TeiRoundtripTest do
     assert xml_texts(xml, "trailer", within: "back") == ["FIN"]
   end
 
+  # Question 41: the Arte nuevo (EMOTHE0002) and its translations, a treatise and not a
+  # play: a poem with no heading, its dedication the poem's opener, its stanzas spoken by
+  # nobody.
+  test "a poem comes back with its opener, its stanzas in no speech" do
+    xml =
+      roundtrip(
+        tei(
+          body: """
+          <div type="poema"><opener><salute>Dirigido a la <emph>Academia</emph> de Madrid</salute></opener>
+            <lg><l n="1">Mándanme, ingenios nobles, flor de España</l><l n="2">(que en esta junta</l></lg>
+            <lg><l n="3">en breve tiempo excederéis</l></lg>
+          </div>
+          """
+        )
+      )
+
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poema]"]
+    assert xml_texts(xml, "head", within: "body") == []
+    assert xml_texts(xml, "salute", within: "opener") == ["Dirigido a la Academia de Madrid"]
+    assert xml_texts(xml, "emph", within: "opener") == ["Academia"]
+    assert xml_elements(xml, "sp") == []
+    assert length(xml_elements(xml, "lg", within: "body")) == 2
+
+    assert xml_texts(xml, "l", within: "body") ==
+             [
+               "Mándanme, ingenios nobles, flor de España",
+               "(que en esta junta",
+               "en breve tiempo excederéis"
+             ]
+  end
+
+  # The French translation (EMOTHE0025) is in prose.
+  test "a poem in prose comes back in prose, in no speech" do
+    xml =
+      roundtrip(
+        tei(
+          body: """
+          <div type="poema"><opener><salute>Adressée à l’Académie de Madrid</salute></opener>
+            <p>Beaux génies, fleurs de notre Espagne.</p><p>La matière paraît aisée.</p>
+          </div>
+          """
+        )
+      )
+
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poema]"]
+    assert xml_texts(xml, "salute", within: "opener") == ["Adressée à l’Académie de Madrid"]
+    assert xml_elements(xml, "sp") == []
+
+    assert xml_texts(xml, "p", within: "body") ==
+             ["Beaux génies, fleurs de notre Espagne.", "La matière paraît aisée."]
+  end
+
+  # With its opener removed in Playcode, the poem is still the play's text, not a paratext
+  # in verse, whose lines have no numbers.
+  test "a poem with no opener comes back the text, its lines numbered" do
+    xml =
+      roundtrip(tei(body: ~s(<div type="poema"><lg><l n="1">Uno</l><l n="2">Dos</l></lg></div>)))
+
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poema]"]
+
+    assert for({attrs, _text} <- xml_elements(xml, "l", within: "body"), do: attrs["n"]) ==
+             ["0001", "0002"]
+  end
+
   # 12 head titles and 4 notes on the digital edition are a heading alone.
   test "a paratext with a heading and no paragraphs comes back" do
     xml = roundtrip(tei(front: ~s(<div type="head_title"><head>THE MALCONTENT</head></div>)))
