@@ -331,6 +331,24 @@ defmodule Playcode.TestFixtures do
   end
 
   @doc """
+  An entry an import brought in, as `filemaker_id` names it (`"T04:116"`): the column is set
+  only by the imports, on the struct, so a form cannot reach it.
+  """
+  def entry_fixture(filemaker_id, attrs \\ %{}) do
+    {:ok, entry} =
+      %Playcode.Bibliography.Entry{filemaker_id: filemaker_id}
+      |> Playcode.Bibliography.Entry.changeset(
+        Map.merge(
+          %{"kind" => "modern_edition", "monogr_title" => "Edición #{filemaker_id}"},
+          attrs
+        )
+      )
+      |> Playcode.Repo.insert()
+
+    entry
+  end
+
+  @doc """
   A performance of `play` (dated 1610 unless `attrs` say otherwise; string keys, as the
   forms send them).
   """

@@ -220,14 +220,7 @@ defmodule Playcode.Import.Places do
   def default_dir, do: @default_dir
 
   @doc "Reads the eight T10 tables from `dir`."
-  def load(dir) do
-    Enum.reduce_while(@files, {:ok, %{}}, fn {key, file}, {:ok, data} ->
-      case FilemakerXml.read(Path.join(dir, file)) do
-        {:ok, rows} -> {:cont, {:ok, Map.put(data, key, rows)}}
-        {:error, reason} -> {:halt, {:error, {file, reason}}}
-      end
-    end)
-  end
+  def load(dir), do: FilemakerXml.read_tables(dir, @files)
 
   @doc """
   What the import would write. Reads the database, writes nothing. See the moduledoc.
@@ -259,7 +252,7 @@ defmodule Playcode.Import.Places do
       data.links
       |> Enum.filter(&id(&1, "_k_IdObraTitulo"))
       |> Enum.sort_by(&String.to_integer(&1["_kp_IdObraAccionLugar"]))
-      |> Enum.map(&{&1, Map.get(by_code, version_code(&1["_k_IdObraTitulo"]), [])})
+      |> Enum.map(&{&1, Map.get(by_code, FilemakerXml.version_code(&1["_k_IdObraTitulo"]), [])})
 
     pending =
       for {row, plays} <- owned,
@@ -370,19 +363,12 @@ defmodule Playcode.Import.Places do
 
   @doc "The plan as lines of text, for the mix task and the release."
   def report(plan) do
-    by_key = Map.new(plan.places, &{&1.key, &1})
-    name = &place_name(by_key[&1])
+    name = place_names(plan.places)
 
     per_play =
       for link <- Enum.sort_by(plan.links, & &1.code) do
-        "#{link.code}  #{name.(link.place)}" <>
-          if(link.state, do: " — #{name.(link.state)}", else: "")
-      end
-
-    to_create =
-      for %{existing: nil} = place <- plan.places do
-        "#{name.(place.key)} (#{place.attrs["type"]})" <>
-          if(place.parent, do: " in #{name.(place.parent)}", else: "")
+        "#{link.code}  #{name[link.place]}" <>
+          if(link.state, do: " — #{name[link.state]}", else: "")
       end
 
     plays = plan.links |> Enum.uniq_by(& &1.play_id) |> length()
@@ -394,16 +380,35 @@ defmodule Playcode.Import.Places do
 
     per_play ++
       ["", "links: #{length(plan.links)} on #{plays} plays"] ++
-      section("places to create", to_create) ++
-      section("places reused", plan.reused) ++
-      section("merged", plan.merged) ++
-      section("twinless", plan.twinless) ++
-      section("no country", plan.no_country) ++
+      place_report(plan) ++
       skipped ++
       [
         "links on versions not held: #{plan.not_held}",
         "already imported: #{length(plan.already_imported)} plays #{Enum.join(plan.already_imported, ", ")}"
       ]
+  end
+
+  @doc "A plan's places by key, each as a report names it."
+  def place_names(places), do: Map.new(places, &{&1.key, place_name(&1)})
+
+  @doc """
+  The report's lines about the places themselves, for any plan with `places` and the report
+  lines of `place_plan/2` (`reused`, `merged`, `twinless`, `no_country`).
+  """
+  def place_report(plan) do
+    name = place_names(plan.places)
+
+    to_create =
+      for %{existing: nil} = place <- plan.places do
+        "#{name[place.key]} (#{place.attrs["type"]})" <>
+          if(place.parent, do: " in #{name[place.parent]}", else: "")
+      end
+
+    section("places to create", to_create) ++
+      section("places reused", plan.reused) ++
+      section("merged", plan.merged) ++
+      section("twinless", plan.twinless) ++
+      section("no country", plan.no_country)
   end
 
   @doc """
@@ -791,13 +796,14 @@ defmodule Playcode.Import.Places do
 
     label = "#{ref(row)}: #{Enum.join(text, " ")}"
 
-    case version_code(row["_k_IdObraTitulo"]) do
+    case FilemakerXml.version_code(row["_k_IdObraTitulo"]) do
       nil -> label
       code -> "#{code} #{label}"
     end
   end
 
-  defp ref(row), do: "T10:" <> row["_kp_IdObraAccionLugar"]
+  @doc "A link's reference in a plan, `\"T10:<id>\"`: the key of `place_plan/2`'s `resolved`."
+  def ref(row), do: "T10:" <> row["_kp_IdObraAccionLugar"]
 
   defp id(row, field), do: value(row[field])
 
@@ -834,13 +840,5 @@ defmodule Playcode.Import.Places do
     |> select([pp], {pp.play_id, pp.place_id})
     |> Repo.all()
     |> MapSet.new()
-  end
-
-  # The play code FileMaker's version id stands for: 38 is EMOTHE0038.
-  defp version_code(version) do
-    case Integer.parse(version || "") do
-      {number, ""} -> "EMOTHE" <> String.pad_leading(Integer.to_string(number), 4, "0")
-      _other -> nil
-    end
   end
 end

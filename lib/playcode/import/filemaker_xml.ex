@@ -27,6 +27,27 @@ defmodule Playcode.Import.FilemakerXml do
     end
   end
 
+  @doc """
+  Reads each of `files` (`[key: file_name]`) from `dir`: `{:ok, %{key => rows}}`, or
+  `{:error, {file, reason}}` for the first that cannot be read.
+  """
+  def read_tables(dir, files) do
+    Enum.reduce_while(files, {:ok, %{}}, fn {key, file}, {:ok, data} ->
+      case read(Path.join(dir, file)) do
+        {:ok, rows} -> {:cont, {:ok, Map.put(data, key, rows)}}
+        {:error, reason} -> {:halt, {:error, {file, reason}}}
+      end
+    end)
+  end
+
+  @doc "The play code FileMaker's version id stands for: 38 is EMOTHE0038; nil for an id that is no number."
+  def version_code(version) do
+    case Integer.parse(version || "") do
+      {number, ""} -> "EMOTHE" <> String.pad_leading(Integer.to_string(number), 4, "0")
+      _other -> nil
+    end
+  end
+
   defp parse(xml) do
     Saxy.SimpleForm.parse_string(xml)
   catch

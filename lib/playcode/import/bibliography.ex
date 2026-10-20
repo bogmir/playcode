@@ -67,14 +67,7 @@ defmodule Playcode.Import.Bibliography do
   def default_dir, do: @default_dir
 
   @doc "Reads the six tables from `dir`."
-  def load(dir) do
-    Enum.reduce_while(@files, {:ok, %{}}, fn {key, file}, {:ok, data} ->
-      case FilemakerXml.read(Path.join(dir, file)) do
-        {:ok, rows} -> {:cont, {:ok, Map.put(data, key, rows)}}
-        {:error, reason} -> {:halt, {:error, {file, reason}}}
-      end
-    end)
-  end
+  def load(dir), do: FilemakerXml.read_tables(dir, @files)
 
   @doc "City and publisher names by id, from `T13.1` and `T13.2`."
   def lookups(data) do
@@ -348,7 +341,7 @@ defmodule Playcode.Import.Bibliography do
   end
 
   defp link_versions(acc, context, ref, attrs, version, link_attrs) do
-    case Map.get(context.by_code, version_code(version), []) do
+    case Map.get(context.by_code, FilemakerXml.version_code(version), []) do
       [] ->
         %{acc | not_held: acc.not_held + 1}
 
@@ -392,14 +385,6 @@ defmodule Playcode.Import.Bibliography do
 
   defp skip(acc, reason, ref),
     do: %{acc | skipped: Map.update(acc.skipped, reason, [ref], &[ref | &1])}
-
-  # The play code FileMaker's version id stands for: 38 is EMOTHE0038.
-  defp version_code(version) do
-    case Integer.parse(version || "") do
-      {number, ""} -> "EMOTHE" <> String.pad_leading(Integer.to_string(number), 4, "0")
-      _other -> nil
-    end
-  end
 
   defp level(row, suffix) do
     %{
