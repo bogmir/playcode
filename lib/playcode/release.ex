@@ -2,7 +2,7 @@ defmodule Playcode.Release do
   @moduledoc false
 
   alias Playcode.Export.{SiteBuilder, StaticSite}
-  alias Playcode.Import.{Bibliography, FilemakerSync, Places, TeiCorpus, Witnesses}
+  alias Playcode.Import.{Bibliography, FilemakerSync, Performances, Places, TeiCorpus, Witnesses}
 
   @app :playcode
 
@@ -119,6 +119,47 @@ defmodule Playcode.Release do
 
       {:error, {file, reason}} ->
         IO.puts("cannot read #{Path.join(dir, file)}: #{inspect(reason)}")
+    end
+  end
+
+  @doc """
+  S5's one-time import of FileMaker's historical performances, for a release, which has no mix
+  tasks. Copy the `T10*`, `T11*` and `T13*` tables, and `T11.12_ActorSexo.tab`, onto the
+  machine first (`fly ssh sftp shell`), then:
+
+      bin/playcode rpc 'Playcode.Release.import_performances("/tmp/ctce", dry_run: true)'
+      bin/playcode rpc 'Playcode.Release.import_performances("/tmp/ctce")'
+  """
+  def import_performances(dir, opts \\ []) do
+    load_app()
+    {:ok, _} = Application.ensure_all_started(:playcode)
+
+    case Performances.load(dir) do
+      {:ok, data} ->
+        plan = Performances.plan(data, FilemakerSync.all_plays())
+        Enum.each(Performances.report(plan), &IO.puts/1)
+
+        if opts[:dry_run] do
+          IO.puts("dry run, nothing written")
+        else
+          write_performances(plan)
+        end
+
+      {:error, {file, reason}} ->
+        IO.puts("cannot read #{Path.join(dir, file)}: #{inspect(reason)}")
+    end
+  end
+
+  defp write_performances(plan) do
+    case Performances.apply_plan(plan) do
+      {:ok, written} ->
+        IO.puts(
+          "created #{written.performances} performances, #{written.companies} companies, " <>
+            "#{written.actors} actors, #{written.entries} entries and #{written.places} places"
+        )
+
+      {:error, refused} ->
+        IO.puts("nothing written, #{Performances.error_message(refused)}")
     end
   end
 

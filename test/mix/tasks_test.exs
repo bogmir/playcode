@@ -15,6 +15,8 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
   alias Playcode.ActivityLog
   alias Playcode.Bibliography
   alias Playcode.Catalogue
+  alias Playcode.Performances
+  alias Playcode.PlayContent
   alias Playcode.Places
   alias Playcode.Witnesses
 
@@ -640,6 +642,253 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     test "a missing dump is refused" do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.places", ["--path", "test/fixtures/filemaker/nope"])
+      end
+    end
+  end
+
+  describe "playcode.import.performances" do
+    @performances "test/fixtures/filemaker/performances"
+
+    # The versions the sample holds, by code; 0083 stays out, for the version we do not hold.
+    @performance_plays %{
+      "0010" => "EMOTHE0010_Hamlet",
+      "0038" => "EMOTHE0038_AntonyAndCleopatra",
+      "0209" => "EMOTHE0209_Play",
+      "0274" => "EMOTHE0274_Play",
+      "0304" => "EMOTHE0304_TheAlchemist",
+      "0309" => "EMOTHE0309_Play",
+      "0313" => "EMOTHE0313_TheWayOfTheWorld",
+      "0373" => "EMOTHE0373_Play",
+      "0379" => "EMOTHE0379_Play",
+      "0420" => "EMOTHE0420_Play",
+      "0472" => "EMOTHE0472_Play",
+      "0491" => "EMOTHE0491_Play",
+      "0644" => "EMOTHE0644_Play",
+      "0671" => "EMOTHE0671_Play",
+      "0675" => "EMOTHE0675_Play",
+      "0714" => "EMOTHE0714_Play"
+    }
+
+    setup do
+      plays =
+        Map.new(@performance_plays, fn {short, code} ->
+          {short, play_fixture(%{"code" => code})}
+        end)
+
+      %{plays: plays, alchemist: plays["0304"], way: plays["0313"]}
+    end
+
+    defp performances(play), do: Performances.list_for_play(play.id)
+
+    defp performance_count(plays),
+      do: plays |> Map.values() |> Enum.map(&length(performances(&1))) |> Enum.sum()
+
+    # The lines readers see for a play's performances, in order, and the sources they cite.
+    defp performance_lines(play, locale \\ "en") do
+      Performances.listing(
+        performances(play),
+        PlayContent.list_characters(play.id),
+        Places.gazetteer(),
+        locale
+      )
+    end
+
+    # What a run wrote that no play's list shows: the corpus-wide rows.
+    defp performance_leftovers do
+      %{
+        companies: Performances.list_companies(),
+        actors: Performances.list_actors(),
+        places: Places.list_places(),
+        entries: Bibliography.search_entries("Catalogue", nil, 10, kinds: :all),
+        log: ActivityLog.list_entries(action: "import", resource_type: "play_performance")
+      }
+    end
+
+    test "--dry-run prints the plan and writes nothing", %{plays: plays} do
+      out = run("playcode.import.performances", ["--path", @performances, "--dry-run"])
+
+      assert out =~ "EMOTHE0304_TheAlchemist  1610  Globe or Blackfriars"
+      assert out =~ "dry run, nothing written"
+      assert performance_count(plays) == 0
+
+      assert %{companies: [], actors: [], places: [], entries: [], log: []} =
+               performance_leftovers()
+    end
+
+    test "writes the performances as readers will see them", %{plays: plays, alchemist: alchemist} do
+      out = run("playcode.import.performances", ["--path", @performances])
+
+      assert [_, performances, companies, actors, entries, places] =
+               Regex.run(
+                 ~r/created (\d+) performances, (\d+) companies, (\d+) actors, (\d+) entries and (\d+) places/,
+                 out
+               )
+
+      assert String.to_integer(performances) == performance_count(plays)
+      assert String.to_integer(companies) == length(Performances.list_companies())
+      assert String.to_integer(actors) == length(Performances.list_actors())
+      assert String.to_integer(places) == length(Places.list_places())
+      assert String.to_integer(entries) > 0
+
+      assert %{lines: [first | _] = lines, sources: [{1, wiggins}]} = performance_lines(alchemist)
+
+      assert first.parts == [
+               "Globe or Blackfriars",
+               "London, Kingdom of England, Europe (today United Kingdom)",
+               "The King’s Men",
+               "commercial theatre"
+             ]
+
+      # performance 260 cites a record that names its volume and no page, 263 one with a page
+      assert first.range == "vol. 6"
+      assert Enum.any?(lines, &(&1.range == "vol. 6, p. 83"))
+      assert wiggins.kind == "catalogue"
+
+      origins = for play <- Map.values(plays), p <- performances(play), do: p.origin
+      assert Enum.uniq(origins) == ["filemaker"]
+
+      # FileMaker's record, for the imports' own bookkeeping: no TEI file names it
+      assert [%{filemaker_id: "T11:260"} | _] = performances(alchemist)
+
+      # Entries a performance cites stay out of the play's bibliography.
+      assert Bibliography.list_links(alchemist.id) == []
+
+      # One log entry per play that got performances.
+      logged = ActivityLog.list_entries(action: "import", resource_type: "play_performance")
+      assert length(logged) == Enum.count(Map.values(plays), &(performances(&1) != []))
+      assert Enum.all?(logged, &(&1.metadata == %{"source" => "filemaker"}))
+    end
+
+    test "gives a performance its place, its cast and the cast list", %{plays: plays, way: way} do
+      run("playcode.import.performances", ["--path", @performances])
+
+      assert %{lines: lines} = performance_lines(plays["0671"], "es")
+      assert Enum.any?(lines, fn line -> Enum.any?(line.parts, &(&1 =~ "Nápoles")) end)
+
+      assert %{lines: [%{cast: [molière, _]} | _]} = performance_lines(plays["0714"])
+      assert molière == "Jean François Poquelin, “Molière” (Argan)"
+
+      assert [%{cast_from_cast_list: true}] = performances(way)
+    end
+
+    test "an edition S4 brought in is cited, not made again", %{plays: plays} do
+      massinger = entry_fixture("T04:116")
+
+      run("playcode.import.performances", ["--path", @performances])
+
+      assert Enum.any?(performances(plays["0309"]), &(&1.source_entry_id == massinger.id))
+      assert Bibliography.list_links(plays["0309"].id) == []
+    end
+
+    test "a company, an actor, a place and an entry Playcode already has are used, not made again",
+         %{plays: plays, alchemist: alchemist} do
+      # as written by hand: another case, and Wiggins's catalogue as the project cites it
+      {:ok, company} = Performances.find_or_create_company("THE KING’S MEN")
+      naples = place_fixture(%{"name" => "Nápoles"})
+
+      {:ok, _burbage} =
+        Performances.find_or_create_actor(%{"surname" => "Burbage", "forename" => "Richard"})
+
+      wiggins =
+        catalogue_fixture(%{
+          "pub_type" => "book",
+          "monogr_author" => "Wiggins, Martin, in association with Catherine Richardson",
+          "monogr_title" => "British Drama 1533–1642: A Catalogue",
+          "pub_place" => "Oxford",
+          "publisher" => "Oxford University Press",
+          "year_text" => "2012–"
+        })
+
+      companies = length(Performances.list_companies())
+      actors = length(Performances.list_actors())
+      places = length(Places.list_places())
+
+      out = run("playcode.import.performances", ["--path", @performances])
+
+      assert [_, new_companies, new_actors, new_places] =
+               Regex.run(~r/(\d+) companies, (\d+) actors, \d+ entries and (\d+) places/, out)
+
+      assert String.to_integer(new_places) == length(Places.list_places()) - places
+      assert Enum.any?(performances(plays["0671"]), &(&1.place_id == naples.id))
+
+      assert String.to_integer(new_companies) == length(Performances.list_companies()) - companies
+      assert String.to_integer(new_actors) == length(Performances.list_actors()) - actors
+
+      assert [_one] = Enum.filter(Performances.list_companies(), &(&1.name =~ ~r/king’s men/i))
+      assert Performances.get_company(company.id).name == "THE KING’S MEN"
+      assert [_one] = Enum.filter(Performances.list_actors(), &(&1.surname == "Burbage"))
+
+      assert %{sources: [{1, cited}]} = performance_lines(alchemist)
+      assert cited.id == wiggins.id
+      assert [_one] = Bibliography.search_entries("British Drama", nil, 10, kinds: :all)
+    end
+
+    test "a second run changes nothing", %{plays: plays} do
+      run("playcode.import.performances", ["--path", @performances])
+      count = performance_count(plays)
+      leftovers = performance_leftovers()
+
+      out = run("playcode.import.performances", ["--path", @performances])
+
+      assert out =~ "already imported: #{map_size(plays)} plays"
+      assert out =~ "created 0 performances, 0 companies, 0 actors, 0 entries and 0 places"
+      assert performance_count(plays) == count
+      assert performance_leftovers() == leftovers
+    end
+
+    # As S3, S4 and S9b learned: the play's filemaker performances alone are no marker, since
+    # a curator may delete every one of them.
+    test "performances a curator deleted stay deleted", %{alchemist: alchemist} do
+      run("playcode.import.performances", ["--path", @performances])
+
+      for p <- performances(alchemist), do: {:ok, _} = Performances.delete_performance(p)
+
+      run("playcode.import.performances", ["--path", @performances])
+
+      assert performances(alchemist) == []
+    end
+
+    test "a play's own performances stay, FileMaker's go after them", %{alchemist: alchemist} do
+      own = performance_fixture(alchemist, %{"date_text" => "1700"})
+
+      run("playcode.import.performances", ["--path", @performances])
+
+      assert [first | imported] = Enum.sort_by(performances(alchemist), & &1.position)
+      assert {first.id, first.position, first.origin} == {own.id, 0, "manual"}
+      assert Enum.all?(imported, &(&1.origin == "filemaker"))
+      assert Enum.map(imported, & &1.position) == Enum.to_list(1..length(imported))
+    end
+
+    # The Way of the World's cast-list switch is unique per play: a curator who set it on a
+    # performance of their own makes FileMaker's 1700 performance refuse, and then nothing
+    # of the run stays, not the performances before it, not the companies, places or entries.
+    test "a write the database refuses rolls the whole run back, naming the performance", %{
+      plays: plays,
+      way: way
+    } do
+      own = performance_fixture(way, %{"cast_from_cast_list" => true})
+
+      error =
+        assert_raise Mix.Error, fn ->
+          Mix.Task.rerun("playcode.import.performances", ["--path", @performances])
+        end
+
+      assert error.message =~ "performance T11:145"
+      assert error.message =~ "is already set on another performance of this play"
+
+      assert Enum.map(performances(way), & &1.id) == [own.id]
+      assert performance_count(Map.delete(plays, "0313")) == 0
+
+      assert %{companies: [], actors: [], places: [], entries: [], log: []} =
+               performance_leftovers()
+    end
+
+    test "a missing dump is refused" do
+      assert_raise Mix.Error, ~r/cannot read/, fn ->
+        Mix.Task.rerun("playcode.import.performances", [
+          "--path",
+          "test/fixtures/filemaker/nope"
+        ])
       end
     end
   end

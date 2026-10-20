@@ -605,6 +605,135 @@ defmodule Playcode.Import.Performances do
     |> Repo.all()
   end
 
+  # --- writing the plan
+
+  @doc """
+  Writes the plan in one transaction: the places it creates (`Import.Places.apply_places/1`),
+  the entries it cites that Playcode lacks, the companies and actors it names, each
+  performance with its cast in FileMaker's order (after any the play already has), then one
+  activity-log entry per play, which marks the play as imported for good. Returns
+  `{:ok, %{performances: n, companies: n, actors: n, entries: n, places: n}}`, counting the
+  rows made: a company, actor, entry or place already in Playcode is reused, not counted.
+
+  A write the database refuses undoes the whole run and returns `{:error, {kind, ref,
+  changeset}}`, `ref` the FileMaker record behind it (`error_message/1`).
+  """
+  def apply_plan(plan, opts \\ []) do
+    Repo.transaction(
+      fn ->
+        ids = %{
+          places: Places.apply_places(plan.places),
+          entries: Map.new(plan.works, fn {key, work} -> {key, entry_id!(work)} end),
+          companies: Map.new(plan.companies, &{&1, company_id!(&1)}),
+          actors: Map.new(plan.actors, &{&1, actor_id!(&1)})
+        }
+
+        Enum.each(plan.performances, &write_performance!(&1, ids))
+
+        plan.performances
+        |> Enum.group_by(& &1.play_id)
+        |> Enum.each(fn {play_id, performances} ->
+          ActivityLog.log!(%{
+            user_id: opts[:user_id],
+            play_id: play_id,
+            action: "import",
+            resource_type: "play_performance",
+            resource_id: play_id,
+            changes: %{"performances" => length(performances)},
+            metadata: %{"source" => "filemaker"}
+          })
+        end)
+
+        %{
+          performances: length(plan.performances),
+          companies: length(plan.companies -- plan.reused_companies),
+          actors: length(plan.actors -- plan.reused_actors),
+          entries: Enum.count(plan.works, fn {_key, work} -> created?(work) end),
+          places: Enum.count(plan.places, &is_nil(&1.existing))
+        }
+      end,
+      timeout: :infinity
+    )
+  end
+
+  @doc "A refused write, as `apply_plan/2` returns it, in a line for the operator."
+  def error_message({kind, ref, %Ecto.Changeset{} = changeset}) do
+    errors =
+      Ecto.Changeset.traverse_errors(changeset, fn {message, opts} ->
+        Regex.replace(~r"%{(\w+)}", message, fn _, key ->
+          opts |> Keyword.get(String.to_existing_atom(key), key) |> to_string()
+        end)
+      end)
+
+    "#{kind} #{ref}: #{inspect(errors)}"
+  end
+
+  # A refused write rolls the run back at once: the database has aborted the transaction, so
+  # any query after it would only fail with a message about that.
+  defp ok!({:ok, row}, _kind, _ref), do: row
+  defp ok!({:error, changeset}, kind, ref), do: Repo.rollback({kind, ref, changeset})
+
+  defp created?(work), do: is_nil(work.existing) and is_nil(work.identical)
+
+  # The entry a work is cited as: the edition S4 brought in (by its `filemaker_id`), the one
+  # Playcode already has with the same description, else a new one.
+  defp entry_id!(%{existing: ref}) when is_binary(ref),
+    do: Repo.get_by!(Entry, filemaker_id: ref).id
+
+  defp entry_id!(%{identical: id}) when is_binary(id), do: id
+
+  defp entry_id!(work) do
+    %Entry{filemaker_id: work.ref}
+    |> Entry.changeset(work.attrs)
+    |> Repo.insert()
+    |> ok!(:entry, work.ref)
+    |> Map.fetch!(:id)
+  end
+
+  defp company_id!(name) do
+    name |> Performances.find_or_create_company() |> ok!(:company, name) |> Map.fetch!(:id)
+  end
+
+  defp actor_id!(attrs) do
+    attrs
+    |> Performances.find_or_create_actor()
+    |> ok!(:actor, actor_name(attrs))
+    |> Map.fetch!(:id)
+  end
+
+  defp write_performance!(planned, ids) do
+    base = %Performance{filemaker_id: planned.ref, origin: "filemaker"}
+
+    performance =
+      planned
+      |> performance_attrs(ids)
+      |> Performances.create_performance(base)
+      |> ok!(:performance, planned.ref)
+
+    if planned.cast != [], do: put_cast!(performance, planned, ids)
+  end
+
+  defp performance_attrs(planned, ids) do
+    Map.merge(planned.attrs, %{
+      "play_id" => planned.play_id,
+      "company_id" => ids.companies[planned.company],
+      "place_id" => ids.places[planned.place],
+      "historical_state_id" => ids.places[planned.state],
+      "source_entry_id" => ids.entries[planned.source],
+      "source_volume" => planned.source_volume,
+      "source_pages" => planned.source_pages,
+      "cast_from_cast_list" => planned.cast_from_cast_list
+    })
+  end
+
+  defp put_cast!(performance, planned, ids) do
+    rows =
+      for %{actor: actor, role: role} <- planned.cast,
+          do: %{"actor_id" => ids.actors[actor], "role" => role}
+
+    performance |> Performances.put_cast(rows) |> ok!(:performance, planned.ref)
+  end
+
   # --- the report
 
   @doc "The plan as lines of text, for the mix task and the release."
