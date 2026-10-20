@@ -1216,8 +1216,8 @@ defmodule Playcode.Export.TeiXml do
 
   # An act: its heading, the cast lists that open it before any element (a bare castList,
   # its head inside), its own elements, then its scenes and its other lists in their order,
-  # then its trailers, as TEI allows a trailer only at the end. The poem that is the whole
-  # text of the Arte nuevo is a plain div, as question 41 encodes it.
+  # then its trailers, as TEI allows a trailer only at the end. The whole text of a work
+  # that is not a play (the Arte nuevo) is a plain div, as question 41 encodes it.
   defp build_div1(div, cast) do
     attrs = %{type: div.type}
     attrs = if div.number, do: Map.put(attrs, :n, to_string(div.number)), else: attrs
@@ -1228,7 +1228,7 @@ defmodule Playcode.Export.TeiXml do
     {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
 
     element(
-      if(div.type == "poema", do: :div, else: :div1),
+      if(div.type in Division.whole_text_types(), do: :div, else: :div1),
       attrs,
       division_heading(div) ++
         Enum.flat_map(opening, &cast_list(&1, heading(&1.title), cast)) ++

@@ -62,14 +62,19 @@ defmodule Playcode.PlayContent.Division do
   defp kind(type), do: type
 
   @body_types ~w(acto jornada prologo argumento act acte play prologue induction epilogue
-                 interlude dumb_show auto poema)
+                 interlude dumb_show auto poema discurso)
 
   @doc """
   The types of a division of the text itself, as the files write them between the acts:
   acts, and the prologues, inductions, interludes and dumb shows around them; and the
-  poem that is the whole text of the *Arte nuevo* and its translations (question 41).
+  whole text of a work that is not a play (question 41): the *Arte nuevo* and its verse
+  translations, a `poema`, and its prose translation, a `discurso`, Lope's address to the
+  Academy of Madrid.
   """
   def body_types, do: @body_types
+
+  @doc "The types of a whole text that is not a play, written as a plain `div`, not a `div1`."
+  def whole_text_types, do: ~w(poema discurso)
 
   @doc """
   A division's scenes, its children but its cast lists, each with its number from 1: a cast
@@ -95,7 +100,7 @@ defmodule Playcode.PlayContent.Division do
       act scene prologue epilogue induction
       acte scene prologue epilogue
       play circunstancia_accion introduccion_editor_digital nota_edicion_digital head_title
-      interlude dumb_show auto poema
+      interlude dumb_show auto poema discurso
     ))
   end
 end

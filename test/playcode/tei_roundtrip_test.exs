@@ -1178,25 +1178,33 @@ defmodule Playcode.TeiRoundtripTest do
              ]
   end
 
-  # The French translation (EMOTHE0025) is in prose.
-  test "a poem in prose comes back in prose, in no speech" do
+  # The French translation (EMOTHE0025) is in prose: not a poem but a discourse, Lope's
+  # address to the Academy of Madrid.
+  test "a discourse comes back in prose, with its opener, in no speech" do
     xml =
       roundtrip(
         tei(
           body: """
-          <div type="poema"><opener><salute>Adressée à l’Académie de Madrid</salute></opener>
+          <div type="discurso"><opener><salute>Adressée à l’Académie de Madrid</salute></opener>
             <p>Beaux génies, fleurs de notre Espagne.</p><p>La matière paraît aisée.</p>
           </div>
           """
         )
       )
 
-    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poema]"]
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[discurso]"]
     assert xml_texts(xml, "salute", within: "opener") == ["Adressée à l’Académie de Madrid"]
     assert xml_elements(xml, "sp") == []
 
     assert xml_texts(xml, "p", within: "body") ==
              ["Beaux génies, fleurs de notre Espagne.", "La matière paraît aisée."]
+  end
+
+  # Like a poem, a discourse whose opener is removed is still the text, not a paratext.
+  test "a discourse with no opener comes back the text" do
+    xml = roundtrip(tei(body: ~s(<div type="discurso"><p>Beaux génies.</p></div>)))
+
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[discurso]"]
   end
 
   # With its opener removed in Playcode, the poem is still the play's text, not a paratext
