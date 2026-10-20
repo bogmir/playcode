@@ -61,6 +61,15 @@ defmodule Playcode.PlayContent.Division do
   defp kind(type) when type in ~w(prologo prologue), do: "prologue"
   defp kind(type), do: type
 
+  @body_types ~w(acto jornada prologo argumento act acte play prologue induction epilogue
+                 interlude dumb_show auto)
+
+  @doc """
+  The types of a division of the text itself, as the files write them between the acts:
+  acts, and the prologues, inductions, interludes and dumb shows around them.
+  """
+  def body_types, do: @body_types
+
   def changeset(division, attrs) do
     division
     |> cast(attrs, [:type, :number, :title, :position, :play_id, :parent_id])

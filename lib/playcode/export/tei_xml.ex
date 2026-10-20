@@ -23,9 +23,6 @@ defmodule Playcode.Export.TeiXml do
   defp sorted(attrs) when is_map(attrs), do: Enum.sort_by(attrs, &to_string(elem(&1, 0)))
   defp sorted(attrs), do: attrs
 
-  @body_types ~w(acto jornada prologo argumento act acte play prologue induction epilogue
-                 interlude dumb_show auto)
-
   @title_editor_roles %{
     "translator" => "translator",
     "researcher" => "researcher",
@@ -815,7 +812,7 @@ defmodule Playcode.Export.TeiXml do
 
   defp build_text(play, characters, divisions, performances, gazetteer) do
     body_divisions =
-      divisions |> Enum.filter(fn d -> d.type in @body_types end) |> with_folio_parts()
+      divisions |> Enum.filter(&(&1.type in Division.body_types())) |> with_folio_parts()
 
     cast_heading = Enum.find_value(divisions, &(&1.type == "elenco" && &1.title))
 

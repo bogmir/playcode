@@ -11,7 +11,9 @@ defmodule Playcode.Import.TeiImportTest do
 
   alias Playcode.Catalogue
   alias Playcode.Import.TeiImport
+  alias Playcode.Outline
   alias Playcode.Places
+  alias Playcode.PlayContent
   alias Playcode.Statistics
 
   describe "a file that cannot become a play" do
@@ -54,6 +56,126 @@ defmodule Playcode.Import.TeiImportTest do
 
   # One statement per row made a big play's import thousands of round trips (7,565 for
   # AL0788), all inside the one transaction production's 60-second timeout covers.
+  describe "the outline" do
+    # A paratext by its kind, a division by its type, in outline order.
+    defp outline_kinds(play) do
+      play.id
+      |> Catalogue.list_paratexts()
+      |> Outline.items(PlayContent.list_top_divisions(play.id))
+      |> Enum.map(&(Map.get(&1, :kind) || &1.type))
+    end
+
+    test "every cast list comes in where its file has it, each with its own entries" do
+      play = import_tei!(outline_xml())
+      lists = PlayContent.list_cast_lists(play.id)
+
+      assert Enum.map(lists, fn list -> Enum.map(list.entries, & &1.name) end) == [
+               ["ANA", "BLAS", "CRISPÍN", "Músicos"],
+               ["ANA, disfrazada"],
+               ["DIEGO"],
+               ["BLAS"],
+               ["CRISPÍN"]
+             ]
+
+      assert Enum.map(lists, & &1.title) == [
+               "PERSONAS",
+               "Personas del acto primero",
+               "Sale de nuevo",
+               "Personas del acto segundo",
+               "Personas que no hablan"
+             ]
+
+      [first | _] = lists
+      assert Enum.map(first.entries, & &1.group_heading) == [nil, "Criados", "Criados", nil]
+      assert List.last(first.entries).character_id == nil
+
+      [act | _] = Enum.filter(PlayContent.list_top_divisions(play.id), &(&1.type == "acto"))
+
+      assert Enum.map(act.children, &{&1.type, &1.position}) ==
+               [{"elenco", 0}, {"escena", 1}, {"elenco", 2}, {"escena", 3}]
+
+      assert [{"ANA", "dama"}, {"BLAS", nil}, {"CRISPÍN", nil}, {"DIEGO", nil}] =
+               for(c <- PlayContent.list_characters(play.id), do: {c.name, c.description})
+    end
+
+    test "paratexts, the scene, lists and divisions take one order, the file's" do
+      play = import_tei!(outline_xml())
+
+      assert outline_kinds(play) ==
+               ~w(dedicatoria lugar_accion elenco head_title acto elenco loa acto epilogo elenco)
+    end
+
+    test "a re-import leaves a hand-added paratext where it stood" do
+      xml = outline_xml()
+      play = import_tei!(xml)
+
+      # The loa's number: the paratext stands between the list and the loa once the loa
+      # moves on.
+      {:ok, _} =
+        Catalogue.create_paratext(%{
+          play_id: play.id,
+          kind: "nota_edicion_digital",
+          heading: "A mano",
+          origin: "manual",
+          position: 6
+        })
+
+      play = import_tei!(xml)
+
+      assert outline_kinds(play) ==
+               ~w(dedicatoria lugar_accion elenco head_title acto elenco nota_edicion_digital
+                  loa acto epilogo elenco)
+    end
+
+    test "a re-import of a file with an empty front div keeps a hand-added paratext" do
+      xml =
+        tei(
+          front: """
+          <div type="dedicatoria"></div>
+          <div type="dedicatoria"></div>
+          """,
+          body: ~s(<div1 type="acto" n="1"><head>ACTO</head></div1>)
+        )
+
+      play = import_tei!(xml)
+
+      {:ok, _} =
+        Catalogue.create_paratext(%{
+          play_id: play.id,
+          kind: "nota_edicion_digital",
+          heading: "A mano",
+          origin: "manual",
+          position: 0
+        })
+
+      assert outline_kinds(import_tei!(xml)) == ~w(nota_edicion_digital acto)
+    end
+
+    test "a role whose xml:id the file already gave is an entry for that character" do
+      play =
+        import_tei!(
+          tei(
+            front: """
+            <div type="elenco"><castList>
+              <castItem><role xml:id="ANA">ANA</role></castItem>
+            </castList></div>
+            <div type="elenco"><castList>
+              <castItem><role xml:id="ANA">ANA, otra vez</role></castItem>
+            </castList></div>
+            """
+          )
+        )
+
+      assert [%{name: "ANA"}] = PlayContent.list_characters(play.id)
+
+      assert [[{"ANA", id}], [{"ANA, otra vez", id}]] =
+               for(
+                 list <- PlayContent.list_cast_lists(play.id),
+                 do: Enum.map(list.entries, &{&1.name, &1.character_id})
+               )
+    end
+  end
+
   test "the queries an import makes do not grow with the length of its text" do
     front = """
     <div type="elenco"><castList>

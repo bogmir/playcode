@@ -19,7 +19,7 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Performances
   alias Playcode.Performances.Performance
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, Note}
+  alias Playcode.PlayContent.{CastListEntry, Character, Division, Element, ElementCharacter, Note}
   alias Playcode.Places
   alias Playcode.Repo
   alias Playcode.Text
@@ -221,14 +221,14 @@ defmodule Playcode.Import.TeiImport do
     Enum.each(tei.places, &write_place(&1, nil))
     write_settings(tei.settings, play)
 
-    Enum.each(tei.characters, &insert_character(Map.put(&1, :play_id, play.id)))
+    tei = take_free_positions(tei, play)
+    cast = write_characters(tei.characters, play)
 
     Enum.each(tei.paratexts, &Catalogue.create_paratext(tei_row(&1, play)))
     write_performances(tei.performances, play)
 
-    cast = Map.new(PlayContent.list_characters(play.id), &{&1.xml_id, &1.id})
     write_text(tei.divisions, play, cast)
-    write_cast_entries(play)
+    PlayContent.sync_characters(play.id)
     write_bibliography(tei.bibliography, play)
 
     # Recompute verse_count from actual verse_line elements (the TEI header
@@ -238,37 +238,36 @@ defmodule Playcode.Import.TeiImport do
     play
   end
 
-  # A role repeating an xml:id under the same name is the same character; under another
-  # name, a character of its own with a suffixed id.
-  defp insert_character(attrs, n \\ 1) do
-    xml_id = if n == 1, do: attrs.xml_id, else: "#{attrs.xml_id}_#{n}"
+  # The file's top-level items take the positions the paratexts kept from before (typed
+  # by hand) leave free, in the file's order: a kept paratext stays where it stood.
+  defp take_free_positions(tei, play) do
+    kept =
+      for paratext <- Catalogue.list_paratexts(play.id), into: MapSet.new(), do: paratext.position
 
-    case PlayContent.find_character_by_xml_id(attrs.play_id, xml_id) do
-      nil -> %Character{} |> Character.changeset(%{attrs | xml_id: xml_id}) |> Repo.insert!()
-      %Character{name: name} when name == attrs.name -> :ok
-      _other -> insert_character(attrs, n + 1)
-    end
+    # An empty div takes a position and makes no item: as many as the last one needs.
+    needed = Enum.max(Enum.map(tei.paratexts ++ tei.divisions, & &1.position), fn -> -1 end) + 1
+
+    free =
+      Stream.iterate(0, &(&1 + 1))
+      |> Stream.reject(&MapSet.member?(kept, &1))
+      |> Enum.take(needed)
+      |> List.to_tuple()
+
+    move = &%{&1 | position: elem(free, &1.position)}
+    %{tei | paratexts: Enum.map(tei.paratexts, move), divisions: Enum.map(tei.divisions, move)}
   end
 
-  # Every character in the file's first cast list, in the order the file gives them.
-  defp write_cast_entries(play) do
-    case PlayContent.list_cast_lists(play.id) do
-      [] ->
-        :ok
+  # The file's characters as rows; returns their ids by xml_id.
+  defp write_characters(characters, play) do
+    rows =
+      for character <- characters do
+        %Character{id: Ecto.UUID.generate()}
+        |> Character.changeset(Map.put(character, :play_id, play.id))
+        |> checked(&{:character_create_failed, &1})
+      end
 
-      [list | _] ->
-        for character <- PlayContent.list_characters(play.id) do
-          {:ok, _} =
-            PlayContent.create_entry(%{
-              play_id: play.id,
-              cast_list_id: list.id,
-              character_id: character.id,
-              name: character.name,
-              description: character.description,
-              position: character.position
-            })
-        end
-    end
+    insert_rows(rows, Character, DateTime.utc_now(:second))
+    Map.new(rows, &{&1.xml_id, &1.id})
   end
 
   # Every editor, source, note, witness and performance the importer creates is stamped
@@ -697,13 +696,13 @@ defmodule Playcode.Import.TeiImport do
     rows =
       Enum.reduce(
         divisions,
-        %{Division => [], Element => [], ElementCharacter => [], Note => []},
+        %{Division => [], CastListEntry => [], Element => [], ElementCharacter => [], Note => []},
         &collect_division(&1, play, nil, cast, &2)
       )
 
     now = DateTime.utc_now(:second)
 
-    for schema <- [Division, Element, ElementCharacter, Note] do
+    for schema <- [Division, CastListEntry, Element, ElementCharacter, Note] do
       rows |> Map.fetch!(schema) |> Enum.reverse() |> insert_rows(schema, now)
     end
   end
@@ -721,8 +720,28 @@ defmodule Playcode.Import.TeiImport do
       |> checked(&{:division_create_failed, &1})
 
     rows = rows |> add(Division, row) |> collect_notes(division.notes, :division_id, row, play)
+    rows = Enum.reduce(Map.get(division, :entries, []), rows, &collect_entry(&1, row, cast, &2))
     rows = Enum.reduce(division.elements, rows, &collect_element(&1, play, row.id, nil, cast, &2))
     Enum.reduce(division.divisions, rows, &collect_division(&1, play, row.id, cast, &2))
+  end
+
+  # A cast list's entry, naming the character its role declares or refers to: none for a
+  # role with no id, or one referring to an id no role declares.
+  defp collect_entry(entry, list, cast, rows) do
+    row =
+      %CastListEntry{id: Ecto.UUID.generate()}
+      |> CastListEntry.changeset(
+        entry
+        |> Map.take([:name, :description, :group_heading, :position])
+        |> Map.merge(%{
+          play_id: list.play_id,
+          cast_list_id: list.id,
+          character_id: Map.get(cast, entry.character)
+        })
+      )
+      |> checked(&{:cast_list_entry_create_failed, &1})
+
+    add(rows, CastListEntry, row)
   end
 
   defp collect_element(element, play, division_id, parent_id, cast, rows) do

@@ -40,7 +40,7 @@ defmodule Playcode.Import.TeiParser do
   alias Playcode.Catalogue.Play
   alias Playcode.Performances.Performance
   alias Playcode.Places
-  alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.PlayContent.{Division, InlineMarkup, Note}
   alias Playcode.Text
   alias Playcode.Witnesses
 
@@ -1146,38 +1146,87 @@ defmodule Playcode.Import.TeiParser do
   defp text(nil),
     do: %{characters: [], paratexts: [], divisions: [], bibliography: [], performances: []}
 
+  # The front, the body and the back are read child by child onto one position counter:
+  # a play's top-level paratexts and divisions share one order, the file's (`Outline`).
+  # In the front a div, the <set> and a bare <castList> each take a position; in the body
+  # every div1; in the back every div but the bibliography and one in verse, two files'
+  # commendatory sonnet (question 30). The title page and the performances take none.
   defp text({_name, _attrs, children}) do
-    front = front(find_child(children, "front"))
-    body = body(find_child(children, "body"), front.next_position)
+    front = find_child(children, "front")
     back = find_child(children, "back")
 
+    items =
+      (slots(:front, front) ++ slots(:body, find_child(children, "body")) ++ slots(:back, back))
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {slot, pos} -> read_slot(slot, pos) end)
+
+    divisions = for {:division, division} <- items, do: division
+
     %{
-      characters: front.characters,
-      paratexts: front.paratexts ++ back_matter(back, front.next_position + length(body)),
-      divisions: front.divisions ++ body,
+      characters: declared_characters(divisions),
+      paratexts: for({:paratext, paratext} <- items, do: paratext),
+      divisions: divisions,
       bibliography: bibliography(back),
-      performances: front.performances
+      performances:
+        for({"performance", attrs, parts} <- children_of(front), do: performance(attrs, parts))
     }
   end
 
-  # --- Back: paratexts after the text ---
+  # Each child that takes a position: {section, element name, type, attributes, children}.
+  defp slots(section, element) do
+    for {name, attrs, children} = child <- children_of(element), slot?(section, child) do
+      type = (attr_value(attrs, "type") || default_type(name)) |> String.downcase()
+      {section, name, type, attrs, children}
+    end
+  end
 
-  # Each div but the bibliography, read as a front paratext is, positions continuing
-  # after the body's. Not read: a cast list (0404, 0718; question 29) and a div in verse,
-  # two files' commendatory sonnet, though it has a heading (question 30).
-  defp back_matter(nil, _first), do: []
+  defp default_type("div1"), do: "acto"
+  defp default_type(_name), do: "front"
 
-  defp back_matter({_name, _attrs, children}, first) do
-    for(
-      {"div", attrs, div_children} <- children,
-      type = attr_value(attrs, "type") || "front",
-      type not in ~w(bibliografia elenco),
-      find_child(div_children, "lg") == nil,
-      do: {type, div_children}
-    )
-    |> Enum.with_index(first)
-    |> Enum.flat_map(fn {{type, div_children}, pos} -> paratext(type, div_children, pos) end)
-    |> Enum.map(&%{&1 | back: true})
+  defp slot?(:front, {name, _, _}), do: name in ~w(div set castList)
+  defp slot?(:body, {name, _, _}), do: name in ~w(div1 div)
+
+  defp slot?(:back, {"div", attrs, children}),
+    do: attr_value(attrs, "type") != "bibliografia" and find_child(children, "lg") == nil
+
+  defp slot?(_section, _child), do: false
+
+  defp read_slot({_section, "castList", _type, _attrs, children}, pos),
+    do: [{:division, cast_list(find_child(children, "head"), children, pos)}]
+
+  defp read_slot({_section, _name, "elenco", _attrs, children}, pos),
+    do: [{:division, elenco(children, pos)}]
+
+  defp read_slot({_section, "set", _type, _attrs, children}, pos),
+    do: for(scene <- paratext("lugar_accion", children, pos), do: {:paratext, scene})
+
+  defp read_slot({:body, _name, type, attrs, children} = slot, pos) do
+    if paratext_div1?(type, children),
+      do: read_slot(put_elem(slot, 0, :front), pos),
+      else: [{:division, act(type, attrs, children, pos)}]
+  end
+
+  defp read_slot({section, _name, type, _attrs, children}, pos) do
+    for paratext <- paratext(type, children, pos),
+        do: {:paratext, %{paratext | back: section == :back}}
+  end
+
+  # A div1 between the acts holding only a heading and paragraphs is a paratext, as
+  # Playcode writes one there, unless its type is a division's: Gorboduc's dumb shows and
+  # La Silvanira's inductions are divisions of the text.
+  defp paratext_div1?(type, children) do
+    type not in Division.body_types() and
+      Enum.all?(children, &(not is_tuple(&1) or elem(&1, 0) in ~w(head p)))
+  end
+
+  # The characters the file declares, each by its first role with that xml:id, in the
+  # file's order: a list inside an act after the act.
+  defp declared_characters(divisions) do
+    divisions
+    |> Enum.flat_map(&[&1 | &1.divisions])
+    |> Enum.flat_map(&Map.get(&1, :characters, []))
+    |> Enum.uniq_by(& &1.xml_id)
+    |> Enum.with_index(fn character, position -> %{character | position: position} end)
   end
 
   # --- Back: the bibliography ---
@@ -1284,56 +1333,7 @@ defmodule Playcode.Import.TeiParser do
   defp attrs_of({_name, attrs, _children}), do: attrs
   defp attrs_of(nil), do: []
 
-  # --- Front matter ---
-
-  # Each <div> of the front takes a position, which the body's divisions continue; the
-  # title page and anything else take none. A cast list is the play's characters and an
-  # `elenco` division; any other div is a paratext.
-  defp front(nil),
-    do: %{characters: [], paratexts: [], divisions: [], performances: [], next_position: 0}
-
-  defp front({_name, _attrs, children}) do
-    divs =
-      for(
-        {"div", attrs, div_children} <- children,
-        do: {attr_value(attrs, "type") || "front", div_children}
-      )
-      |> Enum.with_index()
-
-    %{
-      characters:
-        Enum.flat_map(divs, fn
-          {{"elenco", div_children}, _pos} -> cast_list(find_child(div_children, "castList"))
-          _other -> []
-        end),
-      divisions:
-        for({{"elenco", div_children}, pos} <- divs, do: elenco_division(div_children, pos)),
-      paratexts:
-        Enum.flat_map(divs, fn
-          {{"elenco", _div_children}, _pos} -> []
-          {{type, div_children}, pos} -> paratext(type, div_children, pos)
-        end) ++
-          for(
-            {"set", _attrs, set_children} <- children,
-            scene <- paratext("lugar_accion", set_children, length(divs)),
-            do: scene
-          ),
-      performances: for({"performance", attrs, parts} <- children, do: performance(attrs, parts)),
-      next_position: length(divs)
-    }
-  end
-
-  defp elenco_division(children, pos) do
-    %{
-      type: "elenco",
-      number: nil,
-      title: safe_text(find_child(children, "head")),
-      position: pos,
-      notes: [],
-      elements: [],
-      divisions: []
-    }
-  end
+  # --- Paratexts ---
 
   # A paratext (dedication, editor's introduction, …), kept when it has a heading or
   # paragraphs: 12 head titles are a heading alone.
@@ -1375,80 +1375,118 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Cast list ---
 
-  defp cast_list(nil), do: []
+  # A div (div1, div2) of type `elenco`: its heading, and the castList inside, if any.
+  defp elenco(children, pos),
+    do:
+      cast_list(find_child(children, "head"), children_of(find_child(children, "castList")), pos)
 
-  defp cast_list({_name, _attrs, children}) do
-    children
-    |> find_children("castItem")
-    |> Enum.with_index()
-    |> Enum.flat_map(fn {{_name, attrs, item_children}, idx} ->
-      case find_child(item_children, "role") do
-        nil ->
-          []
+  # A cast list: an `elenco` division holding its entries, one per castItem, those of a
+  # castGroup under the group's head. An entry names the character it declares
+  # (`xml:id`) or refers to (`corresp`), or none; a role with an xml:id also gives the
+  # character.
+  defp cast_list(head, list_children, pos) do
+    items = Enum.flat_map(list_children, &cast_items/1)
 
-        {_role_name, role_attrs, _role_children} = role ->
-          name = role |> text_content() |> String.trim()
-          xml_id = attr_value(role_attrs, "xml:id") || attr_value(role_attrs, "id")
+    %{
+      type: "elenco",
+      number: nil,
+      title: safe_text(head),
+      position: pos,
+      notes: [],
+      elements: [],
+      divisions: [],
+      entries:
+        items
+        |> Enum.with_index()
+        |> Enum.map(fn {{entry, _character}, position} -> %{entry | position: position} end),
+      characters: for({_entry, character} <- items, character, do: character)
+    }
+  end
 
-          [
-            %{
-              # Clean xml_id (some have newlines)
-              xml_id: if(xml_id, do: String.trim(xml_id), else: name),
+  defp cast_items({"castItem", attrs, children}), do: cast_item(attrs, children, nil)
+
+  defp cast_items({"castGroup", _attrs, children}) do
+    group = safe_text(find_child(children, "head"))
+    for {"castItem", attrs, item} <- children, entry <- cast_item(attrs, item, group), do: entry
+  end
+
+  defp cast_items(_other), do: []
+
+  defp cast_item(attrs, children, group) do
+    case find_child(children, "role") do
+      nil ->
+        []
+
+      {_role_name, role_attrs, _role_children} = role ->
+        name = role |> text_content() |> String.trim()
+        description = safe_text(find_child(children, "roleDesc"))
+        # Clean xml_id (some have newlines)
+        xml_id =
+          with id when is_binary(id) <-
+                 attr_value(role_attrs, "xml:id") || attr_value(role_attrs, "id"),
+               do: String.trim(id)
+
+        corresp =
+          with ref when is_binary(ref) <- attr_value(role_attrs, "corresp"),
+               do: ref |> String.trim() |> String.trim_leading("#")
+
+        character =
+          if xml_id,
+            do: %{
+              xml_id: xml_id,
               name: name,
-              description: safe_text(find_child(item_children, "roleDesc")),
-              actor: safe_text(find_child(item_children, "actor")),
+              description: description,
+              actor: safe_text(find_child(children, "actor")),
               is_hidden: attr_value(attrs, "ana") == "oculto",
-              position: idx
+              position: 0
             }
-          ]
-      end
-    end)
+
+        entry = %{
+          name: name,
+          description: description,
+          group_heading: group,
+          position: 0,
+          character: xml_id || corresp
+        }
+
+        [{entry, character}]
+    end
   end
 
   # --- Body (acts, scenes, speeches, etc.) ---
 
-  defp body(nil, _first), do: []
+  defp act(type, attrs, act_children, pos) do
+    {heading, notes} = text_and_notes(find_child(act_children, "head"))
+    {elements, scenes} = act_content(act_children)
 
-  defp body({_name, _attrs, children}, first) do
-    children
-    |> Enum.filter(&match?({name, _, _} when name in ["div1", "div"], &1))
-    |> Enum.with_index(first)
-    |> Enum.map(fn {{_name, attrs, act_children}, pos} ->
-      {heading, notes} = text_and_notes(find_child(act_children, "head"))
-      {elements, scenes} = act_content(act_children)
-
-      %{
-        type: (attr_value(attrs, "type") || "acto") |> String.downcase(),
-        number: parse_int(attr_value(attrs, "n")),
-        title: heading,
-        position: pos,
-        notes: notes,
-        elements: elements,
-        divisions: scenes
-      }
-    end)
+    %{
+      type: type,
+      number: parse_int(attr_value(attrs, "n")),
+      title: heading,
+      position: pos,
+      notes: notes,
+      elements: elements,
+      divisions: scenes
+    }
   end
 
   # An act's own elements and its scenes. The act's elements and its scenes' share one
-  # position counter: a scene's first element follows the last element before it.
+  # position counter: a scene's first element follows the last element before it. A cast
+  # list in the act, a bare castList or a div2 of type `elenco`, stands among the scenes.
   defp act_content(children) do
     {_el_pos, _scene_pos, elements, scenes} =
       Enum.reduce(children, {0, 0, [], []}, fn
-        {"div2", attrs, scene_children}, {el_pos, scene_pos, elements, scenes} ->
-          {heading, notes} = text_and_notes(find_child(scene_children, "head"))
-          scene_elements = scene_content(scene_children, el_pos)
+        {"castList", _attrs, list_children}, {el_pos, scene_pos, elements, scenes} ->
+          list = cast_list(find_child(list_children, "head"), list_children, scene_pos)
+          {el_pos, scene_pos + 1, elements, [list | scenes]}
 
-          scene = %{
-            type: (attr_value(attrs, "type") || "escena") |> String.downcase(),
-            number: parse_int(attr_value(attrs, "n")),
-            title: heading,
-            position: scene_pos,
-            notes: notes,
-            elements: scene_elements,
-            divisions: []
-          }
+        {"div2", attrs, div2_children}, {el_pos, scene_pos, elements, scenes} ->
+          scene =
+            if attr_value(attrs, "type") == "elenco",
+              do: elenco(div2_children, scene_pos),
+              else: scene(attrs, div2_children, el_pos, scene_pos)
 
-          {el_pos + length(scene_elements), scene_pos + 1, elements, [scene | scenes]}
+          {el_pos + length(scene.elements), scene_pos + 1, elements, [scene | scenes]}
 
         child, {el_pos, scene_pos, elements, scenes} = acc ->
           case act_element(child, el_pos) do
@@ -1458,6 +1496,20 @@ defmodule Playcode.Import.TeiParser do
       end)
 
     {Enum.reverse(elements), Enum.reverse(scenes)}
+  end
+
+  defp scene(attrs, children, el_pos, scene_pos) do
+    {heading, notes} = text_and_notes(find_child(children, "head"))
+
+    %{
+      type: (attr_value(attrs, "type") || "escena") |> String.downcase(),
+      number: parse_int(attr_value(attrs, "n")),
+      title: heading,
+      position: scene_pos,
+      notes: notes,
+      elements: scene_content(children, el_pos),
+      divisions: []
+    }
   end
 
   # An element directly in an act; nil for anything else (the head is the act's title).

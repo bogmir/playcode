@@ -1,0 +1,134 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- A play made up to hold every place a cast list, a paratext and the scene of the action
+     can stand in (docs/superpowers/specs/2026-10-20-play-outline-design.md): before the
+     acts, inside an act before its first scene and between its scenes, between the acts,
+     and after the text. Written as Playcode writes a file, so its round trip gives it back.
+     Tests import it under a code of their own (ImportHelpers.outline_xml/0). -->
+<TEI xmlns="http://www.tei-c.org/ns/1.0">
+  <teiHeader>
+    <fileDesc>
+      <titleStmt>
+        <title>Comedia de los elencos</title>
+      </titleStmt>
+      <publicationStmt>
+        <idno>EMOTHE9990</idno>
+      </publicationStmt>
+      <sourceDesc>
+        <p>Una comedia de prueba.</p>
+      </sourceDesc>
+    </fileDesc>
+  </teiHeader>
+  <text>
+    <front>
+      <titlePage>
+        <docTitle>
+          <titlePart>
+            <title>Comedia de los elencos</title>
+          </titlePart>
+        </docTitle>
+      </titlePage>
+      <div type="dedicatoria">
+        <head>DEDICATORIA</head>
+        <p>Al lector discreto.</p>
+      </div>
+      <set>
+        <head>LUGAR DE LA ACCIÓN</head>
+        <p>La acción pasa en Toledo.</p>
+      </set>
+      <div type="elenco">
+        <head>PERSONAS</head>
+        <castList>
+          <castItem>
+            <role xml:id="ANA">ANA</role>
+            <roleDesc>dama</roleDesc>
+          </castItem>
+          <castGroup>
+            <head>Criados</head>
+            <castItem>
+              <role xml:id="BLAS">BLAS</role>
+            </castItem>
+            <castItem>
+              <role xml:id="CRISPIN">CRISPÍN</role>
+            </castItem>
+          </castGroup>
+          <castItem>
+            <role>Músicos</role>
+          </castItem>
+        </castList>
+      </div>
+      <div type="head_title">
+        <head>COMEDIA DE LOS ELENCOS</head>
+      </div>
+    </front>
+    <body>
+      <div1 type="acto" n="1">
+        <head>ACTO PRIMERO</head>
+        <castList>
+          <head>Personas del acto primero</head>
+          <castItem>
+            <role corresp="#ANA">ANA, disfrazada</role>
+            <roleDesc>de hombre</roleDesc>
+          </castItem>
+        </castList>
+        <div2 type="escena" n="1">
+          <head>ESCENA I</head>
+          <sp who="#ANA">
+            <speaker>ANA</speaker>
+            <l n="1">Primer verso de la comedia.</l>
+          </sp>
+        </div2>
+        <div2 type="elenco">
+          <head>Sale de nuevo</head>
+          <castList>
+            <castItem>
+              <role xml:id="DIEGO">DIEGO</role>
+            </castItem>
+          </castList>
+        </div2>
+        <div2 type="escena" n="2">
+          <head>ESCENA II</head>
+          <sp who="#DIEGO">
+            <speaker>DIEGO</speaker>
+            <l n="2">Segundo verso de la comedia.</l>
+          </sp>
+        </div2>
+      </div1>
+      <div1 type="elenco">
+        <head>Personas del acto segundo</head>
+        <castList>
+          <castItem>
+            <role corresp="#BLAS">BLAS</role>
+          </castItem>
+        </castList>
+      </div1>
+      <div1 type="loa">
+        <head>LOA</head>
+        <p>Una loa entre los actos.</p>
+      </div1>
+      <div1 type="acto" n="2">
+        <head>ACTO SEGUNDO</head>
+        <div2 type="escena" n="1">
+          <head>ESCENA I</head>
+          <sp who="#BLAS">
+            <speaker>BLAS</speaker>
+            <l n="3">Tercer verso de la comedia.</l>
+          </sp>
+        </div2>
+      </div1>
+    </body>
+    <back>
+      <div type="epilogo">
+        <head>EPÍLOGO</head>
+        <p>Fin de la comedia.</p>
+      </div>
+      <div type="elenco">
+        <head>Personas que no hablan</head>
+        <castList>
+          <castItem>
+            <role corresp="#CRISPIN">CRISPÍN</role>
+          </castItem>
+        </castList>
+      </div>
+    </back>
+  </text>
+</TEI>

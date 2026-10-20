@@ -60,6 +60,15 @@ defmodule Playcode.ImportHelpers do
   # would be stored as something else.
   defp tei_code, do: "T#{System.unique_integer([:positive])}"
 
+  @doc """
+  `test/fixtures/outline.xml`, a play with a cast list, a paratext and the scene of the
+  action in every place one can stand, under a code of its own: async tests importing one
+  code would wait on each other's unique index.
+  """
+  def outline_xml do
+    "test/fixtures/outline.xml" |> File.read!() |> String.replace("EMOTHE9990", tei_code())
+  end
+
   @doc "Writes `contents` to a temp file removed when the test exits."
   def write_tmp!(contents, ext \\ ".xml") do
     path = Path.join(System.tmp_dir!(), "import-#{System.unique_integer([:positive])}#{ext}")

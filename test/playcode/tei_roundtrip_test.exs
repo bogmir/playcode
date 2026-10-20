@@ -944,7 +944,10 @@ defmodule Playcode.TeiRoundtripTest do
              ]
     end
 
-    test "a repeated id with a different name is kept apart; an exact repeat is one character" do
+    # Until 2026-10-20 a repeated id under another name became a character of its own,
+    # HERO_2. A role naming an id the file already declared is that character's entry in
+    # its list (docs/superpowers/specs/2026-10-20-play-outline-design.md).
+    test "a repeated id is the character it first declared" do
       xml =
         roundtrip(
           tei(
@@ -958,10 +961,7 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
-      assert xml_elements(xml, "role") == [
-               {%{"xml:id" => "HERO"}, "Hero Original"},
-               {%{"xml:id" => "HERO_2"}, "Hero Duplicate"}
-             ]
+      assert xml_elements(xml, "role") == [{%{"xml:id" => "HERO"}, "Hero Original"}]
     end
   end
 

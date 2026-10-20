@@ -29,6 +29,7 @@ defmodule Playcode.Import.TeiParserTest do
     {Playcode.Places.Place, :authorities, 0},
     {Playcode.PlayContent.InlineMarkup, :number_marker, 1},
     {Playcode.PlayContent.Note, :variant, 0},
+    {Playcode.PlayContent.Division, :body_types, 0},
     # strings only: a performance's text is squeezed as the changeset squeezes it
     {Playcode.Text, :squeeze, 1},
     {Playcode.Witnesses, :type_from_tei, 2}
