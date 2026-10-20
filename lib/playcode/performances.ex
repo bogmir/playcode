@@ -14,13 +14,14 @@ defmodule Playcode.Performances do
   """
 
   import Ecto.Query
-  import Ecto.Changeset, only: [get_field: 2, put_change: 3]
+  import Ecto.Changeset, only: [add_error: 4, get_field: 2, put_change: 3]
 
   alias Playcode.Bibliography
   alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Performances.{Actor, CastMember, Company, Performance}
   alias Playcode.Places
   alias Playcode.Repo
+  alias Playcode.Text
 
   defp preloads,
     do: [:company, :source, place: [names: Places.names_query()], cast: :actor]
@@ -165,18 +166,28 @@ defmodule Playcode.Performances do
 
   @doc """
   Adds a performance after the play's last. `attrs` carry its `play_id`; `base` is the
-  struct to start from, so the FileMaker import can set `filemaker_id`.
+  struct to start from, so the FileMaker import can set `filemaker_id`. See
+  `update_performance/2` for a `"company_name"`.
   """
   def create_performance(attrs, %Performance{} = base \\ %Performance{}) do
-    changeset = Performance.changeset(base, attrs)
+    with_company(base, attrs, fn attrs ->
+      changeset = Performance.changeset(base, attrs)
 
-    changeset
-    |> put_change(:position, next_position(get_field(changeset, :play_id)))
-    |> Repo.insert()
+      changeset
+      |> put_change(:position, next_position(get_field(changeset, :play_id)))
+      |> Repo.insert()
+    end)
   end
 
+  @doc """
+  Corrects a performance. A `"company_name"` among `attrs` stands for the company: found by
+  name or created (blank, none), in the same transaction as the write, so a refused write
+  leaves no company behind. The company it had, if no performance names it now, is deleted.
+  The `updated` performance keeps the associations it came with: read it again
+  (`get_performance/2`) before showing its company.
+  """
   def update_performance(%Performance{} = performance, attrs) do
-    Repo.transact(fn ->
+    with_company(performance, attrs, fn attrs ->
       with {:ok, updated} <- performance |> Performance.changeset(attrs) |> Repo.update() do
         delete_unused(
           companies: [performance.company_id],
@@ -186,6 +197,41 @@ defmodule Playcode.Performances do
         {:ok, updated}
       end
     end)
+  end
+
+  # Runs `write` with the `company_id` for the "company_name" in `attrs`, if there is one.
+  defp with_company(base, attrs, write) do
+    Repo.transact(fn ->
+      case put_company(attrs) do
+        {:ok, attrs} -> write.(attrs)
+        {:error, company} -> {:error, company_error(base, attrs, company)}
+      end
+    end)
+  end
+
+  defp put_company(%{"company_name" => name} = attrs) do
+    case Text.squeeze(name) do
+      nil ->
+        {:ok, Map.put(attrs, "company_id", nil)}
+
+      name ->
+        with {:ok, company} <- find_or_create_company(name),
+             do: {:ok, Map.put(attrs, "company_id", company.id)}
+    end
+  end
+
+  defp put_company(attrs), do: {:ok, attrs}
+
+  # The refused company's errors (only a rival writer's unique name can refuse one), on the
+  # performance's own changeset under the field the form calls it.
+  defp company_error(base, attrs, company) do
+    changeset = Performance.changeset(base, attrs)
+
+    company.errors
+    |> Enum.reduce(changeset, fn {_field, {message, opts}}, changeset ->
+      add_error(changeset, :company_name, message, opts)
+    end)
+    |> Map.put(:action, :validate)
   end
 
   def delete_performance(%Performance{} = performance) do

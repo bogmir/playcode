@@ -262,6 +262,21 @@ defmodule Playcode.Places do
     |> Map.new(&{&1.id, &1})
   end
 
+  @doc """
+  The places a place can be said to have belonged to (a play's place link, a performance's
+  place): the countries and regions of the `gazetteer`, by name, and any place of another
+  type in `named_ids` (a TEI file's state can be of any type). Without its option a row
+  would submit the blank one, and a save would clear the state.
+  """
+  def historical_states(gazetteer, named_ids) do
+    named = MapSet.new(named_ids)
+
+    gazetteer
+    |> Map.values()
+    |> Enum.filter(&(&1.type in ~w(country region) or &1.id in named))
+    |> Enum.sort_by(&display_name(&1, "es"))
+  end
+
   @doc "The containing places, outermost first. Bounded, so a data loop cannot hang a page."
   def ancestors(%Place{} = place, gazetteer) do
     Enum.reduce_while(1..10, {place.parent_place_id, []}, fn _, {id, acc} ->

@@ -6,6 +6,8 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
 
   use PlaycodeWeb, :live_view
 
+  import PlaycodeWeb.Admin.PlacePicker
+
   alias Playcode.Catalogue
   alias Playcode.Places
   alias Playcode.Places.Authority
@@ -199,19 +201,10 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
     socket
     |> assign(:links, links)
     |> assign(:gazetteer, gazetteer)
-    |> assign(:states, historical_states(gazetteer, links))
-  end
-
-  # The countries and regions a link can name as its place's historical state, by name, and any
-  # place of another type a link already names (a TEI file's state can be of any type): without
-  # its option the row would submit the blank one and a save would clear the state.
-  defp historical_states(gazetteer, links) do
-    named = MapSet.new(links, & &1.historical_state_id)
-
-    gazetteer
-    |> Map.values()
-    |> Enum.filter(&(&1.type in ~w(country region) or &1.id in named))
-    |> Enum.sort_by(&Places.display_name(&1, "es"))
+    |> assign(
+      :states,
+      Places.historical_states(gazetteer, Enum.map(links, & &1.historical_state_id))
+    )
   end
 
   @impl true
@@ -243,62 +236,17 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
       />
 
       <div :if={is_nil(@editing)} class="mb-6 mt-4">
-        <label class="label">
+        <label class="label" for="place-search-term">
           <span class="label-text font-medium">{gettext("Add an existing place")}</span>
         </label>
         <div class="flex items-end gap-2">
-          <div class="relative grow">
-            <%!-- Picked state: the place is chosen, only the role is left to set. --%>
-            <div
-              :if={@picked}
-              class="input input-bordered input-sm flex h-auto min-h-8 items-center justify-between gap-2"
-            >
-              <span class="truncate text-sm">
-                {Places.breadcrumb(@picked, @gazetteer, "es")}
-              </span>
-              <button
-                type="button"
-                phx-click="clear_pick"
-                class="btn btn-circle btn-ghost btn-xs shrink-0"
-                title={gettext("Clear")}
-              >
-                <.icon name="hero-x-mark-mini" class="size-3.5" />
-              </button>
-            </div>
-            <%!-- Search state. A <select> of every place stops scaling well before the
-                 corpus is fully imported, so this searches names in any language. --%>
-            <form :if={is_nil(@picked)} phx-change="search_places">
-              <input
-                type="text"
-                name="term"
-                value={@term}
-                phx-debounce="200"
-                placeholder={gettext("Search any name, in any language")}
-                class="input input-bordered input-sm w-full"
-                autocomplete="off"
-              />
-            </form>
-            <ul
-              :if={@suggestions != []}
-              class="rounded-box absolute z-20 mt-1 max-h-64 w-full overflow-y-auto border border-base-300 bg-base-100 shadow-lg"
-            >
-              <li :for={place <- @suggestions}>
-                <button
-                  type="button"
-                  phx-click="pick_place"
-                  phx-value-id={place.id}
-                  class="w-full px-3 py-2 text-left transition-colors hover:bg-base-200"
-                >
-                  <div class="truncate text-sm font-medium">
-                    {Places.display_name(place, "es")}
-                  </div>
-                  <div class="mt-0.5 truncate text-xs text-base-content/70">
-                    {Places.breadcrumb(place, @gazetteer, "es")}
-                  </div>
-                </button>
-              </li>
-            </ul>
-          </div>
+          <.place_picker
+            id="place-search"
+            picked={@picked}
+            term={@term}
+            suggestions={@suggestions}
+            gazetteer={@gazetteer}
+          />
           <form phx-submit="link" class="flex items-end gap-2">
             <input type="hidden" name="place_id" value={(@picked && @picked.id) || ""} />
             <div class="w-40">

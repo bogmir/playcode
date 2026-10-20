@@ -24,6 +24,7 @@ defmodule PlaycodeWeb.AuthorizationTest do
     {"/admin/plays/:id/editors", :active},
     {"/admin/plays/:id/sources", :active},
     {"/admin/plays/:id/witnesses", :active},
+    {"/admin/plays/:id/performances", :active},
     {"/admin/plays/:id/places", :active},
     {"/admin/plays/:id/bibliography", :active},
     {"/admin/plays/:id/content", :active},
