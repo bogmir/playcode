@@ -6,6 +6,7 @@ items with a longer write-up live in `docs/static-site-improvements.md`.
 
 ## Production rollout
 
+- [ ] **El galán Castrucho's first cast list on production** (question 43, 2026-10-21, `docs/history.md`) - EMOTHE0555's first list stays before the text until its file in `doc/tei_corpus/` is re-imported there. The re-import replaces the play's divisions, so the list made by hand in act I on production goes: check it in the dry run
 - [ ] **The *Arte nuevo* as a poem on production** (question 41, built 2026-10-21, `docs/history.md`) - EMOTHE0002, 0024, 0025 and 0116 show as a play in one act until their re-encoded files in `doc/tei_corpus/` are re-imported there
 - [ ] **Re-import for punctuation after asides and stages, the credit corrections and the sort titles in capitals** (2026-10-18, `docs/history.md`) - production's plays read "Dimmi (ti priego) , dimmi" (302 texts in the corpus), keep the 65 credits corrected in our copies of the files, and keep four sort titles in capitals (`GIULIO CESARE`), until their files are re-imported (`mix playcode.fly.reimport prepare`, `run`, about 8 minutes, then `generate`; `docs/production-reimport.md`)
 - [ ] **Hamlet's variants back on** (question 2) - EMOTHE0010's `show_variants` stays off until its editor has finished the file; then switch it on in the play's form and Generate (a play's own row change refreshes only its pages)
