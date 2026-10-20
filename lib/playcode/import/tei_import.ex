@@ -187,7 +187,7 @@ defmodule Playcode.Import.TeiImport do
     edited = &from(r in &1, where: r.play_id == ^id and r.updated_at > r.inserted_at)
     from_file = &where(edited.(&1), origin: "tei")
 
-    (Enum.map([Division, Element, Note, Character], edited) ++
+    (Enum.map([Division, Element, Note, Character, CastListEntry], edited) ++
        Enum.map(
          [PlayEditor, PlaySource, Paratext, Witness, Places.PlayPlace, Performance],
          from_file

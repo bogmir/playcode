@@ -206,6 +206,30 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
                ~r/TASK0001  replaces .*, 1 row\(s\) from the file edited since their import/
     end
 
+    # A later list's line keeps its own description: an edit to it changes no character.
+    test "--dry-run --force counts a cast list's line edited since its import", %{dir: dir} do
+      File.write!(
+        Path.join(dir, "TASK0001_Primera.xml"),
+        tei(
+          code: "TASK0001",
+          front:
+            ~s(<div type="elenco"><head>PERSONAS</head><castList><castItem><role xml:id="ANA">ANA</role></castItem></castList></div>) <>
+              ~s(<div type="elenco"><head>OTRAS</head><castList><castItem><role corresp="#ANA">ANA</role></castItem></castList></div>)
+        )
+      )
+
+      run("playcode.import.tei", ["--dir", dir])
+      [play] = Catalogue.list_plays()
+      play |> Playcode.TestFixtures.age_rows!()
+
+      [_first, second] = Playcode.PlayContent.list_cast_lists(play.id)
+      [line] = second.entries
+      {:ok, _} = Playcode.PlayContent.update_entry(line, %{description: "disfrazada"})
+
+      assert run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"]) =~
+               ~r/TASK0001  replaces .*, 1 row\(s\) from the file edited since their import/
+    end
+
     test "an import logs itself, so edits made before it are not counted again", %{dir: dir} do
       run("playcode.import.tei", ["--dir", dir])
       [play] = Catalogue.list_plays()

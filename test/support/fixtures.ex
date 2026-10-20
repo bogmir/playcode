@@ -36,6 +36,7 @@ defmodule Playcode.TestFixtures do
 
     for schema <- [
           Playcode.PlayContent.Character,
+          Playcode.PlayContent.CastListEntry,
           Playcode.Catalogue.PlaySource,
           Playcode.Catalogue.Paratext,
           Playcode.Performances.Performance
