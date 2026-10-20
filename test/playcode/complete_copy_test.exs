@@ -216,7 +216,7 @@ defmodule Playcode.CompleteCopyTest do
         heading: "DEDICATORIA",
         content: "Al <<lector>>,\ncon afecto.\n\nSegundo párrafo."
       },
-      %{kind: "lugar_accion", heading: "ESCENA:", content: "Un bosque de Venecia."}
+      %{kind: "lugar_accion", heading: "ESCENA:", content: "Un bosque de Venecia.", position: 2}
     ])
 
     [ana, blas, _criado] =
@@ -226,7 +226,7 @@ defmodule Playcode.CompleteCopyTest do
         %{xml_id: "CRIADO", name: "Criado", is_hidden: true}
       ])
 
-    {act, scene} = act_and_scene!(play)
+    {act, scene} = act_and_scene!(play, 3)
     note!(play, %{division_id: act.id, offset: 4, n: "1", type: "editor", body: "El acto."})
 
     stage =
@@ -509,9 +509,9 @@ defmodule Playcode.CompleteCopyTest do
     end
   end
 
-  # The cast list, under its heading; returns the characters.
+  # The cast list, under its heading, second in the outline; returns the characters.
   defp cast!(play, characters) do
-    division!(play, %{type: "elenco", title: "DRAMATIS PERSONAE", position: 0})
+    division!(play, %{type: "elenco", title: "DRAMATIS PERSONAE", position: 1})
 
     for {attrs, position} <- Enum.with_index(characters) do
       {:ok, character} =
@@ -521,8 +521,8 @@ defmodule Playcode.CompleteCopyTest do
     end
   end
 
-  defp act_and_scene!(play) do
-    act = division!(play, %{type: "acto", number: 1, title: "ACTO PRIMERO", position: 1})
+  defp act_and_scene!(play, position \\ 2) do
+    act = division!(play, %{type: "acto", number: 1, title: "ACTO PRIMERO", position: position})
 
     scene =
       division!(play, %{

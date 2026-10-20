@@ -828,12 +828,12 @@ defmodule Playcode.Export.TeiXml do
       element(
         :front,
         [title_page(play)] ++
-          Enum.map(section.(:front), &outer_item(&1, cast)) ++
+          Enum.map(section.(:front), &outer_item(&1, :front, cast)) ++
           build_performances(performances, gazetteer)
       ),
       element(:body, Enum.map(section.(:body), &body_item(&1, cast))),
       build_back(
-        Enum.map(section.(:back), &outer_item(&1, cast)),
+        Enum.map(section.(:back), &outer_item(&1, :back, cast)),
         Playcode.Bibliography.list_for_play(play.id)
       )
     ])
@@ -851,12 +851,12 @@ defmodule Playcode.Export.TeiXml do
   end
 
   # An item before or after the text.
-  defp outer_item(%Paratext{} = paratext, _cast), do: paratext_element(paratext, :div)
-  defp outer_item(%Division{} = list, cast), do: cast_list_div(list, :div, cast)
+  defp outer_item(%Paratext{} = paratext, section, _cast), do: paratext_element(paratext, section)
+  defp outer_item(%Division{} = list, _section, cast), do: cast_list_div(list, :div, cast)
 
   # An item between the divisions of the text: a paratext or a cast list as a div1 of its
   # own, as the files' prologues and dumb shows are.
-  defp body_item(%Paratext{} = paratext, _cast), do: paratext_element(paratext, :div1)
+  defp body_item(%Paratext{} = paratext, _cast), do: paratext_element(paratext, :body)
   defp body_item(%Division{type: "elenco"} = list, cast), do: cast_list_div(list, :div1, cast)
   defp body_item(%Division{} = division, cast), do: build_div1(division, cast)
 
@@ -1168,20 +1168,22 @@ defmodule Playcode.Export.TeiXml do
   defp with_breaks({name, attrs, content}), do: {name, attrs, with_breaks(content)}
   defp with_breaks(other), do: other
 
-  # A paratext: a div of its kind before or after the text, the scene of the action a
-  # <set>; a div1 between the divisions of the text, the scene `circunstancia_accion`, the
-  # files' own word for it there.
-  defp paratext_element(paratext, tag) do
+  # A paratext: a div of its kind before or after the text, a div1 between the divisions
+  # of the text. The scene of the action is the front's <set>; elsewhere, where TEI has no
+  # <set>, a div of the files' own `circunstancia_accion`.
+  defp paratext_element(paratext, section) do
     paragraphs =
       for paragraph <- String.split(paratext.content || "", "\n\n", trim: true),
           do: inline_element(:p, %{}, build_inline_content(paragraph))
 
     content = heading(paratext.heading) ++ paragraphs
 
-    case {Paratext.scene?(paratext.kind), tag} do
-      {true, :div} -> element(:set, content)
-      {true, :div1} -> element(:div1, %{type: "circunstancia_accion"}, content)
-      {false, tag} -> element(tag, %{type: paratext.kind}, content)
+    tag = if section == :body, do: :div1, else: :div
+
+    case {Paratext.scene?(paratext.kind), section} do
+      {true, :front} -> element(:set, content)
+      {true, _section} -> element(tag, %{type: "circunstancia_accion"}, content)
+      {false, _section} -> element(tag, %{type: paratext.kind}, content)
     end
   end
 

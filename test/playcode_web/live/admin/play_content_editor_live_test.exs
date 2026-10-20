@@ -740,28 +740,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert xml =~ ~r{<emph>una\s*<lb/>\s*dos</emph>}
   end
 
-  # Review focus 3: the scene of the action is written as the front's <set>, never in <back>.
-  # Placing a paratext after the text is its place in the outline since 2026-10-20, which
-  # the Structure tab's drag tests cover.
-  test "the scene of the action is not placed after the text", %{conn: conn, play: play} do
-    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
-    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
-    lv |> element("button", t("Add Paratext")) |> render_click()
-
-    lv
-    |> form("#paratext-form",
-      paratext: %{"kind" => "lugar_accion", "content" => "A wood.", "back" => "true"}
-    )
-    |> render_submit()
-
-    assert lv |> element("#paratext-form") |> render() =~
-             Gettext.dgettext(
-               PlaycodeWeb.Gettext,
-               "errors",
-               "the scene of the action stands with the cast list"
-             )
-  end
-
   describe "the paratexts' order" do
     setup do
       play =

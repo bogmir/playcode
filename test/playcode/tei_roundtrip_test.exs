@@ -1225,6 +1225,25 @@ defmodule Playcode.TeiRoundtripTest do
                ["front/titlePage", "front/div[dedicatoria]", "front/div[elenco]"]
     end
 
+    test "a scene of the action after the text comes back after it" do
+      play = play_fixture(%{})
+      act = division!(play, %{type: "acto", number: 1, title: "ACTO", position: 0})
+      division!(play, %{parent_id: act.id, type: "escena", number: 1, position: 0})
+
+      {:ok, _} =
+        Catalogue.create_paratext(%{
+          play_id: play.id,
+          kind: "lugar_accion",
+          content: "Un bosque.",
+          position: 1
+        })
+
+      play = play |> export_tei() |> import_tei!()
+
+      assert [%{type: "acto"}, %{kind: "lugar_accion", content: "Un bosque."}] =
+               Playcode.Outline.items(play.paratexts, PlayContent.list_top_divisions(play.id))
+    end
+
     test "a performance cast from the cast list names the first list" do
       play = play_fixture(%{})
       first = division!(play, %{type: "elenco", title: "Primera", position: 0})

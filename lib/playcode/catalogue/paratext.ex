@@ -58,7 +58,6 @@ defmodule Playcode.Catalogue.Paratext do
     # One TEI token (teidata.enumerated), so whatever is stored exports schema-valid.
     |> validate_format(:kind, ~r/^[^\p{C}\p{Z}]+$/u)
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
-    |> validate_scene_before_text()
   end
 
   # Line breaks and spaces as a TEI file gives them back (Text.squeeze/1), and any run of
@@ -73,12 +72,5 @@ defmodule Playcode.Catalogue.Paratext do
     if get_field(changeset, :heading),
       do: changeset,
       else: validate_required(changeset, :content)
-  end
-
-  # The scene of the action is printed with the cast list and written as the front's <set>.
-  defp validate_scene_before_text(changeset) do
-    if scene?(get_field(changeset, :kind)) and get_field(changeset, :back),
-      do: add_error(changeset, :back, "the scene of the action stands with the cast list"),
-      else: changeset
   end
 end
