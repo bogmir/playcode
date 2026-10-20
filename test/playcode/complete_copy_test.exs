@@ -288,12 +288,14 @@ defmodule Playcode.CompleteCopyTest do
 
     paratexts!(play, [
       %{kind: "head_title", heading: "UNA COMEDIA RARA"},
-      %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", back: true, position: 3}
+      %{kind: "loa", heading: "LOA", content: "Entre los actos.", position: 4},
+      %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", back: true, position: 6}
     ])
 
     [blas] = cast!(play, [%{xml_id: "BLAS", name: "Blas", actor: "Mr. Betterton"}])
 
-    {_act, scene} = act_and_scene!(play)
+    {act, scene} = act_and_scene!(play)
+    outline!(play, act, blas)
     speech = element!(scene, %{type: "speech", speaker_label: "BLAS"})
     PlayContent.set_element_characters(speech.id, [blas.id])
     group = element!(scene, speech, %{type: "line_group"})
@@ -530,10 +532,60 @@ defmodule Playcode.CompleteCopyTest do
         type: "escena",
         number: 1,
         title: "ESCENA I",
-        position: 0
+        position: 1
       })
 
     {act, scene}
+  end
+
+  # A cast list in every place one stands but the front: opening the act and between its
+  # scenes, between the acts (its people in a group), after the text, Blas in a second list
+  # with a description of its own and a line naming no one.
+  defp outline!(play, act, blas) do
+    opening =
+      division!(play, %{parent_id: act.id, type: "elenco", title: "En el acto", position: 0})
+
+    entry!(play, opening, %{character_id: blas.id, name: "Blas", description: "disfrazado"})
+
+    between = division!(play, %{parent_id: act.id, type: "elenco", title: "Salen", position: 2})
+    entry!(play, between, %{name: "Músicos"})
+
+    division!(play, %{
+      parent_id: act.id,
+      type: "escena",
+      number: 2,
+      title: "ESCENA II",
+      position: 3
+    })
+
+    between_acts = division!(play, %{type: "elenco", title: "Criados", position: 3})
+
+    [carlos, _diego] =
+      for name <- ~w(CARLOS DIEGO) do
+        {:ok, character} =
+          PlayContent.create_character(%{
+            play_id: play.id,
+            xml_id: name,
+            name: name,
+            group_heading: "Criados",
+            cast_list_id: between_acts.id
+          })
+
+        character
+      end
+
+    second = division!(play, %{type: "acto", number: 2, title: "ACTO SEGUNDO", position: 5})
+    division!(play, %{parent_id: second.id, type: "escena", number: 1, position: 0})
+
+    after_text = division!(play, %{type: "elenco", title: "No hablan", position: 7})
+    entry!(play, after_text, %{character_id: carlos.id, name: "Carlos, viejo"})
+  end
+
+  defp entry!(play, list, attrs) do
+    {:ok, entry} =
+      PlayContent.create_entry(Map.merge(attrs, %{play_id: play.id, cast_list_id: list.id}))
+
+    entry
   end
 
   defp division!(play, attrs) do
