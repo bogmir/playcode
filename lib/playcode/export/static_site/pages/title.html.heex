@@ -42,31 +42,7 @@
     <Components.witnesses play={@edition.play} />
     <Components.performances edition={@edition} />
     <Components.bibliography groups={@edition.bibliography} />
-    <section :for={note <- Components.front_paratexts(@edition)}>
-      <h2>
-        <Components.inline text={note.heading || PlayLabels.kind_label(note.kind)} />
-      </h2>
-      <p :for={paragraph <- Components.paragraphs(note.content)}>
-        <Components.inline text={paragraph} />
-      </p>
-    </section>
-    <section :if={Components.cast(@edition.characters) != [] or Components.scene(@edition) != []}>
-      <%= if Components.cast(@edition.characters) != [] do %>
-        <h2><Components.inline text={Components.cast_heading(@edition.divisions)} /></h2>
-        <dl class="cast">
-          <%= for character <- Components.cast(@edition.characters) do %>
-            <dt><Components.inline text={character.name} /></dt>
-            <dd><Components.inline text={character.description} /></dd>
-          <% end %>
-        </dl>
-      <% end %>
-      <%= for note <- Components.scene(@edition) do %>
-        <h3 :if={note.heading}><Components.inline text={note.heading} /></h3>
-        <p :for={paragraph <- Components.paragraphs(note.content)}>
-          <Components.inline text={paragraph} />
-        </p>
-      <% end %>
-    </section>
+    <Components.outline_item :for={item <- @edition.front} edition={@edition} item={item} />
     <section>
       <h2>Contents</h2>
       <Components.play_contents edition={@edition} all_scenes />

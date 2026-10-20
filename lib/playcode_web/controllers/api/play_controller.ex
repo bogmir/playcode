@@ -7,7 +7,7 @@ defmodule PlaycodeWeb.API.PlayController do
 
   use PlaycodeWeb, :controller
 
-  alias Playcode.{Catalogue, PlayContent, Statistics}
+  alias Playcode.{Catalogue, Outline, PlayContent, Statistics}
   alias Playcode.Catalogue.{Paratext, Play}
 
   # The API has no session, so every reader is anonymous: complete plays only.
@@ -26,7 +26,7 @@ defmodule PlaycodeWeb.API.PlayController do
   # GET /api/v1/plays/:code
   def show(conn, %{"code" => code}) do
     play = Catalogue.get_play_by_code_with_all!(code, complete: true)
-    json(conn, play_detail(play))
+    json(conn, play_detail(play, PlayContent.list_top_divisions(play.id)))
   rescue
     Ecto.NoResultsError -> not_found(conn)
   end
@@ -85,7 +85,14 @@ defmodule PlaycodeWeb.API.PlayController do
     }
   end
 
-  defp play_detail(play) do
+  # A paratext is `back` when the outline puts it after the last division of the text.
+  defp play_detail(play, divisions) do
+    back =
+      for {:back, %Paratext{id: id}} <-
+            play.paratexts |> Outline.items(divisions) |> Outline.placement(),
+          into: MapSet.new(),
+          do: id
+
     %{
       code: play.code,
       url: play_url(play.code),
@@ -103,7 +110,12 @@ defmodule PlaycodeWeb.API.PlayController do
       availability_note: play.availability_note,
       editors: Enum.map(play.editors, &editor_json/1),
       sources: Enum.map(play.sources, &source_json/1),
-      paratexts: for(p <- play.paratexts, not Paratext.scene?(p.kind), do: paratext_json(p)),
+      paratexts:
+        for(
+          p <- play.paratexts,
+          not Paratext.scene?(p.kind),
+          do: paratext_json(p, MapSet.member?(back, p.id))
+        ),
       scene_of_action:
         for(p <- play.paratexts, Paratext.scene?(p.kind), do: Map.take(p, [:heading, :content]))
     }
@@ -128,12 +140,12 @@ defmodule PlaycodeWeb.API.PlayController do
   end
 
   # `content` holds its line breaks as \n, its paragraphs parted by a blank line.
-  defp paratext_json(paratext) do
+  defp paratext_json(paratext, back?) do
     %{
       kind: paratext.kind,
       heading: paratext.heading,
       content: paratext.content,
-      back: paratext.back,
+      back: back?,
       editorial: Paratext.editorial?(paratext.kind)
     }
   end

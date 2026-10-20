@@ -25,7 +25,6 @@ defmodule Playcode.Catalogue.Paratext do
     field :kind, :string
     field :heading, :string
     field :content, :string
-    field :back, :boolean, default: false
     field :position, :integer, default: 0
     field :origin, :string, default: "manual"
 
@@ -51,7 +50,7 @@ defmodule Playcode.Catalogue.Paratext do
 
   def changeset(paratext, attrs) do
     paratext
-    |> cast(attrs, [:kind, :heading, :content, :back, :position, :play_id, :origin])
+    |> cast(attrs, [:kind, :heading, :content, :position, :play_id, :origin])
     |> update_change(:content, &paragraphs/1)
     |> validate_required([:kind])
     |> validate_heading_or_content()

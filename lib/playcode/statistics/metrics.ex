@@ -8,7 +8,7 @@ defmodule Playcode.Statistics.Metrics do
   labels in the margin, so the pages and the statistics follow the same rules.
   """
 
-  alias Playcode.PlayContent.{Element, InlineMarkup}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup}
 
   @act_types ~w(acto act acte jornada)
   @unmarked [nil, "", "free", "nil"]
@@ -28,19 +28,21 @@ defmodule Playcode.Statistics.Metrics do
     * `:number` — the verse number; for a split verse's `M`/`F` fragment, the number
       of the verse it completes; nil for prose and stage directions
     * `:act` — 1-based ordinal among the act divisions, nil outside them
-    * `:division` (top level) and `:scene` (child division or nil)
+    * `:division` (top level) and `:scene` (child division or nil), with
+      `:scene_number`, its number among its division's scenes (`Division.numbered_scenes/1`)
   """
   def items(divisions) do
     {items, _acts} =
       Enum.flat_map_reduce(divisions, 0, fn division, previous ->
         act = if division.type in @act_types, do: previous + 1
-        context = %{act: act, division: division, scene: nil}
+        context = %{act: act, division: division, scene: nil, scene_number: nil}
 
         own = Enum.flat_map(division.loaded_elements, &element_items(&1, context))
 
         scenes =
-          Enum.flat_map(division.children, fn scene ->
-            Enum.flat_map(scene.loaded_elements, &element_items(&1, %{context | scene: scene}))
+          Enum.flat_map(Division.numbered_scenes(division), fn {scene, n} ->
+            scene_context = %{context | scene: scene, scene_number: n}
+            Enum.flat_map(scene.loaded_elements, &element_items(&1, scene_context))
           end)
 
         {own ++ scenes, act || previous}
@@ -261,12 +263,9 @@ defmodule Playcode.Statistics.Metrics do
   defp unit_label(%{scene: nil, division: division}),
     do: division.title || String.capitalize(division.type)
 
-  defp unit_label(%{scene: scene, act: act}) do
+  defp unit_label(%{scene: scene, scene_number: n, act: act}) do
     scene.title ||
-      if(act,
-        do: "#{act}.#{scene.position + 1}",
-        else: "#{String.capitalize(scene.type)} #{scene.position + 1}"
-      )
+      if(act, do: "#{act}.#{n}", else: "#{String.capitalize(scene.type)} #{n}")
   end
 
   @doc "Per-character figures, most lines first, then most words."

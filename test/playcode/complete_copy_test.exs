@@ -289,7 +289,7 @@ defmodule Playcode.CompleteCopyTest do
     paratexts!(play, [
       %{kind: "head_title", heading: "UNA COMEDIA RARA"},
       %{kind: "loa", heading: "LOA", content: "Entre los actos.", position: 4},
-      %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", back: true, position: 6}
+      %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", position: 6}
     ])
 
     [blas] = cast!(play, [%{xml_id: "BLAS", name: "Blas", actor: "Mr. Betterton"}])

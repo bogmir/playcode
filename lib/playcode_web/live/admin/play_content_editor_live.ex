@@ -1319,9 +1319,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   <span class="badge badge-outline badge-sm">
                     {PlayLabels.kind_label(paratext.kind)}
                   </span>
-                  <span :if={paratext.back} class="badge badge-ghost badge-sm">
-                    {gettext("After the text")}
-                  </span>
                   <span :if={paratext.heading} class="font-medium text-sm">{paratext.heading}</span>
                 </div>
                 <p class="text-sm text-base-content/70 line-clamp-3 whitespace-pre-line">
@@ -2718,9 +2715,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           type="select"
           options={PlayLabels.kind_options(@editing && @editing.kind)}
         />
-      </div>
-      <div>
-        <.input field={@form[:back]} type="checkbox" label={gettext("After the text")} />
       </div>
       <div>
         <label class="label" for={@form[:heading].id}>

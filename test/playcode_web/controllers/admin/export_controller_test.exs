@@ -59,6 +59,28 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert body =~ ~s(<span class="pn">5</span>Uno,<br>dos.)
   end
 
+  # Paratexts stay off the comparison, which sets text against text.
+  test "the comparison page prints each cast list's own entries where it stands",
+       %{conn: conn, play: play} do
+    outline = outline_xml() |> import_tei!()
+
+    body =
+      conn
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{outline.id},#{play.id}"]}")
+      |> response(200)
+
+    assert in_order?(
+             body,
+             ["PERSONAS", "ANA", "Criados", "BLAS", "ACTO PRIMERO", "Personas del acto primero"] ++
+               ["ANA, disfrazada", "ESCENA I", "Sale de nuevo", "DIEGO", "ESCENA II"] ++
+               ["Personas del acto segundo", "ACTO SEGUNDO", "Personas que no hablan"]
+           )
+
+    assert occurrences(body, "dama") == 1
+    assert occurrences(body, "de hombre") == 1
+    refute body =~ "DEDICATORIA"
+  end
+
   test "two plays compared side by side download as one page", %{conn: conn, play: play} do
     other = play_fixture(%{"title" => "La otra versión"})
 

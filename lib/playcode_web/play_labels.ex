@@ -133,22 +133,6 @@ defmodule PlaycodeWeb.PlayLabels do
       else: options ++ [{current, current}]
   end
 
-  @doc """
-  A play's paratexts as printed, `{front, scene, back}`: those before the text; its scene
-  of the action, printed after the cast list as emothe.uv.es prints it (with those before
-  the text when the play has no cast list); and those after the text.
-  """
-  def split_paratexts(paratexts, divisions) do
-    {back, front} = Enum.split_with(paratexts, & &1.back)
-
-    {front, scene} =
-      if Enum.any?(divisions, &(&1.type == "elenco")),
-        do: Enum.split_with(front, &(not Paratext.scene?(&1.kind))),
-        else: {front, []}
-
-    {front, scene, back}
-  end
-
   @doc "A paratext's name where one is needed: its heading, plain, or its kind's."
   def paratext_title(%{heading: heading}) when heading not in [nil, ""],
     do: InlineMarkup.plain(heading)

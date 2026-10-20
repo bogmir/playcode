@@ -73,6 +73,9 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
       <div type="elenco"><castList><castItem><role xml:id="DON">Don</role></castItem></castList></div>
       <set><p>London</p></set>
       """,
+      # An act, for the colophon to stand after: `back` is where the outline puts a
+      # paratext, and in a play with no text every paratext stands before it.
+      body: ~s(<div1 type="acto" n="1"><head>ACTO I</head><p>Texto.</p></div1>),
       back: ~s(<div type="colofon"><p>Loado sea.<lb/>En Madrid</p></div>)
     )
     |> import_tei!()
@@ -95,6 +98,31 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
            } = json
 
     refute Map.has_key?(json, "editorial_notes")
+  end
+
+  # `back` is where the outline puts a paratext: after the last division of the text, as
+  # one added by hand there is. A character is described as its first entry describes it.
+  test "a paratext is after the text where the outline puts it, a character as it is first listed",
+       %{conn: conn} do
+    play = outline_xml() |> import_tei!() |> Playcode.TestFixtures.mark_complete!()
+
+    {:ok, _colophon} =
+      Playcode.Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "colofon",
+        heading: "COLOFÓN",
+        content: "Impreso en Valencia.",
+        position: 100,
+        origin: "manual"
+      })
+
+    json = json_response(get(conn, ~p"/api/v1/plays/#{play.code}"), 200)
+
+    assert %{"DEDICATORIA" => false, "LOA" => false, "EPÍLOGO" => true, "COLOFÓN" => true} =
+             Map.new(json["paratexts"], &{&1["heading"], &1["back"]})
+
+    characters = json_response(get(conn, ~p"/api/v1/plays/#{play.code}/characters"), 200)
+    assert %{"name" => "ANA", "description" => "dama"} = hd(characters["data"])
   end
 
   test "a play's form is the curator's, served beside is_verse", %{conn: conn, play: play} do

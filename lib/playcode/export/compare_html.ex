@@ -7,7 +7,7 @@ defmodule Playcode.Export.CompareHtml do
 
   alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.Division
+  alias Playcode.PlayContent.{CastListEntry, Division}
 
   # The live compare page's sync module, inlined without its `export` keywords: the
   # downloaded page is opened from disk, with nothing to import.
@@ -19,9 +19,7 @@ defmodule Playcode.Export.CompareHtml do
     panels =
       Enum.map(plays, fn play ->
         play = Playcode.Repo.preload(play, [:editors, :sources])
-        characters = PlayContent.list_characters(play.id)
-        divisions = PlayContent.load_play_content(play.id)
-        {play, characters, divisions}
+        {play, PlayContent.load_play_content(play.id)}
       end)
 
     """
@@ -48,7 +46,7 @@ defmodule Playcode.Export.CompareHtml do
 
   defp comparison_title(panels) do
     panels
-    |> Enum.map(fn {play, _, _} -> escape(play.code || play.title) end)
+    |> Enum.map(fn {play, _divisions} -> escape(play.code || play.title) end)
     |> Enum.join(" vs ")
   end
 
@@ -126,6 +124,8 @@ defmodule Playcode.Export.CompareHtml do
         }
 
         .cast-desc { font-size: 12px; color: rgba(51, 51, 51, 0.55); }
+
+    .cast-group { font-weight: bold; font-size: 12px; margin: 0.25rem 0 0 0.5rem; }
 
         /* Division headings */
         .act-heading {
@@ -282,7 +282,7 @@ defmodule Playcode.Export.CompareHtml do
   defp render_panels(panels) do
     panels
     |> Enum.with_index()
-    |> Enum.map(fn {{play, characters, divisions}, idx} ->
+    |> Enum.map(fn {{play, divisions}, idx} ->
       """
           <div class="panel">
             <div class="panel-header">
@@ -291,7 +291,7 @@ defmodule Playcode.Export.CompareHtml do
               <p class="code">#{escape(play.code || "")}</p>
             </div>
             <div class="panel-body" data-panel="panel-#{idx}">
-      #{render_divisions(divisions, characters)}
+      #{render_divisions(divisions)}
             </div>
           </div>
       """
@@ -303,17 +303,13 @@ defmodule Playcode.Export.CompareHtml do
 
   # A speech carries its act's key (`data-sync-act`) whatever scene it is in; headings
   # carry their own (`data-sync-div`). See `Division.sync_keys/1`.
-  defp render_divisions(divisions, characters) do
+  defp render_divisions(divisions) do
     divisions
     |> Enum.zip(Division.sync_keys(divisions))
     |> Enum.map(fn {div, div_key} ->
       heading = division_heading(div, div_key)
 
-      cast =
-        if div.type == "elenco",
-          do: render_inline_cast_list(characters),
-          else: ""
-
+      cast = render_cast_list(div)
       elements = render_elements(Map.get(div, :loaded_elements, []), div_key)
 
       children = Map.get(div, :children, [])
@@ -323,8 +319,9 @@ defmodule Playcode.Export.CompareHtml do
         |> Enum.zip(Division.sync_keys(children))
         |> Enum.map(fn {child, child_key} ->
           ch = child_heading(child, "#{div_key}/#{child_key}")
+          cc = render_cast_list(child)
           ce = render_elements(Map.get(child, :loaded_elements, []), div_key)
-          "      <div class=\"child-division\">\n#{ch}#{ce}      </div>"
+          "      <div class=\"child-division\">\n#{ch}#{cc}#{ce}      </div>"
         end)
         |> Enum.join("\n")
 
@@ -350,28 +347,40 @@ defmodule Playcode.Export.CompareHtml do
   defp child_heading(%{title: title}, key),
     do: "        <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{escape(title)}</h3>\n"
 
-  defp render_inline_cast_list(characters) do
-    visible = Enum.reject(characters, & &1.is_hidden)
-    if visible == [], do: "", else: do_render_inline_cast_list(visible)
+  # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its
+  # heading; nothing for a division of the text.
+  defp render_cast_list(%{type: "elenco", entries: entries}) do
+    case CastListEntry.printed_groups(entries) do
+      [] ->
+        ""
+
+      groups ->
+        """
+              <div class="cast-list">
+        #{Enum.map_join(groups, "\n", &render_cast_group/1)}
+              </div>
+        """
+    end
   end
 
-  defp do_render_inline_cast_list(characters) do
-    items =
-      Enum.map(characters, fn char ->
-        desc =
-          if char.description,
-            do: " <span class=\"cast-desc\">#{escape(char.description)}</span>",
-            else: ""
+  defp render_cast_list(_division), do: ""
 
-        "          <div class=\"cast-item\"><span class=\"cast-name\">#{escape(char.name)}</span>#{desc}</div>"
-      end)
-      |> Enum.join("\n")
+  defp render_cast_group([first | _] = entries) do
+    heading =
+      if first.group_heading,
+        do: "          <p class=\"cast-group\">#{escape(first.group_heading)}</p>\n",
+        else: ""
 
-    """
-          <div class="cast-list">
-    #{items}
-          </div>
-    """
+    heading <> Enum.map_join(entries, "\n", &render_cast_item/1)
+  end
+
+  defp render_cast_item(entry) do
+    desc =
+      if entry.description,
+        do: " <span class=\"cast-desc\">#{escape(entry.description)}</span>",
+        else: ""
+
+    "          <div class=\"cast-item\"><span class=\"cast-name\">#{escape(entry.name)}</span>#{desc}</div>"
   end
 
   defp render_elements(elements, act_key) do

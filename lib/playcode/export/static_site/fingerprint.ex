@@ -38,6 +38,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.Text,
     Playcode.Catalogue.Play,
     Playcode.Outline,
+    Playcode.PlayContent.CastListEntry,
     Playcode.PlayContent.Division,
     Playcode.PlayContent.InlineMarkup,
     Playcode.PlayContent.Element,

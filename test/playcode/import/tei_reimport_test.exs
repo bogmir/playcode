@@ -7,8 +7,22 @@ defmodule Playcode.Import.TeiReimportTest do
 
   import Playcode.ImportHelpers
 
-  alias Playcode.Catalogue
+  alias Playcode.{Catalogue, Outline, PlayContent}
+  alias Playcode.Catalogue.Paratext
   alias Playcode.Import.TeiImport
+
+  @act ~s(<div1 type="acto" n="1"><head>ACTO I</head><p>Texto.</p></div1>)
+
+  # The play's paratexts on each side of the text, as the outline places them: `:front`
+  # before its first division, `:back` after its last.
+  defp sides(play) do
+    play.id
+    |> Catalogue.list_paratexts()
+    |> Outline.items(PlayContent.list_top_divisions(play.id))
+    |> Outline.placement()
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+    |> Map.new(fn {side, items} -> {side, for(%Paratext{} = p <- items, do: p)} end)
+  end
 
   @tei tei(
          code: "EMOTHE9301",
@@ -109,7 +123,11 @@ defmodule Playcode.Import.TeiReimportTest do
   # Review focus 1: only the file's own paratexts are replaced; one typed by hand keeps
   # its place before the text.
   test "a re-import adds the file's paratexts after the text and keeps a hand-entered one" do
-    path = write_tmp!(tei(code: "TBACK1", back: ~s(<div type="colofon"><p>Loado sea.</p></div>)))
+    path =
+      write_tmp!(
+        tei(code: "TBACK1", body: @act, back: ~s(<div type="colofon"><p>Loado sea.</p></div>))
+      )
+
     {:ok, play} = TeiImport.import_file(path)
 
     {:ok, _} =
@@ -117,9 +135,8 @@ defmodule Playcode.Import.TeiReimportTest do
 
     {:ok, _} = TeiImport.import_file(path)
 
-    paratexts = Catalogue.list_paratexts(play.id)
-    assert [%{content: "A mano.", back: false}] = Enum.filter(paratexts, &(&1.origin == "manual"))
-    assert [%{kind: "colofon", back: true}] = Enum.filter(paratexts, &(&1.origin == "tei"))
+    assert %{front: [%{content: "A mano.", origin: "manual"}], back: [%{kind: "colofon"}]} =
+             sides(play)
   end
 
   # Review focus 1: a hand-entered paratext keeps its place and its side of the text. A
@@ -132,20 +149,30 @@ defmodule Playcode.Import.TeiReimportTest do
         tei(
           code: "TBACK2",
           front:
-            ~s(<div type="dedicatoria"><p>Ded.</p></div><div type="argumento"><p>Arg.</p></div>)
+            ~s(<div type="dedicatoria"><p>Ded.</p></div><div type="argumento"><p>Arg.</p></div>),
+          body: @act
         )
       )
 
     {:ok, play} = TeiImport.import_file(path)
 
+    # Dragged before the dedication, and after the act.
     {:ok, typed} =
-      Catalogue.create_paratext(%{play_id: play.id, kind: "prologo", content: "A mano."})
+      Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "prologo",
+        content: "A mano.",
+        position: -1
+      })
 
     {:ok, _} =
-      Catalogue.create_paratext(%{play_id: play.id, kind: "colofon", content: "Fin.", back: true})
+      Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "colofon",
+        content: "Fin.",
+        position: 100
+      })
 
-    ids = play.id |> Catalogue.list_paratexts() |> Enum.map(& &1.id)
-    Catalogue.reorder_paratexts(play.id, [typed.id | List.delete(ids, typed.id)])
     Playcode.TestFixtures.age_rows!(play)
 
     {:ok, _} = TeiImport.import_file(path)
@@ -155,8 +182,7 @@ defmodule Playcode.Import.TeiReimportTest do
         content: "A mano, corregido."
       })
 
-    # The two sides are printed apart, so only the order within each is the play's.
-    {back, front} = play.id |> Catalogue.list_paratexts() |> Enum.split_with(& &1.back)
+    %{front: front, back: back} = sides(play)
     assert Enum.map(front, & &1.content) == ["A mano, corregido.", "Ded.", "Arg."]
     assert Enum.map(back, & &1.content) == ["Fin."]
   end

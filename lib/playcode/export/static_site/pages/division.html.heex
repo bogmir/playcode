@@ -12,8 +12,19 @@
     lang={@edition.play.language}
     data-cite={Components.cite_prefix(@edition.play, @page)}
   >
+    <Components.outline_item
+      :for={item <- if(@page.scene, do: [], else: Edition.before(@edition, @page))}
+      edition={@edition}
+      item={item}
+      head="act-head"
+    />
     <Components.page_text edition={@edition} page={@page} />
-    <Components.back_paratexts :if={@next == nil} edition={@edition} />
+    <Components.outline_item
+      :for={item <- if(@next, do: [], else: @edition.back)}
+      edition={@edition}
+      item={item}
+      head="act-head"
+    />
     <Components.endnotes notes={Edition.page_notes(@page)} />
   </div>
   <Components.pager prev={@prev} next={@next} />

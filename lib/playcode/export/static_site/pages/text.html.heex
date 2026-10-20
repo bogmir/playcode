@@ -11,12 +11,14 @@
     lang={@edition.play.language}
     data-cite={Components.cite_prefix(@edition.play, nil)}
   >
-    <Components.division_text
-      :for={page <- Enum.reject(@edition.pages, & &1.scene)}
-      edition={@edition}
-      division={page.division}
-    />
-    <Components.back_paratexts edition={@edition} />
+    <%= for entry <- @edition.contents do %>
+      <%= case entry do %>
+        <% {:page, page} -> %>
+          <Components.division_text edition={@edition} division={page.division} />
+        <% {:item, item} -> %>
+          <Components.outline_item edition={@edition} item={item} head="act-head" />
+      <% end %>
+    <% end %>
     <Components.endnotes notes={
       @edition.pages |> Enum.reject(& &1.scene) |> Enum.map(& &1.division) |> Note.reading_order()
     } />

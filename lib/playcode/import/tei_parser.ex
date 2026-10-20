@@ -1206,9 +1206,8 @@ defmodule Playcode.Import.TeiParser do
       else: [{:division, act(type, attrs, children, pos)}]
   end
 
-  defp read_slot({section, _name, type, _attrs, children}, pos) do
-    for paratext <- paratext(type, children, pos),
-        do: {:paratext, %{paratext | back: section == :back}}
+  defp read_slot({_section, _name, type, _attrs, children}, pos) do
+    for paratext <- paratext(type, children, pos), do: {:paratext, paratext}
   end
 
   # A div1 between the acts holding only a heading and paragraphs is a paratext, as
@@ -1359,8 +1358,7 @@ defmodule Playcode.Import.TeiParser do
           kind: kind(type),
           heading: heading,
           content: if(paragraphs != "", do: paragraphs),
-          position: pos,
-          back: false
+          position: pos
         }
       ]
     end

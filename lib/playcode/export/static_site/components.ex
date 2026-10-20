@@ -7,11 +7,11 @@ defmodule Playcode.Export.StaticSite.Components do
   use Phoenix.Component
 
   alias Playcode.Bibliography.Citation
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Paratext, Play}
   alias Playcode.Export.NoteMarkup
   alias Playcode.Export.StaticSite.{Edition, Search}
   alias Playcode.Performances
-  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
+  alias Playcode.PlayContent.{CastListEntry, Division, Element, InlineMarkup, Note}
   alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
@@ -146,26 +146,39 @@ defmodule Playcode.Export.StaticSite.Components do
     ~H"""
     <ul>
       <li><a href="index.html" aria-current={@current == "index" && "page"}>Title page</a></li>
-      <li :for={page <- Enum.reject(@edition.pages, & &1.scene)}>
-        <a href={page.slug <> ".html"} aria-current={@current == page.slug && "page"}>{page.title}</a>
-        <ul :if={(@all_scenes or open?(@edition, page, @current)) and page.division.children != []}>
-          <li :for={scene <- page.division.children}>
-            <%= if scene_page = Edition.scene_page(@edition, scene) do %>
-              <a
-                href={scene_page.slug <> ".html"}
-                aria-current={@current == scene_page.slug && "page"}
-              >
-                {Edition.scene_title(scene)}
+      <%= for entry <- @edition.contents do %>
+        <%= case entry do %>
+          <% {:item, item} -> %>
+            <li><a href={item_href(@edition, item)}>{item_title(item)}</a></li>
+          <% {:page, page} -> %>
+            <li>
+              <a href={page.slug <> ".html"} aria-current={@current == page.slug && "page"}>
+                {page.title}
               </a>
-            <% else %>
-              <a href={"#{page.slug}.html##{@edition.anchors[scene.id]}"}>
-                {Edition.scene_title(scene)}
-              </a>
-            <% end %>
-          </li>
-        </ul>
-      </li>
-      <li :for={{href, title} <- back_matter_links(@edition)}><a href={href}>{title}</a></li>
+              <ul :if={
+                (@all_scenes or open?(@edition, page, @current)) and page.division.children != []
+              }>
+                <li :for={{child, n} <- numbered_children(page.division)}>
+                  <%= cond do %>
+                    <% n == nil -> %>
+                      <a href={item_href(@edition, child)}>{item_title(child)}</a>
+                    <% scene_page = Edition.scene_page(@edition, child) -> %>
+                      <a
+                        href={scene_page.slug <> ".html"}
+                        aria-current={@current == scene_page.slug && "page"}
+                      >
+                        {Edition.scene_title(child, n)}
+                      </a>
+                    <% true -> %>
+                      <a href={"#{page.slug}.html##{@edition.anchors[child.id]}"}>
+                        {Edition.scene_title(child, n)}
+                      </a>
+                  <% end %>
+                </li>
+              </ul>
+            </li>
+        <% end %>
+      <% end %>
       <li><a href="text.html" aria-current={@current == "text" && "page"}>Full text</a></li>
       <li>
         <a href="statistics.html" aria-current={@current == "statistics" && "page"}>Statistics</a>
@@ -185,6 +198,22 @@ defmodule Playcode.Export.StaticSite.Components do
     </ul>
     """
   end
+
+  # A division's children for the Contents: each scene with its number, a cast list with nil.
+  defp numbered_children(division) do
+    numbers = Map.new(Division.numbered_scenes(division), fn {scene, n} -> {scene.id, n} end)
+    Enum.map(division.children, &{&1, numbers[&1.id]})
+  end
+
+  # Where a paratext or a cast list prints after the title page, and what it is called there.
+  defp item_href(edition, item),
+    do: "#{edition.item_pages[item.id]}.html##{edition.anchors[item.id]}"
+
+  defp item_title(%Paratext{} = paratext), do: PlayLabels.paratext_title(paratext)
+  defp item_title(list), do: list_title(list)
+
+  defp list_title(%{title: title}) when title not in [nil, ""], do: InlineMarkup.plain(title)
+  defp list_title(_list), do: "Dramatis personae"
 
   # A division's scenes show in the rail on its page and on its scene pages.
   defp open?(edition, page, current) do
@@ -354,48 +383,65 @@ defmodule Playcode.Export.StaticSite.Components do
   @doc "The cast as published: every character not marked hidden."
   def cast(characters), do: Enum.reject(characters, & &1.is_hidden)
 
-  @doc "The paratexts printed above the cast list (`PlayLabels.split_paratexts/2`)."
-  def front_paratexts(edition), do: edition |> paratexts() |> elem(0)
-
-  @doc "The scene of the action, printed under the cast list."
-  def scene(edition), do: edition |> paratexts() |> elem(1)
-
-  @doc "The paratexts after the text, each with its anchor on the page."
-  def back_matter(edition) do
-    for {paratext, index} <- edition |> paratexts() |> elem(2) |> Enum.with_index(1),
-        do: {"after-#{index}", paratext}
-  end
-
-  defp paratexts(edition),
-    do: PlayLabels.split_paratexts(edition.play.paratexts, edition.divisions)
-
-  @doc "The paratexts after the text, printed after it."
   attr :edition, :map, required: true
+  attr :item, :map, required: true
+  attr :head, :string, default: nil, doc: "the heading's class: `act-head` among the acts"
 
-  def back_paratexts(assigns) do
+  @doc """
+  A paratext or a cast list where the outline puts it (`Edition`): on the title page,
+  above a page's heading, among an act's scenes, or after the text.
+  """
+  def outline_item(%{item: %Paratext{}} = assigns) do
     ~H"""
-    <section :for={{id, paratext} <- back_matter(@edition)} id={id} class="division">
-      <h2 class="act-head">
-        <.inline text={paratext.heading || PlayLabels.kind_label(paratext.kind)} />
-      </h2>
-      <p :for={paragraph <- paragraphs(paratext.content)}><.inline text={paragraph} /></p>
+    <section id={@edition.anchors[@item.id]}>
+      <%= if Paratext.scene?(@item.kind) do %>
+        <h3 :if={@item.heading}><.inline text={@item.heading} /></h3>
+      <% else %>
+        <h2 class={@head}><.inline text={@item.heading || PlayLabels.kind_label(@item.kind)} /></h2>
+      <% end %>
+      <p :for={paragraph <- paragraphs(@item.content)}><.inline text={paragraph} /></p>
     </section>
     """
   end
 
-  # The Contents' entries for the paratexts after the text, on the text's last page.
-  defp back_matter_links(%{pages: []}), do: []
-
-  defp back_matter_links(edition) do
-    last = List.last(edition.pages)
-
-    for {id, paratext} <- back_matter(edition),
-        do: {"#{last.slug}.html##{id}", PlayLabels.paratext_title(paratext)}
+  def outline_item(%{item: %{parent_id: nil}} = assigns) do
+    ~H"""
+    <section id={@edition.anchors[@item.id]}>
+      <h2 class={@head}>
+        <.inline text={@item.title || "Dramatis personae"} notes={@item.notes} />
+      </h2>
+      <.cast_entries entries={@item.entries} />
+    </section>
+    """
   end
 
-  @doc "The cast list's heading: the play's own, as its TEI file carries it, or the Latin."
-  def cast_heading(divisions),
-    do: Enum.find_value(divisions, &(&1.type == "elenco" && &1.title)) || "Dramatis personae"
+  def outline_item(assigns) do
+    ~H"""
+    <section id={@edition.anchors[@item.id]}>
+      <h3 :if={@item.title} class="scene-head">
+        <.inline text={@item.title} notes={@item.notes} />
+      </h3>
+      <.cast_entries entries={@item.entries} />
+    </section>
+    """
+  end
+
+  attr :entries, :list, required: true
+
+  # A cast list's own entries, a group's under its heading.
+  defp cast_entries(assigns) do
+    ~H"""
+    <%= for [first | _] = group <- CastListEntry.printed_groups(@entries) do %>
+      <p :if={first.group_heading} class="cast-group"><.inline text={first.group_heading} /></p>
+      <dl class="cast">
+        <%= for entry <- group do %>
+          <dt><.inline text={entry.name} /></dt>
+          <dd><.inline text={entry.description} /></dd>
+        <% end %>
+      </dl>
+    <% end %>
+    """
+  end
 
   @doc "What the title page says about the play's form."
   def form_summary(play, stats) do
@@ -496,12 +542,18 @@ defmodule Playcode.Export.StaticSite.Components do
         <.inline text={@division.title} notes={@division.notes} />
       </h2>
       <.el :for={el <- @division.loaded_elements} el={el} edition={@edition} />
-      <section :for={scene <- @division.children} id={@edition.anchors[scene.id]}>
-        <h3 :if={scene.title} class="scene-head">
-          <.inline text={scene.title} notes={scene.notes} />
-        </h3>
-        <.el :for={el <- scene.loaded_elements} el={el} edition={@edition} />
-      </section>
+      <%= for child <- @division.children do %>
+        <%= if child.type == "elenco" do %>
+          <.outline_item edition={@edition} item={child} />
+        <% else %>
+          <section id={@edition.anchors[child.id]}>
+            <h3 :if={child.title} class="scene-head">
+              <.inline text={child.title} notes={child.notes} />
+            </h3>
+            <.el :for={el <- child.loaded_elements} el={el} edition={@edition} />
+          </section>
+        <% end %>
+      <% end %>
     </section>
     """
   end
@@ -539,7 +591,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <nav aria-label="Scenes">
         <ul>
           <li :for={scene_page <- @scene_pages}>
-            <a href={scene_page.slug <> ".html"}>{Edition.scene_title(scene_page.scene)}</a>
+            <a href={scene_page.slug <> ".html"}>
+              {Edition.scene_title(scene_page.scene, scene_page.number)}
+            </a>
           </li>
         </ul>
       </nav>
@@ -553,6 +607,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2 :if={@page.division.title} class="act-head">
         <.inline text={@page.division.title} notes={@page.division.notes} />
       </h2>
+      <.outline_item :for={item <- Edition.before(@edition, @page)} edition={@edition} item={item} />
       <section id={@edition.anchors[@page.scene.id]}>
         <h3 :if={@page.scene.title} class="scene-head">
           <.inline text={@page.scene.title} notes={@page.scene.notes} />

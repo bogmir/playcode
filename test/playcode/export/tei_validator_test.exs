@@ -150,9 +150,10 @@ defmodule Playcode.Export.TeiValidatorTest do
     })
 
     # A paratext after the text stands before the bibliography's div, a line break in it
-    # is an <lb/>, and one may be a heading alone.
+    # is an <lb/>, and one may be a heading alone. After the text is a place in the
+    # outline, past the last division.
     for attrs <- [
-          %{"kind" => "colofon", "content" => "Loado sea.\nEn Madrid", "back" => true},
+          %{"kind" => "colofon", "content" => "Loado sea.\nEn Madrid", "position" => 10_000},
           %{"kind" => "head_title", "heading" => "LA BARCA"}
         ] do
       {:ok, _} = Catalogue.create_paratext(Map.put(attrs, "play_id", play.id))

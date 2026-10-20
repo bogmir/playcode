@@ -1,12 +1,14 @@
 defmodule Playcode.Export.StaticSite.Edition do
   @moduledoc """
-  One play prepared for the static site: which page each division goes on, the
-  anchor and citation reference of every line, the ghost text that aligns a split
-  verse, where each metrical passage starts, and where each note is. The pages and the
-  search index both read it, so a line's or a note's address is decided once.
+  One play prepared for the static site: which page each division goes on, where each
+  paratext and cast list prints, the anchor and citation reference of every line, the
+  ghost text that aligns a split verse, where each metrical passage starts, and where each
+  note is. The pages and the search index both read it, so a line's or a note's address
+  is decided once.
   """
 
-  alias Playcode.{Bibliography, Catalogue, Performances, PlayContent, Statistics}
+  alias Playcode.{Bibliography, Catalogue, Outline, Performances, PlayContent, Statistics}
+  alias Playcode.Catalogue.Paratext
   alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
   alias Playcode.Statistics.Metrics
 
@@ -18,6 +20,11 @@ defmodule Playcode.Export.StaticSite.Edition do
     :divisions,
     :stats,
     :pages,
+    :front,
+    :before,
+    :back,
+    :contents,
+    :item_pages,
     :items,
     :anchors,
     :refs,
@@ -38,6 +45,7 @@ defmodule Playcode.Export.StaticSite.Edition do
     divisions = PlayContent.load_play_content(id, variants: play.show_variants)
     items = Metrics.items(divisions)
     pages = pages(divisions, items)
+    outline = outline(play.paratexts, divisions, pages)
     refs = refs(items)
 
     %__MODULE__{
@@ -48,8 +56,13 @@ defmodule Playcode.Export.StaticSite.Edition do
       divisions: divisions,
       stats: Statistics.get_statistics(id).data,
       pages: pages,
+      front: outline.front,
+      before: outline.before,
+      back: outline.back,
+      contents: outline.contents,
+      item_pages: outline.item_pages,
       items: items,
-      anchors: anchors(items, pages),
+      anchors: Map.merge(anchors(items, pages), outline.anchors),
       refs: refs,
       ghosts: ghosts(items),
       passage_starts: passage_starts(Metrics.passages(items)),
@@ -79,7 +92,7 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   # Every top-level division with text gets a page: acts are act-N by their ordinal
   # among all acts, as in the statistics; anything else is named by its type, with
-  # -2, -3 for repeats. The cast list goes on the title page. A division over
+  # -2, -3 for repeats. A cast list gets none (see `outline/3`). A division over
   # @split_bytes with two or more scenes also gets a page per scene, after its own.
   defp pages(divisions, items) do
     bytes =
@@ -100,7 +113,10 @@ defmodule Playcode.Export.StaticSite.Edition do
     pages
     |> Enum.reject(&(&1.division.type == "elenco" or empty?(&1.division)))
     |> Enum.flat_map(fn page ->
-      scenes = Enum.reject(page.division.children, &(&1.loaded_elements == []))
+      scenes =
+        page.division
+        |> Division.numbered_scenes()
+        |> Enum.reject(fn {scene, _n} -> scene.loaded_elements == [] end)
 
       if Map.get(bytes, page.division.id, 0) > @split_bytes and length(scenes) >= 2 do
         [%{page | split: true} | Enum.map(scenes, &scene_page_for(page, &1))]
@@ -112,15 +128,135 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   defp text_bytes(item), do: byte_size(item.element.content || "")
 
-  defp scene_page_for(page, scene) do
+  defp scene_page_for(page, {scene, n}) do
     %{
-      slug: "#{page.slug}-s#{scene.position + 1}",
-      title: "#{page.title}, #{scene_title(scene)}",
+      slug: "#{page.slug}-s#{n}",
+      title: "#{page.title}, #{scene_title(scene, n)}",
       division: page.division,
       scene: scene,
+      number: n,
       split: false
     }
   end
+
+  # Where each paratext and cast list prints. Those before the first division of the text
+  # go on the title page (`front`). Any other prints at the top of the next page, above its
+  # heading (`before`, by the id of that page's division or scene), and those after the
+  # last page at its foot (`back`). An act's own lists print where they stand on its page;
+  # on an act split by scene, each goes on the page of the scene after it. A play with no
+  # page of text prints them all on the title page.
+  defp outline(paratexts, divisions, []) do
+    %{
+      front: for(item <- Outline.items(paratexts, divisions), not text_division?(item), do: item),
+      before: %{},
+      back: [],
+      contents: [],
+      item_pages: %{},
+      anchors: item_anchors(paratexts, divisions)
+    }
+  end
+
+  defp outline(paratexts, divisions, pages) do
+    {front, rest} =
+      paratexts
+      |> Outline.items(divisions)
+      |> Outline.placement()
+      |> Enum.split_with(&match?({:front, _item}, &1))
+
+    rest = Enum.map(rest, &elem(&1, 1))
+    page_of = Map.new(pages, &{(&1.scene || &1.division).id, &1})
+    reading = Enum.flat_map(rest, &reading(&1, page_of))
+
+    {before, back} =
+      Enum.reduce(reading, {%{}, []}, fn
+        {:page, page}, {before, pending} ->
+          {Map.put(before, (page.scene || page.division).id, Enum.reverse(pending)), []}
+
+        {:item, item}, {before, pending} ->
+          {before, [item | pending]}
+      end)
+
+    last = List.last(pages)
+
+    item_pages =
+      for(
+        {id, items} <- before,
+        item <- items,
+        into: %{},
+        do: {item.id, page_of[id].slug}
+      )
+      |> Map.merge(Map.new(back, &{&1.id, last.slug}))
+      |> Map.merge(
+        for page <- pages,
+            not page.split,
+            is_nil(page.scene),
+            %{type: "elenco"} = list <- page.division.children,
+            into: %{},
+            do: {list.id, page.slug}
+      )
+
+    %{
+      front: Enum.map(front, &elem(&1, 1)),
+      before: before,
+      back: Enum.reverse(back),
+      contents: for(item <- rest, entry <- contents(item, page_of), do: entry),
+      item_pages: item_pages,
+      anchors: item_anchors(paratexts, divisions)
+    }
+  end
+
+  # The outline after the title page as a reader meets it: pages, and the items between.
+  defp reading(%Paratext{} = paratext, _page_of), do: [{:item, paratext}]
+  defp reading(%Division{type: "elenco"} = list, _page_of), do: [{:item, list}]
+
+  defp reading(division, page_of) do
+    case page_of[division.id] do
+      nil ->
+        for %{type: "elenco"} = list <- division.children, do: {:item, list}
+
+      %{split: true} = page ->
+        [{:page, page} | Enum.flat_map(division.children, &reading_child(&1, page_of))]
+
+      page ->
+        [{:page, page}]
+    end
+  end
+
+  defp reading_child(%{type: "elenco"} = list, _page_of), do: [{:item, list}]
+  defp reading_child(scene, page_of), do: page_entry(scene, page_of)
+
+  # The Contents' top-level entries after the title page: each division's page, each
+  # paratext and cast list between them.
+  defp contents(item, page_of) do
+    if text_division?(item), do: page_entry(item, page_of), else: [{:item, item}]
+  end
+
+  defp page_entry(division, page_of),
+    do: for(page <- List.wrap(page_of[division.id]), do: {:page, page})
+
+  defp text_division?(%Division{type: type}), do: type != "elenco"
+  defp text_division?(_paratext), do: false
+
+  # A paratext is `paratext-<n>`, its number in outline order; a cast list before or
+  # between the acts `elenco`, `elenco-2`…, as a page is named; an act's own list is named
+  # after its page in `anchors/2`.
+  defp item_anchors(paratexts, divisions) do
+    items = Outline.items(paratexts, divisions)
+
+    paratext_anchors =
+      for {paratext, n} <- items |> Enum.filter(&match?(%Paratext{}, &1)) |> Enum.with_index(1),
+          do: {paratext.id, "paratext-#{n}"}
+
+    list_anchors =
+      for {list, n} <-
+            items |> Enum.filter(&match?(%Division{type: "elenco"}, &1)) |> Enum.with_index(1),
+          do: {list.id, numbered("elenco", n)}
+
+    Map.new(paratext_anchors ++ list_anchors)
+  end
+
+  defp numbered(base, 1), do: base
+  defp numbered(base, n), do: "#{base}-#{n}"
 
   # A division's heading. With none, its type, and an act's number as the file gives it, in
   # Roman numerals as the corpus writes its headings ("Act I"): 48 files leave every act's
@@ -132,9 +268,9 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   defp title(division), do: String.capitalize(division.type)
 
-  @doc "A scene's heading, or its number when it has none."
-  def scene_title(%{title: nil} = scene), do: "Scene #{scene.position + 1}"
-  def scene_title(scene), do: InlineMarkup.plain(scene.title)
+  @doc "A scene's heading, or its number `n` when it has none."
+  def scene_title(%{title: nil}, n), do: "Scene #{n}"
+  def scene_title(scene, _n), do: InlineMarkup.plain(scene.title)
 
   @doc "The notes in a page's text, in reading order: the endnotes it lists."
   def page_notes(%{scene: nil, split: false, division: division}),
@@ -185,10 +321,23 @@ defmodule Playcode.Export.StaticSite.Edition do
   # A line's, or a speech's first line's, citation; a scene heading's scene; otherwise the
   # title of the page the note is on.
   defp note_ref(%Division{} = scene, %{scene: scene, division: division}, _item, _refs, _title),
-    do: "#{title(division)}, #{scene_title(scene)}"
+    do: "#{title(division)}, #{scene_title(scene, scene_number(division, scene))}"
 
   defp note_ref(_anchor, _at, %{element: element}, refs, _title), do: refs[element.id]
   defp note_ref(_anchor, _at, nil, _refs, title), do: title
+
+  defp scene_number(division, scene) do
+    Enum.find_value(Division.numbered_scenes(division), fn {child, n} ->
+      child.id == scene.id && n
+    end)
+  end
+
+  @doc """
+  The paratexts and cast lists printed at the top of `page`: above its heading, or on a
+  scene's page between its act's heading and the scene.
+  """
+  def before(%__MODULE__{before: before}, page),
+    do: Map.get(before, (page.scene || page.division).id, [])
 
   @doc "The page a scene has to itself, or nil when it shares its division's page."
   def scene_page(%__MODULE__{pages: pages}, scene),
@@ -240,8 +389,7 @@ defmodule Playcode.Export.StaticSite.Edition do
       pages
       |> Enum.reject(& &1.scene)
       |> Enum.flat_map(fn page ->
-        scenes = Enum.map(page.division.children, &{&1.id, "#{page.slug}-s#{&1.position + 1}"})
-        [{page.division.id, page.slug} | scenes]
+        [{page.division.id, page.slug} | child_anchors(page)]
       end)
 
     Map.new(elements ++ divisions)
@@ -260,8 +408,22 @@ defmodule Playcode.Export.StaticSite.Edition do
     length(numbers) != length(Enum.uniq(numbers))
   end
 
-  defp scene_ordinal(%{scene: nil}), do: 0
-  defp scene_ordinal(%{scene: scene}), do: scene.position + 1
+  # A division's children on its page: a scene by its number, `<page>-s<n>`; a cast list by
+  # its count among the division's lists, `<page>-elenco`, `<page>-elenco-2`…
+  defp child_anchors(page) do
+    {anchors, _counts} =
+      Enum.map_reduce(page.division.children, {0, 0}, fn
+        %{type: "elenco"} = list, {scenes, lists} ->
+          {{list.id, numbered("#{page.slug}-elenco", lists + 1)}, {scenes, lists + 1}}
+
+        scene, {scenes, lists} ->
+          {{scene.id, "#{page.slug}-s#{scenes + 1}"}, {scenes + 1, lists}}
+      end)
+
+    anchors
+  end
+
+  defp scene_ordinal(item), do: item.scene_number || 0
 
   # How a line is cited in search results: "II, 1236"; "II.3, 45" when the play
   # numbers each scene from 1; the division alone for prose and stage directions.

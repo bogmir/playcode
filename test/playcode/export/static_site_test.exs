@@ -139,7 +139,9 @@ defmodule Playcode.Export.StaticSiteTest do
         do: assert(italic in ems, italic)
   end
 
-  # Under the cast list, as on emothe.uv.es, and not among the front matter above it.
+  # Where its file puts it: here under the cast list, as on emothe.uv.es. It used to be
+  # printed under the cast list wherever the file had it, inside the list's section; the
+  # outline gives every item its own place, so the order is what is asserted now.
   test "the scene of the action follows the cast list" do
     play =
       tei(
@@ -153,8 +155,8 @@ defmodule Playcode.Export.StaticSiteTest do
     {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
     page = title_page(generate!([play]), play)
 
-    assert texts(page, "dl.cast ~ h3") == ["SCENE:"]
-    assert texts(page, "dl.cast ~ p") == ["An English wood."]
+    assert in_order?(LazyHTML.text(page), ["Don Juan", "SCENE:", "An English wood."])
+    assert "SCENE:" in texts(page, "h3")
     refute "SCENE:" in texts(page, "h2")
   end
 
@@ -276,6 +278,94 @@ defmodule Playcode.Export.StaticSiteTest do
 
     :ok = StaticSite.remove_single_play(original.code, output_dir: dir)
     refute link in hrefs(title_page(dir, translation))
+  end
+
+  # Its only act has no text yet, so no page: what stands after it prints on the title
+  # page, not on a page that is not there.
+  test "a play with no page of text prints its paratexts on the title page" do
+    play =
+      tei(
+        body: ~s(<div1 type="acto" n="1"><head>ACTO I</head></div1>),
+        back: ~s(<div type="epilogo"><head>EPÍLOGO</head><p>Fin.</p></div>)
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    assert "EPÍLOGO" in texts(title_page(generate!([play]), play), "h2")
+  end
+
+  # test/fixtures/outline.xml: what stands before the first act prints on the title page,
+  # an item between two acts at the top of the next act's page, an item after the text on
+  # the last page, each in its file's order.
+  describe "the outline" do
+    setup do
+      play = outline_xml() |> import_tei!() |> mark_complete!()
+      %{play: play, dir: generate!([play])}
+    end
+
+    defp page_text(dir, play, file),
+      do: dir |> html!("plays/#{play.code}/#{file}") |> LazyHTML.query("main") |> LazyHTML.text()
+
+    test "the title page prints what stands before the text, in order", %{play: play, dir: dir} do
+      text = page_text(dir, play, "index.html")
+
+      assert in_order?(
+               text,
+               ["DEDICATORIA", "LUGAR DE LA ACCIÓN", "PERSONAS", "ANA", "dama", "Criados"] ++
+                 ["BLAS", "CRISPÍN", "Músicos", "COMEDIA DE LOS ELENCOS", "Contents"]
+             )
+
+      for later <- ["de hombre", "DIEGO", "Una loa entre los actos.", "Fin de la comedia."],
+          do: refute(text =~ later, later)
+    end
+
+    test "an act's page prints its own lists where they stand, and what stands before it",
+         %{play: play, dir: dir} do
+      act_1 = page_text(dir, play, "act-1.html")
+
+      assert in_order?(
+               act_1,
+               ["ACTO PRIMERO", "Personas del acto primero", "ANA, disfrazada", "de hombre"] ++
+                 ["ESCENA I", "Primer verso", "Sale de nuevo", "DIEGO", "ESCENA II"]
+             )
+
+      refute act_1 =~ "Personas del acto segundo"
+      refute act_1 =~ "Una loa entre los actos."
+
+      assert in_order?(
+               page_text(dir, play, "act-2.html"),
+               ["Personas del acto segundo", "BLAS", "LOA", "Una loa entre los actos."] ++
+                 ["ACTO SEGUNDO", "ESCENA I", "Tercer verso", "EPÍLOGO", "Fin de la comedia."] ++
+                 ["Personas que no hablan", "CRISPÍN"]
+             )
+    end
+
+    test "the full text prints the outline from the first act on", %{play: play, dir: dir} do
+      text = page_text(dir, play, "text.html")
+
+      assert in_order?(text, Enum.drop(outline_headings(), 4))
+      refute text =~ "DEDICATORIA"
+    end
+
+    test "the Contents names every list and paratext after the title page, linked where it prints",
+         %{play: play, dir: dir} do
+      links =
+        for link <- dir |> title_page(play) |> LazyHTML.query("article li a"),
+            do: {squish(LazyHTML.text(link)), hd(LazyHTML.attribute(link, "href"))}
+
+      assert in_order?(
+               Enum.map_join(links, "|", &elem(&1, 0)),
+               ["ACTO PRIMERO", "Personas del acto primero", "ESCENA I", "Sale de nuevo"] ++
+                 ["ESCENA II", "Personas del acto segundo", "LOA", "ACTO SEGUNDO", "ESCENA I"] ++
+                 ["EPÍLOGO", "Personas que no hablan", "Full text"]
+             )
+
+      for {title, href} <- links, String.contains?(href, "#") do
+        [file, id] = String.split(href, "#")
+        target = html!(dir, "plays/#{play.code}/#{file}")
+        assert Enum.count(LazyHTML.query(target, "[id='#{id}']")) == 1, "#{title}: #{href}"
+      end
+    end
   end
 
   describe "a relative edited since it was last exported" do

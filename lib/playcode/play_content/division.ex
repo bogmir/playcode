@@ -70,6 +70,13 @@ defmodule Playcode.PlayContent.Division do
   """
   def body_types, do: @body_types
 
+  @doc """
+  A division's scenes, its children but its cast lists, each with its number from 1: a cast
+  list between two scenes shares their positions, not their numbering.
+  """
+  def numbered_scenes(division),
+    do: division.children |> Enum.reject(&(&1.type == "elenco")) |> Enum.with_index(1)
+
   def changeset(division, attrs) do
     division
     |> cast(attrs, [:type, :number, :title, :position, :play_id, :parent_id])
