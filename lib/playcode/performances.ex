@@ -17,7 +17,6 @@ defmodule Playcode.Performances do
   import Ecto.Changeset, only: [add_error: 4, get_field: 2, put_change: 3]
 
   alias Playcode.Bibliography
-  alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Performances.{Actor, CastMember, Company, Performance}
   alias Playcode.Places
   alias Playcode.Repo
@@ -69,6 +68,11 @@ defmodule Playcode.Performances do
   or nil; its `cast`, each `"Actor (role)"`; and its `note`. A performance that
   takes its cast from the cast list prints first the characters' actors, as the cast list
   prints its characters (a hidden one left out), then the cast rows of its own.
+
+  The date, the parts, the cast and the note hold italics as `<<…>>`, as every text the TEI
+  importer reads does: a page prints them through its text renderer
+  (`PlaycodeWeb.Components.PlayText.inline_content/1`, `Playcode.Export.StaticSite.Components.inline/1`),
+  and `Playcode.PlayContent.InlineMarkup.plain/1` is for where markup cannot go.
 
   `locale` is the page's language, for the venue types; the place names follow `place_locale`
   when the page's language is not theirs (the static site is in English, its places Spanish).
@@ -151,12 +155,13 @@ defmodule Playcode.Performances do
   end
 
   # Each character with an actor, in cast-list order, as the printed cast list leaves out
-  # the hidden ones.
+  # the hidden ones. Names, roles and actors hold italics as <<…>>: the page prints them
+  # through the text renderers, as it does the venue and the note.
   defp cast_list_actors(characters) do
     for %{actor: actor} = character <- characters,
         not character.is_hidden,
         actor not in [nil, ""],
-        do: cast_line(InlineMarkup.plain(actor), InlineMarkup.plain(character.name))
+        do: cast_line(actor, character.name)
   end
 
   defp cast_line(actor, nil), do: actor

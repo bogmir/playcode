@@ -61,6 +61,35 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
     assert html =~ "Globe · The King’s Men · teatro público"
   end
 
+  # Every text the TEI importer reads holds <emph> as <<…>> (CLAUDE.md), a performance's too:
+  # the list prints italics, and the buttons' names, where markup cannot go, read plain.
+  test "the list prints italics as italics and names its buttons plain", %{conn: conn, play: play} do
+    performance =
+      performance_fixture(play, %{
+        "date_text" => "1610",
+        "venue" => "<<Globe>>",
+        "note" => "Hissed <<twice>>.",
+        "cast" => [%{"surname" => "<<Mlle>> du Parc", "role" => "<<Toinette>>"}]
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+    html = lv |> element("#performance-#{performance.id}") |> render()
+
+    for word <- ["Globe", "twice", "Mlle", "Toinette"] do
+      assert html =~ "<em>#{word}</em>", word
+    end
+
+    refute html =~ "&lt;&lt;"
+    assert has_element?(button(lv, "Edit", "1610, Globe"))
+    assert has_element?(button(lv, "Delete", "1610, Globe"))
+
+    # The actor's rename button and panel name it plain too.
+    lv |> button("Edit", "1610, Globe") |> render_click()
+    assert has_element?(rename_button(lv, "Mlle du Parc"))
+    rename_button(lv, "Mlle du Parc") |> render_click()
+    assert has_element?(lv, "#rename-panel h3", t("Rename %{name}", name: "Mlle du Parc"))
+  end
+
   test "a company is picked from those that exist", %{conn: conn, play: play} do
     {:ok, company} = Performances.find_or_create_company("The King’s Men")
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
@@ -331,8 +360,13 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
 
       assert [%{sex: "man"}, %{sex: "woman"}] = Enum.map(performance.cast, & &1.actor)
 
-      assert lv |> element("#performance-#{performance.id}") |> render() =~
+      # The cast prints through the text renderer, in a span of its own: asserted on the
+      # paragraph's text, not on its markup.
+      assert has_element?(
+               lv,
+               "#performance-#{performance.id} p",
                "#{t("Cast")}: Thomas Betterton (Mirabell); Anne Bracegirdle, “Bracey” (Millamant)"
+             )
 
       # Edited, the rows come back as saved; the first is removed, and its actor with it.
       lv |> button("Edit", "1700") |> render_click()

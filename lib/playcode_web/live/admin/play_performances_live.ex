@@ -16,8 +16,10 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
   alias Playcode.Performances
   alias Playcode.Performances.{Actor, Company, Performance}
   alias Playcode.PlayContent
+  alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Places
   alias PlaycodeWeb.Admin.LiveHelpers
+  alias PlaycodeWeb.Components.PlayText
 
   # What the form edits. The play comes from the page, the place from the picker, and the
   # origin is "manual" or what an import set, never from the browser: see form_params/2.
@@ -474,6 +476,10 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
   defp name(%Company{name: name}), do: name
   defp name(%Actor{} = actor), do: Actor.display_name(actor)
 
+  # A name where markup cannot go (an aria-label), or is not worth the trouble (a heading
+  # built from a translation): an actor's names may hold italics as <<…>>.
+  defp plain_name(record), do: record |> name() |> InlineMarkup.plain()
+
   # The open form names the record by its old name; it must name it by the new, else saving
   # it would make a company of the old name, or leave a row naming no one.
   defp follow_rename(socket, %Company{} = old, %Company{} = renamed) do
@@ -601,12 +607,16 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
         do: {Performance.venue_type_label(type, locale()), type}
   end
 
-  # What a button of a line is about: its date and parts, else its note.
+  # What a button of a line is about: its date and parts, else its note. An aria-label has no
+  # markup to print italics with, so the italics' markers go.
   defp label(line) do
-    case Enum.reject([line.date | line.parts], &is_nil/1) do
-      [] -> line.note
-      present -> Enum.join(present, ", ")
-    end
+    about =
+      case Enum.reject([line.date | line.parts], &is_nil/1) do
+        [] -> line.note
+        present -> Enum.join(present, ", ")
+      end
+
+    InlineMarkup.plain(about)
   end
 
   # The entry the performance's save wrote, if its source was a new one.
@@ -801,7 +811,9 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
           id="rename-panel"
           class="mb-4 rounded-box border border-base-300 bg-base-200/50 p-4"
         >
-          <h3 class="text-sm font-semibold">{gettext("Rename %{name}", name: name(@renaming))}</h3>
+          <h3 class="text-sm font-semibold">
+            {gettext("Rename %{name}", name: plain_name(@renaming))}
+          </h3>
           <p class="mb-3 text-xs text-base-content/70">{usage_text(@usage)}</p>
           <.form for={@rename_form} id="rename-form" phx-submit="save_rename">
             <.rename_fields record={@renaming} form={@rename_form} />
@@ -975,15 +987,17 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
         >
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0 text-sm">
-              <span :if={line.date} class="font-semibold">{line.date}</span>
-              {Enum.join(line.parts, " · ")}
+              <span :if={line.date} class="font-semibold">
+                <PlayText.inline_content text={line.date} />
+              </span>
+              <PlayText.inline_content :if={line.parts != []} text={Enum.join(line.parts, " · ")} />
               <span :if={line.reference} class="whitespace-nowrap text-xs text-base-content/70">
                 {line.reference}
               </span>
               <p :if={line.cast != []} class="text-xs">
-                {gettext("Cast")}: {Enum.join(line.cast, "; ")}
+                {gettext("Cast")}: <PlayText.inline_content text={Enum.join(line.cast, "; ")} />
               </p>
-              <p :if={line.note} class="text-xs">{line.note}</p>
+              <p :if={line.note} class="text-xs"><PlayText.inline_content text={line.note} /></p>
             </div>
             <div class="flex shrink-0 gap-1">
               <button
@@ -1049,7 +1063,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
       phx-click={@event}
       phx-value-id={@record.id}
       class="btn btn-ghost btn-xs mb-2 gap-1"
-      aria-label={gettext("Rename %{name}", name: name(@record))}
+      aria-label={gettext("Rename %{name}", name: plain_name(@record))}
     >
       <.icon name="hero-pencil-micro" class="size-3.5" /> {gettext("Rename")}
     </button>

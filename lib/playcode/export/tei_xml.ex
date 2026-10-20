@@ -6,8 +6,10 @@ defmodule Playcode.Export.TeiXml do
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Paratext
+  alias Playcode.Performances
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
+  alias Playcode.Places
   alias Playcode.Witnesses
   import XmlBuilder, except: [element: 2, element: 3]
 
@@ -35,8 +37,9 @@ defmodule Playcode.Export.TeiXml do
 
   @doc """
   The play's TEI document. `opts` may hand in `:divisions` (as
-  `PlayContent.load_play_content/1` returns them) and `:characters` already loaded, as
-  the static site does for every play; otherwise they are loaded here.
+  `PlayContent.load_play_content/1` returns them), `:characters` and `:performances` (as
+  `Performances.list_for_play/1` returns them) already loaded, as the static site does for
+  every play; otherwise they are loaded here.
   """
   def generate(play, opts \\ []) do
     play =
@@ -57,13 +60,16 @@ defmodule Playcode.Export.TeiXml do
     divisions =
       Keyword.get_lazy(opts, :divisions, fn -> PlayContent.load_play_content(play.id) end)
 
+    performances =
+      Keyword.get_lazy(opts, :performances, fn -> Performances.list_for_play(play.id) end)
+
     tei =
       element(
         :TEI,
         %{"xml:lang" => play.language || "es", "xmlns" => "http://www.tei-c.org/ns/1.0"},
         [
-          build_header(play),
-          build_text(play, characters, divisions)
+          build_header(play, performances),
+          build_text(play, characters, divisions, performances)
         ]
       )
 
@@ -73,13 +79,13 @@ defmodule Playcode.Export.TeiXml do
 
   # --- Header ---
 
-  defp build_header(play) do
+  defp build_header(play, performances) do
     element(
       :teiHeader,
       [
         build_file_desc(play),
         build_encoding_desc(play),
-        build_profile_desc(play)
+        build_profile_desc(play, performances)
       ] ++ build_revision_desc(play)
     )
   end
@@ -457,7 +463,7 @@ defmodule Playcode.Export.TeiXml do
     "pt" => {"pt-PT", "Português"}
   }
 
-  defp build_profile_desc(play) do
+  defp build_profile_desc(play, performances) do
     {ident, label} = Map.get(@language_ident_labels, play.language || "es", {"es-ES", "Español"})
 
     children =
@@ -465,7 +471,7 @@ defmodule Playcode.Export.TeiXml do
         [element(:langUsage, [element(:language, %{ident: ident}, label)])] ++
         build_text_class(play)
 
-    element(:profileDesc, children ++ build_setting_desc(play))
+    element(:profileDesc, children ++ build_setting_desc(play, performances))
   end
 
   # <creation> is where TEI records when the text *in this file* was composed. The years
@@ -500,13 +506,20 @@ defmodule Playcode.Export.TeiXml do
   end
 
   # The places are a `listPlace` and their links in `<setting>`; the historical time is a
-  # `<time>` in the same `<setting>`, the period as @type and its note as the text.
-  defp build_setting_desc(play) do
-    {list_place, setting_refs} = build_places(play)
+  # `<time>` in the same `<setting>`, the period as @type and its note as the text. A play
+  # whose only places are its performances' has the `listPlace` alone.
+  defp build_setting_desc(play, performances) do
+    {list_place, setting_refs} = build_places(play, performances)
 
-    case setting_refs ++ build_historical_time(play) do
+    setting =
+      case setting_refs ++ build_historical_time(play) do
+        [] -> []
+        setting -> [element(:setting, setting)]
+      end
+
+    case list_place ++ setting do
       [] -> []
-      setting -> [element(:settingDesc, list_place ++ [element(:setting, setting)])]
+      children -> [element(:settingDesc, children)]
     end
   end
 
@@ -514,26 +527,36 @@ defmodule Playcode.Export.TeiXml do
   # place and its historical state) *plus every ancestor*, so containment is complete —
   # which means a `<place>` may be a pure container. `setting` is therefore what says
   # which of them the play actually references, because "the leaves are the settings" is
-  # wrong: a play can be set in Italy itself.
-  defp build_places(%{play_places: [_ | _] = links}) do
-    gazetteer = Playcode.Places.gazetteer()
+  # wrong: a play can be set in Italy itself. The places and states of the performances are
+  # in the `listPlace` too, and in no `setting`: each performance names its own.
+  defp build_places(%{play_places: links}, performances) do
     ordered = Enum.sort_by(links, fn link -> {link.role != "setting", link.position} end)
 
-    needed =
-      ordered
-      |> Enum.flat_map(&[&1.place, Map.get(gazetteer, &1.historical_state_id)])
-      |> Enum.reject(&is_nil/1)
-      |> Enum.flat_map(&[&1 | Playcode.Places.ancestors(&1, gazetteer)])
-      |> Enum.uniq_by(& &1.id)
+    performance_places =
+      for performance <- performances,
+          id <- [performance.place_id, performance.historical_state_id],
+          id,
+          do: id
 
-    wanted = MapSet.new(needed, & &1.id)
-    roots = Enum.filter(needed, &is_nil(&1.parent_place_id))
+    if ordered == [] and performance_places == [] do
+      {[], []}
+    else
+      gazetteer = Places.gazetteer()
 
-    {[element(:listPlace, Enum.map(roots, &build_place(&1, gazetteer, wanted)))],
-     Enum.map(ordered, &build_setting_ref(&1, gazetteer))}
+      needed =
+        (Enum.flat_map(ordered, &[&1.place, Map.get(gazetteer, &1.historical_state_id)]) ++
+           Enum.map(performance_places, &Map.get(gazetteer, &1)))
+        |> Enum.reject(&is_nil/1)
+        |> Enum.flat_map(&[&1 | Places.ancestors(&1, gazetteer)])
+        |> Enum.uniq_by(& &1.id)
+
+      wanted = MapSet.new(needed, & &1.id)
+      roots = Enum.filter(needed, &is_nil(&1.parent_place_id))
+
+      {[element(:listPlace, Enum.map(roots, &build_place(&1, gazetteer, wanted)))],
+       Enum.map(ordered, &build_setting_ref(&1, gazetteer))}
+    end
   end
-
-  defp build_places(_play), do: {[], []}
 
   defp build_historical_time(%{historical_time: nil, historical_time_note: nil}), do: []
 
@@ -652,9 +675,10 @@ defmodule Playcode.Export.TeiXml do
   # never leave Playcode: this file is published with the static site. A field that may
   # hold italics goes out on one line (inline_element/3): an indented one would put a space
   # between "<<Adonis y Venus>>" and ": hacia", and a reference is matched on its words.
-  defp build_bibl_struct(%{entry: e} = link) do
+  defp build_bibl_struct(%{entry: e} = link, extra \\ %{}) do
     attrs =
       %{"type" => Entry.tei_type(e.pub_type), "xml:lang" => e.language}
+      |> Map.merge(extra)
       |> Map.reject(fn {_key, value} -> is_nil(value) end)
 
     element(
@@ -781,7 +805,7 @@ defmodule Playcode.Export.TeiXml do
 
   # --- Text ---
 
-  defp build_text(play, characters, divisions) do
+  defp build_text(play, characters, divisions, performances) do
     body_divisions =
       divisions |> Enum.filter(fn d -> d.type in @body_types end) |> with_folio_parts()
 
@@ -790,13 +814,13 @@ defmodule Playcode.Export.TeiXml do
     {back, front} = play.paratexts |> Enum.sort_by(& &1.position) |> Enum.split_with(& &1.back)
 
     element(:text, [
-      build_front(play, front, characters, cast_heading),
+      build_front(play, front, characters, cast_heading, performances),
       build_body(body_divisions),
       build_back(back, Playcode.Bibliography.list_for_play(play.id))
     ])
   end
 
-  defp build_front(play, paratexts, characters, cast_heading) do
+  defp build_front(play, paratexts, characters, cast_heading, performances) do
     title_page =
       element(
         :titlePage,
@@ -839,7 +863,13 @@ defmodule Playcode.Export.TeiXml do
             do: [inline_element(:head, %{}, build_inline_content(cast_heading))],
             else: []
 
-        [element(:div, %{type: "elenco"}, head ++ [element(:castList, cast_items)])]
+        # The id a performance takes its actors from the cast list by (`corresp="#castlist"`).
+        list_attrs =
+          if Enum.any?(performances, & &1.cast_from_cast_list),
+            do: %{"xml:id" => "castlist"},
+            else: %{}
+
+        [element(:div, %{type: "elenco"}, head ++ [element(:castList, list_attrs, cast_items)])]
       else
         []
       end
@@ -848,7 +878,151 @@ defmodule Playcode.Export.TeiXml do
       :front,
       [title_page] ++
         Enum.map(paratexts, &paratext_element/1) ++
-        cast_list ++ Enum.map(scenes, &paratext_element/1)
+        cast_list ++ Enum.map(scenes, &paratext_element/1) ++ build_performances(performances)
+    )
+  end
+
+  # --- Performances (S5) ---
+
+  # In the list's order, each named by its place in it: `performance-1` is the file's own
+  # name for it, never a database id.
+  defp build_performances(performances) do
+    # ponytail: a second load of the gazetteer, after the settingDesc's, to read each state's
+    # slug and type: one more per play, at a hundred places. Share it if that ever shows.
+    gazetteer =
+      if Enum.any?(performances, & &1.historical_state_id), do: Places.gazetteer(), else: %{}
+
+    performances
+    |> Enum.with_index(1)
+    |> Enum.map(fn {performance, number} ->
+      build_performance(performance, number, gazetteer)
+    end)
+  end
+
+  # The details in a <p>, the cast, the note and the source, in the order TEI's content model
+  # gives them. The <p> is always there: the schema wants one paragraph-level element at
+  # least, and a performance of a note alone has no other.
+  defp build_performance(performance, number, gazetteer) do
+    attrs = %{"xml:id" => "performance-#{number}"}
+
+    attrs =
+      if performance.cast_from_cast_list, do: Map.put(attrs, :corresp, "#castlist"), else: attrs
+
+    element(
+      :performance,
+      attrs,
+      Enum.reject(
+        [
+          element(:p, performance_details(performance, gazetteer)),
+          build_performance_cast(performance.cast),
+          if(performance.note,
+            do: inline_element(:note, %{}, build_inline_content(performance.note))
+          ),
+          build_performance_source(performance)
+        ],
+        &is_nil/1
+      )
+    )
+  end
+
+  # When, where and by whom, each as TEI's own element: the date as written with its years
+  # as attributes, the venue's name with its type, the town with the state it then belonged
+  # to (as a play's setting does), the company.
+  defp performance_details(performance, gazetteer) do
+    Enum.reject(
+      [
+        build_performance_date(performance),
+        build_venue(performance),
+        build_performance_place(performance, gazetteer),
+        if(performance.company, do: element(:orgName, performance.company.name))
+      ],
+      &is_nil/1
+    )
+  end
+
+  # A single year is `when`; a span, or one end of it, `notBefore` and `notAfter`.
+  defp build_performance_date(%{date_text: nil, year_from: nil, year_to: nil}), do: nil
+
+  defp build_performance_date(performance) do
+    attrs =
+      case {performance.year_from, performance.year_to} do
+        {nil, nil} ->
+          %{}
+
+        {year, year} ->
+          attributes(when: to_string(year))
+
+        {from, to} ->
+          attributes(notBefore: from && to_string(from), notAfter: to && to_string(to))
+      end
+
+    inline_element(:date, attrs, build_inline_content(performance.date_text))
+  end
+
+  # Empty when only a type is known.
+  defp build_venue(%{venue: nil, venue_type: nil}), do: nil
+
+  defp build_venue(performance),
+    do:
+      inline_element(
+        :rs,
+        attributes(type: "venue", subtype: performance.venue_type),
+        build_inline_content(performance.venue)
+      )
+
+  defp build_performance_place(%{place: nil, historical_state_id: nil}, _gazetteer), do: nil
+
+  defp build_performance_place(performance, gazetteer) do
+    state = Map.get(gazetteer, performance.historical_state_id)
+    attrs = if performance.place, do: %{ref: "##{performance.place.slug}"}, else: %{}
+
+    element(:placeName, attrs, build_state_ref(state))
+  end
+
+  defp build_performance_cast([]), do: nil
+
+  defp build_performance_cast(cast),
+    do: element(:castList, Enum.map(cast, &build_performance_cast_item/1))
+
+  defp build_performance_cast_item(member) do
+    role =
+      if member.role,
+        do: [inline_element(:role, %{}, build_inline_content(member.role))],
+        else: []
+
+    element(:castItem, role ++ [build_actor(member.actor)])
+  end
+
+  @actor_sex %{"man" => "M", "woman" => "F"}
+
+  # TEI's own parts of a name, the nickname an `addName`; the sex as `actor@sex`.
+  defp build_actor(actor) do
+    names =
+      Enum.reject(
+        [
+          actor.forename && inline_element(:forename, %{}, build_inline_content(actor.forename)),
+          actor.surname && inline_element(:surname, %{}, build_inline_content(actor.surname)),
+          actor.nickname &&
+            inline_element(:addName, %{type: "nickname"}, build_inline_content(actor.nickname))
+        ],
+        &is_nil/1
+      )
+
+    element(:actor, attributes(sex: @actor_sex[actor.sex]), [element(:persName, names)])
+  end
+
+  # The performance carries its source whole, kind included: question 12 keeps a performance's
+  # source out of the play's bibliography, so no listBibl says what kind it is.
+  defp build_performance_source(%{source: nil}), do: nil
+
+  defp build_performance_source(performance) do
+    build_bibl_struct(
+      %{
+        entry: performance.source,
+        volume: performance.source_volume,
+        pages: performance.source_pages
+      },
+      %{"ana" => Entry.tei_source_kind(performance.source.kind)}
     )
   end
 

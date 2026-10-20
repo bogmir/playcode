@@ -794,6 +794,33 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert "index.html#performances" in rail_links(dir, play)
   end
 
+  # Every text the TEI importer reads holds <emph> as <<…>> (CLAUDE.md), a performance's too.
+  test "the title page prints a performance's italics as italics, never as markers" do
+    play = import_tei!(tei(body: @two_acts))
+
+    {:ok, _} =
+      Playcode.PlayContent.create_character(%{
+        play_id: play.id,
+        xml_id: "ARGAN",
+        name: "<<Argan>>",
+        actor: "Mr. <<Betterton>>"
+      })
+
+    performance_fixture(play, %{
+      "venue" => "<<Globe>>",
+      "note" => "Hissed <<twice>>.",
+      "cast_from_cast_list" => "true",
+      "cast" => [%{"surname" => "<<Mlle>> du Parc", "role" => "<<Toinette>>"}]
+    })
+
+    title = page(generate!([play], all: true), play, "index.html")
+
+    assert texts(title, "#performances .performance em") ==
+             ["Globe", "Betterton", "Argan", "Mlle", "Toinette", "twice"]
+
+    refute LazyHTML.text(title) =~ "<<"
+  end
+
   defp rail_links(dir, play) do
     dir
     |> page(play, "act-1.html")

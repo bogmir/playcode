@@ -12,7 +12,14 @@ defmodule Playcode.TeiRoundtripTest do
   import Playcode.ImportHelpers
 
   import Playcode.TestFixtures,
-    only: [bibliography_fixture: 2, bibliography_fixture: 3, play_fixture: 1]
+    only: [
+      bibliography_fixture: 2,
+      bibliography_fixture: 3,
+      catalogue_fixture: 1,
+      performance_fixture: 2,
+      place_fixture: 1,
+      play_fixture: 1
+    ]
 
   @rich_header [
     title: "Ricardo III",
@@ -3411,6 +3418,543 @@ defmodule Playcode.TeiRoundtripTest do
       second = first |> String.replace("WIT1", "WIT2") |> roundtrip()
 
       assert String.replace(second, "WIT2", "WIT1") == first
+    end
+  end
+
+  # A play's performances (S5) are in the file as <performance>s of the front, after the
+  # cast list and the scene. They name their company, actors and source by what they are,
+  # never by an id; a re-import replaces the file's own and leaves the rest.
+  describe "performances" do
+    alias Playcode.Performances
+
+    @performance_places """
+    <settingDesc>
+      <listPlace>
+        <place xml:id="rt-perf-europa" type="continent">
+          <placeName xml:lang="es">Europa</placeName>
+          <place xml:id="rt-perf-inglaterra" type="country">
+            <placeName xml:lang="es">Inglaterra</placeName>
+            <place xml:id="rt-perf-londres" type="city"><placeName xml:lang="es">Londres</placeName></place>
+          </place>
+          <place xml:id="rt-perf-reino" type="country"><placeName xml:lang="es">Reino de Inglaterra</placeName></place>
+        </place>
+      </listPlace>
+    </settingDesc>
+    """
+
+    @cast_list ~s(<div type="elenco"><castList><castItem><role xml:id="BLAS">Blas</role><actor>Mr. Betterton</actor></castItem></castList></div>)
+
+    # A company's name is unique across the corpus, so two async tests naming one queue
+    # behind each other: every name here is made unique.
+    defp unique_company, do: "The King’s Men #{System.unique_integer([:positive])}"
+
+    # The performance as the export writes it, so that the file and its round trip compare
+    # element for element.
+    defp performance_xml(company, corresp \\ "") do
+      """
+      <performance xml:id="performance-1"#{corresp}>
+        <p>
+          <date notAfter="1611" notBefore="1609">1609-11</date>
+          <rs subtype="commercial_theatre" type="venue">Globe or <emph>Blackfriars</emph></rs>
+          <placeName ref="#rt-perf-londres"><country ref="#rt-perf-reino"/></placeName>
+          <orgName>#{company}</orgName>
+        </p>
+        <castList>
+          <castItem><role><emph>Argan</emph></role><actor sex="M"><persName><forename>Jean François</forename><surname>Poquelin</surname><addName type="nickname">Molière</addName></persName></actor></castItem>
+        </castList>
+        <note>The play was <emph>hissed</emph> occasionally.</note>
+        <biblStruct ana="catalogos">
+          <monogr>
+            <title level="m">British Drama 1533–1642: A Catalogue</title>
+            <imprint><pubPlace>Oxford</pubPlace><publisher>Oxford University Press</publisher><date>2012–</date></imprint>
+          </monogr>
+          <citedRange unit="volume">6</citedRange>
+          <citedRange unit="page">83</citedRange>
+        </biblStruct>
+      </performance>
+      """
+    end
+
+    defp performance_file(front, opts \\ []),
+      do: tei(Keyword.merge([front: front, profile_desc: @performance_places], opts))
+
+    defp performances(play), do: Performances.list_for_play(play.id)
+
+    test "a performance comes back with every field" do
+      company = unique_company()
+      file = performance_file(performance_xml(company))
+      play = import_tei!(file)
+
+      assert [performance] = performances(play)
+
+      assert %{
+               date_text: "1609-11",
+               year_from: 1609,
+               year_to: 1611,
+               venue: "Globe or <<Blackfriars>>",
+               venue_type: "commercial_theatre",
+               note: "The play was <<hissed>> occasionally.",
+               source_volume: "6",
+               source_pages: "83",
+               cast_from_cast_list: false,
+               origin: "tei",
+               filemaker_id: nil
+             } = performance
+
+      assert performance.company.name == company
+
+      assert {performance.place.slug,
+              Playcode.Places.get_place(performance.historical_state_id).slug} ==
+               {"rt-perf-londres", "rt-perf-reino"}
+
+      assert [
+               %{
+                 role: "<<Argan>>",
+                 actor: %{
+                   surname: "Poquelin",
+                   forename: "Jean François",
+                   nickname: "Molière",
+                   sex: "man"
+                 }
+               }
+             ] = performance.cast
+
+      assert %{
+               kind: "catalogue",
+               monogr_title: "British Drama 1533–1642: A Catalogue",
+               pub_place: "Oxford",
+               publisher: "Oxford University Press",
+               year_text: "2012–"
+             } = performance.source
+
+      xml = export_tei(play)
+
+      assert xml_elements(xml, "performance") == xml_elements(file, "performance")
+      assert xml_texts(xml, "orgName", within: "performance") == [company]
+
+      # The date of the performance, and the one in its source's imprint.
+      assert xml_elements(xml, "date", within: "performance") ==
+               [{%{"notBefore" => "1609", "notAfter" => "1611"}, "1609-11"}, {%{}, "2012–"}]
+
+      assert xml_elements(xml, "rs", within: "performance") ==
+               [
+                 {%{"type" => "venue", "subtype" => "commercial_theatre"}, "Globe or Blackfriars"}
+               ]
+
+      assert xml_elements(xml, "placeName", within: "performance") ==
+               [{%{"ref" => "#rt-perf-londres"}, ""}]
+
+      assert xml_elements(xml, "country", within: "performance") ==
+               [{%{"ref" => "#rt-perf-reino"}, ""}]
+
+      assert xml_texts(xml, "emph", within: "performance") == ["Blackfriars", "Argan", "hissed"]
+      assert [{%{"sex" => "M"}, _}] = xml_elements(xml, "actor", within: "performance")
+
+      assert xml_elements(xml, "citedRange", within: "performance") ==
+               [{%{"unit" => "volume"}, "6"}, {%{"unit" => "page"}, "83"}]
+
+      assert [{%{"ana" => "catalogos"}, _}] =
+               xml_elements(xml, "biblStruct", within: "performance")
+
+      # The place and its state are in the file's gazetteer, though no <setting> names them.
+      assert {"rt-perf-londres" in place_ids(xml), "rt-perf-reino" in place_ids(xml)} ==
+               {true, true}
+
+      assert xml_elements(xml, "setting") == []
+    end
+
+    test "exporting, re-importing and exporting again changes nothing" do
+      first =
+        performance_file(performance_xml(unique_company()), code: "RTP1")
+        |> roundtrip()
+
+      assert [_] = xml_elements(first, "performance")
+
+      second = first |> String.replace("RTP1", "RTP2") |> roundtrip()
+
+      assert String.replace(second, "RTP2", "RTP1") == first
+    end
+
+    test "a company, an actor and a source already in Playcode are reused, not copied" do
+      name = unique_company()
+      {:ok, company} = Performances.find_or_create_company(name)
+
+      {:ok, actor} =
+        Performances.find_or_create_actor(%{
+          "surname" => "Poquelin",
+          "forename" => "Jean François",
+          "nickname" => "Molière",
+          "sex" => "man"
+        })
+
+      source =
+        catalogue_fixture(%{
+          "monogr_title" => "British Drama 1533–1642: A Catalogue",
+          "pub_place" => "Oxford",
+          "publisher" => "Oxford University Press",
+          "year_text" => "2012–"
+        })
+
+      play = import_tei!(performance_file(performance_xml(name)))
+
+      assert [performance] = performances(play)
+      assert performance.company_id == company.id
+      assert [%{actor_id: actor_id}] = performance.cast
+      assert actor_id == actor.id
+      assert performance.source_entry_id == source.id
+
+      assert Enum.count(Performances.list_companies(), &(&1.name == name)) == 1
+      assert length(Performances.list_actors()) == 1
+    end
+
+    test "the cast-list switch comes back, and the cast list it names is marked" do
+      file =
+        performance_file(
+          @cast_list <> performance_xml(unique_company(), ~s( corresp="#castlist"))
+        )
+
+      play = import_tei!(file)
+
+      assert [%{cast_from_cast_list: true}] = performances(play)
+
+      xml = export_tei(play)
+
+      assert [{%{"corresp" => "#castlist"}, _}] = xml_elements(xml, "performance")
+      assert [{%{"xml:id" => "castlist"}, _}] = xml_elements(xml, "castList", within: "div")
+    end
+
+    test "a cast list no performance names is left as it was" do
+      play = import_tei!(performance_file(@cast_list <> performance_xml(unique_company())))
+
+      assert [%{cast_from_cast_list: false}] = performances(play)
+
+      xml = export_tei(play)
+
+      assert [{%{} = list, _}] = xml_elements(xml, "castList", within: "div")
+      assert [{%{} = performance, _}] = xml_elements(xml, "performance")
+      refute Map.has_key?(list, "xml:id")
+      refute Map.has_key?(performance, "corresp")
+
+      # A play with no performance at all has the cast list as before.
+      xml = roundtrip(tei(front: @cast_list))
+      assert [{list, _}] = xml_elements(xml, "castList", within: "div")
+      assert list == %{}
+    end
+
+    test "a source cited by a performance stays out of the play's bibliography" do
+      play = import_tei!(performance_file(performance_xml(unique_company())))
+
+      assert [%{source_entry_id: id}] = performances(play)
+      assert id
+      assert Playcode.Bibliography.list_for_play(play.id) == []
+    end
+
+    test "a source keeps its kind, and a file that names none cites a criticism" do
+      for {ana, kind} <- [
+            {"catalogos", "catalogue"},
+            {"ediciones_modernas", "modern_edition"},
+            {"critica", "criticism"},
+            {"traducciones", "translation"},
+            {"adaptaciones", "adaptation"},
+            {nil, "criticism"}
+          ] do
+        written = if ana, do: ~s( ana="#{ana}"), else: ""
+        source = String.replace(performance_xml(unique_company()), ~s( ana="catalogos"), written)
+        play = import_tei!(performance_file(source))
+
+        assert [%{source: %{kind: ^kind}}] = performances(play), inspect(ana)
+
+        expected = ana || "critica"
+        assert [{%{"ana" => ^expected}, _}] = xml_elements(export_tei(play), "biblStruct")
+      end
+    end
+
+    test "a performance of a note alone is valid TEI shape and comes back" do
+      xml =
+        roundtrip(
+          tei(
+            front:
+              ~s(<performance xml:id="performance-1"><p/><note>Solo una nota.</note></performance>)
+          )
+        )
+
+      assert [{%{"xml:id" => "performance-1"}, "Solo una nota."}] =
+               xml_elements(xml, "performance")
+
+      assert xml_elements(xml, "p", within: "performance") == [{%{}, ""}]
+    end
+
+    test "a venue type alone is an empty rs, and a date as words is a date with no years" do
+      play =
+        import_tei!(
+          tei(
+            front: """
+            <performance xml:id="performance-1">
+              <p><date>desconocida</date><rs type="venue" subtype="palace"/></p>
+            </performance>
+            """
+          )
+        )
+
+      assert [
+               %{
+                 date_text: "desconocida",
+                 year_from: nil,
+                 year_to: nil,
+                 venue: nil,
+                 venue_type: "palace"
+               }
+             ] =
+               performances(play)
+
+      xml = export_tei(play)
+
+      assert xml_elements(xml, "rs", within: "performance") ==
+               [{%{"type" => "venue", "subtype" => "palace"}, ""}]
+
+      assert xml_elements(xml, "date", within: "performance") == [{%{}, "desconocida"}]
+    end
+
+    test "a venue type that is not one of the eight is dropped, the venue kept" do
+      play =
+        import_tei!(
+          tei(
+            front:
+              ~s(<performance xml:id="performance-1"><p><rs type="venue" subtype="mansion">Casa de campo</rs></p></performance>)
+          )
+        )
+
+      assert [%{venue: "Casa de campo", venue_type: nil}] = performances(play)
+    end
+
+    test "the years come from the date's attributes, else from its words" do
+      for {date, years, attrs} <- [
+            {~s(<date when="1610">1610</date>), {1610, 1610}, %{"when" => "1610"}},
+            {~s(<date notAfter="1642">Before 1642</date>), {nil, 1642}, %{"notAfter" => "1642"}},
+            {~s(<date notBefore="1608" notAfter="1612">c. 1610</date>), {1608, 1612},
+             %{"notBefore" => "1608", "notAfter" => "1612"}},
+            {"<date>c. 1620</date>", {1620, 1620}, %{"when" => "1620"}}
+          ] do
+        play =
+          import_tei!(
+            tei(front: ~s(<performance xml:id="performance-1"><p>#{date}</p></performance>))
+          )
+
+        assert [%{year_from: from, year_to: to}] = performances(play)
+        assert {from, to} == years, date
+
+        assert [{^attrs, _}] = xml_elements(export_tei(play), "date", within: "performance")
+      end
+    end
+
+    test "a place or a state the file does not declare is dropped, the performance kept" do
+      play =
+        import_tei!(
+          tei(
+            front: """
+            <performance xml:id="performance-1">
+              <p><date when="1610">1610</date><placeName ref="#rt-perf-nowhere"><country ref="#rt-perf-nowhere-either"/></placeName></p>
+            </performance>
+            """
+          )
+        )
+
+      assert [%{date_text: "1610", place_id: nil, historical_state_id: nil}] = performances(play)
+    end
+
+    test "a state with no town comes back as a state with no town" do
+      play =
+        import_tei!(
+          performance_file(
+            ~s(<performance xml:id="performance-1"><p><date when="1610">1610</date><placeName><country ref="#rt-perf-reino"/></placeName></p></performance>)
+          )
+        )
+
+      assert [%{place_id: nil, historical_state_id: state_id}] = performances(play)
+      assert Playcode.Places.get_place(state_id).slug == "rt-perf-reino"
+
+      xml = export_tei(play)
+
+      assert xml_elements(xml, "placeName", within: "performance") == [{%{}, ""}]
+
+      assert xml_elements(xml, "country", within: "performance") ==
+               [{%{"ref" => "#rt-perf-reino"}, ""}]
+    end
+
+    # The performance is the file's, the source a guess: one that names nothing is no entry,
+    # and the pages in it go with it.
+    test "a source that names nothing is left out, the performance kept" do
+      play =
+        import_tei!(
+          tei(
+            front: """
+            <performance xml:id="performance-1">
+              <p><date when="1610">1610</date></p>
+              <biblStruct ana="catalogos"><monogr><title level="m"/></monogr><citedRange unit="page">83</citedRange></biblStruct>
+            </performance>
+            """
+          )
+        )
+
+      assert [%{date_text: "1610", source_entry_id: nil, source_pages: nil}] = performances(play)
+    end
+
+    test "a cast row that names no actor is dropped, the performance kept" do
+      play =
+        import_tei!(
+          tei(
+            front: """
+            <performance xml:id="performance-1">
+              <p><date when="1610">1610</date></p>
+              <castList>
+                <castItem><role>Sin actor</role></castItem>
+                <castItem><role>Solo nombre</role><actor><persName><forename>Jean</forename></persName></actor></castItem>
+                <castItem><role>Con apodo</role><actor><persName><addName type="nickname">Molière</addName></persName></actor></castItem>
+              </castList>
+            </performance>
+            """
+          )
+        )
+
+      assert [%{cast: [%{role: "Con apodo", actor: %{nickname: "Molière", sex: nil}}]}] =
+               performances(play)
+    end
+
+    # Review Focus 2 of the spec: the file replaces what it wrote, never what a curator or
+    # FileMaker did.
+    test "a re-import replaces the file's performances and keeps the others" do
+      code = "RTP#{System.unique_integer([:positive])}"
+      play = import_tei!(tei(code: code))
+
+      filemaker =
+        performance_fixture(play, %{
+          "date_text" => "1600",
+          "venue" => "Corral del Príncipe",
+          "origin" => "filemaker"
+        })
+
+      company = unique_company()
+
+      # The same company as the file's, written in another case: companies are found
+      # ignoring it, so the two performances are one to a reader.
+      manual =
+        performance_fixture(play, %{
+          "date_text" => "1605",
+          "venue" => "Corral de la Cruz",
+          "venue_type" => "public_theatre",
+          "company_name" => String.downcase(company)
+        })
+
+      identical =
+        ~s(<performance xml:id="performance-1"><p><date when="1605">1605</date><rs type="venue" subtype="public_theatre">Corral de la Cruz</rs><orgName>#{company}</orgName></p></performance>)
+
+      other = unique_company()
+
+      new =
+        ~s(<performance xml:id="performance-2"><p><date when="1610">1610</date><orgName>#{other}</orgName></p></performance>)
+
+      play = import_tei!(tei(code: code, front: identical <> new))
+
+      assert [
+               %{origin: "filemaker", id: filemaker_id},
+               %{origin: "manual", id: manual_id},
+               %{origin: "tei", date_text: "1610"}
+             ] = performances(play)
+
+      assert {filemaker_id, manual_id} == {filemaker.id, manual.id}
+      assert Enum.any?(Performances.list_companies(), &(&1.name == other))
+
+      # A file with none: the file's own is gone, with the company only it named.
+      play = import_tei!(tei(code: code))
+
+      assert [%{origin: "filemaker"}, %{origin: "manual"}] = performances(play)
+      refute Enum.any?(Performances.list_companies(), &(&1.name == other))
+    end
+
+    # The file the export writes holds the play's every performance, FileMaker's among them:
+    # read back into the same play, those the play keeps must be told from their copies in it,
+    # whatever they hold (a place with its state, a cast, a source with its pages).
+    test "re-importing its own export keeps a play's performances, once" do
+      play = import_tei!(tei(code: "RTP#{System.unique_integer([:positive])}"))
+      place = place_fixture(%{"name" => "Londres"})
+      state = place_fixture(%{"name" => "Reino de Inglaterra", "type" => "country"})
+
+      kept =
+        performance_fixture(play, %{
+          "date_text" => "1609-11",
+          "venue" => "Globe or <<Blackfriars>>",
+          "venue_type" => "commercial_theatre",
+          "company_name" => unique_company(),
+          "place_id" => place.id,
+          "historical_state_id" => state.id,
+          "note" => "Hissed,\ncomplete with <<italics>>.",
+          "source_volume" => "6",
+          "source_pages" => "83",
+          "origin" => "filemaker",
+          "source_entry" => %{
+            "kind" => "catalogue",
+            "monogr_title" => "British Drama 1533–1642: A <<Catalogue>>",
+            "public_note" => "Copyright DICAT."
+          },
+          "cast" => [
+            %{
+              "surname" => "Poquelin",
+              "nickname" => "Molière",
+              "sex" => "man",
+              "role" => "Argan"
+            },
+            %{"nickname" => "Mlle du Parc"}
+          ]
+        })
+
+      file = export_tei(play)
+      assert [_] = xml_elements(file, "performance")
+
+      for _ <- 1..2 do
+        play = file |> import_tei!()
+        assert [%{id: id, origin: "filemaker"}] = performances(play)
+        assert id == kept.id
+      end
+    end
+
+    test "a file's performance that differs from one the play keeps in its source alone is kept too" do
+      code = "RTP#{System.unique_integer([:positive])}"
+      play = import_tei!(tei(code: code))
+
+      performance_fixture(play, %{
+        "date_text" => "1605",
+        "source_volume" => "6",
+        "source_entry" => %{"kind" => "catalogue", "monogr_title" => "Wiggins"}
+      })
+
+      same_date = fn title ->
+        ~s(<performance xml:id="performance-1"><p><date when="1605">1605</date></p><biblStruct ana="catalogos"><monogr><title level="m">#{title}</title></monogr><citedRange unit="volume">6</citedRange></biblStruct></performance>)
+      end
+
+      assert [_] = performances(import_tei!(tei(code: code, front: same_date.("Wiggins"))))
+      assert [_, _] = performances(import_tei!(tei(code: code, front: same_date.("CATCOM"))))
+    end
+
+    test "a file's cast-list switch yields to one a performance the play keeps already has" do
+      code = "RTP#{System.unique_integer([:positive])}"
+      play = import_tei!(tei(code: code))
+
+      kept =
+        performance_fixture(play, %{
+          "date_text" => "1600",
+          "cast_from_cast_list" => true,
+          "origin" => "manual"
+        })
+
+      file =
+        ~s(<performance xml:id="performance-1" corresp="#castlist"><p><date when="1610">1610</date></p></performance>)
+
+      play = import_tei!(tei(code: code, front: file))
+
+      assert [%{id: id, cast_from_cast_list: true}, %{origin: "tei", cast_from_cast_list: false}] =
+               performances(play)
+
+      assert id == kept.id
     end
   end
 

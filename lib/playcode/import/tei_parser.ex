@@ -15,6 +15,9 @@ defmodule Playcode.Import.TeiParser do
         settings: [%{slug, role, position, note, state}],
         characters: [%{xml_id, name, description, actor, is_hidden, position}],
         paratexts: [%{kind, heading, content, position, back}],
+        performances: [%{date_text, year_from, year_to, venue, venue_type, place, state,
+                         company, note, cast: [%{role, surname, forename, nickname, sex}],
+                         source, source_volume, source_pages, cast_from_cast_list}],
         divisions: [%{type, number, title, position, notes, elements, divisions}],
         bibliography: [%{description, volume, pages}]
       }
@@ -23,8 +26,11 @@ defmodule Playcode.Import.TeiParser do
   `who` the xml_ids it names. A reference of the bibliography is its
   `Bibliography.Entry.description/1` and where the play sits in it. A note is `%{offset, n, type, term, body}`. An entry of
   the critical apparatus is a note of type "variante" that also carries `variant_type`,
-  `range_end` and `readings` (`%{lemma, wit, text, note}`), its `body` possibly nil. Nothing
-  here knows a row: ids, `play_id` and `origin` are the writer's.
+  `range_end` and `readings` (`%{lemma, wit, text, note}`), its `body` possibly nil. A
+  performance is its `place` and `state` as slugs, its `company` plain and its `source` as
+  a reference is, `Bibliography.Entry.description/1`, with where the performance sits in
+  it (`source_volume`, `source_pages`); a cast row's `sex` is `"man"`, `"woman"` or nil.
+  Nothing here knows a row: ids, `play_id` and `origin` are the writer's.
 
   Handles UTF-16 encoded files (common in the EMOTHE corpus) by converting them to UTF-8
   before parsing with Saxy.
@@ -32,6 +38,7 @@ defmodule Playcode.Import.TeiParser do
 
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
+  alias Playcode.Performances.Performance
   alias Playcode.Places
   alias Playcode.PlayContent.{InlineMarkup, Note}
   alias Playcode.Witnesses
@@ -1135,7 +1142,8 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Text (front, body) ---
 
-  defp text(nil), do: %{characters: [], paratexts: [], divisions: [], bibliography: []}
+  defp text(nil),
+    do: %{characters: [], paratexts: [], divisions: [], bibliography: [], performances: []}
 
   defp text({_name, _attrs, children}) do
     front = front(find_child(children, "front"))
@@ -1146,7 +1154,8 @@ defmodule Playcode.Import.TeiParser do
       characters: front.characters,
       paratexts: front.paratexts ++ back_matter(back, front.next_position + length(body)),
       divisions: front.divisions ++ body,
-      bibliography: bibliography(back)
+      bibliography: bibliography(back),
+      performances: front.performances
     }
   end
 
@@ -1279,7 +1288,8 @@ defmodule Playcode.Import.TeiParser do
   # Each <div> of the front takes a position, which the body's divisions continue; the
   # title page and anything else take none. A cast list is the play's characters and an
   # `elenco` division; any other div is a paratext.
-  defp front(nil), do: %{characters: [], paratexts: [], divisions: [], next_position: 0}
+  defp front(nil),
+    do: %{characters: [], paratexts: [], divisions: [], performances: [], next_position: 0}
 
   defp front({_name, _attrs, children}) do
     divs =
@@ -1307,6 +1317,7 @@ defmodule Playcode.Import.TeiParser do
             scene <- paratext("lugar_accion", set_children, length(divs)),
             do: scene
           ),
+      performances: for({"performance", attrs, parts} <- children, do: performance(attrs, parts)),
       next_position: length(divs)
     }
   end
@@ -2127,6 +2138,101 @@ defmodule Playcode.Import.TeiParser do
   defp safe_text(nil), do: nil
   defp safe_text(element) when is_tuple(element), do: text_content(element)
   defp safe_text(text) when is_binary(text), do: String.trim(text)
+
+  # --- Performances (S5) ---
+
+  # A `<performance>` of the front as the export writes it: its <p> has the date (its years
+  # the attributes, as a composition date's), the venue and its type, the town with the
+  # state it belonged to (as a setting's), the company; then the cast list, the note and the
+  # source, a biblStruct the bibliography's own reader reads. Its actors are the play's cast
+  # list's when its `corresp` is the id the export gives that list.
+  defp performance(attrs, children) do
+    details = children_of(find_child(children, "p"))
+    date = find_child(details, "date")
+    venue = typed(details, "rs", "venue")
+    place = find_child(details, "placeName")
+    {year_from, year_to} = creation_years(attrs_of(date))
+    {source, volume, pages} = performance_source(find_child(children, "biblStruct"))
+
+    %{
+      date_text: line_text(date),
+      year_from: year_from,
+      year_to: year_to,
+      venue: line_text(venue),
+      venue_type: venue_type(venue),
+      place: place_slug(place),
+      state: setting_state(children_of(place)),
+      company: details |> find_child("orgName") |> line_text() |> plain_text(),
+      note: note_text(find_child(children, "note")),
+      cast: performance_cast(find_child(children, "castList")),
+      source: source,
+      source_volume: volume,
+      source_pages: pages,
+      cast_from_cast_list: attr_value(attrs, "corresp") == "#castlist"
+    }
+  end
+
+  # A text of a performance: the words as `text_content/2` reads them, italics as <<…>>
+  # and each <lb/> a line break; nil for none.
+  defp line_text(nil), do: nil
+
+  defp line_text(element) do
+    case element |> text_content(:breaks) |> String.replace(@break, "\n") do
+      "" -> nil
+      text -> text
+    end
+  end
+
+  # A company's name is no marked-up text: it is what companies are found by.
+  defp plain_text(nil), do: nil
+  defp plain_text(text), do: InlineMarkup.plain(text)
+
+  # The slug a <placeName> refers to; nil for none, as a state with no town has.
+  defp place_slug(place) do
+    case ref_slug(attrs_of(place)) do
+      "" -> nil
+      slug -> slug
+    end
+  end
+
+  # The venue's type, when it is one of the eight.
+  defp venue_type(venue) do
+    type = attr_value(attrs_of(venue), "subtype")
+    if type in Performance.venue_types(), do: type
+  end
+
+  defp performance_cast(nil), do: []
+
+  defp performance_cast({_name, _attrs, children}) do
+    for {"castItem", _attrs, item} <- children do
+      actor = find_child(item, "actor")
+      name = children_of(find_child(children_of(actor), "persName"))
+
+      %{
+        role: line_text(find_child(item, "role")),
+        surname: line_text(find_child(name, "surname")),
+        forename: line_text(find_child(name, "forename")),
+        nickname: name |> typed("addName", "nickname") |> line_text(),
+        sex: actor_sex(attr_value(attrs_of(actor), "sex"))
+      }
+    end
+  end
+
+  @actor_sex %{"M" => "man", "F" => "woman"}
+
+  defp actor_sex(nil), do: nil
+  defp actor_sex(sex), do: @actor_sex[String.upcase(String.trim(sex))]
+
+  # The source: the reference it describes and where the performance sits in it. Its kind is
+  # the file's `ana`; a file that names none cites a criticism, the kind most sources are.
+  defp performance_source(nil), do: {nil, nil, nil}
+
+  defp performance_source({_name, attrs, _children} = struct) do
+    kind = Entry.kind_from_tei_source(attr_value(attrs, "ana")) || "criticism"
+    %{description: description, volume: volume, pages: pages} = reference(struct, kind)
+
+    {description, volume, pages}
+  end
 
   defp attr_value(attrs, key) when is_list(attrs) do
     case List.keyfind(attrs, key, 0) do

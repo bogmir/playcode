@@ -4,9 +4,9 @@ defmodule Playcode.Import.TeiImport do
   it read, in one transaction.
 
   A re-import updates the play with that code in place. It replaces the play's whole
-  text and the editors, sources, paratexts, witnesses and place links the importer
-  created itself (`origin: "tei"`); everything a researcher typed is kept, and so are the
-  columns the platform owns. `preview_import/1` reports that before anything is written.
+  text and the editors, sources, paratexts, witnesses, place links and performances the
+  importer created itself (`origin: "tei"`); everything a researcher typed is kept, and so
+  are the columns the platform owns. `preview_import/1` reports that before anything is written.
   """
 
   import Ecto.Query
@@ -16,10 +16,13 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
   alias Playcode.Import.TeiParser
+  alias Playcode.Performances
+  alias Playcode.Performances.Performance
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element, ElementCharacter, Note}
   alias Playcode.Places
   alias Playcode.Repo
+  alias Playcode.Text
   alias Playcode.Witnesses
   alias Playcode.Witnesses.Witness
 
@@ -115,13 +118,13 @@ defmodule Playcode.Import.TeiImport do
   @doc """
   Sums the mixed-ownership counts in one half of a `preview_import/1` result.
 
-  Those five tables — editors, sources, paratexts, places and witnesses — hold both TEI-imported and
-  hand-entered rows, so `:replaces` and `:preserves` split each one by `origin`. Both
-  the admin import page and the `--dry-run` output report the totals, and adding a
-  fifth such table must not mean remembering two more addition sites.
+  Those six tables — editors, sources, paratexts, places, witnesses and performances — hold
+  both TEI-imported and hand-entered rows, so `:replaces` and `:preserves` split each one by
+  `origin`. Both the admin import page and the `--dry-run` output report the totals, and
+  adding a seventh such table must not mean remembering two more addition sites.
   """
   def mixed_ownership_total(counts) do
-    [:editors, :sources, :paratexts, :places, :witnesses]
+    [:editors, :sources, :paratexts, :places, :witnesses, :performances]
     |> Enum.map(&Map.fetch!(counts, &1))
     |> Enum.sum()
   end
@@ -135,7 +138,8 @@ defmodule Playcode.Import.TeiImport do
       sources: 0,
       paratexts: 0,
       places: 0,
-      witnesses: 0
+      witnesses: 0,
+      performances: 0
     }
 
   defp replaced_counts(%Play{id: id}) do
@@ -147,11 +151,13 @@ defmodule Playcode.Import.TeiImport do
       sources: count_rows(PlaySource, id, "tei"),
       paratexts: count_rows(Paratext, id, "tei"),
       places: count_rows(Places.PlayPlace, id, "tei"),
-      witnesses: count_rows(Witness, id, "tei")
+      witnesses: count_rows(Witness, id, "tei"),
+      performances: count_rows(Performance, id, "tei")
     }
   end
 
-  defp preserved_counts(nil), do: %{editors: 0, sources: 0, paratexts: 0, places: 0, witnesses: 0}
+  defp preserved_counts(nil),
+    do: %{editors: 0, sources: 0, paratexts: 0, places: 0, witnesses: 0, performances: 0}
 
   defp preserved_counts(%Play{id: id}) do
     %{
@@ -159,7 +165,8 @@ defmodule Playcode.Import.TeiImport do
       sources: count_rows(PlaySource, id) - count_rows(PlaySource, id, "tei"),
       paratexts: count_rows(Paratext, id) - count_rows(Paratext, id, "tei"),
       places: count_rows(Places.PlayPlace, id) - count_rows(Places.PlayPlace, id, "tei"),
-      witnesses: count_rows(Witness, id) - count_rows(Witness, id, "tei")
+      witnesses: count_rows(Witness, id) - count_rows(Witness, id, "tei"),
+      performances: count_rows(Performance, id) - count_rows(Performance, id, "tei")
     }
   end
 
@@ -181,7 +188,10 @@ defmodule Playcode.Import.TeiImport do
     from_file = &where(edited.(&1), origin: "tei")
 
     (Enum.map([Division, Element, Note, Character], edited) ++
-       Enum.map([PlayEditor, PlaySource, Paratext, Witness, Places.PlayPlace], from_file))
+       Enum.map(
+         [PlayEditor, PlaySource, Paratext, Witness, Places.PlayPlace, Performance],
+         from_file
+       ))
     |> Enum.map(&Repo.aggregate(&1, :count))
     |> Enum.sum()
   end
@@ -217,6 +227,7 @@ defmodule Playcode.Import.TeiImport do
     )
 
     Enum.each(tei.paratexts, &Catalogue.create_paratext(tei_row(&1, play)))
+    write_performances(tei.performances, play)
 
     cast = Map.new(PlayContent.list_characters(play.id), &{&1.xml_id, &1.id})
     write_text(tei.divisions, play, cast)
@@ -229,7 +240,7 @@ defmodule Playcode.Import.TeiImport do
     play
   end
 
-  # Every editor, source, note and witness the importer creates is stamped
+  # Every editor, source, note, witness and performance the importer creates is stamped
   # `origin: "tei"`, so a re-import can replace its own rows and leave hand-entered ones
   # alone. Rows created anywhere else default to "manual".
   defp tei_row(attrs, play), do: Map.merge(attrs, %{play_id: play.id, origin: "tei"})
@@ -306,6 +317,161 @@ defmodule Playcode.Import.TeiImport do
     :ok
   end
 
+  # --- Performances ---
+
+  # The file's performances replace the play's `tei` ones, which go through
+  # `Performances.delete_performance/1` so that the companies, actors and source entries they
+  # leave unused go with them; a curator's and FileMaker's stay. A performance of the file
+  # that prints as one the play keeps is left out, as is a witness printing the same line.
+  # The cast-list switch is one per play: the first performance to claim it has it, a later
+  # claim in the file comes in without. A performance that fails its changeset is left out
+  # too, as a witness is.
+  defp write_performances(performances, play) do
+    {own, kept} =
+      play.id |> Performances.list_for_play() |> Enum.split_with(&(&1.origin == "tei"))
+
+    Enum.each(own, &Performances.delete_performance/1)
+    kept_prints = MapSet.new(kept, &(&1 |> as_parsed() |> printed()))
+
+    Enum.reduce(performances, Enum.any?(kept, & &1.cast_from_cast_list), fn parsed,
+                                                                            switch_taken? ->
+      place_id = place_id(parsed.place)
+      state_id = place_id(parsed.state)
+      print = printed(%{parsed | place: place_id, state: state_id})
+
+      unless MapSet.member?(kept_prints, print) do
+        switch = parsed.cast_from_cast_list and not switch_taken?
+        write_performance(parsed, play, place_id, state_id, switch)
+      end
+
+      switch_taken? or parsed.cast_from_cast_list
+    end)
+
+    :ok
+  end
+
+  defp write_performance(parsed, play, place_id, state_id, switch) do
+    attrs =
+      %{
+        "play_id" => play.id,
+        "origin" => "tei",
+        "date_text" => parsed.date_text,
+        "year_from" => parsed.year_from,
+        "year_to" => parsed.year_to,
+        "venue" => parsed.venue,
+        "venue_type" => parsed.venue_type,
+        "company_name" => parsed.company,
+        "place_id" => place_id,
+        "historical_state_id" => state_id,
+        "note" => parsed.note,
+        "cast_from_cast_list" => switch,
+        "cast" => cast_rows(parsed.cast)
+      }
+      |> Map.merge(source_attrs(parsed, play))
+
+    with {:error, reason} <- Performances.create_performance(attrs),
+         do: Logger.warning("TEI import: left out a performance: #{inspect(reason)}")
+  end
+
+  # The place or state a performance names, by slug as a setting does; one the file does not
+  # declare is dropped, the performance kept.
+  defp place_id(nil), do: nil
+
+  defp place_id(slug) do
+    case Repo.get_by(Places.Place, slug: slug) do
+      %{id: id} ->
+        id
+
+      nil ->
+        Logger.warning("TEI import: a performance references unknown place #{inspect(slug)}")
+        nil
+    end
+  end
+
+  # A cast row is an actor found or created by name, which needs a surname or a nickname.
+  defp cast_rows(cast) do
+    {named, nameless} = Enum.split_with(cast, &(&1.surname || &1.nickname))
+
+    if nameless != [],
+      do: Logger.warning("TEI import: #{length(nameless)} cast row(s) name no actor, left out")
+
+    for row <- named, do: Map.new(row, fn {field, value} -> {to_string(field), value} end)
+  end
+
+  # The source is the entry with the description the file gives, else a new one, as
+  # `write_step/2` does for the bibliography. A source that is no valid entry is left out,
+  # and with it the pages in it.
+  defp source_attrs(%{source: nil}, _play), do: %{}
+
+  defp source_attrs(%{source: description} = parsed, play) do
+    volume_and_pages = %{
+      "source_volume" => parsed.source_volume,
+      "source_pages" => parsed.source_pages
+    }
+
+    cond do
+      entry_id = Bibliography.identical_entries([description], play.id)[description] ->
+        Map.put(volume_and_pages, "source_entry_id", entry_id)
+
+      valid_entry?(description) ->
+        Map.put(volume_and_pages, "source_entry", description)
+
+      true ->
+        Logger.warning("TEI import: a performance's source is no valid entry, left out")
+        %{}
+    end
+  end
+
+  # A stored performance in the shape the parser gives a file's (place and state as ids), to
+  # be told from one by `printed/1`.
+  defp as_parsed(performance) do
+    %{
+      date_text: performance.date_text,
+      venue: performance.venue,
+      venue_type: performance.venue_type,
+      place: performance.place_id,
+      state: performance.historical_state_id,
+      company: performance.company && performance.company.name,
+      note: performance.note,
+      cast:
+        for member <- performance.cast do
+          %{
+            role: member.role,
+            surname: member.actor.surname,
+            forename: member.actor.forename,
+            nickname: member.actor.nickname
+          }
+        end,
+      source: performance.source && Entry.description(performance.source),
+      source_volume: performance.source_volume,
+      source_pages: performance.source_pages,
+      cast_from_cast_list: performance.cast_from_cast_list
+    }
+  end
+
+  # What a page prints of a performance, as the changesets store it: the text squeezed, the
+  # company without regard to case; its years and the actors' sex are not printed. Two
+  # performances with the same `printed/1` are the same performance to a reader.
+  defp printed(fields) do
+    %{
+      date_text: Text.squeeze(fields.date_text),
+      venue: Text.squeeze(fields.venue),
+      venue_type: fields.venue_type,
+      place: fields.place,
+      state: fields.state,
+      company: fields.company |> Text.squeeze() |> then(&(&1 && String.downcase(&1))),
+      note: Text.squeeze(fields.note),
+      cast:
+        for row <- fields.cast do
+          Map.new(~w(role surname forename nickname)a, &{&1, Text.squeeze(row[&1])})
+        end,
+      source: fields.source,
+      source_volume: Text.squeeze(fields.source_volume),
+      source_pages: Text.squeeze(fields.source_pages),
+      cast_from_cast_list: fields.cast_from_cast_list
+    }
+  end
+
   # --- Bibliography ---
 
   # What an import does with a file's references, decided once for the import and its
@@ -334,7 +500,7 @@ defmodule Playcode.Import.TeiImport do
   end
 
   defp step(reference, nil, _linked) do
-    if valid_reference?(reference),
+    if valid_entry?(reference.description),
       do: [{:create, nil, reference}],
       else: [{:skip, nil, reference}]
   end
@@ -364,8 +530,7 @@ defmodule Playcode.Import.TeiImport do
     with {:error, reason} <- result, do: Repo.rollback({:bibliography, reason})
   end
 
-  defp valid_reference?(reference),
-    do: Bibliography.change_entry(%Entry{}, reference.description).valid?
+  defp valid_entry?(description), do: Bibliography.change_entry(%Entry{}, description).valid?
 
   # --- Places ---
 

@@ -276,13 +276,15 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2>Performances</h2>
       <ul>
         <li :for={line <- @listing.lines} class="performance">
-          <b :if={line.date}>{line.date}</b>
-          {Enum.join(line.parts, " · ")}
+          <b :if={line.date}><.inline text={line.date} /></b>
+          <.inline :if={line.parts != []} text={Enum.join(line.parts, " · ")} />
           <span :if={line.reference} class="note">
             {line.reference}
           </span>
-          <p :if={line.cast != []} class="note">Cast: {Enum.join(line.cast, "; ")}</p>
-          <p :if={line.note} class="note">{line.note}</p>
+          <p :if={line.cast != []} class="note">
+            Cast: <.inline text={Enum.join(line.cast, "; ")} />
+          </p>
+          <p :if={line.note} class="note"><.inline text={line.note} /></p>
         </li>
       </ul>
       <ul :if={@listing.sources != []} class="sources">

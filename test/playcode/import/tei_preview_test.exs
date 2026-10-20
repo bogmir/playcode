@@ -52,7 +52,8 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert preview.existing == nil
     refute preview.archived
 
-    # Witnesses (S3) are a fifth table of mixed ownership, so the preview counts them too.
+    # Witnesses (S3) and performances (S5) are tables of mixed ownership too, so the preview
+    # counts them.
     assert preview.replaces == %{
              divisions: 0,
              elements: 0,
@@ -61,10 +62,18 @@ defmodule Playcode.Import.TeiPreviewTest do
              sources: 0,
              paratexts: 0,
              places: 0,
-             witnesses: 0
+             witnesses: 0,
+             performances: 0
            }
 
-    assert preview.preserves == %{editors: 0, sources: 0, paratexts: 0, places: 0, witnesses: 0}
+    assert preview.preserves == %{
+             editors: 0,
+             sources: 0,
+             paratexts: 0,
+             places: 0,
+             witnesses: 0,
+             performances: 0
+           }
   end
 
   test "an existing play reports what is replaced and what is kept", %{path: path} do
@@ -143,6 +152,53 @@ defmodule Playcode.Import.TeiPreviewTest do
 
     assert preview.replaces.places == 1
     assert preview.preserves.places == 1
+  end
+
+  # The file's performances (S5) are replaced by a re-import; those a curator typed or
+  # FileMaker supplied are kept, and an edit to one of the file's counts as lost.
+  describe "performances" do
+    setup do
+      path =
+        write_tmp!(
+          tei(
+            code: "PRVP#{System.unique_integer([:positive])}",
+            front:
+              ~s(<performance xml:id="performance-1"><p><date when="1610">1610</date></p></performance>)
+          )
+        )
+
+      {:ok, play} = TeiImport.import_file(path)
+      %{path: path, play: play}
+    end
+
+    test "a performance from the file counts as replaced, one by hand or from FileMaker as kept",
+         %{path: path, play: play} do
+      Playcode.TestFixtures.performance_fixture(play, %{"date_text" => "1600"})
+
+      Playcode.TestFixtures.performance_fixture(play, %{
+        "date_text" => "1605",
+        "origin" => "filemaker"
+      })
+
+      assert {:ok, preview} = TeiImport.preview_import(path)
+
+      assert preview.replaces.performances == 1
+      assert preview.preserves.performances == 2
+
+      # The totals the import page and --dry-run print count them.
+      assert TeiImport.mixed_ownership_total(preview.replaces) == 1
+      assert TeiImport.mixed_ownership_total(preview.preserves) == 2
+    end
+
+    test "counts the file's performance edited since its import", %{path: path, play: play} do
+      assert {:ok, %{edited: 0}} = TeiImport.preview_import(path)
+
+      [performance] = Playcode.Performances.list_for_play(play.id)
+      Playcode.TestFixtures.age_rows!(play)
+      {:ok, _} = Playcode.Performances.update_performance(performance, %{"venue" => "Globe"})
+
+      assert {:ok, %{edited: 1}} = TeiImport.preview_import(path)
+    end
   end
 
   test "an archived play is flagged so the UI can say it will be restored", %{path: path} do

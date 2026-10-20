@@ -853,6 +853,33 @@ defmodule Playcode.PerformancesTest do
       assert %{lines: [%{cast: ["Mr. Verbruggen (Mirabell)", "Bowen (Witwoud)"]}]} = listing(play)
     end
 
+    # Every text the TEI importer reads holds <emph> as <<…>> (CLAUDE.md): the listing hands it
+    # on whole, for the page to print through the text renderers, and the cast list's
+    # actors and roles are no exception.
+    test "a venue, a cast name, a role and a note keep their italics markers" do
+      play = play_fixture()
+      character!(play, "<<Mirabell>>", %{actor: "Mr. <<Verbruggen>>"})
+
+      performance =
+        performance_fixture(play, %{
+          "venue" => "<<Globe>>",
+          "note" => "Hissed <<twice>>.",
+          "cast_from_cast_list" => "true"
+        })
+
+      cast(performance, [{actor!(%{"surname" => "<<Mlle>> du Parc"}), "<<Argan>>"}])
+
+      assert %{
+               lines: [
+                 %{
+                   parts: ["<<Globe>>"],
+                   note: "Hissed <<twice>>.",
+                   cast: ["Mr. <<Verbruggen>> (<<Mirabell>>)", "<<Mlle>> du Parc (<<Argan>>)"]
+                 }
+               ]
+             } = listing(play)
+    end
+
     test "a performance with only a venue type prints that" do
       play = play_fixture()
       performance_fixture(play, %{"date_text" => nil, "venue_type" => "street"})

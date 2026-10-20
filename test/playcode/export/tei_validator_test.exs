@@ -38,7 +38,8 @@ defmodule Playcode.Export.TeiValidatorTest do
         {"places with a historical state", &historical_state/0},
         {"an original cast", &original_cast/0},
         {"a scene of the action", &scene_of_the_action/0},
-        {"a translation naming its original, after the edition's notes", &translation/0}
+        {"a translation naming its original, after the edition's notes", &translation/0},
+        {"performances", &performances/0}
       ]
 
       xmls = Enum.map(shapes, fn {_shape, build} -> build.() end)
@@ -343,6 +344,52 @@ defmodule Playcode.Export.TeiValidatorTest do
 
     assert xml =~ "<note>Impresos<lb/>Madrid, 1637.</note>"
     assert xml =~ ~s(<relatedItem target="ORIG#{n}" type="original"/>)
+    xml
+  end
+
+  # A play's performances (S5) with every part, and one with a note alone (its <p> empty): a
+  # place and its state in a listPlace no <setting> names, the switch that points at the cast
+  # list's castList, a source with the performance's own volume and pages, actors with a
+  # nickname and a sex. Under a code of its own, for the same reason as the bibliography test.
+  defp performances do
+    play = own_copy(@fixture_file, "PERF")
+
+    place = Playcode.TestFixtures.place_fixture(%{"name" => "Londres"})
+
+    state =
+      Playcode.TestFixtures.place_fixture(%{"name" => "Reino de Inglaterra", "type" => "country"})
+
+    {:ok, _} =
+      Playcode.Performances.create_performance(%{
+        "play_id" => play.id,
+        "date_text" => "1609-11",
+        "venue" => "Globe or <<Blackfriars>>",
+        "venue_type" => "commercial_theatre",
+        "company_name" => "The King’s Men #{System.unique_integer([:positive])}",
+        "place_id" => place.id,
+        "historical_state_id" => state.id,
+        "note" => "Hissed,\nnow and then.",
+        "source_volume" => "6",
+        "source_pages" => "83",
+        "cast_from_cast_list" => true,
+        "source_entry" => %{
+          "kind" => "catalogue",
+          "monogr_title" => "British Drama 1533–1642: A Catalogue",
+          "publisher" => "Oxford University Press"
+        },
+        "cast" => [
+          %{"surname" => "Poquelin", "nickname" => "Molière", "sex" => "man", "role" => "Argan"},
+          %{"nickname" => "Mlle du Parc", "sex" => "woman"},
+          %{"surname" => "Hart", "forename" => "Charles"}
+        ]
+      })
+
+    {:ok, _} =
+      Playcode.Performances.create_performance(%{"play_id" => play.id, "note" => "Sin fecha."})
+
+    xml = export_tei(play)
+
+    assert xml =~ ~s(<performance corresp="#castlist" xml:id="performance-1">)
     xml
   end
 

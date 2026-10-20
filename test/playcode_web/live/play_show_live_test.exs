@@ -1001,6 +1001,38 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     end
   end
 
+  # Every text the TEI importer reads holds <emph> as <<…>> (CLAUDE.md), a performance's too.
+  describe "the performances panel's italics" do
+    test "print as italics, never as markers", %{conn: conn} do
+      play = TestFixtures.play_fixture()
+
+      {:ok, _} =
+        Playcode.PlayContent.create_character(%{
+          play_id: play.id,
+          xml_id: "ARGAN",
+          name: "<<Argan>>",
+          actor: "Mr. <<Betterton>>"
+        })
+
+      TestFixtures.performance_fixture(play, %{
+        "venue" => "<<Globe>>",
+        "note" => "Hissed <<twice>>.",
+        "cast_from_cast_list" => "true",
+        "cast" => [%{"surname" => "<<Mlle>> du Parc", "role" => "<<Toinette>>"}]
+      })
+
+      TestFixtures.mark_complete!(play)
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      section = view |> element("#meta-performances") |> render()
+
+      for word <- ["Globe", "twice", "Betterton", "Argan", "Mlle", "Toinette"] do
+        assert section =~ "<em>#{word}</em>", word
+      end
+
+      refute section =~ "&lt;&lt;"
+    end
+  end
+
   describe "related plays" do
     test "a draft translation is not linked from its original, except for staff", %{
       conn: conn

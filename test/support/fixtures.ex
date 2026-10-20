@@ -37,7 +37,8 @@ defmodule Playcode.TestFixtures do
     for schema <- [
           Playcode.PlayContent.Character,
           Playcode.Catalogue.PlaySource,
-          Playcode.Catalogue.Paratext
+          Playcode.Catalogue.Paratext,
+          Playcode.Performances.Performance
         ] do
       from(r in schema, where: r.play_id == ^play.id)
       |> Playcode.Repo.update_all(set: [inserted_at: day_ago, updated_at: day_ago])

@@ -17,6 +17,7 @@ defmodule Playcode.Import.TeiParserTest do
   @pure_helpers [
     {Playcode.Bibliography.Entry, :description, 1},
     {Playcode.Bibliography.Entry, :kind_from_tei_list, 1},
+    {Playcode.Bibliography.Entry, :kind_from_tei_source, 1},
     {Playcode.Bibliography.Entry, :pub_type_from_tei, 1},
     {Playcode.Catalogue.Play, :composition_year_range, 0},
     {Playcode.Catalogue.Play, :historical_times, 0},
@@ -24,8 +25,10 @@ defmodule Playcode.Import.TeiParserTest do
     {Playcode.Catalogue.Play, :short_code, 1},
     {Playcode.Catalogue.Play, :valid_languages, 0},
     {Playcode.Places, :slugify, 1},
+    {Playcode.Performances.Performance, :venue_types, 0},
     {Playcode.Places.Place, :authorities, 0},
     {Playcode.PlayContent.InlineMarkup, :number_marker, 1},
+    {Playcode.PlayContent.InlineMarkup, :plain, 1},
     {Playcode.PlayContent.Note, :variant, 0},
     {Playcode.Witnesses, :type_from_tei, 2}
   ]

@@ -21,18 +21,21 @@ defmodule Playcode.CompleteCopyTest do
 
   alias Playcode.Bibliography
   alias Playcode.Catalogue
+  alias Playcode.Performances
   alias Playcode.Places
   alias Playcode.PlayContent
 
   # How rows are stored, not what they hold: identifiers and links (a row's place in the
   # tree is its place in the snapshot), order (the lists are in order), provenance and
-  # timestamps. Then what stays out of the file on purpose (CLAUDE.md, *The TEI file is a
-  # complete copy of a play*): whether the play is complete, and whether its variants are
-  # shown, the two switches for what readers see.
+  # timestamps. A performance's source, company and actors are named by the ids the file does
+  # not carry (`source_entry_id`, `company_id`, `actor_id`, `performance_id`): the rows they
+  # name are compared by value. Then what stays out of the file on purpose (CLAUDE.md, *The
+  # TEI file is a complete copy of a play*): whether the play is complete, and whether its
+  # variants are shown, the two switches for what readers see.
   @dropped ~w(id play_id parent_id division_id element_id entry_id place_id parent_place_id
               historical_state_id parent_play_id position origin filemaker_id inserted_at
               updated_at content_version deleted_at pending_original_code is_complete
-              show_variants)a
+              show_variants source_entry_id company_id actor_id performance_id)a
 
   # The researchers' private notes, never written to the file: it is published with the
   # site. Dropped by schema, not by name: every other `note` is the play's.
@@ -69,11 +72,11 @@ defmodule Playcode.CompleteCopyTest do
   # A new column joins the comparison by itself; a new table only when snapshot/1 reads it.
   test "every table holding a play's rows is compared, or kept out of the file on purpose" do
     compared = ~w(play_editors play_sources play_witnesses play_bibliography play_places
-                  play_paratexts characters play_divisions play_elements play_notes)
+                  play_paratexts characters play_divisions play_elements play_notes
+                  play_performances)
 
-    # Worked out from the text each time, and the platform's own audit trail; and
-    # play_performances, until the TEI export carries performances (Task 8).
-    kept_out = ~w(play_statistics activity_logs play_performances)
+    # Worked out from the text each time, and the platform's own audit trail.
+    kept_out = ~w(play_statistics activity_logs)
 
     # Reads the schema itself: no context lists the tables.
     %{rows: rows} =
@@ -195,6 +198,17 @@ defmodule Playcode.CompleteCopyTest do
     witnesses!(play)
     bibliography!(play)
 
+    {:ok, _} =
+      Performances.create_performance(%{
+        "play_id" => play.id,
+        "date_text" => "1610",
+        "venue" => "Globe",
+        "venue_type" => "public_theatre",
+        "company_name" => "Compañía #{System.unique_integer([:positive])}",
+        "note" => "Representada ante el rey.",
+        "cast" => [%{"surname" => "Betterton", "forename" => "Thomas", "role" => "Hamlet"}]
+      })
+
     paratexts!(play, [
       %{
         kind: "dedicatoria",
@@ -269,6 +283,7 @@ defmodule Playcode.CompleteCopyTest do
 
     credits!(play, [{"researcher", "Investigadora, Inés", "Instituto"}])
     places!(play)
+    performances!(play)
 
     paratexts!(play, [
       %{kind: "head_title", heading: "UNA COMEDIA RARA"},
@@ -432,6 +447,56 @@ defmodule Playcode.CompleteCopyTest do
       })
   end
 
+  # Every column of a performance: a place with its state, a source with the performance's
+  # own volume and pages, a company, a cast with a nickname, a sex and a role in italics, the
+  # years as the curator set them (not the date's), a note of two paragraphs and the
+  # switch that takes the actors of the cast list. A second one says a note alone.
+  defp performances!(play) do
+    place = place_fixture(%{"name" => "Londres"})
+    state = place_fixture(%{"name" => "Reino de Inglaterra", "type" => "country"})
+
+    {:ok, _} =
+      Performances.create_performance(%{
+        "play_id" => play.id,
+        "date_text" => "c. 1610",
+        "year_from" => 1608,
+        "year_to" => 1612,
+        "venue" => "Globe or <<Blackfriars>>",
+        "venue_type" => "commercial_theatre",
+        "company_name" => "The King’s Men #{System.unique_integer([:positive])}",
+        "place_id" => place.id,
+        "historical_state_id" => state.id,
+        "note" => "Una nota,\ncon dos líneas.\n\nY otro <<párrafo>>.",
+        "source_volume" => "6",
+        "source_pages" => "83",
+        "cast_from_cast_list" => true,
+        "source_entry" => %{
+          "kind" => "catalogue",
+          "pub_type" => "book",
+          "language" => "en",
+          "monogr_author" => "Wiggins, Martin",
+          "monogr_title" => "British Drama 1533–1642: A <<Catalogue>>",
+          "pub_place" => "Oxford",
+          "publisher" => "Oxford University Press",
+          "year_text" => "2012–",
+          "public_note" => "Copyright DICAT.",
+          "note" => "Nota privada."
+        },
+        "cast" => [
+          %{
+            "surname" => "Poquelin",
+            "forename" => "Jean François",
+            "nickname" => "Molière",
+            "sex" => "man",
+            "role" => "<<Argan>>"
+          },
+          %{"nickname" => "Mlle du Parc", "sex" => "woman"}
+        ]
+      })
+
+    {:ok, _} = Performances.create_performance(%{"play_id" => play.id, "note" => "Sin fecha."})
+  end
+
   defp paratexts!(play, paratexts) do
     for {attrs, position} <- Enum.with_index(paratexts) do
       {:ok, _} =
@@ -546,8 +611,26 @@ defmodule Playcode.CompleteCopyTest do
           |> Map.put(:place, place_with_ancestors(link.place, gazetteer))
           |> Map.put(:historical_state, state && place_with_ancestors(state, gazetteer))
         end,
+      performances: Enum.map(Performances.list_for_play(play_id), &performance(&1, gazetteer)),
       divisions: Enum.map(PlayContent.load_play_content(play_id), &division/1)
     }
+  end
+
+  # The company, actors and source by value, their ids being dropped; the source as the file
+  # carries it (`Entry.description/1`: the researchers' note stays out).
+  defp performance(performance, gazetteer) do
+    state =
+      performance.historical_state_id && Map.fetch!(gazetteer, performance.historical_state_id)
+
+    performance
+    |> fields()
+    |> Map.merge(%{
+      company: performance.company && fields(performance.company),
+      place: performance.place && place_with_ancestors(performance.place, gazetteer),
+      historical_state: state && place_with_ancestors(state, gazetteer),
+      cast: Enum.map(performance.cast, &(&1 |> fields() |> Map.put(:actor, fields(&1.actor)))),
+      source: performance.source && Bibliography.Entry.description(performance.source)
+    })
   end
 
   defp place(place), do: place |> fields() |> Map.put(:names, Enum.map(place.names, &fields/1))

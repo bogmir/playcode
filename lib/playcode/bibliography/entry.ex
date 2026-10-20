@@ -130,6 +130,18 @@ defmodule Playcode.Bibliography.Entry do
   def kind_from_tei_list(type),
     do: Enum.find_value(@tei_lists, &(elem(&1, 1) == type && elem(&1, 0)))
 
+  @doc """
+  What a performance's `biblStruct/@ana` says of its source's kind: `tei_list/1`'s word, and
+  `"catalogos"` for a catalogue, which no `listBibl` of a play's bibliography holds. Apart
+  from `kind_from_tei_list/1`, so a bibliography listing `"catalogos"` still reads as no kind.
+  """
+  def tei_source_kind(@catalogue), do: "catalogos"
+  def tei_source_kind(kind), do: tei_list(kind)
+
+  @doc "The kind a performance's `biblStruct/@ana` names; nil for one not here."
+  def kind_from_tei_source("catalogos"), do: @catalogue
+  def kind_from_tei_source(ana), do: kind_from_tei_list(ana)
+
   @doc "The `biblStruct/@type` of a publication type in a TEI file; nil for none."
   def tei_type(pub_type), do: @tei_types[pub_type]
 

@@ -512,8 +512,10 @@ defmodule PlaycodeWeb.PlayShowLive do
               <dd class="min-w-0">
                 <ul class="space-y-2">
                   <li :for={line <- @performances.lines}>
-                    <span :if={line.date} class="font-semibold">{line.date}</span>
-                    {Enum.join(line.parts, " · ")}
+                    <span :if={line.date} class="font-semibold">
+                      <.inline_content text={line.date} />
+                    </span>
+                    <.inline_content :if={line.parts != []} text={Enum.join(line.parts, " · ")} />
                     <span
                       :if={line.reference}
                       class="text-xs text-base-content/70 whitespace-nowrap"
@@ -521,9 +523,9 @@ defmodule PlaycodeWeb.PlayShowLive do
                       {line.reference}
                     </span>
                     <p :if={line.cast != []} class="text-xs">
-                      {gettext("Cast")}: {Enum.join(line.cast, "; ")}
+                      {gettext("Cast")}: <.inline_content text={Enum.join(line.cast, "; ")} />
                     </p>
-                    <p :if={line.note} class="text-xs">{line.note}</p>
+                    <p :if={line.note} class="text-xs"><.inline_content text={line.note} /></p>
                   </li>
                 </ul>
                 <ul
