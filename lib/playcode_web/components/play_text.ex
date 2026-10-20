@@ -41,39 +41,46 @@ defmodule PlaycodeWeb.Components.PlayText do
           <.division_heading division={division} sync_key={div_key} />
           <.cast_list :if={division.type == "elenco"} entries={division.entries} />
 
-          <div :if={Map.has_key?(division, :loaded_elements)}>
-            <.element_list
-              elements={Map.get(division, :loaded_elements, [])}
-              show_line_numbers={@show_line_numbers}
-              show_stage_directions={@show_stage_directions}
-              show_asides={@show_asides}
-              show_split_verses={@show_split_verses}
-              show_verse_type={@show_verse_type}
-              show_folio={@show_folio}
-              act_key={div_key}
-            />
-          </div>
-
-          <div
-            :for={{child, child_key} <- sync_keyed(Map.get(division, :children, []), @sync_keys)}
-            class="mb-6 scroll-mt-16"
-            id={"div-#{child.id}"}
-          >
-            <.division_heading division={child} sync_key={child_key && "#{div_key}/#{child_key}"} />
-            <.cast_list :if={child.type == "elenco"} entries={child.entries} />
-            <div :if={Map.has_key?(child, :loaded_elements)}>
-              <.element_list
-                elements={Map.get(child, :loaded_elements, [])}
-                show_line_numbers={@show_line_numbers}
-                show_stage_directions={@show_stage_directions}
-                show_asides={@show_asides}
-                show_split_verses={@show_split_verses}
-                show_verse_type={@show_verse_type}
-                show_folio={@show_folio}
-                act_key={div_key}
-              />
-            </div>
-          </div>
+          <%= for part <- act_parts(division, @sync_keys) do %>
+            <%= case part do %>
+              <% :elements -> %>
+                <div>
+                  <.element_list
+                    elements={Map.get(division, :loaded_elements, [])}
+                    show_line_numbers={@show_line_numbers}
+                    show_stage_directions={@show_stage_directions}
+                    show_asides={@show_asides}
+                    show_split_verses={@show_split_verses}
+                    show_verse_type={@show_verse_type}
+                    show_folio={@show_folio}
+                    act_key={div_key}
+                  />
+                </div>
+              <% {child, child_key} -> %>
+                <div
+                  class="mb-6 scroll-mt-16"
+                  id={"div-#{child.id}"}
+                >
+                  <.division_heading
+                    division={child}
+                    sync_key={child_key && "#{div_key}/#{child_key}"}
+                  />
+                  <.cast_list :if={child.type == "elenco"} entries={child.entries} />
+                  <div :if={Map.has_key?(child, :loaded_elements)}>
+                    <.element_list
+                      elements={Map.get(child, :loaded_elements, [])}
+                      show_line_numbers={@show_line_numbers}
+                      show_stage_directions={@show_stage_directions}
+                      show_asides={@show_asides}
+                      show_split_verses={@show_split_verses}
+                      show_verse_type={@show_verse_type}
+                      show_folio={@show_folio}
+                      act_key={div_key}
+                    />
+                  </div>
+                </div>
+            <% end %>
+          <% end %>
         <% end %>
       </div>
       <.endnotes notes={Note.reading_order(@divisions)} />
@@ -86,6 +93,15 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp outline(paratexts, divisions, sync?) do
     keys = divisions |> sync_keyed(sync?) |> Map.new(fn {division, key} -> {division.id, key} end)
     for item <- Outline.items(paratexts, divisions), do: {item, Map.get(keys, item.id)}
+  end
+
+  # An act's parts in its file's order: the lists that open it, its own elements
+  # (`:elements`), then its scenes and other lists, each child with its comparison key.
+  defp act_parts(division, sync?) do
+    children = Map.get(division, :children, [])
+    {opening, _rest} = Division.split_opening_lists(children)
+    {opening, rest} = children |> sync_keyed(sync?) |> Enum.split(length(opening))
+    opening ++ [:elements] ++ rest
   end
 
   defp outline_id(%Paratext{id: id}), do: "paratext-#{id}"

@@ -536,13 +536,17 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :division, :map, required: true
 
   def division_text(assigns) do
+    {opening, rest} = Division.split_opening_lists(assigns.division.children)
+    assigns = assign(assigns, opening: opening, rest: rest)
+
     ~H"""
     <section class="division" id={@edition.anchors[@division.id]}>
       <h2 :if={@division.title} class="act-head">
         <.inline text={@division.title} notes={@division.notes} />
       </h2>
+      <.outline_item :for={list <- @opening} edition={@edition} item={list} />
       <.el :for={el <- @division.loaded_elements} el={el} edition={@edition} />
-      <%= for child <- @division.children do %>
+      <%= for child <- @rest do %>
         <%= if child.type == "elenco" do %>
           <.outline_item edition={@edition} item={child} />
         <% else %>
@@ -572,14 +576,16 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   def page_text(%{page: %{scene: nil, split: true}} = assigns) do
+    {opening, _rest} = Division.split_opening_lists(assigns.page.division.children)
+
     assigns =
-      assign(
-        assigns,
-        :scene_pages,
-        Enum.filter(
-          assigns.edition.pages,
-          &(&1.scene && &1.division.id == assigns.page.division.id)
-        )
+      assign(assigns,
+        opening: opening,
+        scene_pages:
+          Enum.filter(
+            assigns.edition.pages,
+            &(&1.scene && &1.division.id == assigns.page.division.id)
+          )
       )
 
     ~H"""
@@ -587,6 +593,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2 :if={@page.division.title} class="act-head">
         <.inline text={@page.division.title} notes={@page.division.notes} />
       </h2>
+      <.outline_item :for={list <- @opening} edition={@edition} item={list} />
       <.el :for={el <- @page.division.loaded_elements} el={el} edition={@edition} />
       <nav aria-label="Scenes">
         <ul>

@@ -71,6 +71,7 @@
             <roleDesc>de hombre</roleDesc>
           </castItem>
         </castList>
+        <stage>Suenan cajas.</stage>
         <div2 type="escena" n="1">
           <head>ESCENA I</head>
           <sp who="#ANA">

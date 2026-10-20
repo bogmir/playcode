@@ -72,8 +72,13 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert in_order?(
              body,
              ["PERSONAS", "ANA", "Criados", "BLAS", "ACTO PRIMERO", "Personas del acto primero"] ++
-               ["ANA, disfrazada", "ESCENA I", "Sale de nuevo", "DIEGO", "ESCENA II"] ++
-               ["Personas del acto segundo", "ACTO SEGUNDO", "Personas que no hablan"]
+               ["ANA, disfrazada", "Suenan cajas.", "ESCENA I", "Sale de nuevo", "DIEGO"] ++
+               [
+                 "ESCENA II",
+                 "Personas del acto segundo",
+                 "ACTO SEGUNDO",
+                 "Personas que no hablan"
+               ]
            )
 
     assert occurrences(body, "dama") == 1

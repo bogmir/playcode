@@ -143,7 +143,8 @@ defmodule Playcode.Export.StaticSite.Edition do
   # go on the title page (`front`). Any other prints at the top of the next page, above its
   # heading (`before`, by the id of that page's division or scene), and those after the
   # last page at its foot (`back`). An act's own lists print where they stand on its page;
-  # on an act split by scene, each goes on the page of the scene after it. A play with no
+  # on an act split by scene, those that open it on the act's page, any other on the page
+  # of the scene after it. A play with no
   # page of text prints them all on the title page.
   defp outline(paratexts, divisions, []) do
     %{
@@ -188,9 +189,8 @@ defmodule Playcode.Export.StaticSite.Edition do
       |> Map.merge(Map.new(back, &{&1.id, last.slug}))
       |> Map.merge(
         for page <- pages,
-            not page.split,
             is_nil(page.scene),
-            %{type: "elenco"} = list <- page.division.children,
+            list <- own_lists(page),
             into: %{},
             do: {list.id, page.slug}
       )
@@ -215,12 +215,20 @@ defmodule Playcode.Export.StaticSite.Edition do
         for %{type: "elenco"} = list <- division.children, do: {:item, list}
 
       %{split: true} = page ->
-        [{:page, page} | Enum.flat_map(division.children, &reading_child(&1, page_of))]
+        {_opening, rest} = Division.split_opening_lists(division.children)
+        [{:page, page} | Enum.flat_map(rest, &reading_child(&1, page_of))]
 
       page ->
         [{:page, page}]
     end
   end
+
+  # The lists a division's own page prints: all of them; on a page split by scene, those
+  # that open the act, as the others print on the page of the scene after them.
+  defp own_lists(%{split: true, division: division}),
+    do: division.children |> Division.split_opening_lists() |> elem(0)
+
+  defp own_lists(page), do: Enum.filter(page.division.children, &(&1.type == "elenco"))
 
   defp reading_child(%{type: "elenco"} = list, _page_of), do: [{:item, list}]
   defp reading_child(scene, page_of), do: page_entry(scene, page_of)

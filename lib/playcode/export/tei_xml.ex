@@ -1197,10 +1197,7 @@ defmodule Playcode.Export.TeiXml do
     {trailers, elements} =
       div |> Map.get(:loaded_elements, []) |> Enum.split_with(&(&1.type == "trailer"))
 
-    {opening, children} =
-      div
-      |> Map.get(:children, [])
-      |> Enum.split_while(&(&1.type == "elenco" and &1.entries != []))
+    {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
 
     element(
       :div1,

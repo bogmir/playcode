@@ -313,19 +313,28 @@ defmodule Playcode.Export.CompareHtml do
       elements = render_elements(Map.get(div, :loaded_elements, []), div_key)
 
       children = Map.get(div, :children, [])
+      {opening, _rest} = Division.split_opening_lists(children)
 
-      children =
+      {opening, children} =
         children
         |> Enum.zip(Division.sync_keys(children))
-        |> Enum.map(fn {child, child_key} ->
-          ch = child_heading(child, "#{div_key}/#{child_key}")
-          cc = render_cast_list(child)
-          ce = render_elements(Map.get(child, :loaded_elements, []), div_key)
-          "      <div class=\"child-division\">\n#{ch}#{cc}#{ce}      </div>"
-        end)
-        |> Enum.join("\n")
+        |> Enum.split(length(opening))
 
-      "    <div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n    </div>"
+      opening = render_children(opening, div_key)
+      children = render_children(children, div_key)
+
+      "    <div class=\"division\">\n#{heading}#{cast}#{opening}#{elements}#{children}\n    </div>"
+    end)
+    |> Enum.join("\n")
+  end
+
+  defp render_children(keyed_children, div_key) do
+    keyed_children
+    |> Enum.map(fn {child, child_key} ->
+      ch = child_heading(child, "#{div_key}/#{child_key}")
+      cc = render_cast_list(child)
+      ce = render_elements(Map.get(child, :loaded_elements, []), div_key)
+      "      <div class=\"child-division\">\n#{ch}#{cc}#{ce}      </div>"
     end)
     |> Enum.join("\n")
   end

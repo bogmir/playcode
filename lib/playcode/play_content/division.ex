@@ -77,6 +77,14 @@ defmodule Playcode.PlayContent.Division do
   def numbered_scenes(division),
     do: division.children |> Enum.reject(&(&1.type == "elenco")) |> Enum.with_index(1)
 
+  @doc """
+  An act's `children` as its file writes them: the cast lists that open the act, which
+  stand before its own elements (a bare `<castList>`), and the rest, after them. An empty
+  list is written as a division of its own, so it never opens an act.
+  """
+  def split_opening_lists(children),
+    do: Enum.split_while(children, &(&1.type == "elenco" and &1.entries != []))
+
   def changeset(division, attrs) do
     division
     |> cast(attrs, [:type, :number, :title, :position, :play_id, :parent_id])

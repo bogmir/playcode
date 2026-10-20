@@ -250,11 +250,11 @@ defmodule Playcode.ImportHelpers do
   @doc """
   The headings of `test/fixtures/outline.xml` in its outline's order, as a page prints
   them: the front matter, the acts with their lists and scenes, the items between and
-  after them.
+  after them; and the direction act 1 opens with, after the list that opens it.
   """
   def outline_headings do
     ["DEDICATORIA", "LUGAR DE LA ACCIÓN", "PERSONAS", "COMEDIA DE LOS ELENCOS", "ACTO PRIMERO"] ++
-      ["Personas del acto primero", "ESCENA I", "Sale de nuevo", "ESCENA II"] ++
+      ["Personas del acto primero", "Suenan cajas.", "ESCENA I", "Sale de nuevo", "ESCENA II"] ++
       ["Personas del acto segundo", "LOA", "ACTO SEGUNDO", "EPÍLOGO", "Personas que no hablan"]
   end
 

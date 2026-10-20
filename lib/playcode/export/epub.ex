@@ -8,7 +8,7 @@ defmodule Playcode.Export.Epub do
   alias Playcode.Export.{Html, NoteMarkup}
   alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, InlineMarkup, Note}
+  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
   @act_types ~w(acto act acte jornada)
@@ -211,19 +211,21 @@ defmodule Playcode.Export.Epub do
     cast = render_cast_list(div)
     elements = render_elements(Map.get(div, :loaded_elements, []))
 
-    children =
-      Map.get(div, :children, [])
-      |> Enum.map(fn child ->
-        ch = child_heading(child)
-        cc = render_cast_list(child)
-        ce = render_elements(Map.get(child, :loaded_elements, []))
-        "<div class=\"child-division\">\n#{ch}#{cc}#{ce}</div>"
-      end)
-      |> Enum.join("\n")
-
+    {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
     notes = NoteMarkup.endnotes(Note.reading_order(div), :epub)
 
-    "<div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n#{notes}</div>"
+    "<div class=\"division\">\n#{heading}#{cast}#{render_children(opening)}#{elements}#{render_children(children)}\n#{notes}</div>"
+  end
+
+  defp render_children(children) do
+    children
+    |> Enum.map(fn child ->
+      ch = child_heading(child)
+      cc = render_cast_list(child)
+      ce = render_elements(Map.get(child, :loaded_elements, []))
+      "<div class=\"child-division\">\n#{ch}#{cc}#{ce}</div>"
+    end)
+    |> Enum.join("\n")
   end
 
   # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its

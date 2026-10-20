@@ -521,6 +521,26 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  # As the file has it: the list that opens an act stands before the act's own text.
+  test "a long act's opening cast list prints on its page, above the act's own text" do
+    words = String.duplicate("palabra ", 9_000)
+
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <castList><head>Figuras del acto</head><castItem><role xml:id="A">A</role></castItem></castList>
+        <stage>Salen todos</stage>
+        <div2 type="escena" n="1"><head>Escena 1</head><sp><speaker>A</speaker><p>#{words}uno</p></sp></div2>
+        <div2 type="escena" n="2"><head>Escena 2</head><sp><speaker>A</speaker><p>#{words}dos</p></sp></div2>
+      </div1>
+      """)
+
+    text = &(page(dir, play, &1) |> LazyHTML.query(".division") |> LazyHTML.text())
+
+    assert in_order?(text.("act-1.html"), ["Figuras del acto", "Salen todos"])
+    refute text.("act-1-s1.html") =~ "Figuras del acto"
+  end
+
   describe "the Notes page" do
     setup do
       {play, dir} =
