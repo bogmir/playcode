@@ -98,7 +98,7 @@ defmodule Playcode.Performances.Actor do
   end
 
   # ponytail: no unique index behind this, so two curators saving the same new actor in the
-  # same instant can both pass; an index on the four lowered fields if that ever happens.
+  # same instant can both pass; an index on the three lowered fields if that ever happens.
   defp validate_not_taken(changeset) do
     if twin(changeset),
       do: add_error(changeset, :surname, "is already another actor"),

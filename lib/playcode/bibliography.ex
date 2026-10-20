@@ -128,17 +128,18 @@ defmodule Playcode.Bibliography do
 
   @doc """
   Links an entry another play already has; `origin` as for `create_entry_for_play/4`. A
-  catalogue is refused: only a performance cites one.
+  catalogue is refused: only a performance cites one. So is an entry that is gone, or an
+  `entry_id` that is no id: it arrives from the browser.
   """
   def link_entry(play_id, entry_id, attrs \\ %{}, origin \\ "manual") do
     changeset = Link.changeset(%Link{play_id: play_id, entry_id: entry_id, origin: origin}, attrs)
 
     case get_entry(entry_id) do
-      %Entry{kind: "catalogue"} ->
-        {:error, Ecto.Changeset.add_error(changeset, :entry_id, "is invalid")}
-
-      _entry ->
+      %Entry{kind: kind} when kind != "catalogue" ->
         Repo.insert(changeset)
+
+      _gone_or_catalogue ->
+        {:error, Ecto.Changeset.add_error(changeset, :entry_id, "is invalid")}
     end
   end
 

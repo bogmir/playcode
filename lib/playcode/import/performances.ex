@@ -167,10 +167,11 @@ defmodule Playcode.Import.Performances do
   `places` and their report lines (`merged`, `twinless`, `no_country`, `reused`) are
   `Import.Places.place_plan/2`'s. `works` holds one entry per work cited: its `attrs`, the
   entry it is `existing` (a `filemaker_id`, when Playcode has it), the entry it is
-  `identical` to (an id, when Playcode has an entry with its description), its `records`
-  (ids, in order) and the `ref` it is created with. `companies` and `actors` are the ones
-  the performances name, `reused_*` those Playcode already has, `merged_*` those FileMaker
-  has under two records. `skipped` holds labels, by reason: `empty`, `undated` (kept, with no
+  `identical` to (an id, when Playcode has the entry made from its `ref`, or one with its
+  description), its `records` (ids, in order) and the `ref` it is created with, its
+  `filemaker_id`: a hand-listed work's first record in the hand list, whichever records this
+  run cites. `companies` and `actors` are the ones the performances name, `reused_*` those
+  Playcode already has, `merged_*` those FileMaker has under two records. `skipped` holds labels, by reason: `empty`, `undated` (kept, with no
   year to order by), `cast`, `source` and `place`. `not_held` counts the performances on
   versions we do not hold, and `already_imported` names the plays skipped whole.
   """
@@ -485,7 +486,7 @@ defmodule Playcode.Import.Performances do
       |> Enum.sort_by(&number/1)
 
     resolved = Map.new(cited, &{&1, resolve(&1, records[&1], lookups)})
-    works = build_works(cited, resolved, existing_refs())
+    works = build_works(cited, resolved, present_entries())
 
     by_performance =
       for {row, _plays} <- described,
@@ -534,8 +535,10 @@ defmodule Playcode.Import.Performances do
   defp rename(key), do: key
 
   # One entry per work, its records in id order. `existing` is the edition S4 brought in
-  # that the hand list sends a record to, when Playcode has it; `identical` an entry
-  # Playcode has that cites the work as it would be created.
+  # that the hand list sends a record to, when Playcode has it; `identical` the entry
+  # Playcode already has for the work: the one an earlier run made from its `ref` (so a
+  # correction made since does not hide it), else one that cites it as it would be created.
+  # `present` is `%{filemaker_id => entry id}` of the entries a run could have made.
   defp build_works(cited, resolved, present) do
     members =
       for id <- cited, {:ok, key, attrs} <- [resolved[id]], do: {key, id, attrs}
@@ -544,22 +547,39 @@ defmodule Playcode.Import.Performances do
       members
       |> Enum.group_by(&elem(&1, 0))
       |> Map.new(fn {key, [{_key, first, attrs} | _] = group} ->
+        ref = work_ref(key, first)
         existing = @existing[first]
+        existing = if Map.has_key?(present, existing), do: existing
 
         {key,
          %{
            attrs: work_attrs(key, attrs),
-           existing: if(existing in present, do: existing),
+           existing: existing,
+           identical: if(!existing, do: present[ref]),
            records: Enum.map(group, &elem(&1, 1)),
-           ref: "T13:" <> first
+           ref: ref
          }}
       end)
 
-    created = for {key, %{existing: nil, attrs: attrs}} <- works, do: {key, description(attrs)}
+    created =
+      for {key, %{existing: nil, identical: nil, attrs: attrs}} <- works,
+          do: {key, description(attrs)}
+
     found = Bibliography.identical_entries(Enum.map(created, &elem(&1, 1)), nil)
     identical = Map.new(created, fn {key, description} -> {key, found[description]} end)
 
-    Map.new(works, fn {key, work} -> {key, Map.put(work, :identical, identical[key])} end)
+    Map.new(works, fn {key, work} ->
+      {key, Map.update!(work, :identical, &(&1 || identical[key]))}
+    end)
+  end
+
+  # What a work's entry is made with, and found by, in every run: a hand-listed work's first
+  # record in the hand list (not the first one this run's plays cite), a lone record's own.
+  defp work_ref(key, first) do
+    case @works[key] do
+      nil -> "T13:" <> first
+      %{records: [head | _]} -> "T13:" <> head
+    end
   end
 
   defp work_attrs(key, attrs) do
@@ -598,11 +618,13 @@ defmodule Playcode.Import.Performances do
     |> Enum.sum_by(fn [this, next] -> if this < next, do: -this, else: this end)
   end
 
-  defp existing_refs do
+  # The entries an earlier run, or S4, may have made: `%{filemaker_id => id}`.
+  defp present_entries do
     Entry
-    |> where([e], e.filemaker_id in ^Map.values(@existing))
-    |> select([e], e.filemaker_id)
+    |> where([e], like(e.filemaker_id, "T13:%") or e.filemaker_id in ^Map.values(@existing))
+    |> select([e], {e.filemaker_id, e.id})
     |> Repo.all()
+    |> Map.new()
   end
 
   # --- writing the plan
@@ -746,15 +768,15 @@ defmodule Playcode.Import.Performances do
 
     plays = plan.performances |> Enum.uniq_by(& &1.play_id) |> length()
 
-    skipped =
-      for {title, reason} <- [
-            {"performances saying nothing", :empty},
-            {"dates without a year", :undated},
-            {"cast rows without an actor", :cast},
-            {"sources", :source},
-            {"places", :place}
+    left_out =
+      for {how, title, reason} <- [
+            {"skipped", "performances saying nothing", :empty},
+            {"kept", "dates without a year", :undated},
+            {"skipped", "cast rows without an actor", :cast},
+            {"skipped", "sources", :source},
+            {"skipped", "places", :place}
           ],
-          line <- section("skipped, #{title}", plan.skipped[reason]),
+          line <- section("#{how}, #{title}", plan.skipped[reason]),
           do: line
 
     per_play ++
@@ -767,7 +789,7 @@ defmodule Playcode.Import.Performances do
       section("actors merged", plan.merged_actors) ++
       entries(plan.works) ++
       Places.place_report(plan) ++
-      skipped ++
+      left_out ++
       [
         "performances on versions not held: #{plan.not_held}",
         "already imported: #{length(plan.already_imported)} plays #{Enum.join(plan.already_imported, ", ")}"

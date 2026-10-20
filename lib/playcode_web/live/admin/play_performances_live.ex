@@ -497,10 +497,11 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     end
   end
 
+  # A row with an id is that actor's alone: a look-alike's row keeps its own name.
   defp follow_rename(socket, %Actor{} = old, %Actor{} = renamed) do
     update(socket, :cast, fn rows ->
       for row <- rows do
-        if Performances.picked_actor(row, [old]),
+        if row["actor_id"] in [nil, "", old.id] and Performances.picked_actor(row, [old]),
           do: Map.put(row, "actor_name", name(renamed)),
           else: row
       end
@@ -839,8 +840,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
             <div>
               <div class="grid grid-cols-2 gap-x-4">
                 <.input
-                  id="performance_year_from"
-                  name="performance[year_from]"
+                  field={@form[:year_from]}
                   type="number"
                   value={elem(@years.year_from, 0)}
                   placeholder={elem(@years.year_from, 1)}
@@ -848,8 +848,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
                   aria-describedby="years-help"
                 />
                 <.input
-                  id="performance_year_to"
-                  name="performance[year_to]"
+                  field={@form[:year_to]}
                   type="number"
                   value={elem(@years.year_to, 0)}
                   placeholder={elem(@years.year_to, 1)}

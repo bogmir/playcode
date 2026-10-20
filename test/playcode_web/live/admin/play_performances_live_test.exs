@@ -1092,6 +1092,31 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
       assert %{forename: "Charles", sex: "man"} = Performances.get_actor(split.id)
     end
 
+    test "renaming one leaves the other's row in an open form as it was", %{
+      conn: conn,
+      play: play,
+      plain: plain,
+      split: split
+    } do
+      performance = performance_fixture(play, %{"venue" => "Globe"})
+
+      {:ok, _} =
+        Performances.put_cast(performance, [%{"actor_id" => plain.id}, %{"actor_id" => split.id}])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      lv |> button("Edit", "1610, Globe") |> render_click()
+      render_click(lv, "rename_actor", %{"id" => split.id})
+
+      lv
+      |> form("#rename-form",
+        rename: %{"surname" => "Hart", "forename" => "Carlos", "nickname" => "", "sex" => "man"}
+      )
+      |> render_submit()
+
+      assert has_element?(lv, "#cast-0-actor-name[value='Charles Hart']")
+      assert has_element?(lv, "#cast-1-actor-name[value='Carlos Hart']")
+    end
+
     test "a name they share is refused on its row, and the names settle it", %{
       conn: conn,
       play: play,
@@ -1183,6 +1208,31 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
 
       assert %{year_from: 1608, year_to: 1612} =
                Performances.get_performance(play.id, performance.id)
+    end
+
+    test "that are no year, or run backwards, are refused beside their input", %{
+      conn: conn,
+      play: play
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+
+      html =
+        lv
+        |> form("#performance-form",
+          performance: %{"date_text" => "1610", "year_from" => "10000000000"}
+        )
+        |> render_submit()
+
+      assert html =~ "debe ser menor o igual que 9999"
+
+      html =
+        lv
+        |> form("#performance-form", performance: %{"year_from" => "1650", "year_to" => "1640"})
+        |> render_submit()
+
+      assert html =~ error("must not be before the start year")
+      assert Performances.list_for_play(play.id) == []
     end
   end
 end

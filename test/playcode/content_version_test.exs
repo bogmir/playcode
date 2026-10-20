@@ -9,7 +9,6 @@ defmodule Playcode.ContentVersionTest do
   import Playcode.TestFixtures
 
   alias Playcode.{Bibliography, Catalogue, PlayContent, Performances, Places, Statistics}
-  alias Playcode.Performances.{Actor, CastMember, Company}
 
   # Postgres moves a play once per transaction, and the sandbox runs the whole test in
   # one. This stands in for the commit between two edits. It reaches past the contexts
@@ -230,23 +229,19 @@ defmodule Playcode.ContentVersionTest do
       assert version(elsewhere) == elsewhere_before
     end
 
-    # A company, an actor and a cast row have no context yet: the Repo writes them.
+    # The Repo writes the cast row's update and delete: the trigger is on the table, and
+    # `put_cast/2` replaces a whole cast, so it never updates a row or deletes one alone.
     test "a cast row moves the performance's play" do
       play = play_fixture()
       elsewhere = play_fixture()
       performance = performance_fixture(play)
       performance_fixture(elsewhere)
-      actor = Playcode.Repo.insert!(%Actor{surname: "Burbage"})
+      {:ok, actor} = Performances.find_or_create_actor(%{"surname" => "Burbage"})
       next_transaction()
       elsewhere_before = version(elsewhere)
 
       row = fn ->
-        Playcode.Repo.insert!(%CastMember{
-          performance_id: performance.id,
-          actor_id: actor.id,
-          role: "Hamlet",
-          position: 0
-        })
+        Performances.put_cast(performance, [%{"actor_id" => actor.id, "role" => "Hamlet"}])
       end
 
       assert moves?(play, row)
@@ -260,8 +255,8 @@ defmodule Playcode.ContentVersionTest do
     end
 
     test "renaming a company or an actor moves every play whose performances name it" do
-      company = Playcode.Repo.insert!(%Company{name: "King's Men"})
-      actor = Playcode.Repo.insert!(%Actor{surname: "Burbage"})
+      {:ok, company} = Performances.find_or_create_company("King's Men")
+      {:ok, actor} = Performances.find_or_create_actor(%{"surname" => "Burbage"})
       hamlet = play_fixture()
       othello = play_fixture()
       elsewhere = play_fixture()
@@ -269,22 +264,16 @@ defmodule Playcode.ContentVersionTest do
       performance_fixture(hamlet, %{"company_id" => company.id})
       cast = performance_fixture(othello)
 
-      performance_fixture(elsewhere, %{
-        "company_id" => Playcode.Repo.insert!(%Company{name: "Other"}).id
-      })
+      {:ok, other} = Performances.find_or_create_company("Other")
+      performance_fixture(elsewhere, %{"company_id" => other.id})
 
-      Playcode.Repo.insert!(%CastMember{performance_id: cast.id, actor_id: actor.id, position: 0})
+      {:ok, _} = Performances.put_cast(cast, [%{"actor_id" => actor.id}])
 
       # A new name each time: an update that changes nothing sends no UPDATE at all.
       unique = fn -> "Name #{System.unique_integer([:positive])}" end
 
-      company_edit = fn ->
-        Playcode.Repo.update!(Ecto.Changeset.change(company, name: unique.()))
-      end
-
-      actor_edit = fn ->
-        Playcode.Repo.update!(Ecto.Changeset.change(actor, surname: unique.()))
-      end
+      company_edit = fn -> Performances.update_company(company, %{"name" => unique.()}) end
+      actor_edit = fn -> Performances.update_actor(actor, %{"surname" => unique.()}) end
 
       assert moves?(hamlet, company_edit)
       refute moves?(othello, company_edit)

@@ -106,8 +106,8 @@ defmodule Playcode.PerformancesTest do
       play = play_fixture()
       place = place_fixture(%{"name" => "Londres"})
       source = bibliography_fixture(play_fixture(), %{"monogr_title" => "Wiggins"})
-      company = Playcode.Repo.insert!(%Performances.Company{name: "King's Men"})
-      actor = Playcode.Repo.insert!(%Performances.Actor{surname: "Burbage"})
+      {:ok, company} = Performances.find_or_create_company("King's Men")
+      {:ok, actor} = Performances.find_or_create_actor(%{"surname" => "Burbage"})
 
       performance =
         performance_fixture(play, %{
@@ -116,12 +116,8 @@ defmodule Playcode.PerformancesTest do
           "source_entry_id" => source.entry_id
         })
 
-      Playcode.Repo.insert!(%Performances.CastMember{
-        performance_id: performance.id,
-        actor_id: actor.id,
-        role: "Hamlet",
-        position: 0
-      })
+      {:ok, _} =
+        Performances.put_cast(performance, [%{"actor_id" => actor.id, "role" => "Hamlet"}])
 
       assert [listed] = Performances.list_for_play(play.id)
       assert listed.company.name == "King's Men"

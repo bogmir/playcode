@@ -41,6 +41,7 @@ defmodule Playcode.Import.TeiParser do
   alias Playcode.Performances.Performance
   alias Playcode.Places
   alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.Text
   alias Playcode.Witnesses
 
   require Logger
@@ -2173,15 +2174,12 @@ defmodule Playcode.Import.TeiParser do
   end
 
   # A text of a performance: the words as `text_content/2` reads them, italics as <<…>>
-  # and each <lb/> a line break; nil for none.
+  # and each <lb/> a line break, squeezed as a form's text is (`Text.squeeze/1`); nil for
+  # none, a bare <lb/> included.
   defp line_text(nil), do: nil
 
-  defp line_text(element) do
-    case element |> text_content(:breaks) |> String.replace(@break, "\n") do
-      "" -> nil
-      text -> text
-    end
-  end
+  defp line_text(element),
+    do: element |> text_content(:breaks) |> String.replace(@break, "\n") |> Text.squeeze()
 
   # The slug a <placeName> refers to; nil for none, as a state with no town has.
   defp place_slug(place) do

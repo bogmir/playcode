@@ -435,6 +435,14 @@ defmodule Playcode.Import.PerformancesTest do
     assert report =~ "performances on versions not held: 1"
   end
 
+  # An undated performance is written, last in its play's order: the report says it is kept.
+  test "the report lists a performance with no year as kept, not skipped", ctx do
+    report = ctx |> plan() |> Import.report() |> Enum.join("\n")
+
+    assert report =~ ~r/kept, dates without a year: \d+\n(  .*\n)*?  EMOTHE0010_Play T11:26\b/
+    refute report =~ "skipped, dates without a year"
+  end
+
   test "a directory without the tables is an error naming the file" do
     assert {:error, {"T11_ObraRepresentacion.xml", :enoent}} =
              Import.load("test/fixtures/filemaker/witnesses")

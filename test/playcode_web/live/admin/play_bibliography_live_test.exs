@@ -307,4 +307,19 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLiveTest do
     assert Bibliography.list_links(play.id) == []
     assert %{kind: "catalogue"} = Bibliography.get_entry(catalogue.id)
   end
+
+  # An id from the browser: an entry that is gone, or no id at all, says so and changes nothing.
+  test "an entry that is gone or no id cannot be linked, and the page says so", %{
+    conn: conn,
+    play: play
+  } do
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+
+    for entry <- [Ecto.UUID.generate(), "not-a-uuid"] do
+      assert render_click(view, "link", %{"entry" => entry}) =~
+               t("That item no longer exists. The list has been refreshed.")
+    end
+
+    assert Bibliography.list_links(play.id) == []
+  end
 end

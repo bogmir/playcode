@@ -3977,6 +3977,25 @@ defmodule Playcode.TeiRoundtripTest do
       assert Performances.list_actors() == []
     end
 
+    # A bare <lb/> is a line break, but a text of nothing else says nothing: the parser must
+    # give nil, as it does for an empty element, or the importer takes it for a venue or a
+    # surname and the changeset refuses the whole file.
+    @tag :capture_log
+    test "a performance or a cast row of nothing but a line break is left out, the file imported" do
+      file = """
+      <performance xml:id="performance-1"><p><rs type="venue"><lb/></rs></p></performance>
+      <performance xml:id="performance-2">
+        <p><date when="1610">1610</date></p>
+        <castList><castItem><role>Argan</role><actor><persName><surname><lb/></surname></persName></actor></castItem></castList>
+      </performance>
+      """
+
+      play = import_tei!(performance_file(file))
+
+      assert [%{date_text: "1610", cast: []}] = performances(play)
+      assert Performances.list_actors() == []
+    end
+
     test "a company keeps its italics, and comes back the same company" do
       n = System.unique_integer([:positive])
       name = "The <<King’s>> Men #{n}"

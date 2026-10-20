@@ -823,6 +823,45 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert [_one] = Bibliography.search_entries("British Drama", nil, 10, kinds: :all)
     end
 
+    # A work's entry is found again by the record it was made from (`filemaker_id`), not only
+    # by what it says: a curator corrects it between two runs, and a play held later cites it.
+    defp run_twice_citing_one_entry(later, work_title, corrected_title) do
+      {:ok, archived} = Catalogue.delete_play(later)
+
+      run("playcode.import.performances", ["--path", @performances])
+      assert [entry] = Bibliography.search_entries(work_title, nil, 10, kinds: :all)
+      {:ok, _} = Bibliography.update_entry(entry, %{"monogr_title" => corrected_title})
+
+      {:ok, _} = Catalogue.restore_play(archived)
+      out = run("playcode.import.performances", ["--path", @performances])
+
+      assert out =~ ~r/created \d+ performances, \d+ companies, \d+ actors, 0 entries/
+      assert length(Bibliography.search_entries(work_title, nil, 10, kinds: :all)) == 1
+      assert Enum.any?(performances(later), &(&1.source_entry_id == entry.id))
+    end
+
+    test "a hand-listed work's entry is cited again by a play held later, even corrected", %{
+      plays: plays
+    } do
+      # 0304 makes Wiggins's entry from record 94, 0038 cites another of its records, 93
+      run_twice_citing_one_entry(plays["0038"], "British Drama", "British Drama 1533–1642, 2012")
+    end
+
+    test "a hand-listed work whose first record a later play cites does not stop the run", %{
+      plays: plays
+    } do
+      # 0379 makes CATCOM's entry from record 119, 0671 cites 119 and 468
+      run_twice_citing_one_entry(plays["0671"], "CATCOM", "Base de datos CATCOM, corregida")
+    end
+
+    test "a lone record's entry, corrected, is cited, not made again", %{plays: plays} do
+      lone = entry_fixture("T13:102", %{"kind" => "catalogue", "monogr_title" => "Corrected"})
+
+      run("playcode.import.performances", ["--path", @performances])
+
+      assert Enum.any?(performances(plays["0644"]), &(&1.source_entry_id == lone.id))
+    end
+
     test "a second run changes nothing", %{plays: plays} do
       run("playcode.import.performances", ["--path", @performances])
       count = performance_count(plays)

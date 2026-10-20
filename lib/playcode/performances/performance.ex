@@ -44,6 +44,8 @@ defmodule Playcode.Performances.Performance do
 
   @text ~w(date_text venue note source_volume source_pages)a
 
+  @year_bounds [greater_than_or_equal_to: 1000, less_than_or_equal_to: 9999]
+
   # A performance says something when one of these is filled.
   @described ~w(date_text venue venue_type company_id note)a
 
@@ -125,6 +127,7 @@ defmodule Playcode.Performances.Performance do
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
     |> validate_described()
     |> fill_years()
+    |> validate_years()
     |> unique_constraint(:cast_from_cast_list,
       name: :play_performances_one_cast_list_index,
       message: "is already set on another performance of this play"
@@ -176,6 +179,20 @@ defmodule Playcode.Performances.Performance do
     changeset
     |> follow_date(:year_from, from, was_from)
     |> follow_date(:year_to, to, was_to)
+  end
+
+  # Four-digit years, as `years/1` reads them, which also keeps a typed one inside the column;
+  # the last year is not before the first.
+  defp validate_years(changeset) do
+    changeset =
+      Enum.reduce([:year_from, :year_to], changeset, &validate_number(&2, &1, @year_bounds))
+
+    from = get_field(changeset, :year_from)
+    to = get_field(changeset, :year_to)
+
+    if from && to && to < from,
+      do: add_error(changeset, :year_to, "must not be before the start year"),
+      else: changeset
   end
 
   # A blank year takes the date's. So does one the date used to give, when the form sent it
