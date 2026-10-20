@@ -43,15 +43,10 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
         {:noreply, socket |> load() |> LiveHelpers.put_gone_flash()}
 
       link ->
-        others =
-          link.entry_id
-          |> Bibliography.plays_for_entry()
-          |> Enum.reject(&(&1.id == link.play_id))
-
         params = %{"volume" => link.volume, "pages" => link.pages, "note" => link.note}
 
         {:noreply,
-         socket |> assign(:adding, false) |> open_form(link, link.entry, params, others)}
+         socket |> assign(:adding, false) |> open_form(link, link.entry, params, others(link))}
     end
   end
 
@@ -94,6 +89,9 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
          socket
          |> assign(:form, to_form(changeset, as: "entry"))
          |> assign(:link_params, link_params)}
+
+      :gone ->
+        {:noreply, socket |> close_form() |> load() |> LiveHelpers.put_gone_flash()}
     end
   end
 
@@ -104,6 +102,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
         {:noreply, socket |> load() |> LiveHelpers.put_gone_flash()}
 
       link ->
+        kept_by_others? = others(link) != []
         {:ok, outcome} = Bibliography.unlink(link)
         LiveHelpers.log_activity(socket, "delete", "play_bibliography", link.id)
 
@@ -111,9 +110,16 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
           do: LiveHelpers.log_activity(socket, "delete", "bibliography_entry", link.entry_id)
 
         message =
-          if outcome == :deleted,
-            do: gettext("Entry deleted: no other play used it."),
-            else: gettext("Removed from this play. The other plays keep it.")
+          cond do
+            outcome == :deleted ->
+              gettext("Entry deleted: no other play used it.")
+
+            kept_by_others? ->
+              gettext("Removed from this play. The other plays keep it.")
+
+            true ->
+              gettext("Removed from this play. A performance still cites it, so the entry stays.")
+          end
 
         {:noreply, socket |> close_form() |> load() |> put_flash(:info, message)}
     end
@@ -160,10 +166,25 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
          do: {:ok, link, "create"}
   end
 
-  defp save(%Link{} = link, _play_id, entry_params, link_params) do
-    with {:ok, _entry} <- Bibliography.update_entry(link.entry, entry_params),
-         {:ok, link} <- Bibliography.update_link(link, link_params),
-         do: {:ok, link, "update"}
+  # The link and its entry are read again: another curator may have removed them since the
+  # form opened.
+  defp save(%Link{} = link, play_id, entry_params, link_params) do
+    case Bibliography.get_link(play_id, link.id) do
+      nil ->
+        :gone
+
+      link ->
+        with {:ok, _entry} <- Bibliography.update_entry(link.entry, entry_params),
+             {:ok, link} <- Bibliography.update_link(link, link_params),
+             do: {:ok, link, "update"}
+    end
+  end
+
+  # The other plays that link the link's entry or whose performances cite it.
+  defp others(%Link{} = link) do
+    link.entry_id
+    |> Bibliography.plays_for_entry()
+    |> Enum.reject(&(&1.id == link.play_id))
   end
 
   defp load(socket) do
@@ -178,6 +199,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
     socket
     |> assign(:groups, groups)
     |> assign(:shared, Bibliography.link_counts(entry_ids))
+    |> assign(:cited, Bibliography.cited_by_performances(entry_ids))
   end
 
   defp open_form(socket, editing, entry, link_params, others) do
@@ -241,10 +263,19 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
 
   defp shared?(shared, link), do: Map.get(shared, link.entry_id, 1) > 1
 
-  defp remove_confirm(shared, link) do
-    if shared?(shared, link),
-      do: gettext("Remove this entry from this play? The other plays keep it."),
-      else: gettext("Delete this entry? No other play uses it.")
+  defp remove_confirm(shared, cited, link) do
+    cond do
+      shared?(shared, link) ->
+        gettext("Remove this entry from this play? The other plays keep it.")
+
+      link.entry_id in cited ->
+        gettext(
+          "Remove this entry from this play? A performance of this play cites it, so the entry stays."
+        )
+
+      true ->
+        gettext("Delete this entry? No other play uses it.")
+    end
   end
 
   @impl true
@@ -369,17 +400,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
         id="entry-editor"
         class="mb-8 overflow-hidden rounded-box border border-primary/30 bg-base-100 shadow-md"
       >
-        <div :if={@shared_with != []} role="alert" class="alert alert-warning rounded-none">
-          <.icon name="hero-users-mini" class="size-5" />
-          <span>
-            {ngettext(
-              "Shared with %{count} other play (%{codes}): changes appear on both.",
-              "Shared with %{count} other plays (%{codes}): changes appear on all of them.",
-              length(@shared_with),
-              codes: Enum.map_join(@shared_with, ", ", & &1.code)
-            )}
-          </span>
-        </div>
+        <.shared_warning plays={@shared_with} />
         <.form
           for={@form}
           id="entry-form"
@@ -505,7 +526,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
                   type="button"
                   phx-click="remove"
                   phx-value-id={link.id}
-                  data-confirm={remove_confirm(@shared, link)}
+                  data-confirm={remove_confirm(@shared, @cited, link)}
                   class="btn btn-ghost btn-xs btn-square text-error"
                   aria-label={gettext("Remove")}
                 >

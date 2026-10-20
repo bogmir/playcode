@@ -115,7 +115,7 @@ defmodule Playcode.Bibliography do
   """
   def create_entry_for_play(play_id, entry_attrs, link_attrs \\ %{}, origin \\ "manual") do
     Multi.new()
-    |> Multi.insert(:entry, Entry.changeset(%Entry{}, entry_attrs))
+    |> Multi.insert(:entry, %Entry{} |> Entry.changeset(entry_attrs) |> not_catalogue())
     |> Multi.insert(:link, fn %{entry: entry} ->
       Link.changeset(%Link{play_id: play_id, entry_id: entry.id, origin: origin}, link_attrs)
     end)
@@ -174,7 +174,29 @@ defmodule Playcode.Bibliography do
   @doc "A new entry no play links: a performance's source."
   def create_entry(attrs), do: %Entry{} |> Entry.changeset(attrs) |> Repo.insert()
 
-  def update_entry(%Entry{} = entry, attrs), do: entry |> Entry.changeset(attrs) |> Repo.update()
+  @doc """
+  Corrects an entry, for every play that cites it. An entry a play links stays one of
+  `Entry.kinds/0`: as a catalogue it would drop out of that play's bibliography.
+  """
+  def update_entry(%Entry{} = entry, attrs) do
+    changeset = Entry.changeset(entry, attrs)
+    Repo.update(if linked?(entry.id), do: not_catalogue(changeset), else: changeset)
+  end
+
+  # A catalogue is a performance's source alone: no play's bibliography holds one.
+  defp not_catalogue(changeset),
+    do: Ecto.Changeset.validate_exclusion(changeset, :kind, ["catalogue"], message: "is invalid")
+
+  @doc "Whether some play's bibliography links the entry."
+  def linked?(entry_id), do: Repo.exists?(from l in Link, where: l.entry_id == ^entry_id)
+
+  @doc "Of `entry_ids`, those some performance cites, as a `MapSet`."
+  def cited_by_performances(entry_ids) do
+    from(p in Performance, where: p.source_entry_id in ^entry_ids, select: p.source_entry_id)
+    |> Repo.all()
+    |> MapSet.new()
+  end
+
   def update_link(%Link{} = link, attrs), do: link |> Link.changeset(attrs) |> Repo.update()
 
   @doc "The ids of the entries a play links; none for nil, a play not imported yet."

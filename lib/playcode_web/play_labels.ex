@@ -302,6 +302,7 @@ defmodule PlaycodeWeb.PlayLabels do
   defp bibliography_kind_name("criticism"), do: gettext("Criticism")
   defp bibliography_kind_name("translation"), do: gettext("Translation")
   defp bibliography_kind_name("adaptation"), do: gettext("Adaptation")
+  defp bibliography_kind_name("catalogue"), do: gettext("Catalogue")
 
   @doc "The witness types for a form's select, grouped as FileMaker's tree: manuscripts, then early editions."
   def witness_type_options do

@@ -72,7 +72,17 @@ defmodule PlaycodeWeb.AccessibilityTest do
 
     # A performance with a company and a cast, for the play's pages and the tab's panels.
     company = "Compañía #{System.unique_integer([:positive])}"
-    performance = performance_fixture(play, %{"venue" => "Globe", "company_name" => company})
+    source = catalogue_fixture(%{"monogr_title" => "British Drama 1533–1642"})
+
+    performance =
+      performance_fixture(play, %{
+        "venue" => "Globe",
+        "company_name" => company,
+        "source_entry_id" => source.id,
+        "source_volume" => "6",
+        "source_pages" => "83"
+      })
+
     {:ok, actor} = Playcode.Performances.find_or_create_actor(%{"surname" => "Actriz"})
 
     {:ok, _} =
@@ -140,6 +150,8 @@ defmodule PlaycodeWeb.AccessibilityTest do
       {"button[aria-label='#{t("Edit %{performance}", performance: context.performance)}']", nil}
 
     rename = &{"button[aria-label='#{t("Rename %{name}", name: &1)}']", nil}
+    new_source = {"button", t("New source")}
+    clear_source = {"button[aria-label='#{t("Clear source")}']", nil}
 
     for {path, clicks} <- [
           {"/admin/plays/:id/editors", [{"button", t("Add editor")}]},
@@ -147,6 +159,9 @@ defmodule PlaycodeWeb.AccessibilityTest do
           {"/admin/plays/:id/witnesses", [{"button", t("Add witness")}]},
           {"/admin/plays/:id/performances", [{"button", t("Add performance")}]},
           {"/admin/plays/:id/performances", [edit_performance, {"button", t("Add actor")}]},
+          {"/admin/plays/:id/performances", [{"button", t("Add performance")}, new_source]},
+          {"/admin/plays/:id/performances", [edit_performance, {"button", t("Edit source")}]},
+          {"/admin/plays/:id/performances", [edit_performance, clear_source, new_source]},
           {"/admin/plays/:id/performances", [edit_performance, rename.(context.company)]},
           {"/admin/plays/:id/performances", [edit_performance, rename.("Actriz")]},
           {"/admin/plays/:id/bibliography", [{"button", t("New entry")}]},

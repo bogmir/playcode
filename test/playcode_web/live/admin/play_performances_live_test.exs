@@ -5,6 +5,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
   import Playcode.TestFixtures
 
   alias Playcode.ActivityLog
+  alias Playcode.Bibliography
   alias Playcode.Performances
   alias Playcode.Performances.Actor
 
@@ -634,6 +635,309 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
       html = lv |> form("#rename-form", rename: %{"name" => unique("Otro")}) |> render_submit()
       assert html =~ t("That item no longer exists. The list has been refreshed.")
       refute has_element?(lv, "#rename-panel")
+    end
+  end
+
+  describe "the source" do
+    defp new_performance(lv), do: lv |> element("button", t("Add performance")) |> render_click()
+
+    defp search_source(lv, term),
+      do: lv |> element("#source-search") |> render_change(%{"term" => term})
+
+    defp pick_source(lv, text),
+      do: lv |> element("#source-results button", text) |> render_click()
+
+    # A new source of the form, entered and kept for the performance to write.
+    defp enter_source(lv, title) do
+      lv |> element("button", t("New source")) |> render_click()
+
+      lv
+      |> form("#source-form", entry: %{kind: "catalogue", monogr_title: title})
+      |> render_submit()
+    end
+
+    # The entries with this title, whatever their kind or who cites them.
+    defp titled(title),
+      do: Bibliography.search_entries(title, Ecto.UUID.generate(), 10, kinds: :all)
+
+    @gone t("That item no longer exists. The list has been refreshed.")
+
+    test "a source is found among every entry, catalogues included, and cited with its own pages",
+         %{conn: conn, play: play} do
+      catalogue =
+        catalogue_fixture(%{
+          "monogr_author" => "Wiggins, Martin",
+          "monogr_title" => "British Drama 1533–1642"
+        })
+
+      bibliography_fixture(play, %{
+        "monogr_author" => "Wiggins, Martin",
+        "monogr_title" => "Shakespeare and the Drama of His Time"
+      })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+
+      # The play's own entries too, which the Bibliography tab leaves out of its search.
+      html = search_source(lv, "Wiggins")
+      assert html =~ "British Drama 1533–1642"
+      assert html =~ "Shakespeare and the Drama of His Time"
+
+      pick_source(lv, "British Drama")
+      refute has_element?(lv, "#source-search")
+
+      lv
+      |> form("#performance-form",
+        performance: %{"date_text" => "1610", "source_volume" => "6", "source_pages" => "83"}
+      )
+      |> render_submit()
+
+      assert [%{id: id, source_entry_id: entry_id}] = Performances.list_for_play(play.id)
+      assert entry_id == catalogue.id
+      assert lv |> element("#performance-#{id}") |> render() =~ "[1] vol. 6, p. 83"
+      assert lv |> element("#performance-sources") |> render() =~ "British Drama 1533–1642"
+    end
+
+    test "a new source is entered in the form, and written with the performance",
+         %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      lv |> element("button", t("New source")) |> render_click()
+      assert has_element?(lv, "#source-form option[value=catalogue]")
+
+      lv
+      |> form("#source-form", entry: %{kind: "catalogue", monogr_title: "London Stage Database"})
+      |> render_submit()
+
+      # Chosen, but nothing is written until the performance is.
+      refute has_element?(lv, "#source-form")
+      assert lv |> element("#source") |> render() =~ "London Stage Database"
+      assert titled("London Stage Database") == []
+
+      lv
+      |> form("#performance-form", performance: %{"date_text" => "1700", "source_pages" => "12"})
+      |> render_submit()
+
+      assert [%{kind: "catalogue"} = entry] = titled("London Stage Database")
+      assert [%{source_entry_id: id, source_pages: "12"}] = Performances.list_for_play(play.id)
+      assert id == entry.id
+      assert Bibliography.list_for_play(play.id) == []
+      assert [_] = ActivityLog.list_entries(resource_type: "bibliography_entry", action: "create")
+    end
+
+    # The entry is written with the performance, in its transaction: a form closed, a source
+    # replaced or a save refused after the source was made leaves no entry behind.
+    test "a new source nobody saves leaves no entry: cancelled, replaced or refused",
+         %{conn: conn, play: play} do
+      other = catalogue_fixture(%{"monogr_title" => "Other catalogue"})
+      performance_fixture(play, %{"cast_from_cast_list" => "true"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+
+      new_performance(lv)
+      enter_source(lv, "Cancelled catalogue")
+      lv |> element("#performance-form button", t("Cancel")) |> render_click()
+      assert titled("Cancelled catalogue") == []
+
+      new_performance(lv)
+      enter_source(lv, "Replaced catalogue")
+      lv |> element("button[aria-label='#{t("Clear source")}']") |> render_click()
+      search_source(lv, "Other")
+      pick_source(lv, "Other catalogue")
+      lv |> form("#performance-form", performance: %{"date_text" => "1611"}) |> render_submit()
+      assert titled("Replaced catalogue") == []
+      assert Enum.any?(Performances.list_for_play(play.id), &(&1.source_entry_id == other.id))
+
+      # The database refuses a second cast-list switch, after the entry was made.
+      new_performance(lv)
+      enter_source(lv, "Refused catalogue")
+
+      lv
+      |> form("#performance-form",
+        performance: %{"date_text" => "1612", "cast_from_cast_list" => "true"}
+      )
+      |> render_submit()
+
+      assert render(lv) =~ error("is already set on another performance of this play")
+      assert titled("Refused catalogue") == []
+
+      # Corrected, it saves, the source with it.
+      lv
+      |> form("#performance-form", performance: %{"cast_from_cast_list" => "false"})
+      |> render_submit()
+
+      assert [%{kind: "catalogue"}] = titled("Refused catalogue")
+    end
+
+    test "Edit source corrects the entry for every play, after the warning",
+         %{conn: conn, play: play} do
+      source = catalogue_fixture(%{"monogr_title" => "Old title"})
+      [one, two] = for _ <- 1..2, do: play_fixture()
+
+      for other <- [one, two, play],
+          do: performance_fixture(other, %{"source_entry_id" => source.id})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      search_source(lv, "Old title")
+      pick_source(lv, "Old title")
+      lv |> element("button", t("Edit source")) |> render_click()
+
+      warning = lv |> element("#source-panel [role=alert]") |> render()
+      assert warning =~ one.code
+      assert warning =~ two.code
+      # This play is not "other".
+      refute warning =~ play.code
+
+      lv |> form("#source-form", entry: %{monogr_title: "New title"}) |> render_submit()
+
+      assert %{monogr_title: "New title"} = Bibliography.get_entry(source.id)
+      assert lv |> element("#source") |> render() =~ "New title"
+      assert [_only_the_fixture] = Performances.list_for_play(play.id)
+      assert [_] = ActivityLog.list_entries(resource_type: "bibliography_entry", action: "update")
+
+      {:ok, _lv, html} = live(conn, ~p"/plays/#{two.code}")
+      assert html =~ "New title"
+    end
+
+    test "a source entered and not written yet can be edited again", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      enter_source(lv, "London Stage")
+
+      lv |> element("button", t("Edit source")) |> render_click()
+      assert has_element?(lv, "#entry_monogr_title[value='London Stage']")
+      refute has_element?(lv, "#source-panel [role=alert]")
+
+      # The form follows the kind, as the Bibliography tab's does.
+      refute has_element?(lv, "#entry_siglum")
+      lv |> form("#source-form", entry: %{kind: "modern_edition"}) |> render_change()
+      assert has_element?(lv, "#entry_siglum")
+
+      html =
+        lv
+        |> form("#source-form", entry: %{monogr_title: "", monogr_author: ""})
+        |> render_submit()
+
+      assert html =~ error("needs an author, an editor or a title")
+      assert has_element?(lv, "#source-form")
+
+      lv
+      |> form("#source-form", entry: %{monogr_title: "London Stage Database"})
+      |> render_submit()
+
+      lv |> form("#performance-form", performance: %{"date_text" => "1700"}) |> render_submit()
+
+      assert [%{kind: "modern_edition"}] = titled("London Stage Database")
+      assert titled("London Stage") |> length() == 1
+    end
+
+    test "a source that is gone says so", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+
+      for event <- ~w(pick_source edit_source), id <- [Ecto.UUID.generate(), "not-a-uuid"] do
+        assert render_click(lv, event, %{"entry" => id}) =~ @gone, "#{event} #{id}"
+        refute has_element?(lv, "#source-form")
+      end
+
+      # Deleted under an open panel, or after it was picked.
+      source = catalogue_fixture(%{"monogr_title" => "Doomed catalogue"})
+      search_source(lv, "Doomed")
+      pick_source(lv, "Doomed")
+      lv |> element("button", t("Edit source")) |> render_click()
+      :deleted = Bibliography.delete_if_unused(source.id)
+
+      html = lv |> form("#source-form", entry: %{monogr_title: "Changed"}) |> render_submit()
+      assert html =~ @gone
+      refute has_element?(lv, "#source-form")
+      assert has_element?(lv, "#source-search")
+
+      other = catalogue_fixture(%{"monogr_title" => "Doomed too"})
+      search_source(lv, "Doomed too")
+      pick_source(lv, "Doomed too")
+      :deleted = Bibliography.delete_if_unused(other.id)
+
+      html =
+        lv |> form("#performance-form", performance: %{"date_text" => "1610"}) |> render_submit()
+
+      assert html =~ @gone
+      assert has_element?(lv, "#source-search")
+      assert Performances.list_for_play(play.id) == []
+    end
+
+    test "the volume and pages go with the source", %{conn: conn, play: play} do
+      source = catalogue_fixture()
+
+      performance =
+        performance_fixture(play, %{
+          "source_entry_id" => source.id,
+          "source_volume" => "6",
+          "source_pages" => "83"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      lv |> button("Edit", "1610") |> render_click()
+      assert has_element?(lv, "#performance_source_volume[value='6']")
+
+      lv |> element("button[aria-label='#{t("Clear source")}']") |> render_click()
+      refute has_element?(lv, "#performance_source_volume")
+      lv |> form("#performance-form") |> render_submit()
+
+      assert %{source_entry_id: nil, source_volume: nil, source_pages: nil} =
+               Performances.get_performance(play.id, performance.id)
+
+      # Nothing cites the entry now.
+      assert Bibliography.get_entry(source.id) == nil
+
+      # And a volume sent with no source is not kept.
+      new_performance(lv)
+
+      lv
+      |> form("#performance-form", performance: %{"date_text" => "1620"})
+      |> render_submit(%{"performance" => %{"source_volume" => "5", "source_pages" => "9"}})
+
+      assert [_, %{date_text: "1620", source_volume: nil, source_pages: nil}] =
+               Performances.list_for_play(play.id)
+    end
+
+    # A bibliography entry some play lists is one of the four kinds, or it would drop out of
+    # that play's bibliography.
+    test "an entry a play's bibliography lists cannot become a catalogue", %{
+      conn: conn,
+      play: play
+    } do
+      link = bibliography_fixture(play_fixture(), %{"monogr_title" => "Listed elsewhere"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      search_source(lv, "Listed elsewhere")
+      pick_source(lv, "Listed elsewhere")
+      lv |> element("button", t("Edit source")) |> render_click()
+
+      assert has_element?(lv, "#source-form option[value=criticism]")
+      refute has_element?(lv, "#source-form option[value=catalogue]")
+
+      html =
+        lv
+        |> element("#source-form")
+        |> render_submit(%{"entry" => %{"kind" => "catalogue"}})
+
+      assert html =~ error("is invalid")
+      assert %{kind: "criticism"} = Bibliography.get_entry(link.entry_id)
+    end
+
+    test "an entry no play lists can be turned into a catalogue, and back", %{
+      conn: conn,
+      play: play
+    } do
+      source = catalogue_fixture(%{"monogr_title" => "Loose entry"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      search_source(lv, "Loose entry")
+      pick_source(lv, "Loose entry")
+      lv |> element("button", t("Edit source")) |> render_click()
+
+      lv |> form("#source-form", entry: %{kind: "criticism"}) |> render_submit()
+      assert %{kind: "criticism"} = Bibliography.get_entry(source.id)
     end
   end
 end

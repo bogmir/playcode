@@ -167,7 +167,7 @@ defmodule Playcode.Performances do
   @doc """
   Adds a performance after the play's last. `attrs` carry its `play_id`; `base` is the
   struct to start from, so the FileMaker import can set `filemaker_id`. See
-  `update_performance/2` for a `"company_name"` and a `"cast"`.
+  `update_performance/2` for a `"company_name"`, a `"source_entry"` and a `"cast"`.
   """
   def create_performance(attrs, %Performance{} = base \\ %Performance{}) do
     write(base, attrs, fn attrs ->
@@ -183,6 +183,11 @@ defmodule Playcode.Performances do
   Corrects a performance. A `"company_name"` among `attrs` stands for the company: found by
   name or created (blank, none), in the same transaction as the write, so a refused write
   leaves no company behind. The company it had, if no performance names it now, is deleted.
+
+  A `"source_entry"` among `attrs`, the fields of a new bibliography entry, is written in the
+  same transaction and becomes the performance's source, so a source entered in a form that
+  is never saved leaves no entry behind. The source it had, if nothing cites it now, is
+  deleted (`Playcode.Bibliography.delete_if_unused/1`).
 
   A `"cast"` among `attrs`, the form's rows in order, replaces the cast (`put_cast/2`); without
   one the cast is left as it is. A row names its actor by `"actor_name"`, as
@@ -209,32 +214,44 @@ defmodule Playcode.Performances do
   end
 
   # Runs `write` with the `company_id` for the "company_name" in `attrs`, if there is one, and
-  # then sets the cast, if there is a "cast": one transaction, so a refusal anywhere leaves
-  # nothing behind, a new company or a new actor least of all.
+  # the `source_entry_id` for a "source_entry", and then sets the cast, if there is a "cast":
+  # one transaction, so a refusal anywhere leaves nothing behind, a new company, source entry
+  # or actor least of all.
   defp write(base, attrs, write) do
     Repo.transact(fn ->
-      case put_company(attrs) do
-        {:ok, attrs} ->
-          with {:ok, performance} <- write.(attrs), do: replace_cast(base, attrs, performance)
-
-        {:error, company} ->
-          {:error, refuse(base, attrs, :company_name, Keyword.values(company.errors))}
+      with {:ok, attrs} <- put_company(base, attrs),
+           {:ok, attrs} <- put_source(base, attrs),
+           {:ok, performance} <- write.(attrs) do
+        replace_cast(base, attrs, performance)
       end
     end)
   end
 
-  defp put_company(%{"company_name" => name} = attrs) do
+  defp put_company(base, %{"company_name" => name} = attrs) do
     case Text.squeeze(name) do
       nil ->
         {:ok, Map.put(attrs, "company_id", nil)}
 
       name ->
-        with {:ok, company} <- find_or_create_company(name),
-             do: {:ok, Map.put(attrs, "company_id", company.id)}
+        case find_or_create_company(name) do
+          {:ok, company} -> {:ok, Map.put(attrs, "company_id", company.id)}
+          {:error, company} -> {:error, refuse(base, attrs, :company_name, errors(company))}
+        end
     end
   end
 
-  defp put_company(attrs), do: {:ok, attrs}
+  defp put_company(_base, attrs), do: {:ok, attrs}
+
+  defp put_source(base, %{"source_entry" => entry_attrs} = attrs) when is_map(entry_attrs) do
+    case Bibliography.create_entry(entry_attrs) do
+      {:ok, entry} -> {:ok, Map.put(attrs, "source_entry_id", entry.id)}
+      {:error, entry} -> {:error, refuse(base, attrs, :source_entry_id, errors(entry))}
+    end
+  end
+
+  defp put_source(_base, attrs), do: {:ok, attrs}
+
+  defp errors(changeset), do: Keyword.values(changeset.errors)
 
   defp replace_cast(base, %{"cast" => rows} = attrs, performance) do
     case resolve_cast(rows) do
@@ -247,7 +264,7 @@ defmodule Playcode.Performances do
 
   # The performance's own changeset, refused with `errors` (`{message, opts}`) on `field`, in
   # the order given (`add_error/4` puts the last first): only a rival writer's unique name can
-  # refuse a company, only a row a cast.
+  # refuse a company, only a row a cast, only a source entry the form did not check.
   defp refuse(base, attrs, field, errors) do
     errors
     |> Enum.reverse()

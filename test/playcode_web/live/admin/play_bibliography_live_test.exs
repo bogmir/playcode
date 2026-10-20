@@ -197,4 +197,87 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLiveTest do
 
     assert [_] = Bibliography.list_links(elsewhere.play_id)
   end
+
+  # A catalogue is cited by performances alone (question 12); the shared entry changeset
+  # accepts it for them, so this tab refuses it itself, whatever the browser sends.
+  test "a catalogue is not a kind of this tab: a forged one is refused, new or edited", %{
+    conn: conn,
+    play: play
+  } do
+    link = bibliography_fixture(play, %{"monogr_title" => "Complete Works"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+
+    refute has_element?(view, ~s(option[value="catalogue"]))
+
+    view |> element("#new-entry") |> render_click()
+
+    html =
+      view
+      |> element("#entry-form")
+      |> render_submit(%{"entry" => %{"kind" => "catalogue", "monogr_title" => "Forged"}})
+
+    assert html =~ Gettext.dgettext(PlaycodeWeb.Gettext, "errors", "is invalid")
+    assert [_] = Bibliography.list_links(play.id)
+
+    view |> element("#entry-form button", t("Cancel")) |> render_click()
+    view |> button(link, "Edit") |> render_click()
+
+    view
+    |> element("#entry-form")
+    |> render_submit(%{"entry" => %{"kind" => "catalogue", "monogr_title" => "Forged"}})
+
+    assert %{kind: "criticism", monogr_title: "Complete Works"} =
+             Bibliography.get_entry(link.entry_id)
+  end
+
+  describe "an entry a performance of this play cites" do
+    setup %{play: play} do
+      link = bibliography_fixture(play, %{"monogr_title" => "Performed volume"})
+      performance_fixture(play, %{"source_entry_id" => link.entry_id})
+      %{link: link}
+    end
+
+    test "is not promised a deletion: removing the link keeps it, and says why", %{
+      conn: conn,
+      play: play,
+      link: link
+    } do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+
+      assert view |> button(link, "Remove") |> render() =~
+               t(
+                 "Remove this entry from this play? A performance of this play cites it, so the entry stays."
+               )
+
+      html = view |> button(link, "Remove") |> render_click()
+
+      assert html =~
+               t("Removed from this play. A performance still cites it, so the entry stays.")
+
+      refute html =~ t("Entry deleted: no other play used it.")
+      assert Bibliography.list_links(play.id) == []
+      assert Bibliography.get_entry(link.entry_id)
+    end
+  end
+
+  test "an entry deleted under an open edit says so instead of crashing", %{
+    conn: conn,
+    play: play
+  } do
+    link = bibliography_fixture(play, %{"monogr_title" => "Complete Works"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+    view |> button(link, "Edit") |> render_click()
+
+    # Another curator removes the only link: the entry goes with it.
+    {:ok, :deleted} = Bibliography.unlink(link)
+
+    html =
+      view
+      |> form("#entry-form", entry: %{monogr_title: "The Complete Works"})
+      |> render_submit()
+
+    assert html =~ t("That item no longer exists. The list has been refreshed.")
+    refute has_element?(view, "#entry-editor")
+    assert Bibliography.get_entry(link.entry_id) == nil
+  end
 end

@@ -1,8 +1,8 @@
 defmodule PlaycodeWeb.Admin.EntryFields do
   @moduledoc """
-  The inputs of a bibliography entry, shared by the tabs that edit one: a play's
-  Bibliography tab and, for a performance's source, the Performances tab. Only the markup is
-  shared. The page owns the `<form>`, its events and the entry's changeset.
+  The inputs of a bibliography entry, and the warning that it is shared, for the tabs that
+  edit one: a play's Bibliography tab and, for a performance's source, the Performances tab.
+  Only the markup is shared. The page owns the `<form>`, its events and the entry's changeset.
   """
 
   use PlaycodeWeb, :html
@@ -101,6 +101,27 @@ defmodule PlaycodeWeb.Admin.EntryFields do
           />
         </div>
       </fieldset>
+    </div>
+    """
+  end
+
+  attr :plays, :list,
+    required: true,
+    doc: "the other plays that cite the entry, with their `code`"
+
+  @doc "The warning that an entry is shared: a correction reaches the plays that cite it."
+  def shared_warning(assigns) do
+    ~H"""
+    <div :if={@plays != []} role="alert" class="alert alert-warning rounded-none">
+      <.icon name="hero-users-mini" class="size-5" />
+      <span>
+        {ngettext(
+          "Shared with %{count} other play (%{codes}): changes appear on both.",
+          "Shared with %{count} other plays (%{codes}): changes appear on all of them.",
+          length(@plays),
+          codes: Enum.map_join(@plays, ", ", & &1.code)
+        )}
+      </span>
     </div>
     """
   end
