@@ -193,3 +193,9 @@ msgstr "necesita un apellido o un apodo"
 
 msgid "is already another actor"
 msgstr "ya es otro actor"
+
+msgid "needs an actor"
+msgstr "necesita un actor"
+
+msgid "names no actor that exists: add one with a surname or a nickname"
+msgstr "no nombra a ningún actor que exista: añada uno con apellidos o apodo"

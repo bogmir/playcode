@@ -69,6 +69,16 @@ defmodule Playcode.Performances.Actor do
     end
   end
 
+  @doc """
+  The actor of `actors` whose `display_name/1` is `name` (squeezed), ignoring case, or nil.
+  """
+  def named(actors, name) do
+    with name when is_binary(name) <- Text.squeeze(name) do
+      wanted = String.downcase(name)
+      Enum.find(actors, &(String.downcase(display_name(&1)) == wanted))
+    end
+  end
+
   defp squeeze_names(changeset) do
     Enum.reduce(@names, changeset, fn field, cs ->
       update_change(cs, field, &Text.squeeze/1)

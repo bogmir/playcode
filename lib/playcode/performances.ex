@@ -167,10 +167,10 @@ defmodule Playcode.Performances do
   @doc """
   Adds a performance after the play's last. `attrs` carry its `play_id`; `base` is the
   struct to start from, so the FileMaker import can set `filemaker_id`. See
-  `update_performance/2` for a `"company_name"`.
+  `update_performance/2` for a `"company_name"` and a `"cast"`.
   """
   def create_performance(attrs, %Performance{} = base \\ %Performance{}) do
-    with_company(base, attrs, fn attrs ->
+    write(base, attrs, fn attrs ->
       changeset = Performance.changeset(base, attrs)
 
       changeset
@@ -183,11 +183,20 @@ defmodule Playcode.Performances do
   Corrects a performance. A `"company_name"` among `attrs` stands for the company: found by
   name or created (blank, none), in the same transaction as the write, so a refused write
   leaves no company behind. The company it had, if no performance names it now, is deleted.
-  The `updated` performance keeps the associations it came with: read it again
-  (`get_performance/2`) before showing its company.
+
+  A `"cast"` among `attrs`, the form's rows in order, replaces the cast (`put_cast/2`); without
+  one the cast is left as it is. A row names its actor by `"actor_name"`, as
+  `Actor.display_name/1` writes it, ignoring case; or by `"surname"`, `"forename"`,
+  `"nickname"` and `"sex"`, which find the actor or create one, and win when a name is filled
+  in. A row with nothing in it is dropped; one that names no actor is refused, with its error
+  on `:cast` and its `:row` (the index in `"cast"`). The actors are resolved in the same
+  transaction, so a refused write leaves no new actor behind either.
+
+  The `updated` performance keeps the associations it came with, but for the cast: read it
+  again (`get_performance/2`) before showing its company.
   """
   def update_performance(%Performance{} = performance, attrs) do
-    with_company(performance, attrs, fn attrs ->
+    write(performance, attrs, fn attrs ->
       with {:ok, updated} <- performance |> Performance.changeset(attrs) |> Repo.update() do
         delete_unused(
           companies: [performance.company_id],
@@ -199,12 +208,17 @@ defmodule Playcode.Performances do
     end)
   end
 
-  # Runs `write` with the `company_id` for the "company_name" in `attrs`, if there is one.
-  defp with_company(base, attrs, write) do
+  # Runs `write` with the `company_id` for the "company_name" in `attrs`, if there is one, and
+  # then sets the cast, if there is a "cast": one transaction, so a refusal anywhere leaves
+  # nothing behind, a new company or a new actor least of all.
+  defp write(base, attrs, write) do
     Repo.transact(fn ->
       case put_company(attrs) do
-        {:ok, attrs} -> write.(attrs)
-        {:error, company} -> {:error, company_error(base, attrs, company)}
+        {:ok, attrs} ->
+          with {:ok, performance} <- write.(attrs), do: replace_cast(base, attrs, performance)
+
+        {:error, company} ->
+          {:error, refuse(base, attrs, :company_name, Keyword.values(company.errors))}
       end
     end)
   end
@@ -222,16 +236,80 @@ defmodule Playcode.Performances do
 
   defp put_company(attrs), do: {:ok, attrs}
 
-  # The refused company's errors (only a rival writer's unique name can refuse one), on the
-  # performance's own changeset under the field the form calls it.
-  defp company_error(base, attrs, company) do
-    changeset = Performance.changeset(base, attrs)
+  defp replace_cast(base, %{"cast" => rows} = attrs, performance) do
+    case resolve_cast(rows) do
+      {:ok, rows} -> put_cast(performance, rows)
+      {:error, errors} -> {:error, refuse(base, attrs, :cast, errors)}
+    end
+  end
 
-    company.errors
-    |> Enum.reduce(changeset, fn {_field, {message, opts}}, changeset ->
-      add_error(changeset, :company_name, message, opts)
+  defp replace_cast(_base, _attrs, performance), do: {:ok, performance}
+
+  # The performance's own changeset, refused with `errors` (`{message, opts}`) on `field`, in
+  # the order given (`add_error/4` puts the last first): only a rival writer's unique name can
+  # refuse a company, only a row a cast.
+  defp refuse(base, attrs, field, errors) do
+    errors
+    |> Enum.reverse()
+    |> Enum.reduce(Performance.changeset(base, attrs), fn {message, opts}, changeset ->
+      add_error(changeset, field, message, opts)
     end)
     |> Map.put(:action, :validate)
+  end
+
+  # The cast rows with something in them, as the actors they name, or every error found,
+  # each with the `:row` it was in. New actors are created here, one by one: the caller's
+  # transaction takes them back when a row is refused.
+  defp resolve_cast(rows) do
+    actors = list_actors()
+
+    resolved =
+      for {row, index} <- Enum.with_index(rows), not blank_row?(row) do
+        case cast_actor(row, actors) do
+          {:ok, actor} ->
+            {:ok, %{"actor_id" => actor.id, "role" => row["role"]}}
+
+          {:error, errors} ->
+            {:error, for({message, opts} <- errors, do: {message, [row: index] ++ opts})}
+        end
+      end
+
+    case Enum.split_with(resolved, &match?({:ok, _}, &1)) do
+      {rows, []} -> {:ok, Enum.map(rows, &elem(&1, 1))}
+      {_, errors} -> {:error, Enum.flat_map(errors, &elem(&1, 1))}
+    end
+  end
+
+  @cast_row_fields ~w(actor_name surname forename nickname sex role)
+
+  defp blank_row?(row), do: Enum.all?(@cast_row_fields, &(Text.squeeze(row[&1]) == nil))
+
+  @doc """
+  The actor of `actors` that a cast row picks by its `"actor_name"` (see `update_performance/2`),
+  or nil: the row gives the names of one to find or create instead, or names no one.
+  """
+  def picked_actor(row, actors) do
+    if new_actor?(row), do: nil, else: Actor.named(actors, row["actor_name"])
+  end
+
+  defp new_actor?(row), do: Enum.any?(~w(surname forename nickname), &Text.squeeze(row[&1]))
+
+  defp cast_actor(row, actors) do
+    cond do
+      actor = picked_actor(row, actors) ->
+        {:ok, actor}
+
+      new_actor?(row) ->
+        with {:error, changeset} <-
+               find_or_create_actor(Map.take(row, ~w(surname forename nickname sex))),
+             do: {:error, Keyword.values(changeset.errors)}
+
+      Text.squeeze(row["actor_name"]) ->
+        {:error, [{"names no actor that exists: add one with a surname or a nickname", []}]}
+
+      true ->
+        {:error, [{"needs an actor", []}]}
+    end
   end
 
   def delete_performance(%Performance{} = performance) do
@@ -268,6 +346,12 @@ defmodule Playcode.Performances do
       end
     end)
   end
+
+  @doc "A changeset for a form on a company: see `update_company/2`."
+  def change_company(%Company{} = company, attrs \\ %{}), do: Company.changeset(company, attrs)
+
+  @doc "A changeset for a form on an actor: see `update_actor/2`."
+  def change_actor(%Actor{} = actor, attrs \\ %{}), do: Actor.changeset(actor, attrs)
 
   @doc "Every company, by name."
   def list_companies, do: Repo.all(from c in Company, order_by: c.name)

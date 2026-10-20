@@ -11,7 +11,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
 
   alias Playcode.Catalogue
   alias Playcode.Performances
-  alias Playcode.Performances.Performance
+  alias Playcode.Performances.{Actor, Company, Performance}
   alias Playcode.PlayContent
   alias Playcode.Places
   alias PlaycodeWeb.Admin.LiveHelpers
@@ -20,6 +20,10 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
   # origin is "manual" or what an import set, never from the browser: see form_params/2.
   @editable ~w(date_text year_from year_to venue venue_type company_name historical_state_id
                note cast_from_cast_list)
+
+  # What a row of the cast holds: an existing actor by name, or the names of a new one, and
+  # the role. See Playcode.Performances.update_performance/2.
+  @cast_fields ~w(actor_name surname forename nickname sex role)
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -30,7 +34,8 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
      |> assign(:page_title, "#{play.title} — #{gettext("Performances")}")
      |> assign(:play, play)
      |> assign(:play_context, %{play: play, active_tab: :performances})
-     |> assign(editing: nil, form: nil)
+     |> assign(editing: nil, form: nil, cast: [], companies: [], actors: [])
+     |> assign(renaming: nil, rename_form: nil, usage: nil)
      |> assign(picked: nil, term: "", suggestions: [])
      |> reload()}
   end
@@ -38,15 +43,19 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
   @impl true
   def handle_event("new", _, socket) do
     {:noreply,
-     edit(socket, :new, %Performance{play_id: socket.assigns.play.id, company: nil, place: nil})}
+     edit(socket, :new, %Performance{
+       play_id: socket.assigns.play.id,
+       company: nil,
+       place: nil,
+       cast: []
+     })}
   end
 
   def handle_event("edit", %{"id" => id}, socket) do
     with_performance(socket, id, &edit(socket, &1, &1))
   end
 
-  def handle_event("cancel", _, socket),
-    do: {:noreply, assign(socket, editing: nil, form: nil)}
+  def handle_event("cancel", _, socket), do: {:noreply, close_form(socket)}
 
   def handle_event("validate", %{"performance" => params}, socket) do
     changeset =
@@ -55,15 +64,45 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
       |> Performances.change_performance(form_params(params, socket.assigns.picked))
       |> Map.put(:action, :validate)
 
-    {:noreply, show_form(socket, changeset)}
+    {:noreply, socket |> assign(:cast, cast_params(params)) |> show_form(changeset)}
   end
 
   def handle_event("save", %{"performance" => params}, socket) do
-    params = form_params(params, socket.assigns.picked)
+    cast = cast_params(params)
+    params = params |> form_params(socket.assigns.picked) |> Map.put("cast", cast)
 
     case known_state(params) do
-      :ok -> save(socket, params)
+      :ok -> save(assign(socket, :cast, cast), params)
       :gone -> {:noreply, socket |> reload() |> LiveHelpers.put_gone_flash()}
+    end
+  end
+
+  def handle_event("add_cast", _, socket), do: {:noreply, update(socket, :cast, &(&1 ++ [%{}]))}
+
+  def handle_event("remove_cast", %{"index" => index}, socket) do
+    case Integer.parse(index) do
+      {index, ""} when index >= 0 ->
+        {:noreply, update(socket, :cast, &List.delete_at(&1, index))}
+
+      _ ->
+        {:noreply, socket}
+    end
+  end
+
+  def handle_event("rename_company", %{"id" => id}, socket),
+    do: rename(socket, Performances.get_company(id))
+
+  def handle_event("rename_actor", %{"id" => id}, socket),
+    do: rename(socket, Performances.get_actor(id))
+
+  def handle_event("cancel_rename", _, socket), do: {:noreply, close_rename(socket)}
+
+  # The record is read again: it may be gone, or renamed by someone else, since the panel
+  # opened.
+  def handle_event("save_rename", %{"rename" => params}, socket) do
+    case reread(socket.assigns.renaming) do
+      nil -> {:noreply, socket |> close_rename() |> reload() |> LiveHelpers.put_gone_flash()}
+      record -> save_rename(socket, record, params)
     end
   end
 
@@ -111,8 +150,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
             do: gettext("Performance added."),
             else: gettext("Performance updated.")
 
-        {:noreply,
-         socket |> reload() |> assign(editing: nil, form: nil) |> put_flash(:info, message)}
+        {:noreply, socket |> reload() |> close_form() |> put_flash(:info, message)}
 
       {:error, changeset} ->
         {:noreply, show_form(socket, changeset)}
@@ -127,6 +165,10 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     assign(socket, :form, to_form(changeset))
   end
 
+  defp close_form(socket) do
+    socket |> assign(editing: nil, form: nil, cast: []) |> close_rename()
+  end
+
   # The form's own fields. A performance with no place has no historical state either.
   defp form_params(params, nil) do
     params |> Map.take(@editable) |> Map.merge(%{"place_id" => nil, "historical_state_id" => nil})
@@ -134,6 +176,136 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
 
   defp form_params(params, place),
     do: params |> Map.take(@editable) |> Map.put("place_id", place.id)
+
+  # The rows of the cast in the form, in the order of their indexes: the browser sends them
+  # as a map keyed "0", "1", ... "10", and "10" is before "2" as text.
+  defp cast_params(%{"cast" => rows}) when is_map(rows) do
+    rows
+    |> Enum.sort_by(fn {index, _row} -> row_number(index) end)
+    |> Enum.flat_map(fn
+      {_index, row} when is_map(row) ->
+        [row |> Map.take(@cast_fields) |> Map.filter(fn {_field, value} -> is_binary(value) end)]
+
+      _ ->
+        []
+    end)
+  end
+
+  defp cast_params(_params), do: []
+
+  defp row_number(index) do
+    case Integer.parse(index) do
+      {number, _} -> number
+      :error -> 0
+    end
+  end
+
+  # The cast as saved, as the form's rows: the actor picked by name.
+  defp saved_cast(performance) do
+    for member <- performance.cast,
+        do: %{"actor_name" => Actor.display_name(member.actor), "role" => member.role}
+  end
+
+  # Each row with its number and the actor it picks, if any: the one "Rename" is for.
+  defp cast_view(cast, actors) do
+    for {row, index} <- Enum.with_index(cast),
+        do: {index, row, Performances.picked_actor(row, actors)}
+  end
+
+  # What went wrong in each row of the cast, by its number.
+  defp cast_errors(%{source: changeset}) do
+    for({:cast, error} <- changeset.errors, do: {error_row(error), translate_error(error)})
+    |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+  end
+
+  defp error_row({_message, opts}), do: opts[:row]
+
+  # Rename, for every performance that names the company or the actor: a panel of its own,
+  # because the performance's form has no room for a form inside it.
+  defp rename(socket, nil),
+    do: {:noreply, socket |> close_rename() |> reload() |> LiveHelpers.put_gone_flash()}
+
+  defp rename(%{assigns: %{form: nil}} = socket, _record), do: {:noreply, socket}
+
+  defp rename(socket, record) do
+    {:noreply,
+     assign(socket,
+       renaming: record,
+       rename_form: rename_form(record),
+       usage: Performances.usage(record)
+     )}
+  end
+
+  defp save_rename(socket, record, params) do
+    case update_named(record, params) do
+      {:ok, renamed} ->
+        LiveHelpers.log_activity(socket, "update", resource_type(renamed), renamed.id, %{
+          from: name(record),
+          to: name(renamed)
+        })
+
+        {:noreply,
+         socket
+         |> follow_rename(record, renamed)
+         |> close_rename()
+         |> assign_names()
+         |> reload()
+         |> put_flash(:info, gettext("Renamed for every performance."))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, :rename_form, to_form(changeset, as: :rename))}
+    end
+  end
+
+  defp close_rename(socket), do: assign(socket, renaming: nil, rename_form: nil, usage: nil)
+
+  defp rename_form(%Company{} = company),
+    do: to_form(Performances.change_company(company), as: :rename)
+
+  defp rename_form(%Actor{} = actor), do: to_form(Performances.change_actor(actor), as: :rename)
+
+  defp reread(%Company{id: id}), do: Performances.get_company(id)
+  defp reread(%Actor{id: id}), do: Performances.get_actor(id)
+  defp reread(nil), do: nil
+
+  defp update_named(%Company{} = company, params),
+    do: Performances.update_company(company, Map.take(params, ["name"]))
+
+  defp update_named(%Actor{} = actor, params),
+    do: Performances.update_actor(actor, Map.take(params, ~w(surname forename nickname sex)))
+
+  defp resource_type(%Company{}), do: "performance_company"
+  defp resource_type(%Actor{}), do: "performance_actor"
+
+  defp name(%Company{name: name}), do: name
+  defp name(%Actor{} = actor), do: Actor.display_name(actor)
+
+  # The open form names the record by its old name; it must name it by the new, else saving
+  # it would make a company of the old name, or leave a row naming no one.
+  defp follow_rename(socket, %Company{} = old, %Company{} = renamed) do
+    %{params: params, source: %{action: action}} = socket.assigns.form
+
+    if Company.named([old], params["company_name"]) do
+      changeset =
+        socket
+        |> editing_base()
+        |> Performances.change_performance(Map.put(params, "company_name", renamed.name))
+
+      show_form(socket, %{changeset | action: action})
+    else
+      socket
+    end
+  end
+
+  defp follow_rename(socket, %Actor{} = old, %Actor{} = renamed) do
+    update(socket, :cast, fn rows ->
+      for row <- rows do
+        if Performances.picked_actor(row, [old]),
+          do: Map.put(row, "actor_name", name(renamed)),
+          else: row
+      end
+    end)
+  end
 
   # A blank state clears it; any other must still be in the gazetteer.
   defp known_state(%{"historical_state_id" => state_id}) when state_id not in ["", nil] do
@@ -143,17 +315,25 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
   defp known_state(_params), do: :ok
 
   defp edit(socket, editing, performance) do
-    assign(socket,
+    socket
+    |> assign(
       editing: editing,
       form: to_form(Performances.change_performance(performance, company_params(performance))),
+      cast: saved_cast(performance),
       picked: performance.place,
       term: "",
       suggestions: [],
-      companies: Performances.list_companies(),
       states:
         Places.historical_states(socket.assigns.gazetteer, [performance.historical_state_id])
     )
+    |> close_rename()
+    |> assign_names()
   end
+
+  # What the form's datalists offer.
+  defp assign_names(socket),
+    do:
+      assign(socket, companies: Performances.list_companies(), actors: Performances.list_actors())
 
   defp company_params(performance),
     do: %{"company_name" => performance.company && performance.company.name}
@@ -211,8 +391,29 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     })
   end
 
+  # The company the form names, if it exists: the one "Rename" is for.
+  defp named_company(%{form: nil}), do: nil
+
+  defp named_company(%{form: form, companies: companies}),
+    do: Company.named(companies, form[:company_name].value)
+
+  defp usage_text(%{performances: performances, plays: plays}) do
+    gettext("%{performances} in %{plays}",
+      performances: ngettext("1 performance", "%{count} performances", performances),
+      plays: ngettext("1 play", "%{count} plays", plays)
+    )
+  end
+
+  defp sex_options, do: [{gettext("Man"), "man"}, {gettext("Woman"), "woman"}]
+
   @impl true
   def render(assigns) do
+    assigns =
+      assign(assigns,
+        company: named_company(assigns),
+        cast_errors: assigns.form && cast_errors(assigns.form)
+      )
+
     ~H"""
     <div class="mx-auto max-w-4xl px-4 py-8">
       <div class="mb-6 flex items-center justify-between">
@@ -254,6 +455,24 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
             {gettext("No places found")}
           </p>
         </div>
+        <%!-- Nor can a rename's form sit inside the performance's. --%>
+        <div
+          :if={@renaming}
+          id="rename-panel"
+          class="mb-4 rounded-box border border-base-300 bg-base-200/50 p-4"
+        >
+          <h3 class="text-sm font-semibold">{gettext("Rename %{name}", name: name(@renaming))}</h3>
+          <p class="mb-3 text-xs text-base-content/70">{usage_text(@usage)}</p>
+          <.form for={@rename_form} id="rename-form" phx-submit="save_rename">
+            <.rename_fields record={@renaming} form={@rename_form} />
+            <div class="mt-2 flex justify-end gap-2">
+              <button type="button" phx-click="cancel_rename" class="btn btn-ghost btn-sm">
+                {gettext("Cancel")}
+              </button>
+              <button type="submit" class="btn btn-primary btn-sm">{gettext("Save")}</button>
+            </div>
+          </.form>
+        </div>
         <.form for={@form} id="performance-form" phx-change="validate" phx-submit="save">
           <.input
             :if={@picked}
@@ -277,13 +496,24 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
               prompt={gettext("Not stated")}
               options={venue_type_options()}
             />
-            <.input
-              field={@form[:company_name]}
-              type="text"
-              label={gettext("Company")}
-              list="performance-companies"
-              autocomplete="off"
-            />
+            <div>
+              <div class="flex items-end gap-2">
+                <div class="grow">
+                  <.input
+                    field={@form[:company_name]}
+                    type="text"
+                    label={gettext("Company")}
+                    list="performance-companies"
+                    autocomplete="off"
+                    aria-describedby="company-help"
+                  />
+                </div>
+                <.rename_button :if={@company} event="rename_company" record={@company} />
+              </div>
+              <p id="company-help" class="-mt-1 mb-2 text-xs text-base-content/70">
+                {gettext("Rename corrects the company for every performance that names it.")}
+              </p>
+            </div>
           </div>
           <datalist id="performance-companies">
             <option :for={company <- @companies} value={company.name} />
@@ -294,6 +524,63 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
             type="checkbox"
             label={gettext("Cast as in the cast list")}
           />
+          <div class="mt-2">
+            <div class="flex items-center justify-between">
+              <h3 class="text-sm font-semibold">{gettext("Cast")}</h3>
+              <button type="button" phx-click="add_cast" class="btn btn-ghost btn-xs gap-1">
+                <.icon name="hero-plus-mini" class="size-3.5" /> {gettext("Add actor")}
+              </button>
+            </div>
+            <datalist id="performance-actors">
+              <option :for={actor <- @actors} value={Actor.display_name(actor)} />
+            </datalist>
+            <fieldset
+              :for={{index, row, actor} <- cast_view(@cast, @actors)}
+              id={"cast-row-#{index}"}
+              class="mt-3 rounded-box border border-base-300 p-3"
+            >
+              <legend class="sr-only">{gettext("Cast row %{number}", number: index + 1)}</legend>
+              <div class="flex items-end gap-2">
+                <div class="grid grow grid-cols-1 gap-x-3 md:grid-cols-2">
+                  <.cast_input
+                    index={index}
+                    field="actor_name"
+                    row={row}
+                    label={gettext("Actor")}
+                    list="performance-actors"
+                    autocomplete="off"
+                  />
+                  <.cast_input index={index} field="role" row={row} label={gettext("Role")} />
+                </div>
+                <.rename_button :if={actor} event="rename_actor" record={actor} />
+                <button
+                  type="button"
+                  phx-click="remove_cast"
+                  phx-value-index={index}
+                  class="btn btn-ghost btn-xs mb-2 text-error"
+                  aria-label={gettext("Remove cast row %{number}", number: index + 1)}
+                >
+                  <.icon name="hero-trash-micro" class="size-3.5" />
+                </button>
+              </div>
+              <p class="text-xs text-base-content/70">{gettext("Or a new actor")}</p>
+              <div class="grid grid-cols-2 gap-x-3 md:grid-cols-4">
+                <.cast_input index={index} field="surname" row={row} label={gettext("Surname")} />
+                <.cast_input index={index} field="forename" row={row} label={gettext("Forename")} />
+                <.cast_input index={index} field="nickname" row={row} label={gettext("Nickname")} />
+                <.input
+                  type="select"
+                  id={"cast-#{index}-sex"}
+                  name={"performance[cast][#{index}][sex]"}
+                  value={row["sex"]}
+                  label={gettext("Sex")}
+                  prompt={gettext("Not stated")}
+                  options={sex_options()}
+                />
+              </div>
+              <.error :for={message <- Map.get(@cast_errors, index, [])}>{message}</.error>
+            </fieldset>
+          </div>
           <div class="mt-4 flex justify-end gap-2">
             <button type="button" phx-click="cancel" class="btn btn-ghost btn-sm">
               {gettext("Cancel")}
@@ -345,6 +632,68 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
           </div>
         </li>
       </ul>
+    </div>
+    """
+  end
+
+  attr :index, :integer, required: true
+  attr :field, :string, required: true
+  attr :row, :map, required: true
+  attr :label, :string, required: true
+  attr :rest, :global, include: ~w(list autocomplete)
+
+  # A text field of a cast row, `performance[cast][index][field]`.
+  defp cast_input(assigns) do
+    ~H"""
+    <.input
+      id={"cast-#{@index}-#{String.replace(@field, "_", "-")}"}
+      name={"performance[cast][#{@index}][#{@field}]"}
+      value={@row[@field]}
+      label={@label}
+      {@rest}
+    />
+    """
+  end
+
+  attr :event, :string, required: true
+  attr :record, :any, required: true
+
+  defp rename_button(assigns) do
+    ~H"""
+    <button
+      type="button"
+      phx-click={@event}
+      phx-value-id={@record.id}
+      class="btn btn-ghost btn-xs mb-2 gap-1"
+      aria-label={gettext("Rename %{name}", name: name(@record))}
+    >
+      <.icon name="hero-pencil-micro" class="size-3.5" /> {gettext("Rename")}
+    </button>
+    """
+  end
+
+  attr :record, :any, required: true
+  attr :form, :any, required: true
+
+  defp rename_fields(%{record: %Company{}} = assigns) do
+    ~H"""
+    <.input field={@form[:name]} type="text" label={gettext("Company")} />
+    """
+  end
+
+  defp rename_fields(%{record: %Actor{}} = assigns) do
+    ~H"""
+    <div class="grid grid-cols-2 gap-x-3 md:grid-cols-4">
+      <.input field={@form[:surname]} type="text" label={gettext("Surname")} />
+      <.input field={@form[:forename]} type="text" label={gettext("Forename")} />
+      <.input field={@form[:nickname]} type="text" label={gettext("Nickname")} />
+      <.input
+        field={@form[:sex]}
+        type="select"
+        label={gettext("Sex")}
+        prompt={gettext("Not stated")}
+        options={sex_options()}
+      />
     </div>
     """
   end

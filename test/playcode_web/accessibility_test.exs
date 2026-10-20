@@ -70,7 +70,21 @@ defmodule PlaycodeWeb.AccessibilityTest do
         body: "Por la rima."
       })
 
-    %{conn: log_in_user(conn, admin_fixture()), play: play, structure: structure}
+    # A performance with a company and a cast, for the play's pages and the tab's panels.
+    company = "Compañía #{System.unique_integer([:positive])}"
+    performance = performance_fixture(play, %{"venue" => "Globe", "company_name" => company})
+    {:ok, actor} = Playcode.Performances.find_or_create_actor(%{"surname" => "Actriz"})
+
+    {:ok, _} =
+      Playcode.Performances.put_cast(performance, [%{"actor_id" => actor.id, "role" => "Papel"}])
+
+    %{
+      conn: log_in_user(conn, admin_fixture()),
+      play: play,
+      structure: structure,
+      performance: "1610, Globe, #{company}",
+      company: company
+    }
   end
 
   @pages ~w(
@@ -116,17 +130,25 @@ defmodule PlaycodeWeb.AccessibilityTest do
 
   # Each case is a page and the clicks that open a tab, a selection or a modal on it,
   # made on what the user reads.
-  test "what a click opens has no barrier", %{conn: conn, play: play, structure: s} do
+  test "what a click opens has no barrier", %{conn: conn, play: play, structure: s} = context do
     content = "/admin/plays/:id/content"
     tab = &{"nav[aria-label='Editor tabs'] button", &1}
     scene = [tab.("structure"), {"button", "SCENE I"}]
     edit = &{"#element-#{&1.id} button[aria-label='#{t("Edit")}']", nil}
+
+    edit_performance =
+      {"button[aria-label='#{t("Edit %{performance}", performance: context.performance)}']", nil}
+
+    rename = &{"button[aria-label='#{t("Rename %{name}", name: &1)}']", nil}
 
     for {path, clicks} <- [
           {"/admin/plays/:id/editors", [{"button", t("Add editor")}]},
           {"/admin/plays/:id/sources", [{"button", t("Add source")}]},
           {"/admin/plays/:id/witnesses", [{"button", t("Add witness")}]},
           {"/admin/plays/:id/performances", [{"button", t("Add performance")}]},
+          {"/admin/plays/:id/performances", [edit_performance, {"button", t("Add actor")}]},
+          {"/admin/plays/:id/performances", [edit_performance, rename.(context.company)]},
+          {"/admin/plays/:id/performances", [edit_performance, rename.("Actriz")]},
           {"/admin/plays/:id/bibliography", [{"button", t("New entry")}]},
           {"/admin/plays/:id/bibliography", [{"button", t("Add existing")}]},
           {"/admin/plays/:id/places", [{"button", t("New place")}]},

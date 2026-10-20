@@ -18,6 +18,14 @@ defmodule Playcode.Performances.Company do
     timestamps(type: :utc_datetime)
   end
 
+  @doc "The company of `companies` called `name` (squeezed), ignoring case, or nil."
+  def named(companies, name) do
+    with name when is_binary(name) <- Text.squeeze(name) do
+      wanted = String.downcase(name)
+      Enum.find(companies, &(String.downcase(&1.name) == wanted))
+    end
+  end
+
   def changeset(company, attrs) do
     company
     |> cast(attrs, [:name])

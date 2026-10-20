@@ -513,6 +513,72 @@ defmodule Playcode.PerformancesTest do
     end
   end
 
+  describe "a performance written with its cast" do
+    test "a cast of rows replaces the cast; no cast leaves it as it is" do
+      betterton = actor!(%{"surname" => "Betterton", "forename" => "Thomas"})
+      play = play_fixture()
+      performance = performance_fixture(play, %{"company_name" => unique("Company")})
+
+      rows = [
+        %{"actor_name" => " thomas  BETTERTON ", "role" => "Mirabell"},
+        %{
+          "actor_name" => "",
+          "surname" => "Bracegirdle",
+          "sex" => "woman",
+          "role" => "Millamant"
+        },
+        %{"actor_name" => "", "role" => ""},
+        # Names win over a name: the row is a new actor, not Betterton.
+        %{"actor_name" => "Thomas Betterton", "surname" => "Mohun", "role" => "Fainall"}
+      ]
+
+      assert {:ok, %{cast: cast}} =
+               Performances.update_performance(performance, %{"cast" => rows})
+
+      assert Enum.map(cast, & &1.role) == ["Mirabell", "Millamant", "Fainall"]
+      assert hd(cast).actor_id == betterton.id
+      assert [%{sex: "woman"}, %{surname: "Mohun"}] = Enum.map(tl(cast), & &1.actor)
+
+      assert {:ok, _} = Performances.update_performance(performance, %{"venue" => "Globe"})
+      assert [%{venue: "Globe", cast: [_, _, _]}] = Performances.list_for_play(play.id)
+
+      assert {:ok, %{cast: []}} = Performances.update_performance(performance, %{"cast" => []})
+      assert Performances.list_actors() == []
+    end
+
+    test "every row that names no actor is refused with its number, and nothing is written" do
+      play = play_fixture()
+      company = unique("Company")
+
+      rows = [
+        %{"surname" => "Nuevo"},
+        %{"role" => "Sin actor"},
+        %{},
+        %{"actor_name" => "Nadie"},
+        %{"forename" => "Solo"}
+      ]
+
+      assert {:error, changeset} =
+               Performances.create_performance(%{
+                 "play_id" => play.id,
+                 "company_name" => company,
+                 "date_text" => "1700",
+                 "cast" => rows
+               })
+
+      assert [
+               {1, "needs an actor"},
+               {3, "names no actor that exists: add one with a surname or a nickname"},
+               {4, "needs a surname or a nickname"}
+             ] ==
+               for({:cast, {message, opts}} <- changeset.errors, do: {opts[:row], message})
+
+      assert Performances.list_for_play(play.id) == []
+      assert Performances.list_actors() == []
+      refute company in company_names()
+    end
+  end
+
   describe "a company or actor no performance names" do
     test "is deleted with the last performance that names it, and kept while another does" do
       company = company!("Company")

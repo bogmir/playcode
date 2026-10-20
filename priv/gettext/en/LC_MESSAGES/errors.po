@@ -205,3 +205,9 @@ msgstr ""
 
 msgid "is already another actor"
 msgstr ""
+
+msgid "needs an actor"
+msgstr ""
+
+msgid "names no actor that exists: add one with a surname or a nickname"
+msgstr ""
