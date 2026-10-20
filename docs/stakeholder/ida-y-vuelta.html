@@ -110,6 +110,21 @@
   }
   .lede { font-size: 1.125rem; max-width: 62ch; }
   .meta { font-size: 0.875rem; color: var(--muted); }
+  .changes { font-size: 0.9375rem; }
+  .changes summary {
+    display: list-item;
+    width: fit-content;
+    cursor: pointer;
+    color: var(--accent);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 0.35rem 0.8rem;
+    font-size: 0.875rem;
+    list-style-position: inside;
+  }
+  .changes summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .changes > ul { margin: 1rem 0 0; padding-left: 0; list-style: none; display: grid; gap: 0.9rem; }
+  .changes ul ul { margin: 0.3rem 0 0; padding-left: 1.2rem; display: grid; gap: 0.3rem; }
 
   section { display: grid; gap: 1.1rem; }
   section > h2 {
@@ -284,16 +299,69 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October, and the parts the TEI re-import brought in recounted after it on 15 October. Updated on 13 and 14 October: the cast list’s heading, a dating given only in words and the historical time now come back, and the published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time. The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team. The exported file carries the CDU number again; the witnesses come back from it whole, with their line breaks; a translation’s file names its original, so the two are linked again whichever is imported first; the bibliography comes back from the file, with each play’s own place in an edition; a digital editor comes back as one, not as an editor; two italic passages side by side come back as two; the kind of a stage direction can be corrected in Playcode; the notes on the edition are read from the file and written back; where the digital text came from is read, written back and printed; the actors of the original cast are read and written back; and the scene of the action is read, written back and printed after the cast list; and italics outside the text, in the sources, dedications, introductions and cast lists, are printed and written back as italics, where until now readers saw “&lt;&lt;El prado de Valencia&gt;&gt;”. Updated on 15 October: every text printed around the play, a paratext (a dedication, an introduction, a licence to print, an epilogue), keeps the kind its file gives it, where 285 had become a plain “note”, and its line breaks; those after the text are read, written back and printed after it; editors can put them in order. The files carry no FileMaker or Playcode record numbers. Updated on 16 October: the HTML typed into the text is gone from three plays, <i>The Rover</i>, <i>Mariamne</i> and <i>La tragedia española</i>; the line breaks of prose, letters and songs and the numbers of prose's printed lines are kept, shown and written back (questions 9 and 10); and the variant readings of six plays are read, written back and shown as asterisks that open the readings, each witness named, with a switch to hide them and a setting to hide a whole play, which <i>Hamlet</i> has until its editor has finished (questions 1 to 4). Updated on 17 October: Hamlet’s Folio passages are read, written back and shown behind a switch, off until a reader turns it on (questions 5, 36 and 38). Updated on 18 October: an adaptation, a <i>refundición</i> or a version is written to the file as such, and the file’s revision history, who revised it and when, is read and written back. Also on 18 October: an automated check now builds two plays with every part filled in, an ordinary one and one with the rarer encodings, exports them, imports the files into an empty Playcode and compares them part by part, with every change made to Playcode. It found four losses. Three are fixed: text nobody speaks inside a scene, a researcher’s credit, and a space before the punctuation after an italic passage. The fourth, the order of the credits, is in the table; since 19 October an order set by hand comes back within the title’s credits and within the edition’s. Also on 19 October: the places of the action were imported from FileMaker (146 links on 103 plays), each with the historical state its place belonged to at the time, such as the Kingdom of Denmark for Elsinore in <i>Hamlet</i>; the file writes that state and reads it back, and the play page and the published site print it. Updated on 20 October: a play’s historical performances, imported from FileMaker (239 on 60 plays), are edited in Playcode, written to the file and read back, and printed on the play page and the published site.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October, and the parts the TEI re-import brought in recounted after it on 15 October. Last updated 20 October 2026.</p>
+    <details class="changes">
+      <summary>What has changed since 11 October</summary>
+      <ul>
+        <li><strong>20 October</strong>
+          <ul>
+            <li>A play’s historical performances, imported from FileMaker (239 on 60 plays), are edited in Playcode, written to the file and read back, and printed on the play page and the published site.</li>
+          </ul>
+        </li>
+        <li><strong>19 October</strong>
+          <ul>
+            <li>The places of the action were imported from FileMaker (146 links on 103 plays), each with the historical state its place belonged to at the time, such as the Kingdom of Denmark for Elsinore in <i>Hamlet</i>; the file writes that state and reads it back, and the play page and the published site print it.</li>
+            <li>An order of the credits set by hand comes back within the title’s credits and within the edition’s.</li>
+          </ul>
+        </li>
+        <li><strong>18 October</strong>
+          <ul>
+            <li>An adaptation, a <i>refundición</i> or a version is written to the file as such.</li>
+            <li>The file’s revision history, who revised it and when, is read and written back.</li>
+            <li>An automated check builds two plays with every part filled in, an ordinary one and one with the rarer encodings, exports them, imports the files into an empty Playcode and compares them part by part, with every change made to Playcode. It found four losses. Three are fixed: text nobody speaks inside a scene, a researcher’s credit, and a space before the punctuation after an italic passage. The fourth, the order of the credits, is in the table.</li>
+          </ul>
+        </li>
+        <li><strong>17 October</strong>
+          <ul>
+            <li>Hamlet’s Folio passages are read, written back and shown behind a switch, off until a reader turns it on (questions 5, 36 and 38).</li>
+          </ul>
+        </li>
+        <li><strong>16 October</strong>
+          <ul>
+            <li>The HTML typed into the text is gone from three plays, <i>The Rover</i>, <i>Mariamne</i> and <i>La tragedia española</i>.</li>
+            <li>The line breaks of prose, letters and songs and the numbers of prose’s printed lines are kept, shown and written back (questions 9 and 10).</li>
+            <li>The variant readings of six plays are read, written back and shown as asterisks that open the readings, each witness named, with a switch to hide them and a setting to hide a whole play, which <i>Hamlet</i> has until its editor has finished (questions 1 to 4).</li>
+          </ul>
+        </li>
+        <li><strong>15 October</strong>
+          <ul>
+            <li>Every text printed around the play, a paratext (a dedication, an introduction, a licence to print, an epilogue), keeps the kind its file gives it, where 285 had become a plain “note”, and its line breaks.</li>
+            <li>The paratexts after the text are read, written back and printed after it; editors can put them in order.</li>
+            <li>The files carry no FileMaker or Playcode record numbers.</li>
+          </ul>
+        </li>
+        <li><strong>13 and 14 October</strong>
+          <ul>
+            <li>The cast list’s heading, a dating given only in words and the historical time come back.</li>
+            <li>The published site prints the cast list’s own heading and, with the downloads, the closing formulas. The downloads also print the date of composition and the historical time.</li>
+            <li>The files turned out to label each play verse, prose or both already; Playcode ignores the label, so where it belongs is now a question for the team.</li>
+            <li>The exported file carries the CDU number again.</li>
+            <li>The witnesses come back from the file whole, with their line breaks.</li>
+            <li>A translation’s file names its original, so the two are linked again whichever is imported first.</li>
+            <li>The bibliography comes back from the file, with each play’s own place in an edition.</li>
+            <li>A digital editor comes back as one, not as an editor.</li>
+            <li>Two italic passages side by side come back as two.</li>
+            <li>The kind of a stage direction can be corrected in Playcode.</li>
+            <li>The notes on the edition are read from the file and written back.</li>
+            <li>Where the digital text came from is read, written back and printed.</li>
+            <li>The actors of the original cast are read and written back.</li>
+            <li>The scene of the action is read, written back and printed after the cast list.</li>
+            <li>Italics outside the text, in the sources, dedications, introductions and cast lists, are printed and written back as italics, where until now readers saw “&lt;&lt;El prado de Valencia&gt;&gt;”.</li>
+          </ul>
+        </li>
+      </ul>
+    </details>
   </header>
-
-  <section aria-labelledby="h-why">
-    <h2 id="h-why">Why the TEI file matters</h2>
-    <p>The TEI file is meant to be a complete copy of a play. It is published with the site as the edition's long-term archive, and it is how a play moves: a backup restored, a play loaded into another installation. If a play is exported and its file imported into an empty Playcode, everything should come back, but for the five things kept out on purpose (see <a href="#h-tei">Into the TEI</a>).</p>
-    <p>So the rule is: <strong>if TEI has a way to say it, it goes into the file</strong>, wherever it came from: the TEI file itself, a form in Playcode, or FileMaker. FileMaker’s data was imported once; whatever of it lives only in Playcode’s database cannot be recovered from the TEI files. That is why the table says where each part’s data came from.</p>
-    <p>To check, every play was exported and its file imported again as a new play, then the two were compared field by field. The text comes back whole. Several things around it do not.</p>
-    <p class="note">Importing a file over the play it came from is a different case. That keeps what the team has set in Playcode (whether the play is complete, its family, its historical time) and everything brought in from FileMaker, so it loses much less. What it replaces is the text itself.</p>
-  </section>
 
   <section aria-labelledby="h-short">
     <h2 id="h-short">In short</h2>
@@ -809,6 +877,14 @@
     <p class="note">“Downloads” are one renderer for HTML and PDF and another, with the same sections, for EPUB.</p>
   </section>
 
+  <section aria-labelledby="h-why">
+    <h2 id="h-why">Why the TEI file matters</h2>
+    <p>The TEI file is meant to be a complete copy of a play. It is published with the site as the edition's long-term archive, and it is how a play moves: a backup restored, a play loaded into another installation. If a play is exported and its file imported into an empty Playcode, everything should come back, but for the five things kept out on purpose (see <a href="#h-tei">Into the TEI</a>).</p>
+    <p>So the rule is: <strong>if TEI has a way to say it, it goes into the file</strong>, wherever it came from: the TEI file itself, a form in Playcode, or FileMaker. FileMaker’s data was imported once; whatever of it lives only in Playcode’s database cannot be recovered from the TEI files. That is why the table says where each part’s data came from.</p>
+    <p>To check, every play was exported and its file imported again as a new play, then the two were compared field by field. The text comes back whole. Several things around it do not.</p>
+    <p class="note">Importing a file over the play it came from is a different case. That keeps what the team has set in Playcode (whether the play is complete, its family, its historical time) and everything brought in from FileMaker, so it loses much less. What it replaces is the text itself.</p>
+  </section>
+
   <section aria-labelledby="h-notes">
     <h2 id="h-notes">Notes</h2>
     <ol class="notes">
@@ -822,7 +898,7 @@
       <li id="n8">All 510 witnesses of 107 plays come back, with the line breaks in their titles and notes (45 fields in 8 plays); a double space comes back as one, which is all any page prints. They come back as the file’s: the file names no FileMaker record (see <a href="#h-tei">Into the TEI</a>).</li>
       <li id="n9">The bibliography comes back from the file: all 2,804 references of 115 plays, each with the play’s own volume and pages in it. A reference several plays cite comes back as the one shared reference, recognised by its description, since the file carries no FileMaker or Playcode number; so FileMaker’s word-for-word copies of one work become one (72 references into 32). Importing a file only adds what Playcode does not have: it never changes or removes a reference, so a correction made in Playcode stays, and before an import adds any reference Playcode lists them, for a new play too, so an older file’s version of a corrected reference can be caught. The researchers’ private notes are never written, on purpose, because the file is published with the site.</li>
       <li id="n10">Checked by an automated test. Imported on production on 19 October. FileMaker records 179 links to places of the action; 150 are on plays Playcode holds, and the import writes 146 of them, on 103 plays. It leaves out an empty link, a repeated one and two that say “sin especificar”; the 29 on versions Playcode does not hold are not imported, and neither are the 49 that belong to performances, which wait for the performances. It made 100 places, 19 of them historical states, correcting FileMaker’s slips in their names on the way: Algeria is “Argelia”, not the city “Argel”, and “Reino de Nápoles” has its accent, among some fifty names in the five languages. FileMaker’s several copies of one place (Rome has five) become one, with the old names kept, and each link names the state its place belonged to at the time where FileMaker says so, Elsinore in the Kingdom of Denmark or Rome in the Roman Republic. A state is a place of its own, and a researcher sets or clears it on the play’s Places tab. Readers see “Elsinor, Reino de Dinamarca, Europa (hoy Dinamarca)”. The file writes the state inside the place (<code>&lt;country ref&gt;</code>, or a nested <code>placeName</code> for a region such as the Italian Peninsula) and reads it back. Importing a file over a play keeps the links FileMaker brought in.</li>
-      <li id="n11">Playcode does not record which list a character is in, so the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back from the file with a single list, under the first heading; the play page and the downloads print each list with its heading, but every one lists all the characters, and the published site prints one list.</li>
+      <li id="n11">Playcode does not record yet which list a character is in, so the plays with a cast list per act or part (<i>La Tragédie espagnole</i>, <i>’Tis Pity She’s a Whore</i>, <i>El galán Castrucho</i>, <i>Le Malade imaginaire</i>) come back from the file with a single list, under the first heading; the play page and the downloads print each list with its heading, but every one lists all the characters, and the published site prints one list. The team settled on 20 October how each is encoded (<a href="preguntas.html#t-cast-lists">questions 42 and 43</a>): <i>Le Malade imaginaire</i> and <i>La Tragédie espagnole</i> keep their lists distinct, <i>’Tis Pity She’s a Whore</i> has one list with the women as a group inside it, and <i>El galán Castrucho</i> has a list at the head of each act, its people keeping the first list’s identifiers. Building that is next.</li>
       <li id="n12">The kind of a stage direction (entrance, exit, stage business…) is chosen in the content editor from the list the TEI guidelines suggest; a kind a file gives outside the list is kept. Some kinds in the files are wrong, such as “Sale don Pedro solo.” marked as an exit, and can now be corrected. A verse’s identifier, the file’s name for the line (<code>em0010-en-0001</code>), is shown there but not changed by hand, so that no two lines share one; a line added in Playcode gets none, and what it should get is <a href="preguntas.html#t-ids">question 25</a>. The spelling <code>delivery_</code> in 24 files is read as the TEI’s <code>delivery</code>.</li>
       <li id="n13">Every italic passage comes back as it was, two side by side included. Until 18 October one followed directly by punctuation gained a space before it on every import, the first one from the source files too: “un <i>sueño</i>, fue” read “un <i>sueño</i> , fue”, in 2,286 texts. Found by the automated check and fixed the same day; production’s plays get it when their files are next re-imported. An italic with no words in it, left in three notes, is not written: there is nothing in it to keep.</li>
       <li id="n14">Worked out from the text each time, so not part of the file.</li>
@@ -852,8 +928,7 @@
         <thead><tr><th scope="col">Part of the play</th><th scope="col">Kept today in</th><th scope="col">Proposed TEI home</th></tr></thead>
         <tbody>
           <tr><th scope="row">Verse, prose or mixed</th><td data-label="Kept today in">The files, on <code>extent</code>, which Playcode does not read; Playcode, when set by hand</td><td data-label="Proposed TEI home"><code>extent ana="verso"</code>, <code>"prosa"</code> or <code>"versoprosa"</code>, as the files do now; or the TEI’s own classification, <code>textClass/catRef</code>, beside the CDU number: <a href="preguntas.html#t-form">question 22</a></td></tr>
-          <tr><th scope="row">A cast list per act or part</th><td data-label="Kept today in">The TEI files only: Playcode does not record which list a character is in</td><td data-label="Proposed TEI home">one <code>div type="elenco"/castList</code> per list, once Playcode keeps the link</td></tr>
-          <tr><th scope="row">Historical performances</th><td data-label="Kept today in">FileMaker</td><td data-label="Proposed TEI home"><code>front/performance</code>, the cast as <code>castList/castItem/actor</code>, the source as a <code>bibl</code></td></tr>
+          <tr><th scope="row">A cast list per act or part</th><td data-label="Kept today in">The TEI files only: Playcode does not record which list a character is in</td><td data-label="Proposed TEI home">A <code>castList</code> per list, with its <code>head</code> inside, where the file puts it: before or after the text in its <code>div type="elenco"</code>, as every file has it, or at the head of its act alone, since an act cannot hold a <code>div</code> (<i>El galán Castrucho</i>). A part of one list as a <code>castGroup</code> (<i>’Tis Pity</i>’s women); a person a later list names again points at the first by <code>corresp</code>. Settled by <a href="preguntas.html#t-cast-lists">questions 42 and 43</a></td></tr>
           <tr><th scope="row">Genre</th><td data-label="Kept today in">FileMaker</td><td data-label="Proposed TEI home"><code>textClass/keywords</code> or <code>catRef</code></td></tr>
         </tbody>
       </table>

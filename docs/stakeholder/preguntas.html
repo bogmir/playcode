@@ -269,7 +269,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 19 October 2026. 43 questions, 22 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 20 October 2026. 43 questions, 24 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -1613,7 +1613,7 @@
     <h2 id="h-cast-lists">Several cast lists</h2>
     <p>Six files have more than one cast list. Two of them are question 29 (a list after the text), and one is a test file. The other four keep their lists one after another before the text, each in a section of its own (<code>&lt;div type="elenco"&gt;</code>), where every other play has one such section. Playcode reads all the lists of a play as one: every role becomes one of the play’s characters, and the play page prints all of them under each list’s heading, so <i>El galán Castrucho</i> shows its 42 roles three times. These two questions settle what each list is and how the files encode it; Playcode will follow the encoding you choose.</p>
 
-    <div class="q" id="q42" data-q="q42" data-n="42">
+    <div class="q" id="q42" data-q="q42" data-n="42" data-answered="2026-10-20">
       <span class="q-num" aria-hidden="true">42</span>
       <div class="q-body">
         <h3>Are the extra cast lists of three plays sections of one cast list, and how should the files encode them?</h3>
@@ -1632,13 +1632,19 @@
         <pre class="tei">&lt;div1 type="interlude" n="1"&gt;&lt;head&gt;PREMIER INTERMÈDE&lt;/head&gt;
   &lt;castList&gt;&lt;head&gt;PERSONNAGES DES INTERMÈDES&lt;/head&gt;&lt;castItem&gt;…&lt;/castItem&gt; …&lt;/castList&gt;
   …</pre>
+        <div class="answered">
+          <p><strong>Answered on 20 October 2026:</strong> each play its own way. TEI allows several cast lists one after another, and a list needs no section around it: its heading goes inside it, <code>&lt;castList&gt;&lt;head&gt;The Persons&lt;/head&gt;…</code>, as in the TEI Guidelines’ example.</p>
+          <p><i>Le Malade imaginaire</i>: three distinct lists, as in our edition. The source, Théâtre classique, has two; the third, the interludes’, was added in the encoding so that each role has its identifier, and no note says so yet. <i>La Tragédie espagnole</i>: four distinct lists, since their headings are printed like “Dramatis personae”. <i>’Tis Pity She’s a Whore</i>: one list, with “Women” a group inside it (A). Its two lists were the only way FileMaker gave to keep that heading without editing the file by hand each time.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q42-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q42-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q42-o1"><input type="radio" id="q42-o1" name="q42-choice" value="A: one cast list section, the parts as groups inside it">A: one cast list section, the parts as groups inside it</label>
             <label for="q42-o2"><input type="radio" id="q42-o2" name="q42-choice" value="B: a section per list, as the files are now">B: a section per list, as the files are now</label>
             <label for="q42-o3"><input type="radio" id="q42-o3" name="q42-choice" value="C: some lists inside their own part (which ones, in the notes)">C: some lists inside their own part (which ones, in the notes)</label>
-            <label for="q42-o4"><input type="radio" id="q42-o4" name="q42-choice" value="Another encoding (in the notes)">Another encoding (in the notes)</label>
+            <label for="q42-o4"><input type="radio" id="q42-o4" name="q42-choice" value="Another encoding (in the notes)" checked>Another encoding (in the notes)</label>
           </div>
         </fieldset>
         <div>
@@ -1646,10 +1652,11 @@
           <textarea id="q42-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" id="q43" data-q="q43" data-n="43">
+    <div class="q" id="q43" data-q="q43" data-n="43" data-answered="2026-10-20">
       <span class="q-num" aria-hidden="true">43</span>
       <div class="q-body">
         <h3>How should the figures of each act of <i>El galán Castrucho</i> be encoded?</h3>
@@ -1671,11 +1678,16 @@
         <pre class="tei">&lt;div1 type="act" n="2"&gt;&lt;head&gt;Acto II&lt;/head&gt;
   &lt;stage&gt;FIGURAS DEL SEGUNDO ACTO: ESCOBARILLO, LUCRECIA, FORTUNA, …&lt;/stage&gt;</pre>
         <p class="why"><strong>D.</strong> The file as it is: three sections before the text, printed together and tied to no act.</p>
+        <div class="answered">
+          <p><strong>Answered on 20 October 2026:</strong> B, each list inside its act, as the source has them (<a href="https://www.cervantesvirtual.com/obra-visor/el-galan-castrucho-comedia-famosa/html/02cd4b8f-1819-434c-b2c2-982f9db14d6b_2.html#I_1_">Biblioteca Virtual Miguel de Cervantes</a>). They are the same people, so they keep the first list’s identifiers: ESCOBARILLO2 and ESCOBARILLO3 go, and the later lists point at ESCOBARILLO. The soldiers, who appear in the second list only, keep an identifier of their own there. FileMaker could not do this, since a cast list could only be a paratext, so the file was edited by hand; Playcode will keep it.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q43-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q43-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q43-o1"><input type="radio" id="q43-o1" name="q43-choice" value="A: the lists before the text, each pointing at its act">A: the lists before the text, each pointing at its act</label>
-            <label for="q43-o2"><input type="radio" id="q43-o2" name="q43-choice" value="B: each list inside its act">B: each list inside its act</label>
+            <label for="q43-o2"><input type="radio" id="q43-o2" name="q43-choice" value="B: each list inside its act" checked>B: each list inside its act</label>
             <label for="q43-o3"><input type="radio" id="q43-o3" name="q43-choice" value="C: one cast list; the other acts' figures as a stage direction, as in Numancia">C: one cast list; the other acts’ figures as a stage direction, as in <i>Numancia</i></label>
             <label for="q43-o4"><input type="radio" id="q43-o4" name="q43-choice" value="D: the three sections as they are">D: the three sections as they are</label>
             <label for="q43-o5"><input type="radio" id="q43-o5" name="q43-choice" value="Another encoding (in the notes)">Another encoding (in the notes)</label>
@@ -1686,6 +1698,7 @@
           <textarea id="q43-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1717,7 +1730,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 21 answered</span>
+        <span class="count" id="answered-count">0 of 19 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
