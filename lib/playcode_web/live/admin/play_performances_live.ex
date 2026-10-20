@@ -29,7 +29,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
 
   # What a row of the cast holds: an existing actor by name, or the names of a new one, and
   # the role. See Playcode.Performances.update_performance/2.
-  @cast_fields ~w(actor_name surname forename nickname sex role)
+  @cast_fields ~w(actor_id actor_name surname forename nickname sex role)
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -65,6 +65,11 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
 
   def handle_event("cancel", _, socket), do: {:noreply, close_form(socket)}
 
+  # Events for a form that is not open come from a stale or forged page.
+  def handle_event(event, _, %{assigns: %{editing: nil}} = socket)
+      when event in ~w(validate save),
+      do: {:noreply, socket}
+
   def handle_event("validate", %{"performance" => params}, socket) do
     changeset =
       socket
@@ -81,6 +86,9 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     params = params |> form_params(socket.assigns) |> Map.put("cast", cast)
 
     cond do
+      known_performance(socket) == :gone ->
+        {:noreply, socket |> close_form() |> reload() |> LiveHelpers.put_gone_flash()}
+
       known_state(params) == :gone ->
         {:noreply, socket |> reload() |> LiveHelpers.put_gone_flash()}
 
@@ -124,6 +132,10 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
       open_source_form(socket, entry, Bibliography.change_entry(entry), others)
     end)
   end
+
+  # Nothing was entered in the form to edit again.
+  def handle_event("edit_source", _, %{assigns: %{source_params: nil}} = socket),
+    do: {:noreply, socket}
 
   # A source entered in the form and not written yet.
   def handle_event("edit_source", _, socket) do
@@ -172,7 +184,11 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     with_performance(socket, id, fn performance ->
       {:ok, _} = Performances.delete_performance(performance)
       log(socket, "delete", performance)
-      socket |> reload() |> put_flash(:info, gettext("Performance deleted."))
+
+      socket
+      |> close_form_editing(performance)
+      |> reload()
+      |> put_flash(:info, gettext("Performance deleted."))
     end)
   end
 
@@ -228,6 +244,12 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     changeset = Map.update!(changeset, :changes, &Map.drop(&1, [:year_from, :year_to]))
     assign(socket, :form, to_form(changeset))
   end
+
+  # A form open on the performance just deleted has nothing left to save.
+  defp close_form_editing(%{assigns: %{editing: %Performance{id: id}}} = socket, %{id: id}),
+    do: close_form(socket)
+
+  defp close_form_editing(socket, _performance), do: socket
 
   defp close_form(socket) do
     socket |> assign(editing: nil, form: nil, cast: []) |> choose_source(nil) |> close_rename()
@@ -301,9 +323,10 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     end
   end
 
-  # The entry is read again: it may be gone since the form opened.
-  defp save_source(socket, %Entry{id: id}, params) do
-    with %Entry{} = entry <- Bibliography.get_entry(id),
+  # The entry is read again only to see that it is still there. The form's own copy takes
+  # the update, so a field another curator changed and this form left alone is not put back.
+  defp save_source(socket, %Entry{id: id} = entry, params) do
+    with %Entry{} <- Bibliography.get_entry(id),
          {:ok, updated} <- Bibliography.update_entry(entry, params) do
       LiveHelpers.log_activity(socket, "update", "bibliography_entry", id)
       {:noreply, socket |> choose_source(updated) |> put_flash(:info, gettext("Entry saved."))}
@@ -327,6 +350,12 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
 
   defp forget_source(socket),
     do: socket |> choose_source(nil) |> reload() |> LiveHelpers.put_gone_flash()
+
+  # The performance the form edits, deleted since: by another curator, say.
+  defp known_performance(%{assigns: %{editing: %Performance{id: id}, play: play}}),
+    do: if(Performances.get_performance(play.id, id), do: :ok, else: :gone)
+
+  defp known_performance(_socket), do: :ok
 
   # A source chosen and deleted since: by its last citation going, say.
   defp known_source(%{assigns: %{source: %Entry{id: id}}}) when is_binary(id),
@@ -364,7 +393,11 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
   # The cast as saved, as the form's rows: the actor picked by name.
   defp saved_cast(performance) do
     for member <- performance.cast,
-        do: %{"actor_name" => Actor.display_name(member.actor), "role" => member.role}
+        do: %{
+          "actor_id" => member.actor_id,
+          "actor_name" => Actor.display_name(member.actor),
+          "role" => member.role
+        }
   end
 
   # Each row with its number and the actor it picks, if any: the one "Rename" is for.
@@ -492,6 +525,37 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     |> assign_names()
   end
 
+  # The year inputs: `{value, placeholder}` each. The value is a year the curator typed; the
+  # placeholder the year the date gives, which the save writes when the input is blank. A year
+  # the date gave is shown as the placeholder alone, so it follows the date as it is edited,
+  # and the browser does not send it back as the curator's own.
+  defp years(form) do
+    {from, to} = Performance.years(form[:date_text].value)
+    %{year_from: {own_year(form, :year_from), from}, year_to: {own_year(form, :year_to), to}}
+  end
+
+  # The rule of `Performance.changeset/2`: a year follows the date when it is blank, or is the
+  # one the stored date gave and the form leaves unchanged.
+  defp own_year(%{source: %{data: data}} = form, field) do
+    {was_from, was_to} = Performance.years(data.date_text)
+    was = if field == :year_from, do: was_from, else: was_to
+    stored = Map.fetch!(data, field)
+    year = form.params |> Map.get(Atom.to_string(field), stored) |> to_year()
+
+    if year == nil or (year == stored and stored == was), do: nil, else: year
+  end
+
+  defp to_year(year) when is_integer(year), do: year
+
+  defp to_year(year) when is_binary(year) do
+    case Integer.parse(year) do
+      {year, ""} -> year
+      _ -> nil
+    end
+  end
+
+  defp to_year(nil), do: nil
+
   # What the form's datalists offer.
   defp assign_names(socket),
     do:
@@ -584,7 +648,8 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
     assigns =
       assign(assigns,
         company: named_company(assigns),
-        cast_errors: assigns.form && cast_errors(assigns.form)
+        cast_errors: assigns.form && cast_errors(assigns.form),
+        years: assigns.form && years(assigns.form)
       )
 
     ~H"""
@@ -759,9 +824,30 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
           />
           <div class="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <.input field={@form[:date_text]} type="text" label={gettext("Date")} />
-            <div class="grid grid-cols-2 gap-x-4">
-              <.input field={@form[:year_from]} type="number" label={gettext("Year from")} />
-              <.input field={@form[:year_to]} type="number" label={gettext("Year to")} />
+            <div>
+              <div class="grid grid-cols-2 gap-x-4">
+                <.input
+                  id="performance_year_from"
+                  name="performance[year_from]"
+                  type="number"
+                  value={elem(@years.year_from, 0)}
+                  placeholder={elem(@years.year_from, 1)}
+                  label={gettext("Year from")}
+                  aria-describedby="years-help"
+                />
+                <.input
+                  id="performance_year_to"
+                  name="performance[year_to]"
+                  type="number"
+                  value={elem(@years.year_to, 0)}
+                  placeholder={elem(@years.year_to, 1)}
+                  label={gettext("Year to")}
+                  aria-describedby="years-help"
+                />
+              </div>
+              <p id="years-help" class="-mt-1 mb-2 text-xs text-base-content/70">
+                {gettext("Left blank, the years follow the date.")}
+              </p>
             </div>
             <.input field={@form[:venue]} type="text" label={gettext("Venue")} />
             <.input
@@ -819,6 +905,13 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
               class="mt-3 rounded-box border border-base-300 p-3"
             >
               <legend class="sr-only">{gettext("Cast row %{number}", number: index + 1)}</legend>
+              <%!-- A saved row keeps its actor by id: two actors can read the same. --%>
+              <input
+                :if={row["actor_id"]}
+                type="hidden"
+                name={"performance[cast][#{index}][actor_id]"}
+                value={row["actor_id"]}
+              />
               <div class="flex items-end gap-2">
                 <div class="grid grow grid-cols-1 gap-x-3 md:grid-cols-2">
                   <.cast_input
@@ -829,7 +922,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
                     list="performance-actors"
                     autocomplete="off"
                   />
-                  <.cast_input index={index} field="role" row={row} label={gettext("Role")} />
+                  <.cast_input index={index} field="role" row={row} label={pgettext("cast", "Role")} />
                 </div>
                 <.rename_button :if={actor} event="rename_actor" record={actor} />
                 <button
@@ -884,11 +977,8 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
             <div class="min-w-0 text-sm">
               <span :if={line.date} class="font-semibold">{line.date}</span>
               {Enum.join(line.parts, " · ")}
-              <span
-                :if={Performances.reference(line)}
-                class="whitespace-nowrap text-xs text-base-content/70"
-              >
-                {Performances.reference(line)}
+              <span :if={line.reference} class="whitespace-nowrap text-xs text-base-content/70">
+                {line.reference}
               </span>
               <p :if={line.cast != []} class="text-xs">
                 {gettext("Cast")}: {Enum.join(line.cast, "; ")}

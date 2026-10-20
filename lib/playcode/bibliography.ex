@@ -126,11 +126,20 @@ defmodule Playcode.Bibliography do
     end
   end
 
-  @doc "Links an entry another play already has; `origin` as for `create_entry_for_play/4`."
+  @doc """
+  Links an entry another play already has; `origin` as for `create_entry_for_play/4`. A
+  catalogue is refused: only a performance cites one.
+  """
   def link_entry(play_id, entry_id, attrs \\ %{}, origin \\ "manual") do
-    %Link{play_id: play_id, entry_id: entry_id, origin: origin}
-    |> Link.changeset(attrs)
-    |> Repo.insert()
+    changeset = Link.changeset(%Link{play_id: play_id, entry_id: entry_id, origin: origin}, attrs)
+
+    case get_entry(entry_id) do
+      %Entry{kind: "catalogue"} ->
+        {:error, Ecto.Changeset.add_error(changeset, :entry_id, "is invalid")}
+
+      _entry ->
+        Repo.insert(changeset)
+    end
   end
 
   @doc """

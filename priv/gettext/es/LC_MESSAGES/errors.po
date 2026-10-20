@@ -199,3 +199,6 @@ msgstr "necesita un actor"
 
 msgid "names no actor that exists: add one with a surname or a nickname"
 msgstr "no nombra a ningún actor que exista: añada uno con apellidos o apodo"
+
+msgid "names more than one actor: give the surname, forename and nickname"
+msgstr "nombra a más de un actor: indique apellidos, nombre y apodo"

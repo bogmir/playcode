@@ -70,12 +70,18 @@ defmodule Playcode.Performances.Actor do
   end
 
   @doc """
-  The actor of `actors` whose `display_name/1` is `name` (squeezed), ignoring case, or nil.
+  The actors of `actors` whose `display_name/1` is `name` (squeezed), ignoring case. More
+  than one when two actors read the same: surname "Charles Hart", and surname "Hart" with
+  forename "Charles".
   """
   def named(actors, name) do
-    with name when is_binary(name) <- Text.squeeze(name) do
-      wanted = String.downcase(name)
-      Enum.find(actors, &(String.downcase(display_name(&1)) == wanted))
+    case Text.squeeze(name) do
+      nil ->
+        []
+
+      name ->
+        wanted = String.downcase(name)
+        Enum.filter(actors, &(String.downcase(display_name(&1)) == wanted))
     end
   end
 

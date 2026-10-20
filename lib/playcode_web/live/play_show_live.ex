@@ -515,10 +515,10 @@ defmodule PlaycodeWeb.PlayShowLive do
                     <span :if={line.date} class="font-semibold">{line.date}</span>
                     {Enum.join(line.parts, " · ")}
                     <span
-                      :if={Performances.reference(line)}
+                      :if={line.reference}
                       class="text-xs text-base-content/70 whitespace-nowrap"
                     >
-                      {Performances.reference(line)}
+                      {line.reference}
                     </span>
                     <p :if={line.cast != []} class="text-xs">
                       {gettext("Cast")}: {Enum.join(line.cast, "; ")}

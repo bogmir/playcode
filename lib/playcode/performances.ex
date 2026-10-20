@@ -65,7 +65,8 @@ defmodule Playcode.Performances do
   A line is the `date` as written; its `parts`, those present of the venue, the place line
   (`Places.place_line/3`), the company and the venue type's label, to be joined by the page;
   the number of its `source` and the performance's own volume and pages, its `range`
-  (`"vol. 6, p. 83"`); its `cast`, each `"Actor (role)"`; and its `note`. A performance that
+  (`"vol. 6, p. 83"`), and together its `reference` (`"[1] vol. 6, p. 83"`), those present,
+  or nil; its `cast`, each `"Actor (role)"`; and its `note`. A performance that
   takes its cast from the cast list prints first the characters' actors, as the cast list
   prints its characters (a hidden one left out), then the cast rows of its own.
 
@@ -78,13 +79,15 @@ defmodule Playcode.Performances do
     {lines, sources} =
       Enum.map_reduce(performances, [], fn performance, sources ->
         {number, sources} = number_source(performance.source, sources)
+        range = range(performance)
 
         line = %{
           id: performance.id,
           date: performance.date_text,
           parts: parts(performance, gazetteer, locale, place_locale),
           source: number,
-          range: range(performance),
+          range: range,
+          reference: reference(number, range),
           cast: cast(performance, characters),
           note: performance.note
         }
@@ -95,11 +98,9 @@ defmodule Playcode.Performances do
     %{lines: lines, sources: sources}
   end
 
-  @doc """
-  Where a line says it comes from: its source's number and its own volume and pages
-  (`"[1] vol. 6, p. 83"`), those present, or nil.
-  """
-  def reference(line), do: join_present([line.source && "[#{line.source}]", line.range], " ")
+  # Where a line says it comes from: its source's number and its own volume and pages
+  # (`"[1] vol. 6, p. 83"`), those present, or nil.
+  defp reference(number, range), do: join_present([number && "[#{number}]", range], " ")
 
   defp number_source(nil, sources), do: {nil, sources}
 
@@ -302,12 +303,37 @@ defmodule Playcode.Performances do
   defp blank_row?(row), do: Enum.all?(@cast_row_fields, &(Text.squeeze(row[&1]) == nil))
 
   @doc """
-  The actor of `actors` that a cast row picks by its `"actor_name"` (see `update_performance/2`),
-  or nil: the row gives the names of one to find or create instead, or names no one.
+  The actor of `actors` that a cast row picks (see `update_performance/2`), or nil: the row
+  gives the names of one to find or create instead, names no one, or names two.
+
+  A saved row carries its actor's `"actor_id"` and picks that actor for as long as its
+  `"actor_name"` still reads as the actor does, so two actors who read the same are never
+  swapped. Without an id, or once the name has been changed, the name picks the one actor
+  that reads so.
   """
   def picked_actor(row, actors) do
-    if new_actor?(row), do: nil, else: Actor.named(actors, row["actor_name"])
+    cond do
+      new_actor?(row) -> nil
+      actor = actor_of_row(row, actors) -> actor
+      true -> only(Actor.named(actors, row["actor_name"]))
+    end
   end
+
+  # The id came from the browser: an actor that does not exist, or whose name the row no
+  # longer gives, picks no one.
+  defp actor_of_row(%{"actor_id" => id} = row, actors) when is_binary(id) do
+    with %Actor{} = actor <- Enum.find(actors, &(&1.id == id)),
+         [^actor] <- Actor.named([actor], row["actor_name"]) do
+      actor
+    else
+      _ -> nil
+    end
+  end
+
+  defp actor_of_row(_row, _actors), do: nil
+
+  defp only([actor]), do: actor
+  defp only(_none_or_several), do: nil
 
   defp new_actor?(row), do: Enum.any?(~w(surname forename nickname), &Text.squeeze(row[&1]))
 
@@ -320,6 +346,9 @@ defmodule Playcode.Performances do
         with {:error, changeset} <-
                find_or_create_actor(Map.take(row, ~w(surname forename nickname sex))),
              do: {:error, Keyword.values(changeset.errors)}
+
+      match?([_, _ | _], Actor.named(actors, row["actor_name"])) ->
+        {:error, [{"names more than one actor: give the surname, forename and nickname", []}]}
 
       Text.squeeze(row["actor_name"]) ->
         {:error, [{"names no actor that exists: add one with a surname or a nickname", []}]}

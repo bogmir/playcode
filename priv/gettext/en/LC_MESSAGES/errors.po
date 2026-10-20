@@ -211,3 +211,6 @@ msgstr ""
 
 msgid "names no actor that exists: add one with a surname or a nickname"
 msgstr ""
+
+msgid "names more than one actor: give the surname, forename and nickname"
+msgstr ""

@@ -153,9 +153,8 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
          |> load()
          |> put_flash(:info, gettext("Entry added."))}
 
-      {:error, _changeset} ->
-        {:noreply,
-         put_flash(socket, :error, gettext("That entry is already in this play's bibliography."))}
+      {:error, changeset} ->
+        {:noreply, link_refused(socket, changeset)}
     end
   end
 
@@ -166,17 +165,31 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
          do: {:ok, link, "create"}
   end
 
-  # The link and its entry are read again: another curator may have removed them since the
-  # form opened.
+  # The link is read again only to see that it is still there: another curator may have
+  # removed it since the form opened. The form's own copies take the update, so a field
+  # another curator changed and this form left alone is not put back.
   defp save(%Link{} = link, play_id, entry_params, link_params) do
     case Bibliography.get_link(play_id, link.id) do
       nil ->
         :gone
 
-      link ->
+      _still_there ->
         with {:ok, _entry} <- Bibliography.update_entry(link.entry, entry_params),
              {:ok, link} <- Bibliography.update_link(link, link_params),
              do: {:ok, link, "update"}
+    end
+  end
+
+  # Only a link already there is a mistake of the curator's; any other refusal is an entry
+  # the search never offered (a catalogue) or one that is gone.
+  defp link_refused(socket, changeset) do
+    if Enum.any?(
+         changeset.errors,
+         &match?({:entry_id, {"is already linked to this play", _}}, &1)
+       ) do
+      put_flash(socket, :error, gettext("That entry is already in this play's bibliography."))
+    else
+      socket |> load() |> LiveHelpers.put_gone_flash()
     end
   end
 

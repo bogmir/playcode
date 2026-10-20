@@ -481,8 +481,12 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
       lv |> form("#rename-form", rename: %{"name" => new_name}) |> render_submit()
 
       assert [%{name: ^new_name}] = Performances.list_companies()
-      assert [%{company: %{name: ^new_name}}] = Performances.list_for_play(other.id)
       refute has_element?(lv, "#rename-panel")
+
+      # The other play's page, as readers get it, names the company anew.
+      {:ok, _page, html} = live(conn, ~p"/plays/#{other.code}")
+      assert html =~ new_name
+      refute html =~ name
 
       # The open form follows the company: saving it keeps the one company.
       assert has_element?(lv, "#performance_company_name[value='#{new_name}']")
@@ -934,10 +938,217 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLiveTest do
       new_performance(lv)
       search_source(lv, "Loose entry")
       pick_source(lv, "Loose entry")
+
+      for {from, to} <- [{"catalogue", "criticism"}, {"criticism", "catalogue"}] do
+        assert %{kind: ^from} = Bibliography.get_entry(source.id)
+        lv |> element("button", t("Edit source")) |> render_click()
+        lv |> form("#source-form", entry: %{kind: to}) |> render_submit()
+        assert %{kind: ^to} = Bibliography.get_entry(source.id)
+      end
+    end
+
+    # The form read the entry when it opened; another curator corrected a field this form
+    # did not touch. Saving must not put the old text back.
+    test "an edit of the source leaves alone what another curator changed meanwhile", %{
+      conn: conn,
+      play: play
+    } do
+      source = catalogue_fixture(%{"monogr_title" => "Old title"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      search_source(lv, "Old title")
+      pick_source(lv, "Old title")
       lv |> element("button", t("Edit source")) |> render_click()
 
-      lv |> form("#source-form", entry: %{kind: "criticism"}) |> render_submit()
-      assert %{kind: "criticism"} = Bibliography.get_entry(source.id)
+      {:ok, _} = Bibliography.update_entry(source, %{"public_note" => "Corrected meanwhile"})
+      lv |> form("#source-form", entry: %{monogr_title: "New title"}) |> render_submit()
+
+      assert %{monogr_title: "New title", public_note: "Corrected meanwhile"} =
+               Bibliography.get_entry(source.id)
+    end
+  end
+
+  describe "an open form" do
+    test "a performance deleted under it says so when the form is saved", %{
+      conn: conn,
+      play: play
+    } do
+      performance = performance_fixture(play, %{"venue" => "Globe"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      lv |> button("Edit", "1610, Globe") |> render_click()
+
+      # Another curator deletes it.
+      {:ok, _} = Performances.delete_performance(performance)
+
+      html =
+        lv |> form("#performance-form", performance: %{"venue" => "Rose"}) |> render_submit()
+
+      assert html =~ t("That item no longer exists. The list has been refreshed.")
+      refute has_element?(lv, "#performance-form")
+      assert Performances.list_for_play(play.id) == []
+    end
+
+    test "deleting the line that is open closes its form; another line leaves it open", %{
+      conn: conn,
+      play: play
+    } do
+      performance_fixture(play, %{"venue" => "Globe"})
+      performance_fixture(play, %{"date_text" => "1611", "venue" => "Rose"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+
+      lv |> button("Edit", "1610, Globe") |> render_click()
+      lv |> button("Delete", "1611, Rose") |> render_click()
+      assert has_element?(lv, "#performance-form")
+
+      lv |> button("Delete", "1610, Globe") |> render_click()
+      refute has_element?(lv, "#performance-form")
+      assert Performances.list_for_play(play.id) == []
+    end
+
+    test "events for a form that is not open do nothing", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      form = %{"performance" => %{"date_text" => "1610"}}
+
+      render_change(lv, "validate", form)
+      render_submit(lv, "save", form)
+      render_click(lv, "edit_source", %{})
+      assert Performances.list_for_play(play.id) == []
+
+      # An open form with no new source kept has nothing to edit either.
+      new_performance(lv)
+      render_click(lv, "edit_source", %{})
+      refute has_element?(lv, "#source-form")
+    end
+  end
+
+  # Two actors can read the same: surname "Charles Hart", and surname "Hart" with forename
+  # "Charles". The form picks a saved row's actor by id, never by how it reads.
+  describe "actors who read the same" do
+    setup do
+      {:ok, plain} =
+        Performances.find_or_create_actor(%{"surname" => "Charles Hart", "sex" => "man"})
+
+      {:ok, split} =
+        Performances.find_or_create_actor(%{
+          "surname" => "Hart",
+          "forename" => "Charles",
+          "sex" => "man"
+        })
+
+      %{plain: plain, split: split}
+    end
+
+    test "an edit that leaves the cast alone keeps its actors", %{
+      conn: conn,
+      play: play,
+      split: split
+    } do
+      performance = performance_fixture(play, %{"venue" => "Globe"})
+
+      {:ok, _} =
+        Performances.put_cast(performance, [%{"actor_id" => split.id, "role" => "Othello"}])
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      lv |> button("Edit", "1610, Globe") |> render_click()
+      lv |> form("#performance-form", performance: %{"venue" => "Rose"}) |> render_submit()
+
+      # Saved, with the cast as it was.
+      assert [%{venue: "Rose", cast: [%{actor: actor}]}] = Performances.list_for_play(play.id)
+      assert actor.id == split.id
+      assert %{forename: "Charles", sex: "man"} = Performances.get_actor(split.id)
+    end
+
+    test "a name they share is refused on its row, and the names settle it", %{
+      conn: conn,
+      play: play,
+      split: split
+    } do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      add_cast_row(lv)
+
+      html =
+        lv
+        |> form("#performance-form",
+          performance: %{
+            "date_text" => "1700",
+            "cast" => %{"0" => %{"actor_name" => "Charles Hart", "role" => "Othello"}}
+          }
+        )
+        |> render_submit()
+
+      assert html =~
+               error("names more than one actor: give the surname, forename and nickname")
+
+      assert Performances.list_for_play(play.id) == []
+
+      lv
+      |> form("#performance-form",
+        performance: %{
+          "cast" => %{"0" => %{"actor_name" => "", "surname" => "Hart", "forename" => "Charles"}}
+        }
+      )
+      |> render_submit()
+
+      assert [%{cast: [%{actor: actor, role: "Othello"}]}] = Performances.list_for_play(play.id)
+      assert actor.id == split.id
+    end
+  end
+
+  describe "the cast row" do
+    test "calls the role Papel, which the Places tab's Rol is not", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      new_performance(lv)
+      add_cast_row(lv)
+
+      assert has_element?(lv, "label span", "Papel")
+    end
+  end
+
+  # The years a save will write are the date's, unless the curator typed their own.
+  describe "the years in the form" do
+    test "follow the date on screen as they do on save", %{conn: conn, play: play} do
+      performance = performance_fixture(play, %{"date_text" => "1700"})
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      lv |> button("Edit", "1700") |> render_click()
+
+      refute has_element?(lv, "#performance_year_from[value]")
+      assert has_element?(lv, "#performance_year_from[placeholder='1700']")
+
+      lv |> form("#performance-form", performance: %{"date_text" => "1705"}) |> render_change()
+      assert has_element?(lv, "#performance_year_from[placeholder='1705']")
+      assert has_element?(lv, "#performance_year_to[placeholder='1705']")
+      refute has_element?(lv, "#performance_year_from[value]")
+
+      lv |> form("#performance-form") |> render_submit()
+
+      assert %{year_from: 1705, year_to: 1705} =
+               Performances.get_performance(play.id, performance.id)
+    end
+
+    test "that the curator typed stay as typed, whatever the date becomes", %{
+      conn: conn,
+      play: play
+    } do
+      performance =
+        performance_fixture(play, %{
+          "date_text" => "1610",
+          "year_from" => "1608",
+          "year_to" => "1612"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+      lv |> button("Edit", "1610") |> render_click()
+      assert has_element?(lv, "#performance_year_from[value='1608']")
+
+      lv |> form("#performance-form", performance: %{"date_text" => "1620"}) |> render_change()
+      assert has_element?(lv, "#performance_year_from[value='1608']")
+      assert has_element?(lv, "#performance_year_to[value='1612']")
+
+      lv |> form("#performance-form") |> render_submit()
+
+      assert %{year_from: 1608, year_to: 1612} =
+               Performances.get_performance(play.id, performance.id)
     end
   end
 end

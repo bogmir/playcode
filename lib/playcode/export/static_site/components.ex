@@ -278,8 +278,8 @@ defmodule Playcode.Export.StaticSite.Components do
         <li :for={line <- @listing.lines} class="performance">
           <b :if={line.date}>{line.date}</b>
           {Enum.join(line.parts, " · ")}
-          <span :if={Performances.reference(line)} class="note">
-            {Performances.reference(line)}
+          <span :if={line.reference} class="note">
+            {line.reference}
           </span>
           <p :if={line.cast != []} class="note">Cast: {Enum.join(line.cast, "; ")}</p>
           <p :if={line.note} class="note">{line.note}</p>

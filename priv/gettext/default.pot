@@ -23,7 +23,7 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:389
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:402
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1155
 #: lib/playcode_web/live/admin/play_places_live.ex:267
 #, elixir-autogen, elixir-format
@@ -141,7 +141,7 @@ msgstr ""
 #: lib/playcode_web/live/admin/import_live.ex:312
 #: lib/playcode_web/live/admin/notes_component.ex:291
 #: lib/playcode_web/live/admin/place_form_component.ex:344
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:440
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:453
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1979
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2750
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2799
@@ -150,9 +150,9 @@ msgstr ""
 #: lib/playcode_web/live/admin/play_editors_live.ex:232
 #: lib/playcode_web/live/admin/play_form_live.ex:920
 #: lib/playcode_web/live/admin/play_notes_live.ex:337
-#: lib/playcode_web/live/admin/play_performances_live.ex:726
-#: lib/playcode_web/live/admin/play_performances_live.ex:745
-#: lib/playcode_web/live/admin/play_performances_live.ex:865
+#: lib/playcode_web/live/admin/play_performances_live.ex:791
+#: lib/playcode_web/live/admin/play_performances_live.ex:810
+#: lib/playcode_web/live/admin/play_performances_live.ex:958
 #: lib/playcode_web/live/admin/play_sources_live.ex:254
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:176
 #, elixir-autogen, elixir-format
@@ -314,7 +314,7 @@ msgstr ""
 
 #: lib/playcode_web/live/admin/notes_component.ex:210
 #: lib/playcode_web/live/admin/place_list_live.ex:183
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:521
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:534
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1156
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1339
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1450
@@ -802,7 +802,7 @@ msgstr ""
 #: lib/playcode_web/live/admin/import_live.ex:213
 #: lib/playcode_web/live/admin/notes_component.ex:334
 #: lib/playcode_web/live/admin/place_form_component.ex:281
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:531
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:544
 #: lib/playcode_web/live/admin/play_compare_live.ex:170
 #: lib/playcode_web/live/admin/play_form_live.ex:853
 #: lib/playcode_web/live/admin/play_places_live.ex:331
@@ -829,16 +829,16 @@ msgstr ""
 
 #: lib/playcode_web/live/admin/notes_component.ex:284
 #: lib/playcode_web/live/admin/place_form_component.ex:346
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:442
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:455
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2748
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2797
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:2837
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:3057
 #: lib/playcode_web/live/admin/play_editors_live.ex:235
 #: lib/playcode_web/live/admin/play_notes_live.ex:339
-#: lib/playcode_web/live/admin/play_performances_live.ex:728
-#: lib/playcode_web/live/admin/play_performances_live.ex:747
-#: lib/playcode_web/live/admin/play_performances_live.ex:867
+#: lib/playcode_web/live/admin/play_performances_live.ex:793
+#: lib/playcode_web/live/admin/play_performances_live.ex:812
+#: lib/playcode_web/live/admin/play_performances_live.ex:960
 #: lib/playcode_web/live/admin/play_places_live.ex:383
 #: lib/playcode_web/live/admin/play_sources_live.ex:257
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:178
@@ -912,8 +912,8 @@ msgstr ""
 msgid "Something went wrong!"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:634
-#: lib/playcode_web/live/admin/play_performances_live.ex:661
+#: lib/playcode_web/live/admin/play_performances_live.ex:699
+#: lib/playcode_web/live/admin/play_performances_live.ex:726
 #: lib/playcode_web/live/play_show_live.ex:670
 #, elixir-autogen, elixir-format
 msgid "Source"
@@ -1241,7 +1241,7 @@ msgid "Cast list"
 msgstr ""
 
 #: lib/playcode_web/live/admin/play_form_live.ex:842
-#: lib/playcode_web/live/admin/play_performances_live.ex:761
+#: lib/playcode_web/live/admin/play_performances_live.ex:826
 #: lib/playcode_web/live/admin/play_sources_live.ex:231
 #: lib/playcode_web/live/admin/play_sources_live.ex:315
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:165
@@ -1275,8 +1275,8 @@ msgstr ""
 msgid "EMOTHE ID:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:646
-#: lib/playcode_web/live/admin/play_performances_live.ex:721
+#: lib/playcode_web/live/admin/play_performances_live.ex:711
+#: lib/playcode_web/live/admin/play_performances_live.ex:786
 #: lib/playcode_web/live/admin/play_sources_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "Edit source"
@@ -1357,8 +1357,8 @@ msgstr ""
 msgid "Manage the bibliographic sources for this play."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:703
-#: lib/playcode_web/live/admin/play_performances_live.ex:721
+#: lib/playcode_web/live/admin/play_performances_live.ex:768
+#: lib/playcode_web/live/admin/play_performances_live.ex:786
 #: lib/playcode_web/live/admin/play_sources_live.ex:174
 #, elixir-autogen, elixir-format
 msgid "New source"
@@ -1381,7 +1381,7 @@ msgstr ""
 
 #: lib/playcode_web/live/admin/entry_fields.ex:66
 #: lib/playcode_web/live/admin/place_list_live.ex:144
-#: lib/playcode_web/live/admin/play_performances_live.ex:613
+#: lib/playcode_web/live/admin/play_performances_live.ex:678
 #: lib/playcode_web/live/admin/play_sources_live.ex:225
 #: lib/playcode_web/live/admin/play_sources_live.ex:310
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:163
@@ -1708,7 +1708,7 @@ msgstr ""
 
 #: lib/playcode_web/live/admin/place_form_component.ex:335
 #: lib/playcode_web/live/admin/play_form_live.ex:845
-#: lib/playcode_web/live/admin/play_performances_live.ex:800
+#: lib/playcode_web/live/admin/play_performances_live.ex:886
 #: lib/playcode_web/play_labels.ex:51
 #, elixir-autogen, elixir-format
 msgid "Note"
@@ -1768,7 +1768,6 @@ msgid "Reworking"
 msgstr ""
 
 #: lib/playcode_web/live/admin/play_editors_live.ex:200
-#: lib/playcode_web/live/admin/play_performances_live.ex:832
 #: lib/playcode_web/live/admin/play_places_live.ex:254
 #: lib/playcode_web/live/admin/play_places_live.ex:346
 #: lib/playcode_web/live/admin/user_list_live.ex:245
@@ -3388,7 +3387,7 @@ msgstr ""
 msgid "Create %{name}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:628
+#: lib/playcode_web/live/admin/play_performances_live.ex:693
 #: lib/playcode_web/live/admin/play_places_live.ex:277
 #, elixir-autogen, elixir-format
 msgid "No places found"
@@ -3731,8 +3730,8 @@ msgstr ""
 msgid "bibliography link"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:381
-#: lib/playcode_web/live/admin/play_performances_live.ex:576
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:394
+#: lib/playcode_web/live/admin/play_performances_live.ex:640
 #, elixir-autogen, elixir-format
 msgid "1 play"
 msgid_plural "%{count} plays"
@@ -3749,12 +3748,12 @@ msgstr ""
 msgid "Adaptations"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:354
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:367
 #, elixir-autogen, elixir-format
 msgid "Add an entry another play already has"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:305
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:318
 #, elixir-autogen, elixir-format
 msgid "Add existing"
 msgstr ""
@@ -3764,27 +3763,27 @@ msgstr ""
 msgid "Article or chapter"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:448
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:461
 #, elixir-autogen, elixir-format
 msgid "As it will be printed"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:371
-#: lib/playcode_web/live/admin/play_performances_live.ex:670
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:384
+#: lib/playcode_web/live/admin/play_performances_live.ex:735
 #, elixir-autogen, elixir-format
 msgid "Author, editor or title"
 msgstr ""
 
 #: lib/playcode_web/components/layouts.ex:167
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:26
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:290
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:303
 #: lib/playcode_web/live/play_show_live.ex:551
 #: lib/playcode_web/live/play_show_live.ex:678
 #, elixir-autogen, elixir-format
 msgid "Bibliography"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:315
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:328
 #, elixir-autogen, elixir-format
 msgid "Bibliography sections"
 msgstr ""
@@ -3806,7 +3805,7 @@ msgstr ""
 
 #: lib/playcode_web/components/play_text.ex:527
 #: lib/playcode_web/components/play_text.ex:545
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:360
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:373
 #, elixir-autogen, elixir-format
 msgid "Close"
 msgstr ""
@@ -3828,7 +3827,7 @@ msgstr ""
 msgid "Criticism"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:277
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:290
 #, elixir-autogen, elixir-format
 msgid "Delete this entry? No other play uses it."
 msgstr ""
@@ -3860,7 +3859,7 @@ msgid "Entry deleted: no other play used it."
 msgstr ""
 
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:83
-#: lib/playcode_web/live/admin/play_performances_live.ex:309
+#: lib/playcode_web/live/admin/play_performances_live.ex:332
 #, elixir-autogen, elixir-format
 msgid "Entry saved."
 msgstr ""
@@ -3870,27 +3869,27 @@ msgstr ""
 msgid "Festschrift"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:451
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:464
 #, elixir-autogen, elixir-format
 msgid "Fill in an author, an editor or a title."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:339
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:352
 #, elixir-autogen, elixir-format
 msgid "Filter"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:340
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:353
 #, elixir-autogen, elixir-format
 msgid "Filter the bibliography"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:415
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:428
 #, elixir-autogen, elixir-format
 msgid "In this play"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:433
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:446
 #, elixir-autogen, elixir-format
 msgid "Internal note"
 msgstr ""
@@ -3932,27 +3931,27 @@ msgstr ""
 msgid "Modern editions"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:293
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:306
 #, elixir-autogen, elixir-format
 msgid "Modern editions, criticism, translations and adaptations of this play. An entry shared with other plays is edited once for all of them."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:308
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:321
 #, elixir-autogen, elixir-format
 msgid "New entry"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:462
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:475
 #, elixir-autogen, elixir-format
 msgid "No bibliography for this play yet."
 msgstr ""
 
 #: lib/playcode_web/live/admin/entry_fields.ex:31
 #: lib/playcode_web/live/admin/entry_fields.ex:38
-#: lib/playcode_web/live/admin/play_performances_live.ex:757
-#: lib/playcode_web/live/admin/play_performances_live.ex:771
-#: lib/playcode_web/live/admin/play_performances_live.ex:856
-#: lib/playcode_web/live/admin/play_performances_live.ex:988
+#: lib/playcode_web/live/admin/play_performances_live.ex:822
+#: lib/playcode_web/live/admin/play_performances_live.ex:857
+#: lib/playcode_web/live/admin/play_performances_live.ex:949
+#: lib/playcode_web/live/admin/play_performances_live.ex:1078
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:157
 #, elixir-autogen, elixir-format
 msgid "Not stated"
@@ -3970,14 +3969,14 @@ msgstr ""
 msgid "Notes"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:466
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:479
 #: lib/playcode_web/live/admin/play_notes_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "Nothing matches the filter."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:393
-#: lib/playcode_web/live/admin/play_performances_live.ex:695
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:406
+#: lib/playcode_web/live/admin/play_performances_live.ex:760
 #, elixir-autogen, elixir-format
 msgid "Nothing matches."
 msgstr ""
@@ -3993,8 +3992,8 @@ msgid "Original title"
 msgstr ""
 
 #: lib/playcode_web/live/admin/entry_fields.ex:73
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:427
-#: lib/playcode_web/live/admin/play_performances_live.ex:795
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:440
+#: lib/playcode_web/live/admin/play_performances_live.ex:881
 #, elixir-autogen, elixir-format
 msgid "Pages"
 msgstr ""
@@ -4009,7 +4008,7 @@ msgstr ""
 msgid "Publication"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:269
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:282
 #, elixir-autogen, elixir-format
 msgid "Remove this entry from this play? The other plays keep it."
 msgstr ""
@@ -4024,7 +4023,7 @@ msgstr ""
 msgid "Scholarly edition"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:372
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:385
 #, elixir-autogen, elixir-format
 msgid "Search the bibliography"
 msgstr ""
@@ -4034,7 +4033,7 @@ msgstr ""
 msgid "Series"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:502
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:515
 #, elixir-autogen, elixir-format
 msgid "Shared · %{count} plays"
 msgstr ""
@@ -4045,7 +4044,7 @@ msgstr ""
 msgid "Siglum"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:158
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:190
 #, elixir-autogen, elixir-format
 msgid "That entry is already in this play's bibliography."
 msgstr ""
@@ -4067,8 +4066,8 @@ msgid "URL"
 msgstr ""
 
 #: lib/playcode_web/live/admin/entry_fields.ex:70
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:421
-#: lib/playcode_web/live/admin/play_performances_live.ex:794
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:434
+#: lib/playcode_web/live/admin/play_performances_live.ex:880
 #, elixir-autogen, elixir-format
 msgid "Volume"
 msgstr ""
@@ -4538,7 +4537,7 @@ msgid "Where the digital text came from: Gallica, Canon 60…"
 msgstr ""
 
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1440
-#: lib/playcode_web/live/admin/play_performances_live.ex:828
+#: lib/playcode_web/live/admin/play_performances_live.ex:921
 #, elixir-autogen, elixir-format
 msgid "Actor"
 msgstr ""
@@ -4901,15 +4900,15 @@ msgstr ""
 msgid "This place is still the historical state of a play's place. Change it there first."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:756
+#: lib/playcode_web/live/admin/play_performances_live.ex:821
 #: lib/playcode_web/live/admin/play_places_live.ex:361
 #: lib/playcode_web/live/admin/play_places_live.ex:363
 #, elixir-autogen, elixir-format
 msgid "Historical state"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:808
 #: lib/playcode_web/live/admin/play_performances_live.ex:894
+#: lib/playcode_web/live/admin/play_performances_live.ex:984
 #: lib/playcode_web/live/play_show_live.ex:524
 #, elixir-autogen, elixir-format
 msgid "Cast"
@@ -4917,95 +4916,95 @@ msgstr ""
 
 #: lib/playcode_web/components/layouts.ex:161
 #: lib/playcode_web/live/admin/play_performances_live.ex:40
-#: lib/playcode_web/live/admin/play_performances_live.ex:595
+#: lib/playcode_web/live/admin/play_performances_live.ex:660
 #: lib/playcode_web/live/play_show_live.ex:511
 #: lib/playcode_web/live/play_show_live.ex:676
 #, elixir-autogen, elixir-format
 msgid "Performances"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:602
+#: lib/playcode_web/live/admin/play_performances_live.ex:667
 #, elixir-autogen, elixir-format
 msgid "Add performance"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:804
+#: lib/playcode_web/live/admin/play_performances_live.ex:890
 #, elixir-autogen, elixir-format
 msgid "Cast as in the cast list"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:780
-#: lib/playcode_web/live/admin/play_performances_live.ex:974
+#: lib/playcode_web/live/admin/play_performances_live.ex:866
+#: lib/playcode_web/live/admin/play_performances_live.ex:1064
 #, elixir-autogen, elixir-format
 msgid "Company"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:912
+#: lib/playcode_web/live/admin/play_performances_live.ex:1002
 #, elixir-autogen, elixir-format
 msgid "Delete %{performance}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:910
+#: lib/playcode_web/live/admin/play_performances_live.ex:1000
 #, elixir-autogen, elixir-format
 msgid "Delete this performance?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:903
+#: lib/playcode_web/live/admin/play_performances_live.ex:993
 #, elixir-autogen, elixir-format
 msgid "Edit %{performance}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:608
+#: lib/playcode_web/live/admin/play_performances_live.ex:673
 #, elixir-autogen, elixir-format
 msgid "Edit performance"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:608
+#: lib/playcode_web/live/admin/play_performances_live.ex:673
 #, elixir-autogen, elixir-format
 msgid "New performance"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:874
+#: lib/playcode_web/live/admin/play_performances_live.ex:967
 #, elixir-autogen, elixir-format
 msgid "No performances yet."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:214
+#: lib/playcode_web/live/admin/play_performances_live.ex:230
 #, elixir-autogen, elixir-format
 msgid "Performance added."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:175
+#: lib/playcode_web/live/admin/play_performances_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "Performance deleted."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:215
+#: lib/playcode_web/live/admin/play_performances_live.ex:231
 #, elixir-autogen, elixir-format
 msgid "Performance updated."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:766
+#: lib/playcode_web/live/admin/play_performances_live.ex:852
 #, elixir-autogen, elixir-format
 msgid "Venue"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:770
+#: lib/playcode_web/live/admin/play_performances_live.ex:856
 #, elixir-autogen, elixir-format
 msgid "Venue type"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:598
+#: lib/playcode_web/live/admin/play_performances_live.ex:663
 #, elixir-autogen, elixir-format
 msgid "When, where and by whom the play was staged, and what says so."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:763
+#: lib/playcode_web/live/admin/play_performances_live.ex:835
 #, elixir-autogen, elixir-format
 msgid "Year from"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:764
+#: lib/playcode_web/live/admin/play_performances_live.ex:844
 #, elixir-autogen, elixir-format
 msgid "Year to"
 msgstr ""
@@ -5015,89 +5014,89 @@ msgstr ""
 msgid "performance"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:574
+#: lib/playcode_web/live/admin/play_performances_live.ex:638
 #, elixir-autogen, elixir-format
 msgid "%{performances} in %{plays}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:575
+#: lib/playcode_web/live/admin/play_performances_live.ex:639
 #, elixir-autogen, elixir-format
 msgid "1 performance"
 msgid_plural "%{count} performances"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:810
+#: lib/playcode_web/live/admin/play_performances_live.ex:896
 #, elixir-autogen, elixir-format
 msgid "Add actor"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:821
+#: lib/playcode_web/live/admin/play_performances_live.ex:907
 #, elixir-autogen, elixir-format
 msgid "Cast row %{number}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:848
-#: lib/playcode_web/live/admin/play_performances_live.ex:982
+#: lib/playcode_web/live/admin/play_performances_live.ex:941
+#: lib/playcode_web/live/admin/play_performances_live.ex:1072
 #, elixir-autogen, elixir-format
 msgid "Forename"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:580
+#: lib/playcode_web/live/admin/play_performances_live.ex:644
 #, elixir-autogen, elixir-format
 msgid "Man"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:849
-#: lib/playcode_web/live/admin/play_performances_live.ex:983
+#: lib/playcode_web/live/admin/play_performances_live.ex:942
+#: lib/playcode_web/live/admin/play_performances_live.ex:1073
 #, elixir-autogen, elixir-format
 msgid "Nickname"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:845
+#: lib/playcode_web/live/admin/play_performances_live.ex:938
 #, elixir-autogen, elixir-format
 msgid "Or a new actor"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:840
+#: lib/playcode_web/live/admin/play_performances_live.ex:933
 #, elixir-autogen, elixir-format
 msgid "Remove cast row %{number}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:964
+#: lib/playcode_web/live/admin/play_performances_live.ex:1054
 #, elixir-autogen, elixir-format
 msgid "Rename"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:739
-#: lib/playcode_web/live/admin/play_performances_live.ex:962
+#: lib/playcode_web/live/admin/play_performances_live.ex:804
+#: lib/playcode_web/live/admin/play_performances_live.ex:1052
 #, elixir-autogen, elixir-format
 msgid "Rename %{name}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:789
+#: lib/playcode_web/live/admin/play_performances_live.ex:875
 #, elixir-autogen, elixir-format
 msgid "Rename corrects the company for every performance that names it."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:414
+#: lib/playcode_web/live/admin/play_performances_live.ex:447
 #, elixir-autogen, elixir-format
 msgid "Renamed for every performance."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:855
-#: lib/playcode_web/live/admin/play_performances_live.ex:987
+#: lib/playcode_web/live/admin/play_performances_live.ex:948
+#: lib/playcode_web/live/admin/play_performances_live.ex:1077
 #, elixir-autogen, elixir-format
 msgid "Sex"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:847
-#: lib/playcode_web/live/admin/play_performances_live.ex:981
+#: lib/playcode_web/live/admin/play_performances_live.ex:940
+#: lib/playcode_web/live/admin/play_performances_live.ex:1071
 #, elixir-autogen, elixir-format
 msgid "Surname"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:580
+#: lib/playcode_web/live/admin/play_performances_live.ex:644
 #, elixir-autogen, elixir-format
 msgid "Woman"
 msgstr ""
@@ -5112,12 +5111,12 @@ msgstr ""
 msgid "company"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_performances_live.ex:652
+#: lib/playcode_web/live/admin/play_performances_live.ex:717
 #, elixir-autogen, elixir-format
 msgid "Clear source"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_bibliography_live.ex:272
+#: lib/playcode_web/live/admin/play_bibliography_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "Remove this entry from this play? A performance of this play cites it, so the entry stays."
 msgstr ""
@@ -5125,4 +5124,15 @@ msgstr ""
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:121
 #, elixir-autogen, elixir-format
 msgid "Removed from this play. A performance still cites it, so the entry stays."
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_performances_live.ex:849
+#, elixir-autogen, elixir-format
+msgid "Left blank, the years follow the date."
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_performances_live.ex:925
+#, elixir-autogen, elixir-format
+msgctxt "cast"
+msgid "Role"
 msgstr ""

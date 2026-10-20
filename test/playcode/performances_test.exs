@@ -751,6 +751,7 @@ defmodule Playcode.PerformancesTest do
       assert line.parts == ["Globe or Blackfriars", company.name, "commercial theatre"]
       assert line.source == 1
       assert line.range == "vol. 6, p. 83"
+      assert line.reference == "[1] vol. 6, p. 83"
 
       assert %{lines: [%{parts: [_, _, "teatro comercial"]}]} = listing(play, "es")
     end

@@ -280,4 +280,31 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLiveTest do
     refute has_element?(view, "#entry-editor")
     assert Bibliography.get_entry(link.entry_id) == nil
   end
+
+  test "an edit leaves alone what another curator changed in a field it did not touch", %{
+    conn: conn,
+    play: play
+  } do
+    link = bibliography_fixture(play, %{"monogr_title" => "Complete Works"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+    view |> button(link, "Edit") |> render_click()
+
+    {:ok, _} = Bibliography.update_entry(link.entry, %{"public_note" => "Corrected meanwhile"})
+    view |> form("#entry-form", entry: %{monogr_title: "The Complete Works"}) |> render_submit()
+
+    assert %{monogr_title: "The Complete Works", public_note: "Corrected meanwhile"} =
+             Bibliography.get_entry(link.entry_id)
+  end
+
+  # The search never offers a catalogue; a forged link event must not add one either.
+  test "a catalogue cannot be linked to the play by a forged event", %{conn: conn, play: play} do
+    catalogue = catalogue_fixture()
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/bibliography")
+
+    assert render_click(view, "link", %{"entry" => catalogue.id}) =~
+             t("That item no longer exists. The list has been refreshed.")
+
+    assert Bibliography.list_links(play.id) == []
+    assert %{kind: "catalogue"} = Bibliography.get_entry(catalogue.id)
+  end
 end
