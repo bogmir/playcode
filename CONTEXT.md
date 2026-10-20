@@ -98,3 +98,18 @@ The state a place belonged to at the time of a play — Castilla, Reino de Ingla
 República romana — or the wider area the editors name when they name no state (Península
 itálica). A place in the gazetteer like any other; a play's link names it.
 _Avoid_: polity, then part of, país histórico
+
+### Performances
+
+**Performance** (*representación*):
+One staging of a play recorded by a source — a date, a venue, a company, a cast. The play
+page's "Performances".
+_Avoid_: historical performance in the interface (all of them are), representación antigua
+
+**Company** (*compañía*):
+Who staged it, a record shared by every performance it gave.
+
+**Venue** (*lugar de la representación*):
+Where, as the source names it ("The Rose playhouse"); text, not a place. Its **venue type**
+(*circunstancia escénica*) is one of eight. The town is the performance's place, from the
+gazetteer.

@@ -33,6 +33,12 @@ lib/
 │   ├── witnesses.ex                  # A play's witnesses (S3): CRUD, order, the printed line, TEI id and type
 │   ├── witnesses/
 │   │   └── witness.ex                # One manuscript or early printing, with its siglum
+│   ├── performances.ex               # A play's historical performances (S5): CRUD with company, cast and source in one write, the printed lines
+│   ├── performances/
+│   │   ├── performance.ex            # One staging: date and years, venue and its type, place, note, source's volume and pages
+│   │   ├── cast_member.ex            # A cast row: actor and role
+│   │   ├── company.ex                # A company, shared by every performance it gave
+│   │   └── actor.ex                  # An actor, one per surname, forename and nickname
 │   ├── activity_log.ex                   # Activity log context (log, list, count)
 │   ├── activity_log/
 │   │   └── entry.ex                  # Activity log entry schema
@@ -52,6 +58,8 @@ lib/
 │   │   ├── filemaker_xml.ex          # FMPXMLRESULT reader (one FileMaker table)
 │   │   ├── bibliography.ex           # S4's one-time FileMaker bibliography import
 │   │   └── witnesses.ex              # S3's one-time FileMaker witness import
+│   │   ├── places.ex                 # S9b's FileMaker places of action; its place rules serve any T10 link
+│   │   └── performances.ex           # S5's one-time FileMaker performance import: the plan, the hand list of works, the write
 │   └── export/
 │       ├── tei_xml.ex                # Generate TEI-XML from DB
 │       ├── html.ex                   # Standalone HTML document export
@@ -94,6 +102,9 @@ lib/
     │       ├── notes_component.ex        # The note editor inside the content editor's modals
     │       ├── play_notes_live.ex        # Admin: /admin/plays/:id/notes - a play's notes, edited in place
     │       ├── play_witnesses_live.ex    # Admin: /admin/plays/:id/witnesses - a play's witnesses
+    │       ├── play_performances_live.ex # Admin: /admin/plays/:id/performances - a play's performances, cast, renames, source
+    │       ├── place_picker.ex           # The place search and state select, shared by the Places and Performances tabs
+    │       ├── entry_fields.ex           # A bibliography entry's inputs, shared by the Bibliography and Performances tabs
     │       └── user_list_live.ex     # Admin: /admin/users - user management
     ├── controllers/
     │   ├── user_session_controller.ex # Login/logout session handling
@@ -137,8 +148,21 @@ lib/
 - `GET /admin/plays/:id/notes` - A play's in-text notes in reading order: filter by type, words or no term; edit type, word, term and text in place; delete; open the line in Content (`?element=`/`?division=` opens its modal), where notes are added (`:edit_content`)
 - `GET /admin/plays/:id/bibliography` - A play's bibliography: new, edit (with a warning on a shared entry), add an existing entry, remove, filter (`:manage_bibliography`)
 - `GET /admin/plays/:id/witnesses` - A play's witnesses: add, edit, reorder, delete, previewed as printed (`:view_admin`)
+- `GET /admin/plays/:id/performances` - A play's performances: add, edit, delete; the cast; a company or actor renamed for every performance; the source picked, entered or corrected for every play (`:view_admin`)
 - `GET /admin/plays/compare/export/html` - Comparison HTML export
 - `GET /admin/plays/:id/export/tei` - Download TEI-XML
 - `GET /admin/plays/:id/export/html` - Download HTML
 - `GET /admin/plays/:id/export/pdf` - Download PDF
 - `GET /admin/plays/:id/export/epub` - Download EPUB
+
+## Key Decisions
+
+- **TEI Import first**: Primary data entry via XML import, not manual forms
+- **ChromicPDF for PDF**: Reuses the HTML export via headless Chrome, so PDF looks identical to the website
+- **Saxy for XML**: SAX-style streaming parser; uses `Saxy.SimpleForm` to parse into tree
+- **UUID primary keys**: All tables use `binary_id` for eventual distributed deployment
+- **JSONB statistics**: Cached stats stored as a JSON blob, recomputed on demand
+- **Self-referencing trees**: Both divisions and elements use `parent_id` for hierarchy
+- **bcrypt authentication**: Standard Phoenix auth pattern with session tokens and password reset; accounts arrive by invitation, so accepting the invite replaces a separate confirmation step
+- **One authorization seam**: two roles (`:admin`, `:researcher`) but every access decision goes through `Playcode.Authz.can?/3`, which already takes the resource — per-play scoping becomes one extra clause instead of a rewrite
+- **Admin identity in config, not the UI**: `ADMIN_EMAILS` is reconciled at boot, so a compromised admin session cannot strip its co-admins or lock the owner out

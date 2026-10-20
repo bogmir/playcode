@@ -9,7 +9,10 @@ EMOTHE and ARTELOPE stay the public brands; Playcode is the internal platform th
 This file holds the rules every session needs. The rest is in `docs/`:
 
 - `CONTEXT.md` - the glossary: the project's words for its concepts (paratext, editorial text, kind…) and the words to avoid
-- `docs/architecture.md` - the file map and the routes
+- `docs/architecture.md` - the file map, the routes and the key decisions
+- `docs/schema.md` - every table and column, and the rules behind them; the account lifecycle
+- `docs/tei-mapping.md` - how each element of a TEI file reaches Playcode and back
+- `docs/development.md` - loading the corpus and FileMaker's data, and what each re-run keeps; gettext recipes
 - `docs/static-site.md` - the static site export in full: architecture, measurements, output, publishing on emothe.uv.es
 - `docs/production-reimport.md` - re-importing the TEI corpus on Fly: the machines, the steps, and what broke each time
 - `docs/backlog.md` - open work, the TEI corpus gaps among it
@@ -148,41 +151,24 @@ toponym no other test uses.
 
 ## Database Schema
 
-All tables use UUID primary keys. Key relationships:
+The tables, their columns and the rules behind each: `docs/schema.md`. What bites when you change them:
 
-- `users` - email/password auth with role (`:admin`, `:researcher`), `confirmed_at`, `deactivated_at`; `hashed_password` is nullable because an invited account has no password yet
-- `users_tokens` - session tokens (with `ip_address`/`user_agent`), invite and password-reset tokens. There is no self-service email change, so no `change:` context
-- `plays` has_many `play_editors`, `play_sources`, `play_paratexts`, `characters`, `play_divisions`, `play_elements`; `composition_date_from`, `composition_date_to`, `composition_date_note` hold when the play was written, as a year range plus the competing datings verbatim; `form` is nil (automatic, from `is_verse`) or a curator's `verse`/`prose`/`mixed`, read only through `Play.form/1`; `pending_original_code` is the short code (`Play.short_code/1`) of the original a translation's TEI file named while no play has it, written by a first import and cleared by `Catalogue.link_waiting_translations/0`, which every play write runs; `show_variants` ("Show variant readings", default on) hides a play's variants from readers (the TEI export and the admin keep them), off for EMOTHE0010 until its editor has finished
-- `plays.content_version` - moved by Postgres triggers (migration `20261005120000_track_play_content_version`) whenever anything a play's static pages show changes: its own row, its divisions, elements, speakers, characters, editors, sources, notes, places and bibliography links, the gazetteer entries of those places and their ancestors, the bibliography entries it links to, and the rows of its original and translations. Once per transaction, with a `pg_notify('play_changed', id)`. Never written by the app (`writable: :never`). **A new table with a `play_id` whose rows appear on a play's pages needs the `play_row_changed()` trigger in its migration** (the migration's moduledoc has the line); `test/playcode/content_version_test.exs` fails until it has it. Adding a column needs nothing. Over-flagging is deliberate: any statement touching a play's rows flags it, even when the values end up the same
-- `play_divisions` self-references via `parent_id` (acts contain scenes)
-- `play_elements` self-references via `parent_id` (speeches contain line_groups contain verse_lines)
+- All tables use UUID primary keys. A play has its divisions (a `parent_id` tree: acts contain scenes), its elements (speeches contain line groups contain verse lines), characters, editors, sources, paratexts, notes and variants (`play_notes`), witnesses, place links, bibliography links and performances. Bibliography entries, places, companies and actors are corpus-wide, shared by every play that names them, so one correction reaches them all
+- `plays.content_version` is moved by Postgres triggers whenever anything a play's static pages show changes, and never written by the app. **A new table with a `play_id` whose rows appear on a play's pages needs the `play_row_changed()` trigger in its migration**; `test/playcode/content_version_test.exs` fails until it has it
 - **Every text the TEI importer reads holds `<emph>` as `<<…>>`**, not only a line: a source's note, a front-matter section, a character's name and description, a heading. Print such text through the text's renderers (`PlayText.inline_content`, `Components.inline`, `NoteMarkup.inline`), export it through `TeiXml`'s `build_inline_content`, and where markup cannot go (a link, a title attribute, a `<title>`) use `InlineMarkup.plain/1`. Printing it with `{text}` or `escape/1` shows the markers to readers
-- `play_elements.content` holds an inline stage direction as `<stage type="…">…</stage>` next to the `<<…>>` italics, written by the TEI importer from a `<stage>` child of an `<l>`, `<p>` or `<seg>` and written back by the export; `Element.changeset` refuses a malformed marker, and any marker in an element that is not a verse line or a paragraph (a stage direction or trailer is a stage already). A line break is `\n`; where a printed line of the source starts, its number is `<lb n="…"/>`, and a prose paragraph's own number (`p@n`) is that marker at its very start; `Element.changeset` refuses any other `<lb`. In a line or paragraph partly spoken aside each aside is `<aside>…</aside>`, flat and outside stages and italics; one all aside is `is_aside` with no marker (`Element.whole_aside?/1`), and a marker sets `is_aside`. A passage only the Folio prints (Hamlet) is `<folio>…</folio>`, `part="I|M|F"` when it crosses elements, in a line's, paragraph's or stage direction's text or a speech's speaker label; read from Hamlet's `<code>` marks or an `<app type="folio">`, written back as the `<app>` or, across elements, the file's marks (question 37). `/api/v1` returns `content` raw, markers included
-- `element_characters` join table links `play_elements` to `characters` (many-to-many, supports multi-speaker speeches like `who="#ALB #COR"`)
-- `play_notes` - in-text notes (TEI `<note>` in the body): on one element (a line, paragraph, stage direction, trailer, or a speech's speaker label) or one division's heading, at `offset` graphemes into that text's plain form (`PlayContent.anchor_text/1`); `position` orders notes at one offset (set by `PlayContent.create_note/1` and `update_note/2`, never passed by a caller; the TEI import numbers its notes the same way in memory, `TeiImport.collect_notes/5`, since it writes them with `insert_all`); `n`, `type`, `term`, `body` (paragraphs split by a blank line). `update_element/2` and `update_division/2` carry offsets through an edit. Numbered in reading order (`Note.reading_order/1`) by `load_play_content/1`. A variant of the critical apparatus is a row of type `variante` (`Note.variant?/1`, not `variantes`, the type of 3 ordinary notes) with `variant_type`, `range_end` and `readings` (JSONB, `Note.Reading`); its `body` may be nil. Variants are numbered apart from notes, and `load_play_content(id, variants: false)` leaves them out. A re-import replaces the play's notes and variants with the file's. **Not rolled out to every play yet:** a play imported before 2026-10-08 keeps its notes and inline stages pasted into its lines until its TEI file is re-imported (`docs/backlog.md`, *Production rollout*). **A re-import replaces the play's elements, divisions and notes: hand edits to its lines and hand-added notes are lost** (`play_notes` has no `origin` column, unlike editors, sources and paratexts, so nothing marks a note as hand-entered)
-- `play_paratexts` - a play's paratexts (`CONTEXT.md`): `kind`, `heading`, `content` (paragraphs parted by a blank line, a line break as `\n`; nil for a heading alone), `back` (after the text), `position` (dragged in the content editor; a new one goes last), `origin`. The kind is the file's own word, any TEI token; `Paratext.kinds/0` are the ones the admin offers, and the kind decides the concept through a fixed map: `Paratext.editorial?/1` (an editorial text), `scene?/1` (`lugar_accion`, the scene of the action: not a paratext, never `back`). Printed through one rule, `PlayLabels.split_paratexts/2` → `{front, scene, back}`
-- `play_statistics` stores computed JSONB data per play
-- `bibliography_entries` - corpus-wide, one row per work cited, shared by every play that cites it, so one correction reaches them all (S4). Two levels, `analytic_*` (article, chapter) and `monogr_*` (book, journal); `kind` (`modern_edition`/`criticism`/`translation`/`adaptation`), `pub_type`, `language`, imprint text columns, `filemaker_id` (`"T12:<id>"`/`"T04:<id>"`, unique). `public_note` is printed with the citation; `note` is for researchers only and never leaves the admin pages, not even into the TEI file. An update moves every linked play's `content_version` (`bibliography_entry_changed()`)
-- `play_bibliography` - a play's link to an entry: `volume` and `pages` (where the play sits in a modern edition; they win over the entry's when printed), an internal `note`, `origin` (`manual`/`filemaker`/`tei`). Unique per play and entry. `Bibliography.unlink/1` deletes the entry with its last link, so there are no orphan entries
-- `play_witnesses` - a play's witnesses (S3), the manuscripts and early printings its text survives in: `siglum`, `title`, `normalized_title`, `attribution`, `pub_place`, `publisher`, `date`, `format`, `witness_type` (a leaf of FileMaker's T03.1 tree, `Witness.types/0`), `shelfmark`, `note`, `position` (set only by `Playcode.Witnesses`), `origin`, `filemaker_id` (`"T03:<id>"`). `siglum` is unique per play; the table has the content trigger. Printed as emothe.uv.es prints *Testimonios* (`Witnesses.html/1`); siglum and type are never public. The changeset keeps a line break as `\n` and a run of spaces as one, the form the TEI file gives back
-- `activity_logs` tracks admin actions with user_id, play_id, action, resource_type, resource_id, changes (JSONB), metadata (JSONB)
-
-Element types: `speech`, `stage_direction`, `verse_line`, `prose`, `line_group`, `trailer` (a division's closing formula, "FIN DEL PRIMER ACTO"; exported last in its division). A `prose` or `line_group` with no parent is text nobody speaks: a dumb show, a stanza opening a prologue
-Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco`, `front`
+- `play_elements.content` holds inline markers beside the italics (`<stage>`, `<aside>`, `<folio>`, `<lb n="…"/>`); `Element.changeset` refuses a malformed one. `/api/v1` returns `content` raw, markers included
+- **A re-import replaces the play's elements, divisions and notes: hand edits to its lines and hand-added notes are lost** (`play_notes` has no `origin` column)
 
 ### Archiving and provenance
 
-- `plays.deleted_at` — archiving, not deletion. `Catalogue.delete_play/1` sets it, `restore_play/1` clears it, `purge_play/1` is the destructive path (wired to no button). Every Catalogue read hides archived plays; pass `include_deleted: true` for both or `archived: true` for only the archived ones. The unique index on `plays.code` is deliberately global, so an archived play keeps its code reserved.
-- `play_editors.origin`, `play_sources.origin`, `play_paratexts.origin` — `"tei" | "manual" | "filemaker"`, default `"manual"`; a paratext may also be `"word"`, the front matter a Word import wrote. A TEI re-import deletes only its own `"tei"` rows and a Word import only its `"word"` ones, so hand-entered records survive.
+- `plays.deleted_at` is archiving, not deletion: every Catalogue read hides archived plays (`include_deleted: true` for both, `archived: true` for only those); `purge_play/1` is the destructive path, wired to no button. The unique index on `plays.code` is global, so an archived play keeps its code reserved.
+- Editors, sources, paratexts, witnesses, place links, bibliography links and performances carry an `origin` (`"tei" | "manual" | "filemaker"`, a paratext also `"word"`). A TEI re-import replaces only its own `"tei"` rows (bibliography links it only adds) and a Word import only its `"word"` ones, so hand-entered records survive.
 - **Re-importing a TEI file whose code exists updates that play in place** (same `id`, same history, un-archived). It does *not* write `language`, `relationship_type`, `parent_play_id`, `is_complete`, `historical_time`, `historical_time_note`, `composition_date_from`, `composition_date_to`, `composition_date_note`, `form` or `show_variants` — those are `@platform_owned` in `lib/playcode/import/tei_import.ex`. Any new curated column must be added to that list: for a column the TEI parser emits, the list is what stops the re-import overwriting it; for one it does not emit, the list is what makes the import preview report it as preserved.
 - `TeiImport.preview_import/1` reports what an import would replace and keep, without writing. Used by the admin import page and `mix playcode.import.tei --dry-run`.
 
 ### Access control
 
-- **Accounts are invite-only.** There is no registration page. `Accounts.invite_user/3`
-  creates a password-less row plus a 7-day `"invite"` token; accepting sets the password
-  and `confirmed_at` in one transaction, because clicking the emailed link already proves
-  the mailbox. Re-inviting invalidates the previous link.
+- **Accounts are invite-only, and deactivated, never deleted** (`activity_logs.user_id` references them); the account lifecycle (invites, resets, sessions, throttling) is in `docs/schema.md`, *Accounts*.
 - **`ADMIN_EMAILS`** is the source of truth for who is an admin. `Playcode.Accounts.AdminBootstrap`
   reconciles it at boot: unknown addresses get an invited admin plus mail, non-admins get
   promoted, deactivated ones get reactivated. Those accounts cannot be demoted, deactivated
@@ -218,49 +204,11 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
 - **Per-play scoping is a planned extension**, not a rewrite: `can?/3` already takes the
   resource, so restricting researchers to assigned plays is one new clause plus a
   `play_assignments` table. See the `@moduledoc` in `lib/playcode/authz.ex`.
-- **A password reset confirms an unconfirmed account.** The link was mailed to that
-  address, so following it proves the mailbox — the same argument as accepting an invite.
-  Without this, an invited user who reaches for "forgot password" instead of their invite
-  link ends up with a working password on an account every gate refuses, which is a lockout
-  with no UI escape. A reset never clears `deactivated_at`.
-- **Accounts are deactivated, never deleted** — `activity_logs.user_id` references them.
-  Deactivating destroys every token and disconnects open LiveViews.
-- Sessions last 30 days and are listed and revocable at `/users/settings`; admins can force
-  logout from `/admin/users`. Login throttling has two ETS keys: 20/minute per IP and
-  10/15 minutes per email address, and a successful login clears the email counter.
 
 ## TEI-XML Format
 
-The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
-- `teiHeader/fileDesc` -> play metadata, editors, sources
-- `sourceDesc/bibl/distributor` -> `play_sources.distributor`, where the digital text came from (“Procedencia” on emothe.uv.es); printed under the source on the play page and the site through `PlayLabels.provenance/1`, which prints none of the placeholders “Texto base” and “ProcedenciaFuente” (question 27)
-- `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept; `<lb/>` a line break in a field
-- `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note; words with no year are a note alone); read on first import only, since the columns are `@platform_owned`
-- `teiHeader/profileDesc/settingDesc/setting/time` -> historical time (`@type` the period, the text its note), beside the place links in the same `setting`; first import only, like the dating
-- `teiHeader/profileDesc/settingDesc/setting/placeName/country` -> the link's historical state (`play_places.historical_state_id`): `<country ref="#republica-romana"/>` for a state of type `country`, a nested `<placeName ref>` for any other (a region, Península itálica), the state and its ancestors in `listPlace`; read back by `TeiParser`'s `setting_links/1`. A re-import writes the state of the play's `tei` links from the file, so a file without one clears it; `filemaker` links are left alone
-- `teiHeader/fileDesc/notesStmt/note` -> `plays.edition_notes`, one text per note, `<lb/>` a line break; on every import, like the title. In the play form and the file only: emothe.uv.es shows none, and readers seeing them waits on question 26
-- `teiHeader/fileDesc/titleStmt/title[@type]` `traduccion`, `adaptacion`, `refundicion` or `version` -> the main title, and its type the play's `relationship_type` (first import only, `@platform_owned`); written back as the main title's `type`. `version` is kept as a kind until question 40 is answered
-- `teiHeader/fileDesc/notesStmt/relatedItem[@type="original"]/@target` -> the original's short code; a first import links the two whichever arrives first (`Catalogue.link_waiting_translations/0`), and never replaces an original already set
-- `teiHeader/revisionDesc/change` -> `plays.revisions` (`Catalogue.Revision`: its `date`, its `persName`s joined with "; ", its own words, its `note`), on every import, replacing a change recorded in Playcode as the notes on the edition are; an empty change is none. Edited in the play form, listed on the play's admin page, printed for no reader
-- `teiHeader/profileDesc/textClass/classCode[@scheme="#CDU"]` <- written from the language (with `encodingDesc/classDecl/taxonomy[@xml:id="CDU"]`), never read: the CDU number follows the language one for one, and Portuguese has none
-- `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading; `castItem/actor` -> `characters.actor`, the original cast, edited in the content editor and printed nowhere, as on emothe.uv.es (question 28)
-- `text/front/div` -> a paratext keeping its `@type` as its kind (`circunstancia_accion` is read as `lugar_accion`, `nota` and no type as `nota_edicion_digital`), kept when it has a heading or paragraphs; `<lb/>` a line break, an empty line between two a paragraph break
-- `text/front/set` -> the scene of the action (not a paratext, but kept in `play_paratexts` with kind `lugar_accion`), written back as `<set>` after the cast list and printed there (`PlayLabels.split_paratexts/2`)
-- `text/back/div` -> a paratext with `back`, written back before the bibliography and printed after the text; not read: a back cast list (question 29) or a div holding `lg` (the sonnet, question 30)
-- `text/body/div1[@type="acto"]` -> act divisions
-- `text/body/div1/div2[@type="escena"]` -> scene subdivisions
-- `sp` -> speech elements with `who` -> character reference
-- `lg` -> line groups with verse type (redondilla, romance_tirada, etc.)
-- `l` -> verse lines with line numbering, split line markers (part I/M/F); `@xml:id` the line's identifier, shown in the content editor but never edited
-- `stage` -> stage directions, `@type` the kind (`Element.stage_types/0`, TEI's list, chosen in the content editor; any other word a file gives is kept); the `delivery_` of 24 source files is read as `delivery`
-- `stage` inside `l`, `p` or `seg` -> a `<stage>` marker in the line's text (a line or paragraph all aside drops its stages)
-- `seg[@type="aside"]` in `l` or `p` -> `is_aside`; when every word is in one, the line is the segs' text and its breaks (the delivery stage, "(Aparte)", dropped), else the whole text, each seg an `<aside>` marker
-- `lb` in the play text and its notes -> a line break, `\n`, as in paratexts; `lb@n` -> a `<lb n="…"/>` marker where a printed line of the source starts, and `p@n` that marker at the very start of the paragraph (the export tells them apart by position). Shown as a new line and an inline number that follows the line-number switch; an `lb`'s `xml:id` is dropped, and so is a break that ends a note's paragraph
-- `note` in the play text -> `play_notes`, at its offset in the line, speaker label or heading it sits in (not part of the text); its `type` as written but for two slips, `video` read as `traductor` and `nota_editor_digital` as `editor_digital` (question 17)
-- `app` in the play text -> a variant, a `play_notes` row of type `variante` at its offset, as a `note` is (`n`; `variant_type` its `type`, `range_end` its `to`, both as written; `readings` its `lem` and `rdg`s, each with `wit` as written, its text and its own `note`; `body` its own note or nil); written back where it was. Inside a note an `app` reads as nothing, the note keeping the line's words, unless no entry of its element has its `n` (EMOTHE0530 `n="496"`): then it moves into the line, after the note. An entry inside the delivery stage a line all aside drops is kept at the line's start. Readers see an asterisk opening the readings, each siglum followed by what it names (`Witnesses.short_names/1`), unless the play's `show_variants` is off; the site's Notes page and search and the play page's Notes view leave variants out
-- `app[@type="folio"]` in the play text, an empty `<lem wit="#Q2"/>` and one `<rdg wit="#F1">` with a word in it -> a Folio passage, `<folio>` around the reading's contents; any other `app type="folio"` stays a variant. A passage inside one element is written back as that `<app>` (question 36); readers get a "Folio interpolations" switch, off by default, whatever `show_variants` says
-- Hamlet's `<code>` marks (`<sup>F</sup>`, `<span class="folio">`) -> Folio passages: the superscript labels, in document order, alternately open and close one (an "F" label's text is dropped, any other word kept), `part="I|M|F"` where it crosses elements; the span strings are not read. A file with no label drops the wrappers and keeps their words. A passage across elements is written back in the same `<code>` form until question 37 is settled, its pieces paired again in reading order, so an edit inside one cannot unbalance the file
-- `back/div[@type="bibliografia"]/listBibl/biblStruct` -> the bibliography, on every import: a reference is linked to the entry with an identical `Bibliography.Entry.description/1` (`Bibliography.identical_entries/2`), else created, with link origin `tei`; nothing is changed or removed, and `preview_import/1` lists what an import would add. The play's own volume and pages are `biblStruct/citedRange`, the entry's `monogr/biblScope`; each person of a field ("Morris, Brian; Gill, Roma") is an `author` or `editor` of their own, joined with "; " on import. A bibliography in prose (seven source files) gives nothing. `mix playcode.import.bibliography` counts a play with `tei` links as imported, so FileMaker's copies never come in beside a file's references. Completeness is never written (see *The TEI file is a complete copy of a play*)
+The importer reads the TEI P5 of EMOTHE/Artelope. Every element's mapping, both ways, is
+`docs/tei-mapping.md`; a change to the import or the export changes its line there.
 
 TEI fixture files are at `test/fixtures/tei_files/` (UTF-16 encoded, ~37 files covering Spanish/Italian/English/French plays). The whole production corpus, the 370 files the live site was loaded from, is at `doc/tei_corpus/` (git-ignored, like the FileMaker exports beside it); 17 of its plays are newer than their copies under `test/fixtures/`.
 
@@ -302,17 +250,6 @@ export PATH="/home/bogdan/.asdf/installs/erlang/28.1/bin:/home/bogdan/.asdf/inst
 
 The version numbers are pinned in both places. An asdf upgrade means editing `env.PATH` in `.claude/settings.json` and the line above; `.tool-versions` stays the source of truth for which versions those are.
 
-### Finding missing gettext translations without mix
-
-When `mix gettext.extract --merge` is not runnable, find missing translations manually:
-
-```bash
-# Strings in code but not in PO file:
-grep -rho 'gettext("[^"]*")' lib/ | sed 's/.*gettext("\(.*\)")/\1/' | sort -u > /tmp/code_strings.txt
-grep '^msgid ' priv/gettext/es/LC_MESSAGES/default.po | sed 's/msgid "\(.*\)"/\1/' | sort -u > /tmp/po_strings.txt
-comm -23 /tmp/code_strings.txt /tmp/po_strings.txt
-```
-
 ## Getting Started
 
 ```bash
@@ -324,61 +261,20 @@ mix test
 mix phx.server
 ```
 
-Load the corpus: the 370 production files under `doc/tei_corpus/` (git-ignored; copy them there first) plus the fixtures under `test/fixtures/`, 392 plays, one per code, a `doc/tei_corpus` file winning over a fixture with the same code:
+Load the data. Every command takes `--dry-run`; what each reads, and what a re-run keeps, is in
+`docs/development.md`:
 
 ```bash
-mix playcode.import.tei             # skip codes already imported
-mix playcode.import.tei --dry-run   # report what would happen, write nothing
-mix playcode.import.tei --force     # re-import every file, updating in place
-mix playcode.import.tei --force --resume  # ...except plays imported since their file was written
+mix playcode.import.tei            # the TEI corpus: doc/tei_corpus/ and test/fixtures/ (--force, --resume)
+mix playcode.import.filemaker      # language, kind and original from FileMaker's index, historical time
+mix playcode.import.bibliography   # S4, FileMaker's bibliography
+mix playcode.import.witnesses      # S3, its witnesses
+mix playcode.import.places         # S9b, its places of action
+mix playcode.import.performances   # S5, its historical performances
 ```
 
-On Fly, `mix playcode.fly.reimport prepare`, `run`, `generate` and, after the preview,
-`deploy`, from this directory (`docs/production-reimport.md`).
-
-Correct `language`, `relationship_type` and `parent_play_id` from the FileMaker published index,
-and bootstrap `historical_time`/`historical_time_note` from the version records
-(`doc/w3emothe_T01_tituloEM.ndjson`, git-ignored):
-
-```bash
-mix playcode.import.filemaker --dry-run   # print the changes, write nothing
-mix playcode.import.filemaker             # apply them
-mix playcode.import.filemaker --force     # also overwrite curated conflicts
-```
-
-The derived fields (`language`, `relationship_type`, `parent_play_id`) overwrite unconditionally —
-the index is authoritative — but for what it cannot say: it knows only originals and translations, so
-an adaptation, refundición or version keeps its kind and its original (filled when it has none), and
-the families question 15 corrected stay so (`FilemakerSync`'s `@corrected_originals`). The curated fields (`historical_time`, `historical_time_note`) are
-fill-only: written when blank, reported as a conflict when they differ, overwritten only under
-`--force`.
-
-Bring FileMaker's bibliography into the plays we hold, once (S4; the six tables of the
-`ctce_dades` dump under `doc/ctce_dades/`, git-ignored). A re-run skips plays already imported,
-so a curator's edits stay; on Fly, `Playcode.Release.import_bibliography/2`:
-
-```bash
-mix playcode.import.bibliography --dry-run   # the plan, per play and per skip reason
-mix playcode.import.bibliography             # write it
-```
-
-Its witnesses likewise (S3; `T03` and `T03.2` under `doc/ctce_dades/`); on Fly,
-`Playcode.Release.import_witnesses/2`:
-
-```bash
-mix playcode.import.witnesses --dry-run   # the plan, per play and per skip reason
-mix playcode.import.witnesses             # write it
-```
-
-Its places of action likewise, each link with the historical state its place belonged to (S9b; the
-`T10*` tables, read from `doc/ctce_dades/` or `--path DIR`). A re-run skips plays already imported, so a
-curator's deletions stay, and the links (origin `filemaker`) survive a TEI re-import; on Fly,
-`Playcode.Release.import_places/2`, `dry_run: true` first:
-
-```bash
-mix playcode.import.places --dry-run   # the plan, per play and per skip reason
-mix playcode.import.places             # write it
-```
+On Fly: `mix playcode.fly.reimport prepare`, `run`, `generate` and `deploy` (`docs/production-reimport.md`),
+and the `Playcode.Release.import_*` functions, `dry_run: true` first.
 
 The TEI header is not authoritative for language — every EMOTHE file carries `xml:lang="es"` for
 the editorial platform. The index's `[EN]`/`[FR]` tag is.
@@ -400,15 +296,3 @@ deployment, Fly volume, PDF downloads); publishing the site: `docs/static-site.m
 - **`ADMIN_EMAILS` unset means zero admins** (see *Access control*), and **`SMTP_HOST` unset silently drops every invitation**: use `bin/playcode rpc 'Playcode.Release.invite_url("...")'`.
 - **`DATABASE_URL` must be a direct or session-mode connection.** `PlayChangeListener` holds a LISTEN connection that a transaction-mode pooler silently breaks; pages then update only on reload.
 - Secrets: `DATABASE_URL`, `SECRET_KEY_BASE`, `ADMIN_EMAILS`, `SMTP_HOST`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and the four deploy secrets in `docs/static-site.md`. `fly secrets list` shows names only.
-
-## Key Decisions
-
-- **TEI Import first**: Primary data entry via XML import, not manual forms
-- **ChromicPDF for PDF**: Reuses the HTML export via headless Chrome, so PDF looks identical to the website
-- **Saxy for XML**: SAX-style streaming parser; uses `Saxy.SimpleForm` to parse into tree
-- **UUID primary keys**: All tables use `binary_id` for eventual distributed deployment
-- **JSONB statistics**: Cached stats stored as a JSON blob, recomputed on demand
-- **Self-referencing trees**: Both divisions and elements use `parent_id` for hierarchy
-- **bcrypt authentication**: Standard Phoenix auth pattern with session tokens and password reset; accounts arrive by invitation, so accepting the invite replaces a separate confirmation step
-- **One authorization seam**: two roles (`:admin`, `:researcher`) but every access decision goes through `Playcode.Authz.can?/3`, which already takes the resource — per-play scoping becomes one extra clause instead of a rewrite
-- **Admin identity in config, not the UI**: `ADMIN_EMAILS` is reconciled at boot, so a compromised admin session cannot strip its co-admins or lock the owner out

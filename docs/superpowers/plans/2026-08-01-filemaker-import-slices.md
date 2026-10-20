@@ -583,6 +583,8 @@ lacks, the proposed table, TEI mapping. Headlines:
 
 ### S5 — Historical performances
 
+- **Built:** 2026-10-20 on branch `s5-performances`: design `docs/superpowers/specs/2026-10-19-s5-performances-design.md`, plan `docs/superpowers/plans/2026-10-20-s5-performances.md`; what follows is the analysis it was built from
+
 - **From:** the master tables `T11*` (2026-10-10, below), replacing `T01.pub_RepAntiguas` —
   labelled `<b>Company</b>`, `<b>Venue</b>`, `<b>Date</b>`, `<b>Cast</b>` (nested `<ul>`, one
   `<li>` per actor), `<b>Location</b>`, `<b>Venue type</b>`, `<b>Note</b>`,
