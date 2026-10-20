@@ -293,15 +293,15 @@ defmodule PlaycodeWeb.PlayLabels do
   def bibliography_kind_label("adaptation"), do: gettext("Adaptations")
   def bibliography_kind_label(_other), do: ""
 
-  @doc "The kinds for a form's select: one entry is one of these."
-  def bibliography_kind_options do
-    [
-      {gettext("Modern edition"), "modern_edition"},
-      {gettext("Criticism"), "criticism"},
-      {gettext("Translation"), "translation"},
-      {gettext("Adaptation"), "adaptation"}
-    ]
+  @doc "The kinds for a form's select: one entry is one of `kinds`."
+  def bibliography_kind_options(kinds \\ Entry.kinds()) do
+    for kind <- kinds, do: {bibliography_kind_name(kind), kind}
   end
+
+  defp bibliography_kind_name("modern_edition"), do: gettext("Modern edition")
+  defp bibliography_kind_name("criticism"), do: gettext("Criticism")
+  defp bibliography_kind_name("translation"), do: gettext("Translation")
+  defp bibliography_kind_name("adaptation"), do: gettext("Adaptation")
 
   @doc "The witness types for a form's select, grouped as FileMaker's tree: manuscripts, then early editions."
   def witness_type_options do
