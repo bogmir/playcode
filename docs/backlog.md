@@ -6,6 +6,7 @@ items with a longer write-up live in `docs/static-site-improvements.md`.
 
 ## Production rollout
 
+- [ ] **The *Arte nuevo* as a poem on production** (question 41, built 2026-10-21, `docs/history.md`) - EMOTHE0002, 0024, 0025 and 0116 show as a play in one act until their re-encoded files in `doc/tei_corpus/` are re-imported there
 - [ ] **Re-import for punctuation after asides and stages, the credit corrections and the sort titles in capitals** (2026-10-18, `docs/history.md`) - production's plays read "Dimmi (ti priego) , dimmi" (302 texts in the corpus), keep the 65 credits corrected in our copies of the files, and keep four sort titles in capitals (`GIULIO CESARE`), until their files are re-imported (`mix playcode.fly.reimport prepare`, `run`, about 8 minutes, then `generate`; `docs/production-reimport.md`)
 - [ ] **Hamlet's variants back on** (question 2) - EMOTHE0010's `show_variants` stays off until its editor has finished the file; then switch it on in the play's form and Generate (a play's own row change refreshes only its pages)
 - [ ] **Paratexts on production: the editors' corrections** - the re-import (2026-10-15) brought every file's kind back, so the five wrong ones listed under "Kinds to correct" in `docs/stakeholder/preguntas.html` (EMOTHE0125, 0133, 0715, 0750, 0271) show on production as their files give them. The editors correct them in the content editor's Paratexts tab, and the order where a file's is wrong. A correction lives in Playcode only: a later forced re-import of the original file puts the file's kind back (the dry run counts it as a row edited since its import), so correct the file as well, or import Playcode's own export instead
@@ -28,7 +29,6 @@ and the technical detail is here.
 
 ## Texts that are not plays (2026-10-18), waiting on the project
 
-- [ ] **The *Arte nuevo* encoded as a one-act play** (question 41 in `docs/stakeholder/preguntas.html`) - EMOTHE0002 and its translations EMOTHE0024, 0025 and 0116, a treatise in verse, are one `<div1 type="Act">` headed "Acto I" (and its translations), "Dirigido a la Academia de Madrid" a `<stage>`, the 389 lines one `<sp>` with no speaker; no other corpus file has this shape. emothe.uv.es never prints an act's heading (a play's acts show only in its index, and one act has none); Playcode prints the file's, so the treatise reads as a play in one act spoken by nobody. Decided 2026-10-21 (question 41): `<body><div type="poema"><opener><salute>Dirigido a la Academia de Madrid</salute></opener><lg>…</lg> …</div></body>`, the stanzas (the French translation, EMOTHE0025, in prose: its 28 `<p>`) outside any `sp`. The project would also accept the dedication as the poem's `<head>`; we keep the opener, the dedication not being the poem's title. Playcode reads and writes that shape and prints the division with no heading (today an untitled division falls back to its act label, `PlayLabels.act_label/1`); then the four files corrected and re-imported
 
 ## Paratexts (2026-10-15), waiting on the project
 
