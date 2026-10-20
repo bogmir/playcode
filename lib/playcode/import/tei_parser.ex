@@ -1416,8 +1416,6 @@ defmodule Playcode.Import.TeiParser do
         []
 
       {_role_name, role_attrs, _role_children} = role ->
-        name = role |> text_content() |> String.trim()
-        description = safe_text(find_child(children, "roleDesc"))
         # Clean xml_id (some have newlines)
         xml_id =
           with id when is_binary(id) <-
@@ -1427,6 +1425,16 @@ defmodule Playcode.Import.TeiParser do
         corresp =
           with ref when is_binary(ref) <- attr_value(role_attrs, "corresp"),
                do: ref |> String.trim() |> String.trim_leading("#")
+
+        # A role left empty (0714's Daphné) is named by its id, so its speeches keep it;
+        # one with no id either names no one and prints nothing.
+        name =
+          case role |> text_content() |> String.trim() do
+            "" -> xml_id || corresp
+            text -> text
+          end
+
+        description = safe_text(find_child(children, "roleDesc"))
 
         character =
           if xml_id,
@@ -1447,7 +1455,7 @@ defmodule Playcode.Import.TeiParser do
           character: xml_id || corresp
         }
 
-        [{entry, character}]
+        if name, do: [{entry, character}], else: []
     end
   end
 

@@ -1184,6 +1184,22 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(exported, "head", within: "castGroup") == ["Criados"]
     end
 
+    # EMOTHE0714 lists Daphné as `<role xml:id="Daphné"></role>`, and her speeches point at it.
+    test "a role with an id and no name is named by its id and keeps its speeches" do
+      xml =
+        roundtrip(
+          tei(
+            front:
+              ~s(<div type="elenco"><castList><castItem><role xml:id="Daphne"></role></castItem></castList></div>),
+            body:
+              ~s(<div1 type="acto" n="1"><sp who="#Daphne"><speaker>DAPHNÉ</speaker><l n="1">Verso.</l></sp></div1>)
+          )
+        )
+
+      assert [{%{"xml:id" => "Daphne"}, "Daphne"}] = xml_elements(xml, "role")
+      assert [{%{"who" => "#Daphne"}, _speech}] = xml_elements(xml, "sp")
+    end
+
     test "a cast list with no entries is written where it stands and read back there" do
       play = play_fixture(%{})
       act = division!(play, %{type: "acto", number: 1, title: "ACTO", position: 0})
