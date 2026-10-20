@@ -97,8 +97,8 @@ or attribute for a piece of data, the export writes it there, wherever the data 
 file, a form, or FileMaker. FileMaker is imported once and not gone back to, so FileMaker data
 held only in the database cannot be recovered from the TEI files (`FilemakerSync` and the S3/S4
 imports write rows, not files); a new slice writes its data to the TEI from the start. The
-reverse holds too: what TEI can say and Playcode cannot store (which cast list a character is
-in) is a gap in Playcode.
+reverse holds too: what TEI can say and Playcode cannot store (a speech's `xml:id`) is a gap
+in Playcode.
 `docs/stakeholder/ida-y-vuelta.html` tables each part of a play against the admin, the TEI export,
 the TEI import, HTML/PDF/EPUB, the play page and the static site, in words the project reads; it is
 the only copy. A change that adds data to a play fills its row, and a cell short of "yes" is an
@@ -153,11 +153,12 @@ toponym no other test uses.
 
 The tables, their columns and the rules behind each: `docs/schema.md`. What bites when you change them:
 
-- All tables use UUID primary keys. A play has its divisions (a `parent_id` tree: acts contain scenes), its elements (speeches contain line groups contain verse lines), characters, editors, sources, paratexts, notes and variants (`play_notes`), witnesses, place links, bibliography links and performances. Bibliography entries, places, companies and actors are corpus-wide, shared by every play that names them, so one correction reaches them all
+- All tables use UUID primary keys. A play has its divisions (a `parent_id` tree: acts contain scenes and cast lists), its elements (speeches contain line groups contain verse lines), characters and the cast lists' entries naming them, editors, sources, paratexts, notes and variants (`play_notes`), witnesses, place links, bibliography links and performances. Bibliography entries, places, companies and actors are corpus-wide, shared by every play that names them, so one correction reaches them all
 - `plays.content_version` is moved by Postgres triggers whenever anything a play's static pages show changes, and never written by the app. **A new table with a `play_id` whose rows appear on a play's pages needs the `play_row_changed()` trigger in its migration**; `test/playcode/content_version_test.exs` fails until it has it
 - **Every text the TEI importer reads holds `<emph>` as `<<…>>`**, not only a line: a source's note, a front-matter section, a character's name and description, a heading. Print such text through the text's renderers (`PlayText.inline_content`, `Components.inline`, `NoteMarkup.inline`), export it through `TeiXml`'s `build_inline_content`, and where markup cannot go (a link, a title attribute, a `<title>`) use `InlineMarkup.plain/1`. Printing it with `{text}` or `escape/1` shows the markers to readers
 - `play_elements.content` holds inline markers beside the italics (`<stage>`, `<aside>`, `<folio>`, `<lb n="…"/>`); `Element.changeset` refuses a malformed one. `/api/v1` returns `content` raw, markers included
 - **A re-import replaces the play's elements, divisions and notes: hand edits to its lines and hand-added notes are lost** (`play_notes` has no `origin` column)
+- **One order per play, the outline** (`Playcode.Outline`): the top-level divisions and the paratexts share one `position` sequence, and an item's place decides both its TEI encoding (`docs/tei-mapping.md`) and where every page prints it. An exporter or renderer never orders by kind; it walks `Outline.items/2`, and splits an act's children with `Division.split_opening_lists/1`, as the file does
 
 ### Archiving and provenance
 
@@ -195,7 +196,7 @@ The tables, their columns and the rules behind each: `docs/schema.md`. What bite
 - **An id in a LiveView event came from the browser.** On a play's tabs, resolve it with a
   getter scoped to the play (`Catalogue.get_play_editor/2`, `get_play_source/2`,
   `get_paratext/2`, `Places.get_play_place/2`, `Bibliography.get_link/2`,
-  `PlayContent.get_character/2`, `get_division/2`, `get_element/2`, `get_note/2`), never `Repo.get!(id)`.
+  `PlayContent.get_character/2`, `get_cast_list/2`, `get_entry/2`, `get_division/2`, `get_element/2`, `get_note/2`), never `Repo.get!(id)`.
   Each returns nil for another play's row, a deleted one or a malformed id; the tab then
   reloads its list and calls `PlaycodeWeb.Admin.LiveHelpers.put_gone_flash/1`. A selection
   or a list of character ids from the browser is filtered to the play's own rows before a

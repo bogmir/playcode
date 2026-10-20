@@ -15,10 +15,22 @@ The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/fileDesc/notesStmt/relatedItem[@type="original"]/@target` -> the original's short code; a first import links the two whichever arrives first (`Catalogue.link_waiting_translations/0`), and never replaces an original already set
 - `teiHeader/revisionDesc/change` -> `plays.revisions` (`Catalogue.Revision`: its `date`, its `persName`s joined with "; ", its own words, its `note`), on every import, replacing a change recorded in Playcode as the notes on the edition are; an empty change is none. Edited in the play form, listed on the play's admin page, printed for no reader
 - `teiHeader/profileDesc/textClass/classCode[@scheme="#CDU"]` <- written from the language (with `encodingDesc/classDecl/taxonomy[@xml:id="CDU"]`), never read: the CDU number follows the language one for one, and Portuguese has none
-- `text/front/div[@type="elenco"]/castList` -> characters; its `head` -> the `elenco` division's title, written back as the cast list's heading; `castItem/actor` -> `characters.actor`, the original cast, edited in the content editor and printed nowhere, as on emothe.uv.es (question 28)
+- **The outline**: every paratext, the scene and every cast list stands at a place in one order with the acts (`Playcode.Outline`), and the place decides the encoding; nothing stores whether an item is before or after the text. The import reads each row back to the same place:
+
+  | Where the item sits | Written as |
+  |---|---|
+  | Top level, before the first body division | in `<front>`: a paratext as `<div type="kind">`, the scene as `<set>`, a cast list as `<div type="elenco"><head/><castList/></div>` |
+  | Top level, between two body divisions | in `<body>`: `<div1 type="kind">` for a paratext, `<div1 type="elenco">` holding the `castList` for a cast list |
+  | Top level, after the last body division | in `<back>`, before the bibliography: as in `<front>` |
+  | Inside an act, before its first scene | a bare `<castList><head/>…</castList>` after the act's heading (question 43), before the act's own elements |
+  | Inside an act, between or after scenes | `<div2 type="elenco">` holding the `castList` |
+
+  A play with no body division puts every top-level item in `<front>`; the title page always opens it, the performances always close it
+- `castList` -> a cast list, an `elenco` division; its `head` (inside the list, or the `div`'s) -> the division's title. Each `castItem` -> a `cast_list_entries` row of that list, holding the `role` and `roleDesc` as this list prints them; `castGroup/head` -> the entry's `group_heading`, consecutive entries with the same heading written back as one `castGroup`. A `role` with an `xml:id` declares a character; `role corresp="#id"` names one another list declared, keeping this list's name and description (0555's acts); a role with neither names no one who speaks (`character_id` nil). A character's first entry in outline order is written with its `xml:id`, every later one with `corresp`. A list with no entries is written as its division with only its heading, so the file stays valid and the list comes back where it was. `castItem/actor` -> `characters.actor`, the original cast, edited in the content editor and printed nowhere, as on emothe.uv.es (question 28); `castItem[@ana="oculto"]` -> `characters.is_hidden`
 - `text/front/div` -> a paratext keeping its `@type` as its kind (`circunstancia_accion` is read as `lugar_accion`, `nota` and no type as `nota_edicion_digital`), kept when it has a heading or paragraphs; `<lb/>` a line break, an empty line between two a paragraph break
-- `text/front/set` -> the scene of the action (not a paratext, but kept in `play_paratexts` with kind `lugar_accion`), written back as `<set>` after the cast list and printed there (`PlayLabels.split_paratexts/2`)
-- `text/back/div` -> a paratext with `back`, written back before the bibliography and printed after the text; not read: a back cast list (question 29) or a div holding `lg` (the sonnet, question 30)
+- `text/front/set` -> the scene of the action (not a paratext, but kept in `play_paratexts` with kind `lugar_accion`), written back as `<set>` where the outline puts it, and printed there
+- `text/back/div` -> a paratext or a cast list after the text, written back before the bibliography; not read: a div holding `lg` (the sonnet, question 30)
+- `text/body/div1` of a type that is not a part of the text (`loa`, `elenco`…) -> a paratext or a cast list between two acts, where it stands
 - `text/body/div1[@type="acto"]` -> act divisions
 - `text/body/div1/div2[@type="escena"]` -> scene subdivisions
 - `sp` -> speech elements with `who` -> character reference

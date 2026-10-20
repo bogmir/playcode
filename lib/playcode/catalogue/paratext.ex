@@ -1,10 +1,11 @@
 defmodule Playcode.Catalogue.Paratext do
   @moduledoc """
-  A paratext (CONTEXT.md): a text that stands before the play's text, or after it
-  (`back`), without being part of it: a heading, paragraphs, or both. Its `kind` says what it is and decides the concept:
-  an editorial text, written for this edition (`editorial?/1`); the scene of the action
-  (`lugar_accion`, TEI's `<set>`, printed with the cast list, `scene?/1`), which is not a
-  paratext but is kept here; or a paratext printed with the play in its early edition.
+  A paratext (CONTEXT.md): a text that stands before the play's text, between its acts or
+  after it, without being part of it: a heading, paragraphs, or both. Its `position` is its
+  place in the play's outline (`Playcode.Outline`). Its `kind` says what it is and decides
+  the concept: an editorial text, written for this edition (`editorial?/1`); the scene of
+  the action (`lugar_accion`, TEI's `<set>`, `scene?/1`), which is not a paratext but is
+  kept here; or a paratext printed with the play in its early edition.
   A file's kind outside `kinds/0` is kept as the file gives it, as a stage direction's
   is. `origin` works as for `PlayEditor`.
   """

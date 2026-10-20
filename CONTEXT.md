@@ -39,8 +39,8 @@ A paratext authorising the printing: a licence, a privilege, an approbation.
 _Avoid_: licence (alone: the edition's licence is its terms of use)
 
 **Scene of the action**:
-Where and when the play takes place, given with the cast list ("Scene: An Italian
-Court."). Not a paratext.
+Where and when the play takes place, usually given with the cast list ("Scene: An
+Italian Court."). Not a paratext, but it stands in the outline as one does.
 _Avoid_: setting (a place's role), circunstancia de la acción
 
 **Kind**:
@@ -50,8 +50,27 @@ the file is wrong.
 _Avoid_: section type, type
 
 **Before the text / after the text**:
-Where a paratext stands.
+Where a paratext or a cast list stands: before the first act, after the last, or between
+two. It follows from the item's place in the outline.
 _Avoid_: front and back (where the TEI file puts it), place (a place is in the gazetteer)
+
+**Outline**:
+Everything in a play in the order it is read: the paratexts, the scene of the action, the
+cast lists and the divisions, each where it stands. One order, the same in the admin's
+Structure tab, the TEI file and every page.
+_Avoid_: structure (the admin tab that edits it), table of contents (a page's navigation)
+
+**Cast list**:
+A list of the play's people with its own heading and place in the outline: before the
+text, between two acts, inside an act or after the text. A play may have several; one
+person may be in several lists.
+_Avoid_: dramatis personae (one list's heading), elenco (the file's word for its division)
+
+**Cast list entry**:
+One line of one cast list: a person as that list names and describes them ("BELTRANICO,
+que es LUCRECIA"), perhaps under a group heading ("Women"), or a line naming no one who
+speaks ("Servants and attendants"). A character is named as its first entry names it.
+_Avoid_: character (the person the speeches point at, whatever each list calls them), role
 
 ### The critical apparatus
 
