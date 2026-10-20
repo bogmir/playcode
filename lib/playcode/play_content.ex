@@ -622,12 +622,66 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Creates an element; `attrs` carry its `play_id`, `division_id` and `parent_id`.
+  Creates an element; `attrs` carry its `play_id`, `division_id` and `parent_id`. A verse
+  line given no identifier takes the play's next one.
   """
   def create_element(attrs) do
     %Element{}
     |> Element.changeset(attrs)
+    |> put_next_line_id()
     |> Repo.insert()
+  end
+
+  # Question 25: a verse line added in the editor or from Word takes one past the play's
+  # highest identifier, in its shape (`em0010-en-4002`, `es-3679`), and no line is
+  # renumbered, so no link to a line breaks. A play with none starts at `es-0001`, or
+  # `em0771-es-0001` for an EMOTHE code.
+  # ponytail: two curators adding a verse to one play in the same instant can still tie;
+  # a unique index on play_id and line_id if that ever happens.
+  defp put_next_line_id(%{valid?: true} = changeset) do
+    with "verse_line" <- Ecto.Changeset.get_field(changeset, :type),
+         nil <- Ecto.Changeset.get_field(changeset, :line_id),
+         play_id when is_binary(play_id) <- Ecto.Changeset.get_field(changeset, :play_id) do
+      Ecto.Changeset.put_change(changeset, :line_id, next_line_id(play_id))
+    else
+      _ -> changeset
+    end
+  end
+
+  defp put_next_line_id(changeset), do: changeset
+
+  defp next_line_id(play_id) do
+    highest =
+      Repo.one(
+        from e in Element,
+          where: e.play_id == ^play_id and fragment("? ~ '[0-9]$'", e.line_id),
+          order_by: [desc: fragment("substring(? from '[0-9]+$')::bigint", e.line_id)],
+          limit: 1,
+          select: e.line_id
+      )
+
+    case highest do
+      nil ->
+        Playcode.Catalogue.Play |> Repo.get!(play_id) |> line_id(1)
+
+      line_id ->
+        [prefix, digits] = Regex.run(~r/^(.*?)(\d+)$/, line_id, capture: :all_but_first)
+        next = Integer.to_string(String.to_integer(digits) + 1)
+        prefix <> String.pad_leading(next, String.length(digits), "0")
+    end
+  end
+
+  @doc """
+  The `n`th verse line's identifier in a play that has none yet: the language and the
+  number, `es-0001`, after the play's own number for an EMOTHE code, `em0771-es-0001`.
+  """
+  def line_id(%{code: code, language: language}, n) do
+    shape = "#{language || "es"}-#{String.pad_leading(Integer.to_string(n), 4, "0")}"
+
+    case Regex.run(~r/^EMOTHE(\d+)$/, code, capture: :all_but_first) do
+      [number] -> "em#{number}-#{shape}"
+      nil -> shape
+    end
   end
 
   @doc """

@@ -659,6 +659,80 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  # Question 25: a verse added in Playcode takes the next free number in the play's shape,
+  # one past its highest, and no line is renumbered, so no link to a line breaks.
+  describe "a new verse's identifier" do
+    defp insert_above(lv, content) do
+      lv
+      |> element("#{card(lv, content)} button[aria-label='#{t("Insert Above")}']")
+      |> render_click()
+
+      lv |> form("#element-form", element: %{"content" => "Línea nueva"}) |> render_submit()
+    end
+
+    defp ids(play) do
+      play
+      |> export_tei()
+      |> xml_elements("l")
+      |> Enum.map(fn {attrs, text} -> {text, attrs["xml:id"]} end)
+    end
+
+    # Hamlet's numbers skip: 2,943 lines, the highest 4001.
+    test "is one past the play's highest, wherever the verse goes", %{conn: conn} do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg>
+                  <l n="1" xml:id="em0010-en-0136">Primera línea</l>
+                  <l n="2" xml:id="em0010-en-4001">Segunda línea</l>
+                </lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      conn |> open_scene(play) |> insert_above("Segunda línea")
+
+      assert ids(play) == [
+               {"Primera línea", "em0010-en-0136"},
+               {"Línea nueva", "em0010-en-4002"},
+               {"Segunda línea", "em0010-en-4001"}
+             ]
+    end
+
+    test "in a play with none is the language's first", %{conn: conn, play: play} do
+      conn |> open_scene(play) |> insert_above("Primera línea")
+
+      assert {"Línea nueva", "es-0001"} in ids(play)
+    end
+
+    test "in an EMOTHE play with none takes the play's number too", %{conn: conn} do
+      number = System.unique_integer([:positive])
+
+      play =
+        import_tei!(
+          tei(
+            code: "EMOTHE#{number}",
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><lg><l n="1">Primera línea</l></lg></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      conn |> open_scene(play) |> insert_above("Primera línea")
+
+      assert {"Línea nueva", "em#{number}-#{play.language}-0001"} in ids(play)
+    end
+  end
+
   # The glossary's word (CONTEXT.md): a dedication, an epilogue or an editor's
   # introduction is a paratext, not an "editorial note".
   test "the paratexts tab adds a paratext", %{conn: conn, play: play} do

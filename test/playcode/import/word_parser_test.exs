@@ -344,6 +344,18 @@ defmodule Playcode.Import.WordParserTest do
     assert xml_texts(xml, "role") == ["RICARDO"]
   end
 
+  # Question 25: a .docx carries no identifiers, so each verse takes the next in the play's
+  # shape, in the document's order.
+  test "each verse gets an identifier in the play's shape" do
+    number = System.unique_integer([:positive])
+    play = play_fixture(%{"code" => "EMOTHE#{number}", "language" => "en"})
+
+    xml = import_word(["{e}Escena 1", "{p}FEBO  {v}uno", "{v}dos", "{p}ANA  {v}tres"], play)
+
+    assert Enum.map(xml_elements(xml, "l"), fn {attrs, _} -> attrs["xml:id"] end) ==
+             Enum.map(1..3, &"em#{number}-en-000#{&1}")
+  end
+
   # A play is made in the form, which gives it a note on the digital edition, and its
   # text then imported from Word, maybe more than once.
   test "importing again replaces its front matter and keeps a paratext typed by hand" do
