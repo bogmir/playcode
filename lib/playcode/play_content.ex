@@ -400,10 +400,89 @@ defmodule Playcode.PlayContent do
     do: division |> Division.changeset(attrs) |> update_anchor(division_id: division.id)
 
   @doc """
-  Deletes a division with its scenes and every element in them.
+  Deletes a division with its scenes, its cast lists and every element in them, and the
+  characters left with no entry in any list. Refused, `{:error, {:speaking, names}}`, while
+  one of those characters speaks: its speeches would point at no one listed.
   """
   def delete_division(%Division{} = division) do
-    Repo.delete(division)
+    case stranded(division) do
+      {[], silent} ->
+        Repo.transaction(fn ->
+          Repo.delete!(division)
+          Character |> where([c], c.id in ^silent) |> Repo.delete_all()
+          sync_characters(division.play_id)
+          division
+        end)
+
+      {speaking, _silent} ->
+        {:error, {:speaking, Enum.map(speaking, & &1.name)}}
+    end
+  end
+
+  @doc """
+  What deleting `division` does to the cast: the characters whose every entry is in it or
+  in its own lists, the names of those who speak (`delete_division/1` refuses then), and
+  how many of the rest go with it.
+  """
+  def deletion_effect(%Division{} = division) do
+    {speaking, silent} = stranded(division)
+    %{speaking: Enum.map(speaking, & &1.name), removed: length(silent)}
+  end
+
+  # The characters `division` holds every entry of: `{speaking, silent ids}`.
+  defp stranded(division) do
+    lists =
+      Division
+      |> where(play_id: ^division.play_id, type: "elenco")
+      |> where([d], d.id == ^division.id or d.parent_id == ^division.id)
+      |> select([d], d.id)
+      |> Repo.all()
+
+    ids =
+      CastListEntry
+      |> where([e], e.play_id == ^division.play_id and not is_nil(e.character_id))
+      |> group_by([e], e.character_id)
+      |> having([e], fragment("bool_and(?)", e.cast_list_id in ^lists))
+      |> select([e], e.character_id)
+      |> Repo.all()
+
+    speaking =
+      Character
+      |> where([c], c.id in ^ids)
+      |> where([c], c.id in subquery(ElementCharacter |> select([ec], ec.character_id)))
+      |> order_by(:position)
+      |> Repo.all()
+
+    {speaking, ids -- Enum.map(speaking, & &1.id)}
+  end
+
+  @doc """
+  Puts an act's scenes and cast lists in the order of `ids`. An id that is not one of the
+  act's children is dropped; a child the ids leave out keeps its turn after them.
+  """
+  def reorder_children(%Division{} = act, ids) do
+    children = Division |> where(parent_id: ^act.id) |> order_by([:position, :id]) |> Repo.all()
+    renumber(children, ids, & &1.id)
+    sync_characters(act.play_id)
+    :ok
+  end
+
+  @doc false
+  # `rows` (of one table or several) renumbered 0.. in the order `keys` name them by
+  # `key_of`, those not named after, in their order; only a row whose place moves is written.
+  def renumber(rows, keys, key_of) do
+    by_key = Map.new(rows, &{key_of.(&1), &1})
+    named = keys |> Enum.map(&by_key[&1]) |> Enum.reject(&is_nil/1) |> Enum.uniq()
+    now = DateTime.utc_now(:second)
+
+    Repo.transaction(fn ->
+      for {row, position} <- Enum.with_index(named ++ (rows -- named)),
+          row.position != position do
+        row.__struct__
+        |> where(id: ^row.id)
+        |> Repo.update_all(set: [position: position, updated_at: now])
+      end
+    end)
   end
 
   @doc """

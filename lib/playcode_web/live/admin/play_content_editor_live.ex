@@ -12,6 +12,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Paratext
+  alias Playcode.Outline
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element}
   alias PlaycodeWeb.Admin.LiveHelpers
@@ -63,6 +64,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
        paratexts: paratexts,
        characters: characters,
        divisions: divisions,
+       removals: removals(divisions),
        selected_division_id: nil,
        elements: [],
        modal: nil,
@@ -165,13 +167,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   def handle_event("new_paratext", _, socket) do
     play = socket.assigns.play
-    # Last, after the file's positions, which the cast list division shares.
-    next_pos = Enum.max(Enum.map(socket.assigns.paratexts, & &1.position), fn -> -1 end) + 1
 
+    # Last in the outline, whose positions the divisions share.
     changeset =
       Catalogue.change_paratext(%Paratext{
         play_id: play.id,
-        position: next_pos
+        position: Outline.next_position(play.id)
       })
 
     {:noreply,
@@ -249,9 +250,17 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end)
   end
 
-  def handle_event("reorder_paratexts", %{"ids" => ids}, socket) do
-    Catalogue.reorder_paratexts(socket.assigns.play.id, ids)
-    {:noreply, reload_paratexts(socket)}
+  def handle_event("reorder_outline", %{"ids" => keys}, socket) do
+    Outline.reorder(socket.assigns.play.id, keys)
+    PlayContent.refresh_derived(socket.assigns.play.id)
+    {:noreply, socket |> reload_paratexts() |> reload_divisions() |> reload_characters()}
+  end
+
+  def handle_event("reorder_children", %{"parent" => parent_id, "ids" => ids}, socket) do
+    with_row(socket, PlayContent.get_division(socket.assigns.play.id, parent_id), fn act ->
+      PlayContent.reorder_children(act, ids)
+      socket |> reload_divisions() |> reload_characters()
+    end)
   end
 
   def handle_event("reorder_characters", %{"ids" => ids}, socket) do
@@ -463,24 +472,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   def handle_event("delete_division", %{"id" => id}, socket) do
     with_row(socket, PlayContent.get_division(socket.assigns.play.id, id), fn division ->
-      {:ok, _} = PlayContent.delete_division(division)
-      PlayContent.refresh_derived(socket.assigns.play.id)
-
-      LiveHelpers.log_activity(socket, "delete", "division", division.id, %{
-        type: division.type,
-        number: division.number
-      })
-
-      selected =
-        if socket.assigns.selected_division_id == id,
-          do: nil,
-          else: socket.assigns.selected_division_id
-
-      socket
-      |> put_flash(:info, gettext("Division deleted."))
-      |> assign(selected_division_id: selected)
-      |> reload_divisions()
-      |> reload_elements()
+      case PlayContent.delete_division(division) do
+        {:ok, _} -> division_deleted(socket, division)
+        {:error, {:speaking, names}} -> put_flash(socket, :error, speaking_refusal(names))
+      end
     end)
   end
 
@@ -666,9 +661,53 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   # --- Division helpers ---
 
+  defp division_deleted(socket, division) do
+    PlayContent.refresh_derived(socket.assigns.play.id)
+
+    LiveHelpers.log_activity(socket, "delete", "division", division.id, %{
+      type: division.type,
+      number: division.number
+    })
+
+    # The selected scene may have gone with its act.
+    selected =
+      if socket.assigns.selected_division_id in [
+           division.id | Enum.map(division_children(socket, division), & &1.id)
+         ],
+         do: nil,
+         else: socket.assigns.selected_division_id
+
+    socket
+    |> put_flash(:info, gettext("Division deleted."))
+    |> assign(selected_division_id: selected)
+    |> reload_divisions()
+    |> reload_characters()
+    |> reload_elements()
+  end
+
+  defp division_children(socket, division) do
+    case find_division(socket.assigns.divisions, division.id) do
+      %{children: children} when is_list(children) -> children
+      _scene -> []
+    end
+  end
+
+  defp speaking_refusal(names) do
+    gettext(
+      "Not deleted: %{names} speak in the play and are listed nowhere else. List them elsewhere first.",
+      names: Enum.join(names, ", ")
+    )
+  end
+
   defp open_new_division(socket, parent_id) do
     play = socket.assigns.play
-    pos = PlayContent.next_division_position(play.id, parent_id)
+
+    # Last at its level, the outline's paratexts included at the top.
+    pos =
+      if parent_id,
+        do: PlayContent.next_division_position(play.id, parent_id),
+        else: Outline.next_position(play.id)
+
     default_type = if parent_id, do: "escena", else: "acto"
 
     changeset =
@@ -1043,7 +1082,25 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   defp reload_divisions(socket) do
-    assign(socket, divisions: PlayContent.list_top_divisions(socket.assigns.play.id))
+    divisions = PlayContent.list_top_divisions(socket.assigns.play.id)
+    assign(socket, divisions: divisions, removals: removals(divisions))
+  end
+
+  # How many characters deleting each cast list, or each division holding one, takes with
+  # it: the count its confirmation gives.
+  defp removals(divisions) do
+    lists =
+      for division <- divisions,
+          row <- [division | division.children],
+          row.type == "elenco",
+          do: row
+
+    holders =
+      for division <- divisions,
+          Enum.any?(division.children, &(&1.type == "elenco")),
+          do: division
+
+    Map.new(lists ++ holders, &{&1.id, PlayContent.deletion_effect(&1).removed})
   end
 
   defp reload_elements(socket) do
@@ -1175,20 +1232,26 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp maybe_add_line_number(attrs, _type, _play_id), do: attrs
 
-  defp division_types do
-    [
-      {gettext("Act (acto)"), "acto"},
-      {gettext("Act (act)"), "act"},
-      {gettext("Scene (escena)"), "escena"},
-      {gettext("Scene (scene)"), "scene"},
-      {gettext("Prologue"), "prologo"},
-      {gettext("Epilogue"), "epilogue"},
-      {gettext("Argument"), "argumento"},
-      {gettext("Jornada"), "jornada"},
-      {gettext("Dedication"), "dedicatoria"},
-      {gettext("Cast list"), "elenco"},
-      {gettext("Front matter"), "front"}
-    ]
+  # The types a division may take at its level: an act's children are its scenes and cast
+  # lists. A type a file gave that is not among them stays offered, so an edit keeps it.
+  defp division_types(subdivision?, current) do
+    types =
+      if subdivision?,
+        do: [{gettext("Scene (escena)"), "escena"}, {gettext("Scene (scene)"), "scene"}],
+        else: [
+          {gettext("Act (acto)"), "acto"},
+          {gettext("Act (act)"), "act"},
+          {gettext("Jornada"), "jornada"},
+          {gettext("Prologue"), "prologo"},
+          {gettext("Argument"), "argumento"},
+          {gettext("Epilogue"), "epilogue"}
+        ]
+
+    types = types ++ [{gettext("Cast list"), "elenco"}]
+
+    if current in [nil, ""] or List.keymember?(types, current, 1),
+      do: types,
+      else: types ++ [{current, current}]
   end
 
   defp verse_types do
@@ -1298,22 +1361,13 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <.icon name="hero-document-text" class="mx-auto mb-2 size-8 text-base-content/70" />
           <p>{gettext("No paratexts yet.")}</p>
         </div>
-        <div
-          id="paratext-list"
-          phx-hook=".DragSortList"
-          class="space-y-3"
-          data-event="reorder_paratexts"
-        >
+        <div id="paratext-list" class="space-y-3">
           <div
             :for={paratext <- @paratexts}
             id={"paratext-#{paratext.id}"}
-            data-id={paratext.id}
-            class="drag-item rounded-box border border-base-300 bg-base-100 shadow-sm"
+            class="rounded-box border border-base-300 bg-base-100 shadow-sm"
           >
             <div class="flex items-start justify-between gap-4 p-4">
-              <div class="drag-handle shrink-0 cursor-grab active:cursor-grabbing p-1 -ml-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-200/60 transition-colors">
-                <.icon name="hero-bars-3-mini" class="size-4" />
-              </div>
               <div class="min-w-0 flex-1">
                 <div class="flex items-center gap-2 mb-1">
                   <span class="badge badge-outline badge-sm">
@@ -1325,7 +1379,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   {paratext.content}
                 </p>
               </div>
-              <span class="text-xs text-base-content/70 shrink-0">#{paratext.position}</span>
             </div>
             <div class="flex justify-end gap-1 border-t border-base-300 px-3 py-2">
               <button
@@ -1480,7 +1533,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           },
 
           bindItems() {
-            this.el.querySelectorAll(".drag-item").forEach(item => {
+            this.el.querySelectorAll(":scope > .drag-item").forEach(item => {
               if (!item._dragBound) {
                 this.setupItem(item)
                 item._dragBound = true
@@ -1546,7 +1599,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             this.dragEl.style.top = (clientY - this.offsetY) + "px"
 
             // find the item we're hovering over
-            const items = [...this.el.querySelectorAll(".drag-item")].filter(el => el !== this.dragEl)
+            const items = [...this.el.querySelectorAll(":scope > .drag-item")].filter(el => el !== this.dragEl)
             let after = null
             for (const item of items) {
               const box = item.getBoundingClientRect()
@@ -1587,14 +1640,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             this.dragEl.classList.remove("ring-2", "ring-primary/30")
 
             // Update position numbers
-            this.el.querySelectorAll(".drag-item").forEach((item, i) => {
+            this.el.querySelectorAll(":scope > .drag-item").forEach((item, i) => {
               const posEl = item.querySelector(".drag-position")
               if (posEl) posEl.textContent = i + 1
             })
 
             // Collect new order and push to server
-            const ids = [...this.el.querySelectorAll(".drag-item")].map(el => el.dataset.id)
-            this.pushEvent(this.eventName, { ids })
+            // Only this list's own rows: an act's nested list is a hook of its own.
+            const ids = [...this.el.querySelectorAll(":scope > .drag-item")].map(el => el.dataset.id)
+            this.pushEvent(this.eventName, { ids, parent: this.el.dataset.parent })
 
             // Brief highlight animation
             this.dragEl.style.transition = "background-color 0.3s"
@@ -1608,130 +1662,43 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         }
       </script>
 
-      <%!-- Tab: Structure --%>
+      <%!-- Tab: Structure: the play's outline --%>
       <div :if={@editor_tab == :structure} class="animate-in fade-in">
-        <div class="mb-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-base-content">
-            {gettext("Play Structure")}
-            <span class="text-base-content/70 font-normal">
-              ({Enum.count(@divisions, &(&1.type != "elenco"))} {gettext("acts")})
-            </span>
-          </h2>
-          <button phx-click="new_division" class="btn btn-sm btn-primary gap-1">
-            <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add Act")}
-          </button>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold text-base-content">{gettext("Play Structure")}</h2>
+          <div class="flex gap-2">
+            <button phx-click="new_paratext" class="btn btn-sm btn-ghost btn-outline gap-1">
+              <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add paratext")}
+            </button>
+            <button phx-click="new_division" class="btn btn-sm btn-primary gap-1">
+              <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add division")}
+            </button>
+          </div>
         </div>
+        <p class="mb-4 text-sm text-base-content/70">
+          {gettext(
+            "Everything in the play in the order it is read, as the file and every page give it. A new item stands last: drag it into place."
+          )}
+        </p>
         <div
-          :if={@divisions == []}
+          :if={@divisions == [] and @paratexts == []}
           class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/70"
         >
           <.icon name="hero-bars-3-bottom-left" class="mx-auto mb-2 size-8 text-base-content/70" />
           <p>{gettext("No acts or scenes yet. Add an act to get started.")}</p>
         </div>
-        <div :if={@divisions != []} class="space-y-3">
+        <div id="outline" phx-hook=".DragSortList" data-event="reorder_outline" class="space-y-3">
           <div
-            :for={div <- @divisions}
-            class="rounded-box border border-base-300 bg-base-100 shadow-sm overflow-hidden"
+            :for={item <- Outline.items(@paratexts, @divisions)}
+            id={"outline-" <> String.replace(Outline.key(item), ":", "-")}
+            data-id={Outline.key(item)}
+            class="drag-item rounded-box border border-base-300 bg-base-100 shadow-sm overflow-hidden"
           >
-            <div
-              id={"division-#{div.id}"}
-              class="flex items-center justify-between px-4 py-3 bg-base-200/30"
-            >
-              <div class="flex items-center gap-2">
-                <.icon name="hero-folder-mini" class="size-4 text-base-content/70" />
-                <span class="font-semibold">{division_label(div)}</span>
-                <span class="badge badge-ghost badge-xs">
-                  {div.type}{if div.number, do: " #{div.number}"}
-                </span>
-              </div>
-              <div class="flex items-center gap-1">
-                <button
-                  phx-click="select_division_auto"
-                  phx-value-id={div.id}
-                  class="btn btn-xs btn-ghost btn-outline gap-1"
-                >
-                  <.icon name="hero-pencil-square-mini" class="size-3" /> {gettext("Edit Content")}
-                </button>
-                <button
-                  phx-click="edit_division"
-                  phx-value-id={div.id}
-                  class="btn btn-ghost btn-xs tooltip"
-                  aria-label={gettext("Edit metadata")}
-                  data-tip={gettext("Edit metadata")}
-                >
-                  <.icon name="hero-cog-6-tooth-mini" class="size-4" />
-                </button>
-                <button
-                  phx-click="delete_division"
-                  phx-value-id={div.id}
-                  data-confirm={gettext("Delete this division and all its content?")}
-                  class="btn btn-ghost btn-xs text-error tooltip"
-                  aria-label={gettext("Delete")}
-                  data-tip={gettext("Delete")}
-                >
-                  <.icon name="hero-trash-mini" class="size-4" />
-                </button>
-              </div>
-            </div>
-            <%!-- Child divisions (scenes) --%>
-            <div :if={div.children != []} class="divide-y divide-base-300/50">
-              <div
-                :for={child <- div.children}
-                id={"division-#{child.id}"}
-                class="flex items-center justify-between px-4 py-2 pl-8 transition-colors hover:bg-base-200/30"
-              >
-                <button
-                  phx-click="select_division"
-                  phx-value-id={child.id}
-                  class={[
-                    "flex items-center gap-2 text-sm transition-colors",
-                    if(@selected_division_id == child.id,
-                      do: "font-bold text-primary",
-                      else: "text-base-content/70 hover:text-base-content"
-                    )
-                  ]}
-                >
-                  <.icon name="hero-document-mini" class="size-3.5" />
-                  {division_label(child)}
-                  <span
-                    :if={@selected_division_id == child.id}
-                    class="badge badge-primary badge-xs ml-1"
-                  >
-                    {gettext("editing")}
-                  </span>
-                </button>
-                <div class="flex gap-1">
-                  <button
-                    phx-click="edit_division"
-                    phx-value-id={child.id}
-                    class="btn btn-ghost btn-xs tooltip"
-                    aria-label={gettext("Edit metadata")}
-                    data-tip={gettext("Edit metadata")}
-                  >
-                    <.icon name="hero-cog-6-tooth-mini" class="size-4" />
-                  </button>
-                  <button
-                    phx-click="delete_division"
-                    phx-value-id={child.id}
-                    data-confirm={gettext("Delete this scene and all its content?")}
-                    class="btn btn-ghost btn-xs text-error tooltip"
-                    aria-label={gettext("Delete")}
-                    data-tip={gettext("Delete")}
-                  >
-                    <.icon name="hero-trash-mini" class="size-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div class="border-t border-base-300 px-4 py-2 bg-base-200/20">
-              <button
-                phx-click="new_division"
-                phx-value-parent-id={div.id}
-                class="btn btn-xs btn-ghost gap-1"
-              >
-                <.icon name="hero-plus-mini" class="size-3" /> {gettext("Add Scene")}
-              </button>
-            </div>
+            <.outline_row
+              item={item}
+              removals={@removals}
+              selected_division_id={@selected_division_id}
+            />
           </div>
         </div>
       </div>
@@ -2045,11 +2012,204 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           editing_character_ids={@editing_character_ids}
           play_id={@play.id}
           user={@current_user}
+          subdivision={if @editing, do: Map.get(@editing, :parent_id), else: @modal_parent_id}
         />
       </.modal>
     </div>
     """
   end
+
+  defp drag_handle(assigns) do
+    ~H"""
+    <button
+      type="button"
+      class="drag-handle shrink-0 cursor-grab active:cursor-grabbing p-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-200/60"
+      aria-label={gettext("Drag to reorder")}
+    >
+      <.icon name="hero-bars-3-mini" class="size-4" />
+    </button>
+    """
+  end
+
+  attr :item, :map, required: true
+  attr :removals, :map, required: true
+  attr :selected_division_id, :string, default: nil
+
+  # One item of the outline: a paratext, or a division with its scenes and lists nested.
+  defp outline_row(%{item: %Paratext{}} = assigns) do
+    ~H"""
+    <div class="flex items-center justify-between gap-2 px-4 py-3">
+      <div class="flex min-w-0 items-center gap-2">
+        <.drag_handle />
+        <span class="badge badge-outline badge-sm">{PlayLabels.kind_label(@item.kind)}</span>
+        <span class="truncate text-sm font-medium">{PlayLabels.paratext_title(@item)}</span>
+      </div>
+      <div class="flex shrink-0 gap-1">
+        <button
+          phx-click="edit_paratext"
+          phx-value-id={@item.id}
+          class="btn btn-ghost btn-xs tooltip"
+          aria-label={gettext("Edit")}
+          data-tip={gettext("Edit")}
+        >
+          <.icon name="hero-pencil-square-mini" class="size-4" />
+        </button>
+        <button
+          phx-click="delete_paratext"
+          phx-value-id={@item.id}
+          data-confirm={gettext("Delete this paratext?")}
+          class="btn btn-ghost btn-xs text-error tooltip"
+          aria-label={gettext("Delete")}
+          data-tip={gettext("Delete")}
+        >
+          <.icon name="hero-trash-mini" class="size-4" />
+        </button>
+      </div>
+    </div>
+    """
+  end
+
+  defp outline_row(assigns) do
+    ~H"""
+    <div
+      id={"division-#{@item.id}"}
+      class="flex items-center justify-between gap-2 px-4 py-3 bg-base-200/30"
+    >
+      <div class="flex min-w-0 items-center gap-2">
+        <.drag_handle />
+        <.icon
+          name={if @item.type == "elenco", do: "hero-users-mini", else: "hero-folder-mini"}
+          class="size-4 text-base-content/70"
+        />
+        <span class="truncate font-semibold">{division_label(@item)}</span>
+        <span class="badge badge-ghost badge-xs">
+          {@item.type}{if @item.number, do: " #{@item.number}"}
+        </span>
+      </div>
+      <div class="flex shrink-0 items-center gap-1">
+        <button
+          :if={@item.type != "elenco"}
+          phx-click="new_division"
+          phx-value-parent-id={@item.id}
+          class="btn btn-xs btn-ghost gap-1"
+        >
+          <.icon name="hero-plus-mini" class="size-3" /> {gettext("Add subdivision")}
+        </button>
+        <button
+          :if={@item.type != "elenco"}
+          phx-click="select_division_auto"
+          phx-value-id={@item.id}
+          class="btn btn-xs btn-ghost btn-outline gap-1"
+        >
+          <.icon name="hero-pencil-square-mini" class="size-3" /> {gettext("Edit Content")}
+        </button>
+        <.division_actions division={@item} confirm={delete_confirm(@item, @removals)} />
+      </div>
+    </div>
+    <div
+      :if={@item.type != "elenco"}
+      id={"children-#{@item.id}"}
+      phx-hook=".DragSortList"
+      data-event="reorder_children"
+      data-parent={@item.id}
+      class="divide-y divide-base-300/50"
+    >
+      <div
+        :for={child <- @item.children}
+        id={"division-#{child.id}"}
+        data-id={child.id}
+        class="drag-item flex items-center justify-between gap-2 px-4 py-2 pl-8 transition-colors hover:bg-base-200/30"
+      >
+        <div class="flex min-w-0 items-center gap-2">
+          <.drag_handle />
+          <span :if={child.type == "elenco"} class="flex items-center gap-2 text-sm">
+            <.icon name="hero-users-mini" class="size-3.5" />
+            {division_label(child)}
+          </span>
+          <button
+            :if={child.type != "elenco"}
+            phx-click="select_division"
+            phx-value-id={child.id}
+            class={[
+              "flex items-center gap-2 text-sm transition-colors",
+              if(@selected_division_id == child.id,
+                do: "font-bold text-primary",
+                else: "text-base-content/70 hover:text-base-content"
+              )
+            ]}
+          >
+            <.icon name="hero-document-mini" class="size-3.5" />
+            {division_label(child)}
+            <span :if={@selected_division_id == child.id} class="badge badge-primary badge-xs ml-1">
+              {gettext("editing")}
+            </span>
+          </button>
+        </div>
+        <.division_actions division={child} confirm={delete_confirm(child, @removals)} />
+      </div>
+    </div>
+    """
+  end
+
+  attr :division, :map, required: true
+  attr :confirm, :string, required: true
+
+  defp division_actions(assigns) do
+    ~H"""
+    <div class="flex shrink-0 gap-1">
+      <button
+        phx-click="edit_division"
+        phx-value-id={@division.id}
+        class="btn btn-ghost btn-xs tooltip"
+        aria-label={gettext("Edit metadata")}
+        data-tip={gettext("Edit metadata")}
+      >
+        <.icon name="hero-cog-6-tooth-mini" class="size-4" />
+      </button>
+      <button
+        phx-click="delete_division"
+        phx-value-id={@division.id}
+        data-confirm={@confirm}
+        class="btn btn-ghost btn-xs text-error tooltip"
+        aria-label={gettext("Delete")}
+        data-tip={gettext("Delete")}
+      >
+        <.icon name="hero-trash-mini" class="size-4" />
+      </button>
+    </div>
+    """
+  end
+
+  # A deletion's confirmation, with the characters listed nowhere else that go with it.
+  defp delete_confirm(%{type: "elenco"} = list, removals) do
+    case Map.get(removals, list.id, 0) do
+      0 ->
+        gettext("Delete this cast list?")
+
+      n ->
+        ngettext(
+          "Delete this cast list? One character listed nowhere else goes with it.",
+          "Delete this cast list? %{count} characters listed nowhere else go with it.",
+          n
+        )
+    end
+  end
+
+  defp delete_confirm(%{parent_id: nil} = division, removals) do
+    case Map.get(removals, division.id, 0) do
+      0 ->
+        gettext("Delete this division and all its content?")
+
+      n ->
+        ngettext(
+          "Delete this division and all its content? One character listed nowhere else goes with it.",
+          "Delete this division and all its content? %{count} characters listed nowhere else go with it.",
+          n
+        )
+    end
+  end
+
+  defp delete_confirm(_scene, _removals), do: gettext("Delete this scene and all its content?")
 
   defp division_label(div) do
     if div.title do
@@ -2692,6 +2852,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   attr :editing_character_ids, :list, default: []
   attr :play_id, :string, default: nil
   attr :user, :any, default: nil
+  attr :subdivision, :any, default: nil, doc: "a new or edited division's parent, if any"
 
   defp modal_content(%{modal: :paratext} = assigns) do
     ~H"""
@@ -2812,7 +2973,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <label class="label" for={@form[:type].id}>
           <span class="label-text font-medium">{gettext("Type")} *</span>
         </label>
-        <.input field={@form[:type]} type="select" options={division_types()} />
+        <.input
+          field={@form[:type]}
+          type="select"
+          options={division_types(@subdivision, @editing && @editing.type)}
+        />
       </div>
       <div>
         <label class="label" for={@form[:number].id}>

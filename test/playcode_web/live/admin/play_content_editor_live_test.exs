@@ -147,7 +147,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     test "an act is added, retitled and deleted", %{conn: conn, play: play} do
       lv = open_structure(conn, play)
 
-      lv |> element("button", t("Add Act")) |> render_click()
+      # "Add Act" was this button before the tab became the outline.
+      lv |> element("button", t("Add division")) |> render_click()
 
       lv
       |> form("#division-form",
@@ -226,6 +227,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
         {"delete_character", character.id},
         {"edit_division", act.id},
         {"delete_division", act.id},
+        {"delete_division", row(other, &match?(%Division{type: "elenco"}, &1)).id},
         {"select_division", act.id},
         {"select_division_auto", act.id},
         {"edit_element", verse.id},
@@ -717,8 +719,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     )
     |> render_submit()
 
+    # A new paratext stands last in the outline, after the act.
     xml = export_tei(play)
-    assert xml_texts(xml, "p", within: "front") == ["A B", "C"]
+    assert xml_texts(xml, "p", within: "back") == ["A B", "C"]
     assert xml =~ ~r{<p>A<lb/>B</p>}
   end
 
@@ -740,57 +743,214 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert xml =~ ~r{<emph>una\s*<lb/>\s*dos</emph>}
   end
 
-  describe "the paratexts' order" do
+  # The Structure tab is the play's outline: every paratext, cast list and division in one
+  # order, an act's scenes and lists nested under it. test/fixtures/outline.xml holds one
+  # of each where it can stand.
+  describe "the outline" do
     setup do
-      play =
-        import_tei!(
-          tei(
-            front:
-              ~s(<div type="dedicatoria"><p>A.</p></div><div type="argumento"><p>B.</p></div>)
-          )
-        )
-
-      other =
-        import_tei!(
-          tei(
-            front:
-              ~s(<div type="dedicatoria"><p>X.</p></div><div type="argumento"><p>Y.</p></div>)
-          )
-        )
-
-      %{play: play, other: other}
+      %{play: import_tei!(outline_xml()), other: import_tei!(outline_xml())}
     end
 
-    defp contents(play),
-      do: play.id |> Playcode.Catalogue.list_paratexts() |> Enum.map(& &1.content)
+    defp outline_keys(play), do: play.id |> outline_items() |> Enum.map(&key/1)
 
-    # As the cast list: a file's order may be wrong, and only an editor can fix it.
-    test "is dragged", %{conn: conn, play: play} do
-      [a, b] = Playcode.Catalogue.list_paratexts(play.id)
-      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
-      lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    defp paratext_key(play, heading),
+      do: key(Enum.find(Playcode.Catalogue.list_paratexts(play.id), &(&1.heading == heading)))
+
+    defp division(play, title),
+      do: row(play, &match?(%Division{title: ^title}, &1))
+
+    test "dragging moves a paratext, a list or an act anywhere among the others",
+         %{conn: conn, play: play} do
+      lv = open_structure(conn, play)
+      loa = paratext_key(play, "LOA")
 
       lv
-      |> element("#paratext-list")
-      |> render_hook("reorder_paratexts", %{"ids" => [b.id, a.id]})
+      |> element("#outline")
+      |> render_hook("reorder_outline", %{"ids" => [loa | List.delete(outline_keys(play), loa)]})
 
-      assert contents(play) == ["B.", "A."]
-    end
+      assert hd(outline_keys(play)) == loa
+      assert ["front/titlePage", "front/div[loa]" | _] = text_order(export_tei(play))
 
-    # The ids came from the browser: another play's rows, or a malformed id, move nothing.
-    test "moves none of another play's", %{conn: conn, play: play, other: other} do
-      [a, b] = Playcode.Catalogue.list_paratexts(play.id)
-      [x, y] = Playcode.Catalogue.list_paratexts(other.id)
-      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
-      lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+      act = key(division(play, "ACTO SEGUNDO"))
 
       lv
-      |> element("#paratext-list")
-      |> render_hook("reorder_paratexts", %{"ids" => [b.id, a.id, y.id, x.id, "not-an-id"]})
+      |> element("#outline")
+      |> render_hook("reorder_outline", %{"ids" => [act | List.delete(outline_keys(play), act)]})
 
-      assert contents(play) == ["B.", "A."]
-      assert contents(other) == ["X.", "Y."]
+      assert ["front/titlePage", "body/div1[acto]" | _] = text_order(export_tei(play))
     end
+
+    # The ids came from the browser: another play's rows, or a malformed key, move nothing.
+    test "a reorder naming another play's rows moves neither play",
+         %{conn: conn, play: play, other: other} do
+      ours = outline_keys(play)
+      theirs = outline_keys(other)
+      lv = open_structure(conn, play)
+
+      lv
+      |> element("#outline")
+      |> render_hook("reorder_outline", %{
+        "ids" => [paratext_key(other, "LOA"), "paratext:not-an-id" | ours]
+      })
+
+      assert outline_keys(play) == ours
+      assert outline_keys(other) == theirs
+    end
+
+    test "an act's scenes and lists are dragged within the act", %{
+      conn: conn,
+      play: play,
+      other: other
+    } do
+      act = division(play, "ACTO PRIMERO")
+      [first, scene_1, again, scene_2] = Enum.map(act.children, & &1.id)
+      foreign = division(other, "Sale de nuevo").id
+      lv = open_structure(conn, play)
+
+      lv
+      |> element("#children-#{act.id}")
+      |> render_hook("reorder_children", %{
+        "parent" => act.id,
+        "ids" => [foreign, again, first, scene_1, scene_2]
+      })
+
+      assert in_order?(export_tei(play), [
+               "Sale de nuevo",
+               "Personas del acto primero",
+               "ESCENA I",
+               "ESCENA II"
+             ])
+
+      assert in_order?(export_tei(other), [
+               "Personas del acto primero",
+               "ESCENA I",
+               "Sale de nuevo",
+               "ESCENA II"
+             ])
+    end
+
+    test "Add division offers Cast list, which stands last in the outline", %{
+      conn: conn,
+      play: play
+    } do
+      lv = open_structure(conn, play)
+      lv |> element("button", t("Add division")) |> render_click()
+
+      assert has_element?(lv, "#division-form option", t("Cast list"))
+      refute has_element?(lv, "#division-form option", t("Scene (escena)"))
+
+      lv
+      |> form("#division-form", division: %{"type" => "elenco", "title" => "Personas añadidas"})
+      |> render_submit()
+
+      assert List.last(text_order(export_tei(play))) == "back/div[elenco]"
+      assert List.last(Playcode.PlayContent.list_cast_lists(play.id)).title == "Personas añadidas"
+    end
+
+    test "Add subdivision offers Scene and Cast list", %{conn: conn, play: play} do
+      act = division(play, "ACTO SEGUNDO")
+      lv = open_structure(conn, play)
+      lv |> element("#division-#{act.id} button", t("Add subdivision")) |> render_click()
+
+      assert has_element?(lv, "#division-form option", t("Scene (escena)"))
+      assert has_element?(lv, "#division-form option", t("Cast list"))
+      refute has_element?(lv, "#division-form option", t("Act (acto)"))
+
+      lv
+      |> form("#division-form", division: %{"type" => "elenco", "title" => "Salen al final"})
+      |> render_submit()
+
+      assert in_order?(export_tei(play), ["ACTO SEGUNDO", "ESCENA I", "Salen al final", "EPÍLOGO"])
+    end
+
+    test "a cast list offers neither Add subdivision nor Edit content", %{conn: conn, play: play} do
+      list = division(play, "Personas del acto segundo")
+      act = division(play, "ACTO SEGUNDO")
+      lv = open_structure(conn, play)
+
+      assert has_element?(lv, "#division-#{act.id} button", t("Add subdivision"))
+      refute has_element?(lv, "#division-#{list.id} button", t("Add subdivision"))
+      refute has_element?(lv, "#division-#{list.id} button", t("Edit Content"))
+    end
+
+    # Its one entry declares DIEGO, who speaks: a speech would point at no one listed.
+    test "deleting a list holding a speaking character's only entry is refused, naming them",
+         %{conn: conn, play: play} do
+      before = export_tei(play)
+      list = division(play, "Sale de nuevo")
+      lv = open_structure(conn, play)
+
+      lv |> element("#division-#{list.id} button[aria-label='#{t("Delete")}']") |> render_click()
+
+      assert render(lv) =~ "DIEGO"
+      assert export_tei(play) == before
+    end
+
+    # Review focus 4: an act's own lists go with it.
+    test "deleting an act whose list holds a speaking character's only entry is refused",
+         %{conn: conn, play: play} do
+      before = export_tei(play)
+      act = division(play, "ACTO PRIMERO")
+      lv = open_structure(conn, play)
+
+      lv |> element("#division-#{act.id} button[aria-label='#{t("Delete")}']") |> render_click()
+
+      assert render(lv) =~ "DIEGO"
+      assert export_tei(play) == before
+    end
+
+    # BLAS has his entry before the acts, and the musicians are no one who speaks.
+    test "deleting a list whose characters are elsewhere removes it and no character",
+         %{conn: conn, play: play} do
+      list = division(play, "Personas del acto segundo")
+      lv = open_structure(conn, play)
+
+      lv |> element("#division-#{list.id} button[aria-label='#{t("Delete")}']") |> render_click()
+
+      refute export_tei(play) =~ "Personas del acto segundo"
+      assert length(Playcode.PlayContent.list_characters(play.id)) == 4
+    end
+  end
+
+  # DON is silent and listed only in the first list; ANA has her entry in the act too.
+  test "deleting a list removes the silent characters it leaves in no list, and says how many first",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          front: """
+          <div type="elenco"><head>PRIMERA</head><castList>
+            <castItem><role xml:id="ANA">ANA</role></castItem>
+            <castItem><role xml:id="DON">DON</role></castItem>
+          </castList></div>
+          """,
+          body: """
+          <div1 type="acto" n="1"><head>ACTO I</head>
+            <castList><head>SEGUNDA</head><castItem><role corresp="#ANA">ANA</role></castItem></castList>
+            <sp who="#ANA"><speaker>ANA</speaker><l n="1">Verso.</l></sp>
+          </div1>
+          """
+        )
+      )
+
+    list = row(play, &match?(%Division{title: "PRIMERA"}, &1))
+    lv = open_structure(conn, play)
+
+    confirm =
+      Gettext.ngettext(
+        PlaycodeWeb.Gettext,
+        "Delete this cast list? One character listed nowhere else goes with it.",
+        "Delete this cast list? %{count} characters listed nowhere else go with it.",
+        1
+      )
+
+    delete = "#division-#{list.id} button[aria-label='#{t("Delete")}']"
+    assert lv |> element(delete) |> render() =~ confirm
+
+    lv |> element(delete) |> render_click()
+
+    assert ["ANA"] = Enum.map(Playcode.PlayContent.list_characters(play.id), & &1.name)
+    refute export_tei(play) =~ "PRIMERA"
   end
 
   # A new one took the count as its position, which falls among the file's: positions are
@@ -836,6 +996,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     |> render_submit()
 
     assert render(lv) =~ t("Scene of the action")
+
+    # It stands last, after the act, until it is dragged before the text: a <set> there.
+    lv |> element("nav[aria-label='Editor tabs'] button", "structure") |> render_click()
+    [scene | rest] = play.id |> outline_items() |> Enum.reverse()
+
+    lv
+    |> element("#outline")
+    |> render_hook("reorder_outline", %{"ids" => Enum.map([scene | Enum.reverse(rest)], &key/1)})
+
     xml = export_tei(play)
     assert xml_texts(xml, "head", within: "set") == ["SCENE:"]
     assert xml_texts(xml, "p", within: "set") == ["An English wood."]
@@ -1372,6 +1541,16 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
   end
 
   defp gone, do: t("That item no longer exists. The list has been refreshed.")
+
+  # The play's outline, read back through the contexts, and each item's key as the
+  # Structure tab's rows carry it.
+  defp outline_items(play_id) do
+    play_id
+    |> Playcode.Catalogue.list_paratexts()
+    |> Playcode.Outline.items(Playcode.PlayContent.list_top_divisions(play_id))
+  end
+
+  defp key(item), do: Playcode.Outline.key(item)
 
   defp speakers(play) do
     play |> export_tei() |> xml_elements("sp") |> Enum.map(fn {attrs, _} -> attrs["who"] end)

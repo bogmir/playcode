@@ -172,7 +172,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
           {content, [tab.(t("Cast list")), {"button", t("Add Character")}]},
           {content, [tab.(t("Character Review")), {"button", t("Select all")}]},
           {content, [tab.("content")]},
-          {content, [tab.("structure"), {"button", t("Add Act")}]},
+          {content, [tab.("structure"), {"button", t("Add division")}]},
           {content, scene},
           {content, scene ++ [{"span", s.speech.speaker_label}]},
           {content, scene ++ [edit.(s.verse_line)]},

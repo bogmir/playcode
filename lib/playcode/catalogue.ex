@@ -425,21 +425,6 @@ defmodule Playcode.Catalogue do
   end
 
   @doc """
-  Puts the play's paratexts in the order of `ordered_ids`. The ids came from the browser:
-  one that is not this play's paratext, or no id at all, moves nothing.
-  """
-  def reorder_paratexts(play_id, ordered_ids) when is_list(ordered_ids) do
-    Repo.transaction(fn ->
-      for {raw_id, position} <- Enum.with_index(ordered_ids),
-          {:ok, id} <- [Ecto.UUID.cast(raw_id)] do
-        Paratext
-        |> where(id: ^id, play_id: ^play_id)
-        |> Repo.update_all(set: [position: position, updated_at: DateTime.utc_now()])
-      end
-    end)
-  end
-
-  @doc """
   A paratext's changeset, for a form.
   """
   def change_paratext(%Paratext{} = paratext, attrs \\ %{}) do

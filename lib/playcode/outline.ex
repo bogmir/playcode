@@ -6,6 +6,10 @@ defmodule Playcode.Outline do
   kind. An act's scenes and cast lists are its own sequence, its `children`.
   """
 
+  import Ecto.Query
+
+  alias Playcode.{Catalogue, PlayContent, Repo}
+  alias Playcode.Catalogue.Paratext
   alias Playcode.PlayContent.Division
 
   @doc "The top-level items of `paratexts` and `divisions`, in outline order."
@@ -30,6 +34,41 @@ defmodule Playcode.Outline do
         true -> {:body, item}
       end
     end
+  end
+
+  @doc """
+  Puts the play's top-level items in the order of `keys`, each `"paratext:<id>"` or
+  `"division:<id>"` as the Structure tab's rows carry them. A key that is not one of the
+  play's top-level items is dropped; an item the keys leave out keeps its turn after them.
+  The characters follow their first entries.
+  """
+  def reorder(play_id, keys) do
+    play_id
+    |> Catalogue.list_paratexts()
+    |> items(PlayContent.list_top_divisions(play_id))
+    |> PlayContent.renumber(keys, &key/1)
+
+    PlayContent.sync_characters(play_id)
+    :ok
+  end
+
+  @doc "An outline item's key, as `reorder/2` takes it."
+  def key(%Paratext{id: id}), do: "paratext:#{id}"
+  def key(%Division{id: id}), do: "division:#{id}"
+
+  @doc "The position after the play's last top-level item, paratexts and divisions alike."
+  def next_position(play_id) do
+    paratexts = Paratext |> where(play_id: ^play_id) |> select([p], max(p.position))
+
+    divisions =
+      Division
+      |> where([d], d.play_id == ^play_id and is_nil(d.parent_id))
+      |> select([d], max(d.position))
+
+    [Repo.one(paratexts), Repo.one(divisions)]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.max(fn -> -1 end)
+    |> Kernel.+(1)
   end
 
   defp text_division?(%Division{type: type}), do: type != "elenco"
