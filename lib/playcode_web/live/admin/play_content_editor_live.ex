@@ -1689,35 +1689,18 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             this.dragEl = null
             this.placeholder = null
             this.eventName = this.el.dataset.event
-            this.bindItems()
-          },
 
-          updated() {
-            this.bindItems()
-          },
-
-          bindItems() {
-            this.el.querySelectorAll(":scope > .drag-item").forEach(item => {
-              if (!item._dragBound) {
-                this.setupItem(item)
-                item._dragBound = true
-              }
-            })
-          },
-
-          setupItem(item) {
-            const handle = item.querySelector(".drag-handle")
-            if (!handle) return
-
-            handle.addEventListener("mousedown", (e) => {
+            // One listener on the list, not one per handle: the patch after a drop can
+            // leave a handle in another row, so the row is found when the drag starts.
+            // A nested list's rows belong to its own hook.
+            const start = (e, clientY) => {
+              const item = e.target.closest(".drag-handle")?.closest(".drag-item")
+              if (item?.parentElement !== this.el) return
               e.preventDefault()
-              this.startDrag(item, e.clientY)
-            })
-
-            handle.addEventListener("touchstart", (e) => {
-              e.preventDefault()
-              this.startDrag(item, e.touches[0].clientY)
-            }, { passive: false })
+              this.startDrag(item, clientY)
+            }
+            this.el.addEventListener("mousedown", (e) => start(e, e.clientY))
+            this.el.addEventListener("touchstart", (e) => start(e, e.touches[0].clientY), { passive: false })
           },
 
           startDrag(item, startY) {
