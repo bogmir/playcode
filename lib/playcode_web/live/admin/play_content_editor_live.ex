@@ -14,7 +14,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   alias Playcode.Catalogue.Paratext
   alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Character, Division, Element}
+  alias Playcode.PlayContent.{Character, Division, Element, InlineMarkup}
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
@@ -1250,19 +1250,27 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     )
   end
 
+  # The speeches in reading order: act by act, an act's own before its scenes'. A position
+  # counts within its division, so by itself it interleaves the acts.
   defp list_speeches(play_id) do
     import Ecto.Query
     alias Playcode.PlayContent.ElementCharacter
 
     ec_preload = from(ec in ElementCharacter, order_by: ec.position, preload: :character)
 
+    rank =
+      for {act, i} <- Enum.with_index(PlayContent.list_top_divisions(play_id)),
+          {division, j} <- Enum.with_index([act | act.children]),
+          into: %{},
+          do: {division.id, {i, j}}
+
     Playcode.Repo.all(
       from e in Element,
         where: e.play_id == ^play_id and e.type == "speech",
         left_join: d in assoc(e, :division),
-        preload: [element_characters: ^ec_preload, division: d],
-        order_by: [e.position]
+        preload: [element_characters: ^ec_preload, division: d]
     )
+    |> Enum.sort_by(&{rank[&1.division_id], &1.position})
   end
 
   defp cr_filtered_speeches(assigns) do
@@ -1307,17 +1315,30 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp load_first_child_contents(speech_ids) when speech_ids == [], do: %{}
 
+  # Each speech's first words, plain: its first child's text or, when that is a line
+  # group, which has none, the group's first line.
   defp load_first_child_contents(speech_ids) do
+    first = first_children(speech_ids)
+
+    lines =
+      Map.new(first_children(for {_speech, id, nil} <- first, do: id), &Tuple.delete_at(&1, 1))
+
+    Map.new(first, fn {speech, id, content} ->
+      text = content || lines[id]
+      {speech, text && InlineMarkup.plain(text)}
+    end)
+  end
+
+  defp first_children(parent_ids) do
     import Ecto.Query
 
     Playcode.Repo.all(
       from e in Element,
-        where: e.parent_id in ^speech_ids,
+        where: e.parent_id in ^parent_ids,
         distinct: e.parent_id,
         order_by: [e.parent_id, e.position],
-        select: {e.parent_id, e.content}
+        select: {e.parent_id, e.id, e.content}
     )
-    |> Map.new()
   end
 
   defp reload_preview(socket) do

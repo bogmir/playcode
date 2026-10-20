@@ -1026,6 +1026,56 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
   # The Characters tab has a section per cast list, in outline order, each with its own
   # entries; an entry is dragged within its list or into another.
+  # El galán Castrucho's 985 speeches all open with a line group, which has no text of
+  # its own, and their positions count within each act: every row looked alike, the three
+  # acts interleaved.
+  describe "the character review" do
+    setup do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO I</head>
+              <sp><speaker>ANA</speaker><lg><l n="1">Abre el <emph>acto</emph> primero</l></lg></sp>
+              <sp><speaker>BLAS</speaker><lg><l n="2">Cierra el acto primero</l></lg></sp>
+            </div1>
+            <div1 type="acto" n="2"><head>ACTO II</head>
+              <sp><speaker>CELIA</speaker><lg><l n="3">Abre el acto segundo</l></lg></sp>
+            </div1>
+            """
+          )
+        )
+
+      %{reviewed: play}
+    end
+
+    defp open_review(conn, play) do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+
+      lv
+      |> element("nav[aria-label='Editor tabs'] button", t("Character Review"))
+      |> render_click()
+    end
+
+    test "a speech opening with a line group shows its first line, as readers read it",
+         %{conn: conn, reviewed: play} do
+      html = open_review(conn, play)
+
+      assert html =~ "Abre el acto primero"
+      refute html =~ "<<"
+    end
+
+    test "the speeches are listed in reading order", %{conn: conn, reviewed: play} do
+      assert conn
+             |> open_review(play)
+             |> in_order?([
+               "Abre el acto primero",
+               "Cierra el acto primero",
+               "Abre el acto segundo"
+             ])
+    end
+  end
+
   describe "the cast lists" do
     setup do
       %{play: import_tei!(outline_xml()), other: import_tei!(outline_xml())}
