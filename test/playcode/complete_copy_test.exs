@@ -288,7 +288,7 @@ defmodule Playcode.CompleteCopyTest do
 
     paratexts!(play, [
       %{kind: "head_title", heading: "UNA COMEDIA RARA"},
-      %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", back: true}
+      %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", back: true, position: 3}
     ])
 
     [blas] = cast!(play, [%{xml_id: "BLAS", name: "Blas", actor: "Mr. Betterton"}])
@@ -501,7 +501,11 @@ defmodule Playcode.CompleteCopyTest do
   defp paratexts!(play, paratexts) do
     for {attrs, position} <- Enum.with_index(paratexts) do
       {:ok, _} =
-        Catalogue.create_paratext(Map.merge(attrs, %{play_id: play.id, position: position}))
+        Catalogue.create_paratext(
+          attrs
+          |> Map.put_new(:position, position)
+          |> Map.put(:play_id, play.id)
+        )
     end
   end
 

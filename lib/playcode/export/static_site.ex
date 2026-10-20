@@ -494,7 +494,6 @@ defmodule Playcode.Export.StaticSite do
       Path.join(play_dir, "#{code}.xml"),
       TeiXml.generate(play,
         divisions: edition.divisions,
-        characters: edition.characters,
         performances: edition.performances
       )
     )

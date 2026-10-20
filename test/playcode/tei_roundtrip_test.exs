@@ -961,7 +961,11 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
-      assert xml_elements(xml, "role") == [{%{"xml:id" => "HERO"}, "Hero Original"}]
+      assert xml_elements(xml, "role") == [
+               {%{"xml:id" => "HERO"}, "Hero Original"},
+               {%{"corresp" => "#HERO"}, "Hero Duplicate"},
+               {%{"corresp" => "#HERO"}, "Hero Original"}
+             ]
     end
   end
 
@@ -1038,9 +1042,10 @@ defmodule Playcode.TeiRoundtripTest do
              ])
   end
 
-  # The Old Wife's Tale's "SCENE: An English wood…". 15 of the 17 files that have one put it
-  # right after the cast list, and emothe.uv.es prints it there; Egle's comes back there too.
-  test "the scene of the action keeps its heading and paragraphs, after the cast list" do
+  # The Old Wife's Tale's "SCENE: An English wood…". Until 2026-10-20 every scene came back
+  # after the cast list, where 15 of the 17 files that have one put it; Egle's, before its
+  # list, now comes back where its file has it, as everything in the outline does.
+  test "the scene of the action keeps its heading, its paragraphs and its place" do
     xml =
       roundtrip(
         tei(
@@ -1058,7 +1063,7 @@ defmodule Playcode.TeiRoundtripTest do
              "Otro."
            ]
 
-    assert xml =~ ~r{</castList>\s*</div>\s*<set>}
+    assert xml =~ ~r{</set>\s*<div type="elenco">}
   end
 
   test "a paratext keeps its kind, heading and paragraphs" do
@@ -1160,6 +1165,88 @@ defmodule Playcode.TeiRoundtripTest do
       roundtrip(tei(front: ~s(<div type="epistola"><head>#{heading}</head><p>Sire,</p></div>)))
 
     assert xml_texts(xml, "head", within: "front") == [String.trim(heading)]
+  end
+
+  describe "the outline" do
+    alias Playcode.{Catalogue, PlayContent}
+
+    test "a file comes back in its own order, every list where it stood" do
+      xml = outline_xml()
+      assert text_order(roundtrip(xml)) == text_order(xml)
+    end
+
+    test "each role comes back as its file wrote it, ids, references and groups" do
+      xml = outline_xml()
+      exported = roundtrip(xml)
+
+      assert xml_elements(exported, "castItem") == xml_elements(xml, "castItem")
+      assert xml_elements(exported, "role") == xml_elements(xml, "role")
+      assert xml_texts(exported, "head", within: "castGroup") == ["Criados"]
+    end
+
+    test "a cast list with no entries is written where it stands and read back there" do
+      play = play_fixture(%{})
+      act = division!(play, %{type: "acto", number: 1, title: "ACTO", position: 0})
+      division!(play, %{parent_id: act.id, type: "elenco", title: "Antes", position: 0})
+      division!(play, %{parent_id: act.id, type: "escena", number: 1, position: 1})
+      division!(play, %{parent_id: act.id, type: "elenco", title: "Entre", position: 2})
+      division!(play, %{parent_id: act.id, type: "escena", number: 2, position: 3})
+
+      xml = export_tei(play)
+
+      assert Enum.count(text_order(xml), &(&1 == "body/div1[acto]/div2[elenco]")) == 2
+
+      [act] = import_tei!(xml).id |> PlayContent.list_top_divisions()
+      assert Enum.map(act.children, & &1.type) == ~w(elenco escena elenco escena)
+    end
+
+    test "a play with no body division writes every item in its front" do
+      play = play_fixture(%{})
+
+      {:ok, _} =
+        Catalogue.create_paratext(%{
+          play_id: play.id,
+          kind: "dedicatoria",
+          heading: "Al lector",
+          position: 0
+        })
+
+      list = division!(play, %{type: "elenco", position: 1})
+
+      {:ok, _} =
+        PlayContent.create_character(%{
+          play_id: play.id,
+          xml_id: "ANA",
+          name: "ANA",
+          cast_list_id: list.id
+        })
+
+      assert text_order(export_tei(play)) ==
+               ["front/titlePage", "front/div[dedicatoria]", "front/div[elenco]"]
+    end
+
+    test "a performance cast from the cast list names the first list" do
+      play = play_fixture(%{})
+      first = division!(play, %{type: "elenco", title: "Primera", position: 0})
+      second = division!(play, %{type: "elenco", title: "Segunda", position: 1})
+
+      for {list, name} <- [{first, "ANA"}, {second, "BLAS"}] do
+        {:ok, _} =
+          PlayContent.create_character(%{
+            play_id: play.id,
+            xml_id: name,
+            name: name,
+            cast_list_id: list.id
+          })
+      end
+
+      performance_fixture(play, %{"cast_from_cast_list" => true})
+
+      assert [{%{"xml:id" => "castlist"}, _}, {second_attrs, _}] =
+               xml_elements(export_tei(play), "castList", within: "front")
+
+      assert second_attrs == %{}
+    end
   end
 
   describe "the text" do
@@ -4249,5 +4336,10 @@ defmodule Playcode.TeiRoundtripTest do
     second = first |> String.replace("FIX1", "FIX2") |> roundtrip()
 
     assert String.replace(second, "FIX2", "FIX1") == first
+  end
+
+  defp division!(play, attrs) do
+    {:ok, division} = Playcode.PlayContent.create_division(Map.put(attrs, :play_id, play.id))
+    division
   end
 end

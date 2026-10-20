@@ -814,7 +814,9 @@ defmodule Playcode.PlayContent do
       |> Repo.all()
       |> Repo.preload([
         :notes,
-        children: from(d in Division, order_by: d.position, preload: :notes)
+        entries: :character,
+        children:
+          from(d in Division, order_by: d.position, preload: [:notes, entries: :character])
       ])
 
     # Load elements per division (including sub-divisions)

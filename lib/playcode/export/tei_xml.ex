@@ -6,6 +6,7 @@ defmodule Playcode.Export.TeiXml do
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Paratext
+  alias Playcode.Outline
   alias Playcode.Performances
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
@@ -34,7 +35,7 @@ defmodule Playcode.Export.TeiXml do
 
   @doc """
   The play's TEI document. `opts` may hand in `:divisions` (as
-  `PlayContent.load_play_content/1` returns them), `:characters` and `:performances` (as
+  `PlayContent.load_play_content/1` returns them) and `:performances` (as
   `Performances.list_for_play/1` returns them) already loaded, as the static site does for
   every play; otherwise they are loaded here.
   """
@@ -51,9 +52,6 @@ defmodule Playcode.Export.TeiXml do
       # The credits are written in their order, which a preload does not keep.
       |> Map.update!(:editors, &Enum.sort_by(&1, fn editor -> editor.position end))
 
-    characters =
-      Keyword.get_lazy(opts, :characters, fn -> PlayContent.list_characters(play.id) end)
-
     divisions =
       Keyword.get_lazy(opts, :divisions, fn -> PlayContent.load_play_content(play.id) end)
 
@@ -68,7 +66,7 @@ defmodule Playcode.Export.TeiXml do
         %{"xml:lang" => play.language || "es", "xmlns" => "http://www.tei-c.org/ns/1.0"},
         [
           build_header(play, performances, gazetteer),
-          build_text(play, characters, divisions, performances, gazetteer)
+          build_text(play, divisions, performances, gazetteer)
         ]
       )
 
@@ -652,11 +650,9 @@ defmodule Playcode.Export.TeiXml do
   defp build_link_note(note) when is_binary(note) and note != "", do: [element(:note, note)]
   defp build_link_note(_note), do: []
 
-  # --- Back: the paratexts after the text, then the bibliography (S4) ---
+  # --- Back: the items after the text, then the bibliography (S4) ---
 
-  defp build_back(paratexts, groups) do
-    element(:back, Enum.map(paratexts, &paratext_element/1) ++ build_bibliography(groups))
-  end
+  defp build_back(items, groups), do: element(:back, items ++ build_bibliography(groups))
 
   defp build_bibliography([]), do: []
 
@@ -810,82 +806,130 @@ defmodule Playcode.Export.TeiXml do
 
   # --- Text ---
 
-  defp build_text(play, characters, divisions, performances, gazetteer) do
-    body_divisions =
-      divisions |> Enum.filter(&(&1.type in Division.body_types())) |> with_folio_parts()
+  # The outline in order, each item where its place puts it (`Outline.placement/1`): in
+  # <front> before the first division of the text, in <body> between, in <back> after.
+  defp build_text(play, divisions, performances, gazetteer) do
+    divisions = with_folio_parts(divisions)
+    lists = cast_lists(divisions)
 
-    cast_heading = Enum.find_value(divisions, &(&1.type == "elenco" && &1.title))
+    cast = %{
+      declaring: declaring_entries(lists),
+      # The list a performance takes its actors from (`corresp="#castlist"`): the first.
+      castlist:
+        if(Enum.any?(performances, & &1.cast_from_cast_list),
+          do: Enum.find_value(lists, &(&1.entries != [] && &1.id))
+        )
+    }
 
-    {back, front} = play.paratexts |> Enum.sort_by(& &1.position) |> Enum.split_with(& &1.back)
+    placed = Outline.placement(Outline.items(play.paratexts, divisions))
+    section = fn name -> for {^name, item} <- placed, do: item end
 
     element(:text, [
-      build_front(play, front, characters, cast_heading, performances, gazetteer),
-      build_body(body_divisions),
-      build_back(back, Playcode.Bibliography.list_for_play(play.id))
+      element(
+        :front,
+        [title_page(play)] ++
+          Enum.map(section.(:front), &outer_item(&1, cast)) ++
+          build_performances(performances, gazetteer)
+      ),
+      element(:body, Enum.map(section.(:body), &body_item(&1, cast))),
+      build_back(
+        Enum.map(section.(:back), &outer_item(&1, cast)),
+        Playcode.Bibliography.list_for_play(play.id)
+      )
     ])
   end
 
-  defp build_front(play, paratexts, characters, cast_heading, performances, gazetteer) do
-    title_page =
-      element(
-        :titlePage,
-        [
-          element(:docTitle, [element(:titlePart, [element(:title, play.title)])]),
-          if(play.author_name, do: element(:docAuthor, play.author_name), else: nil)
-        ]
-        |> Enum.reject(&is_nil/1)
-      )
+  defp title_page(play) do
+    element(
+      :titlePage,
+      [
+        element(:docTitle, [element(:titlePart, [element(:title, play.title)])]),
+        if(play.author_name, do: element(:docAuthor, play.author_name), else: nil)
+      ]
+      |> Enum.reject(&is_nil/1)
+    )
+  end
 
-    # Paratexts as front divs with their stored kind; the scene of the
-    # action after the cast list, where 15 of the 17 files that have one put it.
-    {scenes, paratexts} = Enum.split_with(paratexts, &Paratext.scene?(&1.kind))
+  # An item before or after the text.
+  defp outer_item(%Paratext{} = paratext, _cast), do: paratext_element(paratext, :div)
+  defp outer_item(%Division{} = list, cast), do: cast_list_div(list, :div, cast)
 
-    # Cast list
-    cast_list =
-      if characters != [] do
-        cast_items =
-          Enum.map(characters, fn char ->
-            role_attrs = %{"xml:id" => char.xml_id}
+  # An item between the divisions of the text: a paratext or a cast list as a div1 of its
+  # own, as the files' prologues and dumb shows are.
+  defp body_item(%Paratext{} = paratext, _cast), do: paratext_element(paratext, :div1)
+  defp body_item(%Division{type: "elenco"} = list, cast), do: cast_list_div(list, :div1, cast)
+  defp body_item(%Division{} = division, cast), do: build_div1(division, cast)
 
-            children = [inline_element(:role, role_attrs, build_inline_content(char.name))]
+  # --- Cast lists ---
 
-            children =
-              if char.description,
-                do:
-                  children ++
-                    [inline_element(:roleDesc, %{}, build_inline_content(char.description))],
-                else: children
+  # The play's cast lists in outline order: those an act holds after it.
+  defp cast_lists(divisions) do
+    divisions
+    |> Enum.flat_map(&[&1 | &1.children])
+    |> Enum.filter(&(&1.type == "elenco"))
+  end
 
-            children =
-              if char.actor, do: children ++ [element(:actor, char.actor)], else: children
+  # Each character's first entry, which declares it (`xml:id`); a later one refers to it.
+  defp declaring_entries(lists) do
+    lists
+    |> Enum.flat_map(& &1.entries)
+    |> Enum.filter(& &1.character_id)
+    |> Enum.uniq_by(& &1.character_id)
+    |> MapSet.new(& &1.id)
+  end
 
-            item_attrs = if char.is_hidden, do: %{ana: "oculto"}, else: %{}
-            element(:castItem, item_attrs, children)
-          end)
+  # A cast list in a div (div1, div2) of its own, its heading the div's; one with no entries
+  # yet is the div and its heading alone, a castList holding at least one castItem.
+  defp cast_list_div(list, tag, cast),
+    do: element(tag, %{type: "elenco"}, heading(list.title) ++ cast_list(list, [], cast))
 
-        head =
-          if cast_heading,
-            do: [inline_element(:head, %{}, build_inline_content(cast_heading))],
-            else: []
+  defp cast_list(%{entries: []}, _head, _cast), do: []
 
-        # The id a performance takes its actors from the cast list by (`corresp="#castlist"`).
-        list_attrs =
-          if Enum.any?(performances, & &1.cast_from_cast_list),
-            do: %{"xml:id" => "castlist"},
-            else: %{}
+  defp cast_list(list, head, cast) do
+    attrs = if list.id == cast.castlist, do: %{"xml:id" => "castlist"}, else: %{}
+    [element(:castList, attrs, head ++ cast_items(list.entries, cast))]
+  end
 
-        [element(:div, %{type: "elenco"}, head ++ [element(:castList, list_attrs, cast_items)])]
-      else
-        []
+  defp heading(nil), do: []
+  defp heading(text), do: [inline_element(:head, %{}, build_inline_content(text))]
+
+  # The entries in order, consecutive ones under one group heading in a castGroup.
+  defp cast_items(entries, cast) do
+    entries
+    |> Enum.chunk_by(& &1.group_heading)
+    |> Enum.flat_map(fn
+      [%{group_heading: nil} | _] = items ->
+        Enum.map(items, &cast_item(&1, cast))
+
+      [%{group_heading: group} | _] = items ->
+        [element(:castGroup, heading(group) ++ Enum.map(items, &cast_item(&1, cast)))]
+    end)
+  end
+
+  defp cast_item(entry, cast) do
+    character = entry.character
+    declares? = MapSet.member?(cast.declaring, entry.id)
+
+    role_attrs =
+      cond do
+        character == nil -> %{}
+        declares? -> %{"xml:id" => character.xml_id}
+        true -> %{"corresp" => "##{character.xml_id}"}
       end
 
+    description =
+      if entry.description,
+        do: [inline_element(:roleDesc, %{}, build_inline_content(entry.description))],
+        else: []
+
+    actor = if declares? and character.actor, do: [element(:actor, character.actor)], else: []
+    item_attrs = if character && character.is_hidden, do: %{ana: "oculto"}, else: %{}
+
     element(
-      :front,
-      [title_page] ++
-        Enum.map(paratexts, &paratext_element/1) ++
-        cast_list ++
-        Enum.map(scenes, &paratext_element/1) ++
-        build_performances(performances, gazetteer)
+      :castItem,
+      item_attrs,
+      [inline_element(:role, role_attrs, build_inline_content(entry.name))] ++
+        description ++ actor
     )
   end
 
@@ -1124,73 +1168,69 @@ defmodule Playcode.Export.TeiXml do
   defp with_breaks({name, attrs, content}), do: {name, attrs, with_breaks(content)}
   defp with_breaks(other), do: other
 
-  # A paratext before or after the text: a div of its kind, the scene of the action a <set>.
-  defp paratext_element(paratext) do
-    head =
-      if paratext.heading,
-        do: [inline_element(:head, %{}, build_inline_content(paratext.heading))],
-        else: []
-
+  # A paratext: a div of its kind before or after the text, the scene of the action a
+  # <set>; a div1 between the divisions of the text, the scene `circunstancia_accion`, the
+  # files' own word for it there.
+  defp paratext_element(paratext, tag) do
     paragraphs =
       for paragraph <- String.split(paratext.content || "", "\n\n", trim: true),
           do: inline_element(:p, %{}, build_inline_content(paragraph))
 
-    if Paratext.scene?(paratext.kind),
-      do: element(:set, head ++ paragraphs),
-      else: element(:div, %{type: paratext.kind}, head ++ paragraphs)
+    content = heading(paratext.heading) ++ paragraphs
+
+    case {Paratext.scene?(paratext.kind), tag} do
+      {true, :div} -> element(:set, content)
+      {true, :div1} -> element(:div1, %{type: "circunstancia_accion"}, content)
+      {false, tag} -> element(tag, %{type: paratext.kind}, content)
+    end
   end
 
-  defp build_body(body_divisions) do
-    divs =
-      Enum.map(body_divisions, fn div ->
-        attrs = %{type: div.type}
-        attrs = if div.number, do: Map.put(attrs, :n, to_string(div.number)), else: attrs
+  # An act: its heading, the cast lists that open it before any element (a bare castList,
+  # its head inside), its own elements, then its scenes and its other lists in their order,
+  # then its trailers, as TEI allows a trailer only at the end.
+  defp build_div1(div, cast) do
+    attrs = %{type: div.type}
+    attrs = if div.number, do: Map.put(attrs, :n, to_string(div.number)), else: attrs
 
-        children =
-          if div.title,
-            do: [inline_element(:head, %{}, build_inline_content(div.title, div.notes))],
-            else: []
+    {trailers, elements} =
+      div |> Map.get(:loaded_elements, []) |> Enum.split_with(&(&1.type == "trailer"))
 
-        # Add elements from the division. TEI only allows a trailer at the end, so the
-        # act's trailers follow its scenes.
-        {trailers, elements} =
-          div |> Map.get(:loaded_elements, []) |> Enum.split_with(&(&1.type == "trailer"))
+    {opening, children} =
+      div
+      |> Map.get(:children, [])
+      |> Enum.split_while(&(&1.type == "elenco" and &1.entries != []))
 
-        element_xml = Enum.map(elements, &build_element/1) |> Enum.reject(&is_nil/1)
-
-        # Add sub-divisions (scenes, etc.)
-        sub_divs =
-          Map.get(div, :children, [])
-          |> Enum.map(fn child ->
-            child_attrs = %{type: child.type}
-
-            child_attrs =
-              if child.number,
-                do: Map.put(child_attrs, :n, to_string(child.number)),
-                else: child_attrs
-
-            child_head =
-              if child.title,
-                do: [inline_element(:head, %{}, build_inline_content(child.title, child.notes))],
-                else: []
-
-            child_elements =
-              Map.get(child, :loaded_elements, [])
-              |> Enum.map(&build_element/1)
-              |> Enum.reject(&is_nil/1)
-
-            element(:div2, child_attrs, child_head ++ child_elements)
-          end)
-
-        element(
-          :div1,
-          attrs,
-          children ++ element_xml ++ sub_divs ++ Enum.map(trailers, &build_element/1)
-        )
-      end)
-
-    element(:body, divs)
+    element(
+      :div1,
+      attrs,
+      division_heading(div) ++
+        Enum.flat_map(opening, &cast_list(&1, heading(&1.title), cast)) ++
+        (Enum.map(elements, &build_element/1) |> Enum.reject(&is_nil/1)) ++
+        Enum.map(children, &build_div2(&1, cast)) ++
+        Enum.map(trailers, &build_element/1)
+    )
   end
+
+  defp build_div2(%{type: "elenco"} = list, cast), do: cast_list_div(list, :div2, cast)
+
+  defp build_div2(scene, _cast) do
+    attrs = %{type: scene.type}
+    attrs = if scene.number, do: Map.put(attrs, :n, to_string(scene.number)), else: attrs
+
+    elements =
+      scene
+      |> Map.get(:loaded_elements, [])
+      |> Enum.map(&build_element/1)
+      |> Enum.reject(&is_nil/1)
+
+    element(:div2, attrs, division_heading(scene) ++ elements)
+  end
+
+  # An act's or a scene's head, with the notes in it.
+  defp division_heading(%{title: nil}), do: []
+
+  defp division_heading(division),
+    do: [inline_element(:head, %{}, build_inline_content(division.title, division.notes))]
 
   defp build_element(%{type: "speech"} = el) do
     children = []

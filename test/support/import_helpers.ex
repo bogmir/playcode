@@ -203,6 +203,37 @@ defmodule Playcode.ImportHelpers do
     end)
   end
 
+  @doc """
+  The order of a file's text: each child of `<front>`, `<body>` and `<back>` as
+  `"front/div[elenco]"` or `"front/set"`, the type in brackets when it has one, and after
+  each div1 its castList and div2 children, `"body/div1[acto]/castList"`.
+  """
+  def text_order(xml) do
+    [text] = xml |> parse() |> descendants("text")
+
+    for section <- ~w(front body back),
+        {_, _, children} <- children_named(text, section),
+        {name, _, inner} = child <- children,
+        own = "#{section}/#{order_label(child)}",
+        label <- [own | if(name == "div1", do: nested_order(own, inner), else: [])],
+        do: label
+  end
+
+  defp nested_order(own, children),
+    do:
+      for(
+        {name, _, _} = child <- children,
+        name in ~w(castList div2),
+        do: "#{own}/#{order_label(child)}"
+      )
+
+  defp order_label({name, attrs, _}) do
+    case List.keyfind(attrs, "type", 0) do
+      {_, type} -> "#{name}[#{type}]"
+      nil -> name
+    end
+  end
+
   defp parse(xml) do
     {:ok, root} =
       xml |> String.replace(~r/^\s*<\?xml[^?]*\?>/, "") |> Saxy.SimpleForm.parse_string()

@@ -9,7 +9,7 @@ defmodule Playcode.Export.TeiValidatorTest do
   # it beside the corpus sweep, which keeps every core busy.
   @moduletag timeout: 180_000
 
-  import Playcode.ImportHelpers, only: [export_tei: 1, import_tei!: 1]
+  import Playcode.ImportHelpers, only: [export_tei: 1, import_tei!: 1, outline_xml: 0]
 
   alias Playcode.Export.TeiValidator
   alias Playcode.Catalogue
@@ -39,7 +39,8 @@ defmodule Playcode.Export.TeiValidatorTest do
         {"an original cast", &original_cast/0},
         {"a scene of the action", &scene_of_the_action/0},
         {"a translation naming its original, after the edition's notes", &translation/0},
-        {"performances", &performances/0}
+        {"performances", &performances/0},
+        {"cast lists and paratexts before, inside, between and after the acts", &outline/0}
       ]
 
       xmls = Enum.map(shapes, fn {_shape, build} -> build.() end)
@@ -308,6 +309,15 @@ defmodule Playcode.Export.TeiValidatorTest do
 
   # The scene of the action as TEI's <set>, last in the front. Under a code of its own,
   # for the same reason as the bibliography test.
+  # Every place a cast list, a paratext and the scene of the action can stand: a bare
+  # castList and a div2 in an act, a div1 between the acts, a cast list in <back>.
+  defp outline do
+    xml = outline_xml() |> import_tei!() |> export_tei()
+
+    assert xml =~ ~r{<div1 type="elenco">}
+    xml
+  end
+
   defp scene_of_the_action do
     play = own_copy(@fixture_file, "SET")
 
