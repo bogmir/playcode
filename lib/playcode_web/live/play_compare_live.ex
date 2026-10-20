@@ -188,7 +188,6 @@ defmodule PlaycodeWeb.PlayCompareLive do
           >
             <.play_body
               divisions={panel.divisions}
-              characters={panel.characters}
               show_line_numbers={@show_line_numbers}
               show_stage_directions={@show_stage_directions}
               show_asides={@show_asides}

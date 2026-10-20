@@ -42,4 +42,14 @@ defmodule Playcode.PlayContent.CastListEntry do
     ])
     |> validate_required([:name, :play_id, :cast_list_id])
   end
+
+  @doc """
+  What a printed cast list shows of its `entries` (each with its `:character` loaded): a
+  hidden character's left out, the rest in runs that share a group heading.
+  """
+  def printed_groups(entries) do
+    entries
+    |> Enum.reject(&match?(%{character: %{is_hidden: true}}, &1))
+    |> Enum.chunk_by(& &1.group_heading)
+  end
 end

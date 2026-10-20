@@ -6,7 +6,7 @@ defmodule PlaycodeWeb.PlayComparison do
   (`PlaycodeWeb.PlayCompareLive`) comparison LiveViews. Holds the family-building,
   panel-loading, layout, and display-toggle logic so neither LiveView duplicates it.
 
-  A "panel" is a map `%{play: play, divisions: divisions, characters: characters}`.
+  A "panel" is a map `%{play: play, divisions: divisions}`.
   A "family" is the original (root) play plus all of its derived plays
   (translations/adaptations), excluding the play currently being viewed.
   """
@@ -22,14 +22,13 @@ defmodule PlaycodeWeb.PlayComparison do
   def max_panels, do: @max_panels
 
   @doc """
-  Builds a comparison panel for a fully-loaded play, loading its content tree
-  and characters.
+  Builds a comparison panel for a fully-loaded play, loading its content tree (its cast
+  lists among its divisions).
   """
   def build_panel(play) do
     %{
       play: play,
-      divisions: PlayContent.load_play_content(play.id, variants: play.show_variants),
-      characters: PlayContent.list_characters(play.id)
+      divisions: PlayContent.load_play_content(play.id, variants: play.show_variants)
     }
   end
 

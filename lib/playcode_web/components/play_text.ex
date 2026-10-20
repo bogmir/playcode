@@ -6,14 +6,15 @@ defmodule PlaycodeWeb.Components.PlayText do
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext
 
+  alias Playcode.Catalogue.Paratext
   alias Playcode.Export.NoteMarkup
+  alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
+  alias Playcode.PlayContent.{CastListEntry, Division, Element, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
   attr :divisions, :list, required: true
-  attr :characters, :list, default: []
-  attr :scene, :list, default: [], doc: "the scene of the action, printed after the cast list"
+  attr :paratexts, :list, default: [], doc: "printed where the outline puts each"
   attr :show_line_numbers, :boolean, default: true
   attr :show_stage_directions, :boolean, default: true
   attr :show_asides, :boolean, default: true
@@ -31,38 +32,18 @@ defmodule PlaycodeWeb.Components.PlayText do
       data-folio={if @show_folio, do: "on", else: "off"}
     >
       <div
-        :for={{division, div_key} <- sync_keyed(@divisions, @sync_keys)}
+        :for={{division, div_key} <- outline(@paratexts, @divisions, @sync_keys)}
         class="mb-8 scroll-mt-16"
-        id={"div-#{division.id}"}
+        id={outline_id(division)}
       >
-        <.division_heading division={division} sync_key={div_key} />
+        <.paratext :if={match?(%Paratext{}, division)} paratext={division} />
+        <%= if match?(%Division{}, division) do %>
+          <.division_heading division={division} sync_key={div_key} />
+          <.cast_list :if={division.type == "elenco"} entries={division.entries} />
 
-        <%!-- Render inline cast list for elenco divisions --%>
-        <.cast_list :if={division.type == "elenco"} characters={@characters} />
-        <.scene :for={note <- @scene} :if={division.type == "elenco"} note={note} />
-
-        <div :if={Map.has_key?(division, :loaded_elements)}>
-          <.element_list
-            elements={Map.get(division, :loaded_elements, [])}
-            show_line_numbers={@show_line_numbers}
-            show_stage_directions={@show_stage_directions}
-            show_asides={@show_asides}
-            show_split_verses={@show_split_verses}
-            show_verse_type={@show_verse_type}
-            show_folio={@show_folio}
-            act_key={div_key}
-          />
-        </div>
-
-        <div
-          :for={{child, child_key} <- sync_keyed(Map.get(division, :children, []), @sync_keys)}
-          class="mb-6 scroll-mt-16"
-          id={"div-#{child.id}"}
-        >
-          <.division_heading division={child} sync_key={child_key && "#{div_key}/#{child_key}"} />
-          <div :if={Map.has_key?(child, :loaded_elements)}>
+          <div :if={Map.has_key?(division, :loaded_elements)}>
             <.element_list
-              elements={Map.get(child, :loaded_elements, [])}
+              elements={Map.get(division, :loaded_elements, [])}
               show_line_numbers={@show_line_numbers}
               show_stage_directions={@show_stage_directions}
               show_asides={@show_asides}
@@ -72,12 +53,43 @@ defmodule PlaycodeWeb.Components.PlayText do
               act_key={div_key}
             />
           </div>
-        </div>
+
+          <div
+            :for={{child, child_key} <- sync_keyed(Map.get(division, :children, []), @sync_keys)}
+            class="mb-6 scroll-mt-16"
+            id={"div-#{child.id}"}
+          >
+            <.division_heading division={child} sync_key={child_key && "#{div_key}/#{child_key}"} />
+            <.cast_list :if={child.type == "elenco"} entries={child.entries} />
+            <div :if={Map.has_key?(child, :loaded_elements)}>
+              <.element_list
+                elements={Map.get(child, :loaded_elements, [])}
+                show_line_numbers={@show_line_numbers}
+                show_stage_directions={@show_stage_directions}
+                show_asides={@show_asides}
+                show_split_verses={@show_split_verses}
+                show_verse_type={@show_verse_type}
+                show_folio={@show_folio}
+                act_key={div_key}
+              />
+            </div>
+          </div>
+        <% end %>
       </div>
       <.endnotes notes={Note.reading_order(@divisions)} />
     </div>
     """
   end
+
+  # The outline's items in order (`Outline.items/2`), each division with its comparison
+  # key, a paratext with none.
+  defp outline(paratexts, divisions, sync?) do
+    keys = divisions |> sync_keyed(sync?) |> Map.new(fn {division, key} -> {division.id, key} end)
+    for item <- Outline.items(paratexts, divisions), do: {item, Map.get(keys, item.id)}
+  end
+
+  defp outline_id(%Paratext{id: id}), do: "paratext-#{id}"
+  defp outline_id(%Division{id: id}), do: "div-#{id}"
 
   # Each division with its comparison key (see `Division.sync_keys/1`), or with nil when
   # the page does not sync. A speech carries its act's key, whatever scene it is in:
@@ -111,38 +123,51 @@ defmodule PlaycodeWeb.Components.PlayText do
     """
   end
 
-  attr :characters, :list, required: true
+  attr :entries, :list, required: true
 
+  # A cast list's own entries, a hidden character's left out, those of a group under its
+  # heading.
   defp cast_list(assigns) do
-    visible = Enum.filter(assigns.characters, &(!&1.is_hidden))
-    assigns = assign(assigns, :visible_characters, visible)
+    assigns = assign(assigns, :groups, CastListEntry.printed_groups(assigns.entries))
 
     ~H"""
-    <div :if={@visible_characters != []} class="cast-list mb-8 max-w-xl mx-auto">
-      <div
-        :for={char <- @visible_characters}
-        class="cast-item flex items-baseline gap-3 py-1 ml-1 sm:ml-4"
-      >
-        <span class="speaker shrink-0"><.inline_content text={char.name} /></span>
-        <span
-          :if={char.description}
-          class="text-sm"
-          style="color: oklch(from var(--color-base-content) l c h / 0.55)"
+    <div :if={@groups != []} class="cast-list mb-8 max-w-xl mx-auto">
+      <div :for={[first | _] = group <- @groups}>
+        <p
+          :if={first.group_heading}
+          class="cast-group font-semibold text-sm mt-2 ml-1 sm:ml-4"
         >
-          <.inline_content text={char.description} />
-        </span>
+          <.inline_content text={first.group_heading} />
+        </p>
+        <div :for={entry <- group} class="cast-item flex items-baseline gap-3 py-1 ml-1 sm:ml-4">
+          <span class="speaker shrink-0"><.inline_content text={entry.name} /></span>
+          <span
+            :if={entry.description}
+            class="text-sm"
+            style="color: oklch(from var(--color-base-content) l c h / 0.55)"
+          >
+            <.inline_content text={entry.description} />
+          </span>
+        </div>
       </div>
     </div>
     """
   end
 
-  attr :note, :map, required: true
+  attr :paratext, :map, required: true
 
-  defp scene(assigns) do
+  # A paratext where the outline puts it; the scene of the action centred, as emothe.uv.es
+  # prints it.
+  defp paratext(assigns) do
     ~H"""
-    <div class="mb-8 max-w-xl mx-auto text-center text-sm">
-      <h3 :if={@note.heading} class="font-bold mb-1"><.inline_content text={@note.heading} /></h3>
-      <div class="whitespace-pre-line"><.inline_content text={@note.content} /></div>
+    <div class={[
+      "max-w-2xl mx-auto text-sm",
+      if(Paratext.scene?(@paratext.kind), do: "text-center", else: "text-justify")
+    ]}>
+      <h3 :if={@paratext.heading} class="font-bold text-center mb-2">
+        <.inline_content text={@paratext.heading} />
+      </h3>
+      <div class="whitespace-pre-line"><.inline_content text={@paratext.content} /></div>
     </div>
     """
   end

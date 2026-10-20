@@ -234,6 +234,30 @@ defmodule Playcode.ImportHelpers do
     end
   end
 
+  @doc "Whether each of `strings` appears in `text`, each after the one before it."
+  def in_order?(text, strings) do
+    Enum.reduce_while(strings, 0, fn string, from ->
+      case :binary.match(text, string, scope: {from, byte_size(text) - from}) do
+        {at, length} -> {:cont, at + length}
+        :nomatch -> {:halt, false}
+      end
+    end) != false
+  end
+
+  @doc "How many times `string` appears in `text`."
+  def occurrences(text, string), do: length(:binary.matches(text, string))
+
+  @doc """
+  The headings of `test/fixtures/outline.xml` in its outline's order, as a page prints
+  them: the front matter, the acts with their lists and scenes, the items between and
+  after them.
+  """
+  def outline_headings do
+    ["DEDICATORIA", "LUGAR DE LA ACCIÓN", "PERSONAS", "COMEDIA DE LOS ELENCOS", "ACTO PRIMERO"] ++
+      ["Personas del acto primero", "ESCENA I", "Sale de nuevo", "ESCENA II"] ++
+      ["Personas del acto segundo", "LOA", "ACTO SEGUNDO", "EPÍLOGO", "Personas que no hablan"]
+  end
+
   defp parse(xml) do
     {:ok, root} =
       xml |> String.replace(~r/^\s*<\?xml[^?]*\?>/, "") |> Saxy.SimpleForm.parse_string()

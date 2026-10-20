@@ -4,18 +4,24 @@ defmodule Playcode.Export.Epub do
   Reuses rendering patterns from `Playcode.Export.Html`.
   """
 
+  alias Playcode.Catalogue.Paratext
   alias Playcode.Export.{Html, NoteMarkup}
+  alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.PlayContent.{CastListEntry, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
   @act_types ~w(acto act acte jornada)
 
   def generate(play) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
-    characters = PlayContent.list_characters(play.id)
     divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
-    {front, scene, back} = PlayLabels.split_paratexts(play.paratexts, divisions)
+
+    {front, rest} =
+      play.paratexts
+      |> Outline.items(divisions)
+      |> Outline.placement()
+      |> Enum.split_with(&match?({:front, _}, &1))
 
     tmp_dir =
       Path.join(
@@ -30,50 +36,29 @@ defmodule Playcode.Export.Epub do
       css_path = Path.join(tmp_dir, "style.css")
       File.write!(css_path, css())
 
-      # Front matter: title, author, sources, editors, paratexts, cast list
+      # Front matter: title, author, sources, editors, and the outline's items before the
+      # text
       front_path =
         write_chapter(
           tmp_dir,
           "front",
           play.title,
           play.language,
-          render_front(play, characters, front, scene)
+          render_front(play, Enum.map(front, &elem(&1, 1)))
         )
 
-      # One chapter per top-level division
+      # One chapter per item from the first division of the text on, in outline order
       chapter_entries =
-        divisions
+        rest
         |> Enum.with_index(1)
-        |> Enum.map(fn {div, i} ->
+        |> Enum.map(fn {{_placement, item}, i} ->
           filename = "chapter-#{String.pad_leading("#{i}", 3, "0")}"
-          title = if div.title, do: InlineMarkup.plain(div.title), else: "#{div.type} #{i}"
-
-          path =
-            write_chapter(
-              tmp_dir,
-              filename,
-              title,
-              play.language,
-              render_division(div, characters)
-            )
-
-          {path, title}
-        end)
-
-      # One chapter per paratext after the text, named by its heading or its kind
-      back_entries =
-        back
-        |> Enum.with_index(1)
-        |> Enum.map(fn {paratext, i} ->
-          title = PlayLabels.paratext_title(paratext)
-          filename = "back-#{String.pad_leading("#{i}", 3, "0")}"
-
-          {write_chapter(tmp_dir, filename, title, play.language, render_paratexts([paratext])),
-           title}
+          title = chapter_title(item, i)
+          {write_chapter(tmp_dir, filename, title, play.language, render_item(item)), title}
         end)
 
       all_pages =
-        [{front_path, play.title} | chapter_entries ++ back_entries]
+        [{front_path, play.title} | chapter_entries]
         |> Enum.map(fn {path, title} ->
           %BUPE.Item{
             href: path,
@@ -141,7 +126,7 @@ defmodule Playcode.Export.Epub do
 
   # --- Front matter ---
 
-  defp render_front(play, characters, front, scene) do
+  defp render_front(play, items) do
     """
     <div class="header">
       <p class="author">#{escape(play.author_name || "")}</p>
@@ -151,11 +136,17 @@ defmodule Playcode.Export.Epub do
     #{render_verse_info(play)}
     #{render_dating(play)}
     </div>
-    #{render_paratexts(front)}
-    #{render_cast_list(characters)}
-    #{render_paratexts(scene)}
+    #{Enum.map_join(items, "\n", &render_item/1)}
     """
   end
+
+  defp chapter_title(%Paratext{} = paratext, _index), do: PlayLabels.paratext_title(paratext)
+
+  defp chapter_title(%{title: title}, _index) when title not in [nil, ""],
+    do: InlineMarkup.plain(title)
+
+  defp chapter_title(%{type: "elenco"}, _index), do: "Dramatis personae"
+  defp chapter_title(div, index), do: "#{div.type} #{index}"
 
   defp render_sources(sources) do
     sources
@@ -204,64 +195,69 @@ defmodule Playcode.Export.Epub do
     end
   end
 
-  defp render_paratexts(paratexts) do
-    paratexts
-    |> Enum.map(fn paratext ->
-      heading =
-        if paratext.heading,
-          do: "  <h3>#{NoteMarkup.inline(paratext.heading, [], :epub)}</h3>\n",
-          else: ""
-
-      "<div class=\"paratext\">\n#{heading}#{paratext_paragraphs(paratext.content)}</div>"
-    end)
-    |> Enum.join("\n<hr class=\"paratext-sep\"/>\n")
-  end
-
-  defp render_cast_list(characters) do
-    visible = Enum.reject(characters, & &1.is_hidden)
-    if visible == [], do: "", else: do_render_cast_list(visible)
-  end
-
-  defp do_render_cast_list(characters) do
-    items =
-      Enum.map(characters, fn char ->
-        desc =
-          if char.description,
-            do:
-              " <span class=\"cast-desc\">#{NoteMarkup.inline(char.description, [], :epub)}</span>",
-            else: ""
-
-        "  <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(char.name, [], :epub)}</span>#{desc}</div>"
-      end)
-      |> Enum.join("\n")
-
-    "<div class=\"cast-list\">\n#{items}\n</div>"
-  end
-
-  # --- Division rendering ---
-
-  defp render_division(div, characters) do
-    heading = division_heading(div)
-
-    cast =
-      if div.type == "elenco",
-        do: render_cast_list(characters),
+  # An outline item: a paratext, or a division with its cast list if it is one, its
+  # elements and its children.
+  defp render_item(%Paratext{} = paratext) do
+    heading =
+      if paratext.heading,
+        do: "  <h3>#{NoteMarkup.inline(paratext.heading, [], :epub)}</h3>\n",
         else: ""
 
+    "<div class=\"paratext\">\n#{heading}#{paratext_paragraphs(paratext.content)}</div>"
+  end
+
+  defp render_item(div) do
+    heading = division_heading(div)
+    cast = render_cast_list(div)
     elements = render_elements(Map.get(div, :loaded_elements, []))
 
     children =
       Map.get(div, :children, [])
       |> Enum.map(fn child ->
         ch = child_heading(child)
+        cc = render_cast_list(child)
         ce = render_elements(Map.get(child, :loaded_elements, []))
-        "<div class=\"child-division\">\n#{ch}#{ce}</div>"
+        "<div class=\"child-division\">\n#{ch}#{cc}#{ce}</div>"
       end)
       |> Enum.join("\n")
 
     notes = NoteMarkup.endnotes(Note.reading_order(div), :epub)
 
     "<div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n#{notes}</div>"
+  end
+
+  # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its
+  # heading; nothing for a division of the text.
+  defp render_cast_list(%{type: "elenco", entries: entries}) do
+    case CastListEntry.printed_groups(entries) do
+      [] ->
+        ""
+
+      groups ->
+        "<div class=\"cast-list\">\n#{Enum.map_join(groups, "\n", &render_cast_group/1)}\n</div>\n"
+    end
+  end
+
+  defp render_cast_list(_division), do: ""
+
+  defp render_cast_group([first | _] = entries) do
+    heading =
+      if first.group_heading,
+        do:
+          "  <p class=\"cast-group\">#{NoteMarkup.inline(first.group_heading, [], :epub)}</p>\n",
+        else: ""
+
+    heading <> Enum.map_join(entries, "\n", &render_cast_item/1)
+  end
+
+  defp render_cast_item(entry) do
+    desc =
+      if entry.description,
+        do:
+          " <span class=\"cast-desc\">#{NoteMarkup.inline(entry.description, [], :epub)}</span>",
+        else: ""
+
+    "  <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(entry.name, [], :epub)}</span>#{desc}</div>"
   end
 
   defp division_heading(%{title: nil}), do: ""
@@ -402,12 +398,6 @@ defmodule Playcode.Export.Epub do
       margin-bottom: 0.5em;
     }
 
-    .paratext-sep {
-      margin: 0 auto 1.5em;
-      border: none;
-      border-top: 1px solid #e5e7eb;
-    }
-
     .cast-list {
       margin: 0 auto 1.5em;
     }
@@ -424,6 +414,8 @@ defmodule Playcode.Export.Epub do
     }
 
     .cast-desc { font-size: 0.875em; color: rgba(51, 51, 51, 0.55); }
+
+    .cast-group { font-weight: bold; font-size: 0.875em; margin: 0.5em 0 0 1em; }
 
     .act-heading {
       font-weight: bold;

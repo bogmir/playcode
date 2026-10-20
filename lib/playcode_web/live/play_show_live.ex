@@ -13,7 +13,8 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Bibliography
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Paratext, Play}
+  alias Playcode.Outline
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias Playcode.Performances
@@ -42,28 +43,14 @@ defmodule PlaycodeWeb.PlayShowLive do
       |> Performances.list_for_play()
       |> Performances.listing(characters, gazetteer, locale)
 
-    {front_paratexts, scene, back_paratexts} =
-      PlayLabels.split_paratexts(play.paratexts, divisions)
-
     %{metadata: metadata_sections, play: play_sections} =
-      build_sections_navigation(
-        play,
-        front_paratexts,
-        back_paratexts,
-        divisions,
-        performances,
-        bibliography
-      )
+      build_sections_navigation(play, divisions, performances, bibliography)
 
     {:ok,
      socket
      |> assign(:page_title, play.title)
      |> assign(:play, play)
      |> assign(:divisions, divisions)
-     |> assign(:characters, characters)
-     |> assign(:front_paratexts, front_paratexts)
-     |> assign(:scene, scene)
-     |> assign(:back_paratexts, back_paratexts)
      |> assign(:statistic, statistic)
      |> assign(:performances, performances)
      |> assign(:bibliography, bibliography)
@@ -581,19 +568,11 @@ defmodule PlaycodeWeb.PlayShowLive do
             </dl>
           </section>
 
-          <%!-- Paratexts before the text (text view only) --%>
-          <.paratexts
-            :if={@active_tab == :text}
-            paratexts={@front_paratexts}
-            id_prefix="meta-note"
-          />
-
           <%!-- Text tab --%>
           <div :if={@active_tab == :text} id="play-tab-text">
             <.play_body
+              paratexts={@play.paratexts}
               divisions={@divisions}
-              characters={@characters}
-              scene={@scene}
               show_line_numbers={@show_line_numbers}
               show_stage_directions={@show_stage_directions}
               show_asides={@show_asides}
@@ -602,7 +581,6 @@ defmodule PlaycodeWeb.PlayShowLive do
               show_variants={@show_variants}
               show_folio={@show_folio}
             />
-            <.paratexts paratexts={@back_paratexts} id_prefix="back-paratext" />
           </div>
 
           <%!-- Statistics tab --%>
@@ -620,45 +598,25 @@ defmodule PlaycodeWeb.PlayShowLive do
     """
   end
 
-  attr :paratexts, :list, required: true
-  attr :id_prefix, :string, required: true
-
-  defp paratexts(assigns) do
-    ~H"""
-    <div :for={{paratext, index} <- Enum.with_index(@paratexts, 1)}>
-      <hr :if={index > 1} class="max-w-2xl mx-auto border-base-300 mb-6" />
-      <div
-        id={"#{@id_prefix}-#{index}"}
-        class="mb-6 max-w-2xl mx-auto scroll-mt-20 text-justify text-sm"
-      >
-        <h3 :if={paratext.heading} class="font-bold text-center mb-2">
-          <.inline_content text={paratext.heading} />
-        </h3>
-        <div class="whitespace-pre-line"><.inline_content text={paratext.content} /></div>
-      </div>
-    </div>
-    """
-  end
-
-  defp build_sections_navigation(
-         play,
-         front_paratexts,
-         back_paratexts,
-         divisions,
-         performances,
-         bibliography
-       ) do
-    metadata_sections =
-      build_metadata_sections(play, front_paratexts, performances, bibliography)
-
+  # The play's sections follow its outline: each paratext and division where it stands.
+  defp build_sections_navigation(play, divisions, performances, bibliography) do
     play_sections =
-      Enum.flat_map(divisions, &division_navigation_item(&1, 0)) ++
-        paratext_sections(back_paratexts, "back-paratext")
+      play.paratexts
+      |> Outline.items(divisions)
+      |> Enum.flat_map(&outline_navigation_item/1)
 
-    %{metadata: metadata_sections, play: play_sections}
+    %{
+      metadata: build_metadata_sections(play, performances, bibliography),
+      play: play_sections
+    }
   end
 
-  defp build_metadata_sections(play, front_paratexts, performances, bibliography) do
+  defp outline_navigation_item(%Paratext{} = paratext),
+    do: [%{id: "paratext-#{paratext.id}", label: PlayLabels.paratext_title(paratext), depth: 0}]
+
+  defp outline_navigation_item(division), do: division_navigation_item(division, 0)
+
+  defp build_metadata_sections(play, performances, bibliography) do
     base = [%{id: "meta-overview", label: gettext("Overview")}]
 
     base
@@ -678,7 +636,6 @@ defmodule PlaycodeWeb.PlayShowLive do
       gettext("Performances")
     )
     |> maybe_add_section(bibliography != [], "meta-bibliography", gettext("Bibliography"))
-    |> Kernel.++(paratext_sections(front_paratexts, "meta-note"))
   end
 
   defp maybe_add_section(sections, true, id, label), do: sections ++ [%{id: id, label: label}]
@@ -697,12 +654,6 @@ defmodule PlaycodeWeb.PlayShowLive do
   # Settings first, then mentions, each keeping its own curated order.
   defp sorted_places(play_places) do
     Enum.sort_by(play_places, fn link -> {link.role != "setting", link.position} end)
-  end
-
-  # An entry for each paratext, named by its heading or its kind.
-  defp paratext_sections(paratexts, id_prefix) do
-    for {paratext, index} <- Enum.with_index(paratexts, 1),
-        do: %{id: "#{id_prefix}-#{index}", label: PlayLabels.paratext_title(paratext), depth: 0}
   end
 
   defp division_navigation_item(division, depth) do

@@ -106,6 +106,35 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert epub =~ ~s(<span class="pn">5</span>Uno,<br/>dos <span class="pn">6</span>tres.)
   end
 
+  test "the HTML and EPUB downloads print the outline in order, each list its own entries",
+       %{conn: conn} do
+    play = outline_xml() |> import_tei!() |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    assert in_order?(html, outline_headings())
+    assert occurrences(html, "de hombre") == 1
+    assert occurrences(html, "Músicos") == 1
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    book = epub_text(files)
+    assert in_order?(book, outline_headings())
+    assert occurrences(book, "de hombre") == 1
+    assert occurrences(book, "Músicos") == 1
+  end
+
+  # The book's chapters in its spine's order, as a reader turns the pages.
+  defp epub_text(files) do
+    chapters =
+      Map.new(files, fn {name, content} -> {Path.basename(to_string(name), ".xhtml"), content} end)
+
+    {_name, opf} =
+      Enum.find(files, fn {name, _} -> String.ends_with?(to_string(name), ".opf") end)
+
+    for [_, idref] <- Regex.scan(~r/<itemref[^>]*idref="([^"]+)"/, opf),
+        into: "",
+        do: Map.get(chapters, idref, "")
+  end
+
   # After the cast list, as the play page and the published site print it.
   test "the HTML and EPUB downloads print the scene of the action after the cast list",
        %{conn: conn} do

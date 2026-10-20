@@ -531,6 +531,62 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute has_element?(view, "#play-tab-statistics")
   end
 
+  describe "the outline" do
+    setup do
+      play = outline_xml() |> import_tei!() |> TestFixtures.mark_complete!()
+      %{play: play}
+    end
+
+    defp text_tab(view), do: view |> element("#play-tab-text") |> render()
+
+    test "the text prints the outline in its file's order", %{conn: conn, play: play} do
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      assert in_order?(text_tab(view), outline_headings())
+    end
+
+    test "each cast list prints only its own entries", %{conn: conn, play: play} do
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      text = text_tab(view)
+
+      assert occurrences(text, "dama") == 1
+      assert occurrences(text, "de hombre") == 1
+      assert occurrences(text, "Músicos") == 1
+      assert occurrences(text, "Criados") == 1
+      assert in_order?(text, ["PERSONAS", "ANA", "Criados", "BLAS", "CRISPÍN", "Músicos"])
+    end
+
+    test "the navigation has an entry per item of the outline, in order",
+         %{conn: conn, play: play} do
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      expected =
+        for item <-
+              Playcode.Outline.items(
+                Playcode.Catalogue.list_paratexts(play.id),
+                Playcode.PlayContent.list_top_divisions(play.id)
+              ),
+            target <- outline_targets(item),
+            do: "##{target}"
+
+      links =
+        view
+        |> element("#scroll-spy-nav")
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("a")
+        |> Enum.flat_map(&LazyHTML.attribute(&1, "href"))
+        |> Enum.filter(&String.starts_with?(&1, ["#div-", "#paratext-"]))
+
+      assert links == expected
+    end
+
+    defp outline_targets(%Playcode.Catalogue.Paratext{id: id}), do: ["paratext-#{id}"]
+
+    defp outline_targets(division),
+      do: ["div-#{division.id}" | Enum.map(division.children, &"div-#{&1.id}")]
+  end
+
   # "Procedencia" on emothe.uv.es; a placeholder ("Texto base") is not printed.
   # Where emothe.uv.es prints it: after the cast list, once, not among the front matter
   # above the text.
@@ -625,7 +681,9 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
     assert has_element?(view, "#scroll-spy-nav a[href='#meta-sources']")
     assert has_element?(view, "#scroll-spy-nav a[href='#meta-editors']")
-    assert has_element?(view, "#scroll-spy-nav a[href='#meta-note-1']")
+    # A paratext is no longer metadata: it stands in the outline, linked by its own id.
+    [paratext] = Playcode.Catalogue.get_play_with_all!(play.id).paratexts
+    assert has_element?(view, "#scroll-spy-nav a[href='#paratext-#{paratext.id}']")
   end
 
   test "renders the research metadata panel when the play has a historical time", %{conn: conn} do

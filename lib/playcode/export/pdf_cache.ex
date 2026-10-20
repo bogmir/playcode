@@ -141,7 +141,8 @@ defmodule Playcode.Export.PdfCache do
 
   # What the PDF is rendered with: the HTML export and the PDF export around it, the
   # modules that draw the text, the notes and the variants in it (a variant's readings and
-  # the names its witnesses go by), and those that word the dating.
+  # the names its witnesses go by), those that word the dating, and those that order the
+  # outline and print its cast lists.
   defp code_version do
     [
       Playcode.Export.Html,
@@ -152,7 +153,9 @@ defmodule Playcode.Export.PdfCache do
       Playcode.PlayContent.InlineMarkup,
       Playcode.PlayContent.Note,
       Playcode.PlayContent.Note.Reading,
-      Playcode.Witnesses
+      Playcode.Witnesses,
+      Playcode.Outline,
+      Playcode.PlayContent.CastListEntry
     ]
     |> Enum.map(& &1.module_info(:md5))
     |> then(&:crypto.hash(:sha256, &1))

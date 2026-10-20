@@ -4,17 +4,16 @@ defmodule Playcode.Export.Html do
   styled to match the public play presentation page.
   """
 
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Paratext, Play}
   alias Playcode.Export.NoteMarkup
+  alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.Note
+  alias Playcode.PlayContent.{CastListEntry, Note}
   alias PlaycodeWeb.PlayLabels
 
   def generate(play) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
-    characters = PlayContent.list_characters(play.id)
     divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
-    {front, scene, back} = PlayLabels.split_paratexts(play.paratexts, divisions)
 
     """
     <!DOCTYPE html>
@@ -38,13 +37,9 @@ defmodule Playcode.Export.Html do
     #{render_dating(play)}
         </header>
 
-    #{render_paratexts(front)}
-
         <div class="play-text">
-    #{render_divisions(divisions, characters, scene)}
+    #{play.paratexts |> Outline.items(divisions) |> Enum.map_join("\n", &render_item/1)}
         </div>
-
-    #{render_paratexts(back)}
       </div>
     </body>
     </html>
@@ -127,14 +122,7 @@ defmodule Playcode.Export.Html do
           margin-bottom: 0.5rem;
         }
 
-        .paratext-sep {
-          max-width: 640px;
-          margin: 0 auto 1.5rem;
-          border: none;
-          border-top: 1px solid #e5e7eb;
-        }
-
-        /* Cast list (inline within elenco division) */
+        /* Cast lists */
         .cast-list {
           max-width: 560px;
           margin: 0 auto 1.5rem;
@@ -156,6 +144,8 @@ defmodule Playcode.Export.Html do
         }
 
         .cast-desc { font-size: 0.875rem; color: rgba(51, 51, 51, 0.55); }
+
+        .cast-group { font-weight: bold; font-size: 0.875rem; margin: 0.5rem 0 0 1rem; }
 
         /* Division headings */
         .act-heading {
@@ -332,73 +322,76 @@ defmodule Playcode.Export.Html do
   defp render_dating(play),
     do: play |> dating() |> Enum.map_join("\n", &"      <p class=\"dating\">#{escape(&1)}</p>")
 
-  defp render_paratexts(paratexts) do
-    paratexts
-    |> Enum.map(fn paratext ->
-      heading =
-        if paratext.heading,
-          do: "      <h3>#{NoteMarkup.inline(paratext.heading, [], :html)}</h3>\n",
-          else: ""
+  # The outline's items in order: a paratext where it stands, a division with its cast list
+  # if it is one, its elements and its children.
+  defp render_item(%Paratext{} = paratext) do
+    heading =
+      if paratext.heading,
+        do: "      <h3>#{NoteMarkup.inline(paratext.heading, [], :html)}</h3>\n",
+        else: ""
 
-      "    <div class=\"paratext\">\n#{heading}      <div>#{NoteMarkup.inline(paratext.content, [], :html)}</div>\n    </div>"
-    end)
-    |> Enum.join("\n    <hr class=\"paratext-sep\">\n")
+    "    <div class=\"paratext\">\n#{heading}      <div>#{NoteMarkup.inline(paratext.content, [], :html)}</div>\n    </div>"
   end
 
-  defp render_inline_cast_list(characters) do
-    visible = Enum.reject(characters, & &1.is_hidden)
-    if visible == [], do: "", else: do_render_inline_cast_list(visible)
-  end
+  defp render_item(div) do
+    heading = division_heading(div)
+    cast = render_cast_list(div)
+    elements = render_elements(Map.get(div, :loaded_elements, []))
 
-  defp do_render_inline_cast_list(characters) do
-    items =
-      Enum.map(characters, fn char ->
-        desc =
-          if char.description,
-            do:
-              " <span class=\"cast-desc\">#{NoteMarkup.inline(char.description, [], :html)}</span>",
-            else: ""
-
-        "          <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(char.name, [], :html)}</span>#{desc}</div>"
+    children =
+      Map.get(div, :children, [])
+      |> Enum.map(fn child ->
+        ch = child_heading(child)
+        cc = render_cast_list(child)
+        ce = render_elements(Map.get(child, :loaded_elements, []))
+        "      <div class=\"child-division\">\n#{ch}#{cc}#{ce}      </div>"
       end)
       |> Enum.join("\n")
 
-    """
-          <div class="cast-list">
-    #{items}
-          </div>
-    """
+    notes = NoteMarkup.endnotes(Note.reading_order(div), :html)
+
+    "    <div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n#{notes}    </div>"
+  end
+
+  # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its
+  # heading; nothing for a division of the text.
+  defp render_cast_list(%{type: "elenco", entries: entries}) do
+    case CastListEntry.printed_groups(entries) do
+      [] ->
+        ""
+
+      groups ->
+        """
+              <div class="cast-list">
+        #{Enum.map_join(groups, "\n", &render_cast_group/1)}
+              </div>
+        """
+    end
+  end
+
+  defp render_cast_list(_division), do: ""
+
+  defp render_cast_group([first | _] = entries) do
+    heading =
+      if first.group_heading,
+        do:
+          "          <p class=\"cast-group\">#{NoteMarkup.inline(first.group_heading, [], :html)}</p>\n",
+        else: ""
+
+    heading <> Enum.map_join(entries, "\n", &render_cast_item/1)
+  end
+
+  defp render_cast_item(entry) do
+    desc =
+      if entry.description,
+        do:
+          " <span class=\"cast-desc\">#{NoteMarkup.inline(entry.description, [], :html)}</span>",
+        else: ""
+
+    "          <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(entry.name, [], :html)}</span>#{desc}</div>"
   end
 
   @act_types ~w(acto act acte jornada)
-
-  defp render_divisions(divisions, characters, scene) do
-    Enum.map(divisions, fn div ->
-      heading = division_heading(div)
-
-      # Render inline cast list for elenco divisions
-      cast =
-        if div.type == "elenco",
-          do: render_inline_cast_list(characters) <> render_paratexts(scene),
-          else: ""
-
-      elements = render_elements(Map.get(div, :loaded_elements, []))
-
-      children =
-        Map.get(div, :children, [])
-        |> Enum.map(fn child ->
-          ch = child_heading(child)
-          ce = render_elements(Map.get(child, :loaded_elements, []))
-          "      <div class=\"child-division\">\n#{ch}#{ce}      </div>"
-        end)
-        |> Enum.join("\n")
-
-      notes = NoteMarkup.endnotes(Note.reading_order(div), :html)
-
-      "    <div class=\"division\">\n#{heading}#{cast}#{elements}#{children}\n#{notes}    </div>"
-    end)
-    |> Enum.join("\n")
-  end
 
   defp division_heading(%{title: nil}), do: ""
   defp division_heading(%{title: ""}), do: ""
