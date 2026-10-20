@@ -343,6 +343,11 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert css =~ ~s|body[data-ln="5"] .pn:not(.m5)|
       assert css =~ ".pn:not(.m5) { display: none !important; }"
     end
+
+    # As emothe.uv.es printed its prose (`.prosa`), and the play page and downloads do.
+    test "prose is justified", %{dir: dir} do
+      assert read!(dir, "assets/style.css") =~ ~r/^\.pr \{[^}]*text-align: justify/m
+    end
   end
 
   # Components.lines/1, the paratexts' renderer, folded into inline/1 on 2026-10-16.

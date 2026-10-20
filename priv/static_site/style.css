@@ -137,7 +137,7 @@ main { padding: 1.75rem clamp(1rem, 4vw, 2.75rem) 3rem; min-width: 0; }
 .l .margin > * { display: block; }
 .ghost { visibility: hidden; }
 .sd { margin: .6rem var(--margin) .6rem var(--gutter); font-style: italic; color: var(--ink-2); }
-.pr { margin: .2rem var(--margin) .5rem var(--gutter); }
+.pr { margin: .2rem var(--margin) .5rem var(--gutter); text-align: justify; }
 .tr { margin: 1.2rem var(--margin) .6rem var(--gutter); text-align: center; }
 body[data-ln="5"] .l .n:not(.m5), body[data-ln="off"] .l .n { visibility: hidden; }
 .pn { font: .6875rem/1 var(--sans); color: var(--faint); vertical-align: super; padding-right: .2em; font-variant-numeric: tabular-nums; }
