@@ -843,7 +843,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     test "a hand-listed work's entry is cited again by a play held later, even corrected", %{
       plays: plays
     } do
-      # 0304 makes Wiggins's entry from record 94, 0038 cites another of its records, 93
+      # Wiggins's entry is T13:87, its hand list's first record; 0038 cites another, 93
       run_twice_citing_one_entry(plays["0038"], "British Drama", "British Drama 1533–1642, 2012")
     end
 

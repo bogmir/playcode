@@ -84,6 +84,7 @@ Questions only the stakeholders can answer, recorded in `docs/static-site-improv
 - [ ] **Performances: search and pages for companies and actors** (S5 left out) - a performance search across plays, a page per company and per actor listing what they staged or played, and merging two companies or actors a curator finds are one (today a rename onto a taken name is refused; FileMaker brought "Lady Elizabeth's Men" and "Lady Elizabeth’s Men" as two)
 - [ ] **Performances: venues as gazetteer places** (S5 left out) - a venue is text as the source names it ("The Rose playhouse"); making the theatres places would let a reader see every performance at the Globe
 - [ ] **Witnesses: their `T13` sources** (S5 left out) - FileMaker's information sources also back the witnesses (S3); S5 made them bibliography entries for performances only
+- [ ] **A performance's unusable year in a TEI file** - a hand-edited file whose `performance` has a year outside 1000..9999 or a reversed `notBefore`/`notAfter` is refused whole; drop the years and keep the date's text, as `usable_creation_years?` does for the composition date. Playcode's export and FileMaker never write one
 - [ ] **TEI import improvements** - handle more TEI variants, better error reporting
 - [ ] **Full-text search** with PostgreSQL tsvector
 - [ ] **TEI validation** - validate exported XML against TEI schema

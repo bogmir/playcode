@@ -384,9 +384,10 @@ defmodule Playcode.Import.TeiImport do
       }
       |> Map.merge(source_attrs(parsed, play))
 
-    # Nothing the file can say is refused any more (`described?/1`, `cast_rows/1`,
-    # `source_attrs/2`): a write the database refuses anyway rolls the import back with a
-    # reason, as the bibliography's does.
+    # What the file can say is checked first (`described?/1`, `cast_rows/1`,
+    # `source_attrs/2`), but not its years: a year outside 1000..9999 or a reversed range
+    # (`Performance.changeset/2`) rolls the import back with a reason, as the
+    # bibliography's does. Playcode and FileMaker write neither.
     with {:error, reason} <- Performances.create_performance(attrs),
          do: Repo.rollback({:performance, reason})
   end
