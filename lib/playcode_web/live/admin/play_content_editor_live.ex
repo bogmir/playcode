@@ -63,6 +63,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
        play: play,
        paratexts: paratexts,
        characters: characters,
+       cast_lists: PlayContent.list_cast_lists(play.id),
+       modal_list_id: nil,
+       character_form: nil,
+       entry_character: nil,
+       existing_options: [],
        divisions: divisions,
        removals: removals(divisions),
        selected_division_id: nil,
@@ -91,12 +96,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
        play_context: %{play: play, active_tab: :content}
      )}
   end
-
-  defp cast_list_division(divisions) when is_list(divisions) do
-    Enum.find(divisions, &(&1.type == "elenco"))
-  end
-
-  defp cast_list_division(_), do: nil
 
   # --- All handle_event/3 clauses grouped together ---
 
@@ -127,6 +126,24 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       end
 
     {:noreply, socket}
+  end
+
+  def handle_event("validate_form", params, %{assigns: %{modal: :existing_entry}} = socket),
+    do: {:noreply, assign(socket, form: to_form(params["existing"] || %{}, as: :existing))}
+
+  def handle_event("validate_form", params, %{assigns: %{modal: :entry}} = socket) do
+    %{editing: entry, entry_character: character} = socket.assigns
+
+    {:noreply,
+     assign(socket,
+       form: validated(PlayContent.change_entry(entry, params["entry"] || %{}), :entry),
+       character_form:
+         character &&
+           validated(
+             PlayContent.change_character(character, params["character"] || %{}),
+             :character
+           )
+     )}
   end
 
   def handle_event("validate_form", params, socket) do
@@ -160,6 +177,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     case socket.assigns.modal do
       :paratext -> save_paratext(socket, params)
       :character -> save_character(socket, params)
+      :entry -> save_entry(socket, params)
+      :existing_entry -> save_existing_entry(socket, params)
       :division -> save_division(socket, params)
       :element -> save_element(socket, params)
     end
@@ -207,47 +226,84 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end)
   end
 
-  def handle_event("new_character", _, socket) do
-    play = socket.assigns.play
+  # A character and its entry, in the list named, or the play's first.
+  def handle_event("new_character", params, socket) do
+    case params["list-id"] do
+      blank when blank in [nil, ""] ->
+        {:noreply, character_modal(socket, nil)}
 
-    # Shift all existing characters down to make room at position 0
-    PlayContent.shift_character_positions(play.id)
-
-    changeset =
-      PlayContent.change_character(%Character{}, %{play_id: play.id, position: 0})
-
-    {:noreply,
-     assign(socket,
-       modal: :character,
-       editing: nil,
-       form: to_form(changeset)
-     )}
+      list_id ->
+        with_row(socket, PlayContent.get_cast_list(socket.assigns.play.id, list_id), fn list ->
+          character_modal(socket, list.id)
+        end)
+    end
   end
 
-  def handle_event("edit_character", %{"id" => id}, socket) do
-    with_row(socket, PlayContent.get_character(socket.assigns.play.id, id), fn character ->
+  # An entry in this list for a character listed elsewhere: those not in it yet are offered.
+  def handle_event("add_existing_entry", %{"list-id" => list_id}, socket) do
+    with_row(socket, PlayContent.get_cast_list(socket.assigns.play.id, list_id), fn list ->
+      listed =
+        for entry <- cast_list_entries(socket, list.id),
+            entry.character_id,
+            do: entry.character_id
+
       assign(socket,
-        modal: :character,
-        editing: character,
-        form: to_form(PlayContent.change_character(character))
+        modal: :existing_entry,
+        editing: nil,
+        modal_list_id: list.id,
+        existing_options:
+          for(c <- socket.assigns.characters, c.id not in listed, do: {c.name, c.id}),
+        form: to_form(%{"character_id" => nil}, as: :existing)
       )
     end)
   end
 
-  def handle_event("delete_character", %{"id" => id}, socket) do
-    with_row(socket, PlayContent.get_character(socket.assigns.play.id, id), fn character ->
-      {:ok, _} = PlayContent.delete_character(character)
-      PlayContent.refresh_derived(socket.assigns.play.id)
+  def handle_event("edit_entry", %{"id" => id}, socket) do
+    play_id = socket.assigns.play.id
 
-      LiveHelpers.log_activity(socket, "delete", "character", character.id, %{
-        name: character.name,
-        xml_id: character.xml_id
-      })
+    with_row(socket, PlayContent.get_entry(play_id, id), fn entry ->
+      character = entry.character_id && PlayContent.get_character(play_id, entry.character_id)
 
-      socket
-      |> put_flash(:info, gettext("Character deleted."))
-      |> reload_characters()
+      assign(socket,
+        modal: :entry,
+        editing: entry,
+        entry_character: character,
+        form: to_form(PlayContent.change_entry(entry), as: :entry),
+        character_form:
+          character && to_form(PlayContent.change_character(character), as: :character)
+      )
     end)
+  end
+
+  def handle_event("delete_entry", %{"id" => id}, socket) do
+    with_row(socket, PlayContent.get_entry(socket.assigns.play.id, id), fn entry ->
+      case PlayContent.delete_entry(entry) do
+        {:ok, _} ->
+          PlayContent.refresh_derived(socket.assigns.play.id)
+
+          LiveHelpers.log_activity(socket, "delete", "cast_list_entry", entry.id, %{
+            name: entry.name
+          })
+
+          socket
+          |> put_flash(:info, gettext("Removed from the list."))
+          |> reload_characters()
+
+        {:error, {:speaking, [name]}} ->
+          put_flash(
+            socket,
+            :error,
+            gettext("Not removed: %{name} speaks in the play and is listed nowhere else.",
+              name: name
+            )
+          )
+      end
+    end)
+  end
+
+  def handle_event("reorder_entries", %{"ids" => keys}, socket) do
+    PlayContent.reorder_entries(socket.assigns.play.id, keys)
+    {:noreply, reload_characters(socket)}
   end
 
   def handle_event("reorder_outline", %{"ids" => keys}, socket) do
@@ -261,11 +317,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       PlayContent.reorder_children(act, ids)
       socket |> reload_divisions() |> reload_characters()
     end)
-  end
-
-  def handle_event("reorder_characters", %{"ids" => ids}, socket) do
-    PlayContent.reorder_characters(socket.assigns.play.id, ids)
-    {:noreply, reload_characters(socket)}
   end
 
   # --- Character Review handlers ---
@@ -898,26 +949,40 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
   end
 
+  defp character_modal(socket, list_id) do
+    changeset = PlayContent.change_character(%Character{}, %{play_id: socket.assigns.play.id})
+
+    assign(socket,
+      modal: :character,
+      editing: nil,
+      modal_list_id: list_id,
+      form: to_form(changeset)
+    )
+  end
+
+  defp cast_list_entries(socket, list_id) do
+    case Enum.find(socket.assigns.cast_lists, &(&1.id == list_id)) do
+      nil -> []
+      list -> list.entries
+    end
+  end
+
+  defp validated(changeset, as), do: changeset |> Map.put(:action, :validate) |> to_form(as: as)
+
+  # A new character, with its entry in the list it was added from.
   defp save_character(socket, params) do
-    char_params = params["character"] || %{}
     play = socket.assigns.play
 
-    result =
-      case socket.assigns.editing do
-        nil ->
-          char_params = Map.put(char_params, "play_id", play.id)
-          PlayContent.create_character(char_params)
+    char_params =
+      (params["character"] || %{})
+      |> Map.put("play_id", play.id)
+      |> Map.put("cast_list_id", socket.assigns.modal_list_id)
 
-        character ->
-          PlayContent.update_character(character, char_params)
-      end
-
-    case result do
+    case PlayContent.create_character(char_params) do
       {:ok, saved} ->
         PlayContent.refresh_derived(play.id)
-        action = if socket.assigns.editing, do: "update", else: "create"
 
-        LiveHelpers.log_activity(socket, action, "character", saved.id, %{
+        LiveHelpers.log_activity(socket, "create", "character", saved.id, %{
           name: saved.name,
           xml_id: saved.xml_id
         })
@@ -930,6 +995,61 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
       {:error, changeset} ->
         {:noreply, assign(socket, form: to_form(changeset))}
+    end
+  end
+
+  # An entry's line, and the character it names: its id, its actor, whether it is hidden.
+  # The character first, so the line's name and description are what its first entry keeps.
+  defp save_entry(socket, params) do
+    %{editing: entry, entry_character: character, play: play} = socket.assigns
+
+    with {:ok, _character} <- update_entry_character(character, params["character"]),
+         {:ok, saved} <- PlayContent.update_entry(entry, params["entry"] || %{}) do
+      PlayContent.refresh_derived(play.id)
+      LiveHelpers.log_activity(socket, "update", "cast_list_entry", saved.id, %{name: saved.name})
+
+      {:noreply,
+       socket
+       |> put_flash(:info, gettext("Character saved."))
+       |> assign(modal: nil, form: nil, editing: nil, character_form: nil)
+       |> reload_characters()}
+    else
+      {:error, %Ecto.Changeset{data: %Character{}} = changeset} ->
+        {:noreply, assign(socket, character_form: to_form(changeset, as: :character))}
+
+      {:error, changeset} ->
+        {:noreply, assign(socket, form: to_form(changeset, as: :entry))}
+    end
+  end
+
+  defp update_entry_character(nil, _params), do: {:ok, nil}
+
+  defp update_entry_character(character, params),
+    do: PlayContent.update_character(character, params || %{})
+
+  defp save_existing_entry(socket, params) do
+    play_id = socket.assigns.play.id
+    character = PlayContent.get_character(play_id, get_in(params, ["existing", "character_id"]))
+    list = PlayContent.get_cast_list(play_id, socket.assigns.modal_list_id)
+
+    if character && list do
+      {:ok, entry} =
+        PlayContent.create_entry(%{
+          play_id: play_id,
+          cast_list_id: list.id,
+          character_id: character.id,
+          name: character.name
+        })
+
+      LiveHelpers.log_activity(socket, "create", "cast_list_entry", entry.id, %{name: entry.name})
+
+      {:noreply,
+       socket
+       |> put_flash(:info, gettext("Added to the list."))
+       |> assign(modal: nil, form: nil)
+       |> reload_characters()}
+    else
+      {:noreply, gone(socket)}
     end
   end
 
@@ -1078,7 +1198,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   defp reload_characters(socket) do
-    assign(socket, characters: PlayContent.list_characters(socket.assigns.play.id))
+    play_id = socket.assigns.play.id
+
+    assign(socket,
+      characters: PlayContent.list_characters(play_id),
+      cast_lists: PlayContent.list_cast_lists(play_id)
+    )
   end
 
   defp reload_divisions(socket) do
@@ -1401,121 +1526,139 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </div>
       </div>
 
-      <%!-- Tab: Characters --%>
+      <%!-- Tab: Characters: one section per cast list --%>
       <div :if={@editor_tab == :characters} class="animate-in fade-in">
-        <div :if={cast_list_division(@divisions)} class="mb-4">
-          <div class="rounded-box border border-base-300 bg-base-100 px-4 py-3 shadow-sm">
-            <div class="flex items-center justify-between gap-3">
-              <div class="min-w-0">
-                <div class="text-xs font-medium text-base-content/70">
-                  {gettext("Header")}
-                </div>
-                <div class="truncate text-sm font-semibold text-base-content">
-                  {cast_list_division(@divisions).title ||
-                    String.capitalize(cast_list_division(@divisions).type)}
-                </div>
-              </div>
-              <button
-                phx-click="edit_division"
-                phx-value-id={cast_list_division(@divisions).id}
-                class="btn btn-ghost btn-xs tooltip"
-                aria-label={gettext("Edit header")}
-                data-tip={gettext("Edit header")}
-              >
-                <.icon name="hero-pencil-square-mini" class="size-4" />
-              </button>
-            </div>
-          </div>
-        </div>
         <div class="mb-4 flex items-center justify-between">
           <h2 class="text-lg font-semibold text-base-content">
             {gettext("Cast list")}
             <span class="text-base-content/70 font-normal">({length(@characters)})</span>
           </h2>
-          <button phx-click="new_character" class="btn btn-sm btn-primary gap-1">
+          <%!-- With a list, each section has its own. --%>
+          <button
+            :if={@cast_lists == []}
+            phx-click="new_character"
+            class="btn btn-sm btn-primary gap-1"
+          >
             <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add Character")}
           </button>
         </div>
+        <p class="mb-4 text-sm text-base-content/70">
+          {gettext(
+            "Each cast list of the play, in the order it is read. Drag a line within its list or into another; a character is named as its first line names it."
+          )}
+        </p>
         <div
-          :if={@characters == []}
+          :if={@cast_lists == []}
           class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-8 text-center text-sm text-base-content/70"
         >
           <.icon name="hero-user-group" class="mx-auto mb-2 size-8 text-base-content/70" />
           <p>{gettext("No characters yet. Add one to get started.")}</p>
         </div>
         <div
-          :if={@characters != []}
-          id="character-list"
+          :if={@cast_lists != []}
+          id="cast-lists"
           phx-hook=".DragSortList"
           class="rounded-box border border-base-300 bg-base-100 shadow-sm"
-          data-event="reorder_characters"
+          data-event="reorder_entries"
         >
-          <div
-            :for={{char, idx} <- Enum.with_index(@characters)}
-            id={"character-#{char.id}"}
-            data-id={char.id}
-            class="drag-item group flex items-center gap-2 px-3 py-2.5 transition-all hover:bg-base-200/40 border-b border-base-300/60 last:border-b-0"
-          >
-            <%!-- Drag handle --%>
-            <div class="drag-handle shrink-0 cursor-grab active:cursor-grabbing p-1 -ml-1 rounded text-base-content/70 hover:text-base-content hover:bg-base-200/60 transition-colors">
-              <.icon name="hero-bars-3-mini" class="size-4" />
-            </div>
-
-            <%!-- Position number --%>
-            <span class="drag-position flex size-6 shrink-0 items-center justify-center rounded-full bg-base-200 text-[10px] font-semibold text-base-content/70 tabular-nums">
-              {idx + 1}
-            </span>
-
-            <%!-- Avatar initial --%>
-            <div class="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-              {String.first(char.name)}
-            </div>
-
-            <%!-- Character info --%>
-            <div class="min-w-0 flex-1">
-              <div class="flex items-center gap-2">
-                <span class="font-medium text-sm">{char.name}</span>
-                <span class="text-[10px] text-base-content/70 font-mono">{char.xml_id}</span>
-                <span
-                  :if={char.is_hidden}
-                  class="badge badge-ghost badge-xs text-[10px]"
-                >
-                  {gettext("hidden")}
+          <%= for list <- @cast_lists do %>
+            <div
+              id={"list-#{list.id}"}
+              data-id={"list:#{list.id}"}
+              class="drag-item flex flex-wrap items-center justify-between gap-2 border-b border-base-300 bg-base-200/50 px-3 py-2"
+            >
+              <div class="min-w-0 text-sm">
+                <span :if={act = list_act(@divisions, list)} class="text-base-content/70">
+                  {division_label(act)} ·
                 </span>
+                <span class="font-semibold">{list.title || gettext("Cast list")}</span>
               </div>
-              <p :if={char.description} class="text-xs text-base-content/70 truncate">
-                {char.description}
-              </p>
-              <p :if={char.actor} class="text-xs text-base-content/70 truncate">
-                {gettext("Actor")}: {char.actor}
-              </p>
+              <div class="flex flex-wrap gap-1">
+                <button
+                  phx-click="new_character"
+                  phx-value-list-id={list.id}
+                  class="btn btn-ghost btn-xs gap-1"
+                >
+                  <.icon name="hero-plus-mini" class="size-3" /> {gettext("Add character")}
+                </button>
+                <button
+                  phx-click="add_existing_entry"
+                  phx-value-list-id={list.id}
+                  class="btn btn-ghost btn-xs gap-1"
+                >
+                  <.icon name="hero-user-plus-mini" class="size-3" />
+                  {gettext("Add an existing character")}
+                </button>
+                <button
+                  phx-click="edit_division"
+                  phx-value-id={list.id}
+                  class="btn btn-ghost btn-xs tooltip"
+                  aria-label={gettext("Edit header")}
+                  data-tip={gettext("Edit header")}
+                >
+                  <.icon name="hero-pencil-square-mini" class="size-4" />
+                </button>
+              </div>
             </div>
-
-            <%!-- Actions --%>
-            <div class="flex gap-0.5 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                phx-click="edit_character"
-                phx-value-id={char.id}
-                class="btn btn-ghost btn-xs tooltip"
-                aria-label={gettext("Edit")}
-                data-tip={gettext("Edit")}
-              >
-                <.icon name="hero-pencil-mini" class="size-3.5" />
-              </button>
-              <button
-                phx-click="delete_character"
-                phx-value-id={char.id}
-                data-confirm={
-                  gettext("Delete this character? Speeches referencing it will lose their speaker.")
-                }
-                class="btn btn-ghost btn-xs text-error tooltip"
-                aria-label={gettext("Delete")}
-                data-tip={gettext("Delete")}
-              >
-                <.icon name="hero-trash-mini" class="size-3.5" />
-              </button>
+            <div
+              :for={entry <- list.entries}
+              id={"entry-#{entry.id}"}
+              data-id={"entry:#{entry.id}"}
+              class="drag-item flex items-center gap-2 border-b border-base-300/60 px-3 py-2.5 last:border-b-0 hover:bg-base-200/40"
+            >
+              <.drag_handle />
+              <div class="min-w-0 flex-1">
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="font-medium text-sm">{entry.name}</span>
+                  <span :if={entry.character} class="text-[10px] text-base-content/70 font-mono">
+                    {entry.character.xml_id}
+                  </span>
+                  <span :if={!entry.character} class="badge badge-ghost badge-xs">
+                    {gettext("Names no character")}
+                  </span>
+                  <span :if={entry.group_heading} class="badge badge-outline badge-xs">
+                    {entry.group_heading}
+                  </span>
+                  <span
+                    :if={entry.character && entry.character.is_hidden}
+                    class="badge badge-ghost badge-xs"
+                  >
+                    {gettext("hidden")}
+                  </span>
+                </div>
+                <p :if={entry.description} class="text-xs text-base-content/70 truncate">
+                  {entry.description}
+                </p>
+                <p
+                  :if={entry.character && entry.character.actor}
+                  class="text-xs text-base-content/70 truncate"
+                >
+                  {gettext("Actor")}: {entry.character.actor}
+                </p>
+              </div>
+              <div class="flex shrink-0 gap-0.5">
+                <button
+                  phx-click="edit_entry"
+                  phx-value-id={entry.id}
+                  class="btn btn-ghost btn-xs tooltip"
+                  aria-label={gettext("Edit")}
+                  data-tip={gettext("Edit")}
+                >
+                  <.icon name="hero-pencil-mini" class="size-3.5" />
+                </button>
+                <button
+                  phx-click="delete_entry"
+                  phx-value-id={entry.id}
+                  data-confirm={gettext("Remove this line from the list?")}
+                  class="btn btn-ghost btn-xs text-error tooltip"
+                  aria-label={gettext("Remove")}
+                  data-tip={gettext("Remove")}
+                >
+                  <.icon name="hero-trash-mini" class="size-3.5" />
+                </button>
+              </div>
             </div>
-          </div>
+          <% end %>
         </div>
       </div>
 
@@ -2013,6 +2156,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           play_id={@play.id}
           user={@current_user}
           subdivision={if @editing, do: Map.get(@editing, :parent_id), else: @modal_parent_id}
+          character_form={@character_form}
+          existing_options={@existing_options}
         />
       </.modal>
     </div>
@@ -2210,6 +2355,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   defp delete_confirm(_scene, _removals), do: gettext("Delete this scene and all its content?")
+
+  # The act a cast list stands in, or nil for one before, between or after the acts.
+  defp list_act(_divisions, %{parent_id: nil}), do: nil
+  defp list_act(divisions, list), do: Enum.find(divisions, &(&1.id == list.parent_id))
 
   defp division_label(div) do
     if div.title do
@@ -2853,6 +3002,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   attr :play_id, :string, default: nil
   attr :user, :any, default: nil
   attr :subdivision, :any, default: nil, doc: "a new or edited division's parent, if any"
+  attr :character_form, :any, default: nil, doc: "the character an edited entry names"
+  attr :existing_options, :list, default: []
 
   defp modal_content(%{modal: :paratext} = assigns) do
     ~H"""
@@ -2947,9 +3098,107 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       <div>
         <.input field={@form[:is_hidden]} type="checkbox" label={gettext("Hidden character")} />
       </div>
-      <.input field={@form[:position]} type="hidden" />
       <div class="flex gap-2 pt-2">
         <button type="submit" class="btn btn-primary">{gettext("Save")}</button>
+        <button type="button" phx-click="close_modal" class="btn btn-ghost">
+          {gettext("Cancel")}
+        </button>
+      </div>
+    </.form>
+    """
+  end
+
+  defp modal_content(%{modal: :entry} = assigns) do
+    ~H"""
+    <h3 class="text-lg font-bold mb-4">{gettext("Edit")} {gettext("Character")}</h3>
+    <.form
+      id="entry-form"
+      for={@form}
+      as={:entry}
+      phx-change="validate_form"
+      phx-submit="save_form"
+      class="space-y-4"
+    >
+      <p class="text-sm text-base-content/70">
+        {gettext("As this list gives the character. Another list may name it otherwise.")}
+      </p>
+      <div>
+        <label class="label" for={@form[:name].id}>
+          <span class="label-text font-medium">{gettext("Name")} *</span>
+        </label>
+        <.input field={@form[:name]} type="text" required />
+      </div>
+      <div>
+        <label class="label" for={@form[:description].id}>
+          <span class="label-text font-medium">{gettext("Description")}</span>
+        </label>
+        <.input field={@form[:description]} type="text" placeholder={gettext("e.g. una dama")} />
+      </div>
+      <div>
+        <label class="label" for={@form[:group_heading].id}>
+          <span class="label-text font-medium">{gettext("Group")}</span>
+        </label>
+        <.input field={@form[:group_heading]} type="text" placeholder={gettext("e.g. Criados")} />
+      </div>
+      <fieldset :if={@character_form} class="space-y-4 border-t border-base-300 pt-4">
+        <legend class="text-sm font-medium">{gettext("In every list")}</legend>
+        <div>
+          <label class="label" for={@character_form[:xml_id].id}>
+            <span class="label-text font-medium">XML ID *</span>
+          </label>
+          <.input field={@character_form[:xml_id]} type="text" required />
+        </div>
+        <div>
+          <label class="label" for={@character_form[:actor].id}>
+            <span class="label-text font-medium">{gettext("Actor in the original cast")}</span>
+          </label>
+          <.input
+            field={@character_form[:actor]}
+            type="text"
+            placeholder={gettext("e.g. Mr. Betterton")}
+          />
+        </div>
+        <div>
+          <.input
+            field={@character_form[:is_hidden]}
+            type="checkbox"
+            label={gettext("Hidden character")}
+          />
+        </div>
+      </fieldset>
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="btn btn-primary">{gettext("Save")}</button>
+        <button type="button" phx-click="close_modal" class="btn btn-ghost">
+          {gettext("Cancel")}
+        </button>
+      </div>
+    </.form>
+    """
+  end
+
+  defp modal_content(%{modal: :existing_entry} = assigns) do
+    ~H"""
+    <h3 class="text-lg font-bold mb-4">{gettext("Add an existing character")}</h3>
+    <p :if={@existing_options == []} class="text-sm text-base-content/70">
+      {gettext("Every character is in this list already.")}
+    </p>
+    <.form
+      :if={@existing_options != []}
+      id="existing-entry-form"
+      for={@form}
+      as={:existing}
+      phx-change="validate_form"
+      phx-submit="save_form"
+      class="space-y-4"
+    >
+      <div>
+        <label class="label" for={@form[:character_id].id}>
+          <span class="label-text font-medium">{gettext("Character")} *</span>
+        </label>
+        <.input field={@form[:character_id]} type="select" options={@existing_options} />
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button type="submit" class="btn btn-primary">{gettext("Add")}</button>
         <button type="button" phx-click="close_modal" class="btn btn-ghost">
           {gettext("Cancel")}
         </button>

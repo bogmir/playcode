@@ -227,35 +227,6 @@ defmodule Playcode.PlayContent do
     Repo.delete(character)
   end
 
-  @doc """
-  Shifts all character positions up by 1 to make room at position 0.
-  """
-  def shift_character_positions(play_id) do
-    CastListEntry
-    |> where(play_id: ^play_id)
-    |> Repo.update_all(inc: [position: 1])
-
-    sync_characters(play_id)
-  end
-
-  @doc """
-  Reorders characters by assigning positions based on the given list of IDs.
-  The first ID gets position 0, the second gets position 1, etc.
-  """
-  def reorder_characters(play_id, ordered_ids) when is_list(ordered_ids) do
-    Repo.transaction(fn ->
-      ordered_ids
-      |> Enum.with_index()
-      |> Enum.each(fn {id, position} ->
-        CastListEntry
-        |> where(character_id: ^id, play_id: ^play_id)
-        |> Repo.update_all(set: [position: position, updated_at: DateTime.utc_now()])
-      end)
-
-      sync_characters(play_id)
-    end)
-  end
-
   # --- Cast lists ---
 
   @doc """
@@ -311,6 +282,73 @@ defmodule Playcode.PlayContent do
     |> where(cast_list_id: ^cast_list_id)
     |> select([e], coalesce(max(e.position), -1) + 1)
     |> Repo.one()
+  end
+
+  @doc """
+  Puts the play's entries in the order of `keys`, the Characters tab's rows: `"list:<id>"`
+  for a list's heading, `"entry:<id>"` for an entry, which goes in the list whose key is
+  before it. A key not of this play's is dropped, and an entry after one; an entry the keys
+  leave out keeps its turn in its list after those named. The characters follow their
+  first entries.
+  """
+  def reorder_entries(play_id, keys) do
+    lists = list_cast_lists(play_id)
+    entries = lists |> Enum.flat_map(& &1.entries) |> Map.new(&{"entry:#{&1.id}", &1})
+    list_ids = MapSet.new(lists, &"list:#{&1.id}")
+
+    {named, _list} =
+      Enum.flat_map_reduce(keys, nil, fn key, list ->
+        cond do
+          key in list_ids -> {[], String.replace_prefix(key, "list:", "")}
+          list && entries[key] -> {[{list, entries[key]}], list}
+          true -> {[], nil}
+        end
+      end)
+
+    named = Enum.uniq_by(named, fn {_list, entry} -> entry.id end)
+    moved = MapSet.new(named, fn {_list, entry} -> entry.id end)
+    named_in = Enum.group_by(named, &elem(&1, 0), &elem(&1, 1))
+    now = DateTime.utc_now(:second)
+
+    Repo.transaction(fn ->
+      for list <- lists,
+          entries = Map.get(named_in, list.id, []) ++ Enum.reject(list.entries, &(&1.id in moved)),
+          {entry, position} <- Enum.with_index(entries),
+          {entry.cast_list_id, entry.position} != {list.id, position} do
+        CastListEntry
+        |> where(id: ^entry.id)
+        |> Repo.update_all(set: [cast_list_id: list.id, position: position, updated_at: now])
+      end
+
+      sync_characters(play_id)
+    end)
+
+    :ok
+  end
+
+  @doc """
+  Removes an entry from its list. A character's last entry takes the character with it,
+  unless the character speaks: then it is refused, `{:error, {:speaking, [name]}}`, as its
+  speeches would point at no one listed.
+  """
+  def delete_entry(%CastListEntry{} = entry) do
+    # The character this entry is the last of, if any.
+    last =
+      entry.character_id &&
+        not Repo.exists?(
+          where(CastListEntry, [e], e.character_id == ^entry.character_id and e.id != ^entry.id)
+        ) && Repo.get(Character, entry.character_id)
+
+    if last && Repo.exists?(where(ElementCharacter, character_id: ^last.id)) do
+      {:error, {:speaking, [last.name]}}
+    else
+      Repo.transaction(fn ->
+        Repo.delete!(entry)
+        if last, do: Repo.delete!(last)
+        sync_characters(entry.play_id)
+        entry
+      end)
+    end
   end
 
   @doc "An entry's changeset, for a form."

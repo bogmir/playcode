@@ -216,15 +216,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
          %{conn: conn, play: play, other: other} do
       before = export_tei(other)
       [paratext] = Playcode.Catalogue.list_paratexts(other.id)
-      [character] = Playcode.PlayContent.list_characters(other.id)
+      [%{entries: [their_entry]} = their_list] = Playcode.PlayContent.list_cast_lists(other.id)
       act = row(other, &match?(%Division{type: "acto"}, &1))
       verse = row(other, &(&1.type == "verse_line"))
 
       events = [
         {"edit_paratext", paratext.id},
         {"delete_paratext", paratext.id},
-        {"edit_character", character.id},
-        {"delete_character", character.id},
+        {"edit_entry", their_entry.id},
+        {"delete_entry", their_entry.id},
         {"edit_division", act.id},
         {"delete_division", act.id},
         {"delete_division", row(other, &match?(%Division{type: "elenco"}, &1)).id},
@@ -237,6 +237,13 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       for {event, theirs} <- events, id <- [theirs, Ecto.UUID.generate(), "not-an-id"] do
         {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
         assert render_click(lv, event, %{"id" => id}) =~ gone(), "#{event} #{id}"
+        refute has_element?(lv, "#content-modal"), "#{event} #{id}"
+      end
+
+      for event <- ~w(new_character add_existing_entry),
+          id <- [their_list.id, Ecto.UUID.generate(), "not-an-id"] do
+        {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+        assert render_click(lv, event, %{"list-id" => id}) =~ gone(), "#{event} #{id}"
         refute has_element?(lv, "#content-modal"), "#{event} #{id}"
       end
 
@@ -912,6 +919,191 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
   end
 
+  # The Characters tab has a section per cast list, in outline order, each with its own
+  # entries; an entry is dragged within its list or into another.
+  describe "the cast lists" do
+    setup do
+      %{play: import_tei!(outline_xml()), other: import_tei!(outline_xml())}
+    end
+
+    defp list_keys(play) do
+      for list <- Playcode.PlayContent.list_cast_lists(play.id),
+          key <- ["list:#{list.id}" | Enum.map(list.entries, &"entry:#{&1.id}")],
+          do: key
+    end
+
+    defp entry_names(play),
+      do:
+        for(
+          list <- Playcode.PlayContent.list_cast_lists(play.id),
+          do: Enum.map(list.entries, & &1.name)
+        )
+
+    defp cast_list(play, title),
+      do: Enum.find(Playcode.PlayContent.list_cast_lists(play.id), &(&1.title == title))
+
+    test "each list has its own section, in outline order, with its own entries",
+         %{conn: conn, play: play} do
+      html = conn |> open_cast(play) |> element("#cast-lists") |> render()
+
+      assert in_order?(
+               html,
+               ["PERSONAS", "ANA", "dama", "BLAS", "Criados", "CRISPÍN", "Músicos"] ++
+                 ["ACTO PRIMERO", "Personas del acto primero", "ANA, disfrazada", "de hombre"] ++
+                 ["Sale de nuevo", "DIEGO", "Personas del acto segundo", "BLAS"] ++
+                 ["Personas que no hablan", "CRISPÍN"]
+             )
+
+      assert occurrences(html, t("Names no character")) == 1
+    end
+
+    test "dragging an entry into another list moves it there", %{conn: conn, play: play} do
+      diego = "entry:#{entry(play, "DIEGO").id}"
+      [first | rest] = List.delete(list_keys(play), diego)
+
+      conn
+      |> open_cast(play)
+      |> element("#cast-lists")
+      |> render_hook("reorder_entries", %{"ids" => [first, diego | rest]})
+
+      assert [
+               ["DIEGO", "ANA", "BLAS", "CRISPÍN", "Músicos"],
+               ["ANA, disfrazada"],
+               [],
+               ["BLAS"],
+               ["CRISPÍN"]
+             ] =
+               entry_names(play)
+    end
+
+    # Review focus 5: the keys came from the browser.
+    test "a drag carrying another play's entry changes neither play",
+         %{conn: conn, play: play, other: other} do
+      [first | rest] = list_keys(play)
+      ours = entry_names(play)
+      theirs = entry_names(other)
+
+      conn
+      |> open_cast(play)
+      |> element("#cast-lists")
+      |> render_hook("reorder_entries", %{
+        "ids" => [first, "entry:#{entry(other, "DIEGO").id}", "entry:not-an-id" | rest]
+      })
+
+      assert entry_names(play) == ours
+      assert entry_names(other) == theirs
+    end
+
+    test "Add an existing character puts one already listed into this list, and offers none already in it",
+         %{conn: conn, play: play} do
+      list = cast_list(play, "Personas del acto segundo")
+      lv = open_cast(conn, play)
+      lv |> element("#list-#{list.id} button", t("Add an existing character")) |> render_click()
+
+      assert has_element?(lv, "#existing-entry-form option", "DIEGO")
+      refute has_element?(lv, "#existing-entry-form option", "BLAS")
+
+      diego = Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == "DIEGO"))
+
+      lv
+      |> form("#existing-entry-form", existing: %{"character_id" => diego.id})
+      |> render_submit()
+
+      assert Enum.map(cast_list(play, "Personas del acto segundo").entries, & &1.name) == [
+               "BLAS",
+               "DIEGO"
+             ]
+    end
+
+    test "Add character in a section makes the character and its entry there", %{
+      conn: conn,
+      play: play
+    } do
+      list = cast_list(play, "Personas que no hablan")
+      lv = open_cast(conn, play)
+      lv |> element("#list-#{list.id} button", t("Add character")) |> render_click()
+
+      lv
+      |> form("#character-form", character: %{"xml_id" => "PAJE", "name" => "PAJE"})
+      |> render_submit()
+
+      assert Enum.map(cast_list(play, "Personas que no hablan").entries, & &1.name) == [
+               "CRISPÍN",
+               "PAJE"
+             ]
+    end
+
+    test "editing an entry's description changes that list's line only", %{conn: conn, play: play} do
+      disguised =
+        Enum.find(
+          cast_list(play, "Personas del acto primero").entries,
+          &(&1.name == "ANA, disfrazada")
+        )
+
+      lv = open_cast(conn, play)
+
+      lv |> element("#entry-#{disguised.id} button[aria-label='#{t("Edit")}']") |> render_click()
+      lv |> form("#entry-form", entry: %{"description" => "vestida de hombre"}) |> render_submit()
+
+      assert [%{description: "dama"} | _] = cast_list(play, "PERSONAS").entries
+
+      assert [%{description: "vestida de hombre"}] =
+               cast_list(play, "Personas del acto primero").entries
+
+      assert %{description: "dama"} =
+               Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == "ANA"))
+    end
+
+    test "removing a speaking character's last entry is refused, naming them", %{
+      conn: conn,
+      play: play
+    } do
+      diego = entry(play, "DIEGO")
+      lv = open_cast(conn, play)
+
+      lv |> element("#entry-#{diego.id} button[aria-label='#{t("Remove")}']") |> render_click()
+
+      assert render(lv) =~
+               t("Not removed: %{name} speaks in the play and is listed nowhere else.",
+                 name: "DIEGO"
+               )
+
+      assert [["DIEGO"]] =
+               for(
+                 %{title: "Sale de nuevo"} = l <- Playcode.PlayContent.list_cast_lists(play.id),
+                 do: Enum.map(l.entries, & &1.name)
+               )
+    end
+
+    test "an entry naming no character is removed", %{conn: conn, play: play} do
+      musicians = Enum.find(cast_list(play, "PERSONAS").entries, &(&1.name == "Músicos"))
+      lv = open_cast(conn, play)
+
+      lv
+      |> element("#entry-#{musicians.id} button[aria-label='#{t("Remove")}']")
+      |> render_click()
+
+      assert Enum.map(cast_list(play, "PERSONAS").entries, & &1.name) == [
+               "ANA",
+               "BLAS",
+               "CRISPÍN"
+             ]
+    end
+
+    test "removing an entry whose character is listed elsewhere keeps the character", %{
+      conn: conn,
+      play: play
+    } do
+      [crispin] = cast_list(play, "Personas que no hablan").entries
+      lv = open_cast(conn, play)
+
+      lv |> element("#entry-#{crispin.id} button[aria-label='#{t("Remove")}']") |> render_click()
+
+      assert cast_list(play, "Personas que no hablan").entries == []
+      assert Enum.any?(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == "CRISPIN"))
+    end
+  end
+
   # DON is silent and listed only in the first list; ANA has her entry in the act too.
   test "deleting a list removes the silent characters it leaves in no list, and says how many first",
        %{conn: conn} do
@@ -1010,18 +1202,18 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert xml_texts(xml, "p", within: "set") == ["An English wood."]
   end
 
+  # Edited in the form of her entry, which carries her character's fields too.
   test "a character's actor in the original cast is edited and listed", %{conn: conn, play: play} do
-    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
-    lv |> element("nav[aria-label='Editor tabs'] button", t("Cast list")) |> render_click()
-    ana = Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == "ANA"))
+    lv = open_cast(conn, play)
+    ana = entry(play, "ANA")
 
-    lv |> element("#character-#{ana.id} button[aria-label='#{t("Edit")}']") |> render_click()
+    lv |> element("#entry-#{ana.id} button[aria-label='#{t("Edit")}']") |> render_click()
 
     lv
-    |> form("#character-form", character: %{"actor" => " Mrs.  Bracegirdle "})
+    |> form("#entry-form", character: %{"actor" => " Mrs.  Bracegirdle "})
     |> render_submit()
 
-    assert lv |> element("#character-#{ana.id}") |> render() =~ "Mrs. Bracegirdle"
+    assert lv |> element("#entry-#{ana.id}") |> render() =~ "Mrs. Bracegirdle"
     assert xml_texts(export_tei(play), "actor") == ["Mrs. Bracegirdle"]
   end
 
@@ -1551,6 +1743,20 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
   end
 
   defp key(item), do: Playcode.Outline.key(item)
+
+  defp open_cast(conn, play) do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Cast list")) |> render_click()
+    lv
+  end
+
+  # A character's first entry, the line its name is first given in.
+  defp entry(play, xml_id) do
+    play.id
+    |> Playcode.PlayContent.list_cast_lists()
+    |> Enum.flat_map(& &1.entries)
+    |> Enum.find(&(&1.character && &1.character.xml_id == xml_id))
+  end
 
   defp speakers(play) do
     play |> export_tei() |> xml_elements("sp") |> Enum.map(fn {attrs, _} -> attrs["who"] end)
