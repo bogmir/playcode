@@ -6,13 +6,14 @@ defmodule Playcode.Export.StaticSite.Edition do
   search index both read it, so a line's or a note's address is decided once.
   """
 
-  alias Playcode.{Bibliography, Catalogue, PlayContent, Statistics}
+  alias Playcode.{Bibliography, Catalogue, Performances, PlayContent, Statistics}
   alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
   alias Playcode.Statistics.Metrics
 
   defstruct [
     :play,
     :bibliography,
+    :performances,
     :characters,
     :divisions,
     :stats,
@@ -42,6 +43,7 @@ defmodule Playcode.Export.StaticSite.Edition do
     %__MODULE__{
       play: play,
       bibliography: Bibliography.list_for_play(id),
+      performances: Performances.list_for_play(id),
       characters: PlayContent.list_characters(id),
       divisions: divisions,
       stats: Statistics.get_statistics(id).data,

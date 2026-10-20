@@ -19,6 +19,13 @@ defmodule Playcode.Places do
   # `place_line/3`, and the gettext backend is not fingerprinted by the static site.
   @today %{"es" => "hoy", "en" => "today"}
 
+  @doc """
+  A place's names in the order every page prints them: the preferred first, then by
+  position and name. Preload `names: Places.names_query()`, so `display_name/2` picks the same
+  name every time.
+  """
+  def names_query, do: from(n in PlaceName, order_by: ^@name_order)
+
   # --- Places ---
 
   def change_place(%Place{} = place, attrs \\ %{}) do
@@ -75,14 +82,14 @@ defmodule Playcode.Places do
   end
 
   defp preload_place(place),
-    do: Repo.preload(place, [:parent, names: from(n in PlaceName, order_by: ^@name_order)])
+    do: Repo.preload(place, [:parent, names: names_query()])
 
   def list_places(opts \\ []) do
     locale = opts[:locale] || "es"
 
     Place
     |> Repo.all()
-    |> Repo.preload(names: from(n in PlaceName, order_by: ^@name_order))
+    |> Repo.preload(names: names_query())
     |> with_play_counts()
     |> Enum.sort_by(&slugify(display_name(&1, locale)))
   end
@@ -251,7 +258,7 @@ defmodule Playcode.Places do
   def gazetteer do
     Place
     |> Repo.all()
-    |> Repo.preload(names: from(n in PlaceName, order_by: ^@name_order))
+    |> Repo.preload(names: names_query())
     |> Map.new(&{&1.id, &1})
   end
 
@@ -284,11 +291,13 @@ defmodule Playcode.Places do
   the names the place's breadcrumb holds today that the line has not printed:
   `"Roma, República romana, Europa (hoy Italia)"`.
 
-  `link.place` is loaded; the state is read from the `gazetteer/0` by id. The word before
-  the brackets follows the names' `locale`, not the page's gettext: the static site's
-  interface is English while its place names are Spanish.
+  `link` is a play's place link or anything else with a `place` and a `historical_state_id`
+  (a performance); its `place` is loaded, with its `names` in `names_query/0` order. The state
+  is read from the `gazetteer/0` by id. The word before the brackets follows the names'
+  `locale`, not the page's gettext: the static site's interface is English while its place
+  names are Spanish.
   """
-  def place_line(%PlayPlace{place: place, historical_state_id: state_id}, gazetteer, locale) do
+  def place_line(%{place: place, historical_state_id: state_id}, gazetteer, locale) do
     case Map.fetch(gazetteer, state_id) do
       {:ok, state} -> historical_line(place, state, gazetteer, locale)
       :error -> breadcrumb(place, gazetteer, locale)
@@ -338,7 +347,7 @@ defmodule Playcode.Places do
     |> distinct(true)
     |> limit(^(opts[:limit] || 20))
     |> Repo.all()
-    |> Repo.preload(names: from(n in PlaceName, order_by: ^@name_order))
+    |> Repo.preload(names: names_query())
     |> with_play_counts()
   end
 
@@ -366,7 +375,7 @@ defmodule Playcode.Places do
     |> where([pp], pp.play_id == ^play_id)
     |> order_by([pp], asc: pp.position, asc: pp.inserted_at)
     |> Repo.all()
-    |> Repo.preload(place: [names: from(n in PlaceName, order_by: ^@name_order)])
+    |> Repo.preload(place: [names: names_query()])
   end
 
   @doc """
@@ -377,7 +386,7 @@ defmodule Playcode.Places do
   def get_play_place(play_id, id) do
     with {:ok, id} <- Ecto.UUID.cast(id),
          %PlayPlace{} = link <- Repo.get_by(PlayPlace, id: id, play_id: play_id) do
-      Repo.preload(link, place: [names: from(n in PlaceName, order_by: ^@name_order)])
+      Repo.preload(link, place: [names: names_query()])
     else
       _ -> nil
     end

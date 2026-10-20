@@ -130,6 +130,22 @@ defmodule Playcode.PerformancesTest do
       assert [%{role: "Hamlet", actor: %{surname: "Burbage"}}] = listed.cast
     end
 
+    test "carry their place's names preferred first, as the Places section loads them" do
+      place =
+        place_fixture(%{
+          "names" => [
+            %{"name" => "Londinium", "language" => "es"},
+            %{"name" => "Londres", "language" => "es", "is_preferred" => "true"}
+          ]
+        })
+
+      play = play_fixture()
+      performance_fixture(play, %{"place_id" => place.id})
+
+      assert [%{place: %{names: names}}] = Performances.list_for_play(play.id)
+      assert Enum.map(names, & &1.name) == ["Londres", "Londinium"]
+    end
+
     test "a new one goes last, whatever position it is given, and a deleted one leaves no tie" do
       play = play_fixture()
 
@@ -626,6 +642,155 @@ defmodule Playcode.PerformancesTest do
 
       assert {:ok, _} = Performances.delete_performance(performance)
       assert Playcode.Bibliography.get_entry(link.entry_id)
+    end
+  end
+
+  describe "listing/4" do
+    defp listing(play, locale \\ "en") do
+      Performances.listing(
+        Performances.list_for_play(play.id),
+        Playcode.PlayContent.list_characters(play.id),
+        Playcode.Places.gazetteer(),
+        locale
+      )
+    end
+
+    defp wiggins, do: catalogue_fixture(%{"monogr_title" => "British Drama 1533–1642"})
+
+    defp character!(play, name, attrs \\ %{}) do
+      {:ok, character} =
+        Playcode.PlayContent.create_character(
+          Map.merge(%{play_id: play.id, xml_id: String.upcase(name), name: name}, attrs)
+        )
+
+      character
+    end
+
+    test "a line is the date, then venue, place, company and venue type, the source's number and the performance's pages" do
+      play = play_fixture()
+      company = company!("The King’s Men")
+
+      performance_fixture(play, %{
+        "date_text" => "1610",
+        "venue" => "Globe or Blackfriars",
+        "company_id" => company.id,
+        "venue_type" => "commercial_theatre",
+        "source_entry_id" => wiggins().id,
+        "source_volume" => "6",
+        "source_pages" => "83"
+      })
+
+      assert %{lines: [line]} = listing(play)
+      assert line.date == "1610"
+      assert line.parts == ["Globe or Blackfriars", company.name, "commercial theatre"]
+      assert line.source == 1
+      assert line.range == "vol. 6, p. 83"
+
+      assert %{lines: [%{parts: [_, _, "teatro comercial"]}]} = listing(play, "es")
+    end
+
+    test "the place line sits between the venue and the company, in the page's language" do
+      play = play_fixture()
+      company = company!("Troupe du Roi")
+
+      place =
+        place_fixture(%{
+          "names" => [
+            %{"name" => "Londres", "language" => "es", "is_preferred" => "true"},
+            %{"name" => "London", "language" => "en", "is_preferred" => "true"}
+          ]
+        })
+
+      performance_fixture(play, %{
+        "venue" => "Whitehall",
+        "place_id" => place.id,
+        "company_id" => company.id
+      })
+
+      assert %{lines: [%{parts: ["Whitehall", "London", _]}]} = listing(play, "en")
+      assert %{lines: [%{parts: ["Whitehall", "Londres", _]}]} = listing(play, "es")
+    end
+
+    test "a part that is missing is left out, and so is the range of a performance with no pages" do
+      play = play_fixture()
+      performance_fixture(play, %{"date_text" => "1611", "source_pages" => "5"})
+      performance_fixture(play, %{"date_text" => "1612", "source_volume" => "2", "note" => "N"})
+      performance_fixture(play, %{"date_text" => "1613", "note" => "Nota"})
+
+      assert %{lines: [one, two, three]} = listing(play)
+      assert {one.range, two.range, three.range} == {"p. 5", "vol. 2", nil}
+      assert {one.parts, one.source, one.note} == {[], nil, nil}
+      assert three.note == "Nota"
+    end
+
+    test "one source cited by several performances is numbered once" do
+      play = play_fixture()
+      chambers = catalogue_fixture(%{"monogr_title" => "The Elizabethan Stage"})
+      wiggins = wiggins()
+
+      for {date, source} <- [{"1612", chambers}, {"1610", wiggins}, {"1611", wiggins}],
+          do: performance_fixture(play, %{"date_text" => date, "source_entry_id" => source.id})
+
+      assert %{lines: lines, sources: sources} = listing(play)
+      assert Enum.map(lines, & &1.source) == [1, 1, 2]
+
+      assert Enum.map(sources, fn {n, entry} -> {n, entry.id} end) == [
+               {1, wiggins.id},
+               {2, chambers.id}
+             ]
+    end
+
+    test "the cast reads actor (role)" do
+      play = play_fixture()
+
+      moliere =
+        actor!(%{"forename" => "Jean François", "surname" => "Poquelin", "nickname" => "Molière"})
+
+      rosimond = actor!(%{"nickname" => "Rosimond"})
+      cast(performance_fixture(play), [{moliere, "Argan"}, {rosimond, " "}])
+
+      assert %{lines: [%{cast: ["Jean François Poquelin, “Molière” (Argan)", "Rosimond"]}]} =
+               listing(play)
+    end
+
+    test "the cast-list switch prints the characters' actors" do
+      play = play_fixture()
+
+      for {name, actor, position} <- [
+            {"Fainall", "Mr. Betterton", 0},
+            {"Waitwell", nil, 1},
+            {"Mirabell", "Mr. Verbruggen", 2},
+            {"Footman", "Mr. Hidden", 3}
+          ] do
+        character!(play, name, %{actor: actor, position: position, is_hidden: name == "Footman"})
+      end
+
+      performance_fixture(play, %{"cast_from_cast_list" => "true"})
+
+      assert %{lines: [%{cast: ["Mr. Betterton (Fainall)", "Mr. Verbruggen (Mirabell)"]}]} =
+               listing(play)
+    end
+
+    test "the cast-list switch with no actor in the cast list prints no cast, and the performance's own rows follow" do
+      play = play_fixture()
+      performance = performance_fixture(play, %{"cast_from_cast_list" => "true"})
+      character!(play, "Fainall")
+
+      assert %{lines: [%{cast: []}]} = listing(play)
+
+      cast(performance, [{actor!(%{"surname" => "Bowen"}), "Witwoud"}])
+      assert %{lines: [%{cast: ["Bowen (Witwoud)"]}]} = listing(play)
+
+      character!(play, "Mirabell", %{actor: "Mr. Verbruggen"})
+
+      assert %{lines: [%{cast: ["Mr. Verbruggen (Mirabell)", "Bowen (Witwoud)"]}]} = listing(play)
+    end
+
+    test "a performance with only a venue type prints that" do
+      play = play_fixture()
+      performance_fixture(play, %{"date_text" => nil, "venue_type" => "street"})
+
+      assert %{lines: [%{date: nil, parts: ["street, square"]}], sources: []} = listing(play)
     end
   end
 

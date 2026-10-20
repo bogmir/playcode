@@ -17,10 +17,13 @@ defmodule Playcode.Performances do
   import Ecto.Changeset, only: [get_field: 2, put_change: 3]
 
   alias Playcode.Bibliography
+  alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Performances.{Actor, CastMember, Company, Performance}
+  alias Playcode.Places
   alias Playcode.Repo
 
-  @preloads [:company, :source, place: :names, cast: :actor]
+  defp preloads,
+    do: [:company, :source, place: [names: Places.names_query()], cast: :actor]
 
   @doc """
   The play's performances, in order of year (`year_from`, else `year_to`; the undated last),
@@ -34,7 +37,7 @@ defmodule Playcode.Performances do
       asc: p.position,
       asc: p.inserted_at
     )
-    |> preload(^@preloads)
+    |> preload(^preloads())
     |> Repo.all()
   end
 
@@ -44,10 +47,118 @@ defmodule Playcode.Performances do
   """
   def get_performance(play_id, id) do
     case Ecto.UUID.cast(id) do
-      {:ok, id} -> Performance |> Repo.get_by(id: id, play_id: play_id) |> Repo.preload(@preloads)
-      :error -> nil
+      {:ok, id} ->
+        Performance |> Repo.get_by(id: id, play_id: play_id) |> Repo.preload(preloads())
+
+      :error ->
+        nil
     end
   end
+
+  @doc """
+  The performances as readers see them (layout B): `lines`, one per performance in the order
+  given, and the `sources` they cite, `{number, entry}`, numbered in order of first citation.
+  `performances` come from `list_for_play/1`, `characters` from
+  `Playcode.PlayContent.list_characters/1` and `gazetteer` from `Playcode.Places.gazetteer/0`.
+
+  A line is the `date` as written; its `parts`, those present of the venue, the place line
+  (`Places.place_line/3`), the company and the venue type's label, to be joined by the page;
+  the number of its `source` and the performance's own volume and pages, its `range`
+  (`"vol. 6, p. 83"`); its `cast`, each `"Actor (role)"`; and its `note`. A performance that
+  takes its cast from the cast list prints first the characters' actors, as the cast list
+  prints its characters (a hidden one left out), then the cast rows of its own.
+
+  `locale` is the page's language, for the venue types; the place names follow `place_locale`
+  when the page's language is not theirs (the static site is in English, its places Spanish).
+  """
+  def listing(performances, characters, gazetteer, locale, place_locale \\ nil) do
+    place_locale = place_locale || locale
+
+    {lines, sources} =
+      Enum.map_reduce(performances, [], fn performance, sources ->
+        {number, sources} = number_source(performance.source, sources)
+
+        line = %{
+          id: performance.id,
+          date: performance.date_text,
+          parts: parts(performance, gazetteer, locale, place_locale),
+          source: number,
+          range: range(performance),
+          cast: cast(performance, characters),
+          note: performance.note
+        }
+
+        {line, sources}
+      end)
+
+    %{lines: lines, sources: sources}
+  end
+
+  @doc """
+  Where a line says it comes from: its source's number and its own volume and pages
+  (`"[1] vol. 6, p. 83"`), those present, or nil.
+  """
+  def reference(line), do: join_present([line.source && "[#{line.source}]", line.range], " ")
+
+  defp number_source(nil, sources), do: {nil, sources}
+
+  defp number_source(entry, sources) do
+    case Enum.find(sources, fn {_number, cited} -> cited.id == entry.id end) do
+      {number, _entry} ->
+        {number, sources}
+
+      nil ->
+        number = length(sources) + 1
+        {number, sources ++ [{number, entry}]}
+    end
+  end
+
+  defp parts(performance, gazetteer, locale, place_locale) do
+    [
+      performance.venue,
+      performance.place && Places.place_line(performance, gazetteer, place_locale),
+      performance.company && performance.company.name,
+      performance.venue_type && Performance.venue_type_label(performance.venue_type, locale)
+    ]
+    |> Enum.reject(&(&1 in [nil, ""]))
+  end
+
+  # ponytail: "p." even for a span of pages ("83-85"); the pages are free text.
+  defp range(performance) do
+    join_present(
+      [
+        performance.source_volume && "vol. #{performance.source_volume}",
+        performance.source_pages && "p. #{performance.source_pages}"
+      ],
+      ", "
+    )
+  end
+
+  defp join_present(parts, separator) do
+    case Enum.reject(parts, &is_nil/1) do
+      [] -> nil
+      present -> Enum.join(present, separator)
+    end
+  end
+
+  defp cast(performance, characters) do
+    own =
+      for member <- performance.cast, do: cast_line(Actor.display_name(member.actor), member.role)
+
+    if performance.cast_from_cast_list, do: cast_list_actors(characters) ++ own, else: own
+  end
+
+  # Each character with an actor, in cast-list order, as the printed cast list leaves out
+  # the hidden ones.
+  defp cast_list_actors(characters) do
+    for %{actor: actor} = character <- characters,
+        not character.is_hidden,
+        actor not in [nil, ""],
+        do: cast_line(InlineMarkup.plain(actor), InlineMarkup.plain(character.name))
+  end
+
+  defp cast_line(actor, nil), do: actor
+  defp cast_line(actor, role), do: "#{actor} (#{role})"
 
   def change_performance(%Performance{} = performance, attrs \\ %{}),
     do: Performance.changeset(performance, attrs)

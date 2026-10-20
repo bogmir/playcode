@@ -741,6 +741,76 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert "index.html#witnesses" in rail
   end
 
+  test "the title page prints the performances as lines, their sources once below, linked from the contents" do
+    play = import_tei!(tei(body: @two_acts))
+
+    {:ok, company} =
+      Playcode.Performances.find_or_create_company(
+        "The King’s Men #{System.unique_integer([:positive])}"
+      )
+
+    # No year: FileMaker printed "{Falta año pub}" here.
+    source =
+      catalogue_fixture(%{"monogr_title" => "CATCOM", "public_note" => "Copyright DICAT."})
+
+    place =
+      place_fixture(%{
+        "names" => [
+          %{"name" => "Londres", "language" => "es", "is_preferred" => "true"},
+          %{"name" => "London", "language" => "en", "is_preferred" => "true"}
+        ]
+      })
+
+    for date <- ["1610", "1611"] do
+      performance_fixture(play, %{
+        "date_text" => date,
+        "venue" => "Globe",
+        "place_id" => place.id,
+        "company_id" => company.id,
+        "venue_type" => "commercial_theatre",
+        "note" => "Hissed.",
+        "source_entry_id" => source.id,
+        "source_volume" => "6",
+        "source_pages" => "83"
+      })
+    end
+
+    dir = generate!([play], all: true)
+    title = page(dir, play, "index.html")
+
+    # Interface in English, place names in Spanish, as the site's Places section.
+    assert [first, _second] = texts(title, "#performances .performance")
+
+    assert first =~
+             "1610 Globe · Londres · #{company.name} · commercial theatre [1] vol. 6, p. 83"
+
+    assert first =~ "Hissed."
+
+    # Both performances cite one source, which is printed once, with its public note.
+    assert [source] = texts(title, "#performances .sources li")
+    assert source =~ ~r/^\[1\] CATCOM.*Copyright DICAT\.$/
+    refute LazyHTML.text(title) =~ "{Falta"
+
+    assert "index.html#performances" in rail_links(dir, play)
+  end
+
+  defp rail_links(dir, play) do
+    dir
+    |> page(play, "act-1.html")
+    |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+    |> LazyHTML.attribute("href")
+  end
+
+  test "a play with no performances has no section and no link" do
+    play = import_tei!(tei(body: @two_acts))
+    dir = generate!([play], all: true)
+
+    assert [] =
+             dir |> page(play, "index.html") |> LazyHTML.query("#performances") |> Enum.to_list()
+
+    refute "index.html#performances" in rail_links(dir, play)
+  end
+
   describe "textual variants" do
     @variant """
     <div1 type="jornada" n="1"><head>Jornada I</head>

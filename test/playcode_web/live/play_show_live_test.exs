@@ -934,6 +934,73 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     end
   end
 
+  describe "the performances panel" do
+    test "is absent when the play has none", %{conn: conn} do
+      play = TestFixtures.mark_complete!(TestFixtures.play_fixture())
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      refute has_element?(view, "#meta-performances")
+      refute has_element?(view, ~s(a[href="#meta-performances"]))
+    end
+
+    test "prints each performance as a line, its cast and note, and its source once below", %{
+      conn: conn
+    } do
+      play = TestFixtures.play_fixture()
+
+      source =
+        TestFixtures.catalogue_fixture(%{
+          "monogr_title" => "CATCOM",
+          "public_note" => "Copyright DICAT."
+        })
+
+      {:ok, company} =
+        Playcode.Performances.find_or_create_company(
+          "Troupe del Roi #{System.unique_integer([:positive])}"
+        )
+
+      {:ok, actor} =
+        Playcode.Performances.find_or_create_actor(%{
+          "surname" => "Poquelin",
+          "nickname" => "Molière"
+        })
+
+      for date <- ["1610", "1611"] do
+        performance =
+          TestFixtures.performance_fixture(play, %{
+            "date_text" => date,
+            "venue" => "Globe or Blackfriars",
+            "company_id" => company.id,
+            "venue_type" => "commercial_theatre",
+            "note" => "The play was hissed.",
+            "source_entry_id" => source.id,
+            "source_volume" => "6",
+            "source_pages" => "83"
+          })
+
+        {:ok, _} =
+          Playcode.Performances.put_cast(performance, [
+            %{"actor_id" => actor.id, "role" => "Argan"}
+          ])
+      end
+
+      TestFixtures.mark_complete!(play)
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      section = view |> element("#meta-performances") |> render()
+
+      assert section =~ "1610"
+      assert section =~ "Globe or Blackfriars · #{company.name} · teatro comercial"
+      assert section =~ "[1] vol. 6, p. 83"
+      assert section =~ "Poquelin, “Molière” (Argan)"
+      assert section =~ "The play was hissed."
+      assert has_element?(view, "#meta-performances dt", t("Performances"))
+      assert has_element?(view, ~s(a[href="#meta-performances"]), t("Performances"))
+
+      # The source is printed once, with its public note, however many performances cite it.
+      assert length(String.split(section, "Copyright DICAT.")) == 2
+    end
+  end
+
   describe "related plays" do
     test "a draft translation is not linked from its original, except for staff", %{
       conn: conn

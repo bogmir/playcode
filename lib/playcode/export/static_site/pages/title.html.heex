@@ -40,6 +40,7 @@
       </ul>
     </section>
     <Components.witnesses play={@edition.play} />
+    <Components.performances edition={@edition} />
     <Components.bibliography groups={@edition.bibliography} />
     <section :for={note <- Components.front_paratexts(@edition)}>
       <h2>

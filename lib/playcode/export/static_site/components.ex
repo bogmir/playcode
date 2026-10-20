@@ -10,6 +10,7 @@ defmodule Playcode.Export.StaticSite.Components do
   alias Playcode.Catalogue.Play
   alias Playcode.Export.NoteMarkup
   alias Playcode.Export.StaticSite.{Edition, Search}
+  alias Playcode.Performances
   alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
@@ -175,6 +176,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <li :if={@edition.play.witnesses != []}>
         <a href="index.html#witnesses">Witnesses</a>
       </li>
+      <li :if={@edition.performances != []}>
+        <a href="index.html#performances">Performances</a>
+      </li>
       <li :if={@edition.bibliography != []}>
         <a href="index.html#bibliography">Bibliography</a>
       </li>
@@ -258,6 +262,40 @@ defmodule Playcode.Export.StaticSite.Components do
       </ul>
     </section>
     """
+  end
+
+  attr :edition, :map, required: true
+
+  # Layout B: a line each, the sources they cite once below. The site's interface is in
+  # English and its place names in Spanish, as the Places section's.
+  def performances(assigns) do
+    assigns = assign(assigns, :listing, performance_listing(assigns.edition))
+
+    ~H"""
+    <section :if={@listing.lines != []} id="performances" class="performances">
+      <h2>Performances</h2>
+      <ul>
+        <li :for={line <- @listing.lines} class="performance">
+          <b :if={line.date}>{line.date}</b>
+          {Enum.join(line.parts, " · ")}
+          <span :if={Performances.reference(line)} class="note">
+            {Performances.reference(line)}
+          </span>
+          <p :if={line.cast != []} class="note">Cast: {Enum.join(line.cast, "; ")}</p>
+          <p :if={line.note} class="note">{line.note}</p>
+        </li>
+      </ul>
+      <ul :if={@listing.sources != []} class="sources">
+        <li :for={{number, entry} <- @listing.sources}>[{number}] {Citation.html(entry)}</li>
+      </ul>
+    </section>
+    """
+  end
+
+  # The gazetteer is loaded only for a performance that has a place, as `place_links/1` does.
+  defp performance_listing(%{performances: performances, characters: characters}) do
+    gazetteer = if Enum.any?(performances, & &1.place), do: Playcode.Places.gazetteer(), else: %{}
+    Performances.listing(performances, characters, gazetteer, "en", "es")
   end
 
   attr :groups, :list, required: true

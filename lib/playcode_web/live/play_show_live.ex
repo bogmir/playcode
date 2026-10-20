@@ -16,6 +16,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Element, InlineMarkup, Note}
+  alias Playcode.Performances
   alias Playcode.Places
   alias Playcode.Places.Authority
   alias Playcode.Statistics
@@ -33,12 +34,26 @@ defmodule PlaycodeWeb.PlayShowLive do
     characters = PlayContent.list_characters(play.id)
     statistic = Statistics.get_statistics(play.id)
     bibliography = Bibliography.list_for_play(play.id)
+    gazetteer = Places.gazetteer()
+    locale = Gettext.get_locale(PlaycodeWeb.Gettext)
+
+    performances =
+      play.id
+      |> Performances.list_for_play()
+      |> Performances.listing(characters, gazetteer, locale)
 
     {front_paratexts, scene, back_paratexts} =
       PlayLabels.split_paratexts(play.paratexts, divisions)
 
     %{metadata: metadata_sections, play: play_sections} =
-      build_sections_navigation(play, front_paratexts, back_paratexts, divisions, bibliography)
+      build_sections_navigation(
+        play,
+        front_paratexts,
+        back_paratexts,
+        divisions,
+        performances,
+        bibliography
+      )
 
     {:ok,
      socket
@@ -50,13 +65,14 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:scene, scene)
      |> assign(:back_paratexts, back_paratexts)
      |> assign(:statistic, statistic)
+     |> assign(:performances, performances)
      |> assign(:bibliography, bibliography)
      |> assign(:notes, divisions |> note_entries() |> Enum.reject(&Note.variant?(&1.note)))
      |> assign(:note_type, nil)
      |> assign(:metadata_sections, metadata_sections)
      |> assign(:play_sections, play_sections)
-     |> assign(:gazetteer, Places.gazetteer())
-     |> assign(:locale, Gettext.get_locale(PlaycodeWeb.Gettext))
+     |> assign(:gazetteer, gazetteer)
+     |> assign(:locale, locale)
      |> assign(:show_line_numbers, true)
      |> assign(:show_stage_directions, true)
      |> assign(:show_asides, true)
@@ -485,6 +501,46 @@ defmodule PlaycodeWeb.PlayShowLive do
             </dl>
           </section>
 
+          <%!-- Performances (layout B): a line each, their sources once below --%>
+          <section
+            :if={@performances.lines != []}
+            id="meta-performances"
+            class="mb-8 max-w-2xl mx-auto scroll-mt-20 text-sm"
+          >
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">
+              <dt class="text-base-content/70">{gettext("Performances")}</dt>
+              <dd class="min-w-0">
+                <ul class="space-y-2">
+                  <li :for={line <- @performances.lines}>
+                    <span :if={line.date} class="font-semibold">{line.date}</span>
+                    {Enum.join(line.parts, " · ")}
+                    <span
+                      :if={Performances.reference(line)}
+                      class="text-xs text-base-content/70 whitespace-nowrap"
+                    >
+                      {Performances.reference(line)}
+                    </span>
+                    <p :if={line.cast != []} class="text-xs">
+                      {gettext("Cast")}: {Enum.join(line.cast, "; ")}
+                    </p>
+                    <p :if={line.note} class="text-xs">{line.note}</p>
+                  </li>
+                </ul>
+                <ul
+                  :if={@performances.sources != []}
+                  class="mt-4 pt-3 border-t border-base-300 space-y-1 font-serif leading-relaxed"
+                >
+                  <li
+                    :for={{number, entry} <- @performances.sources}
+                    class="pl-6 -indent-6 [&_a]:link [&_a]:break-all"
+                  >
+                    [{number}] {Citation.html(entry)}
+                  </li>
+                </ul>
+              </dd>
+            </dl>
+          </section>
+
           <%!-- Bibliography: laid out like Study and Places, a hanging indent per citation --%>
           <section
             :if={@bibliography != []}
@@ -582,8 +638,16 @@ defmodule PlaycodeWeb.PlayShowLive do
     """
   end
 
-  defp build_sections_navigation(play, front_paratexts, back_paratexts, divisions, bibliography) do
-    metadata_sections = build_metadata_sections(play, front_paratexts, bibliography)
+  defp build_sections_navigation(
+         play,
+         front_paratexts,
+         back_paratexts,
+         divisions,
+         performances,
+         bibliography
+       ) do
+    metadata_sections =
+      build_metadata_sections(play, front_paratexts, performances, bibliography)
 
     play_sections =
       Enum.flat_map(divisions, &division_navigation_item(&1, 0)) ++
@@ -592,7 +656,7 @@ defmodule PlaycodeWeb.PlayShowLive do
     %{metadata: metadata_sections, play: play_sections}
   end
 
-  defp build_metadata_sections(play, front_paratexts, bibliography) do
+  defp build_metadata_sections(play, front_paratexts, performances, bibliography) do
     base = [%{id: "meta-overview", label: gettext("Overview")}]
 
     base
@@ -606,6 +670,11 @@ defmodule PlaycodeWeb.PlayShowLive do
     |> maybe_add_section(play.sources != [], "meta-sources", gettext("Source"))
     |> maybe_add_section(play.editors != [], "meta-editors", gettext("Editors"))
     |> maybe_add_section(play.witnesses != [], "meta-witnesses", gettext("Witnesses"))
+    |> maybe_add_section(
+      performances.lines != [],
+      "meta-performances",
+      gettext("Performances")
+    )
     |> maybe_add_section(bibliography != [], "meta-bibliography", gettext("Bibliography"))
     |> Kernel.++(paratext_sections(front_paratexts, "meta-note"))
   end
