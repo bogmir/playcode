@@ -748,6 +748,37 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
              Playcode.Catalogue.list_paratexts(play.id)
   end
 
+  # Question 30: a paratext in verse, a line to a line and a blank line between stanzas,
+  # written as verse, with its closing formula.
+  test "a paratext is marked as verse and given a closing formula", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Paratexts")) |> render_click()
+    lv |> element("button", t("Add Paratext")) |> render_click()
+
+    assert has_element?(lv, "#paratext-form label", t("In verse"))
+    assert has_element?(lv, "#paratext-form label", t("Closing formula"))
+
+    lv
+    |> form("#paratext-form",
+      paratext: %{
+        "kind" => "epilogo",
+        "heading" => "SONETO",
+        "content" => "Alégrate, París,\nuno de tus vecinos\n\nTerencio no hacía",
+        "verse" => "true",
+        "trailer" => "FIN"
+      }
+    )
+    |> render_submit()
+
+    xml = export_tei(play)
+
+    assert xml_texts(xml, "l", within: "back") ==
+             ["Alégrate, París,", "uno de tus vecinos", "Terencio no hacía"]
+
+    assert length(xml_elements(xml, "lg", within: "back")) == 2
+    assert xml_texts(xml, "trailer", within: "back") == ["FIN"]
+  end
+
   # As a stage direction's: the select offers the known kinds and keeps a file's other word.
   test "a paratext keeps a kind the admin does not offer", %{conn: conn} do
     play = import_tei!(tei(front: ~s(<div type="carta_al_lector"><p>Lector.</p></div>)))

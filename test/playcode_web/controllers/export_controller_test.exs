@@ -256,6 +256,29 @@ defmodule PlaycodeWeb.ExportControllerTest do
            end)
   end
 
+  # Question 30: the sonnet after Les Contents, as verse, with its closing formula.
+  test "a paratext in verse is printed with its closing formula", %{conn: conn} do
+    play =
+      tei(
+        back: """
+        <div type="epilogo"><head>SONNET</head>
+          <lg><l>Réjouis-toi, Paris,</l><l>Un de tes citoyens</l></lg><trailer>FIN</trailer>
+        </div>
+        """
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    assert html =~
+             ~r{Réjouis-toi, Paris,\s*(<br/?>)?\s*Un de tes citoyens.*<div class="trailer">FIN</div>}s
+
+    assert epub =~ ~r{Réjouis-toi, Paris,<br/>Un de tes citoyens.*<div class="trailer">FIN</div>}s
+  end
+
   # As the play page prints them: an asterisk in the line, the readings after the act's
   # notes; nothing for a play whose variants readers do not see.
   test "the HTML and EPUB downloads mark each variant and list it after the act's notes",

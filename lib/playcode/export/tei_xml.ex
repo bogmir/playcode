@@ -1174,9 +1174,14 @@ defmodule Playcode.Export.TeiXml do
   defp paratext_element(paratext, section) do
     paragraphs =
       for paragraph <- String.split(paratext.content || "", "\n\n", trim: true),
-          do: inline_element(:p, %{}, build_inline_content(paragraph))
+          do: paratext_paragraph(paragraph, paratext.verse)
 
-    content = heading(paratext.heading) ++ paragraphs
+    trailer =
+      if paratext.trailer,
+        do: [inline_element(:trailer, %{}, build_inline_content(paratext.trailer))],
+        else: []
+
+    content = heading(paratext.heading) ++ paragraphs ++ trailer
 
     tag = if section == :body, do: :div1, else: :div
 
@@ -1186,6 +1191,18 @@ defmodule Playcode.Export.TeiXml do
       {false, _section} -> element(tag, paratext_attrs(paratext.kind, section), content)
     end
   end
+
+  # A paratext's paragraph, or in verse a stanza, an <l> to a line (question 30).
+  defp paratext_paragraph(stanza, true = _verse) do
+    lines =
+      for line <- String.split(stanza, "\n"),
+          do: inline_element(:l, %{}, build_inline_content(line))
+
+    element(:lg, lines)
+  end
+
+  defp paratext_paragraph(paragraph, _verse),
+    do: inline_element(:p, %{}, build_inline_content(paragraph))
 
   # Between the acts a paratext whose kind is also a division's type (`prologo`,
   # `argumento`) says it is one, `ana="paratexto"`, or the import would read a division.

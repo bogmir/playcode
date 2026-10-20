@@ -117,5 +117,33 @@ defmodule Playcode.CatalogueTest do
 
       assert Map.has_key?(errors_on(changeset), :kind)
     end
+
+    # The scene of the action is the front's <set>, which TEI gives no <trailer>.
+    test "the scene of the action has no closing formula" do
+      play = play_fixture()
+
+      assert {:error, changeset} =
+               Catalogue.create_paratext(%{
+                 play_id: play.id,
+                 kind: "lugar_accion",
+                 content: "Un bosque.",
+                 trailer: "FIN"
+               })
+
+      assert Map.has_key?(errors_on(changeset), :trailer)
+    end
+
+    # A heading alone has no lines, and its file no stanzas to say it is in verse.
+    test "a heading alone is not in verse" do
+      play = play_fixture()
+
+      assert {:ok, %{verse: false}} =
+               Catalogue.create_paratext(%{
+                 play_id: play.id,
+                 kind: "head_title",
+                 heading: "LOS CONTENTOS",
+                 verse: true
+               })
+    end
   end
 end

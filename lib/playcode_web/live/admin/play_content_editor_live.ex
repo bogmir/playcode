@@ -3049,6 +3049,19 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           placeholder={gettext("Paragraphs, separated by a blank line")}
         />
       </div>
+      <div>
+        <.input
+          field={@form[:verse]}
+          type="checkbox"
+          label={gettext("In verse")}
+        />
+      </div>
+      <div>
+        <label class="label" for={@form[:trailer].id}>
+          <span class="label-text font-medium">{gettext("Closing formula")}</span>
+        </label>
+        <.input field={@form[:trailer]} type="text" placeholder={gettext("e.g. FIN")} />
+      </div>
       <.input field={@form[:position]} type="hidden" />
       <div class="flex gap-2 pt-2">
         <button type="submit" class="btn btn-primary">{gettext("Save")}</button>

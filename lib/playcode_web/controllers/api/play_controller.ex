@@ -139,12 +139,15 @@ defmodule PlaycodeWeb.API.PlayController do
     }
   end
 
-  # `content` holds its line breaks as \n, its paragraphs parted by a blank line.
+  # `content` holds its line breaks as \n, its paragraphs parted by a blank line; in
+  # `verse`, a line to a line and a blank line between stanzas.
   defp paratext_json(paratext, back?) do
     %{
       kind: paratext.kind,
       heading: paratext.heading,
       content: paratext.content,
+      verse: paratext.verse,
+      trailer: paratext.trailer,
       back: back?,
       editorial: Paratext.editorial?(paratext.kind)
     }

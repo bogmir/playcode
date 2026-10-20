@@ -1,7 +1,9 @@
 defmodule Playcode.Catalogue.Paratext do
   @moduledoc """
   A paratext (CONTEXT.md): a text that stands before the play's text, between its acts or
-  after it, without being part of it: a heading, paragraphs, or both. Its `position` is its
+  after it, without being part of it: a heading, paragraphs, or both. A paratext in `verse`
+  (the sonnet after Les Contents) holds a line to a line and a blank line between stanzas,
+  and none of it is the play's verse; `trailer` is its closing formula. Its `position` is its
   place in the play's outline (`Playcode.Outline`). Its `kind` says what it is and decides
   the concept: an editorial text, written for this edition (`editorial?/1`); the scene of
   the action (`lugar_accion`, TEI's `<set>`, `scene?/1`), which is not a paratext but is
@@ -26,6 +28,8 @@ defmodule Playcode.Catalogue.Paratext do
     field :kind, :string
     field :heading, :string
     field :content, :string
+    field :verse, :boolean, default: false
+    field :trailer, :string
     field :position, :integer, default: 0
     field :origin, :string, default: "manual"
 
@@ -51,10 +55,12 @@ defmodule Playcode.Catalogue.Paratext do
 
   def changeset(paratext, attrs) do
     paratext
-    |> cast(attrs, [:kind, :heading, :content, :position, :play_id, :origin])
+    |> cast(attrs, [:kind, :heading, :content, :verse, :trailer, :position, :play_id, :origin])
     |> update_change(:content, &paragraphs/1)
     |> validate_required([:kind])
     |> validate_heading_or_content()
+    |> verse_only_with_lines()
+    |> validate_no_scene_trailer()
     # One TEI token (teidata.enumerated), so whatever is stored exports schema-valid.
     |> validate_format(:kind, ~r/^[^\p{C}\p{Z}]+$/u)
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
@@ -72,5 +78,19 @@ defmodule Playcode.Catalogue.Paratext do
     if get_field(changeset, :heading),
       do: changeset,
       else: validate_required(changeset, :content)
+  end
+
+  # A heading alone has no lines: its file would hold no stanzas to say it is in verse.
+  defp verse_only_with_lines(changeset) do
+    if get_field(changeset, :content),
+      do: changeset,
+      else: put_change(changeset, :verse, false)
+  end
+
+  # The scene of the action is written as the front's <set>, which TEI gives no <trailer>.
+  defp validate_no_scene_trailer(changeset) do
+    if scene?(get_field(changeset, :kind)) and get_field(changeset, :trailer),
+      do: add_error(changeset, :trailer, "the scene of the action has no closing formula"),
+      else: changeset
   end
 end

@@ -35,7 +35,6 @@ and the technical detail is here.
 Questions 29-35 in `docs/stakeholder/preguntas.html`; the design is `docs/superpowers/specs/2026-10-14-back-matter-design.md`. Questions 30, 32 and 35 were the developer's, decided on 2026-10-16, and most of 29.
 
 - [ ] **EMOTHE0404's front list** (question 29) - the play imports both its lists where its file puts them: 17 names without ids before the text, and the back list "[EDITORIAL CASTLIST", the 20 roles its 893 speeches point at, after it; emothe.uv.es prints both. If the team leaves the 17 out, an editor deletes that list on the Structure tab (it names no one who speaks, so nothing is refused)
-- [ ] **The commendatory sonnet** (question 30) - EMOTHE0542 and its translation 0743 end with a `div type="epilogo"` holding a heading, an `lg` of 14 `l` and a trailer "FIN"; `back_matter/2` skips a back div that holds an `lg`. Decided 2026-10-16: printed after the text as verse, as emothe.uv.es did, not counted among the play's verse lines
 - [ ] **Prologue to the reader vs spoken prologue** (question 31) - one kind (`prologo`) serves both today; EMOTHE0444's back `prologo` is the 1635 edition's address to readers
 - [ ] **The spoken epilogues of The Rover and El hombre a la moda** (question 34) - read as paratexts after the text, as their files have them (one `<p>` with 43 and 35 `<lb/>`); if they are divisions, editors re-enter them by hand
 

@@ -1004,4 +1004,25 @@ defmodule Playcode.Export.StaticSiteTest do
     assert {"Colophon", ["act-1.html#" <> _]} = colophon
     refute LazyHTML.text(title) =~ "Loado sea."
   end
+
+  # Question 30: the sonnet after Les Contents, as verse, with its closing formula.
+  test "a paratext in verse is printed with its closing formula" do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><head>ACTO I</head><sp><speaker>A</speaker><p>Réplica final.</p></sp></div1>),
+        back: """
+        <div type="epilogo"><head>SONNET</head>
+          <lg><l>Réjouis-toi, Paris,</l><l>Un de tes citoyens</l></lg><trailer>FIN</trailer>
+        </div>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = read!(generate!([play]), "plays/#{play.code}/text.html")
+
+    assert page =~
+             ~r{SONNET.*Réjouis-toi, Paris,<br/?>Un de tes citoyens.*<p class="tr">FIN</p>}s
+  end
 end

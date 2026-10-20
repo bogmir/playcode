@@ -100,6 +100,32 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
     refute Map.has_key?(json, "editorial_notes")
   end
 
+  # Question 30: the sonnet after Les Contents, its lines and stanzas in `content`.
+  test "a paratext says whether it is in verse, and gives its closing formula", %{conn: conn} do
+    play =
+      tei(
+        body: ~s(<div1 type="acto" n="1"><head>ACTE I</head><p>Texte.</p></div1>),
+        back: """
+        <div type="epilogo"><head>SONNET</head>
+          <lg><l>Réjouis-toi, Paris,</l><l>Un de tes citoyens</l></lg><trailer>FIN</trailer>
+        </div>
+        """
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    json = json_response(get(conn, ~p"/api/v1/plays/#{play.code}"), 200)
+
+    assert [
+             %{
+               "heading" => "SONNET",
+               "content" => "Réjouis-toi, Paris,\nUn de tes citoyens",
+               "verse" => true,
+               "trailer" => "FIN"
+             }
+           ] = json["paratexts"]
+  end
+
   # `back` is where the outline puts a paratext: after the last division of the text, as
   # one added by hand there is. A character is described as its first entry describes it.
   test "a paratext is after the text where the outline puts it, a character as it is first listed",

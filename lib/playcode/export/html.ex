@@ -330,7 +330,13 @@ defmodule Playcode.Export.Html do
         do: "      <h3>#{NoteMarkup.inline(paratext.heading, [], :html)}</h3>\n",
         else: ""
 
-    "    <div class=\"paratext\">\n#{heading}      <div>#{NoteMarkup.inline(paratext.content, [], :html)}</div>\n    </div>"
+    trailer =
+      if paratext.trailer,
+        do:
+          "      <div class=\"trailer\">#{NoteMarkup.inline(paratext.trailer, [], :html)}</div>\n",
+        else: ""
+
+    "    <div class=\"paratext\">\n#{heading}      <div>#{NoteMarkup.inline(paratext.content, [], :html)}</div>\n#{trailer}    </div>"
   end
 
   defp render_item(div) do

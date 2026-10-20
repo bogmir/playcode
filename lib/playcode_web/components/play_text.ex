@@ -184,6 +184,9 @@ defmodule PlaycodeWeb.Components.PlayText do
         <.inline_content text={@paratext.heading} />
       </h3>
       <div class="whitespace-pre-line"><.inline_content text={@paratext.content} /></div>
+      <p :if={@paratext.trailer} class="text-center mt-4">
+        <.inline_content text={@paratext.trailer} />
+      </p>
     </div>
     """
   end

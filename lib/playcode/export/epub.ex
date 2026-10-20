@@ -203,7 +203,12 @@ defmodule Playcode.Export.Epub do
         do: "  <h3>#{NoteMarkup.inline(paratext.heading, [], :epub)}</h3>\n",
         else: ""
 
-    "<div class=\"paratext\">\n#{heading}#{paratext_paragraphs(paratext.content)}</div>"
+    trailer =
+      if paratext.trailer,
+        do: "  <div class=\"trailer\">#{NoteMarkup.inline(paratext.trailer, [], :epub)}</div>\n",
+        else: ""
+
+    "<div class=\"paratext\">\n#{heading}#{paratext_paragraphs(paratext.content)}#{trailer}</div>"
   end
 
   defp render_item(div) do

@@ -1114,20 +1114,37 @@ defmodule Playcode.TeiRoundtripTest do
     refute "EPILOGUE" in xml_texts(xml, "head", within: "front")
   end
 
-  # Two files' commendatory sonnet waits on question 30, and a cast list after the text
-  # (0404, 0718) on question 29: neither is read.
-  test "a sonnet or a cast list after the text is not read" do
+  # Question 30: the commendatory sonnet after Les Contents (EMOTHE0542) and Los contentos
+  # (0743), a paratext in verse with its closing formula.
+  test "a paratext in verse comes back as verse, with its closing formula" do
     xml =
       roundtrip(
         tei(
+          body:
+            ~s(<div1 type="acto" n="1"><head>ACTE I</head><sp><speaker>A</speaker><p>Adieu.</p></sp></div1>),
           back: """
-          <div type="epilogo"><head>SONNET</head><lg><l>Line one</l></lg><trailer>FIN</trailer></div>
-          <div type="elenco"><castList><castItem><role xml:id="X">X</role></castItem></castList></div>
+          <div type="epilogo"><head>SONNET</head>
+            <lg><l>Réjouis-toi, Paris, œil unique de France, </l><l> Un de tes <emph>citoyens</emph></l></lg>
+            <lg><l>Térence ne faisait</l></lg>
+            <trailer>FIN</trailer>
+          </div>
           """
         )
       )
 
-    assert xml_elements(xml, "div", within: "back") == []
+    assert [{%{"type" => "epilogo"}, _}] = xml_elements(xml, "div", within: "back")
+    assert xml_texts(xml, "p", within: "back") == []
+
+    assert xml_texts(xml, "l", within: "back") ==
+             [
+               "Réjouis-toi, Paris, œil unique de France,",
+               "Un de tes citoyens",
+               "Térence ne faisait"
+             ]
+
+    assert length(xml_elements(xml, "lg", within: "back")) == 2
+    assert xml_texts(xml, "emph", within: "back") == ["citoyens"]
+    assert xml_texts(xml, "trailer", within: "back") == ["FIN"]
   end
 
   # 12 head titles and 4 notes on the digital edition are a heading alone.

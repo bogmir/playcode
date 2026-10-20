@@ -202,3 +202,6 @@ msgstr "no nombra a ningún actor que exista: añada uno con apellidos o apodo"
 
 msgid "names more than one actor: give the surname, forename and nickname"
 msgstr "nombra a más de un actor: indique apellidos, nombre y apodo"
+
+msgid "the scene of the action has no closing formula"
+msgstr "el lugar de la acción no lleva fórmula de cierre"

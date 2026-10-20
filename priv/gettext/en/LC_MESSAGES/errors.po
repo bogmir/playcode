@@ -214,3 +214,6 @@ msgstr ""
 
 msgid "names more than one actor: give the surname, forename and nickname"
 msgstr ""
+
+msgid "the scene of the action has no closing formula"
+msgstr ""

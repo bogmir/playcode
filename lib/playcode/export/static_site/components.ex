@@ -400,6 +400,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <h2 class={@head}><.inline text={@item.heading || PlayLabels.kind_label(@item.kind)} /></h2>
       <% end %>
       <p :for={paragraph <- paragraphs(@item.content)}><.inline text={paragraph} /></p>
+      <p :if={@item.trailer} class="tr"><.inline text={@item.trailer} /></p>
     </section>
     """
   end

@@ -1149,8 +1149,8 @@ defmodule Playcode.Import.TeiParser do
   # The front, the body and the back are read child by child onto one position counter:
   # a play's top-level paratexts and divisions share one order, the file's (`Outline`).
   # In the front a div, the <set> and a bare <castList> each take a position; in the body
-  # every div1; in the back every div but the bibliography and one in verse, two files'
-  # commendatory sonnet (question 30). The title page and the performances take none.
+  # every div1; in the back every div but the bibliography. The title page and the
+  # performances take none.
   defp text({_name, _attrs, children}) do
     front = find_child(children, "front")
     back = find_child(children, "back")
@@ -1186,8 +1186,7 @@ defmodule Playcode.Import.TeiParser do
   defp slot?(:front, {name, _, _}), do: name in ~w(div set castList)
   defp slot?(:body, {name, _, _}), do: name in ~w(div1 div)
 
-  defp slot?(:back, {"div", attrs, children}),
-    do: attr_value(attrs, "type") != "bibliografia" and find_child(children, "lg") == nil
+  defp slot?(:back, {"div", attrs, _children}), do: attr_value(attrs, "type") != "bibliografia"
 
   defp slot?(_section, _child), do: false
 
@@ -1210,13 +1209,14 @@ defmodule Playcode.Import.TeiParser do
     for paratext <- paratext(type, children, pos), do: {:paratext, paratext}
   end
 
-  # A div1 between the acts holding only a heading and paragraphs is a paratext, as
-  # Playcode writes one there, unless its type is a division's: Gorboduc's dumb shows and
-  # La Silvanira's inductions are divisions of the text. A paratext whose kind is a
-  # division's type too (`prologo`, `argumento`) says so, `ana="paratexto"`.
+  # A div1 between the acts holding only what a paratext holds (a heading, paragraphs or
+  # stanzas, a closing formula) is a paratext, as Playcode writes one there, unless its
+  # type is a division's: Gorboduc's dumb shows and La Silvanira's inductions are
+  # divisions of the text. A paratext whose kind is a division's type too (`prologo`,
+  # `argumento`) says so, `ana="paratexto"`.
   defp paratext_div1?(type, attrs, children) do
     (attr_value(attrs, "ana") == "paratexto" or type not in Division.body_types()) and
-      Enum.all?(children, &(not is_tuple(&1) or elem(&1, 0) in ~w(head p)))
+      Enum.all?(children, &(not is_tuple(&1) or elem(&1, 0) in ~w(head p lg trailer)))
   end
 
   # The characters the file declares, each by its first role with that xml:id, in the
@@ -1339,30 +1339,45 @@ defmodule Playcode.Import.TeiParser do
   # paragraphs: 12 head titles are a heading alone.
   defp paratext(type, children, pos) do
     heading = with "" <- safe_text(find_child(children, "head")), do: nil
+    verse = find_child(children, "lg") != nil
+    content = if verse, do: stanzas(children), else: paratext_paragraphs(children)
 
-    # Each <lb/> a line break; an empty line between two (before a signature, in 140
-    # plays) is the blank line that parts paragraphs, so it reads as a new one.
-    paragraphs =
-      children
-      |> find_children("p")
-      |> Enum.map_join("\n\n", &lines_text/1)
-      |> String.split(~r/\n\s*\n/)
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-      |> Enum.join("\n\n")
-
-    if heading == nil and paragraphs == "" do
+    if heading == nil and content == "" do
       []
     else
       [
         %{
           kind: kind(type),
           heading: heading,
-          content: if(paragraphs != "", do: paragraphs),
+          content: if(content != "", do: content),
+          verse: verse,
+          trailer: with("" <- safe_text(find_child(children, "trailer")), do: nil),
           position: pos
         }
       ]
     end
+  end
+
+  # Each <lb/> a line break; an empty line between two (before a signature, in 140
+  # plays) is the blank line that parts paragraphs, so it reads as a new one.
+  defp paratext_paragraphs(children) do
+    children
+    |> find_children("p")
+    |> Enum.map_join("\n\n", &lines_text/1)
+    |> String.split(~r/\n\s*\n/)
+    |> Enum.map(&String.trim/1)
+    |> Enum.reject(&(&1 == ""))
+    |> Enum.join("\n\n")
+  end
+
+  # A paratext in verse (question 30): a line to a line, a blank line between stanzas.
+  # ponytail: a div holding stanzas and paragraphs (no file has one) keeps its stanzas
+  # only; read both in the file's order if one turns up.
+  defp stanzas(children) do
+    for {"lg", _, lines} <- children do
+      for line <- find_children(lines, "l"), do: text_content(line)
+    end
+    |> Enum.map_join("\n\n", &Enum.join(&1, "\n"))
   end
 
   # The file's own word, kept as a stage direction's is. The scene of the action, which 45

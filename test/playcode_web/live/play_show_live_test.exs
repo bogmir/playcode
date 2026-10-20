@@ -75,6 +75,30 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert has_element?(view, "nav a", t("Colophon"))
   end
 
+  # Question 30: the sonnet after Les Contents, a prose comedy, printed after the text as
+  # verse with its closing formula, as emothe.uv.es printed it, and none of it the play's.
+  test "a paratext in verse prints its lines and closing formula, and is not the play's verse",
+       %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><head>ACTO I</head><sp><speaker>A</speaker><p>Réplica final.</p></sp></div1>),
+        back: """
+        <div type="epilogo"><head>SONNET</head>
+          <lg><l>Réjouis-toi, Paris,</l><l>Un de tes citoyens</l></lg><trailer>FIN</trailer>
+        </div>
+        """
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert [_text, after_text] = String.split(html, "Réplica final.")
+    assert after_text =~ ~r{SONNET.*Réjouis-toi, Paris,<br/?>Un de tes citoyens.*FIN}s
+    assert Playcode.Catalogue.Play.form(play) == "prose"
+  end
+
   describe "an inline stage direction" do
     setup %{conn: conn} do
       play =
