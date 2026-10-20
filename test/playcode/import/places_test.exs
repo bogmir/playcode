@@ -433,6 +433,44 @@ defmodule Playcode.Import.PlacesTest do
       assert plan.not_held == 0
     end
 
+    test "the place rules resolve a performance's link like a play's", ctx do
+      plan = plan(ctx)
+      link = Enum.find(plan.links, &(&1.ref == "T10:882"))
+      row = Enum.find(ctx.data.links, &(&1["_kp_IdObraAccionLugar"] == "882"))
+
+      # The same link, as a performance's row has it: no version, a performance.
+      performance_row = %{row | "_k_IdObraTitulo" => "", "_k_IdObraRepresentacion" => "7"}
+      alone = Import.place_plan(ctx.data, [performance_row])
+
+      assert alone.resolved == %{"T10:882" => {link.place, link.state}}
+      assert es(alone, link.place) == "Roma"
+      assert es(alone, link.state) == "República romana"
+
+      assert Enum.map(alone.places, &es(alone, &1.key)) == [
+               "Europa",
+               "Italia",
+               "Roma",
+               "República romana"
+             ]
+    end
+
+    test "a link the place rules leave out is named by FileMaker's text, and its version if any",
+         ctx do
+      no_place = Enum.find(ctx.data.links, &(&1["_kp_IdObraAccionLugar"] == "1083"))
+      performance_row = %{no_place | "_k_IdObraTitulo" => "", "_k_IdObraRepresentacion" => "7"}
+
+      assert %{resolved: resolved, skipped: %{no_place: [version_label]}} =
+               Import.place_plan(ctx.data, [no_place])
+
+      assert %{resolved: performance_resolved, skipped: %{no_place: [performance_label]}} =
+               Import.place_plan(ctx.data, [performance_row])
+
+      assert resolved == %{}
+      assert performance_resolved == %{}
+      assert version_label =~ ~r/^EMOTHE0367 T10:1083: \( unspecified \)/
+      assert performance_label =~ ~r/^T10:1083: \( unspecified \)/
+    end
+
     test "a play the import has written to is skipped whole", ctx do
       hamlet = play(ctx, "EMOTHE0010_TheTragedyOfHamletPrinceOfDenmark")
       othello = play(ctx, "EMOTHE0697_TheTragedyOfOthelloTheMoorOfVenice")

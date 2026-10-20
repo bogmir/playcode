@@ -5,7 +5,9 @@ defmodule Playcode.Import.Places do
   "From FileMaker records to places" this module follows.
 
   `load/1` reads the T10 tables. `plan/2` decides what to write: it reads the database but
-  never writes. `report/1` prints the plan and `apply_plan/2` writes it.
+  never writes. `report/1` prints the plan and `apply_plan/2` writes it. The rules that turn
+  a T10 link into a place and a state belong to no owner: `place_plan/2` and `apply_places/1`
+  serve a play version's links here and a performance's (S5) in `Import.Performances`.
 
   FileMaker keeps one table per level (`T10.1` continents to `T10.5` vague places), and each
   record carries the ids of the places around it, so a new record is made whenever the
@@ -241,7 +243,8 @@ defmodule Playcode.Import.Places do
   `ref`, `"T10:<id>"`. `skipped` holds the links left out, by reason (`no_place`, `empty`,
   `duplicate`, `nameless`), as `"EMOTHE0367 T10:1083: <FileMaker's text>"`. `not_held`
   counts the links on versions we do not hold; `already_imported` names the plays skipped
-  whole. A performance's links are not a version's: they wait for the performances (S5).
+  whole. A performance's links are not a version's: the performances' import plans them, through
+  `place_plan/2`.
 
   The rest are report lines: `merged`, the merges that bring a name the place lacks
   ("Elsinore → Helsingør"); `twinless`, historical records with no modern twin and no entry
@@ -249,49 +252,82 @@ defmodule Playcode.Import.Places do
   `reused`.
   """
   def plan(data, plays) do
-    world = world(data)
     imported = imported_play_ids()
     by_code = Enum.group_by(plays, &Play.short_code(&1.code))
 
-    empty = %{
-      candidates: [],
-      skipped: %{no_place: [], empty: [], duplicate: [], nameless: []},
-      already_imported: MapSet.new(),
-      not_held: 0
-    }
-
-    acc =
+    owned =
       data.links
       |> Enum.filter(&id(&1, "_k_IdObraTitulo"))
       |> Enum.sort_by(&String.to_integer(&1["_kp_IdObraAccionLugar"]))
-      |> Enum.reduce(empty, fn row, acc ->
-        case Map.get(by_code, version_code(row["_k_IdObraTitulo"]), []) do
-          [] -> %{acc | not_held: acc.not_held + 1}
-          plays -> Enum.reduce(plays, acc, &take(&2, world, imported, row, &1))
-        end
-      end)
+      |> Enum.map(&{&1, Map.get(by_code, version_code(&1["_k_IdObraTitulo"]), [])})
 
-    candidates = Enum.reverse(acc.candidates)
-    roots = roots(candidates)
-    places = places(world, roots)
-    {links, duplicates} = deduplicate(candidates, places)
+    pending =
+      for {row, plays} <- owned,
+          plays = Enum.reject(plays, &MapSet.member?(imported, &1.id)),
+          plays != [],
+          do: {row, plays}
+
+    placed = place_plan(data, Enum.map(pending, &elem(&1, 0)))
+    {kept, duplicates} = deduplicate(candidates(pending, placed.resolved), placed.places)
+    links = Enum.map(kept, &elem(&1, 0))
 
     # A duplicate may have been the only link to reach a record: plan without it.
-    {roots, places} =
-      case roots(links) do
-        ^roots -> {roots, places}
-        fewer -> {fewer, places(world, fewer)}
+    final =
+      if duplicates == [] do
+        placed
+      else
+        refs = MapSet.new(links, & &1.ref)
+        place_plan(data, for({row, _plays} <- pending, MapSet.member?(refs, ref(row)), do: row))
       end
+
+    already_imported =
+      for {_row, plays} <- owned,
+          play <- plays,
+          MapSet.member?(imported, play.id),
+          uniq: true,
+          do: play.code
+
+    final
+    |> Map.drop([:resolved, :skipped])
+    |> Map.merge(%{
+      links: links,
+      skipped: Map.put(placed.skipped, :duplicate, duplicates),
+      not_held: Enum.count(owned, &match?({_row, []}, &1)),
+      already_imported: Enum.sort(already_imported)
+    })
+  end
+
+  @doc """
+  The place rules for T10 links of any owner (rows of `T10_ObraAccionLugar`: a version's, a
+  performance's). Reads the database, writes nothing, and knows no play: what a link means
+  to its owner is the caller's.
+
+  Returns `places`, the planned places as `plan/2` describes them; `resolved`, each link's
+  `{place, state}` keys into `places` (state nil for none) by its `ref`, `"T10:<id>"`;
+  `skipped`, the labels of the links left out, by reason (`no_place`, `empty`, `nameless`);
+  and the report lines `merged`, `twinless`, `no_country` and `reused`.
+  """
+  def place_plan(data, rows) do
+    world = world(data)
+    outcomes = Enum.map(rows, &{&1, linked_place(world, &1)})
+
+    links =
+      for {row, {:ok, deepest, place}} <- outcomes do
+        state = state(world, row, deepest)
+        reached = Enum.filter(chain(row) ++ [place, state], &Map.has_key?(world.records, &1))
+        {ref(row), {place, state}, reached}
+      end
+
+    roots = links |> Enum.flat_map(&elem(&1, 2)) |> Enum.uniq()
+    places = places(world, roots)
 
     %{
       places: places,
-      links: Enum.map(links, &elem(&1, 0)),
+      resolved: Map.new(links, fn {ref, link, _reached} -> {ref, link} end),
       skipped:
-        acc.skipped
-        |> Map.new(fn {reason, labels} -> {reason, Enum.reverse(labels)} end)
-        |> Map.put(:duplicate, duplicates),
-      not_held: acc.not_held,
-      already_imported: acc.already_imported |> MapSet.to_list() |> Enum.sort(),
+        for reason <- [:no_place, :empty, :nameless], into: %{} do
+          {reason, for({row, {:skip, ^reason}} <- outcomes, do: link_label(row))}
+        end,
       merged: merged(world, roots),
       twinless: for(key <- roots, twinless?(world, key), do: describe(world, key)),
       no_country: no_country(world, places),
@@ -308,7 +344,7 @@ defmodule Playcode.Import.Places do
   def apply_plan(plan, opts \\ []) do
     Repo.transaction(
       fn ->
-        ids = Enum.reduce(plan.places, %{}, &create_place/2)
+        ids = apply_places(plan.places)
 
         Enum.each(plan.links, &link_place!(&1, ids))
 
@@ -370,6 +406,13 @@ defmodule Playcode.Import.Places do
       ]
   end
 
+  @doc """
+  Writes the planned places, parents first, reusing the gazetteer's where the plan found
+  one. Returns each place's key mapped to its id, for the caller's links. Writes inside the
+  caller's transaction.
+  """
+  def apply_places(places), do: Enum.reduce(places, %{}, &create_place/2)
+
   # `ids` maps a planned place's key to the id of the place it is in the gazetteer.
   defp create_place(%{existing: %Place{id: id}, key: key}, ids), do: Map.put(ids, key, id)
 
@@ -393,31 +436,22 @@ defmodule Playcode.Import.Places do
   defp place_name(%{existing: %Place{} = place}), do: Places.display_name(place, "es")
   defp place_name(%{attrs: %{"names" => [first | _]}}), do: first["name"]
 
-  # A FileMaker link on `play`: a candidate link with its label and the records it
-  # reaches, or a skipped one; nothing for a play already imported.
-  defp take(acc, world, imported, row, play) do
-    if MapSet.member?(imported, play.id) do
-      %{acc | already_imported: MapSet.put(acc.already_imported, play.code)}
-    else
-      case linked_place(world, row) do
-        {:ok, deepest, place} ->
-          link = %{
-            play_id: play.id,
-            code: play.code,
-            place: place,
-            state: state(world, row, deepest),
-            note: value(row["espacio"]),
-            ref: "T10:" <> row["_kp_IdObraAccionLugar"]
-          }
+  # A version's resolved links, one per play holding the version, in FileMaker's order, each
+  # with the label that names it in the report.
+  defp candidates(pending, resolved) do
+    for {row, plays} <- pending,
+        {:ok, {place, state}} <- [Map.fetch(resolved, ref(row))],
+        play <- plays do
+      link = %{
+        play_id: play.id,
+        code: play.code,
+        place: place,
+        state: state,
+        note: value(row["espacio"]),
+        ref: ref(row)
+      }
 
-          reached =
-            Enum.filter(chain(row) ++ [place, link.state], &Map.has_key?(world.records, &1))
-
-          %{acc | candidates: [{link, link_label(row), reached} | acc.candidates]}
-
-        {:skip, reason} ->
-          %{acc | skipped: Map.update!(acc.skipped, reason, &[link_label(row) | &1])}
-      end
+      {link, link_label(row)}
     end
   end
 
@@ -462,9 +496,6 @@ defmodule Playcode.Import.Places do
     if record && !id(record, "_k_IdPais"), do: referent(world, {3, region})
   end
 
-  # The records the links reach, each once, in the order first reached.
-  defp roots(candidates), do: candidates |> Enum.flat_map(&elem(&1, 2)) |> Enum.uniq()
-
   # A play links a place once (the unique index): a later link to a place the play already
   # has, from FileMaker or by hand, is a duplicate. Its note joins the first's only when that
   # is an earlier FileMaker link of this plan; a curator's link keeps its own note, and the
@@ -482,8 +513,7 @@ defmodule Playcode.Import.Places do
     end
 
     {kept, duplicates} =
-      Enum.reduce(candidates, {[], []}, fn {link, label, _reached} = candidate,
-                                           {kept, duplicates} ->
+      Enum.reduce(candidates, {[], []}, fn {link, label} = candidate, {kept, duplicates} ->
         cond do
           MapSet.member?(linked, same.(link)) ->
             {kept, [label | duplicates]}
@@ -499,9 +529,9 @@ defmodule Playcode.Import.Places do
     {Enum.reverse(kept), Enum.reverse(duplicates)}
   end
 
-  defp join_note({link, label, reached}, note) do
+  defp join_note({link, label}, note) do
     joined = [link.note, note] |> Enum.reject(&is_nil/1) |> Enum.join("\n\n")
-    {%{link | note: value(joined)}, label, reached}
+    {%{link | note: value(joined)}, label}
   end
 
   # The T10 tables indexed: each record by key, its names sorted (main names in
@@ -753,13 +783,21 @@ defmodule Playcode.Import.Places do
     )
   end
 
-  # FileMaker's line for a link, for a person to find it by: "EMOTHE0367 T10:1083: ( unspecified ) …".
+  # FileMaker's line for a link, for a person to find it by: "EMOTHE0367 T10:1083: ( unspecified ) …",
+  # without the version code on a link that names none.
   defp link_label(row) do
     text =
       [row["denominacionAntigua"], row["espacio"]] |> Enum.map(&value/1) |> Enum.reject(&is_nil/1)
 
-    "#{version_code(row["_k_IdObraTitulo"])} T10:#{row["_kp_IdObraAccionLugar"]}: #{Enum.join(text, " ")}"
+    label = "#{ref(row)}: #{Enum.join(text, " ")}"
+
+    case version_code(row["_k_IdObraTitulo"]) do
+      nil -> label
+      code -> "#{code} #{label}"
+    end
   end
+
+  defp ref(row), do: "T10:" <> row["_kp_IdObraAccionLugar"]
 
   defp id(row, field), do: value(row[field])
 
