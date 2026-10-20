@@ -660,6 +660,35 @@ defmodule Playcode.PerformancesTest do
                Performances.get_performance(performance.play_id, performance.id)
     end
 
+    # The TEI file writes them inside the source's biblStruct, so a performance with no source
+    # has nowhere to keep them (and a page would print "p. 5" with no [n]).
+    test "the performance's own volume and pages need it: with none they are dropped" do
+      play = play_fixture()
+      source = catalogue_fixture()
+
+      performance = performance_fixture(play, %{"source_volume" => "6", "source_pages" => "83"})
+      assert %{source_entry_id: nil, source_volume: nil, source_pages: nil} = performance
+
+      assert {:ok, %{source_volume: "6", source_pages: "83"} = cited} =
+               Performances.update_performance(performance, %{
+                 "source_entry_id" => source.id,
+                 "source_volume" => "6",
+                 "source_pages" => "83"
+               })
+
+      # Cleared on update, they go with the source.
+      assert {:ok, %{source_entry_id: nil, source_volume: nil, source_pages: nil}} =
+               Performances.update_performance(cited, %{"source_entry_id" => nil})
+
+      # A source entered with them, written in the same transaction, keeps them.
+      assert %{source_volume: "7", source_pages: "9"} =
+               performance_fixture(play, %{
+                 "source_entry" => %{"kind" => "catalogue", "monogr_title" => "Wiggins"},
+                 "source_volume" => "7",
+                 "source_pages" => "9"
+               })
+    end
+
     test "goes with the last performance that cites it" do
       source = catalogue_fixture()
       first = performance_fixture(play_fixture(), %{"source_entry_id" => source.id})
@@ -778,15 +807,32 @@ defmodule Playcode.PerformancesTest do
       assert %{lines: [%{parts: ["Whitehall", "Londres", _]}]} = listing(play, "es")
     end
 
+    # This test used to give pages and a volume with no source, and see "p. 5" printed with no
+    # [n]. A performance's volume and pages are the source's: with none they are dropped
+    # (`Performance.changeset/2`), so the state no longer exists, and they have one here.
     test "a part that is missing is left out, and so is the range of a performance with no pages" do
       play = play_fixture()
-      performance_fixture(play, %{"date_text" => "1611", "source_pages" => "5"})
-      performance_fixture(play, %{"date_text" => "1612", "source_volume" => "2", "note" => "N"})
+      source = wiggins().id
+
+      performance_fixture(play, %{
+        "date_text" => "1611",
+        "source_entry_id" => source,
+        "source_pages" => "5"
+      })
+
+      performance_fixture(play, %{
+        "date_text" => "1612",
+        "source_entry_id" => source,
+        "source_volume" => "2",
+        "note" => "N"
+      })
+
       performance_fixture(play, %{"date_text" => "1613", "note" => "Nota"})
 
       assert %{lines: [one, two, three]} = listing(play)
       assert {one.range, two.range, three.range} == {"p. 5", "vol. 2", nil}
-      assert {one.parts, one.source, one.note} == {[], nil, nil}
+      assert {one.reference, two.reference, three.reference} == {"[1] p. 5", "[1] vol. 2", nil}
+      assert {one.parts, one.note} == {[], nil}
       assert three.note == "Nota"
     end
 

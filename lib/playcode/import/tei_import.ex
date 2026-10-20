@@ -324,8 +324,8 @@ defmodule Playcode.Import.TeiImport do
   # leave unused go with them; a curator's and FileMaker's stay. A performance of the file
   # that prints as one the play keeps is left out, as is a witness printing the same line.
   # The cast-list switch is one per play: the first performance to claim it has it, a later
-  # claim in the file comes in without. A performance that fails its changeset is left out
-  # too, as a witness is.
+  # claim in the file comes in without. A performance that says nothing is left out (see
+  # `described?/1`), with a warning and without a claim to the switch.
   defp write_performances(performances, play) do
     {own, kept} =
       play.id |> Performances.list_for_play() |> Enum.split_with(&(&1.origin == "tei"))
@@ -333,24 +333,39 @@ defmodule Playcode.Import.TeiImport do
     Enum.each(own, &Performances.delete_performance/1)
     kept_prints = MapSet.new(kept, &(&1 |> as_parsed() |> printed()))
 
-    Enum.reduce(performances, Enum.any?(kept, & &1.cast_from_cast_list), fn parsed,
-                                                                            switch_taken? ->
-      place_id = place_id(parsed.place)
-      state_id = place_id(parsed.state)
-      print = printed(%{parsed | place: place_id, state: state_id})
-
-      unless MapSet.member?(kept_prints, print) do
-        switch = parsed.cast_from_cast_list and not switch_taken?
-        write_performance(parsed, play, place_id, state_id, switch)
-      end
-
-      switch_taken? or parsed.cast_from_cast_list
+    Enum.reduce(performances, Enum.any?(kept, & &1.cast_from_cast_list), fn parsed, taken? ->
+      write_performance(parsed, play, kept_prints, taken?)
     end)
 
     :ok
   end
 
-  defp write_performance(parsed, play, place_id, state_id, switch) do
+  # Writes the performance unless it says nothing or the play keeps a copy of it. Returns
+  # whether the cast-list switch is taken after it, `switch_taken?` being whether it was.
+  defp write_performance(parsed, play, kept_prints, switch_taken?) do
+    if described?(parsed) do
+      place = place(parsed.place)
+      place_id = place && place.id
+      state_id = historical_state_id(parsed.state, place)
+      copy? = MapSet.member?(kept_prints, printed(%{parsed | place: place_id, state: state_id}))
+      switch = parsed.cast_from_cast_list and not switch_taken?
+
+      if not copy?, do: insert_performance(parsed, play, place_id, state_id, switch)
+      switch_taken? or parsed.cast_from_cast_list
+    else
+      Logger.warning("TEI import: left out a performance with no date, venue, company or note")
+      switch_taken?
+    end
+  end
+
+  # What `Performance.changeset/2` asks of a performance, checked before the write: a refusal
+  # inside the import's transaction would roll all of it back. A file Playcode did not write
+  # can hold a performance of a cast, a place or a source alone.
+  defp described?(parsed),
+    do:
+      Enum.any?([parsed.date_text, parsed.venue, parsed.venue_type, parsed.company, parsed.note])
+
+  defp insert_performance(parsed, play, place_id, state_id, switch) do
     attrs =
       %{
         "play_id" => play.id,
@@ -369,22 +384,25 @@ defmodule Playcode.Import.TeiImport do
       }
       |> Map.merge(source_attrs(parsed, play))
 
+    # Nothing the file can say is refused any more (`described?/1`, `cast_rows/1`,
+    # `source_attrs/2`): a write the database refuses anyway rolls the import back with a
+    # reason, as the bibliography's does.
     with {:error, reason} <- Performances.create_performance(attrs),
-         do: Logger.warning("TEI import: left out a performance: #{inspect(reason)}")
+         do: Repo.rollback({:performance, reason})
   end
 
-  # The place or state a performance names, by slug as a setting does; one the file does not
-  # declare is dropped, the performance kept.
-  defp place_id(nil), do: nil
+  # The place a performance names, by slug as a setting does; one the file does not declare
+  # is dropped, the performance kept. Its state is read by `historical_state_id/2`.
+  defp place(nil), do: nil
 
-  defp place_id(slug) do
+  defp place(slug) do
     case Repo.get_by(Places.Place, slug: slug) do
-      %{id: id} ->
-        id
-
       nil ->
         Logger.warning("TEI import: a performance references unknown place #{inspect(slug)}")
         nil
+
+      place ->
+        place
     end
   end
 
@@ -450,8 +468,9 @@ defmodule Playcode.Import.TeiImport do
   end
 
   # What a page prints of a performance, as the changesets store it: the text squeezed, the
-  # company without regard to case; its years and the actors' sex are not printed. Two
-  # performances with the same `printed/1` are the same performance to a reader.
+  # company and the actors' names without regard to case, as they are found; its years and
+  # the actors' sex are not printed. Two performances with the same `printed/1` are the same
+  # performance to a reader.
   defp printed(fields) do
     %{
       date_text: Text.squeeze(fields.date_text),
@@ -459,11 +478,16 @@ defmodule Playcode.Import.TeiImport do
       venue_type: fields.venue_type,
       place: fields.place,
       state: fields.state,
-      company: fields.company |> Text.squeeze() |> then(&(&1 && String.downcase(&1))),
+      company: folded(fields.company),
       note: Text.squeeze(fields.note),
       cast:
         for row <- fields.cast do
-          Map.new(~w(role surname forename nickname)a, &{&1, Text.squeeze(row[&1])})
+          %{
+            role: Text.squeeze(row.role),
+            surname: folded(row.surname),
+            forename: folded(row.forename),
+            nickname: folded(row.nickname)
+          }
         end,
       source: fields.source,
       source_volume: Text.squeeze(fields.source_volume),
@@ -471,6 +495,8 @@ defmodule Playcode.Import.TeiImport do
       cast_from_cast_list: fields.cast_from_cast_list
     }
   end
+
+  defp folded(text), do: text |> Text.squeeze() |> then(&(&1 && String.downcase(&1)))
 
   # --- Bibliography ---
 
@@ -606,19 +632,22 @@ defmodule Playcode.Import.TeiImport do
     end)
   end
 
-  # The state a link names, by slug as its place is. One the file does not declare, or the
-  # place itself (the changeset refuses it, and the link would be lost), is no state.
+  # The state a link, or a performance, names, by slug as its place is. One the file does not
+  # declare, or the place itself (a play's link refuses it, and would be lost), is no state;
+  # a performance may have a state and no place (nil).
   defp historical_state_id(nil, _place), do: nil
 
   defp historical_state_id(slug, place) do
+    own_id = place && place.id
+
     case Repo.get_by(Places.Place, slug: slug) do
-      %{id: id} when id != place.id ->
+      %{id: id} when id != own_id ->
         id
 
       _ ->
         Logger.warning(
-          "TEI import: #{inspect(place.slug)} names #{inspect(slug)} as its historical state, " <>
-            "which is unknown or the place itself"
+          "TEI import: #{inspect(place && place.slug)} names #{inspect(slug)} as its " <>
+            "historical state, which is unknown or the place itself"
         )
 
         nil

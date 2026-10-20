@@ -119,6 +119,7 @@ defmodule Playcode.Performances.Performance do
     performance
     |> cast(attrs, @fields)
     |> squeeze(@text)
+    |> drop_pages_without_source()
     |> validate_required([:play_id])
     |> validate_inclusion(:venue_type, @types)
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
@@ -144,6 +145,17 @@ defmodule Playcode.Performances.Performance do
     performance
     |> cast(%{"cast" => rows}, [])
     |> cast_assoc(:cast, with: &CastMember.changeset/2)
+  end
+
+  # The volume and pages are where the performance sits in its source, and the TEI file writes
+  # them inside the source's biblStruct: with no source they are meaningless, and dropped
+  # rather than refused, which would lose the whole performance over them.
+  defp drop_pages_without_source(changeset) do
+    if get_field(changeset, :source_entry_id) do
+      changeset
+    else
+      changeset |> put_change(:source_volume, nil) |> put_change(:source_pages, nil)
+    end
   end
 
   # Line breaks and spaces as the TEI file gives them back (Playcode.Text.squeeze/1).

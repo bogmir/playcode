@@ -2162,7 +2162,7 @@ defmodule Playcode.Import.TeiParser do
       venue_type: venue_type(venue),
       place: place_slug(place),
       state: setting_state(children_of(place)),
-      company: details |> find_child("orgName") |> line_text() |> plain_text(),
+      company: details |> find_child("orgName") |> line_text(),
       note: note_text(find_child(children, "note")),
       cast: performance_cast(find_child(children, "castList")),
       source: source,
@@ -2182,10 +2182,6 @@ defmodule Playcode.Import.TeiParser do
       text -> text
     end
   end
-
-  # A company's name is no marked-up text: it is what companies are found by.
-  defp plain_text(nil), do: nil
-  defp plain_text(text), do: InlineMarkup.plain(text)
 
   # The slug a <placeName> refers to; nil for none, as a state with no town has.
   defp place_slug(place) do

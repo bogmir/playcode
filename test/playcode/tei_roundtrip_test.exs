@@ -3681,7 +3681,11 @@ defmodule Playcode.TeiRoundtripTest do
       assert [{%{"xml:id" => "performance-1"}, "Solo una nota."}] =
                xml_elements(xml, "performance")
 
-      assert xml_elements(xml, "p", within: "performance") == [{%{}, ""}]
+      # The empty <p/> the schema wants, then the note's own paragraph.
+      assert xml_elements(xml, "p", within: "performance") ==
+               [{%{}, ""}, {%{}, "Solo una nota."}]
+
+      assert xml_texts(xml, "p", within: "note") == ["Solo una nota."]
     end
 
     test "a venue type alone is an empty rs, and a date as words is a date with no years" do
@@ -3747,6 +3751,7 @@ defmodule Playcode.TeiRoundtripTest do
       end
     end
 
+    @tag :capture_log
     test "a place or a state the file does not declare is dropped, the performance kept" do
       play =
         import_tei!(
@@ -3760,6 +3765,19 @@ defmodule Playcode.TeiRoundtripTest do
         )
 
       assert [%{date_text: "1610", place_id: nil, historical_state_id: nil}] = performances(play)
+    end
+
+    # As a play's setting does (`historical_state_id/2`): the town is not the state it was in.
+    @tag :capture_log
+    test "a state that is the performance's own place is dropped, the place kept" do
+      play =
+        import_tei!(
+          performance_file(
+            ~s(<performance xml:id="performance-1"><p><date when="1610">1610</date><placeName ref="#rt-perf-londres"><country ref="#rt-perf-londres"/></placeName></p></performance>)
+          )
+        )
+
+      assert [%{place: %{slug: "rt-perf-londres"}, historical_state_id: nil}] = performances(play)
     end
 
     test "a state with no town comes back as a state with no town" do
@@ -3783,6 +3801,7 @@ defmodule Playcode.TeiRoundtripTest do
 
     # The performance is the file's, the source a guess: one that names nothing is no entry,
     # and the pages in it go with it.
+    @tag :capture_log
     test "a source that names nothing is left out, the performance kept" do
       play =
         import_tei!(
@@ -3799,6 +3818,7 @@ defmodule Playcode.TeiRoundtripTest do
       assert [%{date_text: "1610", source_entry_id: nil, source_pages: nil}] = performances(play)
     end
 
+    @tag :capture_log
     test "a cast row that names no actor is dropped, the performance kept" do
       play =
         import_tei!(
@@ -3933,6 +3953,93 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert [_] = performances(import_tei!(tei(code: code, front: same_date.("Wiggins"))))
       assert [_, _] = performances(import_tei!(tei(code: code, front: same_date.("CATCOM"))))
+    end
+
+    # The importer reads files Playcode did not write. A performance of nothing but a cast, a
+    # place or a source says nothing a reader could print (`Performance.changeset/2` refuses
+    # it), and a refusal inside the import's transaction would roll all of it back.
+    @tag :capture_log
+    test "a performance that says nothing is left out, the rest of the file imported" do
+      file = """
+      <performance xml:id="performance-1" corresp="#castlist">
+        <p><placeName ref="#rt-perf-londres"/></p>
+        <castList><castItem><role>Argan</role><actor><persName><surname>Poquelin</surname></persName></actor></castItem></castList>
+      </performance>
+      <performance xml:id="performance-2"><p/><biblStruct ana="catalogos"><monogr><title level="m">Wiggins</title></monogr></biblStruct></performance>
+      <performance xml:id="performance-3" corresp="#castlist"><p><date when="1610">1610</date></p></performance>
+      """
+
+      play = import_tei!(performance_file(file))
+
+      # The one that said nothing did not take the cast-list switch with it.
+      assert [%{date_text: "1610", cast_from_cast_list: true}] = performances(play)
+      assert Playcode.Bibliography.search_entries("Wiggins", play.id, 10, kinds: :all) == []
+      assert Performances.list_actors() == []
+    end
+
+    test "a company keeps its italics, and comes back the same company" do
+      n = System.unique_integer([:positive])
+      name = "The <<King’s>> Men #{n}"
+
+      file =
+        ~s(<performance xml:id="performance-1"><p><date when="1610">1610</date><orgName>The <emph>King’s</emph> Men #{n}</orgName></p></performance>)
+
+      play = import_tei!(tei(front: file))
+
+      assert [%{company: %{name: ^name}}] = performances(play)
+      assert xml_texts(export_tei(play), "emph", within: "orgName") == ["King’s"]
+
+      # Read again, it is the one company, not another named without its italics.
+      import_tei!(tei(front: file))
+      assert Enum.count(Performances.list_companies(), &(&1.name == name)) == 1
+    end
+
+    test "a note's paragraphs are TEI's own, and come back" do
+      note =
+        ~s(<note><p>Uno, <emph>dos</emph>.<lb/>Y una línea más.</p><p>Tres.</p></note>)
+
+      file =
+        ~s(<performance xml:id="performance-1"><p><date when="1610">1610</date></p>#{note}</performance>)
+
+      play = import_tei!(tei(front: file))
+
+      assert [%{note: "Uno, <<dos>>.\nY una línea más.\n\nTres."}] = performances(play)
+
+      xml = export_tei(play)
+
+      # Exported and read again, the same note: no space comes in beside the italics.
+      copy =
+        xml
+        |> String.replace(play.code, "RTN#{System.unique_integer([:positive])}")
+        |> import_tei!()
+
+      assert [%{note: "Uno, <<dos>>.\nY una línea más.\n\nTres."}] = performances(copy)
+
+      assert [{%{}, "Uno, dos . Y una línea más."}, {%{}, "Tres."}] =
+               xml_elements(xml, "p", within: "note")
+
+      assert xml_elements(xml, "lb", within: "note") |> length() == 1
+      assert xml_elements(roundtrip(tei(front: file)), "p", within: "note") |> length() == 2
+    end
+
+    # Actors are found ignoring case (`Actor.twin/1`), so a file naming "POQUELIN" cites the
+    # actor the play's own performance does, and is the same performance to a reader.
+    test "a file's performance naming a kept one's actor in other case is a copy of it" do
+      code = "RTP#{System.unique_integer([:positive])}"
+      play = import_tei!(tei(code: code))
+
+      performance_fixture(play, %{
+        "date_text" => "1605",
+        "cast" => [%{"surname" => "Poquelin", "forename" => "Jean", "role" => "Argan"}]
+      })
+
+      file = fn surname ->
+        ~s(<performance xml:id="performance-1"><p><date when="1605">1605</date></p><castList><castItem><role>Argan</role><actor><persName><forename>Jean</forename><surname>#{surname}</surname></persName></actor></castItem></castList></performance>)
+      end
+
+      assert [_] = performances(import_tei!(tei(code: code, front: file.("POQUELIN"))))
+      assert [_] = performances(import_tei!(tei(code: code, front: file.("poquelin"))))
+      assert [_, _] = performances(import_tei!(tei(code: code, front: file.("Molière"))))
     end
 
     test "a file's cast-list switch yields to one a performance the play keeps already has" do

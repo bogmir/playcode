@@ -63,13 +63,15 @@ defmodule Playcode.Export.TeiXml do
     performances =
       Keyword.get_lazy(opts, :performances, fn -> Performances.list_for_play(play.id) end)
 
+    gazetteer = gazetteer(play, performances)
+
     tei =
       element(
         :TEI,
         %{"xml:lang" => play.language || "es", "xmlns" => "http://www.tei-c.org/ns/1.0"},
         [
-          build_header(play, performances),
-          build_text(play, characters, divisions, performances)
+          build_header(play, performances, gazetteer),
+          build_text(play, characters, divisions, performances, gazetteer)
         ]
       )
 
@@ -77,15 +79,23 @@ defmodule Playcode.Export.TeiXml do
       XmlBuilder.generate(tei, format: :indent, encoding: nil)
   end
 
+  # The places the play links and its performances name are written with their ancestors and
+  # states, which the whole gazetteer knows; a play naming none loads nothing.
+  defp gazetteer(play, performances) do
+    if play.play_places != [] or Enum.any?(performances, &(&1.place_id || &1.historical_state_id)),
+      do: Places.gazetteer(),
+      else: %{}
+  end
+
   # --- Header ---
 
-  defp build_header(play, performances) do
+  defp build_header(play, performances, gazetteer) do
     element(
       :teiHeader,
       [
         build_file_desc(play),
         build_encoding_desc(play),
-        build_profile_desc(play, performances)
+        build_profile_desc(play, performances, gazetteer)
       ] ++ build_revision_desc(play)
     )
   end
@@ -463,7 +473,7 @@ defmodule Playcode.Export.TeiXml do
     "pt" => {"pt-PT", "Português"}
   }
 
-  defp build_profile_desc(play, performances) do
+  defp build_profile_desc(play, performances, gazetteer) do
     {ident, label} = Map.get(@language_ident_labels, play.language || "es", {"es-ES", "Español"})
 
     children =
@@ -471,7 +481,7 @@ defmodule Playcode.Export.TeiXml do
         [element(:langUsage, [element(:language, %{ident: ident}, label)])] ++
         build_text_class(play)
 
-    element(:profileDesc, children ++ build_setting_desc(play, performances))
+    element(:profileDesc, children ++ build_setting_desc(play, performances, gazetteer))
   end
 
   # <creation> is where TEI records when the text *in this file* was composed. The years
@@ -508,8 +518,8 @@ defmodule Playcode.Export.TeiXml do
   # The places are a `listPlace` and their links in `<setting>`; the historical time is a
   # `<time>` in the same `<setting>`, the period as @type and its note as the text. A play
   # whose only places are its performances' has the `listPlace` alone.
-  defp build_setting_desc(play, performances) do
-    {list_place, setting_refs} = build_places(play, performances)
+  defp build_setting_desc(play, performances, gazetteer) do
+    {list_place, setting_refs} = build_places(play, performances, gazetteer)
 
     setting =
       case setting_refs ++ build_historical_time(play) do
@@ -529,7 +539,7 @@ defmodule Playcode.Export.TeiXml do
   # which of them the play actually references, because "the leaves are the settings" is
   # wrong: a play can be set in Italy itself. The places and states of the performances are
   # in the `listPlace` too, and in no `setting`: each performance names its own.
-  defp build_places(%{play_places: links}, performances) do
+  defp build_places(%{play_places: links}, performances, gazetteer) do
     ordered = Enum.sort_by(links, fn link -> {link.role != "setting", link.position} end)
 
     performance_places =
@@ -541,8 +551,6 @@ defmodule Playcode.Export.TeiXml do
     if ordered == [] and performance_places == [] do
       {[], []}
     else
-      gazetteer = Places.gazetteer()
-
       needed =
         (Enum.flat_map(ordered, &[&1.place, Map.get(gazetteer, &1.historical_state_id)]) ++
            Enum.map(performance_places, &Map.get(gazetteer, &1)))
@@ -805,7 +813,7 @@ defmodule Playcode.Export.TeiXml do
 
   # --- Text ---
 
-  defp build_text(play, characters, divisions, performances) do
+  defp build_text(play, characters, divisions, performances, gazetteer) do
     body_divisions =
       divisions |> Enum.filter(fn d -> d.type in @body_types end) |> with_folio_parts()
 
@@ -814,13 +822,13 @@ defmodule Playcode.Export.TeiXml do
     {back, front} = play.paratexts |> Enum.sort_by(& &1.position) |> Enum.split_with(& &1.back)
 
     element(:text, [
-      build_front(play, front, characters, cast_heading, performances),
+      build_front(play, front, characters, cast_heading, performances, gazetteer),
       build_body(body_divisions),
       build_back(back, Playcode.Bibliography.list_for_play(play.id))
     ])
   end
 
-  defp build_front(play, paratexts, characters, cast_heading, performances) do
+  defp build_front(play, paratexts, characters, cast_heading, performances, gazetteer) do
     title_page =
       element(
         :titlePage,
@@ -878,7 +886,9 @@ defmodule Playcode.Export.TeiXml do
       :front,
       [title_page] ++
         Enum.map(paratexts, &paratext_element/1) ++
-        cast_list ++ Enum.map(scenes, &paratext_element/1) ++ build_performances(performances)
+        cast_list ++
+        Enum.map(scenes, &paratext_element/1) ++
+        build_performances(performances, gazetteer)
     )
   end
 
@@ -886,12 +896,7 @@ defmodule Playcode.Export.TeiXml do
 
   # In the list's order, each named by its place in it: `performance-1` is the file's own
   # name for it, never a database id.
-  defp build_performances(performances) do
-    # ponytail: a second load of the gazetteer, after the settingDesc's, to read each state's
-    # slug and type: one more per play, at a hundred places. Share it if that ever shows.
-    gazetteer =
-      if Enum.any?(performances, & &1.historical_state_id), do: Places.gazetteer(), else: %{}
-
+  defp build_performances(performances, gazetteer) do
     performances
     |> Enum.with_index(1)
     |> Enum.map(fn {performance, number} ->
@@ -915,9 +920,7 @@ defmodule Playcode.Export.TeiXml do
         [
           element(:p, performance_details(performance, gazetteer)),
           build_performance_cast(performance.cast),
-          if(performance.note,
-            do: inline_element(:note, %{}, build_inline_content(performance.note))
-          ),
+          performance.note && element(:note, paragraphs(performance.note)),
           build_performance_source(performance)
         ],
         &is_nil/1
@@ -934,7 +937,9 @@ defmodule Playcode.Export.TeiXml do
         build_performance_date(performance),
         build_venue(performance),
         build_performance_place(performance, gazetteer),
-        if(performance.company, do: element(:orgName, performance.company.name))
+        if(performance.company,
+          do: inline_element(:orgName, %{}, build_inline_content(performance.company.name))
+        )
       ],
       &is_nil/1
     )
