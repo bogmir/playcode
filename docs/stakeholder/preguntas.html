@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 21 October 2026. 45 questions, 27 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 21 October 2026. 47 questions, 27 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -296,6 +296,7 @@
       <li><a href="#t-not-plays">Texts that are not plays</a><span class="nums">41</span></li>
       <li><a href="#t-cast-lists">Several cast lists</a><span class="nums">42–43</span></li>
       <li><a href="#t-split">Split verses</a><span class="nums">44–45</span></li>
+      <li><a href="#t-github">Work only in the GitHub copy</a><span class="nums">46–47</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
@@ -1792,6 +1793,56 @@
         <div>
           <label class="label" for="q45-text">Notes</label>
           <textarea id="q45-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-github" aria-labelledby="h-github">
+    <h2 id="h-github">Work only in the GitHub copy</h2>
+    <p>The <code>TEI_XML</code> folder of <a href="https://github.com/JesusTronch/EMOTHE/tree/main/TEI_XML">github.com/JesusTronch/EMOTHE</a> holds the project’s working files as they stood on 10 December 2024. For two plays it has work that neither the reading page nor the <code>[xml]</code> download of emothe.uv.es shows, so it may be unfinished. Playcode keeps the published version of both until you say otherwise.</p>
+
+    <div class="q" id="q46" data-q="q46" data-n="46">
+      <span class="q-num" aria-hidden="true">46</span>
+      <div class="q-body">
+        <h3>Is the critical apparatus of <i>El bastardo Mudarra</i> (EMOTHE0435) in the GitHub copy finished?</h3>
+        <p class="why">The GitHub file <code>EMOTHE0435_ElBastardoMudarraTragicomedia.xml</code> (July 2017) has about 210 variant entries and 135 notes, where the published file has 10 and 5. The readings are attributed to three witnesses, “Aut.”, “PXXIV” and, once, “DA”, but neither file describes them. Playcode would show the entries as it shows the published ten.</p>
+        <p class="why">GitHub also has a second file, <code>EMOTHE0435_ElBastardoMudarra.xml</code> (May 2017), without the apparatus and close to the published one.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q46-o1"><input type="radio" id="q46-o1" name="q46-choice" value="It is finished: Playcode takes the GitHub file">It is finished: Playcode takes the GitHub file</label>
+            <label for="q46-o2"><input type="radio" id="q46-o2" name="q46-choice" value="It is not finished: keep the published text">It is not finished: keep the published text</label>
+            <label for="q46-o3"><input type="radio" id="q46-o3" name="q46-choice" value="We will send a newer file">We will send a newer file</label>
+            <label for="q46-o4"><input type="radio" id="q46-o4" name="q46-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q46-text">Notes, and what “Aut.”, “PXXIV” and “DA” stand for</label>
+          <textarea id="q46-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q47" data-q="q47" data-n="47">
+      <span class="q-num" aria-hidden="true">47</span>
+      <div class="q-body">
+        <h3>Should <i>A Woman Killed with Kindness</i> (EMOTHE0369) take the newer header of the GitHub copy?</h3>
+        <p class="why">The text is the same in both files. The GitHub file’s header is the one the project’s newer files use: it credits Robert Lawrence’s edition and Laura Monrós Gaspar for the electronic edition, names the current funding (PID2019-104045GB) and the CC BY-NC-ND 4.0 licence, and gives the language as English (<code>en-EN</code>; the published file says <code>es-EN</code>). It also leaves out the published file’s one revision, Carlos Muñoz Pons’s of 2019.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q47-o1"><input type="radio" id="q47-o1" name="q47-choice" value="Take the GitHub header, keeping the 2019 revision">Take the GitHub header, keeping the 2019 revision</label>
+            <label for="q47-o2"><input type="radio" id="q47-o2" name="q47-choice" value="Take the GitHub header as it is">Take the GitHub header as it is</label>
+            <label for="q47-o3"><input type="radio" id="q47-o3" name="q47-choice" value="Keep the published header">Keep the published header</label>
+            <label for="q47-o4"><input type="radio" id="q47-o4" name="q47-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q47-text">Notes</label>
+          <textarea id="q47-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
