@@ -92,7 +92,8 @@ What the commands do, for when one of them fails part way, or something new is n
    ```
 
 3. **Put the files on the machine.** `doc/tei_corpus/` (git-ignored) holds the production
-   corpus, 372 files on 2026-10-15, EMOTHE0784 and 0785 among them. One play per code; the
+   corpus, 385 files since 2026-10-21, when the 13 plays of the project's GitHub copy joined
+   (372 on 2026-10-15, EMOTHE0784 and 0785 among them). One play per code; the
    importer reads every `*.xml` in the folder it is given, not its subfolders.
 
    ```bash

@@ -2,7 +2,7 @@
 
 ## The TEI corpus
 
-Load the corpus: the 370 production files under `doc/tei_corpus/` (git-ignored; copy them there first) plus the fixtures under `test/fixtures/`, 392 plays, one per code, a `doc/tei_corpus` file winning over a fixture with the same code:
+Load the corpus: the 385 production files under `doc/tei_corpus/` (git-ignored; copy them there first; 13 of them from the project's GitHub copy since 2026-10-21) plus the fixtures under `test/fixtures/`, 407 plays, one per code, a `doc/tei_corpus` file winning over a fixture with the same code:
 
 ```bash
 mix playcode.import.tei             # skip codes already imported
