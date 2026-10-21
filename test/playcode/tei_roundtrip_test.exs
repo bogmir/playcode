@@ -1155,7 +1155,7 @@ defmodule Playcode.TeiRoundtripTest do
       roundtrip(
         tei(
           body: """
-          <div type="poema"><opener><salute>Dirigido a la <emph>Academia</emph> de Madrid</salute></opener>
+          <div type="poem"><opener><salute>Dirigido a la <emph>Academia</emph> de Madrid</salute></opener>
             <lg><l n="1">Mándanme, ingenios nobles, flor de España</l><l n="2">(que en esta junta</l></lg>
             <lg><l n="3">en breve tiempo excederéis</l></lg>
           </div>
@@ -1163,7 +1163,7 @@ defmodule Playcode.TeiRoundtripTest do
         )
       )
 
-    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poema]"]
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poem]"]
     assert xml_texts(xml, "head", within: "body") == []
     assert xml_texts(xml, "salute", within: "opener") == ["Dirigido a la Academia de Madrid"]
     assert xml_texts(xml, "emph", within: "opener") == ["Academia"]
@@ -1178,21 +1178,20 @@ defmodule Playcode.TeiRoundtripTest do
              ]
   end
 
-  # The French translation (EMOTHE0025) is in prose: not a poem but a discourse, Lope's
-  # address to the Academy of Madrid.
-  test "a discourse comes back in prose, with its opener, in no speech" do
+  # The French translation (EMOTHE0025) is in prose, not a poem.
+  test "a text in prose comes back with its opener, in no speech" do
     xml =
       roundtrip(
         tei(
           body: """
-          <div type="discurso"><opener><salute>Adressée à l’Académie de Madrid</salute></opener>
+          <div type="prose"><opener><salute>Adressée à l’Académie de Madrid</salute></opener>
             <p>Beaux génies, fleurs de notre Espagne.</p><p>La matière paraît aisée.</p>
           </div>
           """
         )
       )
 
-    assert text_order(xml) -- ["front/titlePage"] == ["body/div[discurso]"]
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[prose]"]
     assert xml_texts(xml, "salute", within: "opener") == ["Adressée à l’Académie de Madrid"]
     assert xml_elements(xml, "sp") == []
 
@@ -1200,20 +1199,20 @@ defmodule Playcode.TeiRoundtripTest do
              ["Beaux génies, fleurs de notre Espagne.", "La matière paraît aisée."]
   end
 
-  # Like a poem, a discourse whose opener is removed is still the text, not a paratext.
-  test "a discourse with no opener comes back the text" do
-    xml = roundtrip(tei(body: ~s(<div type="discurso"><p>Beaux génies.</p></div>)))
+  # Like a poem, a text in prose whose opener is removed is still the text, not a paratext.
+  test "a text in prose with no opener comes back the text" do
+    xml = roundtrip(tei(body: ~s(<div type="prose"><p>Beaux génies.</p></div>)))
 
-    assert text_order(xml) -- ["front/titlePage"] == ["body/div[discurso]"]
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[prose]"]
   end
 
   # With its opener removed in Playcode, the poem is still the play's text, not a paratext
   # in verse, whose lines have no numbers.
   test "a poem with no opener comes back the text, its lines numbered" do
     xml =
-      roundtrip(tei(body: ~s(<div type="poema"><lg><l n="1">Uno</l><l n="2">Dos</l></lg></div>)))
+      roundtrip(tei(body: ~s(<div type="poem"><lg><l n="1">Uno</l><l n="2">Dos</l></lg></div>)))
 
-    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poema]"]
+    assert text_order(xml) -- ["front/titlePage"] == ["body/div[poem]"]
 
     assert for({attrs, _text} <- xml_elements(xml, "l", within: "body"), do: attrs["n"]) ==
              ["0001", "0002"]

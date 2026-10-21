@@ -28,7 +28,7 @@ All tables use UUID primary keys. Key relationships:
 - `performance_companies` and `performance_actors` - corpus-wide, shared by every performance that names them, so a rename (`Performances.update_company/2`, `update_actor/2`) reaches them all. A company is one per name, case-insensitively; an actor one per `surname`, `forename` and `nickname`, case-insensitively, with `sex` an attribute (a blank one is filled from a match). A company or actor no performance names any more is deleted with its last performance, and so is a source entry nothing cites
 
 Element types: `speech`, `stage_direction`, `verse_line`, `prose`, `line_group`, `trailer` (a division's closing formula, "FIN DEL PRIMER ACTO"; exported last in its division), `opener` (its opening formula, TEI's `<opener><salute>`: the *Arte nuevo*'s dedication, question 41). A `prose` or `line_group` with no parent is text nobody speaks: a dumb show, a stanza opening a prologue
-Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco`, `front`, `poema` and `discurso` (the *Arte nuevo*'s whole text in verse and in prose, question 41)
+Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco`, `front`, `poem` and `prose` (the *Arte nuevo*'s whole text in verse and in prose, question 41)
 
 ## Archiving and provenance
 

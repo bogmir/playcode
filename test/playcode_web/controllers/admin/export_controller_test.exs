@@ -124,7 +124,7 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
       import_tei!(
         tei(
           body:
-            ~s(<div type="poema"><opener><salute>Dirigido a la Academia de Madrid</salute></opener><lg><l n="1">Mándanme, ingenios nobles</l></lg></div>)
+            ~s(<div type="poem"><opener><salute>Dirigido a la Academia de Madrid</salute></opener><lg><l n="1">Mándanme, ingenios nobles</l></lg></div>)
         )
       )
 
