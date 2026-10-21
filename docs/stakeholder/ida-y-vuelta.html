@@ -721,14 +721,14 @@
             <td data-label="Published site"><span class="s part">In statistics</span></td>
           </tr>
           <tr>
-            <th scope="row" class="feature">Split verses, indentation, asides, verse numbers</th>
+            <th scope="row" class="feature">Split verses, indentation, asides, verse numbers<span class="where"><a href="preguntas.html#t-split">questions 44–45</a></span></th>
             <td class="imp" data-label="Imported data"><span class="n">373</span><span class="src">TEI</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
             <td data-label="Downloads"><span class="s yes">Yes</span></td>
-            <td data-label="Play page"><span class="s yes">Yes</span></td>
-            <td data-label="Published site"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s part">Partly</span><sup class="fn"><a href="#n31" aria-label="note 31">31</a></sup></td>
+            <td data-label="Published site"><span class="s yes">Yes</span><sup class="fn"><a href="#n31" aria-label="note 31">31</a></sup></td>
           </tr>
           <tr>
             <th scope="row" class="feature">Kind of stage direction; a verse’s identifier</th>
@@ -862,6 +862,16 @@
             <td data-label="Published site"><span class="s todo">Not yet</span></td>
           </tr>
           <tr>
+            <th scope="row" class="feature">An aside that runs over several verses, as one aside<span class="where">In 129 plays, 5,770 asides in 11,402 pieces</span></th>
+            <td class="imp" data-label="Imported data"><span class="s part">Partly</span><sup class="fn"><a href="#n30" aria-label="note 30">30</a></sup></td>
+            <td data-label="Edited"><span class="s todo">Not yet</span></td>
+            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
+            <td data-label="Downloads"><span class="s na">—</span></td>
+            <td data-label="Play page"><span class="s part">Partly</span></td>
+            <td data-label="Published site"><span class="s part">Partly</span></td>
+          </tr>
+          <tr>
             <th scope="row" class="feature">Identifiers of speeches, paragraphs and stage directions<span class="where">About 460,000</span></th>
             <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
             <td data-label="Edited"><span class="s todo">Not yet</span></td>
@@ -948,6 +958,8 @@
       <li id="n27">Playcode keeps the 542 entries of the six plays since 16 October; the files hold 604, but 62 are copies, inside a note, of an entry already in the line, and are read as that entry. Production’s plays get them when their files are next re-imported, and the published site when it is next generated; the numbers of those plays’ notes go down then, since the readings’ notes are no longer counted. Hamlet’s variants are kept and written back but hidden from readers, by the play’s “Show variant readings” setting. That setting is not written to the file: like whether a play is complete, it is Playcode’s switch for what readers see (see <a href="#h-tei">Into the TEI</a>).</li>
       <li id="n28">The file’s record of who revised it and when, in its header: “2021, Muñoz Pons, Carlos: Revisión de la obra en formato TEI-XML”, in 267 files; <i>Comedia llamada de los engañados</i> says “Con correcciones a cargo de Guillermo Carrascón”. 351 files have one, 44 of them empty. Until 18 October Playcode dropped it, and the exported file had none. It is now read, written back in the form the files use, shown on the play’s page in Playcode and edited in its form, so an editor who revises a play in Playcode records the revision there; no page for readers prints it. As with the notes on the edition, importing the original file again replaces the history with the file’s, so a revision recorded in Playcode belongs in the file too. Production’s plays get theirs when their files are next re-imported.</li>
       <li id="n29">Checked by an automated test. Imported on production on 20 October. FileMaker records 317 performances; 244 are on plays Playcode holds, and the import writes 239 of them, on 60 plays, leaving out five that say nothing (no date, venue, company or note). Each keeps its date as FileMaker wrote it (“1602 (?)”, “c. 1640”) with the years it gives, the venue as the source names it and its kind, the company, the cast with each actor’s role, the town from the gazetteer with the state it belonged to, a note, and its source. A company or an actor is one record shared by every performance, so a researcher who corrects a name corrects it everywhere; FileMaker’s four repeated companies and two repeated actors become one. A source is a bibliography entry, with the performance’s own volume and page: Wiggins’s <i>British Drama 1533–1642</i>, 77 FileMaker records, is one entry cited by 110 performances, and such a catalogue is printed beside the performances, never in the play’s bibliography (question 12). <i>The Way of the World</i>’s 1700 performance takes its cast from the play’s cast list. The file writes each performance as TEI’s <code>&lt;performance&gt;</code> after the cast list and reads it back; importing a file over a play keeps the performances FileMaker brought in and those typed in Playcode.</li>
+      <li id="n30">A piece of an aside cannot run past the end of a verse, so the files cut an aside over several verses into one piece per verse, each naming the next: Clotaldo’s aside in <i>La vida es sueño</i>, “¡Válgame el cielo! ¿Qué escucho?…”, is 74 pieces. Playcode keeps every piece as an aside but not the link between them, so the file it writes no longer says they are one aside. Readers see it in two places: the statistics on the play’s page count the pieces as asides (321 in <i>El amor al uso</i>, where emothe.uv.es counts 124), and the published site prints “aparte” beside every verse of an aside, 74 times down Clotaldo’s. emothe.uv.es reads the links: its “Apartes” switch steps from one whole aside to the next. Not every link in the files is sound: 758 name a piece that does not exist, 130 of them in <i>La vida es sueño</i>.</li>
+      <li id="n31">The parts of a split verse, the asides, an indented verse and the verse numbers go into the file and come back whole. How readers see a split verse is still open: emothe.uv.es and Playcode’s play page move each part in by a fixed step, while the published site starts it where the part before it ended (<a href="preguntas.html#q44">question 44</a>), and only emothe.uv.es shades the split verses and steps from one to the next (<a href="preguntas.html#q45">question 45</a>). The statistics on the play’s page count the parts, not the verses: 816 split verses in <i>El amor al uso</i>, which has 400 (emothe.uv.es counts 380, leaving out the 20 split inside one speech by an aside); they count the pieces of an aside the same way (note 30).</li>
     </ol>
   </section>
 

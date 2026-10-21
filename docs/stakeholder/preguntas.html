@@ -175,6 +175,10 @@
   .sample sup { font-family: var(--sans); font-size: 0.6rem; color: var(--muted); }
   .sample .printed { display: grid; grid-template-columns: 1fr auto; gap: 0 1rem; font-family: var(--serif); font-size: 1.0625rem; }
   .sample .printed span:nth-child(even) { font-family: var(--sans); font-size: 0.75rem; color: var(--muted); align-self: center; }
+  .sample .who { display: block; margin-top: 0.3rem; font-family: var(--sans); font-size: 0.6875rem; letter-spacing: 0.05em; color: var(--muted); }
+  .sample .step-m { padding-left: 50px; }
+  .sample .step-f { padding-left: 100px; }
+  .sample .ghost { visibility: hidden; }
   .q .table-wrap table { font-size: 0.875rem; }
   fieldset { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 0.5rem; }
   legend, .label {
@@ -269,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 21 October 2026. 43 questions, 27 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 21 October 2026. 45 questions, 27 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -291,6 +295,7 @@
       <li><a href="#t-paratexts">Texts around the play</a><span class="nums">29–35</span></li>
       <li><a href="#t-not-plays">Texts that are not plays</a><span class="nums">41</span></li>
       <li><a href="#t-cast-lists">Several cast lists</a><span class="nums">42–43</span></li>
+      <li><a href="#t-split">Split verses</a><span class="nums">44–45</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
@@ -1730,6 +1735,69 @@
     </div>
   </section>
 
+  <section id="t-split" aria-labelledby="h-split">
+    <h2 id="h-split">Split verses</h2>
+    <p>A verse shared between speakers is split into parts, each in its speech: in <i>La vida es sueño</i>, v. 1688 is Clotaldo’s “no he de soltarte.”, Rosaura’s “¡Ay, cielos!” and Segismundo’s “¡Suelta, digo,”. The files split 37,523 verses this way, and mark each part as the first, a middle or the last. Playcode keeps the parts as the files give them, prints the verse’s number beside its first part, as emothe.uv.es does, and counts the verse once. These two questions are about how readers see them, where emothe.uv.es, Playcode’s play page and the published site do not agree.</p>
+
+    <div class="q" id="q44" data-q="q44" data-n="44">
+      <span class="q-num" aria-hidden="true">44</span>
+      <div class="q-body">
+        <h3>How should the parts of a split verse be laid out?</h3>
+        <p class="why">emothe.uv.es moves each part in by a fixed step: a middle part 50 pixels from the margin, a last part 100, however long the parts before it. A last part can then start under the middle of the words before it, and the eye loses the verse. Playcode’s play page does the same. Playcode’s published site starts each part where the one before it ended, as printed editions set a split verse.</p>
+        <p class="why">A verse is also split inside one speech, 867 times in 152 plays, as when an aside starts in the middle of a verse. There emothe.uv.es prints the first part as an ordinary verse and moves the second further in, with “(Aparte.)” at the right margin; Playcode lays these out like any other split verse.</p>
+        <div class="sample" role="group" aria-label="The two ways, on La vida es sueño, v. 1688">
+          <div>
+            <span class="label">1. A fixed step, as emothe.uv.es and Playcode’s play page</span>
+            <span class="who">CLOTALDO</span><p>no he de soltarte.</p>
+            <span class="who">ROSAURA</span><p class="step-m">¡Ay, cielos!</p>
+            <span class="who">SEGISMUNDO</span><p class="step-f">¡Suelta, digo,</p>
+          </div>
+          <div>
+            <span class="label">2. Each part where the one before it ended, as the published site</span>
+            <span class="who">CLOTALDO</span><p>no he de soltarte.</p>
+            <span class="who">ROSAURA</span><p><span class="ghost" aria-hidden="true">no he de soltarte. </span>¡Ay, cielos!</p>
+            <span class="who">SEGISMUNDO</span><p><span class="ghost" aria-hidden="true">no he de soltarte. ¡Ay, cielos! </span>¡Suelta, digo,</p>
+          </div>
+        </div>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q44-o1"><input type="radio" id="q44-o1" name="q44-choice" value="A fixed step, as emothe.uv.es: the published site changes">A fixed step, as emothe.uv.es: the published site changes</label>
+            <label for="q44-o2"><input type="radio" id="q44-o2" name="q44-choice" value="Each part where the one before it ended: the play page changes">Each part where the one before it ended: the play page changes</label>
+            <label for="q44-o3"><input type="radio" id="q44-o3" name="q44-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q44-text">Notes, and how a verse split inside one speech should look</label>
+          <textarea id="q44-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q45" data-q="q45" data-n="45">
+      <span class="q-num" aria-hidden="true">45</span>
+      <div class="q-body">
+        <h3>What should a switch for split verses do?</h3>
+        <p class="why">emothe.uv.es has a switch, “Versos truncados”, in its side panel. It shades every split verse, the first, middle and last parts in three greys with a legend, and its arrows step from one split verse to the next, with a count: in <i>El amor al uso</i>, “1 de 380”. Playcode’s play page has a switch, “Split verses”, that only takes the steps away, so every part starts at the margin. The published site has no switch, and always moves the parts in.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q45-o1"><input type="radio" id="q45-o1" name="q45-choice" value="Shade them and step through them, as emothe.uv.es, on the play page and the published site">Shade them and step through them, as emothe.uv.es, on the play page and the published site</label>
+            <label for="q45-o2"><input type="radio" id="q45-o2" name="q45-choice" value="Take the steps away, as Playcode's play page does now">Take the steps away, as Playcode’s play page does now</label>
+            <label for="q45-o3"><input type="radio" id="q45-o3" name="q45-choice" value="No switch: the parts always moved in, as the published site does now">No switch: the parts always moved in, as the published site does now</label>
+            <label for="q45-o4"><input type="radio" id="q45-o4" name="q45-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q45-text">Notes</label>
+          <textarea id="q45-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
   <section id="t-correct" aria-labelledby="h-correct">
     <h2 id="h-correct">Kinds to correct</h2>
     <p>Not questions: texts whose file gives them the wrong kind, so Playcode names them wrongly where they have no heading of their own. An editor can correct each one in Playcode’s admin, and the corrected kind goes into the file Playcode exports.</p>
@@ -1757,7 +1825,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 18 answered</span>
+        <span class="count" id="answered-count">0 of 20 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
