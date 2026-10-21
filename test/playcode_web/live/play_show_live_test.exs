@@ -99,6 +99,32 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert Playcode.Catalogue.Play.form(play) == "prose"
   end
 
+  # As emothe.uv.es set them, an act's closing formula and a paratext's.
+  test "a closing formula is centred and in italics", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><p>Réplica final.</p></sp><trailer>FIN DEL PRIMER ACTO</trailer></div1>),
+        back:
+          ~s(<div type="epilogo"><head>SONNET</head><lg><l>Réjouis-toi</l></lg><trailer>FIN</trailer></div>)
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+    nodes = html |> LazyHTML.from_fragment() |> LazyHTML.query("main *")
+
+    for formula <- ["FIN DEL PRIMER ACTO", "FIN"] do
+      assert Enum.any?(nodes, fn node ->
+               classes = node |> LazyHTML.attribute("class") |> Enum.flat_map(&String.split/1)
+
+               String.trim(LazyHTML.text(node)) == formula and "text-center" in classes and
+                 "italic" in classes
+             end),
+             "#{formula} is not centred and in italics"
+    end
+  end
+
   describe "an inline stage direction" do
     setup %{conn: conn} do
       play =

@@ -1479,7 +1479,7 @@ defmodule Playcode.Import.TeiParser do
 
   defp act(type, attrs, act_children, pos) do
     {heading, notes} = text_and_notes(find_child(act_children, "head"))
-    {elements, scenes} = act_content(act_children)
+    {elements, scenes} = act_children |> closing_scene_as_trailer() |> act_content()
 
     %{
       type: type,
@@ -1490,6 +1490,23 @@ defmodule Playcode.Import.TeiParser do
       elements: elements,
       divisions: scenes
     }
+  end
+
+  # The words the corpus closes with: fin, fine, finis, il fine, telón (spaced out once).
+  @closing_words ~r/\A\W*(?:il\s+)?fin(?:e|is)?\b|\A\W*t\s*e\s*l\s*[óo]\s*n\b/iu
+
+  # An act whose last scene holds nothing but a heading of closing words ("FIN DE
+  # CORIOLANO.", "Finis actus primi.", "T E L Ó N": 70 acts in 39 plays of the corpus)
+  # ends with its trailer, encoded as a scene; the heading becomes that trailer.
+  defp closing_scene_as_trailer(children) do
+    with [{"div2", _, scene_children} | before] <-
+           children |> Enum.reject(&is_binary/1) |> Enum.reverse(),
+         [{"head", _, words} = head] <- Enum.reject(scene_children, &is_binary/1),
+         true <- head |> text_content() |> String.match?(@closing_words) do
+      Enum.reverse(before, [{"trailer", [], words}])
+    else
+      _ -> children
+    end
   end
 
   # An act's own elements and its scenes. The act's elements and its scenes' share one

@@ -220,11 +220,13 @@ defmodule Playcode.Export.Html do
           margin: 0.75rem 2rem;
         }
 
-        /* A division's closing formula */
+        /* A division's closing formula, as emothe.uv.es set it; an italic word in it upright */
         .trailer {
           text-align: center;
+          font-style: italic;
           margin: 1.5rem 0 0.5rem;
         }
+        .trailer em { font-style: normal; }
 
         /* Prose */
         .prose-block {

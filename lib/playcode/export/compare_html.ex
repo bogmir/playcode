@@ -207,7 +207,8 @@ defmodule Playcode.Export.CompareHtml do
         .folio { color: #666; }
         sup.folio { font-size: 0.7em; line-height: 0; }
 
-        .trailer { text-align: center; margin: 1rem 0 0.5rem; }
+        .trailer { text-align: center; font-style: italic; margin: 1rem 0 0.5rem; }
+        .trailer em { font-style: normal; }
 
         /* Prose */
         .prose-block {

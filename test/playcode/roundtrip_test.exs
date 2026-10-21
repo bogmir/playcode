@@ -14,7 +14,11 @@ defmodule Playcode.RoundtripTest do
 
   @fields ~w(acts scenes characters speeches verses line_groups stage_dirs asides
              split_parts verse_type_attrs hidden_chars heads front_paratexts back_paratexts
-             speaker_refs notes inline_stages line_breaks line_numbers paragraph_numbers)a
+             speaker_refs notes inline_stages line_breaks line_numbers paragraph_numbers
+             trailers)a
+
+  # The words the corpus closes with, as the importer reads them (`TeiParser`).
+  @closing_words ~r/\A\W*(?:il\s+)?fin(?:e|is)?\b|\A\W*t\s*e\s*l\s*[óo]\s*n\b/iu
 
   # Read a possibly UTF-16 file and return UTF-8 string
   defp read_original(path) do
@@ -159,6 +163,35 @@ defmodule Playcode.RoundtripTest do
     count_head_children(tree)
   end
 
+  # An act's last scene holding only a heading of closing words ("FIN DE CORIOLANO."):
+  # the importer reads it as the act's trailer (2026-10-21), so the export has a trailer
+  # where the file has a scene and its heading.
+  defp closing_scenes_as_trailers(counts, xml) do
+    clean = Regex.replace(~r/<\?xml[^?]*\?>/, extract_body(xml), "")
+    {:ok, tree} = Saxy.SimpleForm.parse_string("<root>#{clean}</root>")
+    closing = count_closing_scenes(tree)
+
+    %{
+      counts
+      | scenes: counts.scenes - closing,
+        heads: counts.heads - closing,
+        trailers: counts.trailers + closing
+    }
+  end
+
+  defp count_closing_scenes({"div1", _attrs, children}) do
+    with {"div2", _, scene} <- children |> Enum.reject(&is_binary/1) |> List.last(),
+         [{"head", _, _} = head] <- Enum.reject(scene, &is_binary/1),
+         true <- text_of(head) =~ @closing_words do
+      1
+    else
+      _ -> 0
+    end
+  end
+
+  defp count_closing_scenes({_name, _attrs, children}),
+    do: children |> Enum.filter(&is_tuple/1) |> Enum.map(&count_closing_scenes/1) |> Enum.sum()
+
   defp count_head_children({_name, _attrs, children}) do
     Enum.reduce(children, 0, fn
       # An empty <head></head> (EMOTHE0075, 0341, 0733) carries nothing, and the
@@ -192,6 +225,7 @@ defmodule Playcode.RoundtripTest do
       verse_type_attrs: count_verse_type_attrs(body),
       hidden_chars: count_hidden_chars(front),
       heads: count_heads_in_body(body),
+      trailers: count_tag(body, "trailer"),
       front_paratexts: count_paratext_divs(front),
       back_paratexts: count_paratext_divs(extract_back(xml)),
       notes: count_notes(xml),
@@ -609,7 +643,7 @@ defmodule Playcode.RoundtripTest do
   def assert_roundtrip(path) do
     code = Path.basename(path, ".xml")
     original_xml = read_original(path)
-    orig_counts = structural_counts(original_xml)
+    orig_counts = original_xml |> structural_counts() |> closing_scenes_as_trailers(original_xml)
 
     assert {:ok, play} = Playcode.Import.TeiImport.import_file(path),
            "Failed to import #{path}"

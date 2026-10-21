@@ -491,7 +491,8 @@ defmodule Playcode.Export.Epub do
     .folio { color: #666; }
     sup.folio { font-size: 0.7em; line-height: 0; }
 
-    .trailer { text-align: center; margin: 1.5em 0 0.5em; }
+    .trailer { text-align: center; font-style: italic; margin: 1.5em 0 0.5em; }
+    .trailer em { font-style: normal; }
 
     .prose-block {
       margin-left: 1em;

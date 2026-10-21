@@ -65,6 +65,20 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert Enum.any?(files, fn {_name, content} -> content =~ "FIN DEL PRIMER ACTO" end)
   end
 
+  # As emothe.uv.es set it: centred, in italics, an italic word in it set upright.
+  test "the HTML and EPUB downloads set the closing formula centred and in italics",
+       %{conn: conn, play: play} do
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, epub_css} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ "style.css" end)
+
+    for css <- [html, epub_css] do
+      assert css =~ ~r/\.trailer \{[^}]*text-align: center/
+      assert css =~ ~r/\.trailer \{[^}]*font-style: italic/
+      assert css =~ ~r/\.trailer em \{[^}]*font-style: normal/
+    end
+  end
+
   # As the published site prints them, in the downloads' English.
   test "the HTML and EPUB downloads print the dating and the historical time",
        %{conn: conn, play: play} do
