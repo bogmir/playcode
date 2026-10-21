@@ -471,15 +471,14 @@ defmodule Playcode.Export.StaticSite.Components do
       source.pub_place,
       source.publisher,
       source.pub_date,
-      source.note,
-      if(provenance = PlayLabels.provenance(source), do: "Provenance: " <> provenance)
+      source.note
     ]
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.reduce("", &sentence/2)
   end
 
   # Each part a sentence of its own, without a second period after one it ends with
-  # ("…Paris, 1872. Provenance: Gallica").
+  # ("…Paris, 1872. Tasso, Torquato. Aminta.").
   defp sentence(part, ""), do: part
 
   defp sentence(part, text),

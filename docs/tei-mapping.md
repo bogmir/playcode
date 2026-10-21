@@ -5,7 +5,7 @@ complete copy of a play* is the rule; this is the reference for every element.
 
 The importer handles the TEI P5 format used by EMOTHE/Artelope. Key mappings:
 - `teiHeader/fileDesc` -> play metadata, editors, sources
-- `sourceDesc/bibl/distributor` -> `play_sources.distributor`, where the digital text came from (“Procedencia” on emothe.uv.es); printed under the source on the play page and the site through `PlayLabels.provenance/1`, which prints none of the placeholders “Texto base” and “ProcedenciaFuente” (question 27)
+- `sourceDesc/bibl/distributor` -> `play_sources.distributor`, where the digital text came from (“Procedencia” on emothe.uv.es); edited in the sources tab and printed nowhere, as emothe.uv.es stopped printing it, the source’s reference saying it now (question 24, answered 2026-10-21); the placeholders “Texto base” and “ProcedenciaFuente” stay as the file has them
 - `sourceDesc/listWit/witness` -> witnesses (`@n` the siglum, `@xml:id` the siglum or `wit-` + siglum when it is no XML name; `bibl@type`/`@subtype` the type); a siglum the play already has, by hand or as a modern edition's, is skipped, and so is a witness printing the same line as one the play kept; `<lb/>` a line break in a field
 - `teiHeader/profileDesc/creation/date` -> composition date (`@when` or `@notBefore`/`@notAfter`, text as the note; words with no year are a note alone); read on first import only, since the columns are `@platform_owned`
 - `teiHeader/profileDesc/settingDesc/setting/time` -> historical time (`@type` the period, the text its note), beside the place links in the same `setting`; first import only, like the dating

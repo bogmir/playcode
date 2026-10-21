@@ -611,7 +611,6 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       do: ["div-#{division.id}" | Enum.map(division.children, &"div-#{&1.id}")]
   end
 
-  # "Procedencia" on emothe.uv.es; a placeholder ("Texto base") is not printed.
   # Where emothe.uv.es prints it: after the cast list, once, not among the front matter
   # above the text.
   test "the scene of the action follows the cast list", %{conn: conn} do
@@ -674,8 +673,10 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     for italic <- @italics, do: assert(italic in ems, italic)
   end
 
-  test "a source says where its digital text came from, unless that is a placeholder",
-       %{conn: conn} do
+  # "Procedencia" on emothe.uv.es, whose pages stopped printing it years ago: the source's
+  # reference says it now. Kept in the file and the sources tab, printed nowhere (question
+  # 24, answered 2026-10-21).
+  test "a source never says where its digital text came from", %{conn: conn} do
     play =
       import_tei!(
         tei(
@@ -691,7 +692,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     TestFixtures.mark_complete!(play)
     {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
 
-    assert has_element?(view, "#meta-sources", t("Provenance") <> ": IntraText Digital Library")
+    assert has_element?(view, "#meta-sources", "Tasso, Torquato. Aminta.")
+    refute has_element?(view, "#meta-sources", "IntraText Digital Library")
     refute has_element?(view, "#meta-sources", "Texto base")
     refute has_element?(view, "#meta-sources", "ProcedenciaFuente")
   end

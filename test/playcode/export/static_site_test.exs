@@ -160,9 +160,10 @@ defmodule Playcode.Export.StaticSiteTest do
     refute "SCENE:" in texts(page, "h2")
   end
 
-  # "Procedencia" on emothe.uv.es. A placeholder ("Texto base", 59 plays) stays in the
-  # file but is not printed; question 27 asks the project what it means.
-  test "a source says where its digital text came from, unless that is a placeholder" do
+  # "Procedencia" on emothe.uv.es, whose pages stopped printing it years ago: the source's
+  # reference says it now. Kept in the file, printed nowhere (question 24, answered
+  # 2026-10-21).
+  test "a source never says where its digital text came from" do
     play =
       tei(
         source_desc: """
@@ -177,8 +178,7 @@ defmodule Playcode.Export.StaticSiteTest do
     {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
     sources = play |> then(&title_page(generate!([&1]), &1)) |> texts("li")
 
-    # The note's own period ends its sentence: no "Aminta.. Provenance".
-    assert "Aminta. Tasso, Torquato. Aminta. Provenance: IntraText Digital Library" in sources
+    assert "Aminta. Tasso, Torquato. Aminta." in sources
     assert "Hamlet" in sources
     assert "El pastor fido" in sources
   end

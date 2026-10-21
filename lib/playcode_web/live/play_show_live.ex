@@ -358,9 +358,6 @@ defmodule PlaycodeWeb.PlayShowLive do
             <div :if={@play.sources != []} id="meta-sources" class="scroll-mt-20">
               <div :for={source <- @play.sources} class="mt-4 text-xs text-base-content/70">
                 <p :if={source.note} class="italic"><.inline_content text={source.note} /></p>
-                <p :if={provenance = PlayLabels.provenance(source)}>
-                  {gettext("Provenance")}: {provenance}
-                </p>
               </div>
             </div>
 
