@@ -1507,6 +1507,53 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(xml, "emph", within: "trailer") == ["PRIMER"]
     end
 
+    # 70 acts in 39 plays of the corpus end with a scene holding nothing but its closing
+    # words ("FIN DE CORIOLANO.", "Finis actus primi.", "T E L Ó N"): their trailer,
+    # encoded as a scene. The GitHub copy of EMOTHE0689 was corrected the same way.
+    test "a last scene holding only closing words is its act's trailer" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="act" n="5">
+              <div2 type="scene"><head>Escena 1</head>
+                <sp><speaker>X</speaker><l>Verso.</l></sp>
+              </div2>
+              <div2 type="scene"><head>FIN DE <emph>CORIOLANO</emph>.</head></div2>
+            </div1>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "head", within: "div2") == ["Escena 1"]
+      assert reading_texts(xml, "trailer") == ["FIN DE CORIOLANO."]
+      assert xml_texts(xml, "emph", within: "trailer") == ["CORIOLANO"]
+    end
+
+    # The 63 other scenes of the corpus holding only a heading ("ACTO 2", "SCENA MUTA")
+    # are not closing words, and closing words before another scene close nothing.
+    test "a heading-only scene stays a scene unless it closes its act" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="act" n="1">
+              <div2 type="scene"><head>FIN DE LA PRIMERA PARTE</head></div2>
+              <div2 type="scene"><head>Escena 1</head>
+                <sp><speaker>X</speaker><l>Verso.</l></sp>
+              </div2>
+              <div2 type="scene"><head>ACTO 2</head></div2>
+            </div1>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "head", within: "div2") ==
+               ["FIN DE LA PRIMERA PARTE", "Escena 1", "ACTO 2"]
+
+      assert xml_texts(xml, "trailer") == []
+    end
+
     test "a speech keeps its speaker, who it is, and its verse" do
       xml =
         roundtrip(

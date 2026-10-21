@@ -587,6 +587,17 @@ defmodule Playcode.Export.StaticSiteTest do
     refute File.read!(Path.join([dir, "assets", "style.css"])) =~ ~r/url\(\s*["']?https?:/
   end
 
+  # An opening or closing formula (`.tr`), as emothe.uv.es set it: centred, in italics,
+  # an italic word in it set upright.
+  test "a formula is set centred and in italics" do
+    dir = generate!([complete_play()])
+    css = File.read!(Path.join([dir, "assets", "style.css"]))
+
+    assert css =~ ~r/\.tr \{[^}]*text-align: center/
+    assert css =~ ~r/\.tr \{[^}]*font-style: italic/
+    assert css =~ ~r/\.tr em \{[^}]*font-style: normal/
+  end
+
   # The muted grey prints the Folio passages, the notes' heads and every caption: WCAG AA
   # asks 4.5:1 for text, in the light theme and the dark one, on the paper, a raised box, a
   # targeted line or note number (`--mark`) and a table's light rule (`--hair-2`).

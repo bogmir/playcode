@@ -110,7 +110,12 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
 
     conn = get(conn, ~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{trailed.id}"]}")
 
-    assert response(conn, 200) =~ "FIN DEL PRIMER ACTO"
+    body = response(conn, 200)
+    assert body =~ "FIN DEL PRIMER ACTO"
+    # Centred and in italics, as the play's own downloads set it.
+    assert body =~ ~r/\.trailer \{[^}]*text-align: center/
+    assert body =~ ~r/\.trailer \{[^}]*font-style: italic/
+    assert body =~ ~r/\.trailer em \{[^}]*font-style: normal/
   end
 
   # Question 41: the Arte nuevo and its translations, compared, each poem's dedication.

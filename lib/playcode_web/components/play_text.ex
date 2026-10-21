@@ -184,7 +184,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         <.inline_content text={@paratext.heading} />
       </h3>
       <div class="whitespace-pre-line"><.inline_content text={@paratext.content} /></div>
-      <p :if={@paratext.trailer} class="text-center mt-4">
+      <p :if={@paratext.trailer} class="text-center italic [&_em]:not-italic mt-4">
         <.inline_content text={@paratext.trailer} />
       </p>
     </div>
@@ -353,6 +353,20 @@ defmodule PlaycodeWeb.Components.PlayText do
         show_numbers={@show_line_numbers}
       />
     </div>
+    """
+  end
+
+  # An opening formula (the Arte nuevo's dedication) or a closing one, centred alike and,
+  # as emothe.uv.es set them, in italics.
+  defp render_element(%{element: %{type: type}} = assigns) when type in ~w(opener trailer) do
+    ~H"""
+    <p :if={@element.content} class="my-4 text-center italic [&_em]:not-italic">
+      <.inline_content
+        text={@element.content}
+        notes={@element.notes}
+        show_stage={@show_stage_directions}
+      />
+    </p>
     """
   end
 
