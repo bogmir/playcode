@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 21 October 2026. 47 questions, 27 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 21 October 2026. 48 questions, 27 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -296,7 +296,7 @@
       <li><a href="#t-not-plays">Texts that are not plays</a><span class="nums">41</span></li>
       <li><a href="#t-cast-lists">Several cast lists</a><span class="nums">42–43</span></li>
       <li><a href="#t-split">Split verses</a><span class="nums">44–45</span></li>
-      <li><a href="#t-github">Work only in the GitHub copy</a><span class="nums">46–47</span></li>
+      <li><a href="#t-github">Work only in the GitHub copy</a><span class="nums">46–48</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
@@ -1801,7 +1801,7 @@
 
   <section id="t-github" aria-labelledby="h-github">
     <h2 id="h-github">Work only in the GitHub copy</h2>
-    <p>The <code>TEI_XML</code> folder of <a href="https://github.com/JesusTronch/EMOTHE/tree/main/TEI_XML">github.com/JesusTronch/EMOTHE</a> holds the project’s working files as they stood on 10 December 2024. For two plays it has work that neither the reading page nor the <code>[xml]</code> download of emothe.uv.es shows, so it may be unfinished. Playcode keeps the published version of both until you say otherwise.</p>
+    <p>The <code>TEI_XML</code> folder of <a href="https://github.com/JesusTronch/EMOTHE/tree/main/TEI_XML">github.com/JesusTronch/EMOTHE</a> holds the project’s working files as they stood on 10 December 2024. For four plays it has work that the <code>[xml]</code> download of emothe.uv.es lacks and that Playcode cannot take without you: it may be unfinished, or it leaves something out. Playcode keeps the published version of each until you answer.</p>
 
     <div class="q" id="q46" data-q="q46" data-n="46">
       <span class="q-num" aria-hidden="true">46</span>
@@ -1843,6 +1843,29 @@
         <div>
           <label class="label" for="q47-text">Notes</label>
           <textarea id="q47-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q48" data-q="q48" data-n="48">
+      <span class="q-num" aria-hidden="true">48</span>
+      <div class="q-body">
+        <h3>Should <i>Friar Bacon and Friar Bungay</i> (EMOTHE0187) and <i>Fray Bacon y Fray Bungay</i> (EMOTHE0299) tag names and Latin phrases instead of annotating them?</h3>
+        <p class="why">In the published files, places, trades, props and Latin phrases carry a note each: 98 in the English play, 60 of them with an explanation (“nobile decus”: “Your worshipful honour.”), and 24 Latin phrases in the Spanish one, all explained. The GitHub files tag these words instead (<code>&lt;rs type="latinismo" n="2004"&gt;nobile decus&lt;/rs&gt;</code>), with FileMaker’s number for the note and no text, and the English play gains 50 mythological names tagged the same way. The explanations are then no longer in the file, so neither Playcode nor anyone reading the file can show them. The GitHub files also have the 2020 header, and the English one gives 652 of its notes to the digital editor where the published file gives them to the editor.</p>
+        <p class="why">Playcode keeps the published files of both plays until you answer. It does not read these tags yet: it would print the words without a note.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q48-o1"><input type="radio" id="q48-o1" name="q48-choice" value="Keep the notes; take only the GitHub header">Keep the notes; take only the GitHub header</label>
+            <label for="q48-o2"><input type="radio" id="q48-o2" name="q48-choice" value="Tag the words, as GitHub does; we will send the explanations from FileMaker">Tag the words, as GitHub does; we will send the explanations from FileMaker</label>
+            <label for="q48-o3"><input type="radio" id="q48-o3" name="q48-choice" value="Keep the published files as they are">Keep the published files as they are</label>
+            <label for="q48-o4"><input type="radio" id="q48-o4" name="q48-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q48-text">Notes, and whether the notes are the editor’s or the digital editor’s</label>
+          <textarea id="q48-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
