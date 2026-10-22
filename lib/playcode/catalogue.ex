@@ -214,14 +214,16 @@ defmodule Playcode.Catalogue do
   def update_verse_count(play_id) do
     alias Playcode.PlayContent.Element
 
-    # Count distinct line numbers rather than raw elements,
-    # because split verses (shared lines between characters) share the same number
+    # The numbered verses, a split verse once, by its first part: distinct numbers undercount
+    # a play whose numbering starts again in each act or scene. A verse with no number waits
+    # on question 23's rule for the form (docs/backlog.md, *The automatic form*).
     count =
       Element
       |> where(play_id: ^play_id)
       |> where(type: "verse_line")
       |> where([e], not is_nil(e.line_number))
-      |> select([e], count(e.line_number, :distinct))
+      |> where([e], is_nil(e.part) or e.part in ["", "I"])
+      |> select([e], count(e.id))
       |> Repo.one()
 
     Play

@@ -1807,6 +1807,21 @@ defmodule Playcode.TeiRoundtripTest do
       # Split halves share one line number, so they are one verse.
       assert xml_elements(xml, "extent") == [{%{"ana" => "verso"}, "2 versos"}]
     end
+
+    # La tragedia española's file says "3820 versos", its numbered verses, where distinct
+    # numbers gave 309, its numbering starting again in each act. A verse with no number is
+    # not counted, until question 23's rule for the form (docs/backlog.md).
+    test "the extent counts each numbered verse where numbering starts again" do
+      act = fn n ->
+        ~s(<div1 type="acto" n="#{n}"><head>ACTO #{n}</head>) <>
+          ~s(<sp><speaker>A</speaker><lg><l n="1">uno</l><l n="2" part="I">dos</l></lg></sp>) <>
+          ~s(<sp><speaker>B</speaker><lg><l part="F">dos</l><l>sin número</l></lg></sp></div1>)
+      end
+
+      xml = roundtrip(tei(body: act.(1) <> act.(2)))
+
+      assert xml_elements(xml, "extent") == [{%{"ana" => "verso"}, "4 versos"}]
+    end
   end
 
   describe "in-text notes" do

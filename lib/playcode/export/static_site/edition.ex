@@ -411,9 +411,18 @@ defmodule Playcode.Export.StaticSite.Edition do
     if MapSet.member?(used, candidate), do: unique(base, used, k + 1), else: candidate
   end
 
+  # A play that numbers each scene from 1 gives a number again in another scene or division.
+  # One repeated within a scene (a data error, or a number a curator typed again) gets a
+  # suffix (`unique/3`) instead: taken for a restart, it changed every anchor in the play.
   defp restarts?(items) do
-    numbers = for %{element: %{line_number: n}} when is_integer(n) <- items, do: n
-    length(numbers) != length(Enum.uniq(numbers))
+    for(
+      %{element: %{line_number: n}} = item <- items,
+      is_integer(n),
+      uniq: true,
+      do: {n, {item.division.id, item.scene && item.scene.id}}
+    )
+    |> Enum.frequencies_by(&elem(&1, 0))
+    |> Enum.any?(fn {_n, units} -> units > 1 end)
   end
 
   # A division's children on its page: a scene by its number, `<page>-s<n>`; a cast list by

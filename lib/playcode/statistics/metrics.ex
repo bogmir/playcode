@@ -106,6 +106,10 @@ defmodule Playcode.Statistics.Metrics do
         %{kind: :verse, element: %{part: part}} = item, last when part in ["M", "F"] ->
           {Map.put(item, :number, last), last}
 
+        # A verse with no number, whole or a first part: its fragments have none either.
+        %{kind: :verse} = item, _last ->
+          {Map.put(item, :number, nil), nil}
+
         item, last ->
           {Map.put(item, :number, nil), last}
       end)

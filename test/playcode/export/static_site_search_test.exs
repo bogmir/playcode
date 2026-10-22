@@ -463,4 +463,52 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     srcs = page |> LazyHTML.query("script") |> LazyHTML.attribute("src")
     assert "assets/search.js" in Enum.map(srcs, &(&1 |> String.split("?") |> hd()))
   end
+
+  # A last part belongs to the verse its first part opened. After a first part with no
+  # number, a verse added in the Content tab, it has none either: it borrowed the number
+  # of the verse before.
+  test "a note on a last part whose first part has no number cites the act alone" do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="jornada" n="1"><head>Jornada I</head>
+            <sp><speaker>A</speaker><lg><l n="10">Diez</l><l part="I">Sin número</l></lg></sp>
+            <sp><speaker>B</speaker><lg><l part="F">fin<note n="1"><p>Nota.</p></note></l></lg></sp>
+          </div1>
+          """
+        )
+      )
+
+    dir = generate!([play], all: true)
+
+    assert {"lines", _, %{"lines" => [[_page, "nref-1", "I" | _]]}} =
+             load_js!(dir, "search/lines/#{play.code}/n0.js")
+  end
+
+  # A number repeated within one scene is a data error (Timon of Athens' 551, twice) or a
+  # number a curator typed again; taken for numbering that starts again in each scene, it
+  # changed how every line of the play is cited, and every anchor.
+  test "a number repeated within a scene leaves the play cited as numbered through" do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>ACTO I</head>
+            <div2 type="escena" n="1"><head>ESCENA I</head>
+              <sp><speaker>A</speaker><lg><l n="1">Uno</l><l n="2">Dos</l><l n="2">Otra vez dos</l></lg></sp>
+            </div2>
+            <div2 type="escena" n="2"><head>ESCENA II</head>
+              <sp><speaker>B</speaker><lg><l n="3">Tres<note n="1"><p>Nota.</p></note></l></lg></sp>
+            </div2>
+          </div1>
+          """
+        )
+      )
+
+    dir = generate!([play], all: true)
+
+    assert {"lines", _, %{"lines" => [[_page, "nref-1", "I, 3" | _]]}} =
+             load_js!(dir, "search/lines/#{play.code}/n0.js")
+  end
 end

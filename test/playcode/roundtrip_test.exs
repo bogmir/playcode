@@ -520,13 +520,14 @@ defmodule Playcode.RoundtripTest do
     end)
   end
 
-  defp distinct_verse_numbers(xml) do
+  # The numbered verse lines that are whole verses or a split verse's first part. This
+  # counted distinct numbers until 2026-10-22, the rule `Catalogue.update_verse_count/1` had,
+  # which gave 309 for La tragedia española, whose file says "3820 versos", its numbering
+  # starting again in each act.
+  defp numbered_verses(xml) do
     xml
     |> verse_line_tokens_in_order()
-    |> Enum.map(fn {_id, n, _part} -> n end)
-    |> Enum.reject(&is_nil/1)
-    |> MapSet.new()
-    |> MapSet.size()
+    |> Enum.count(fn {_id, n, part} -> n != nil and part in [nil, "I"] end)
   end
 
   defp assert_order_preserved(code, label, original_list, exported_list) do
@@ -537,7 +538,7 @@ defmodule Playcode.RoundtripTest do
   end
 
   defp assert_derived_verse_fields(code, play, original_xml, exported_xml) do
-    expected = distinct_verse_numbers(original_xml)
+    expected = numbered_verses(original_xml)
 
     assert play.verse_count == expected,
            "#{code} derived verse_count mismatch: expected=#{expected} got=#{inspect(play.verse_count)}"
