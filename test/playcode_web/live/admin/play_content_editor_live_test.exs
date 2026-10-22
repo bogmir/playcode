@@ -168,20 +168,45 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
         )
       )
 
+    [{part, :completes_nothing}] = PlayContent.split_verses_out_of_order(play.id)
     {:ok, lv, html} = live(conn, ~p"/admin/plays/#{play.id}/content")
 
-    assert html =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    assert html =~
+             n(
+               "%{count} part of a split verse out of order:",
+               "%{count} parts of split verses out of order:",
+               1
+             )
+
     assert html =~ t("a last part that completes no verse")
 
     # The line's form opens in place: the tab, the scene and the selections stay.
     lv |> element("button", "sv-0001") |> render_click()
-    lv |> form("#element-form", element: %{"part" => ""}) |> render_submit()
-    # What Playcode.Export.PlayChangeListener relays when the edit commits.
-    Playcode.PlayContent.notify_changed(play.id)
+    html = lv |> form("#element-form", element: %{"part" => ""}) |> render_submit()
 
-    refute render(lv) =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    # At once, not when the relay of the commit arrives: the tests' sandbox never commits.
+    refute html =~
+             n(
+               "%{count} part of a split verse out of order:",
+               "%{count} parts of split verses out of order:",
+               1
+             )
+
     assert [{%{"xml:id" => "sv-0001"} = line, "O molto"}] = xml_elements(export_tei(play), "l")
     refute Map.has_key?(line, "part")
+
+    # An edit made elsewhere arrives through what Playcode.Export.PlayChangeListener relays.
+    {:ok, _} =
+      PlayContent.update_element(PlayContent.get_element(play.id, part.id), %{"part" => "F"})
+
+    PlayContent.notify_changed(play.id)
+
+    assert render(lv) =~
+             n(
+               "%{count} part of a split verse out of order:",
+               "%{count} parts of split verses out of order:",
+               1
+             )
   end
 
   # The tab adds lines in an act's cast list, and Word nests a stanza in a stanza: the
@@ -228,7 +253,13 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
     {:ok, _lv, html} = live(conn, ~p"/admin/plays/#{play.id}/content")
 
-    assert html =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    assert html =~
+             n(
+               "%{count} part of a split verse out of order:",
+               "%{count} parts of split verses out of order:",
+               1
+             )
+
     assert html =~ "en el elenco"
     assert html =~ t("a first part that nothing completes")
   end

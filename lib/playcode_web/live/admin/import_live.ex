@@ -303,8 +303,10 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                 </ul>
               </div>
               <div :if={p.split_verses != []} class="mt-1 text-xs text-warning">
-                {gettext("%{count} part(s) of split verses out of order:",
-                  count: length(p.split_verses)
+                {ngettext(
+                  "%{count} part of a split verse out of order:",
+                  "%{count} parts of split verses out of order:",
+                  length(p.split_verses)
                 )}
                 <ul class="ml-4 list-disc">
                   <li :for={part <- p.split_verses}>

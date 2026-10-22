@@ -67,10 +67,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
         t("No longer published (a draft or archived); Generate takes it out.")
       )
 
-  # ConnCase's t/2 is gettext/3, which cannot reach a plural entry.
-  defp n(singular, plural, count),
-    do: Gettext.ngettext(PlaycodeWeb.Gettext, singular, plural, count)
-
   # Nothing in the export reads a base URL: the site links relatively, so it works in any
   # folder and opened from disk.
   test "the form asks for no base URL", %{conn: conn} do

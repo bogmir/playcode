@@ -1150,7 +1150,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     {:noreply,
      socket
-     |> assign(play: play, split_verses: PlayContent.split_verses_out_of_order(play.id))
+     |> assign(play: play)
      |> reload_paratexts()
      |> reload_characters()
      |> reload_divisions()
@@ -1198,6 +1198,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     Map.new(lists ++ holders, &{&1.id, PlayContent.deletion_effect(&1).removed})
   end
 
+  # Every write to the text ends here, so the split verses' warning follows each at once.
   defp reload_elements(socket) do
     socket =
       case socket.assigns.selected_division_id do
@@ -1205,7 +1206,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         div_id -> assign(socket, elements: PlayContent.list_elements_for_division(div_id))
       end
 
-    reload_preview(socket)
+    socket
+    |> assign(split_verses: PlayContent.split_verses_out_of_order(socket.assigns.play.id))
+    |> reload_preview()
   end
 
   defp reload_speeches(socket) do
@@ -1405,8 +1408,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       <div :if={@split_verses != []} class="alert alert-warning mb-6">
         <div>
           <p>
-            {gettext("%{count} part(s) of split verses out of order:",
-              count: length(@split_verses)
+            {ngettext(
+              "%{count} part of a split verse out of order:",
+              "%{count} parts of split verses out of order:",
+              length(@split_verses)
             )}
           </p>
           <ul class="ml-4 list-disc">

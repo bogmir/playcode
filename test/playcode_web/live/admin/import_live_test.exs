@@ -104,7 +104,13 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
          )}
       ])
 
-    assert html =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    assert html =~
+             n(
+               "%{count} part of a split verse out of order:",
+               "%{count} parts of split verses out of order:",
+               1
+             )
+
     assert html =~ "imp-0001"
     assert html =~ t("a last part that completes no verse")
     assert Catalogue.list_plays(search: code) == []
