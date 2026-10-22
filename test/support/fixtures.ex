@@ -168,7 +168,7 @@ defmodule Playcode.TestFixtures do
         type: "verse_line",
         content: "A verse line",
         line_number: 1,
-        part: "M",
+        part: "I",
         position: 1
       })
 

@@ -18,7 +18,7 @@ defmodule Playcode.StatisticsTest do
         parent_id: line_group.id,
         type: "verse_line",
         content: "Aside line",
-        line_number: 2,
+        line_number: 1,
         is_aside: true,
         part: "F",
         position: 4
@@ -28,14 +28,39 @@ defmodule Playcode.StatisticsTest do
 
     assert stat.data["num_acts"] == 1
     assert get_in(stat.data, ["scenes", "total"]) == 1
-    assert stat.data["total_verses"] == 2
-    assert stat.data["split_verses"] == 2
+    # The fixture's first part and this last part are one verse. Until 2026-10-22 both
+    # counted parts: 2 verses, 2 split verses.
+    assert stat.data["total_verses"] == 1
+    assert stat.data["split_verses"] == 1
     assert stat.data["total_prose_fragments"] == 1
     assert stat.data["total_stage_directions"] == 1
     assert stat.data["total_asides"] == 1
     assert stat.data["aside_verses"] == 1
 
     assert [%{"name" => "ALFA", "speeches" => 1}] = stat.data["character_appearances"]
+  end
+
+  # El amor al uso (EMOTHE0384) showed 816 split verses, its parts, for its 400, and 3,485
+  # verses for the site's 3,069.
+  test "a split verse counts once, however many parts it has" do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="jornada" n="1"><head>Jornada I</head>
+            <sp><speaker>ANA</speaker><l n="1">Verso entero</l><l n="2" part="I">¿Quién</l></sp>
+            <sp><speaker>BLAS</speaker><l n="2" part="F">va?</l><l n="3" part="I">Yo,</l></sp>
+            <sp><speaker>ANA</speaker><l n="3" part="M">¿tú?</l></sp>
+            <sp><speaker>BLAS</speaker><l n="3" part="F">Yo mismo.</l></sp>
+          </div1>
+          """
+        )
+      )
+
+    data = Statistics.get_statistics(play.id).data
+    assert data["split_verses"] == 2
+    assert data["total_verses"] == 3
+    assert [%{"count" => 3}] = data["verse_distribution"]
   end
 
   test "an inline stage direction is counted as a stage direction, and its words are not spoken" do

@@ -13,7 +13,7 @@ defmodule Playcode.Statistics do
 
   # Bump when compute/1 changes what it stores: a cached row with another version is
   # recomputed on its next read, so no migration or manual recompute is needed.
-  @version 4
+  @version 6
 
   # A cached row is current only for the play's content_version it was computed at:
   # Postgres moves that version on every edit to the play's text, so no edit has to
@@ -77,7 +77,7 @@ defmodule Playcode.Statistics do
       "act_label" => act_label(acts),
       "num_acts" => length(acts),
       "scenes" => compute_scenes(play_id, acts),
-      "total_verses" => count_by_type(all_elements, "verse_line"),
+      "total_verses" => length(whole_verses(all_elements)),
       "verse_distribution" => verse_distribution(all_elements, division_to_act, acts),
       "split_verses" => count_split_verses(all_elements),
       "prose_fragments" => count_prose_fragments(all_elements, division_to_act, acts),
@@ -177,7 +177,7 @@ defmodule Playcode.Statistics do
     do: elements |> Enum.map(&InlineMarkup.stage_count(&1.content)) |> Enum.sum()
 
   defp verse_distribution(elements, division_to_act, acts) do
-    verses = Enum.filter(elements, &(&1.type == "verse_line"))
+    verses = whole_verses(elements)
 
     by_act =
       Enum.group_by(verses, fn el ->
@@ -191,10 +191,13 @@ defmodule Playcode.Statistics do
     end)
   end
 
+  # A split verse counts once, at its first part, as the site's verse total does
+  # (`Metrics.whole_verse?/1`).
+  defp whole_verses(elements),
+    do: Enum.filter(elements, &(&1.type == "verse_line" && &1.part in [nil, "", "I"]))
+
   defp count_split_verses(elements) do
-    elements
-    |> Enum.filter(&(&1.type == "verse_line" && &1.part in ["I", "M", "F"]))
-    |> Enum.count()
+    Enum.count(elements, &(&1.type == "verse_line" && &1.part == "I"))
   end
 
   defp count_prose_fragments(elements, division_to_act, acts) do
