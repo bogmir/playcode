@@ -2250,7 +2250,7 @@ defmodule Playcode.Import.TeiParser do
     date = find_child(details, "date")
     venue = typed(details, "rs", "venue")
     place = find_child(details, "placeName")
-    {year_from, year_to} = creation_years(attrs_of(date))
+    {year_from, year_to} = date |> attrs_of() |> creation_years() |> usable_performance_years()
     {source, volume, pages} = performance_source(find_child(children, "biblStruct"))
 
     %{
@@ -2269,6 +2269,15 @@ defmodule Playcode.Import.TeiParser do
       source_pages: pages,
       cast_from_cast_list: attr_value(attrs, "corresp") == "#castlist"
     }
+  end
+
+  # As a composition date's (`usable_creation_years?/2`), a year the column cannot hold or a
+  # last year before the first is dropped, not refused: the performance keeps its date's
+  # words, and `Performance.changeset/2` reads the years from them.
+  defp usable_performance_years({from, to} = years) do
+    in_range? = Enum.all?([from, to], &(is_nil(&1) or &1 in Performance.year_range()))
+
+    if in_range? and (is_nil(from) or is_nil(to) or from <= to), do: years, else: {nil, nil}
   end
 
   # A text of a performance: the words as `text_content/2` reads them, italics as <<…>>

@@ -44,7 +44,11 @@ defmodule Playcode.Performances.Performance do
 
   @text ~w(date_text venue note source_volume source_pages)a
 
-  @year_bounds [greater_than_or_equal_to: 1000, less_than_or_equal_to: 9999]
+  @year_range 1000..9999
+  @year_bounds [
+    greater_than_or_equal_to: @year_range.first,
+    less_than_or_equal_to: @year_range.last
+  ]
 
   # A performance says something when one of these is filled.
   @described ~w(date_text venue venue_type company_id note)a
@@ -77,6 +81,8 @@ defmodule Playcode.Performances.Performance do
   end
 
   def venue_types, do: @types
+
+  def year_range, do: @year_range
 
   @doc "The label of a venue type in `locale` (`\"es\"` or `\"en\"`), as FileMaker words it."
   def venue_type_label(type, locale), do: @labels[type][locale]

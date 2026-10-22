@@ -4032,6 +4032,23 @@ defmodule Playcode.TeiRoundtripTest do
       end
     end
 
+    # As a composition date's: a hand-edited file's bad year must not refuse the whole file.
+    test "a year the column cannot hold, or a last year before the first, gives way to the date's words" do
+      for {date, text, years} <- [
+            {~s(<date when="16100">1610</date>), "1610", {1610, 1610}},
+            {~s(<date notBefore="1612" notAfter="1608">c. 1610</date>), "c. 1610", {1610, 1610}},
+            {~s(<date when="12">desconocida</date>), "desconocida", {nil, nil}}
+          ] do
+        play =
+          import_tei!(
+            tei(front: ~s(<performance xml:id="performance-1"><p>#{date}</p></performance>))
+          )
+
+        assert [%{date_text: ^text, year_from: from, year_to: to}] = performances(play)
+        assert {from, to} == years, date
+      end
+    end
+
     @tag :capture_log
     test "a place or a state the file does not declare is dropped, the performance kept" do
       play =
