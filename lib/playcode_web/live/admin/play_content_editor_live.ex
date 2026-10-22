@@ -573,8 +573,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         position: pos
       }
 
-      attrs = maybe_add_line_number(attrs, element_type, play.id)
-
       assign(socket,
         modal: :element,
         editing: nil,
@@ -791,8 +789,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       position: before_pos
     }
 
-    attrs = maybe_add_line_number(attrs, element_type, play.id)
-
     socket
     |> reload_elements()
     |> assign(
@@ -806,18 +802,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp delete_element(socket, element) do
     play_id = socket.assigns.play.id
-
-    should_shift_down =
-      element.type == "verse_line" &&
-        element.line_number != nil &&
-        !PlayContent.split_verse?(play_id, element.id, element.line_number)
-
     {:ok, _} = PlayContent.delete_element(element)
-
-    if should_shift_down do
-      PlayContent.shift_line_numbers_down(play_id, element.line_number)
-    end
-
     PlayContent.refresh_derived(play_id)
     LiveHelpers.log_activity(socket, "delete", "element", element.id, %{type: element.type})
 
@@ -1116,34 +1101,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     result =
       case socket.assigns.editing do
         nil ->
-          el_params =
-            el_params
-            |> Map.put("play_id", play.id)
-            |> Map.put("division_id", socket.assigns.selected_division_id)
-
-          changeset = PlayContent.change_element(%PlayContent.Element{}, el_params)
-
-          if changeset.valid? do
-            if el_params["type"] == "verse_line" do
-              case el_params["line_number"] do
-                nil ->
-                  :ok
-
-                "" ->
-                  :ok
-
-                ln ->
-                  line_num = if is_binary(ln), do: String.to_integer(ln), else: ln
-                  PlayContent.shift_line_numbers(play.id, line_num)
-              end
-            end
-
-            PlayContent.create_element(el_params)
-          else
-            # A refusal comes back before any later line is renumbered for a line that
-            # will not be saved.
-            {:error, %{changeset | action: :insert}}
-          end
+          el_params
+          |> Map.put("play_id", play.id)
+          |> Map.put("division_id", socket.assigns.selected_division_id)
+          |> PlayContent.create_element()
 
         element ->
           PlayContent.update_element(element, el_params)
@@ -1367,16 +1328,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       end
     end)
   end
-
-  defp maybe_add_line_number(attrs, "verse_line", play_id) do
-    parent_id = attrs[:parent_id] || attrs["parent_id"]
-    position = attrs[:position] || attrs["position"]
-
-    line_number = PlayContent.auto_line_number(play_id, parent_id, position)
-    Map.put(attrs, :line_number, line_number)
-  end
-
-  defp maybe_add_line_number(attrs, _type, _play_id), do: attrs
 
   # The types a division may take at its level: an act's children are its scenes and cast
   # lists. A type a file gave that is not among them stays offered, so an edit keeps it.

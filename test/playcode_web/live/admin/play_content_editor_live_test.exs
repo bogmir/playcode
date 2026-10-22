@@ -64,7 +64,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     play
     |> export_tei()
     |> xml_elements("l")
-    |> Enum.map(fn {attrs, text} -> {text, String.to_integer(attrs["n"])} end)
+    |> Enum.map(fn {attrs, text} -> {text, attrs["n"] && String.to_integer(attrs["n"])} end)
   end
 
   # Regression: archiving a play notifies its topic, and the editor reloaded it through
@@ -99,18 +99,22 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert xml_texts(export_tei(play), "stage") == ["Sale el Rey", "Entra un criado"]
   end
 
-  test "deleting a verse renumbers the verses after it", %{conn: conn, play: play} do
+  # A verse's number is the edition's, the one readers cite (TEI's `n`, a reference system),
+  # so adding or deleting a verse renumbers no other (decided 2026-10-22). These tests asserted
+  # the renumbering until then; it renumbered other acts' verses in a play whose numbering
+  # starts again in each act, and the whole play's after a deleted first part of a split verse.
+  test "deleting a verse leaves the others' numbers as they are", %{conn: conn, play: play} do
     lv = open_scene(conn, play)
 
     lv
     |> element("#{card(lv, "Primera línea")} button[aria-label='#{t("Delete")}']")
     |> render_click()
 
-    assert lines(play) == [{"Segunda línea", 1}, {"Tercera línea", 2}]
+    assert lines(play) == [{"Segunda línea", 2}, {"Tercera línea", 3}]
   end
 
-  test "a verse inserted above another takes its number and pushes the rest down",
-       %{conn: conn, play: play} do
+  # A number filled in was a guess, and a wrong one for a middle or last part of a split verse.
+  test "a verse inserted above another comes with no number", %{conn: conn, play: play} do
     lv = open_scene(conn, play)
 
     lv
@@ -122,8 +126,27 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert lines(play) == [
              {"Primera línea", 1},
              {"Segunda línea", 2},
+             {"Línea nueva", nil},
+             {"Tercera línea", 3}
+           ]
+  end
+
+  test "the number typed for a new verse renumbers no other", %{conn: conn, play: play} do
+    lv = open_scene(conn, play)
+
+    lv
+    |> element("#{card(lv, "Tercera línea")} button[aria-label='#{t("Insert Above")}']")
+    |> render_click()
+
+    lv
+    |> form("#element-form", element: %{"content" => "Línea nueva", "line_number" => "3"})
+    |> render_submit()
+
+    assert lines(play) == [
+             {"Primera línea", 1},
+             {"Segunda línea", 2},
              {"Línea nueva", 3},
-             {"Tercera línea", 4}
+             {"Tercera línea", 3}
            ]
   end
 
