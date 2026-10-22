@@ -87,6 +87,29 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
     assert Catalogue.get_play_by_code!(code)
   end
 
+  # TEI's schema lets a split verse's parts out of order through (EMOTHE0284's "O molto",
+  # a last part after prose): the curator sees them, by identifier, before the play comes in.
+  test "a new play whose split verses have parts out of order is shown first", %{conn: conn} do
+    code = "IMP#{System.unique_integer([:positive])}"
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
+
+    html =
+      upload(lv, [
+        {"new.xml",
+         tei(
+           code: code,
+           body:
+             ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><p>Prosa.</p></sp>) <>
+               ~s(<sp><speaker>B</speaker><lg><l xml:id="imp-0001" part="F">O molto</l></lg></sp></div1>)
+         )}
+      ])
+
+    assert html =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    assert html =~ "imp-0001"
+    assert html =~ t("a last part that completes no verse")
+    assert Catalogue.list_plays(search: code) == []
+  end
+
   describe "a file whose code is already a play" do
     setup %{conn: conn} do
       code = "IMP#{System.unique_integer([:positive])}"

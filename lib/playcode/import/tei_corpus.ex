@@ -133,11 +133,22 @@ defmodule Playcode.Import.TeiCorpus do
     [adds: preview.bibliography_adds, skips: preview.bibliography_skips]
     |> Enum.reject(&(elem(&1, 1) == []))
     |> Enum.map_join(fn {verb, refs} -> ", #{verb} #{length(refs)} reference(s)" end)
+    |> Kernel.<>(split_verses(preview.split_verses))
   end
+
+  defp split_verses([]), do: ""
+  defp split_verses(parts), do: ", #{length(parts)} split-verse part(s) out of order"
 
   defp added(preview) do
     for(citation <- preview.bibliography_adds, do: {:info, "      + #{citation}"}) ++
-      for(citation <- preview.bibliography_skips, do: {:info, "      - #{citation}"})
+      for(citation <- preview.bibliography_skips, do: {:info, "      - #{citation}"}) ++
+      for(part <- preview.split_verses, do: {:info, "      ! " <> split_verse(part)})
+  end
+
+  defp split_verse(%{line_id: id, part: part, text: text, problem: problem}) do
+    what = Map.fetch!(%{"I" => "first", "M" => "middle", "F" => "last"}, part)
+    why = if problem == :never_completed, do: "never completed", else: "completes no verse"
+    "#{id || "?"} #{what} part, #{why}: #{text}"
   end
 
   defp replaces(preview, undone) do

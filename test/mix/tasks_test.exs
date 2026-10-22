@@ -135,6 +135,42 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert out =~ ~r/\n\s+- Autor, Ana\. Liber/
     end
 
+    # TEI's schema checks a part's value, not its order, so a valid file can hold a last
+    # part that completes nothing (EMOTHE0284's "O molto") or a first part nothing
+    # completes. A split verse may cross scenes, never acts.
+    test "--dry-run lists the parts of split verses out of order", %{dir: dir} do
+      File.write!(
+        Path.join(dir, "TASK0005_Quinta.xml"),
+        tei(
+          code: "TASK0005",
+          title: "Quinta",
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <div2 type="escena"><head>Escena 1</head>
+              <sp><speaker>A</speaker><p>Prosa.</p></sp>
+              <sp><speaker>B</speaker><lg><l xml:id="q-0001" part="F">O molto</l></lg></sp>
+              <sp><speaker>C</speaker><lg><l xml:id="q-0002" n="1" part="I">Abre el verso</l></lg></sp>
+            </div2>
+            <div2 type="escena"><head>Escena 2</head>
+              <sp><speaker>D</speaker><lg><l xml:id="q-0003" part="F">y lo cierra en otra escena</l><l xml:id="q-0004" n="2" part="I">Sei qui, fratello?</l></lg></sp>
+              <sp><speaker>E</speaker><p>Prosa.</p></sp>
+              <sp><speaker>F</speaker><lg><l xml:id="q-0005" n="3">Un verso entero.</l><l xml:id="q-0006" part="M">Hippolita!</l></lg></sp>
+            </div2>
+          </div1>
+          """
+        )
+      )
+
+      out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
+
+      assert out =~ "TASK0005  new, 3 split-verse part(s) out of order"
+      assert out =~ ~r/\n\s+! q-0001 last part, completes no verse: O molto\n/
+      assert out =~ ~r/\n\s+! q-0004 first part, never completed: Sei qui, fratello\?\n/
+      assert out =~ ~r/\n\s+! q-0006 middle part, completes no verse: Hippolita!\n/
+      refute out =~ "q-0002"
+      refute out =~ "q-0003"
+    end
+
     test "imports once, skips on the next run, and re-imports under --force", %{dir: dir} do
       assert run("playcode.import.tei", ["--dir", dir]) =~ "imported 1, skipped 0, failed 0"
       assert [%{title: "Primera"}] = Catalogue.list_plays()

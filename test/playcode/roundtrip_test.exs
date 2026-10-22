@@ -645,6 +645,11 @@ defmodule Playcode.RoundtripTest do
     original_xml = read_original(path)
     orig_counts = original_xml |> structural_counts() |> closing_scenes_as_trailers(original_xml)
 
+    # TEI's schema lets a split verse's parts out of order through; the corpus is clean of
+    # them since 2026-10-22 but for EMOTHE0284's two, waiting on question 50.
+    assert {:ok, %{split_verses: []}} = Playcode.Import.TeiImport.preview_import(path),
+           "#{code} has split-verse parts out of order (mix playcode.import.tei --dry-run)"
+
     assert {:ok, play} = Playcode.Import.TeiImport.import_file(path),
            "Failed to import #{path}"
 

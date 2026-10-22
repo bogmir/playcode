@@ -19,7 +19,8 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Performances
   alias Playcode.Performances.Performance
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, Character, Division, Element, ElementCharacter, Note}
+  alias Playcode.PlayContent.{CastListEntry, Character, Division, Element, ElementCharacter}
+  alias Playcode.PlayContent.{InlineMarkup, Note}
   alias Playcode.Places
   alias Playcode.Repo
   alias Playcode.Text
@@ -74,7 +75,8 @@ defmodule Playcode.Import.TeiImport do
   A re-import replaces the play's whole text and the editors, sources and paratexts the
   importer created itself; everything a researcher typed is kept, as are the columns
   the platform owns. This is what the admin import page and `--dry-run` print so that
-  nobody discovers the replacement afterwards.
+  nobody discovers the replacement afterwards. `:split_verses` lists the file's split-verse
+  parts out of order (`%{line_id, part, text, problem}`), which TEI's schema lets through.
   """
   def preview_import(path) do
     with {:ok, tei} <- TeiParser.parse_file(path), do: {:ok, preview(tei)}
@@ -91,10 +93,59 @@ defmodule Playcode.Import.TeiImport do
       replaces: replaced_counts(existing),
       edited: edited_count(existing),
       preserves: preserved_counts(existing),
-      preserves_fields: preserved_fields(existing)
+      preserves_fields: preserved_fields(existing),
+      split_verses: parts_out_of_order(tei.divisions)
     }
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
   end
+
+  # A split verse's parts in reading order: a first part opens it, middle parts carry it
+  # on, a last part closes it. TEI's schema checks a part's value, not this order. Checked
+  # act by act: a split verse crosses scenes (164 times in the corpus), never acts.
+  # `:completes_nothing` is a middle or last part with no verse open, `:never_completed`
+  # a first part no last part closes.
+  defp parts_out_of_order(divisions) do
+    Enum.flat_map(divisions, fn division ->
+      {problems, open} =
+        [division | division.divisions]
+        |> Enum.flat_map(& &1.elements)
+        |> Enum.flat_map(&verse_lines/1)
+        |> Enum.reduce({[], nil}, fn line, {problems, open} ->
+          case {line.part, open} do
+            {"I", _} ->
+              {never_completed(problems, open), line}
+
+            {part, nil} when part in ["M", "F"] ->
+              {[problem(line, :completes_nothing) | problems], nil}
+
+            {"M", _} ->
+              {problems, open}
+
+            {"F", _} ->
+              {problems, nil}
+
+            _whole ->
+              {never_completed(problems, open), nil}
+          end
+        end)
+
+      Enum.reverse(never_completed(problems, open))
+    end)
+  end
+
+  defp verse_lines(%{type: "verse_line"} = line), do: [line]
+  defp verse_lines(element), do: Enum.flat_map(element.elements, &verse_lines/1)
+
+  defp never_completed(problems, nil), do: problems
+  defp never_completed(problems, line), do: [problem(line, :never_completed) | problems]
+
+  defp problem(line, problem),
+    do: %{
+      line_id: line.line_id,
+      part: line.part,
+      text: InlineMarkup.plain(line.content),
+      problem: problem
+    }
 
   # The import's bibliography plan as it prints: the references the play would gain, and
   # those it would skip. A stale one, an older file's version of a reference corrected

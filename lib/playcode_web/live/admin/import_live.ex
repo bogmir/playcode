@@ -65,13 +65,15 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   end
 
   # An import that lands on a play we already hold replaces its whole text, and one whose
-  # file brings references may add one Playcode holds under a corrected description. Say
-  # so and wait for a click; a batch of new plays with no references goes straight through.
+  # file brings references may add one Playcode holds under a corrected description; a
+  # split verse's parts out of order are worth correcting in the file first. Say so and
+  # wait for a click; a batch of new plays with none of these goes straight through.
   defp start_or_confirm(socket, pending) do
     previews =
       for {path, filename} <- pending,
           {:ok, preview} <- [TeiImport.preview_import(path)],
-          preview.existing || preview.bibliography_adds != [] || preview.bibliography_skips != [],
+          preview.existing || preview.bibliography_adds != [] || preview.bibliography_skips != [] ||
+            preview.split_verses != [],
           do: Map.put(preview, :filename, filename)
 
     if previews == [] do
@@ -299,6 +301,16 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                   <li :for={citation <- p.bibliography_skips}>{citation}</li>
                 </ul>
               </div>
+              <div :if={p.split_verses != []} class="mt-1 text-xs text-warning">
+                {gettext("%{count} part(s) of split verses out of order:",
+                  count: length(p.split_verses)
+                )}
+                <ul class="ml-4 list-disc">
+                  <li :for={part <- p.split_verses}>
+                    <code>{part.line_id || "?"}</code> “{part.text}”, {split_verse_problem(part)}
+                  </li>
+                </ul>
+              </div>
             </li>
           </ul>
 
@@ -425,6 +437,12 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   end
 
   defp existing_count(previews), do: Enum.count(previews, & &1.existing)
+
+  defp split_verse_problem(%{problem: :never_completed}),
+    do: gettext("a first part that nothing completes")
+
+  defp split_verse_problem(%{part: "M"}), do: gettext("a middle part that completes no verse")
+  defp split_verse_problem(%{part: "F"}), do: gettext("a last part that completes no verse")
 
   defp tei_total(preview), do: TeiImport.mixed_ownership_total(preview.replaces)
   defp preserved_total(preview), do: TeiImport.mixed_ownership_total(preview.preserves)
