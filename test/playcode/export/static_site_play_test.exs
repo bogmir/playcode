@@ -389,6 +389,39 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  # EMOTHE0284's "O molto", EMOTHE0283's "Hippolita!": a part with no words before it to
+  # line up after was printed at the margin. emothe.uv.es indented it by a fixed step
+  # (`.versoM`, `.versoF`), as the play page does.
+  test "a middle or last part with no first part before it is indented by a fixed step" do
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <sp><speaker>A</speaker><p>Prosa.</p></sp>
+        <sp><speaker>B</speaker><lg type="free" part="F"><l part="F">O molto</l></lg></sp>
+        <sp><speaker>C</speaker><lg type="free" part="M"><l part="M">Hippolita!</l></lg></sp>
+        <sp><speaker>D</speaker><lg type="free"><l n="1" part="I">Verso</l><l part="F">partido</l></lg></sp>
+      </div1>
+      """)
+
+    for file <- ["act-1.html", "text.html"] do
+      classes =
+        for line <- dir |> page(play, file) |> LazyHTML.query(".l") |> Enum.to_list(),
+            into: %{},
+            do:
+              {squish(LazyHTML.text(line)),
+               line |> LazyHTML.attribute("class") |> hd() |> String.split()}
+
+      assert classes["O molto"] == ["l", "part-f"]
+      assert classes["Hippolita!"] == ["l", "part-m"]
+      # Lined up after "Verso" by its invisible lead, so no step on top of it.
+      assert classes["Verso partido"] == ["l"]
+    end
+
+    css = read!(dir, "assets/style.css")
+    assert css =~ ~r/^\.l\.part-m \.t \{[^}]*padding-left/m
+    assert css =~ ~r/^\.l\.part-f \.t \{[^}]*padding-left/m
+  end
+
   describe "a division too long for one page" do
     setup do
       # 72,000 bytes of text per scene: 144,000 in the act, over the 120,000 threshold.

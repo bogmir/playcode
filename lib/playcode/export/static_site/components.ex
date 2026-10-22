@@ -664,7 +664,12 @@ defmodule Playcode.Export.StaticSite.Components do
     ~H"""
     <div
       phx-no-format
-      class={["l", @el.rend == "indent" && "indent", Element.folio_only?(@el) && "fo"]}
+      class={[
+        "l",
+        @el.rend == "indent" && "indent",
+        Element.folio_only?(@el) && "fo",
+        orphan_part(@el, @ghost)
+      ]}
       id={@anchor}
     ><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true"><.inline text={@ghost} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @el.is_aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@el.is_aside} class="aparte">aparte</span></span></div>
     """
@@ -690,6 +695,13 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   defp el(assigns), do: ~H""
+
+  # A middle or last part with no earlier part to line up after (prose or a whole verse
+  # before it) steps in by a fixed indent instead, as emothe.uv.es printed it.
+  defp orphan_part(%{part: part}, nil) when part in ["M", "F"],
+    do: "part-" <> String.downcase(part)
+
+  defp orphan_part(_el, _ghost), do: nil
 
   defp who(speech) do
     case for(character <- Element.characters(speech), character.xml_id, do: character.xml_id) do
