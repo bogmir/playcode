@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 21 October 2026. 48 questions, 27 of them answered (ten decided by Playcode), a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 22 October 2026. 50 questions, 27 of them answered (ten decided by Playcode), lists of the credits and split verses corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -295,8 +295,9 @@
       <li><a href="#t-paratexts">Texts around the play</a><span class="nums">29–35</span></li>
       <li><a href="#t-not-plays">Texts that are not plays</a><span class="nums">41</span></li>
       <li><a href="#t-cast-lists">Several cast lists</a><span class="nums">42–43</span></li>
-      <li><a href="#t-split">Split verses</a><span class="nums">44–45</span></li>
+      <li><a href="#t-split">Split verses</a><span class="nums">44–45, 50</span></li>
       <li><a href="#t-github">Work only in the GitHub copy</a><span class="nums">46–48</span></li>
+      <li><a href="#t-credits-fixed">Credits corrected</a><span class="nums">49</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
@@ -1739,7 +1740,7 @@
 
   <section id="t-split" aria-labelledby="h-split">
     <h2 id="h-split">Split verses</h2>
-    <p>A verse shared between speakers is split into parts, each in its speech: in <i>La vida es sueño</i>, v. 1688 is Clotaldo’s “no he de soltarte.”, Rosaura’s “¡Ay, cielos!” and Segismundo’s “¡Suelta, digo,”. The files split 37,523 verses this way, and mark each part as the first, a middle or the last. Playcode keeps the parts as the files give them, prints the verse’s number beside its first part, as emothe.uv.es does, and counts the verse once. These two questions are about how readers see them, where emothe.uv.es, Playcode’s play page and the published site do not agree.</p>
+    <p>A verse shared between speakers is split into parts, each in its speech: in <i>La vida es sueño</i>, v. 1688 is Clotaldo’s “no he de soltarte.”, Rosaura’s “¡Ay, cielos!” and Segismundo’s “¡Suelta, digo,”. The files split 37,523 verses this way, and mark each part as the first, a middle or the last. Playcode keeps the parts as the files give them, prints the verse’s number beside its first part, as emothe.uv.es does, and counts the verse once. The first two questions are about how readers see them, where emothe.uv.es, Playcode’s play page and the published site do not agree; the third, about the few the files leave out of order.</p>
 
     <div class="q" id="q44" data-q="q44" data-n="44">
       <span class="q-num" aria-hidden="true">44</span>
@@ -1794,6 +1795,38 @@
         <div>
           <label class="label" for="q45-text">Notes</label>
           <textarea id="q45-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <p id="split-fixed"><strong>Split verses corrected.</strong> The parts of a split verse go in order: a first part opens the verse, middle parts carry it on, a last part closes it. TEI’s schema does not check that order, so a file can be valid and still break it. We checked every file and found 27 parts out of order in 10 plays. The 24 changes below put 25 of them right in Playcode’s copies, on 22 October; question 50 asks about the other two. For your own copies, each line by its identifier:</p>
+    <ul class="requests">
+      <li><strong>A line holding the end of one verse and the start of the next, split at its stage direction (2):</strong> <i>’Tis Pity She’s a Whore</i> (EMOTHE0283), IV.i: <code>em0283-en-1581</code> keeps “Yes, you shall know;”, then comes “[Unmasks.]”, then a new line, <code>em0283-en-2511</code>, the first part “What think you now?”, which “Hippolita!” and “’Tis she,” complete. <i>The Malcontent</i> (EMOTHE0363), IV.iii: <code>em0363-en-1655</code> keeps v. 57, “Cannot so lightly overjump his death”, then comes “(To Aurelia.)”, then a new line, <code>em0363-en-2478</code>, the first part “As leave his woes revengeless. ─”, which “Woman of shame,” completes. emothe.uv.es showed both this way, because it put every stage direction inside a verse on a line of its own. Each new line takes the next free identifier in its play and has no verse number, as on emothe.uv.es.</li>
+      <li><strong>A middle part that closes its verse, now a last part (7):</strong> <i>The Tempest</i> (EMOTHE0152) <code>en-0615</code> “It works! … Come on!” and <code>en-1081</code> “Miranda. … O my father,”; <i>Giovanni e Annabella</i> (EMOTHE0284) <code>em0284-it-2938</code> “Io scoppio dalla rabbia. … Mena”; <i>The Alchemist</i> (EMOTHE0304) <code>em0304-en-0194</code> “Your Sol and Luna – … Help me.” and <code>em0304-en-0203</code> “I hope we need no spurs, sir. … Do we?”; <i>The Tragedy of the Atheist</i> (EMOTHE0368) <code>em0368-en-1831</code> “This falls out happily.”; <i>The Tragedy of Richard III</i> (EMOTHE0664) <code>em0664-en-0315</code> “Here. … Why dost thou spit at me?”.</li>
+      <li><strong>A whole verse marked as a first part that nothing completes, now unmarked (14):</strong> each holds a stage direction with words on both sides, as <i>Twelfth Night</i>’s “Stealing, and giving odor. [To the Musicians] Enough, no more.” <i>Twelfth Night</i> (EMOTHE0183) <code>en-0007</code>, <code>en-0201</code>, <code>en-0210</code>, <code>en-0216</code>, <code>en-0659</code>, <code>en-0976</code>; <i>Volpone</i> (EMOTHE0265) <code>em0265-en-1425</code>, <code>-2962</code>, <code>-2988</code>, <code>-2992</code>, <code>-3811</code>; <i>Giovanni e Annabella</i> (EMOTHE0284) <code>em0284-it-1810</code>, <code>-1966</code>, <code>-2865</code>.</li>
+      <li><strong>A last part written as prose (1):</strong> <i>The King, The Greatest Alcalde</i> (EMOTHE0727): Pelayo’s “Another sort”, <code>em0727-en-1132</code>, was a paragraph; it is now the last part of “Like ordinary men?” (v. 812), first in the line group after it.</li>
+    </ul>
+
+    <div class="q" id="q50" data-q="q50" data-n="50">
+      <span class="q-num" aria-hidden="true">50</span>
+      <div class="q-body">
+        <h3>How do the printed editions set two lines of <i>Giovanni e Annabella</i>, and where does a stage direction of <i>The Malcontent</i> go?</h3>
+        <p class="why">Two of the 27 parts out of order (above) need the edition, and so does one stage direction we moved with the correction. emothe.uv.es and the published site move both lines of <i>Giovanni e Annabella</i> in by a fixed step.</p>
+        <p class="why"><i>Giovanni e Annabella</i> (EMOTHE0284), V.iv: Soranzo’s “O molto”, before v. 1648, is marked a last part, but Vasques’s prose comes before it, so it completes nothing. <i>’Tis Pity</i> has a whole verse here, “Most reverend lord, this grace hath made me proud”. Is it a short line the edition sets in?</p>
+        <p class="why"><i>Giovanni e Annabella</i>, III.ii: Annabella’s “Sei qui, fratello?” (v. 874) is marked a first part, but prose follows it, so nothing completes it. <i>’Tis Pity</i> has a whole verse, “Sick – brother, are you there?”, where the translation gives “Male.” to the verse before.</p>
+        <p class="why"><i>The Malcontent</i> (EMOTHE0363), IV.iii: corrected as above, “(To Aurelia.)” comes after v. 57, “Cannot so lightly overjump his death”, where the file had it. But “As leave his woes revengeless” still speaks to the court, and Mendoza turns to Aurelia at “Woman of shame,”: the direction may belong just before those words.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q50-o1"><input type="radio" id="q50-o1" name="q50-choice" value="Leave them as the files give them">Leave them as the files give them</label>
+            <label for="q50-o2"><input type="radio" id="q50-o2" name="q50-choice" value="Correct them as the notes say">Correct them as the notes say</label>
+            <label for="q50-o3"><input type="radio" id="q50-o3" name="q50-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q50-text">Notes, and how the editions set these lines</label>
+          <textarea id="q50-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
@@ -1867,6 +1900,38 @@
         <div>
           <label class="label" for="q48-text">Notes, and whether the notes are the editor’s or the digital editor’s</label>
           <textarea id="q48-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-credits-fixed" aria-labelledby="h-credits-fixed">
+    <h2 id="h-credits-fixed">Credits corrected</h2>
+    <p>Twenty-three files credited someone who does not exist. Playcode has corrected its copies of them and the plays it holds, on 22 October; for your own copies of the files, these are the changes:</p>
+    <ul class="requests">
+      <li><strong>“FaltaTraductor” as translator, in 21 files:</strong> the template’s placeholder, which readers would have seen as a translator’s name. In seventeen it is dropped: fourteen adaptations and versions, whose author is the one who adapted (EMOTHE0030, 0049, 0090, 0106, 0120, 0121, 0165, 0192, 0237, 0298, 0503, 0687, 0715, 0750), <i>Las mocedades del Cid</i> (EMOTHE0141) and <i>Las bizarrías de Belisa</i> (EMOTHE0385), plays in their own language, and <i>Fray Bacon y Fray Bungay</i> (EMOTHE0299), whose translator is question 49. In four the source names the translators, and they take its place: Jaime Clark for <i>La noche de Reyes</i> (EMOTHE0188), Cino Chiarini for <i>Romeo e Giulietta</i> (EMOTHE0287), and Miguel Ángel García Peinado and Ángeles García Calderón for <i>Felismena</i> and <i>La bella gitana</i> (EMOTHE0515, 0516).</li>
+      <li><strong><i>No hay burlas con el amor</i> (EMOTHE0680):</strong> its critical editor was “Arellano, Arellano”, in the title of the edition, the credits and the source; now Ignacio Arellano, as the source’s note names him, with his group as “Grupo GRISO”, without the brackets.</li>
+      <li><strong><i>El lacayo fingido</i> (EMOTHE0359):</strong> Irina Ionescu’s group was her own name; now “Grupo DICAT”, as the source’s note gives it.</li>
+    </ul>
+
+    <div class="q" id="q49" data-q="q49" data-n="49">
+      <span class="q-num" aria-hidden="true">49</span>
+      <div class="q-body">
+        <h3>Who translated <i>Fray Bacon y Fray Bungay</i> (EMOTHE0299)?</h3>
+        <p class="why">Its file credits “FaltaTraductor” as translator, and its source says only “ReferenciaFuente”, another placeholder, so neither names the translation it reproduces. Francisco Lázaro Lázaro is credited as its editor. Playcode now credits no translator for the play.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q49-o1"><input type="radio" id="q49-o1" name="q49-choice" value="The translator is named in the notes">The translator is named in the notes</label>
+            <label for="q49-o2"><input type="radio" id="q49-o2" name="q49-choice" value="It is the project’s own translation, by the editor">It is the project’s own translation, by the editor</label>
+            <label for="q49-o3"><input type="radio" id="q49-o3" name="q49-choice" value="Not known: credit no translator">Not known: credit no translator</label>
+            <label for="q49-o4"><input type="radio" id="q49-o4" name="q49-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q49-text">Notes, the translator’s name, and the source the translation was taken from</label>
+          <textarea id="q49-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
