@@ -906,6 +906,29 @@ defmodule Playcode.TeiRoundtripTest do
                xml_elements(xml, "castItem")
     end
 
+    # A group speaks as one: soldiers, servants, or, hidden, speakers a speech names
+    # together (Hamlet's `#Hor_Mar_Bar`, "HoratioMarcellusBarnardo"), which no cast list
+    # prints.
+    test "keeps a group, shown or hidden" do
+      xml =
+        roundtrip(
+          tei(
+            front: """
+            <div type="elenco">
+              <castList>
+                <castItem ana="grupo"><role xml:id="SOLDADOS">Soldados</role></castItem>
+                <castItem ana="grupo oculto"><role xml:id="HOR_MAR">HoratioMarcellus</role></castItem>
+                <castItem ana="oculto"><role xml:id="CRIADO">Criado</role></castItem>
+              </castList>
+            </div>
+            """
+          )
+        )
+
+      assert Enum.map(xml_elements(xml, "castItem"), fn {attrs, _} -> attrs["ana"] end) ==
+               ["grupo", "grupo oculto", "oculto"]
+    end
+
     # The Way of the World names the actors of its first performance (1700). An empty
     # actor, as in A Midsummer Night's Dream's file, gives none.
     test "keeps the original cast's actors" do

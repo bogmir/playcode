@@ -1442,6 +1442,9 @@ defmodule Playcode.Import.TeiParser do
           with ref when is_binary(ref) <- attr_value(role_attrs, "corresp"),
                do: ref |> String.trim() |> String.trim_leading("#")
 
+        # `ana` holds its marks apart by spaces: "oculto", "grupo", "grupo oculto".
+        marks = String.split(attr_value(attrs, "ana") || "")
+
         # A role left empty (0714's Daphné) is named by its id, so its speeches keep it;
         # one with no id either names no one and prints nothing.
         name =
@@ -1459,7 +1462,8 @@ defmodule Playcode.Import.TeiParser do
               name: name,
               description: description,
               actor: safe_text(find_child(children, "actor")),
-              is_hidden: attr_value(attrs, "ana") == "oculto",
+              is_hidden: "oculto" in marks,
+              is_group: "grupo" in marks,
               position: 0
             }
 

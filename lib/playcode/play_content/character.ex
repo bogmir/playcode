@@ -11,7 +11,8 @@ defmodule Playcode.PlayContent.Character do
   printed nowhere, as emothe.uv.es prints none (question 28).
 
   A hidden character (`is_hidden`, TEI `ana="oculto"`) may speak, but every printed cast
-  list leaves it out.
+  list leaves it out. A group (`is_group`, `ana="grupo"`) speaks as one: soldiers, servants,
+  or, hidden too (`ana="grupo oculto"`), speakers a speech names together.
   """
 
   use Ecto.Schema
@@ -28,6 +29,7 @@ defmodule Playcode.PlayContent.Character do
     field :description, :string
     field :actor, :string
     field :is_hidden, :boolean, default: false
+    field :is_group, :boolean, default: false
     field :position, :integer, default: 0
 
     belongs_to :play, Playcode.Catalogue.Play
@@ -42,7 +44,16 @@ defmodule Playcode.PlayContent.Character do
 
   def changeset(character, attrs) do
     character
-    |> cast(attrs, [:xml_id, :name, :description, :actor, :is_hidden, :position, :play_id])
+    |> cast(attrs, [
+      :xml_id,
+      :name,
+      :description,
+      :actor,
+      :is_hidden,
+      :is_group,
+      :position,
+      :play_id
+    ])
     |> update_change(:actor, &Text.squeeze/1)
     |> validate_required([:xml_id, :name])
     |> unique_constraint([:play_id, :xml_id],

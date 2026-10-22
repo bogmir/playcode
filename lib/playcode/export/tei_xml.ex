@@ -923,7 +923,13 @@ defmodule Playcode.Export.TeiXml do
         else: []
 
     actor = if declares? and character.actor, do: [element(:actor, character.actor)], else: []
-    item_attrs = if character && character.is_hidden, do: %{ana: "oculto"}, else: %{}
+    marks = if character, do: [character.is_group && "grupo", character.is_hidden && "oculto"]
+
+    item_attrs =
+      case Enum.filter(List.wrap(marks), & &1) do
+        [] -> %{}
+        marks -> %{ana: Enum.join(marks, " ")}
+      end
 
     element(
       :castItem,

@@ -1598,6 +1598,19 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert xml_texts(export_tei(play), "actor") == ["Mrs. Bracegirdle"]
   end
 
+  test "a character marked a group goes into the file as one", %{conn: conn, play: play} do
+    lv = open_cast(conn, play)
+    ana = entry(play, "ANA")
+
+    lv |> element("#entry-#{ana.id} button[aria-label='#{t("Edit")}']") |> render_click()
+    lv |> form("#entry-form", character: %{"is_group" => "true"}) |> render_submit()
+
+    assert {%{"ana" => "grupo"}, _} =
+             export_tei(play)
+             |> xml_elements("castItem")
+             |> Enum.find(fn {_attrs, text} -> text =~ "ANA" end)
+  end
+
   describe "a stage direction's type, changed in a line that has a note" do
     setup %{conn: conn} do
       play =

@@ -308,6 +308,7 @@
             <li>The statistics on the play’s page count a split verse once, not each of its parts, in the split verses, the verses and the verses per act (note 31).</li>
             <li>On the published site, a part of a split verse with nothing before it to follow moves in by a fixed step as on emothe.uv.es, instead of starting at the margin (note 31).</li>
             <li>The files left 27 parts of split verses out of order in 10 plays; 25 are corrected in Playcode’s copies, and the other two are <a href="preguntas.html#q50">question 50</a> (note 31; the changes for your copies are in <a href="preguntas.html#split-fixed">the questions</a>).</li>
+            <li>A role in the cast list keeps its mark as a group, shown (soldiers, servants) or hidden (speakers named together, as Hamlet’s “HoratioMarcellusBarnardo”, which the play page printed); 592 roles in 173 plays (note 33).</li>
             <li>A play brought in from Word numbers a split verse once, on its first part, as the files do; each middle or last part took a number of its own, so every later verse drifted one further from the edition’s number (note 31).</li>
             <li>The admin’s Content tab lists the parts of split verses out of order, as the import does, each opening its line, and refuses none; a verse added or deleted there no longer renumbers the others (note 31, <a href="preguntas.html#q25">question 25</a>).</li>
             <li>A play’s verse count, which its file, its page, the published site and the downloads print, counts each numbered verse: plays whose numbering starts again in each act counted only one act’s worth (<i>La tragedia española</i> 309, where its file says 3,820). 56 plays change; whether a play is verse or prose changes for none.</li>
@@ -396,7 +397,7 @@
         <tr class="ok"><td>Lines, speeches, stage directions and prose: identical</td><td class="num">1,308,522</td></tr>
         <tr class="ok"><td>Notes, editors, sources and paratexts (dedications, introductions…): identical</td><td class="num">5,789</td></tr>
         <tr class="ok"><td>Witnesses, brought over from FileMaker and imported on production on 21 October</td><td class="num">510</td></tr>
-        <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">5</td></tr>
+        <tr class="todo"><td>Parts of a play the source TEI files hold that Playcode does not read yet</td><td class="num">4</td></tr>
         <tr class="todo"><td>Parts of a play in FileMaker or planned, not built yet</td><td class="num">3</td></tr>
       </tbody>
     </table>
@@ -703,6 +704,16 @@
             <td data-label="Published site"><span class="s yes">Yes</span></td>
           </tr>
 
+          <tr>
+            <th scope="row" class="feature">Groups in the cast list: soldiers, servants, speakers named together<span class="where">592 roles in 173 plays</span></th>
+            <td class="imp" data-label="Imported data"><span class="n">173</span><span class="src">TEI</span><sup class="fn"><a href="#n33" aria-label="note 33">33</a></sup></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span><sup class="fn"><a href="#n33" aria-label="note 33">33</a></sup></td>
+            <td data-label="Play page"><span class="s yes">Yes</span><sup class="fn"><a href="#n33" aria-label="note 33">33</a></sup></td>
+            <td data-label="Published site"><span class="s yes">Yes</span><sup class="fn"><a href="#n33" aria-label="note 33">33</a></sup></td>
+          </tr>
           <tr class="group"><th scope="rowgroup" colspan="8" class="feature">The text</th></tr>
           <tr>
             <th scope="row" class="feature">Acts, scenes, prologues, interludes</th>
@@ -856,16 +867,6 @@
             <td data-label="Published site"><span class="s part">Partly</span></td>
           </tr>
           <tr>
-            <th scope="row" class="feature">Groups in the cast list: soldiers, servants<span class="where">560 roles</span></th>
-            <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
-            <td data-label="Edited"><span class="s todo">Not yet</span></td>
-            <td data-label="Written to TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Read from TEI"><span class="s todo">Not yet</span></td>
-            <td data-label="Downloads"><span class="s todo">Not yet</span></td>
-            <td data-label="Play page"><span class="s todo">Not yet</span></td>
-            <td data-label="Published site"><span class="s todo">Not yet</span></td>
-          </tr>
-          <tr>
             <th scope="row" class="feature">Notes in dedications and introductions<span class="where">About 270 notes</span></th>
             <td class="imp" data-label="Imported data"><span class="s todo">Not imported</span></td>
             <td data-label="Edited"><span class="s todo">Not yet</span></td>
@@ -975,6 +976,7 @@
       <li id="n30">A piece of an aside cannot run past the end of a verse, so the files cut an aside over several verses into one piece per verse, each naming the next: Clotaldo’s aside in <i>La vida es sueño</i>, “¡Válgame el cielo! ¿Qué escucho?…”, is 74 pieces. Playcode keeps every piece as an aside but not the link between them, so the file it writes no longer says they are one aside. Readers see it in two places: the statistics on the play’s page count the pieces as asides (321 in <i>El amor al uso</i>, where emothe.uv.es counts 124), and the published site prints “aparte” beside every verse of an aside, 74 times down Clotaldo’s. emothe.uv.es reads the links: its “Apartes” switch steps from one whole aside to the next. Not every link in the files is sound: 758 name a piece that does not exist, 130 of them in <i>La vida es sueño</i>.</li>
       <li id="n31">The parts of a split verse, the asides, an indented verse and the verse numbers go into the file and come back whole. How readers see a split verse is still open: emothe.uv.es and Playcode’s play page move each part in by a fixed step, while the published site starts it where the part before it ended, or by the same fixed step when nothing comes before it (<a href="preguntas.html#q44">question 44</a>), and only emothe.uv.es shades the split verses and steps from one to the next (<a href="preguntas.html#q45">question 45</a>). The statistics on the play’s page count a split verse once since 22 October, in the split verses, the verses and the verses per act: 400 split verses in <i>El amor al uso</i>, where they counted its 816 parts (emothe.uv.es counts 380, leaving out the 20 split inside one speech by an aside); their asides still count the pieces of an aside (note 30). TEI’s schema checks the parts’ marks but not their order, and the files left 27 out of order in 10 plays, a first part nothing completes or a last part with no verse open: 25 are corrected in Playcode’s copies since 22 October, and the other two are <a href="preguntas.html#q50">question 50</a>. Playcode’s import and its Content tab list such parts and refuse none, since a correction passes through disorder; in the Content tab each opens its line. A verse added or deleted in the Content tab renumbers no other since 22 October: the numbers are the edition’s, the ones readers cite. A play brought in from Word numbers a split verse once, on its first part, since the same day.</li>
       <li id="n32">The downloads are to print it (<a href="preguntas.html#t-downloads">question 24</a>, answered on 19 October), not built yet: a translation’s original, and an adaptation’s, and the witnesses of a critical edition, a play with variant readings or a critical apparatus after the text (seven plays: <i>Hamlet</i>, <i>Friar Bacon and Friar Bungay</i>, <i>El bastardo Mudarra</i>, <i>Everyman</i>, <i>Les Amours tragiques de Pyrame et Thisbé</i>, <i>La discreta enamorada</i> and <i>She Would If She Could</i>). The other plays’ witnesses stay out.</li>
+      <li id="n33">A role in the cast list can be a group that speaks as one: soldiers or servants (95 roles, <code>ana="grupo"</code>), or, left out of the printed cast list as well, speakers a speech names together, Hamlet’s “HoratioMarcellusBarnardo” (497, <code>ana="grupo oculto"</code>). Playcode reads and writes the mark since 22 October, and an editor sets it in the cast list. Every output prints a group as any other role and leaves a hidden one out, as emothe.uv.es does. Until then the 497 were read as shown, so Hamlet’s cast list on Playcode’s play page printed “CORNELIUS VOLTEMAND” and “HoratioMarcellusBarnardo”; production’s plays take the mark when their files are imported again.</li>
     </ol>
   </section>
 

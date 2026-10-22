@@ -3100,6 +3100,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       <div>
         <.input field={@form[:is_hidden]} type="checkbox" label={gettext("Hidden character")} />
       </div>
+      <div>
+        <.input field={@form[:is_group]} type="checkbox" label={gettext("A group speaking as one")} />
+      </div>
       <div class="flex gap-2 pt-2">
         <button type="submit" class="btn btn-primary">{gettext("Save")}</button>
         <button type="button" phx-click="close_modal" class="btn btn-ghost">
@@ -3165,6 +3168,13 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             field={@character_form[:is_hidden]}
             type="checkbox"
             label={gettext("Hidden character")}
+          />
+        </div>
+        <div>
+          <.input
+            field={@character_form[:is_group]}
+            type="checkbox"
+            label={gettext("A group speaking as one")}
           />
         </div>
       </fieldset>
