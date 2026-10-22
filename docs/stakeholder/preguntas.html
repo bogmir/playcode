@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 22 October 2026. 50 questions, 27 of them answered (ten decided by Playcode), lists of the credits and split verses corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 22 October 2026. 51 questions, 27 of them answered (ten decided by Playcode), lists of the credits and split verses corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -298,6 +298,7 @@
       <li><a href="#t-split">Split verses</a><span class="nums">44–45, 50</span></li>
       <li><a href="#t-github">Work only in the GitHub copy</a><span class="nums">46–48</span></li>
       <li><a href="#t-credits-fixed">Credits corrected</a><span class="nums">49</span></li>
+      <li><a href="#t-nested-stanza">A stanza inside a stanza</a><span class="nums">51</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
     </ul>
@@ -1933,6 +1934,51 @@
         <div>
           <label class="label" for="q49-text">Notes, the translator’s name, and the source the translation was taken from</label>
           <textarea id="q49-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-nested-stanza" aria-labelledby="h-nested-stanza">
+    <h2 id="h-nested-stanza">A stanza inside a stanza</h2>
+
+    <div class="q" id="q51" data-q="q51" data-n="51">
+      <span class="q-num" aria-hidden="true">51</span>
+      <div class="q-body">
+        <h3>How should the song in <i>Love for Love</i> be encoded?</h3>
+        <p class="why">In <i>Love for Love</i> (EMOTHE0478), III.i, Scandal asks for “the first song in the last new play”, and a singer sings eight verses in two numbered stanzas, vv. 528–535, “A nymph and a swain to Apollo once prayed”. Its file is the only one in the corpus that puts a stanza inside another:</p>
+        <pre class="tei">&lt;sp who="#Singer"&gt;
+  &lt;stage&gt;SONG&lt;/stage&gt;
+  &lt;lg type="free" part="M"&gt;
+    &lt;stage&gt;1&lt;/stage&gt;
+    &lt;lg type="free"&gt;
+      &lt;l n="528"&gt;A nymph and a swain to Apollo once prayed,&lt;/l&gt; … &lt;l n="531"&gt;…&lt;/l&gt;
+      &lt;stage&gt;2&lt;/stage&gt;
+      &lt;l n="532"&gt;Apollo was mute, and had like’t have been posed,&lt;/l&gt; … &lt;l n="535"&gt;…&lt;/l&gt;
+    &lt;/lg&gt;
+  &lt;/lg&gt;
+&lt;/sp&gt;</pre>
+        <p class="why">The outer stanza holds only the “1” and the inner stanza, and it is marked a middle part (<code>part="M"</code>), though no first or last part comes before or after it. The two numbered stanzas are not two stanzas in the file: the “2” stands inside the one inner stanza, among its verses.</p>
+        <p class="why">emothe.uv.es prints the song as any other: “SONG”, “1”, vv. 528–531, “2”, vv. 532–535. The nesting makes no difference a reader can see.</p>
+        <p class="why">Playcode reads a stanza’s verses and stage directions but not a stanza inside it, so the song is missing from Playcode, its play page included: after “SONG” the text goes on with the singer’s exit, without the eight verses or the “1” and “2”. Nothing changes until the team answers. The file could instead give each numbered stanza a stanza of its own:</p>
+        <pre class="tei">&lt;sp who="#Singer"&gt;
+  &lt;stage&gt;SONG&lt;/stage&gt;
+  &lt;lg type="free"&gt;&lt;stage&gt;1&lt;/stage&gt;&lt;l n="528"&gt;…&lt;/l&gt; … &lt;l n="531"&gt;…&lt;/l&gt;&lt;/lg&gt;
+  &lt;lg type="free"&gt;&lt;stage&gt;2&lt;/stage&gt;&lt;l n="532"&gt;…&lt;/l&gt; … &lt;l n="535"&gt;…&lt;/l&gt;&lt;/lg&gt;
+&lt;/sp&gt;</pre>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q51-o1"><input type="radio" id="q51-o1" name="q51-choice" value="Re-encode it as two stanzas, one for each number">Re-encode it as two stanzas, one for each number</label>
+            <label for="q51-o2"><input type="radio" id="q51-o2" name="q51-choice" value="Keep the file; Playcode reads the inner stanza as part of the outer one">Keep the file; Playcode reads the inner stanza as part of the outer one</label>
+            <label for="q51-o3"><input type="radio" id="q51-o3" name="q51-choice" value="Keep the file; Playcode keeps a stanza inside a stanza">Keep the file; Playcode keeps a stanza inside a stanza</label>
+            <label for="q51-o4"><input type="radio" id="q51-o4" name="q51-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q51-text">Notes, and whether “1” and “2” are stage directions or the stanzas’ numbers</label>
+          <textarea id="q51-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
