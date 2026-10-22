@@ -567,16 +567,17 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       pos = PlayContent.next_element_position(div_id, parent_id)
 
       attrs = %{
-        play_id: play.id,
-        division_id: div_id,
-        parent_id: parent_id,
-        type: element_type,
-        position: pos
+        "play_id" => play.id,
+        "division_id" => div_id,
+        "parent_id" => parent_id,
+        "type" => element_type,
+        "position" => pos
       }
 
       assign(socket,
         modal: :element,
         editing: nil,
+        new_element: attrs,
         modal_element_type: element_type,
         editing_character_ids: [],
         form: to_form(PlayContent.change_element(%Element{}, attrs))
@@ -783,11 +784,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     PlayContent.shift_element_positions(div_id, parent_id, before_pos)
 
     attrs = %{
-      play_id: play.id,
-      division_id: div_id,
-      parent_id: parent_id,
-      type: element_type,
-      position: before_pos
+      "play_id" => play.id,
+      "division_id" => div_id,
+      "parent_id" => parent_id,
+      "type" => element_type,
+      "position" => before_pos
     }
 
     socket
@@ -795,6 +796,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     |> assign(
       modal: :element,
       editing: nil,
+      new_element: attrs,
       modal_element_type: element_type,
       editing_character_ids: [],
       form: to_form(PlayContent.change_element(%Element{}, attrs))
@@ -902,8 +904,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   # --- Save helpers ---
 
+  # A form posts back, as hidden fields, the ids that place its row, and the browser can
+  # change them: they come from the server, the row's own when it is edited, its opener's
+  # when it is new (CLAUDE.md, *Access control*).
+  @placing ~w(play_id division_id parent_id cast_list_id character_id)
+  defp form_params(params, form), do: Map.drop(params[form] || %{}, @placing)
+
   defp save_paratext(socket, params) do
-    paratext_params = params["paratext"] || %{}
+    paratext_params = form_params(params, "paratext")
     play = socket.assigns.play
 
     result =
@@ -960,7 +968,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     play = socket.assigns.play
 
     char_params =
-      (params["character"] || %{})
+      params
+      |> form_params("character")
       |> Map.put("play_id", play.id)
       |> Map.put("cast_list_id", socket.assigns.modal_list_id)
 
@@ -989,8 +998,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   defp save_entry(socket, params) do
     %{editing: entry, entry_character: character, play: play} = socket.assigns
 
-    with {:ok, _character} <- update_entry_character(character, params["character"]),
-         {:ok, saved} <- PlayContent.update_entry(entry, params["entry"] || %{}) do
+    with {:ok, _character} <- update_entry_character(character, form_params(params, "character")),
+         {:ok, saved} <- PlayContent.update_entry(entry, form_params(params, "entry")) do
       PlayContent.refresh_derived(play.id)
       LiveHelpers.log_activity(socket, "update", "cast_list_entry", saved.id, %{name: saved.name})
 
@@ -1011,7 +1020,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   defp update_entry_character(nil, _params), do: {:ok, nil}
 
   defp update_entry_character(character, params),
-    do: PlayContent.update_character(character, params || %{})
+    do: PlayContent.update_character(character, params)
 
   defp save_existing_entry(socket, params) do
     play_id = socket.assigns.play.id
@@ -1040,7 +1049,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   defp save_division(socket, params) do
-    div_params = params["division"] || %{}
+    div_params = form_params(params, "division")
     play = socket.assigns.play
 
     result =
@@ -1092,7 +1101,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   defp save_element(socket, params) do
-    el_params = params["element"] || %{}
+    el_params = form_params(params, "element")
 
     character_ids =
       own_character_ids(socket, List.wrap(params["character_ids"] || []))
@@ -1103,8 +1112,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       case socket.assigns.editing do
         nil ->
           el_params
-          |> Map.put("play_id", play.id)
-          |> Map.put("division_id", socket.assigns.selected_division_id)
+          |> Map.merge(socket.assigns.new_element)
           |> PlayContent.create_element()
 
         element ->

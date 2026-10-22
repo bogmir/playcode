@@ -233,6 +233,95 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert html =~ t("a first part that nothing completes")
   end
 
+  # Each form posts back, as hidden fields, the ids that place its row, and the browser can
+  # change them: a crafted save put a line into another play's text, or moved a row into
+  # another play. The ids come from the server (CLAUDE.md, *Access control*).
+  describe "a save naming another play's ids" do
+    setup %{play: play} do
+      %{play: other, act: act, scene: scene, line_group: group} = play_with_structure_fixture()
+
+      %{
+        foreign: %{
+          "play_id" => other.id,
+          "division_id" => scene.id,
+          "parent_id" => group.id,
+          "cast_list_id" => act.id
+        },
+        other: other,
+        divisions: PlayContent.list_top_divisions(play.id)
+      }
+    end
+
+    test "adds a new line where its form opened, in this play",
+         %{conn: conn, play: play, other: other, foreign: foreign} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Tercera línea")} button[aria-label='#{t("Insert Above")}']")
+      |> render_click()
+
+      render_submit(lv, "save_form", %{"element" => Map.put(foreign, "content", "Intrusa")})
+
+      assert {"Intrusa", nil} in lines(play)
+      refute "Intrusa" in xml_texts(export_tei(other), "l")
+    end
+
+    test "leaves an edited line in this play", %{conn: conn, play: play, foreign: foreign} do
+      lv = open_scene(conn, play)
+      "#element-" <> id = card(lv, "Segunda línea")
+
+      render_click(lv, "edit_element", %{"id" => id})
+      render_submit(lv, "save_form", %{"element" => Map.put(foreign, "content", "Movida")})
+
+      assert {"Movida", 2} in lines(play)
+    end
+
+    test "leaves an edited division in this play",
+         %{conn: conn, play: play, foreign: foreign, divisions: divisions} do
+      lv = open_structure(conn, play)
+      act = Enum.find(divisions, &(&1.type == "acto"))
+      [scene] = Enum.reject(act.children, &(&1.type == "elenco"))
+
+      render_click(lv, "edit_division", %{"id" => scene.id})
+      render_submit(lv, "save_form", %{"division" => Map.put(foreign, "title", "ESCENA I")})
+
+      assert %{parent_id: parent_id} = PlayContent.get_division(play.id, scene.id)
+      assert parent_id == act.id
+    end
+
+    test "leaves an edited paratext in this play", %{conn: conn, play: play, foreign: foreign} do
+      {:ok, paratext} =
+        Playcode.Catalogue.create_paratext(%{
+          play_id: play.id,
+          kind: "dedicatoria",
+          content: "Al lector"
+        })
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+      render_click(lv, "edit_paratext", %{"id" => paratext.id})
+      render_submit(lv, "save_form", %{"paratext" => Map.put(foreign, "content", "Al lector")})
+
+      assert Playcode.Catalogue.get_paratext(play.id, paratext.id)
+    end
+
+    test "leaves an edited cast-list entry and its character in this play",
+         %{conn: conn, play: play, foreign: foreign} do
+      [%{entries: [entry | _]}] = PlayContent.list_cast_lists(play.id)
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+
+      render_click(lv, "edit_entry", %{"id" => entry.id})
+
+      render_submit(lv, "save_form", %{
+        "entry" => Map.put(foreign, "name", "ANA"),
+        "character" => Map.put(foreign, "name", "ANA")
+      })
+
+      assert %{cast_list_id: list_id} = PlayContent.get_entry(play.id, entry.id)
+      assert list_id == entry.cast_list_id
+      assert PlayContent.get_character(play.id, entry.character_id)
+    end
+  end
+
   test "a speech is given to the characters chosen in its form", %{conn: conn, play: play} do
     lv = open_scene(conn, play)
     don = Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == "DON"))
