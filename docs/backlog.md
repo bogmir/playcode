@@ -40,7 +40,6 @@ Questions 29-35 in `docs/stakeholder/preguntas.html`; the design is `docs/superp
 ## Medium Priority
 
 - [ ] **Stage direction navigator** (`« N / M »`) - client-side JS hook to scroll between stage directions in play text
-- [ ] **A split verse's parts out of order, in the Content tab** (2026-10-22) - found while checking whether a curator could make the corpus's corrections by hand: the editor checks nothing of a split verse's order. Proposed: a warning listing the parts out of order with links, recomputed when `plays.content_version` moves, never a refusal (a correction passes through disorder), the check `TeiImport` runs on a file moved where both can call it. Its verse numbers: *Adding or deleting a verse renumbers no other*, `docs/history.md`
 - [ ] **Two split-verse parts in *Giovanni e Annabella*, and a stage direction's place in *The Malcontent*** (2026-10-22) - question 50. `em0284-it-2686` ("O molto", `F`, after prose) and `em0284-it-1459` ("Sei qui, fratello?", `I`, prose after it) are the two parts out of order left of the 27 the corpus had (*Split-verse parts out of order*, `docs/history.md`); emothe.uv.es and the published site move them in by a fixed step. And `em0363-en-st-0115` "(To Aurelia.)" may belong before "Woman of shame,". Correct our copies under `doc/tei_corpus/` and list the change for the team's if the answer says so
 
 ## Found by the corpus round trip (2026-10-09)

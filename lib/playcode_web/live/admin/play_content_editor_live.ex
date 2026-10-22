@@ -70,6 +70,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
        existing_options: [],
        divisions: divisions,
        removals: removals(divisions),
+       split_verses: PlayContent.split_verses_out_of_order(play.id),
        selected_division_id: nil,
        elements: [],
        modal: nil,
@@ -1141,7 +1142,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     {:noreply,
      socket
-     |> assign(:play, play)
+     |> assign(play: play, split_verses: PlayContent.split_verses_out_of_order(play.id))
      |> reload_paratexts()
      |> reload_characters()
      |> reload_divisions()
@@ -1391,6 +1392,26 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           {gettext("Edit Content")}: {@play.title}
         </h1>
         <p class="mt-1 text-sm text-base-content/70">{@play.author_name} — {@play.code}</p>
+      </div>
+
+      <div :if={@split_verses != []} class="alert alert-warning mb-6">
+        <div>
+          <p>
+            {gettext("%{count} part(s) of split verses out of order:",
+              count: length(@split_verses)
+            )}
+          </p>
+          <ul class="ml-4 list-disc">
+            <li :for={{line, problem} <- @split_verses}>
+              <button type="button" class="link" phx-click="edit_element" phx-value-id={line.id}>
+                <code>{line.line_id || "?"}</code> “{InlineMarkup.plain(line.content)}”
+              </button>, {PlayLabels.split_verse_problem(
+                problem,
+                line.part
+              )}
+            </li>
+          </ul>
+        </div>
       </div>
 
       <%!-- Tab Bar --%>

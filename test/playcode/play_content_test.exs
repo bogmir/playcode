@@ -6,7 +6,7 @@ defmodule Playcode.PlayContentTest do
   alias Playcode.PlayContent
   alias Playcode.TestFixtures
 
-  # Edge cases of the editor's renumbering, much simpler to set up here than through
+  # Edge cases of the editor's positions, much simpler to set up here than through
   # the editor. The plain cases (insert above, delete) are asserted through the
   # editor in test/playcode_web/live/admin/play_content_editor_live_test.exs.
   describe "shift_element_positions/3" do

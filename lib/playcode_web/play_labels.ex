@@ -320,4 +320,14 @@ defmodule PlaycodeWeb.PlayLabels do
   @doc "A translation group's heading."
   def bibliography_language_label(nil), do: gettext("Language not stated")
   def bibliography_language_label(code), do: Play.language_name(code)
+
+  @doc "What is wrong with a split verse's part out of order (`SplitVerses.out_of_order/1`)."
+  def split_verse_problem(:never_completed, _part),
+    do: gettext("a first part that nothing completes")
+
+  def split_verse_problem(:completes_nothing, "M"),
+    do: gettext("a middle part that completes no verse")
+
+  def split_verse_problem(:completes_nothing, "F"),
+    do: gettext("a last part that completes no verse")
 end

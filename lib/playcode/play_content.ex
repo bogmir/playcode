@@ -21,7 +21,8 @@ defmodule Playcode.PlayContent do
     Element,
     ElementCharacter,
     InlineMarkup,
-    Note
+    Note,
+    SplitVerses
   }
 
   alias Playcode.Witnesses
@@ -397,6 +398,41 @@ defmodule Playcode.PlayContent do
   end
 
   # --- Divisions ---
+
+  @doc """
+  The parts of the play's split verses out of order (`SplitVerses.out_of_order/1`). Every
+  verse line it stores is walked, in reading order act by act: an act's own, then its
+  children's, cast lists included, at any depth of stanza.
+  """
+  def split_verses_out_of_order(play_id) do
+    rank =
+      for {act, i} <- Enum.with_index(list_top_divisions(play_id)),
+          {division, j} <- Enum.with_index([act | act.children]),
+          into: %{},
+          do: {division.id, {i, j}}
+
+    children =
+      Repo.all(
+        from e in Element,
+          where: e.play_id == ^play_id,
+          select:
+            map(e, [:id, :parent_id, :division_id, :position, :type, :part, :line_id, :content])
+      )
+      |> Enum.sort_by(& &1.position)
+      |> Enum.group_by(& &1.parent_id)
+
+    children
+    |> Map.get(nil, [])
+    |> Enum.sort_by(&rank[&1.division_id])
+    |> Enum.chunk_by(&elem(rank[&1.division_id], 0))
+    |> Enum.map(fn act -> Enum.flat_map(act, &verse_lines(&1, children)) end)
+    |> SplitVerses.out_of_order()
+  end
+
+  defp verse_lines(%{type: "verse_line"} = line, _children), do: [line]
+
+  defp verse_lines(element, children),
+    do: children |> Map.get(element.id, []) |> Enum.flat_map(&verse_lines(&1, children))
 
   @doc """
   The play's top-level divisions in order, each with its children in order.

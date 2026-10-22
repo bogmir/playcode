@@ -11,6 +11,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
   import Playcode.TestFixtures
   import Playcode.ImportHelpers
 
+  alias Playcode.PlayContent
   alias Playcode.PlayContent.Division
 
   setup %{conn: conn} do
@@ -148,6 +149,88 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
              {"Línea nueva", 3},
              {"Tercera línea", 3}
            ]
+  end
+
+  # The form takes any part anywhere, as TEI's schema does, and a correction passes through
+  # disorder, so the editor lists the parts out of order, as the import preview does, and
+  # refuses nothing.
+  test "a split verse's part out of order is listed, opening its line, until corrected",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+            <sp><speaker>ANA</speaker><p>Prosa.</p></sp>
+            <sp><speaker>DON</speaker><lg><l xml:id="sv-0001" part="F">O molto</l></lg></sp>
+          </div1>
+          """
+        )
+      )
+
+    {:ok, lv, html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+
+    assert html =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    assert html =~ t("a last part that completes no verse")
+
+    # The line's form opens in place: the tab, the scene and the selections stay.
+    lv |> element("button", "sv-0001") |> render_click()
+    lv |> form("#element-form", element: %{"part" => ""}) |> render_submit()
+    # What Playcode.Export.PlayChangeListener relays when the edit commits.
+    Playcode.PlayContent.notify_changed(play.id)
+
+    refute render(lv) =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    assert [{%{"xml:id" => "sv-0001"} = line, "O molto"}] = xml_elements(export_tei(play), "l")
+    refute Map.has_key?(line, "part")
+  end
+
+  # The tab adds lines in an act's cast list, and Word nests a stanza in a stanza: the
+  # check walks every line the play stores, where it is.
+  test "a part in a nested stanza or in an act's cast list is checked too", %{conn: conn} do
+    %{play: play, act: act, scene: scene, line_group: group} = play_with_structure_fixture()
+
+    add = fn attrs ->
+      {:ok, element} = PlayContent.create_element(Map.put(attrs, :play_id, play.id))
+      element
+    end
+
+    # Completes the fixture's first part, "A verse line".
+    nested = add.(%{division_id: scene.id, parent_id: group.id, type: "line_group", position: 2})
+
+    add.(%{
+      division_id: scene.id,
+      parent_id: nested.id,
+      type: "verse_line",
+      part: "F",
+      content: "anidado",
+      position: 1
+    })
+
+    {:ok, list} =
+      PlayContent.create_division(%{
+        play_id: play.id,
+        parent_id: act.id,
+        type: "elenco",
+        position: 2
+      })
+
+    speech = add.(%{division_id: list.id, type: "speech", position: 1})
+    stanza = add.(%{division_id: list.id, parent_id: speech.id, type: "line_group", position: 1})
+
+    add.(%{
+      division_id: list.id,
+      parent_id: stanza.id,
+      type: "verse_line",
+      part: "I",
+      content: "en el elenco",
+      position: 1
+    })
+
+    {:ok, _lv, html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+
+    assert html =~ t("%{count} part(s) of split verses out of order:", count: 1)
+    assert html =~ "en el elenco"
+    assert html =~ t("a first part that nothing completes")
   end
 
   test "a speech is given to the characters chosen in its form", %{conn: conn, play: play} do
@@ -520,7 +603,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       assert {"Segunda línea", 2} in lines(play)
     end
 
-    test "a refused marker in a new line renumbers nothing", %{conn: conn, play: play} do
+    test "a new line with a refused marker is not saved", %{conn: conn, play: play} do
       lv = open_scene(conn, play)
 
       lv

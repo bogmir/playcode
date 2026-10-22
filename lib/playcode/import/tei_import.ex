@@ -20,7 +20,7 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Performances.Performance
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{CastListEntry, Character, Division, Element, ElementCharacter}
-  alias Playcode.PlayContent.{InlineMarkup, Note}
+  alias Playcode.PlayContent.{InlineMarkup, Note, SplitVerses}
   alias Playcode.Places
   alias Playcode.Repo
   alias Playcode.Text
@@ -99,53 +99,28 @@ defmodule Playcode.Import.TeiImport do
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
   end
 
-  # A split verse's parts in reading order: a first part opens it, middle parts carry it
-  # on, a last part closes it. TEI's schema checks a part's value, not this order. Checked
-  # act by act: a split verse crosses scenes (164 times in the corpus), never acts.
-  # `:completes_nothing` is a middle or last part with no verse open, `:never_completed`
-  # a first part no last part closes.
+  # The parts of the file's split verses out of order (`SplitVerses.out_of_order/1`), as the
+  # preview prints them.
   defp parts_out_of_order(divisions) do
-    Enum.flat_map(divisions, fn division ->
-      {problems, open} =
-        [division | division.divisions]
-        |> Enum.flat_map(& &1.elements)
-        |> Enum.flat_map(&verse_lines/1)
-        |> Enum.reduce({[], nil}, fn line, {problems, open} ->
-          case {line.part, open} do
-            {"I", _} ->
-              {never_completed(problems, open), line}
-
-            {part, nil} when part in ["M", "F"] ->
-              {[problem(line, :completes_nothing) | problems], nil}
-
-            {"M", _} ->
-              {problems, open}
-
-            {"F", _} ->
-              {problems, nil}
-
-            _whole ->
-              {never_completed(problems, open), nil}
-          end
-        end)
-
-      Enum.reverse(never_completed(problems, open))
+    divisions
+    |> Enum.map(fn division ->
+      [division | division.divisions]
+      |> Enum.flat_map(& &1.elements)
+      |> Enum.flat_map(&verse_lines/1)
+    end)
+    |> SplitVerses.out_of_order()
+    |> Enum.map(fn {line, problem} ->
+      %{
+        line_id: line.line_id,
+        part: line.part,
+        text: InlineMarkup.plain(line.content),
+        problem: problem
+      }
     end)
   end
 
   defp verse_lines(%{type: "verse_line"} = line), do: [line]
   defp verse_lines(element), do: Enum.flat_map(element.elements, &verse_lines/1)
-
-  defp never_completed(problems, nil), do: problems
-  defp never_completed(problems, line), do: [problem(line, :never_completed) | problems]
-
-  defp problem(line, problem),
-    do: %{
-      line_id: line.line_id,
-      part: line.part,
-      text: InlineMarkup.plain(line.content),
-      problem: problem
-    }
 
   # The import's bibliography plan as it prints: the references the play would gain, and
   # those it would skip. A stale one, an older file's version of a reference corrected

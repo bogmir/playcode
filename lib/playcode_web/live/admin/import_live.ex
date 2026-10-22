@@ -8,6 +8,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
 
   alias Playcode.Import.TeiImport
   alias PlaycodeWeb.Admin.LiveHelpers
+  alias PlaycodeWeb.PlayLabels
 
   @impl true
   def mount(_params, _session, socket) do
@@ -307,7 +308,8 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                 )}
                 <ul class="ml-4 list-disc">
                   <li :for={part <- p.split_verses}>
-                    <code>{part.line_id || "?"}</code> “{part.text}”, {split_verse_problem(part)}
+                    <code>{part.line_id || "?"}</code>
+                    “{part.text}”, {PlayLabels.split_verse_problem(part.problem, part.part)}
                   </li>
                 </ul>
               </div>
@@ -437,12 +439,6 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   end
 
   defp existing_count(previews), do: Enum.count(previews, & &1.existing)
-
-  defp split_verse_problem(%{problem: :never_completed}),
-    do: gettext("a first part that nothing completes")
-
-  defp split_verse_problem(%{part: "M"}), do: gettext("a middle part that completes no verse")
-  defp split_verse_problem(%{part: "F"}), do: gettext("a last part that completes no verse")
 
   defp tei_total(preview), do: TeiImport.mixed_ownership_total(preview.replaces)
   defp preserved_total(preview), do: TeiImport.mixed_ownership_total(preview.preserves)
