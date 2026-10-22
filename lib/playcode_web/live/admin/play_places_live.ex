@@ -15,6 +15,11 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
+  # A link's own fields: the browser could add `play_id` or `place_id`, which the changeset
+  # casts, and move the link into another play or onto another place (CLAUDE.md, *Access
+  # control*).
+  @editable ~w(role note historical_state_id)
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     play = Catalogue.get_play!(id)
@@ -62,7 +67,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
   def handle_event("update_link", %{"link_id" => id, "play_place" => params}, socket) do
     with_link(socket, id, fn link ->
       with :ok <- known_state(params),
-           {:ok, updated} <- Places.update_play_place(link, params) do
+           {:ok, updated} <- Places.update_play_place(link, Map.take(params, @editable)) do
         log(socket, "update", updated)
         socket |> load_links() |> put_flash(:info, gettext("Place updated."))
       else

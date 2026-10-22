@@ -9,6 +9,11 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
   alias Playcode.Catalogue.PlaySource
   alias PlaycodeWeb.Admin.LiveHelpers
 
+  # The form's own fields: the browser could add `play_id`, which the changeset casts, and move
+  # the row into another play (CLAUDE.md, *Access control*).
+  @editable ~w(title author editor editor_role note publisher pub_place pub_date language
+               distributor)
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     play = Catalogue.get_play!(id)
@@ -76,6 +81,8 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
   end
 
   def handle_event("save_source", %{"play_source" => params}, socket) do
+    params = Map.take(params, @editable)
+
     case socket.assigns.editing_source do
       :new ->
         params = Map.put(params, "play_id", socket.assigns.play.id)

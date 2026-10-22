@@ -10,6 +10,10 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
+  # The form's own fields: the browser could add `play_id`, which the changeset casts, and move
+  # the row into another play (CLAUDE.md, *Access control*).
+  @editable ~w(person_name role organization position)
+
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     play = Catalogue.get_play!(id)
@@ -78,6 +82,8 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   end
 
   def handle_event("save_editor", %{"play_editor" => params}, socket) do
+    params = Map.take(params, @editable)
+
     case socket.assigns.editing_editor do
       :new ->
         params = Map.put(params, "play_id", socket.assigns.play.id)
