@@ -645,8 +645,10 @@ defmodule Playcode.Import.WordParser do
           end
 
         # Create structure in DB
-        # Every verse in document order: its number, and its identifier from the play's shape.
-        verses = %{counter: :counters.new(1, [:atomics]), play: play}
+        # Every verse line in document order takes the next identifier (slot 1); a whole
+        # verse or a first part also takes the next number (slot 2), as the files number
+        # a split verse once.
+        verses = %{counter: :counters.new(2, [:atomics]), play: play}
 
         # Use reduce to track act numbering (skip prologo/epilogue)
         Enum.with_index(acts, first_act_position)
@@ -875,8 +877,9 @@ defmodule Playcode.Import.WordParser do
   # The play's lines were deleted before the import, so its verses take the play's
   # identifiers from the first, as PlayContent.create_element/1 would one by one.
   defp create_verse(element, play_id, division_id, parent_id, pos, verses) do
+    numbered? = element[:part] in [nil, "I"]
     :counters.add(verses.counter, 1, 1)
-    line_num = :counters.get(verses.counter, 1)
+    if numbered?, do: :counters.add(verses.counter, 2, 1)
 
     Playcode.PlayContent.create_element(%{
       play_id: play_id,
@@ -885,8 +888,8 @@ defmodule Playcode.Import.WordParser do
       type: "verse_line",
       content: element.content,
       part: element[:part],
-      line_number: line_num,
-      line_id: Playcode.PlayContent.line_id(verses.play, line_num),
+      line_number: if(numbered?, do: :counters.get(verses.counter, 2)),
+      line_id: Playcode.PlayContent.line_id(verses.play, :counters.get(verses.counter, 1)),
       is_aside: element[:is_aside] || false,
       position: pos
     })

@@ -72,6 +72,29 @@ defmodule Playcode.Import.WordParserTest do
                ["I", "M", "F"]
     end
 
+    # As the files do: a split verse is one verse, numbered on its first part, and each
+    # part keeps an identifier of its own.
+    test "a split verse takes one number, on its first part" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}DUQUE  {ti}¿Cantan?",
+          "{p}RICARDO  {tm}¿No lo ves?",
+          "{p}DUQUE  {tf}¿Pues quién",
+          "{v}será sino Laura?"
+        ])
+
+      lines = Enum.map(xml_elements(xml, "l"), fn {attrs, _} -> attrs end)
+
+      assert Enum.map(lines, & &1["n"]) == ["0001", nil, nil, "0002"]
+
+      assert lines
+             |> Enum.map(& &1["xml:id"])
+             |> Enum.uniq()
+             |> Enum.reject(&is_nil/1)
+             |> length() == 4
+    end
+
     # {m} used to create an empty line group and then drop every verse after it.
     test "{m} opens a new stanza that holds the verses after it" do
       xml =
