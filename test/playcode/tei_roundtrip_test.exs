@@ -1506,6 +1506,28 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_elements(xml, "sp") == []
     end
 
+    # No source file has one, but the Word import stores a verse with no speaker or stanza
+    # open straight under its division ("{V}A line with no speaker.") and writes it so.
+    test "a verse line outside any speech or stanza keeps its place" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="prologo" n="1"><l n="1" part="I">En el prólogo</l></div1>
+            <div1 type="acto" n="1">
+              <div2 type="escena" n="1"><l n="1" part="F">en la escena</l></div2>
+            </div1>
+            """
+          )
+        )
+
+      assert [{%{"part" => "I"}, "En el prólogo"}, {%{"part" => "F"}, "en la escena"}] =
+               xml_elements(xml, "l")
+
+      assert [{_, "en la escena"}] = xml_elements(xml, "l", within: "div2")
+      assert xml_elements(xml, "sp") == []
+    end
+
     # 226 trailers in 132 plays ("FIN DEL PRIMER ACTO") used to be dropped. TEI only
     # allows one at the end of its division, so the act's comes after its scenes.
     test "a trailer closes its scene and its act" do

@@ -1560,15 +1560,16 @@ defmodule Playcode.Import.TeiParser do
   defp act_element({"stage", _, _} = stage, pos), do: stage_direction(stage, pos)
   defp act_element({"p", _, _} = para, pos), do: prose(para, pos)
   defp act_element({"lg", attrs, children}, pos), do: line_group(attrs, children, pos)
+  defp act_element({"l", _, _} = line, pos), do: verse_line(line, pos)
   defp act_element({"trailer", _, _} = trailer, pos), do: trailer(trailer, pos)
   defp act_element({"opener", _, _} = opener, pos), do: opener(opener, pos)
   defp act_element(_other, _pos), do: nil
 
-  # A scene's speeches, stage directions, trailer, and the paragraphs and stanzas nobody
-  # speaks, numbered from `first`. Nothing else in a scene is read.
+  # A scene's speeches, stage directions, trailer, and the paragraphs, stanzas and verses
+  # nobody speaks, numbered from `first`. Nothing else in a scene is read.
   defp scene_content(children, first) do
     children
-    |> Enum.filter(&match?({name, _, _} when name in ~w(sp stage trailer p lg), &1))
+    |> Enum.filter(&match?({name, _, _} when name in ~w(sp stage trailer p lg l), &1))
     |> Enum.with_index(first)
     |> Enum.map(fn {child, pos} -> act_element(child, pos) end)
   end
