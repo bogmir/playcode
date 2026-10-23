@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>Studying Stage Directions</title>
+<!-- The background of question 52 in preguntas.html (2026-10-24). Three ways for a reader of the
+     published site to study a play's stage directions, drawn in the site's own colours
+     (priv/static_site/style.css) with the first scene of Hamlet. Counts are from the dev build of
+     2026-10-14 (_site/): stage directions per act page and per play, block (.sd) and inline (.sdi);
+     the share with a kind is <stage type> in doc/tei_corpus/ (10,477 of 51,471). The places and
+     kinds shown in the mockups are illustrative. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;600&display=swap">
+<style>
+  /* Layout: one reading column; each option a mockup of the published site's reading page. */
+  :root {
+    color-scheme: light;
+    --paper: #F4F6F3; --surface: #FFFFFF; --ink: #1A2130; --muted: #586171; --rule: #D6DBD4;
+    --accent: #27487A; --accent-soft: #E4EBF5;
+    --serif: "EB Garamond", Garamond, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+    /* The published site's tokens, for the mockups. */
+    --s-paper: #fbfbf9; --s-raised: #fff; --s-ink: #1b2430; --s-ink-2: #4b5563; --s-muted: #5f6a78; --s-faint: #9aa3ae;
+    --s-hair: #e3e6ea; --s-hair-2: #eef0f2; --s-accent: #1f3a5f; --s-on-accent: #fff; --s-mark: #e4ecf6;
+    --s-serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --s-sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --paper: #12161B; --surface: #1A1F26; --ink: #E4E7EA; --muted: #9AA3AE; --rule: #2C333C;
+      --accent: #9DB9E8; --accent-soft: #1F2B3D;
+      --s-paper: #121519; --s-raised: #181c21; --s-ink: #e6e8eb; --s-ink-2: #b9c1cb; --s-muted: #98a2ae; --s-faint: #717b88;
+      --s-hair: #2a3038; --s-hair-2: #20252b; --s-accent: #9dbbe3; --s-on-accent: #121519; --s-mark: #23344d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #12161B; --surface: #1A1F26; --ink: #E4E7EA; --muted: #9AA3AE; --rule: #2C333C;
+    --accent: #9DB9E8; --accent-soft: #1F2B3D;
+    --s-paper: #121519; --s-raised: #181c21; --s-ink: #e6e8eb; --s-ink-2: #b9c1cb; --s-muted: #98a2ae; --s-faint: #717b88;
+    --s-hair: #2a3038; --s-hair-2: #20252b; --s-accent: #9dbbe3; --s-on-accent: #121519; --s-mark: #23344d;
+  }
+
+  body {
+    margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.6;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  main { max-width: 56rem; margin-inline: auto; padding-block: 3rem 5rem; display: grid; gap: 3rem; }
+  main > * { min-width: 0; }
+  h1, h2, h3 { text-wrap: balance; margin: 0; }
+  p { margin: 0; }
+  a { color: var(--accent); }
+  .eyebrow { font-size: 0.75rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+  header { display: grid; gap: 1rem; }
+  h1 { font-family: var(--serif); font-weight: 500; font-size: clamp(2.1rem, 6vw, 3.1rem); line-height: 1.08; letter-spacing: -0.01em; }
+  .lede { font-size: 1.125rem; max-width: 62ch; }
+  .meta, .note { font-size: 0.875rem; color: var(--muted); max-width: 70ch; }
+  section { display: grid; gap: 1rem; min-width: 0; }
+  section > h2 {
+    font-family: var(--serif); font-weight: 500; font-size: 1.75rem; line-height: 1.2;
+    padding-top: 1.25rem; border-top: 1px solid var(--rule); display: flex; gap: .75rem; align-items: baseline;
+  }
+  .letter { font-family: var(--sans); font-size: .875rem; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: .1rem .6rem; }
+  .goodbad { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; font-size: .9375rem; }
+  .goodbad h3 { font-size: .72rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+  .goodbad ul { margin: .25rem 0 0; padding-left: 1.1rem; }
+
+  /* A mockup of the published site's reading page. */
+  .site { background: var(--s-paper); color: var(--s-ink); border: 1px solid var(--s-hair); border-radius: 8px; overflow: hidden;
+    display: grid; grid-template-columns: 13rem 1fr; font-family: var(--s-serif); }
+  .site .rail { border-right: 1px solid var(--s-hair); padding: 1rem; font: .78rem/1.5 var(--s-sans); color: var(--s-ink-2); }
+  .site .rail h4 { font: 600 .64rem var(--s-sans); text-transform: uppercase; letter-spacing: .08em; color: var(--s-muted); margin: 1rem 0 .4rem; }
+  .site .rail h4:first-child { margin-top: 0; }
+  .site .rail ul { list-style: none; margin: 0; padding: 0; }
+  .site .rail li { padding: .1rem 0; }
+  .site .rail .cur { color: var(--s-accent); font-weight: 600; box-shadow: inset 2px 0 var(--s-accent); padding-left: .5rem; margin-left: -.6rem; }
+  .site .rail .opt { display: block; padding: .1rem 0; }
+  .site .rail .sub { padding-left: 1.4rem; }
+  .site .seg { display: inline-flex; border: 1px solid var(--s-hair); border-radius: 6px; overflow: hidden; }
+  .site .seg span { padding: .1rem .5rem; border-right: 1px solid var(--s-hair); }
+  .site .seg span:last-child { border-right: 0; }
+  .site .seg .on { background: var(--s-mark); color: var(--s-accent); font-weight: 600; }
+  .site .step { display: inline-flex; align-items: center; gap: .35rem; margin: .2rem 0 .3rem; }
+  .site .step b { font-weight: 600; color: var(--s-ink); font-variant-numeric: tabular-nums; }
+  .site .btn { border: 1px solid var(--s-hair); background: var(--s-raised); border-radius: 6px; width: 1.6rem; height: 1.5rem;
+    display: inline-grid; place-items: center; color: var(--s-accent); font: 600 .85rem var(--s-sans); flex: none; }
+  .site .page { padding: 1.1rem 1.6rem 1.4rem; min-width: 0; }
+  .site .author { font: .75rem var(--s-sans); color: var(--s-muted); margin: 0 0 .1rem; }
+  .site .title { font: 600 1.15rem var(--s-serif); margin: 0 0 .9rem; }
+  .site .scene { font: 600 .95rem var(--s-serif); color: var(--s-ink-2); margin: .2rem 0 .5rem; }
+  .site .sd { margin: .5rem 0 .5rem 2.6rem; font-style: italic; color: var(--s-ink-2); padding: .15rem .4rem; border-radius: 4px; }
+  .site .spk { font: 600 .66rem var(--s-sans); letter-spacing: .08em; text-transform: uppercase; color: var(--s-muted); margin: .45rem 0 .05rem 2.6rem; }
+  .site .l { display: grid; grid-template-columns: 2.6rem 1fr; line-height: 1.5; font-size: .92rem; }
+  .site .l .n { font: .68rem var(--s-sans); color: var(--s-faint); text-align: right; padding-right: .8rem; padding-top: .2rem; }
+  .site .here { background: var(--s-mark); box-shadow: inset 3px 0 var(--s-accent); }
+  .site.study .sp { opacity: .38; }
+  .site .bar { margin: 1rem -1.6rem -1.4rem; padding: .55rem 1rem; background: var(--s-raised); border-top: 1px solid var(--s-hair);
+    display: flex; align-items: center; gap: .6rem; font: .78rem var(--s-sans); color: var(--s-ink-2); }
+  .site .bar .where { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .site .bar .where i { font-family: var(--s-serif); color: var(--s-ink); }
+  .site .bar kbd { font: .68rem var(--s-sans); border: 1px solid var(--s-hair); border-bottom-width: 2px; border-radius: 4px; padding: 0 .3rem; color: var(--s-muted); }
+  .site .tiles { display: flex; gap: 1.2rem; margin: 0 0 .8rem; font: .74rem var(--s-sans); color: var(--s-muted); }
+  .site .tiles b { display: block; font: 600 1.1rem var(--s-serif); color: var(--s-ink); }
+  .site .chips { display: flex; flex-wrap: wrap; gap: .35rem; margin: 0 0 .5rem; font: .74rem var(--s-sans); }
+  .site .chips span { border: 1px solid var(--s-hair); border-radius: 999px; padding: .1rem .6rem; color: var(--s-ink-2); background: var(--s-raised); }
+  .site .chips .on { background: var(--s-accent); border-color: var(--s-accent); color: var(--s-on-accent); }
+  .site .chips em { font-style: normal; color: var(--s-faint); margin-left: .25rem; }
+  .site .chips .on em { color: inherit; opacity: .75; }
+  .site .chips .lbl { border: 0; background: none; padding-left: 0; color: var(--s-muted); font-weight: 600; }
+  .site .group { font: 600 .64rem var(--s-sans); text-transform: uppercase; letter-spacing: .08em; color: var(--s-muted); margin: .9rem 0 .3rem; }
+  .site ol { list-style: none; margin: 0; padding: 0; }
+  .site ol li { display: grid; grid-template-columns: 6.2rem 5.2rem 1fr; gap: .6rem; padding: .32rem 0; border-bottom: 1px solid var(--s-hair-2); align-items: baseline; }
+  .site ol .at { font: .74rem var(--s-sans); color: var(--s-accent); text-decoration: underline; text-underline-offset: 2px; }
+  .site ol .kind { font: .68rem var(--s-sans); color: var(--s-muted); }
+  .site ol .txt { font-style: italic; font-size: .92rem; }
+  @media (max-width: 640px) {
+    .site { grid-template-columns: 1fr; }
+    .site .rail { border-right: 0; border-bottom: 1px solid var(--s-hair); }
+    .site ol li { grid-template-columns: 1fr; gap: 0; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">Playcode · For the EMOTHE team · Background to question 52</p>
+    <h1>Studying a play’s stage directions</h1>
+    <p class="lede">Three ways the published site could help a reader who studies the stage directions themselves: where the entrances and exits fall, how the stage business is written, how often asides are marked. Each is drawn in the site’s own colours with the first scene of <i>Hamlet</i>.</p>
+    <p class="meta">Today the site can only show or hide the stage directions. An act page holds about 23 of them (54 on a busy one, 232 at most, <i>La Tempête</i>, act 1); a whole play about 120, 440 at most (<i>Le Roi Lear</i>). Three in four stand on a line of their own, one in four inside a verse or a speech. The places and kinds in the pictures are illustrative. <a href="preguntas.html#q52">Back to question 52</a></p>
+  </header>
+
+  <section aria-labelledby="h-a">
+    <h2 id="h-a"><span class="letter">A</span> Arrows in the side panel</h2>
+    <p>Under “Show: Stage directions”, two arrows step through the stage directions of the page you are reading, and the one you are on is shaded. emothe.uv.es did the same for split verses.</p>
+    <div class="site" role="img" aria-label="Option A: the side panel shows arrows and the count 2 of 47 under the Stage directions switch; the second stage direction of the scene is shaded.">
+      <div class="rail">
+        <h4>Contents</h4>
+        <ul><li>Title page</li><li class="cur">Act 1</li><li>Act 2</li><li>Act 3</li></ul>
+        <h4>Line numbers</h4>
+        <div class="seg"><span>All</span><span class="on">5</span><span>Off</span></div>
+        <h4>Show</h4>
+        <span class="opt">☑ Stage directions</span>
+        <div class="sub"><span class="step"><span class="btn">‹</span><b>2 / 47</b><span class="btn">›</span></span></div>
+        <span class="opt">☑ Verse forms</span>
+      </div>
+      <div class="page">
+        <p class="author">William Shakespeare</p>
+        <p class="title">The Tragedy of Hamlet, Prince of Denmark</p>
+        <p class="scene">Act 1, Scene 1</p>
+        <p class="sd">Enter Barnardo and Francisco, two sentinels.</p>
+        <div class="sp"><p class="spk">Barnardo</p><div class="l"><span class="n"></span><span>Who’s there?</span></div></div>
+        <div class="sp"><p class="spk">Francisco</p><div class="l"><span class="n"></span><span>Nay, answer me. Stand and unfold yourself.</span></div></div>
+        <div class="sp"><p class="spk">Barnardo</p><div class="l"><span class="n"></span><span>Well, good night.</span></div><div class="l"><span class="n"></span><span>If you do meet Horatio and Marcellus,</span></div><div class="l"><span class="n"></span><span>The rivals of my watch, bid them make haste.</span></div></div>
+        <p class="sd here">Enter Horatio and Marcellus.</p>
+        <div class="sp"><p class="spk">Francisco</p><div class="l"><span class="n"></span><span>I think I hear them. Stand ho, who is there?</span></div></div>
+      </div>
+    </div>
+    <div class="goodbad">
+      <div><h3>For it</h3><ul><li>The smallest change; nothing new on the page</li><li>Familiar to emothe.uv.es’s readers</li></ul></div>
+      <div><h3>Against it</h3><ul><li>One stage direction at a time: they cannot be read together or compared</li><li>Counts only the page you are on; on a phone the side panel is folded away at the top</li></ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-b">
+    <h2 id="h-b"><span class="letter">B</span> A study mode</h2>
+    <p>A “Study stage directions” switch fades the speeches, as Highlight does for a character today, and opens a bar along the bottom of the text: where you are, the stage direction itself, the arrows, and the keys J and K. The bar stays in reach on a phone.</p>
+    <div class="site study" role="img" aria-label="Option B: the speeches are faded; a bar under the text reads 2 of 47, Act 1 scene 1, before verse 14, Enter Horatio and Marcellus, with arrows and the keys J and K.">
+      <div class="rail">
+        <h4>Contents</h4>
+        <ul><li>Title page</li><li class="cur">Act 1</li><li>Act 2</li></ul>
+        <h4>Show</h4>
+        <span class="opt">☑ Stage directions</span>
+        <span class="opt">☑ Verse forms</span>
+        <h4>Study</h4>
+        <span class="opt">☑ Stage directions</span>
+      </div>
+      <div class="page">
+        <p class="author">William Shakespeare</p>
+        <p class="title">The Tragedy of Hamlet, Prince of Denmark</p>
+        <p class="scene">Act 1, Scene 1</p>
+        <p class="sd">Enter Barnardo and Francisco, two sentinels.</p>
+        <div class="sp"><p class="spk">Barnardo</p><div class="l"><span class="n"></span><span>Who’s there?</span></div></div>
+        <div class="sp"><p class="spk">Barnardo</p><div class="l"><span class="n"></span><span>The rivals of my watch, bid them make haste.</span></div></div>
+        <p class="sd here">Enter Horatio and Marcellus.</p>
+        <div class="sp"><p class="spk">Francisco</p><div class="l"><span class="n"></span><span>I think I hear them. Stand ho, who is there?</span></div></div>
+        <div class="sp"><p class="spk">Horatio</p><div class="l"><span class="n">15</span><span>Friends to this ground.</span></div></div>
+        <div class="bar">
+          <span class="btn">‹</span>
+          <span class="where"><b>2 of 47</b> · I.1, before v. 14 · <i>Enter Horatio and Marcellus.</i></span>
+          <span><kbd>J</kbd> <kbd>K</kbd></span>
+          <span class="btn">›</span>
+        </div>
+      </div>
+    </div>
+    <div class="goodbad">
+      <div><h3>For it</h3><ul><li>Each stage direction seen in its place, the rest of the text quiet around it</li><li>Always in reach, on a phone too</li></ul></div>
+      <div><h3>Against it</h3><ul><li>Still one at a time, and only the page you are on</li><li>Needs the browser’s scripts; nothing in a print</li></ul></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-c">
+    <h2 id="h-c"><span class="letter">C</span> A page of the play’s stage directions</h2>
+    <p>Every stage direction of the play on one page, in order, act by act and scene by scene, as the Notes page lists the notes. Each one’s place links to it in the text, where it is shaded. It can be filtered by where it stands and, where the file says, by its kind.</p>
+    <div class="site" role="img" aria-label="Option C: a Stage directions page with counts, filters by place and by kind, and a list of the stage directions of Act 1, each with its place and kind.">
+      <div class="rail">
+        <h4>Contents</h4>
+        <ul><li>Title page</li><li>Act 1</li><li>Act 2</li><li>…</li><li>Statistics</li><li>Notes</li><li class="cur">Stage directions</li></ul>
+      </div>
+      <div class="page">
+        <p class="author">William Shakespeare</p>
+        <p class="title">Stage directions</p>
+        <div class="tiles"><span><b>412</b>stage directions</span><span><b>297</b>on their own</span><span><b>115</b>within a line</span></div>
+        <div class="chips"><span class="lbl">Where</span><span class="on">All</span><span>On their own<em>297</em></span><span>Within a line<em>115</em></span></div>
+        <div class="chips"><span class="lbl">Kind</span><span class="on">All</span><span>Entrance<em>118</em></span><span>Exit<em>104</em></span><span>Business<em>61</em></span><span>Delivery<em>87</em></span><span>Other<em>42</em></span></div>
+        <p class="group">Act 1, Scene 1</p>
+        <ol>
+          <li><span class="at">before v. 1</span><span class="kind">Entrance</span><span class="txt">Enter Barnardo and Francisco, two sentinels.</span></li>
+          <li><span class="at">before v. 14</span><span class="kind">Entrance</span><span class="txt">Enter Horatio and Marcellus.</span></li>
+          <li><span class="at">v. 16</span><span class="kind">Exit</span><span class="txt">Exit Francisco.</span></li>
+          <li><span class="at">before v. 39</span><span class="kind">Entrance</span><span class="txt">Enter Ghost.</span></li>
+          <li><span class="at">v. 50</span><span class="kind">Exit</span><span class="txt">Exit Ghost.</span></li>
+          <li><span class="at">v. 126</span><span class="kind">Business</span><span class="txt">It spreads his arms.</span></li>
+        </ol>
+        <p class="group">Act 1, Scene 2</p>
+        <ol>
+          <li><span class="at">before v. 1</span><span class="kind">Entrance</span><span class="txt">Flourish. Enter Claudius, King of Denmark, Gertrude the Queen, Council, as Polonius and his son Laertes, Hamlet, cum aliis.</span></li>
+        </ol>
+      </div>
+    </div>
+    <div class="goodbad">
+      <div><h3>For it</h3><ul><li>All of them read together, compared, counted and printed: the whole play, not one act</li><li>Works with no scripts, in the downloaded archive too</li></ul></div>
+      <div><h3>Against it</h3><ul><li>The context is a click away, not around it</li><li>A kind shows only where the file gives one: about one stage direction in five in the corpus</li></ul></div>
+    </div>
+  </section>
+
+  <p class="note">B and C can go together: the page to read them all, the study mode when you land in the text. <a href="preguntas.html#q52">Answer in question 52</a></p>
+</main>
+</body>
+</html>

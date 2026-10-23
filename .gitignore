@@ -49,3 +49,6 @@ npm-debug.log
 /_site.old/
 # The live settings of the emothe.uv.es deploy script; copied to the server, not committed
 deploy/playcode-deploy.config.php
+
+# Brainstorming mockups (superpowers visual companion)
+.superpowers/
