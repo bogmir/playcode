@@ -229,6 +229,26 @@ defmodule Playcode.Export.StaticSitePlayTest do
                ["1 line", "1 line", "5 lines"]
     end
 
+    test "a passage of verses with no number names no range" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>ANA</speaker>
+            <lg type="redondilla"><l n="1">uno</l><l n="2">dos</l></lg>
+            <lg type="romance"><l>canta</l><l>la niña</l></lg>
+          </sp>
+        </div1>
+        """)
+
+      stats = page(dir, play, "statistics.html")
+
+      assert stats |> LazyHTML.query("#synopsis .pass") |> LazyHTML.attribute("title") ==
+               ["Redondilla · vv. 1–2 · 2 verses", "Romance · 2 verses"]
+
+      assert stats |> LazyHTML.query("#presence thead th[title]") |> LazyHTML.attribute("title") ==
+               ["Redondilla · vv. 1–2", "Romance"]
+    end
+
     test "a play in prose has no synopsis and measures its characters in words" do
       {play, dir} =
         publish!("""

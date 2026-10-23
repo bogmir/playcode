@@ -974,11 +974,15 @@ defmodule Playcode.Export.StaticSite.Components do
         sep: i > 0 and Enum.at(passages, i - 1)["act"] != passage["act"],
         colour: form_colour(passage["form"]),
         verses: passage["verses"],
-        title: "#{label} · vv. #{range(passage)} · #{passage["verses"]} verses",
+        title: "#{label}#{verses_range(passage)} · #{passage["verses"]} verses",
         label: if(passage["verses"] / total > 0.06, do: label)
       }
     end)
   end
+
+  # A passage whose verses carry no number (a song) has no range to name.
+  defp verses_range(%{"from" => nil}), do: ""
+  defp verses_range(passage), do: " · vv. #{range(passage)}"
 
   defp range(%{"from" => from, "to" => to}) when from == to, do: "#{from}"
   defp range(%{"from" => from, "to" => to}), do: "#{from}–#{to}"
@@ -1112,7 +1116,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp basis_note(_basis, _n), do: "A filled cell means the character speaks in that division."
 
   defp column_title(%{"form" => form} = column),
-    do: "#{PlayLabels.verse_form_label(form)} · vv. #{range(column)}"
+    do: "#{PlayLabels.verse_form_label(form)}#{verses_range(column)}"
 
   # The statistics keep a heading as stored, its italics marked: a title attribute takes
   # plain text.
