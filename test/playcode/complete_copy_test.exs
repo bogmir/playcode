@@ -259,6 +259,8 @@ defmodule Playcode.CompleteCopyTest do
     })
 
     verse!(scene, group, %{content: "cuatro todo aparte", line_number: 3, is_aside: true})
+    verse!(scene, group, %{content: "y sigue aparte", is_aside: true, aside_continues: true})
+    verse!(scene, group, %{content: "otro aparte, a continuación", is_aside: true})
 
     noted = verse!(scene, group, %{content: "cinco <<en cursiva>>", line_number: 4})
     note!(play, %{element_id: noted.id, offset: 5, n: "4", type: "editor", body: "Cinco."})

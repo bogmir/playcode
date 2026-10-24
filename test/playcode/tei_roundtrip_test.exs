@@ -1819,6 +1819,95 @@ defmodule Playcode.TeiRoundtripTest do
              """) == 2
     end
 
+    defp seg_links(xml),
+      do: for({attrs, _} <- xml_elements(xml, "seg"), do: Map.take(attrs, ["xml:id", "next"]))
+
+    test "an aside's pieces are numbered and linked, and a drifted link comes back sound" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>CLARÍN</speaker><lg>
+                <l xml:id="es-1203"><seg type="aside" xml:id="es-1203-seg01" next="es-1205-seg02">A costa de cuatro palos</seg></l>
+                <l xml:id="es-1204"><seg type="aside" xml:id="es-1204-seg02">dos</seg></l>
+                <l xml:id="es-1205"><seg type="aside" xml:id="es-1205-seg03">tres</seg></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      assert seg_links(xml) == [
+               %{"xml:id" => "es-1203-seg01", "next" => "#es-1204-seg02"},
+               %{"xml:id" => "es-1204-seg02", "next" => "#es-1205-seg03"},
+               %{"xml:id" => "es-1205-seg03"}
+             ]
+    end
+
+    test "two asides back to back come back as two" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l xml:id="es-0001"><seg type="aside" xml:id="es-0001-seg01">uno</seg></l>
+                <l xml:id="es-0002"><seg type="aside" xml:id="es-0002-seg01">dos</seg></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      assert seg_links(xml) == [%{"xml:id" => "es-0001-seg01"}, %{"xml:id" => "es-0002-seg01"}]
+
+      play = import_tei!(xml)
+      assert Playcode.Statistics.get_statistics(play.id).data["total_asides"] == 2
+    end
+
+    test "a paragraph's pieces get identifiers no line has, the same on every export" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker>
+                <lg><l xml:id="es-0001">en verso</l></lg>
+                <p><seg type="aside">a</seg> <lb n="2"/><seg type="aside">b</seg> en voz alta</p>
+              </sp>
+              """)
+          )
+        )
+
+      xml = export_tei(play)
+      assert [%{"xml:id" => first, "next" => next}, %{"xml:id" => second} = last] = seg_links(xml)
+      refute Map.has_key?(last, "next")
+      assert next == "#" <> second
+      assert String.ends_with?(first, "-seg01") and String.ends_with?(second, "-seg02")
+
+      assert [] ==
+               [first, second] --
+                 ([first, second] -- for({a, _} <- xml_elements(xml, "l"), do: a["xml:id"]))
+
+      assert seg_links(export_tei(play)) == seg_links(xml)
+    end
+
+    test "two asides starting in one line get distinct identifiers" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l xml:id="es-0001"><seg type="aside">a</seg> dicho <seg type="aside">b</seg></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      ids = for %{"xml:id" => id} <- seg_links(xml), do: id
+      assert length(ids) == 2 and ids == Enum.uniq(ids)
+    end
+
     # 24 source files spell the delivery type "delivery_" (79 stage directions and 418
     # stages inside lines in dev); TEI's word is "delivery".
     test "a stage direction's kind comes back, delivery_ as delivery" do
@@ -3194,11 +3283,10 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_lines(xml, "p") ==
                [{%{}, "Me fouiller ? Soit. (À part.) Prends la coupe, Dick. [12] Allons ! Vite."}]
 
-      assert xml_lines(xml, "seg") ==
-               Enum.map(
-                 ["Basta.", "Prends la coupe, Dick.", "Vite."],
-                 &{%{"type" => "aside"}, &1}
-               )
+      # Each piece has carried an xml:id since 2026-10-25 (its own tests, "the text"): here
+      # the type and the words.
+      assert for({attrs, text} <- xml_lines(xml, "seg"), do: {attrs["type"], text}) ==
+               Enum.map(["Basta.", "Prends la coupe, Dick.", "Vite."], &{"aside", &1})
 
       assert [%{text: "(À part.)", type: "delivery"}] = xml_inline_stages(xml)
       assert xml_texts(xml, "note", within: "seg") == ["Dick."]
@@ -3220,9 +3308,9 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
-      assert xml_lines(xml, "seg") == [
-               {%{"type" => "aside"}, "Ay, marry, now there's [52] a wise man."}
-             ]
+      # One piece, with the xml:id every piece has carried since 2026-10-25.
+      assert [{%{"type" => "aside", "xml:id" => _}, "Ay, marry, now there's [52] a wise man."}] =
+               xml_lines(xml, "seg")
 
       assert xml_inline_stages(xml) == []
     end

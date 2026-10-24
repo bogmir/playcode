@@ -59,6 +59,8 @@ defmodule Playcode.PlayContent.Element do
     field :part, :string
     field :is_aside, :boolean, default: false
     field :aside_continues, :boolean, default: false
+    # Each aside piece's TEI attributes (xml:id, next), set by the TEI export alone.
+    field :aside_links, {:array, :map}, virtual: true, default: []
     field :rend, :string
     field :stage_type, :string
     field :position, :integer, default: 0
@@ -81,35 +83,36 @@ defmodule Playcode.PlayContent.Element do
   def stage_types, do: @stage_types
 
   @doc """
-  How many asides start in `element`. Its first piece starts one unless `aside_continues`
-  says it continues the aside before it; each later piece, an `<aside>` marker, starts
-  another when spoken words stand before it (a stage or a line's number is not spoken).
+  Whether each aside piece of `element` starts an aside, in order. Its first piece does
+  unless `aside_continues` says it continues the aside before it; each later piece, an
+  `<aside>` marker, does when spoken words stand before it (a stage or a line's number is
+  not spoken). A line all aside is one piece.
   """
-  def asides_started(%{is_aside: true} = element) do
-    first = if element.aside_continues, do: 0, else: 1
+  def aside_piece_starts(%{is_aside: true} = element) do
+    first = not element.aside_continues
 
-    if whole_aside?(element) do
-      first
-    else
-      first + later_asides(element.content)
-    end
+    if whole_aside?(element),
+      do: [first],
+      else: [first | later_piece_starts(element.content)]
   end
 
-  def asides_started(_element), do: 0
+  def aside_piece_starts(_element), do: []
 
-  # How many `<aside>` markers after the first have spoken words before them.
-  defp later_asides(content) do
-    {count, _spoken} =
+  @doc "How many asides start in `element` (`aside_piece_starts/1`)."
+  def asides_started(element), do: element |> aside_piece_starts() |> Enum.count(& &1)
+
+  defp later_piece_starts(content) do
+    {starts, _spoken} =
       ~r{<aside>.*?</aside>}s
       |> Regex.split(content, include_captures: true, trim: true)
       |> Enum.drop_while(&(not String.starts_with?(&1, "<aside>")))
       |> Enum.drop(1)
-      |> Enum.reduce({0, false}, fn
-        "<aside>" <> _, {count, spoken} -> {if(spoken, do: count + 1, else: count), false}
-        text, {count, spoken} -> {count, spoken or String.trim(InlineMarkup.spoken(text)) != ""}
+      |> Enum.flat_map_reduce(false, fn
+        "<aside>" <> _, spoken -> {[spoken], false}
+        text, spoken -> {[], spoken or String.trim(InlineMarkup.spoken(text)) != ""}
       end)
 
-    count
+    starts
   end
 
   @doc "True when every word of the element is spoken aside: no marker says which are."

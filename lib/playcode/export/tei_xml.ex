@@ -809,7 +809,7 @@ defmodule Playcode.Export.TeiXml do
   # The outline in order, each item where its place puts it (`Outline.placement/1`): in
   # <front> before the first division of the text, in <body> between, in <back> after.
   defp build_text(play, divisions, performances, gazetteer) do
-    divisions = with_folio_parts(divisions)
+    divisions = divisions |> with_folio_parts() |> with_aside_links()
     lists = cast_lists(divisions)
 
     cast = %{
@@ -1341,13 +1341,13 @@ defmodule Playcode.Export.TeiXml do
   defp spoken_content(el, text) do
     cond do
       Element.whole_aside?(el) ->
-        [element(:seg, %{type: "aside"}, build_inline_content(text, el.notes))]
+        [aside_seg(el.aside_links, build_inline_content(text, el.notes))]
 
       el.is_aside ->
         {nodes, _} =
           ~r{<aside>.*?</aside>}s
           |> Regex.split(text, include_captures: true, trim: true)
-          |> Enum.flat_map_reduce({0, el.notes}, &aside_piece/2)
+          |> Enum.flat_map_reduce({0, el.notes, el.aside_links}, &aside_piece/2)
 
         nodes
 
@@ -1358,7 +1358,7 @@ defmodule Playcode.Export.TeiXml do
 
   # One piece of a text partly aside, starting `at` graphemes into its plain form, with the
   # notes not yet placed. Its notes go in with offsets counted from its own start.
-  defp aside_piece(piece, {at, notes}) do
+  defp aside_piece(piece, {at, notes, links}) do
     {aside?, words} =
       case piece do
         "<aside>" <> rest -> {true, String.replace_suffix(rest, "</aside>", "")}
@@ -1369,11 +1369,92 @@ defmodule Playcode.Export.TeiXml do
     {here, later} = Enum.split_with(notes, &(&1.offset <= stop))
     inline = build_inline_content(words, Enum.map(here, &%{&1 | offset: &1.offset - at}))
 
-    nodes =
-      if aside?, do: [element(:seg, %{type: "aside"}, inline)], else: List.wrap(inline)
-
-    {nodes, {stop, later}}
+    if aside?,
+      do: {[aside_seg(links, inline)], {stop, later, Enum.drop(links, 1)}},
+      else: {List.wrap(inline), {stop, later, links}}
   end
+
+  defp aside_seg(links, content),
+    do: element(:seg, Map.merge(%{type: "aside"}, List.first(links, %{})), content)
+
+  # Each aside piece's xml:id and, but for an aside's last, the next naming the piece after
+  # it, in reading order, so a chain runs on into another speech
+  # (docs/superpowers/specs/2026-10-25-aside-chains-design.md). A piece in a line with an
+  # identifier is `<line_id>-segNN`, NN its number within its aside, the files' shape; one
+  # in a paragraph or a line with none `pNNNN-segNN`, NNNN counting such elements, a shape
+  # no line identifier has. A later piece of a line that starts an aside of its own would
+  # repeat its line's first identifier, so it takes a suffix: the import reads only an
+  # element's first piece. The pieces are paired as `with_folio_parts/1` pairs passages.
+  defp with_aside_links(divisions) do
+    {hosts, _others} =
+      divisions
+      |> Enum.flat_map(&asides_in/1)
+      |> Enum.map_reduce(0, fn
+        %{line_id: id} = element, others when is_binary(id) -> {{element, id}, others}
+        element, others -> {{element, "p" <> pad(others + 1, 4)}, others + 1}
+      end)
+
+    {pieces, _} =
+      hosts
+      |> Enum.flat_map(fn {element, host} ->
+        for starts <- Element.aside_piece_starts(element), do: {element.id, host, starts}
+      end)
+      |> Enum.map_reduce({0, MapSet.new()}, fn {element_id, host, starts}, {number, used} ->
+        number = if starts or number == 0, do: 1, else: number + 1
+        id = unique_id("#{host}-seg#{pad(number, 2)}", used)
+        {{element_id, id, starts}, {number, MapSet.put(used, id)}}
+      end)
+
+    links =
+      pieces
+      |> Enum.zip(Enum.drop(pieces, 1) ++ [nil])
+      |> Enum.map(fn
+        {{element_id, id, _}, {_, next, false}} ->
+          {element_id, %{"xml:id" => id, next: "#" <> next}}
+
+        {{element_id, id, _}, _} ->
+          {element_id, %{"xml:id" => id}}
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    Enum.map(divisions, &put_aside_links(&1, links))
+  end
+
+  defp asides_in(%Division{} = division),
+    do: Enum.flat_map(division.loaded_elements ++ division.children, &asides_in/1)
+
+  defp asides_in(%Element{type: type} = element) when type in ~w(speech line_group),
+    do: Enum.flat_map(element.children, &asides_in/1)
+
+  defp asides_in(%Element{type: type, is_aside: true} = element)
+       when type in ~w(verse_line prose),
+       do: [element]
+
+  defp asides_in(_other), do: []
+
+  defp put_aside_links(%Division{} = division, links) do
+    %{
+      division
+      | loaded_elements: Enum.map(division.loaded_elements, &put_aside_links(&1, links)),
+        children: Enum.map(division.children, &put_aside_links(&1, links))
+    }
+  end
+
+  defp put_aside_links(%Element{type: type} = element, links)
+       when type in ~w(speech line_group),
+       do: %{element | children: Enum.map(element.children, &put_aside_links(&1, links))}
+
+  defp put_aside_links(%Element{} = element, links),
+    do: %{element | aside_links: Map.get(links, element.id, [])}
+
+  defp put_aside_links(other, _links), do: other
+
+  defp unique_id(id, used, k \\ 1) do
+    candidate = if k == 1, do: id, else: "#{id}-#{k}"
+    if MapSet.member?(used, candidate), do: unique_id(id, used, k + 1), else: candidate
+  end
+
+  defp pad(number, width), do: number |> Integer.to_string() |> String.pad_leading(width, "0")
 
   # A text as TEI: <<…>> becomes <emph>, as the EMOTHE corpus writes italics (<hi
   # rend="italic"> would do too, per TEI P5), and each note goes back at its offset
