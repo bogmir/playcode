@@ -2,8 +2,8 @@ defmodule Playcode.Export.StaticSite.Edition do
   @moduledoc """
   One play prepared for the static site: which page each division goes on, where each
   paratext and cast list prints, the anchor and citation reference of every line, the
-  ghost text that aligns a split verse, where each metrical passage starts, and where each
-  note is. The pages and the search index both read it, so a line's or a note's address
+  ghost text that aligns a split verse, where each metrical passage and each aside starts,
+  and where each note is. The pages and the search index both read it, so a line's or a note's address
   is decided once.
   """
 
@@ -30,6 +30,7 @@ defmodule Playcode.Export.StaticSite.Edition do
     :refs,
     :ghosts,
     :passage_starts,
+    :aside_starts,
     :page_of,
     :notes,
     :variants,
@@ -66,6 +67,7 @@ defmodule Playcode.Export.StaticSite.Edition do
       refs: refs,
       ghosts: ghosts(items),
       passage_starts: passage_starts(Metrics.passages(items)),
+      aside_starts: aside_starts(items),
       page_of: page_of(pages, items),
       notes: notes(divisions, items, pages, refs),
       variants: divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1),
@@ -492,5 +494,18 @@ defmodule Playcode.Export.StaticSite.Edition do
     for %{form: form, element_ids: [first | _]} <- passages, form != "unmarked", into: %{} do
       {first, form}
     end
+  end
+
+  # The first verse of each aside. The files cut an aside over several verses into one
+  # piece per verse, so a speech's consecutive aside verses are taken for one. Two asides
+  # back to back read as one: only the files' `next` chain tells them apart, and it is
+  # faulty (backlog, *An aside that runs over several verses*).
+  defp aside_starts(items) do
+    for [%{element: %{is_aside: true} = el} | _] <-
+          items
+          |> Enum.filter(&(&1.kind == :verse))
+          |> Enum.chunk_by(&{&1.speech && &1.speech.id, &1.element.is_aside}),
+        into: MapSet.new(),
+        do: el.id
   end
 end

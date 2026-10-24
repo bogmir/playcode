@@ -130,6 +130,31 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert act |> LazyHTML.query("#p1") |> LazyHTML.text() =~ "En prosa."
   end
 
+  # Regression: the files cut an aside over several verses into one piece per verse, and
+  # the margin said "aparte" on each, 74 times down Clotaldo's in La vida es sueño.
+  test "an aside over several verses is named once, where it starts" do
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <sp><speaker>A</speaker><lg>
+          <l n="1"><seg type="aside">uno</seg></l>
+          <l n="2"><seg type="aside">dos</seg></l>
+          <l n="3">tres</l>
+          <l n="4"><seg type="aside">cuatro</seg></l>
+        </lg></sp>
+        <sp><speaker>B</speaker><lg><l n="5"><seg type="aside">cinco</seg></l></lg></sp>
+      </div1>
+      """)
+
+    act = page(dir, play, "act-1.html")
+
+    assert act |> LazyHTML.query(".aparte") |> Enum.count() == 3
+
+    for n <- [1, 4, 5] do
+      assert act |> LazyHTML.query("#l#{n} .aparte") |> Enum.count() == 1, "verse #{n}"
+    end
+  end
+
   test "the second half of a split verse starts where the first half ended" do
     {play, dir} = publish!(@two_acts)
 
