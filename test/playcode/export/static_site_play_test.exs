@@ -245,6 +245,17 @@ defmodule Playcode.Export.StaticSitePlayTest do
                ["1 line", "1 line", "5 lines"]
     end
 
+    # Regression: both tables stopped at 12; Arden has 18, and a reader counting words needs all.
+    test "the characters table and who shares the stage list every speaking character" do
+      speeches = for i <- 1..13, do: "<sp><speaker>P#{i}</speaker><p>Hola.</p></sp>"
+      {play, dir} = publish!(~s(<div1 type="acto" n="1"><head>Acto I</head>#{speeches}</div1>))
+
+      stats = page(dir, play, "statistics.html")
+
+      assert length(rows(stats, "#characters tbody tr")) == 13
+      assert length(rows(stats, "#presence tbody tr")) == 13
+    end
+
     test "a passage of verses with no number names no range" do
       {play, dir} =
         publish!("""

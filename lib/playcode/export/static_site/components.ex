@@ -994,18 +994,15 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :total, :integer, required: true
 
   def character_table(assigns) do
-    top = assigns.characters |> Enum.sort_by(&(-&1[assigns.unit])) |> Enum.take(12)
-    max = top |> Enum.map(& &1[assigns.unit]) |> Enum.max(fn -> 1 end) |> max(1)
-    assigns = assign(assigns, top: top, max: max)
+    characters = Enum.sort_by(assigns.characters, &(-&1[assigns.unit]))
+    max = characters |> Enum.map(& &1[assigns.unit]) |> Enum.max(fn -> 1 end) |> max(1)
+    assigns = assign(assigns, characters: characters, max: max)
 
     ~H"""
-    <section :if={@top != []} id="characters">
+    <section :if={@characters != []} id="characters">
       <h2>Characters</h2>
       <p class="lede">
-        The {length(@top)} speaking characters with the most {@unit}{if length(@characters) >
-                                                                          length(@top),
-                                                                        do:
-                                                                          " (of #{length(@characters)})"}. A shared verse counts for each speaker.
+        The {length(@characters)} speaking characters, those with the most {@unit} first. A shared verse counts for each speaker.
       </p>
       <table>
         <thead>
@@ -1020,7 +1017,7 @@ defmodule Playcode.Export.StaticSite.Components do
           </tr>
         </thead>
         <tbody>
-          <tr :for={character <- @top}>
+          <tr :for={character <- @characters}>
             <th scope="row">{character["name"]}</th>
             <td class="num">{number(character["speeches"])}</td>
             <td class="num">{number(character["lines"])}</td>
@@ -1061,7 +1058,6 @@ defmodule Playcode.Export.StaticSite.Components do
 
     rows =
       (assigns.stats["characters"] || [])
-      |> Enum.take(12)
       |> Enum.map(fn c -> {c["name"], Map.new(c["columns"], fn [i, n] -> {i, n} end)} end)
 
     assigns =
