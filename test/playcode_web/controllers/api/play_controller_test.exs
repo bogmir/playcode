@@ -187,7 +187,9 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
 
     assert %{
              "verse_type" => "redondilla",
-             "children" => [%{"content" => "Primer verso", "line_number" => 1}]
+             "children" => [
+               %{"content" => "Primer verso", "line_number" => 1, "aside_continues" => false}
+             ]
            } = lg
   end
 

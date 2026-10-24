@@ -191,6 +191,13 @@ defmodule Playcode.PlayContentTest do
       end
     end
 
+    test "a line not aside continues no aside", %{attrs: attrs} do
+      {:ok, line} =
+        PlayContent.create_element(Map.put(attrs.("En voz alta"), :aside_continues, true))
+
+      assert PlayContent.get_element!(line.id).aside_continues == false
+    end
+
     test "is refused when it is not sound, or not in a line or a paragraph", %{attrs: attrs} do
       message = "has an aside marker that is not well formed"
 

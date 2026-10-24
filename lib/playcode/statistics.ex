@@ -216,7 +216,7 @@ defmodule Playcode.Statistics do
   end
 
   defp count_asides(elements) do
-    Enum.count(elements, & &1.is_aside)
+    elements |> Enum.map(&Element.asides_started/1) |> Enum.sum()
   end
 
   defp count_aside_verses(elements) do

@@ -7,6 +7,42 @@ defmodule Playcode.StatisticsTest do
   alias Playcode.Statistics
   alias Playcode.TestFixtures
 
+  # The files cut an aside over several verses into one piece per verse, and Playcode
+  # counted each piece: 321 asides in El amor al uso, where emothe.uv.es counted 124.
+  test "an aside over several verses counts once; a paragraph with two asides, twice" do
+    %{play: play, line_group: group, scene: scene} = TestFixtures.play_with_structure_fixture()
+
+    verse = %{
+      play_id: play.id,
+      division_id: scene.id,
+      parent_id: group.id,
+      type: "verse_line",
+      is_aside: true
+    }
+
+    for {content, continues, position} <- [
+          {"uno", false, 10},
+          {"dos", true, 11},
+          {"tres", true, 12}
+        ] do
+      {:ok, _} =
+        PlayContent.create_element(
+          Map.merge(verse, %{content: content, aside_continues: continues, position: position})
+        )
+    end
+
+    {:ok, _} =
+      PlayContent.create_element(%{
+        play_id: play.id,
+        division_id: scene.id,
+        type: "prose",
+        position: 13,
+        content: ~s(<aside>a</aside> <lb n="2"/><aside>sigue</aside> dicho <aside>b</aside>)
+      })
+
+    assert Statistics.get_statistics(play.id).data["total_asides"] == 3
+  end
+
   test "get_statistics/1 computes and stores aggregate public metrics" do
     %{play: play, line_group: line_group, scene: scene} =
       TestFixtures.play_with_structure_fixture()

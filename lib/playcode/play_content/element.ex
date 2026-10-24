@@ -58,6 +58,7 @@ defmodule Playcode.PlayContent.Element do
     field :verse_type, :string
     field :part, :string
     field :is_aside, :boolean, default: false
+    field :aside_continues, :boolean, default: false
     field :rend, :string
     field :stage_type, :string
     field :position, :integer, default: 0
@@ -78,6 +79,38 @@ defmodule Playcode.PlayContent.Element do
 
   @doc "The kinds of stage direction TEI suggests for `<stage type>`, in its order."
   def stage_types, do: @stage_types
+
+  @doc """
+  How many asides start in `element`. Its first piece starts one unless `aside_continues`
+  says it continues the aside before it; each later piece, an `<aside>` marker, starts
+  another when spoken words stand before it (a stage or a line's number is not spoken).
+  """
+  def asides_started(%{is_aside: true} = element) do
+    first = if element.aside_continues, do: 0, else: 1
+
+    if whole_aside?(element) do
+      first
+    else
+      first + later_asides(element.content)
+    end
+  end
+
+  def asides_started(_element), do: 0
+
+  # How many `<aside>` markers after the first have spoken words before them.
+  defp later_asides(content) do
+    {count, _spoken} =
+      ~r{<aside>.*?</aside>}s
+      |> Regex.split(content, include_captures: true, trim: true)
+      |> Enum.drop_while(&(not String.starts_with?(&1, "<aside>")))
+      |> Enum.drop(1)
+      |> Enum.reduce({0, false}, fn
+        "<aside>" <> _, {count, spoken} -> {if(spoken, do: count + 1, else: count), false}
+        text, {count, spoken} -> {count, spoken or String.trim(InlineMarkup.spoken(text)) != ""}
+      end)
+
+    count
+  end
 
   @doc "True when every word of the element is spoken aside: no marker says which are."
   def whole_aside?(%{is_aside: aside, content: content}),
@@ -136,6 +169,7 @@ defmodule Playcode.PlayContent.Element do
       :verse_type,
       :part,
       :is_aside,
+      :aside_continues,
       :rend,
       :stage_type,
       :position,
@@ -152,6 +186,14 @@ defmodule Playcode.PlayContent.Element do
     |> validate_aside_markers()
     |> validate_folio_markers()
     |> validate_number_markers()
+    |> continue_only_an_aside()
+  end
+
+  # Only a line or paragraph spoken aside can continue an aside.
+  defp continue_only_an_aside(changeset) do
+    if get_field(changeset, :type) in ~w(verse_line prose) and get_field(changeset, :is_aside),
+      do: changeset,
+      else: put_change(changeset, :aside_continues, false)
   end
 
   # A Folio marker (InlineMarkup) is sound or refused, in the text of a line, a paragraph

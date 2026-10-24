@@ -198,6 +198,7 @@ defmodule PlaycodeWeb.API.PlayController do
       line_number: element.line_number,
       part: element.part,
       is_aside: element.is_aside,
+      aside_continues: element.aside_continues,
       rend: element.rend
     }
   end
@@ -207,7 +208,12 @@ defmodule PlaycodeWeb.API.PlayController do
   end
 
   defp serialize_element(%{type: "prose"} = element) do
-    %{type: "prose", content: element.content, is_aside: element.is_aside}
+    %{
+      type: "prose",
+      content: element.content,
+      is_aside: element.is_aside,
+      aside_continues: element.aside_continues
+    }
   end
 
   defp serialize_element(element) do
