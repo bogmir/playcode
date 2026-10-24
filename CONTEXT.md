@@ -72,6 +72,13 @@ que es LUCRECIA"), perhaps under a group heading ("Women"), or a line naming no 
 speaks ("Servants and attendants"). A character is named as its first entry names it.
 _Avoid_: character (the person the speeches point at, whatever each list calls them), role
 
+**Aside** (*aparte*):
+Words a character speaks for the audience, or for one other character, unheard by the rest of the stage. One aside may run over many verses (Clotaldo's in *La vida es sueño*, vv. 395–468) and on into another speaker's speech.
+
+**Piece** (of an aside):
+The part of an aside inside one verse or paragraph, TEI's `<seg type="aside">`, which cannot cross a line. The files number each piece within its aside (`es-0412-seg02`).
+_Avoid_: segment, fragment (a fragment is a split verse's part)
+
 ### The critical apparatus
 
 **Variant**:
