@@ -14,11 +14,11 @@ defmodule Playcode.Import.Asides do
   end
 
   defp guess(%{type: "speech"} = speech, _previous),
-    do: {Map.update!(speech, :elements, &guess/1), false}
+    do: {Map.update(speech, nested(speech), [], &guess/1), false}
 
   defp guess(%{type: "line_group"} = group, previous) do
-    {lines, previous} = Enum.map_reduce(group.elements, previous, &guess/2)
-    {%{group | elements: lines}, previous}
+    {lines, previous} = Enum.map_reduce(Map.get(group, nested(group), []), previous, &guess/2)
+    {Map.put(group, nested(group), lines), previous}
   end
 
   defp guess(%{type: type, is_aside: true} = element, previous)
@@ -29,4 +29,7 @@ defmodule Playcode.Import.Asides do
     do: {element, false}
 
   defp guess(element, previous), do: {element, previous}
+
+  # The TEI parser nests a speech's lines under :elements, the Word parser under :children.
+  defp nested(element), do: if(Map.has_key?(element, :elements), do: :elements, else: :children)
 end

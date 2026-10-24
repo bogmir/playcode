@@ -154,6 +154,69 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
   # The form takes any part anywhere, as TEI's schema does, and a correction passes through
   # disorder, so the editor lists the parts out of order, as the import preview does, and
   # refuses nothing.
+  # Two asides of ANA's in a row, numbered as the files number them: es-0003's seg01
+  # starts the second.
+  defp import_asides!(lines) do
+    import_tei!(
+      tei(
+        body: """
+        <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+          <div2 type="escena" n="1"><head>ESCENA I</head>
+            <sp><speaker>ANA</speaker><lg>#{lines}</lg></sp>
+          </div2>
+        </div1>
+        """
+      )
+    )
+  end
+
+  # Each aside piece's xml:id in the play's TEI file: its number says where an aside starts.
+  # (Not the statistics: they are cached by content_version, which moves once a transaction,
+  # and a test is one.)
+  defp seg_ids(play),
+    do: for({attrs, _} <- xml_elements(export_tei(play), "seg"), do: attrs["xml:id"])
+
+  test "a verse ticked as continuing the aside before it joins that aside", %{conn: conn} do
+    play =
+      import_asides!("""
+      <l xml:id="as-0001"><seg type="aside" xml:id="as-0001-seg01">Primer aparte</seg></l>
+      <l xml:id="as-0002"><seg type="aside" xml:id="as-0002-seg01">Segundo aparte</seg></l>
+      """)
+
+    lv = open_scene(conn, play)
+
+    lv
+    |> element("#{card(lv, "Segundo aparte")} button[aria-label='#{t("Edit")}']")
+    |> render_click()
+
+    lv |> form("#element-form", element: %{"aside_continues" => "true"}) |> render_submit()
+
+    assert seg_ids(play) == ["as-0001-seg01", "as-0002-seg02"]
+  end
+
+  test "deleting the verse an aside starts on leaves the rest an aside of their own",
+       %{conn: conn} do
+    play =
+      import_asides!("""
+      <l xml:id="as-0001"><seg type="aside" xml:id="as-0001-seg01">Uno aparte</seg></l>
+      <l xml:id="as-0002">En voz alta</l>
+      <l xml:id="as-0003"><seg type="aside" xml:id="as-0003-seg01">Tres aparte</seg></l>
+      <l xml:id="as-0004"><seg type="aside" xml:id="as-0004-seg02">Cuatro aparte</seg></l>
+      """)
+
+    assert seg_ids(play) == ["as-0001-seg01", "as-0003-seg01", "as-0004-seg02"]
+
+    lv = open_scene(conn, play)
+
+    lv
+    |> element("#{card(lv, "Tres aparte")} button[aria-label='#{t("Delete")}']")
+    |> render_click()
+
+    # Not seg02: left as it was, Cuatro would continue the first aside, across the verse
+    # spoken aloud.
+    assert seg_ids(play) == ["as-0001-seg01", "as-0004-seg01"]
+  end
+
   test "a split verse's part out of order is listed, opening its line, until corrected",
        %{conn: conn} do
     play =

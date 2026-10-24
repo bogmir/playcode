@@ -136,6 +136,24 @@ defmodule Playcode.Import.WordParserTest do
       assert "en voz alta" in xml_texts(xml, "l")
     end
 
+    # Word marks each paragraph aside on its own, so it says nothing of where an aside
+    # ends: lines aside in a row are taken for one, as a TEI file with nothing else to go by.
+    test "{ap} lines in a row are one aside, and a new speech starts another" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}ANA {ap} {v}uno",
+          "{ap} {v}dos",
+          "{p}REY {ap} {v}tres"
+        ])
+
+      assert for(
+               {attrs, _} <- xml_elements(xml, "seg"),
+               do: String.slice(attrs["xml:id"], -5..-1//1)
+             ) ==
+               ["seg01", "seg02", "seg01"]
+    end
+
     test "verse lines are numbered in order" do
       xml = import_word(["{e}Escena 1", "{p}FEBO  {v}Uno.", "{v}Dos.", "{p}ANA {v}Tres."])
 

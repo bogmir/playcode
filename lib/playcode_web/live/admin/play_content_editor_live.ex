@@ -3416,6 +3416,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <p class="mt-1 text-xs text-base-content/70">
           {gettext("Words spoken aside: <aside>…</aside>")}
         </p>
+        <.input
+          field={@form[:aside_continues]}
+          type="checkbox"
+          label={gettext("Continues the aside before it")}
+        />
         <p class="mt-1 text-xs text-base-content/70">
           {gettext("Words only the Folio prints: <folio>…</folio>")}
         </p>
@@ -3450,6 +3455,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <p class="mt-1 text-xs text-base-content/70">
             {gettext("Words spoken aside: <aside>…</aside>")}
           </p>
+          <.input
+            field={@form[:aside_continues]}
+            type="checkbox"
+            label={gettext("Continues the aside before it")}
+          />
           <p class="mt-1 text-xs text-base-content/70">
             {gettext("Words only the Folio prints: <folio>…</folio>")}
           </p>

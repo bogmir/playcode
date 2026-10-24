@@ -737,8 +737,51 @@ defmodule Playcode.PlayContent do
   Deletes an element and the elements under it.
   """
   def delete_element(%Element{} = element) do
-    Repo.delete(element)
+    Repo.transaction(fn ->
+      if Element.asides_started(element) > 0, do: hand_on_aside(element)
+
+      case Repo.delete(element) do
+        {:ok, deleted} -> deleted
+        {:error, changeset} -> Repo.rollback(changeset)
+      end
+    end)
   end
+
+  # `element` starts an aside and is going: the line or paragraph after it in its speech,
+  # if it continued that aside, starts it now, rather than joining whatever aside came
+  # before (docs/superpowers/specs/2026-10-25-aside-chains-design.md).
+  defp hand_on_aside(element) do
+    case next_in_speech(element) do
+      %Element{is_aside: true, aside_continues: true} = next ->
+        {:ok, _} = update_element(next, %{aside_continues: false})
+
+      _none ->
+        :ok
+    end
+  end
+
+  defp next_in_speech(element) do
+    rows = Repo.all(from e in Element, where: e.division_id == ^element.division_id)
+    by_id = Map.new(rows, &{&1.id, &1})
+    children = rows |> Enum.sort_by(& &1.position) |> Enum.group_by(& &1.parent_id)
+
+    speech_id =
+      case by_id[element.parent_id] do
+        %{type: "line_group", parent_id: speech_id} -> speech_id
+        parent -> parent && parent.id
+      end
+
+    children
+    |> Map.get(speech_id, [])
+    |> Enum.flat_map(&spoken_lines(&1, children))
+    |> Enum.drop_while(&(&1.id != element.id))
+    |> Enum.at(1)
+  end
+
+  defp spoken_lines(%{type: type} = line, _children) when type in ~w(verse_line prose), do: [line]
+
+  defp spoken_lines(element, children),
+    do: children |> Map.get(element.id, []) |> Enum.flat_map(&spoken_lines(&1, children))
 
   # --- Notes ---
 

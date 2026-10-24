@@ -768,6 +768,7 @@ defmodule Playcode.Import.WordParser do
     alias Playcode.PlayContent
 
     elements
+    |> Playcode.Import.Asides.guess()
     |> Enum.with_index()
     |> Enum.each(fn {element, pos} ->
       case element do
@@ -825,6 +826,7 @@ defmodule Playcode.Import.WordParser do
             type: "prose",
             content: element.content,
             is_aside: element[:is_aside] || false,
+            aside_continues: element[:aside_continues] || false,
             position: pos
           })
 
@@ -852,6 +854,7 @@ defmodule Playcode.Import.WordParser do
             type: "prose",
             content: element.content,
             is_aside: element[:is_aside] || false,
+            aside_continues: element[:aside_continues] || false,
             position: pos
           })
 
@@ -891,6 +894,7 @@ defmodule Playcode.Import.WordParser do
       line_number: if(numbered?, do: :counters.get(verses.counter, 2)),
       line_id: Playcode.PlayContent.line_id(verses.play, :counters.get(verses.counter, 1)),
       is_aside: element[:is_aside] || false,
+      aside_continues: element[:aside_continues] || false,
       position: pos
     })
   end
