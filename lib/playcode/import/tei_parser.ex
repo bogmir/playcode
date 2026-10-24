@@ -38,6 +38,7 @@ defmodule Playcode.Import.TeiParser do
 
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue.Play
+  alias Playcode.Import.Asides
   alias Playcode.Performances.Performance
   alias Playcode.Places
   alias Playcode.PlayContent.{Division, InlineMarkup, Note}
@@ -1160,7 +1161,7 @@ defmodule Playcode.Import.TeiParser do
       |> Enum.with_index()
       |> Enum.flat_map(fn {slot, pos} -> read_slot(slot, pos) end)
 
-    divisions = for {:division, division} <- items, do: division
+    divisions = with_aside_continues(for {:division, division} <- items, do: division)
 
     %{
       characters: declared_characters(divisions),
@@ -1647,6 +1648,7 @@ defmodule Playcode.Import.TeiParser do
       part: attr_value(attrs, "part"),
       rend: attr_value(attrs, "rend"),
       is_aside: is_aside,
+      aside_pieces: if(is_aside, do: aside_pieces(children), else: []),
       notes: notes,
       elements: []
     }
@@ -1692,6 +1694,103 @@ defmodule Playcode.Import.TeiParser do
   defp aside_seg?({"seg", attrs, _}), do: attr_value(attrs, "type") == "aside"
   defp aside_seg?(_), do: false
 
+  # Each aside piece of a line or paragraph, in order: its xml:id, its next and whether a
+  # delivery stage stands right before it. A line aside by its delivery stage alone is
+  # one piece with neither.
+  defp aside_pieces(children) do
+    {pieces, _after_delivery} =
+      Enum.flat_map_reduce(children, false, fn
+        {"seg", attrs, _} = seg, after_delivery ->
+          if aside_seg?(seg),
+            do:
+              {[
+                 %{
+                   id: attr_value(attrs, "xml:id"),
+                   next: attr_value(attrs, "next"),
+                   after_delivery: after_delivery
+                 }
+               ], false},
+            else: {[], false}
+
+        {"stage", attrs, _}, _after_delivery ->
+          {[], stage_type(attrs) == "delivery"}
+
+        text, after_delivery when is_binary(text) ->
+          {[], after_delivery and String.trim(text) == ""}
+
+        _other, _after_delivery ->
+          {[], false}
+      end)
+
+    if pieces == [], do: [%{id: nil, next: nil, after_delivery: true}], else: pieces
+  end
+
+  # Whether each line's or paragraph's first aside piece continues the aside before it
+  # (docs/superpowers/specs/2026-10-25-aside-chains-design.md). The files number each
+  # piece within its aside (`es-0412-seg02`), which held where their next links drifted;
+  # then the links; then a delivery stage, which stands before an aside's first piece;
+  # where none says, Asides.guess/1.
+  defp with_aside_continues(divisions) do
+    linked =
+      divisions
+      |> Enum.flat_map(&aside_pieces_in/1)
+      |> Enum.flat_map(fn %{id: id, next: next} ->
+        target = next && next |> String.trim() |> String.trim_leading("#")
+        if target in [nil, "", id], do: [], else: [target]
+      end)
+      |> MapSet.new()
+
+    Enum.map(divisions, &decide_asides(&1, linked))
+  end
+
+  defp aside_pieces_in(node) do
+    Map.get(node, :aside_pieces, []) ++
+      Enum.flat_map(Map.get(node, :elements, []), &aside_pieces_in/1) ++
+      Enum.flat_map(Map.get(node, :divisions, []), &aside_pieces_in/1)
+  end
+
+  defp decide_asides(division, linked) do
+    division
+    |> Map.update!(:elements, fn elements ->
+      elements |> Enum.map(&decide_first_piece(&1, linked)) |> Asides.guess()
+    end)
+    |> Map.replace_lazy(:divisions, &Enum.map(&1, fn sub -> decide_asides(sub, linked) end))
+  end
+
+  defp decide_first_piece(%{aside_pieces: pieces} = element, linked) do
+    element = Map.delete(element, :aside_pieces)
+
+    with [first | _] <- pieces,
+         continues when is_boolean(continues) <- first_piece_continues(first, linked) do
+      Map.put(element, :aside_continues, continues)
+    else
+      _undecided -> element
+    end
+  end
+
+  defp decide_first_piece(%{elements: elements} = element, linked),
+    do: %{element | elements: Enum.map(elements, &decide_first_piece(&1, linked))}
+
+  defp decide_first_piece(element, _linked), do: element
+
+  defp first_piece_continues(%{id: id} = piece, linked) do
+    number = id && piece_number(id)
+
+    cond do
+      number not in [nil, 0] -> number >= 2
+      id -> MapSet.member?(linked, id)
+      piece.after_delivery -> false
+      true -> nil
+    end
+  end
+
+  defp piece_number(id) do
+    case Regex.run(~r/-seg(\d+)$/, id, capture: :all_but_first) do
+      [digits] -> String.to_integer(digits)
+      nil -> nil
+    end
+  end
+
   # --- Stage direction, trailer, prose ---
 
   defp stage_direction({_name, attrs, _children} = stage, pos) do
@@ -1732,6 +1831,7 @@ defmodule Playcode.Import.TeiParser do
       position: pos,
       content: content,
       is_aside: is_aside,
+      aside_pieces: if(is_aside, do: aside_pieces(children), else: []),
       notes: notes,
       elements: []
     }

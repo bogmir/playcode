@@ -1759,6 +1759,66 @@ defmodule Playcode.TeiRoundtripTest do
       assert "Normal prose." in xml_texts(xml, "p", within: "sp")
     end
 
+    # How many asides the play's statistics count, once `body`'s speeches are imported.
+    defp asides(speeches) do
+      play = import_tei!(tei(body: scene(speeches)))
+      Playcode.Statistics.get_statistics(play.id).data["total_asides"]
+    end
+
+    # The files cut an aside over several verses into one piece per verse (a seg cannot
+    # cross an l) and number each piece in its xml:id. Their next links are faulty: in La
+    # vida es sueño Clarín's es-1203-seg01 names es-1205-seg02, a piece that does not exist.
+    test "pieces numbered -segNN make one aside, and -seg01 starts the next" do
+      assert asides("""
+             <sp><speaker>ANA</speaker><lg>
+               <l xml:id="es-0001"><seg type="aside" xml:id="es-0001-seg01" next="es-0003-seg02">uno</seg></l>
+               <l xml:id="es-0002"><seg type="aside" xml:id="es-0002-seg02">dos</seg></l>
+               <l xml:id="es-0003"><seg type="aside" xml:id="es-0003-seg01">tres</seg></l>
+             </lg></sp>
+             """) == 2
+    end
+
+    test "a piece another's next names continues an aside; one with an id no next names starts one" do
+      assert asides("""
+             <sp><speaker>ANA</speaker><lg>
+               <l><seg type="aside" xml:id="a1" next="#a2">uno</seg></l>
+               <l><seg type="aside" xml:id="a2" next="a3">dos</seg></l>
+               <l><seg type="aside" xml:id="a3">tres</seg></l>
+               <l><seg type="aside" xml:id="a4">cuatro</seg></l>
+             </lg></sp>
+             """) == 2
+    end
+
+    test "a delivery stage before a piece starts an aside" do
+      assert asides("""
+             <sp><speaker>ANA</speaker><lg>
+               <l><seg type="aside">uno</seg></l>
+               <l><stage type="delivery">(Aparte.)</stage><seg type="aside">dos</seg></l>
+             </lg></sp>
+             """) == 2
+    end
+
+    test "with nothing else to go by, a speech's consecutive aside lines are one aside" do
+      assert asides("""
+             <sp><speaker>ANA</speaker><lg>
+               <l><seg type="aside">uno</seg></l>
+               <l><seg type="aside">dos</seg></l>
+               <l>en voz alta</l>
+               <l><seg type="aside">tres</seg></l>
+             </lg></sp>
+             <sp><speaker>BRUNO</speaker><lg><l><seg type="aside">cuatro</seg></l></lg></sp>
+             """) == 3
+    end
+
+    test "a line aside by its delivery stage alone is a piece like any other" do
+      assert asides("""
+             <sp><speaker>ANA</speaker><lg>
+               <l><seg type="aside">uno</seg></l>
+               <l><stage type="delivery">(Aparte.)</stage>dos</l>
+             </lg></sp>
+             """) == 2
+    end
+
     # 24 source files spell the delivery type "delivery_" (79 stage directions and 418
     # stages inside lines in dev); TEI's word is "delivery".
     test "a stage direction's kind comes back, delivery_ as delivery" do
