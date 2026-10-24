@@ -496,16 +496,19 @@ defmodule Playcode.Export.StaticSite.Edition do
     end
   end
 
-  # The first verse of each aside. The files cut an aside over several verses into one
-  # piece per verse, so a speech's consecutive aside verses are taken for one. Two asides
-  # back to back read as one: only the files' `next` chain tells them apart, and it is
-  # faulty (backlog, *An aside that runs over several verses*).
+  # The verses the margin names "aparte": each where an aside starts
+  # (`Element.asides_started/1`), and the first of a speech's aside verses in a row, so an
+  # aside carried into another speaker's speech is named again for the new speaker.
   defp aside_starts(items) do
-    for [%{element: %{is_aside: true} = el} | _] <-
-          items
-          |> Enum.filter(&(&1.kind == :verse))
-          |> Enum.chunk_by(&{&1.speech && &1.speech.id, &1.element.is_aside}),
-        into: MapSet.new(),
-        do: el.id
+    verses = Enum.filter(items, &(&1.kind == :verse))
+
+    first_in_speech =
+      for [%{element: %{is_aside: true} = el} | _] <-
+            Enum.chunk_by(verses, &{&1.speech && &1.speech.id, &1.element.is_aside}),
+          do: el.id
+
+    starting = for %{element: el} <- verses, Element.asides_started(el) > 0, do: el.id
+
+    MapSet.new(first_in_speech ++ starting)
   end
 end

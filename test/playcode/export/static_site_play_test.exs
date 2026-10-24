@@ -155,6 +155,27 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  # The files number each piece within its aside: es-0003-seg01 starts a second aside right
+  # after the first, and es-0004-seg02 carries the first into B's speech.
+  test "two asides back to back are named twice; an aside carried to another speaker is named again" do
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <sp><speaker>A</speaker><lg>
+          <l n="1"><seg type="aside" xml:id="es-0001-seg01">uno</seg></l>
+          <l n="2"><seg type="aside" xml:id="es-0002-seg02">dos</seg></l>
+          <l n="3"><seg type="aside" xml:id="es-0003-seg01">tres</seg></l>
+        </lg></sp>
+        <sp><speaker>B</speaker><lg><l n="4"><seg type="aside" xml:id="es-0004-seg02">cuatro</seg></l></lg></sp>
+      </div1>
+      """)
+
+    act = page(dir, play, "act-1.html")
+
+    assert for(n <- 1..4, act |> LazyHTML.query("#l#{n} .aparte") |> Enum.any?(), do: n) ==
+             [1, 3, 4]
+  end
+
   test "the second half of a split verse starts where the first half ended" do
     {play, dir} = publish!(@two_acts)
 
