@@ -13,7 +13,7 @@ defmodule Playcode.Statistics do
 
   # Bump when compute/1 changes what it stores: a cached row with another version is
   # recomputed on its next read, so no migration or manual recompute is needed.
-  @version 7
+  @version 8
 
   # A cached row is current only for the play's content_version it was computed at:
   # Postgres moves that version on every edit to the play's text, so no edit has to
