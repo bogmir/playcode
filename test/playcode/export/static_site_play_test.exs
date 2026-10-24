@@ -114,6 +114,22 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert read!(dir, "plays/#{play.code}/act-1.html") =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
   end
 
+  # Regression: an unnumbered verse was `p<n>`, counted through the play, so a line added
+  # before it in the Content tab moved its anchor, and every link to it broke.
+  test "a verse with no number is anchored by its identifier; a paragraph is still counted" do
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <sp><speaker>A</speaker><p>En prosa.</p><l xml:id="es-0007">Sin número.</l></sp>
+      </div1>
+      """)
+
+    act = page(dir, play, "act-1.html")
+
+    assert act |> LazyHTML.query("#es-0007") |> LazyHTML.text() =~ "Sin número."
+    assert act |> LazyHTML.query("#p1") |> LazyHTML.text() =~ "En prosa."
+  end
+
   test "the second half of a split verse starts where the first half ended" do
     {play, dir} = publish!(@two_acts)
 

@@ -370,22 +370,26 @@ defmodule Playcode.Export.StaticSite.Edition do
   end
 
   # A verse is `l<number>`. A play that numbers each scene from 1 gets
-  # `l<act>-<scene>-<number>`; anything without a number is `p<n>`, counted through
-  # the play. A clash left after that (a data error) gets a numeric suffix.
+  # `l<act>-<scene>-<number>`; a verse with no number is its identifier (`es-0412`), so a
+  # line added before it does not move it; anything else is `p<n>`, counted through the
+  # play. A clash left after that (a data error) gets a numeric suffix.
   defp anchors(items, pages) do
     restarts? = restarts?(items)
 
     {elements, _state} =
       Enum.map_reduce(items, {MapSet.new(), 0}, fn item, {used, p} ->
         {base, p} =
-          case item.element.line_number do
-            n when is_integer(n) and restarts? ->
+          case item.element do
+            %{line_number: n} when is_integer(n) and restarts? ->
               {"l#{item.act || 0}-#{scene_ordinal(item)}-#{n}", p}
 
-            n when is_integer(n) ->
+            %{line_number: n} when is_integer(n) ->
               {"l#{n}", p}
 
-            nil ->
+            %{line_id: id} when is_binary(id) ->
+              {id, p}
+
+            _ ->
               {"p#{p + 1}", p + 1}
           end
 
