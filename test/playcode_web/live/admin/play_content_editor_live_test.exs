@@ -217,6 +217,33 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert seg_ids(play) == ["as-0001-seg01", "as-0004-seg01"]
   end
 
+  # "Delete selected" reads every selected row, then deletes them in its selection's order,
+  # which a test cannot choose: called directly, in the order that once lost the start.
+  # Deleting Tres hands the start to Cuatro, whose row, read before, no longer says so.
+  test "deleting an aside's first two verses, read before either goes, leaves the rest an aside of their own",
+       %{conn: conn} do
+    play =
+      import_asides!("""
+      <l xml:id="as-0001"><seg type="aside" xml:id="as-0001-seg01">Uno aparte</seg></l>
+      <l xml:id="as-0002">En voz alta</l>
+      <l xml:id="as-0003"><seg type="aside" xml:id="as-0003-seg01">Tres aparte</seg></l>
+      <l xml:id="as-0004"><seg type="aside" xml:id="as-0004-seg02">Cuatro aparte</seg></l>
+      <l xml:id="as-0005"><seg type="aside" xml:id="as-0005-seg03">Cinco aparte</seg></l>
+      """)
+
+    lv = open_scene(conn, play)
+
+    selected =
+      for text <- ["Tres aparte", "Cuatro aparte"] do
+        "#element-" <> id = card(lv, text)
+        PlayContent.get_element(play.id, id)
+      end
+
+    for element <- selected, do: {:ok, _} = PlayContent.delete_element(element)
+
+    assert seg_ids(play) == ["as-0001-seg01", "as-0005-seg01"]
+  end
+
   test "a split verse's part out of order is listed, opening its line, until corrected",
        %{conn: conn} do
     play =

@@ -738,6 +738,8 @@ defmodule Playcode.PlayContent do
   """
   def delete_element(%Element{} = element) do
     Repo.transaction(fn ->
+      # As the row stands now: deleting the line before it may have handed it an aside's start.
+      element = Repo.reload(element) || element
       if Element.asides_started(element) > 0, do: hand_on_aside(element)
 
       case Repo.delete(element) do
