@@ -93,7 +93,8 @@ witnesses read)
 **Critical edition**:
 A play with variants, or an appendix headed "Critical Apparatus" after the text (decided by
 Playcode, 2026-10-19; no file marks one): EMOTHE0010, 0187, 0435, 0460, 0530, 0551, 0560
-and 0644. Its downloads print its witnesses; with its variants switched off, they do not.
+and 0644. Its downloads print its witnesses, unless its variants are its only mark and
+they are switched off.
 _Avoid_: scholarly edition, variorum
 
 **Folio passage**:
