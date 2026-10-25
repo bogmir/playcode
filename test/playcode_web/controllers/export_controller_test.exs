@@ -225,6 +225,26 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert epub =~ "The banished cavaliers!<br/>A roving blade!"
   end
 
+  # An EPUB chapter is XHTML: a note's line break is <br/> there, or the chapter does not
+  # parse and a strict e-reader refuses the book.
+  test "the EPUB prints a note's line break as XHTML", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso<note n="1" type="editor"><p>Q2 ho!<lb/>F1 who’s</p></note></l></sp></div1>)
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for {name, content} <- files, String.ends_with?(to_string(name), ".xhtml") do
+      assert {:ok, _} = Saxy.SimpleForm.parse_string(content), "#{name} is not XHTML"
+    end
+
+    assert Enum.map_join(files, &elem(&1, 1)) =~ "Q2 ho!<br/>F1 who’s"
+  end
+
   test "a line break inside italics is printed inside them", %{conn: conn, play: play} do
     {:ok, _} =
       Playcode.Catalogue.create_paratext(%{
