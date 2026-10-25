@@ -21,9 +21,13 @@ defmodule PlaycodeWeb.PdfDownloadTest do
     wait = Application.fetch_env!(:playcode, :pdf_wait)
     Application.put_env(:playcode, :pdf_wait, 100)
 
+    # Production's one render at a time; the suite allows more for its async tests.
+    max_renders = Application.fetch_env!(:playcode, :pdf_max_renders)
+    Application.put_env(:playcode, :pdf_max_renders, 1)
+
     on_exit(fn ->
       Application.delete_env(:playcode, Playcode.PdfRendererStub)
-      Application.delete_env(:playcode, :pdf_max_renders)
+      Application.put_env(:playcode, :pdf_max_renders, max_renders)
       Application.put_env(:playcode, :pdf_wait, wait)
     end)
 
