@@ -441,4 +441,33 @@ defmodule PlaycodeWeb.ExportControllerTest do
       assert response(get(staff, "/export/#{draft.id}/#{format}"), 200), format
     end
   end
+
+  # Question 24, answered on 19 October 2026: what the edition holds beside the play.
+  describe "what the downloads print of the edition (question 24)" do
+    test "the HTML and EPUB downloads name the play a translation translates", %{conn: conn} do
+      %{translation: translation} = Playcode.TestFixtures.translation_family_fixture()
+
+      html = response(get(conn, ~p"/export/#{translation.id}/html"), 200)
+
+      assert html |> LazyHTML.from_document() |> LazyHTML.query(".original") |> LazyHTML.text() ==
+               "Translation of Original Play"
+
+      assert epub_text(conn, translation) =~
+               ~s(<p class="original">Translation of <cite>Original Play</cite></p>)
+
+      # A play linked with no kind names no relation, as the play page and the site do.
+      {:ok, _} = Playcode.Catalogue.update_play(translation, %{relationship_type: nil})
+      refute response(get(conn, ~p"/export/#{translation.id}/html"), 200) =~ ~s(class="original")
+    end
+
+    test "a visitor's download names no draft original", %{conn: conn} do
+      %{original: original, translation: translation} =
+        Playcode.TestFixtures.translation_family_fixture()
+
+      {:ok, _} = Playcode.Catalogue.update_play(original, %{is_complete: false})
+
+      refute response(get(conn, ~p"/export/#{translation.id}/html"), 200) =~ "Original Play"
+      refute epub_text(conn, translation) =~ "Original Play"
+    end
+  end
 end

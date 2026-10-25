@@ -31,6 +31,7 @@ defmodule Playcode.Export.Html do
         <header class="header">
           <p class="author">#{escape(play.author_name || "")}</p>
           <h1 class="title">#{escape(play.title)}</h1>
+    #{original(play)}
     #{render_sources(play.sources)}
     #{render_editors(play.editors)}
     #{render_verse_info(play)}
@@ -100,6 +101,7 @@ defmodule Playcode.Export.Html do
           color: rgba(51, 51, 51, 0.35);
         }
 
+        .header .original,
         .header .verse-info,
         .header .dating {
           margin-top: 0.5rem;
@@ -323,6 +325,25 @@ defmodule Playcode.Export.Html do
 
   defp render_dating(play),
     do: play |> dating() |> Enum.map_join("\n", &"      <p class=\"dating\">#{escape(&1)}</p>")
+
+  @doc """
+  The play a translation or an adaptation is made from, by its title, as the published
+  site's title page names it (`StaticSite.Components.family/1`), in the downloads'
+  English; nothing for an original, or a play linked with no kind. The play's
+  `parent_play` is the one `Catalogue.get_play_with_all!/2` loads, so a visitor's
+  download never names a draft. The EPUB prints the same line.
+  """
+  def original(%{relationship_type: type, parent_play: %Play{} = original})
+      when is_binary(type) do
+    kind =
+      Gettext.with_locale(PlaycodeWeb.Gettext, "en", fn ->
+        PlayLabels.relationship_type_label(type)
+      end)
+
+    ~s(<p class="original">#{kind} of <cite>#{escape(original.title)}</cite></p>)
+  end
+
+  def original(_play), do: ""
 
   # The outline's items in order: a paratext where it stands, a division with its cast list
   # if it is one, its elements and its children.

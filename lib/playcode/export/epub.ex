@@ -131,6 +131,7 @@ defmodule Playcode.Export.Epub do
     <div class="header">
       <p class="author">#{escape(play.author_name || "")}</p>
       <h1 class="title">#{escape(play.title)}</h1>
+    #{Html.original(play)}
     #{render_sources(play.sources)}
     #{render_editors(play.editors)}
     #{render_verse_info(play)}
@@ -387,6 +388,7 @@ defmodule Playcode.Export.Epub do
       color: rgba(51, 51, 51, 0.35);
     }
 
+    .header .original,
     .header .verse-info,
     .header .dating {
       margin-top: 0.5em;
