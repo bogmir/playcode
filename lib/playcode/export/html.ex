@@ -8,7 +8,8 @@ defmodule Playcode.Export.Html do
   alias Playcode.Export.NoteMarkup
   alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, Division, Note}
+  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note}
+  alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
   def generate(play) do
@@ -37,6 +38,7 @@ defmodule Playcode.Export.Html do
     #{render_verse_info(play)}
     #{render_dating(play)}
         </header>
+    #{witnesses(play, divisions)}
 
         <div class="play-text">
     #{play.paratexts |> Outline.items(divisions) |> Enum.map_join("\n", &render_item/1)}
@@ -108,6 +110,22 @@ defmodule Playcode.Export.Html do
           font-size: 0.75rem;
           color: rgba(51, 51, 51, 0.5);
         }
+
+        /* A critical edition's witnesses, each a hanging indent as on the site */
+        .witnesses {
+          max-width: 640px;
+          margin: 0 auto 2rem;
+          font-size: 0.8rem;
+        }
+
+        .witnesses h2 {
+          font-size: 0.875rem;
+          text-align: center;
+          margin-bottom: 0.5rem;
+        }
+
+        .witnesses ul { list-style: none; }
+        .witnesses li { padding-left: 1.5rem; text-indent: -1.5rem; margin-bottom: 0.25rem; }
 
         /* Paratexts */
         .paratext {
@@ -344,6 +362,44 @@ defmodule Playcode.Export.Html do
   end
 
   def original(_play), do: ""
+
+  @doc """
+  A critical edition's witnesses, each as the play page and the published site print it
+  (`Witnesses.html/1`); nothing for any other play (question 24). The EPUB prints the same
+  list.
+  """
+  def witnesses(%{witnesses: [_ | _] = witnesses} = play, divisions) do
+    if critical_edition?(play, divisions) do
+      """
+          <section class="witnesses">
+            <h2>Witnesses</h2>
+            <ul>
+      #{Enum.map_join(witnesses, "\n", &"        <li>#{Phoenix.HTML.safe_to_string(Witnesses.html(&1))}</li>")}
+            </ul>
+          </section>
+      """
+    else
+      ""
+    end
+  end
+
+  def witnesses(_play, _divisions), do: ""
+
+  # A play with variants as printed, or a critical apparatus after the text (decided by
+  # Playcode, 2026-10-19). With its variants hidden, no reading names a witness.
+  # ponytail: the apparatus is known by its heading, the only mark the corpus gives it
+  # (EMOTHE0460, 0644); one headed in another language needs its word added here.
+  defp critical_edition?(play, divisions) do
+    Enum.any?(Note.reading_order(divisions), &Note.variant?/1) or
+      Enum.any?(play.paratexts, &apparatus?/1)
+  end
+
+  defp apparatus?(%Paratext{heading: nil}), do: false
+
+  defp apparatus?(%Paratext{heading: heading}),
+    do:
+      heading |> InlineMarkup.plain() |> String.trim() |> String.downcase() ==
+        "critical apparatus"
 
   # The outline's items in order: a paratext where it stands, a division with its cast list
   # if it is one, its elements and its children.

@@ -44,7 +44,7 @@ defmodule Playcode.Export.Epub do
           "front",
           play.title,
           play.language,
-          render_front(play, Enum.map(front, &elem(&1, 1)))
+          render_front(play, divisions, Enum.map(front, &elem(&1, 1)))
         )
 
       # One chapter per item from the first division of the text on, in outline order
@@ -126,7 +126,7 @@ defmodule Playcode.Export.Epub do
 
   # --- Front matter ---
 
-  defp render_front(play, items) do
+  defp render_front(play, divisions, items) do
     """
     <div class="header">
       <p class="author">#{escape(play.author_name || "")}</p>
@@ -137,6 +137,7 @@ defmodule Playcode.Export.Epub do
     #{render_verse_info(play)}
     #{render_dating(play)}
     </div>
+    #{Html.witnesses(play, divisions)}
     #{Enum.map_join(items, "\n", &render_item/1)}
     """
   end
@@ -395,6 +396,11 @@ defmodule Playcode.Export.Epub do
       font-size: 0.75em;
       color: rgba(51, 51, 51, 0.5);
     }
+
+    .witnesses { margin: 0 auto 2em; font-size: 0.8em; }
+    .witnesses h2 { font-size: 0.875em; text-align: center; margin-bottom: 0.5em; }
+    .witnesses ul { list-style: none; }
+    .witnesses li { padding-left: 1.5em; text-indent: -1.5em; margin-bottom: 0.25em; }
 
     .paratext {
       margin: 0 auto 1.5em;

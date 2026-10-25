@@ -469,5 +469,59 @@ defmodule PlaycodeWeb.ExportControllerTest do
       refute response(get(conn, ~p"/export/#{translation.id}/html"), 200) =~ "Original Play"
       refute epub_text(conn, translation) =~ "Original Play"
     end
+
+    @list_wit ~s(<listWit><witness xml:id="Q1" n="Q1"><bibl type="edicion_antigua" subtype="suelta"><title>THE Tragicall Historie of HAMLET</title><pubPlace>London</pubPlace><date when="1603">1603</date></bibl></witness></listWit>)
+
+    defp witness_play(opts) do
+      [source_desc: @list_wit]
+      |> Keyword.merge(opts)
+      |> tei()
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+    end
+
+    test "the downloads print the witnesses of a play with variants", %{conn: conn} do
+      play =
+        witness_play(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso<app n="1"><lem wit="#Q1">Verso</lem><rdg wit="#B">Canto</rdg></app></l></sp></div1>)
+        )
+
+      doc = LazyHTML.from_document(response(get(conn, ~p"/export/#{play.id}/html"), 200))
+      assert doc |> LazyHTML.query(".witnesses h2") |> LazyHTML.text() == "Witnesses"
+
+      assert doc |> LazyHTML.query(".witnesses li") |> LazyHTML.text() =~
+               "Tragicall Historie of HAMLET"
+
+      assert epub_text(conn, play) =~ "Tragicall Historie of HAMLET"
+
+      # Its variants hidden, no reading names the witnesses, so they stay out too.
+      {:ok, _} = Playcode.Catalogue.update_play(play, %{show_variants: false})
+      refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "Tragicall"
+    end
+
+    test "a critical apparatus after the text makes a critical edition; another appendix does not",
+         %{conn: conn} do
+      body = ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso</l></sp></div1>)
+
+      apparatus =
+        witness_play(
+          body: body,
+          back:
+            ~s(<div type="apendice"><head>Critical Apparatus</head><p>1 Verso] Canto Q1.</p></div>)
+        )
+
+      # EMOTHE0310's translator's note is an appendix after the text too.
+      note =
+        witness_play(
+          body: body,
+          back: ~s(<div type="apendice"><head>Nota del traductor</head><p>Una nota.</p></div>)
+        )
+
+      assert response(get(conn, ~p"/export/#{apparatus.id}/html"), 200) =~ "Tragicall"
+      assert epub_text(conn, apparatus) =~ "Tragicall"
+      refute response(get(conn, ~p"/export/#{note.id}/html"), 200) =~ "Tragicall"
+      refute epub_text(conn, note) =~ "Tragicall"
+    end
   end
 end
