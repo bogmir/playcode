@@ -470,6 +470,21 @@ defmodule PlaycodeWeb.ExportControllerTest do
       refute epub_text(conn, translation) =~ "Original Play"
     end
 
+    # A PDF is rendered once per version and served to whoever asks next (PdfCache), so
+    # what staff download must be what a visitor may read.
+    test "staff's download names no draft original either", %{conn: conn} do
+      %{original: original, translation: translation} =
+        Playcode.TestFixtures.translation_family_fixture()
+
+      {:ok, _} = Playcode.Catalogue.update_play(original, %{is_complete: false})
+      staff = log_in_user(conn, Playcode.TestFixtures.user_fixture())
+
+      refute response(get(staff, ~p"/export/#{translation.id}/html"), 200) =~ "Original Play"
+
+      refute response(get(staff, ~p"/admin/plays/#{translation.id}/export/html"), 200) =~
+               "Original Play"
+    end
+
     @list_wit ~s(<listWit><witness xml:id="Q1" n="Q1"><bibl type="edicion_antigua" subtype="suelta"><title>THE Tragicall Historie of HAMLET</title><pubPlace>London</pubPlace><date when="1603">1603</date></bibl></witness></listWit>)
 
     defp witness_play(opts) do

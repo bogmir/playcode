@@ -359,11 +359,11 @@ defmodule Playcode.Export.Html do
   @doc """
   The play a translation or an adaptation is made from, by its title, as the published
   site's title page names it (`StaticSite.Components.family/1`), in the downloads'
-  English; nothing for an original, or a play linked with no kind. The play's
-  `parent_play` is the one `Catalogue.get_play_with_all!/2` loads, so a visitor's
-  download never names a draft. The EPUB prints the same line.
+  English; nothing for an original, or a play linked with no kind. Only a complete
+  original, whoever downloads: a PDF is rendered once and served to every reader
+  (`PdfCache`), so staff's copy may not name a draft. The EPUB prints the same line.
   """
-  def original(%{relationship_type: type, parent_play: %Play{} = original})
+  def original(%{relationship_type: type, parent_play: %Play{is_complete: true} = original})
       when is_binary(type) do
     kind =
       Gettext.with_locale(PlaycodeWeb.Gettext, "en", fn ->
