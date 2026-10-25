@@ -69,6 +69,11 @@ config :playcode, :pdf_renderer, Playcode.PdfRendererStub
 config :playcode, :pdf_cache_dir, Path.join(System.tmp_dir!(), "playcode-test-pdf")
 config :playcode, :pdf_wait, 500
 
+# The async tests download PDFs at once through the one PdfCache, so one render at a time
+# made a staff download answer busy now and then. Production's limit of one is
+# PlaycodeWeb.PdfDownloadTest's to check, and it sets it.
+config :playcode, :pdf_max_renders, 24
+
 # The export page builds here, never into the developer's own _site/
 config :playcode, :static_site_dir, Path.join(System.tmp_dir!(), "playcode-test-site")
 

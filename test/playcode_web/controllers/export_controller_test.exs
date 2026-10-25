@@ -441,4 +441,163 @@ defmodule PlaycodeWeb.ExportControllerTest do
       assert response(get(staff, "/export/#{draft.id}/#{format}"), 200), format
     end
   end
+
+  # Question 24, answered on 19 October 2026: what the edition holds beside the play.
+  describe "what the downloads print of the edition (question 24)" do
+    test "the HTML and EPUB downloads name the play a translation translates", %{conn: conn} do
+      %{translation: translation} = Playcode.TestFixtures.translation_family_fixture()
+
+      html = response(get(conn, ~p"/export/#{translation.id}/html"), 200)
+
+      assert html |> LazyHTML.from_document() |> LazyHTML.query(".original") |> LazyHTML.text() ==
+               "Translation of Original Play"
+
+      assert epub_text(conn, translation) =~
+               ~s(<p class="original">Translation of <cite>Original Play</cite></p>)
+
+      # A play linked with no kind names no relation, as the play page and the site do.
+      {:ok, _} = Playcode.Catalogue.update_play(translation, %{relationship_type: nil})
+      refute response(get(conn, ~p"/export/#{translation.id}/html"), 200) =~ ~s(class="original")
+    end
+
+    test "a visitor's download names no draft original", %{conn: conn} do
+      %{original: original, translation: translation} =
+        Playcode.TestFixtures.translation_family_fixture()
+
+      {:ok, _} = Playcode.Catalogue.update_play(original, %{is_complete: false})
+
+      refute response(get(conn, ~p"/export/#{translation.id}/html"), 200) =~ "Original Play"
+      refute epub_text(conn, translation) =~ "Original Play"
+    end
+
+    # A PDF is rendered once per version and served to whoever asks next (PdfCache), so
+    # what staff download must be what a visitor may read.
+    test "staff's download names no draft original either", %{conn: conn} do
+      %{original: original, translation: translation} =
+        Playcode.TestFixtures.translation_family_fixture()
+
+      {:ok, _} = Playcode.Catalogue.update_play(original, %{is_complete: false})
+      staff = log_in_user(conn, Playcode.TestFixtures.user_fixture())
+
+      refute response(get(staff, ~p"/export/#{translation.id}/html"), 200) =~ "Original Play"
+
+      refute response(get(staff, ~p"/admin/plays/#{translation.id}/export/html"), 200) =~
+               "Original Play"
+    end
+
+    @list_wit ~s(<listWit><witness xml:id="Q1" n="Q1"><bibl type="edicion_antigua" subtype="suelta"><title>THE Tragicall Historie of HAMLET</title><pubPlace>London</pubPlace><date when="1603">1603</date></bibl></witness></listWit>)
+
+    defp witness_play(opts) do
+      [source_desc: @list_wit]
+      |> Keyword.merge(opts)
+      |> tei()
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+    end
+
+    test "the downloads print the witnesses of a play with variants", %{conn: conn} do
+      play =
+        witness_play(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso<app n="1"><lem wit="#Q1">Verso</lem><rdg wit="#B">Canto</rdg></app></l></sp></div1>)
+        )
+
+      doc = LazyHTML.from_document(response(get(conn, ~p"/export/#{play.id}/html"), 200))
+      assert doc |> LazyHTML.query(".witnesses h2") |> LazyHTML.text() == "Witnesses"
+
+      assert doc |> LazyHTML.query(".witnesses li") |> LazyHTML.text() =~
+               "Tragicall Historie of HAMLET"
+
+      assert epub_text(conn, play) =~ "Tragicall Historie of HAMLET"
+
+      # Its variants hidden, no reading names the witnesses, so they stay out too.
+      {:ok, _} = Playcode.Catalogue.update_play(play, %{show_variants: false})
+      refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "Tragicall"
+    end
+
+    test "a critical apparatus after the text makes a critical edition; another appendix does not",
+         %{conn: conn} do
+      body = ~s(<div1 type="acto" n="1"><sp><speaker>REY</speaker><l n="1">Verso</l></sp></div1>)
+
+      apparatus =
+        witness_play(
+          body: body,
+          back:
+            ~s(<div type="apendice"><head>Critical Apparatus</head><p>1 Verso] Canto Q1.</p></div>)
+        )
+
+      # EMOTHE0310's translator's note is an appendix after the text too.
+      note =
+        witness_play(
+          body: body,
+          back: ~s(<div type="apendice"><head>Nota del traductor</head><p>Una nota.</p></div>)
+        )
+
+      assert response(get(conn, ~p"/export/#{apparatus.id}/html"), 200) =~ "Tragicall"
+      assert epub_text(conn, apparatus) =~ "Tragicall"
+      refute response(get(conn, ~p"/export/#{note.id}/html"), 200) =~ "Tragicall"
+      refute epub_text(conn, note) =~ "Tragicall"
+    end
+
+    defp publication_lines(html) do
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(".publication p")
+      |> Enum.map(&LazyHTML.text/1)
+    end
+
+    test "the downloads print the publication details, the identifiers, the licence and the project statement",
+         %{conn: conn, play: play} do
+      {:ok, play} =
+        Playcode.Catalogue.update_play(play, %{
+          publisher: "Norton & Company",
+          pub_place: "Valencia",
+          publication_date: "2012",
+          authority: "Universitat de València",
+          emothe_id: "0555",
+          licence_text: "CC BY-NC-ND 4.0",
+          licence_url: "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+          availability_note: "Se ruega citar la procedencia.",
+          project_description: "El proyecto EMOTHE.\n\nCarlos Muñoz Pons es responsable.",
+          editorial_declaration: "Las presentes ediciones digitales están basadas…"
+        })
+
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+
+      assert publication_lines(html) == [
+               "Publication: Norton & Company, Valencia, 2012",
+               "Authority: Universitat de València",
+               "Identifiers: #{play.code}, EMOTHE 0555",
+               "Licence: CC BY-NC-ND 4.0 https://creativecommons.org/licenses/by-nc-nd/4.0/",
+               "Se ruega citar la procedencia.",
+               "El proyecto EMOTHE.",
+               "Carlos Muñoz Pons es responsable."
+             ]
+
+      assert html =~ ~s(<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">)
+
+      epub = epub_text(conn, play)
+      assert epub =~ "Publication: Norton &amp; Company, Valencia, 2012"
+      assert epub =~ "<p>Carlos Muñoz Pons es responsable.</p>"
+
+      # The editorial statement, the same paragraph in every file, stays out (question 24).
+      for text <- [html, epub], do: refute(text =~ "Las presentes ediciones")
+    end
+
+    test "the downloads print only what the play has, and link a licence only to a web address",
+         %{conn: conn, play: play} do
+      assert publication_lines(response(get(conn, ~p"/export/#{play.id}/html"), 200)) ==
+               ["Identifiers: #{play.code}"]
+
+      {:ok, play} = Playcode.Catalogue.update_play(play, %{licence_url: "javascript:alert(1)"})
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+
+      assert publication_lines(html) == [
+               "Identifiers: #{play.code}",
+               "Licence: javascript:alert(1)"
+             ]
+
+      refute html =~ ~s(href="javascript:)
+    end
+  end
 end

@@ -8,7 +8,8 @@ defmodule Playcode.Export.Html do
   alias Playcode.Export.NoteMarkup
   alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, Division, Note}
+  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note}
+  alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
   def generate(play) do
@@ -31,11 +32,14 @@ defmodule Playcode.Export.Html do
         <header class="header">
           <p class="author">#{escape(play.author_name || "")}</p>
           <h1 class="title">#{escape(play.title)}</h1>
+    #{original(play)}
     #{render_sources(play.sources)}
     #{render_editors(play.editors)}
     #{render_verse_info(play)}
     #{render_dating(play)}
         </header>
+    #{publication(play, :html)}
+    #{witnesses(play, divisions)}
 
         <div class="play-text">
     #{play.paratexts |> Outline.items(divisions) |> Enum.map_join("\n", &render_item/1)}
@@ -100,12 +104,40 @@ defmodule Playcode.Export.Html do
           color: rgba(51, 51, 51, 0.35);
         }
 
+        .header .original,
         .header .verse-info,
         .header .dating {
           margin-top: 0.5rem;
           font-size: 0.75rem;
           color: rgba(51, 51, 51, 0.5);
         }
+
+        /* The publication details, identifiers, licence and project statement */
+        .publication {
+          max-width: 640px;
+          margin: 0 auto 2rem;
+          font-size: 0.75rem;
+          color: rgba(51, 51, 51, 0.5);
+          text-align: justify;
+        }
+
+        .publication p + p { margin-top: 0.4rem; }
+
+        /* A critical edition's witnesses, each a hanging indent as on the site */
+        .witnesses {
+          max-width: 640px;
+          margin: 0 auto 2rem;
+          font-size: 0.8rem;
+        }
+
+        .witnesses h2 {
+          font-size: 0.875rem;
+          text-align: center;
+          margin-bottom: 0.5rem;
+        }
+
+        .witnesses ul { list-style: none; }
+        .witnesses li { padding-left: 1.5rem; text-indent: -1.5rem; margin-bottom: 0.25rem; }
 
         /* Paratexts */
         .paratext {
@@ -323,6 +355,119 @@ defmodule Playcode.Export.Html do
 
   defp render_dating(play),
     do: play |> dating() |> Enum.map_join("\n", &"      <p class=\"dating\">#{escape(&1)}</p>")
+
+  @doc """
+  The play a translation or an adaptation is made from, by its title, as the published
+  site's title page names it (`StaticSite.Components.family/1`), in the downloads'
+  English; nothing for an original, or a play linked with no kind. Only a complete
+  original, whoever downloads: a PDF is rendered once and served to every reader
+  (`PdfCache`), so staff's copy may not name a draft. The EPUB prints the same line.
+  """
+  def original(%{relationship_type: type, parent_play: %Play{is_complete: true} = original})
+      when is_binary(type) do
+    kind =
+      Gettext.with_locale(PlaycodeWeb.Gettext, "en", fn ->
+        PlayLabels.relationship_type_label(type)
+      end)
+
+    ~s(<p class="original">#{kind} of <cite>#{escape(original.title)}</cite></p>)
+  end
+
+  def original(_play), do: ""
+
+  @doc """
+  The edition's publication details, its identifiers, its licence and the project's
+  statement, a paragraph each and only those the play has, the code always (question 24);
+  not the editorial statement, the same paragraph in every file. The EPUB prints the same
+  block.
+  """
+  def publication(play, format) do
+    inline = &if(filled?(&1), do: NoteMarkup.inline(&1, [], format))
+    catalogue_number = if filled?(play.emothe_id), do: "EMOTHE " <> play.emothe_id
+    project = String.split(play.project_description || "", ~r/\n\s*\n/, trim: true)
+
+    paragraphs =
+      [
+        labelled(
+          "Publication",
+          Enum.map([play.publisher, play.pub_place, play.publication_date], inline)
+        ),
+        labelled("Authority", [inline.(play.authority)]),
+        labelled("Identifiers", Enum.map([play.code, catalogue_number], inline)),
+        labelled("Licence", [inline.(play.licence_text), licence_link(play.licence_url)], " "),
+        inline.(play.availability_note)
+        | Enum.map(project, inline)
+      ]
+      |> Enum.filter(& &1)
+
+    """
+        <section class="publication">
+    #{Enum.map_join(paragraphs, "\n", &"      <p>#{&1}</p>")}
+        </section>
+    """
+  end
+
+  # "Label: " and the parts the play has, or nil when it has none.
+  defp labelled(label, parts, separator \\ ", ") do
+    case Enum.filter(parts, & &1) do
+      [] -> nil
+      parts -> "#{label}: " <> Enum.join(parts, separator)
+    end
+  end
+
+  # Linked only when it is a web address, as the site links it.
+  defp licence_link(url) do
+    cond do
+      not filled?(url) ->
+        nil
+
+      String.starts_with?(url, ["http://", "https://"]) ->
+        ~s(<a href="#{escape(url)}">#{escape(url)}</a>)
+
+      true ->
+        escape(url)
+    end
+  end
+
+  defp filled?(text), do: text not in [nil, ""]
+
+  @doc """
+  A critical edition's witnesses, each as the play page and the published site print it
+  (`Witnesses.html/1`); nothing for any other play (question 24). The EPUB prints the same
+  list.
+  """
+  def witnesses(%{witnesses: [_ | _] = witnesses} = play, divisions) do
+    if critical_edition?(play, divisions) do
+      """
+          <section class="witnesses">
+            <h2>Witnesses</h2>
+            <ul>
+      #{Enum.map_join(witnesses, "\n", &"        <li>#{Phoenix.HTML.safe_to_string(Witnesses.html(&1))}</li>")}
+            </ul>
+          </section>
+      """
+    else
+      ""
+    end
+  end
+
+  def witnesses(_play, _divisions), do: ""
+
+  # A play with variants as printed, or a critical apparatus after the text (decided by
+  # Playcode, 2026-10-19). With its variants hidden, no reading names a witness.
+  # ponytail: the apparatus is known by its heading, the only mark the corpus gives it
+  # (EMOTHE0460, 0644); one headed in another language needs its word added here.
+  defp critical_edition?(play, divisions) do
+    Enum.any?(Note.reading_order(divisions), &Note.variant?/1) or
+      Enum.any?(play.paratexts, &apparatus?/1)
+  end
+
+  defp apparatus?(%Paratext{heading: nil}), do: false
+
+  defp apparatus?(%Paratext{heading: heading}),
+    do:
+      heading |> InlineMarkup.plain() |> String.trim() |> String.downcase() ==
+        "critical apparatus"
 
   # The outline's items in order: a paratext where it stands, a division with its cast list
   # if it is one, its elements and its children.

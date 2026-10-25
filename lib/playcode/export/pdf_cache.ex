@@ -16,8 +16,8 @@ defmodule Playcode.Export.PdfCache do
   plays render at once, one by default: two Chromes do not fit the 1 GB machine. Past
   that, a new play gets `{:error, :busy}` rather than a place in a queue of hours.
 
-  Every render is logged with its duration and outcome, apart from the cache hits: they
-  are the numbers to argue for more compute with.
+  Every render is logged with its duration and outcome, apart from the cache hits, and so
+  is every busy answer: they are the numbers to argue for a queue or more compute with.
   """
   use GenServer
 
@@ -66,6 +66,7 @@ defmodule Playcode.Export.PdfCache do
         {:noreply, Map.update!(renders, path, &%{&1 | waiters: [from | &1.waiters]})}
 
       map_size(renders) >= max_renders() ->
+        Logger.warning("PDF #{play.code}: busy, another PDF is rendering")
         {:reply, {:error, :busy}, renders}
 
       true ->
