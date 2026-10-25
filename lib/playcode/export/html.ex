@@ -38,6 +38,7 @@ defmodule Playcode.Export.Html do
     #{render_verse_info(play)}
     #{render_dating(play)}
         </header>
+    #{publication(play, :html)}
     #{witnesses(play, divisions)}
 
         <div class="play-text">
@@ -110,6 +111,17 @@ defmodule Playcode.Export.Html do
           font-size: 0.75rem;
           color: rgba(51, 51, 51, 0.5);
         }
+
+        /* The publication details, identifiers, licence and project statement */
+        .publication {
+          max-width: 640px;
+          margin: 0 auto 2rem;
+          font-size: 0.75rem;
+          color: rgba(51, 51, 51, 0.5);
+          text-align: justify;
+        }
+
+        .publication p + p { margin-top: 0.4rem; }
 
         /* A critical edition's witnesses, each a hanging indent as on the site */
         .witnesses {
@@ -362,6 +374,62 @@ defmodule Playcode.Export.Html do
   end
 
   def original(_play), do: ""
+
+  @doc """
+  The edition's publication details, its identifiers, its licence and the project's
+  statement, a paragraph each and only those the play has, the code always (question 24);
+  not the editorial statement, the same paragraph in every file. The EPUB prints the same
+  block.
+  """
+  def publication(play, format) do
+    inline = &if(filled?(&1), do: NoteMarkup.inline(&1, [], format))
+    catalogue_number = if filled?(play.emothe_id), do: "EMOTHE " <> play.emothe_id
+    project = String.split(play.project_description || "", ~r/\n\s*\n/, trim: true)
+
+    paragraphs =
+      [
+        labelled(
+          "Publication",
+          Enum.map([play.publisher, play.pub_place, play.publication_date], inline)
+        ),
+        labelled("Authority", [inline.(play.authority)]),
+        labelled("Identifiers", Enum.map([play.code, catalogue_number], inline)),
+        labelled("Licence", [inline.(play.licence_text), licence_link(play.licence_url)], " "),
+        inline.(play.availability_note)
+        | Enum.map(project, inline)
+      ]
+      |> Enum.filter(& &1)
+
+    """
+        <section class="publication">
+    #{Enum.map_join(paragraphs, "\n", &"      <p>#{&1}</p>")}
+        </section>
+    """
+  end
+
+  # "Label: " and the parts the play has, or nil when it has none.
+  defp labelled(label, parts, separator \\ ", ") do
+    case Enum.filter(parts, & &1) do
+      [] -> nil
+      parts -> "#{label}: " <> Enum.join(parts, separator)
+    end
+  end
+
+  # Linked only when it is a web address, as the site links it.
+  defp licence_link(url) do
+    cond do
+      not filled?(url) ->
+        nil
+
+      String.starts_with?(url, ["http://", "https://"]) ->
+        ~s(<a href="#{escape(url)}">#{escape(url)}</a>)
+
+      true ->
+        escape(url)
+    end
+  end
+
+  defp filled?(text), do: text not in [nil, ""]
 
   @doc """
   A critical edition's witnesses, each as the play page and the published site print it

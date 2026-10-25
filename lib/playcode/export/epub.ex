@@ -137,6 +137,7 @@ defmodule Playcode.Export.Epub do
     #{render_verse_info(play)}
     #{render_dating(play)}
     </div>
+    #{Html.publication(play, :epub)}
     #{Html.witnesses(play, divisions)}
     #{Enum.map_join(items, "\n", &render_item/1)}
     """
@@ -396,6 +397,9 @@ defmodule Playcode.Export.Epub do
       font-size: 0.75em;
       color: rgba(51, 51, 51, 0.5);
     }
+
+    .publication { margin: 0 auto 2em; font-size: 0.75em; color: rgba(51, 51, 51, 0.5); text-align: justify; }
+    .publication p + p { margin-top: 0.4em; }
 
     .witnesses { margin: 0 auto 2em; font-size: 0.8em; }
     .witnesses h2 { font-size: 0.875em; text-align: center; margin-bottom: 0.5em; }

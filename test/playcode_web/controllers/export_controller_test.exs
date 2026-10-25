@@ -523,5 +523,66 @@ defmodule PlaycodeWeb.ExportControllerTest do
       refute response(get(conn, ~p"/export/#{note.id}/html"), 200) =~ "Tragicall"
       refute epub_text(conn, note) =~ "Tragicall"
     end
+
+    defp publication_lines(html) do
+      html
+      |> LazyHTML.from_document()
+      |> LazyHTML.query(".publication p")
+      |> Enum.map(&LazyHTML.text/1)
+    end
+
+    test "the downloads print the publication details, the identifiers, the licence and the project statement",
+         %{conn: conn, play: play} do
+      {:ok, play} =
+        Playcode.Catalogue.update_play(play, %{
+          publisher: "Norton & Company",
+          pub_place: "Valencia",
+          publication_date: "2012",
+          authority: "Universitat de València",
+          emothe_id: "0555",
+          licence_text: "CC BY-NC-ND 4.0",
+          licence_url: "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+          availability_note: "Se ruega citar la procedencia.",
+          project_description: "El proyecto EMOTHE.\n\nCarlos Muñoz Pons es responsable.",
+          editorial_declaration: "Las presentes ediciones digitales están basadas…"
+        })
+
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+
+      assert publication_lines(html) == [
+               "Publication: Norton & Company, Valencia, 2012",
+               "Authority: Universitat de València",
+               "Identifiers: #{play.code}, EMOTHE 0555",
+               "Licence: CC BY-NC-ND 4.0 https://creativecommons.org/licenses/by-nc-nd/4.0/",
+               "Se ruega citar la procedencia.",
+               "El proyecto EMOTHE.",
+               "Carlos Muñoz Pons es responsable."
+             ]
+
+      assert html =~ ~s(<a href="https://creativecommons.org/licenses/by-nc-nd/4.0/">)
+
+      epub = epub_text(conn, play)
+      assert epub =~ "Publication: Norton &amp; Company, Valencia, 2012"
+      assert epub =~ "<p>Carlos Muñoz Pons es responsable.</p>"
+
+      # The editorial statement, the same paragraph in every file, stays out (question 24).
+      for text <- [html, epub], do: refute(text =~ "Las presentes ediciones")
+    end
+
+    test "the downloads print only what the play has, and link a licence only to a web address",
+         %{conn: conn, play: play} do
+      assert publication_lines(response(get(conn, ~p"/export/#{play.id}/html"), 200)) ==
+               ["Identifiers: #{play.code}"]
+
+      {:ok, play} = Playcode.Catalogue.update_play(play, %{licence_url: "javascript:alert(1)"})
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+
+      assert publication_lines(html) == [
+               "Identifiers: #{play.code}",
+               "Licence: javascript:alert(1)"
+             ]
+
+      refute html =~ ~s(href="javascript:)
+    end
   end
 end
