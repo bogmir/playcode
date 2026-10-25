@@ -77,7 +77,7 @@ defmodule Playcode.Export.NoteMarkup do
   defp numbered(notes, :html) do
     items =
       Enum.map_join(notes, "\n", fn note ->
-        ~s(<li id="note-#{note.number}" value="#{note.number}">#{body(note, "")}) <>
+        ~s(<li id="note-#{note.number}" value="#{note.number}">#{body(note, "", :html)}) <>
           ~s( <a href="#ref-#{note.number}" aria-label="Back to the text">↩</a></li>)
       end)
 
@@ -86,7 +86,7 @@ defmodule Playcode.Export.NoteMarkup do
 
   defp numbered(notes, :epub) do
     Enum.map_join(notes, "", fn note ->
-      ~s(<aside epub:type="footnote" id="note-#{note.number}">#{body(note, "#{note.number}. ")}</aside>\n)
+      ~s(<aside epub:type="footnote" id="note-#{note.number}">#{body(note, "#{note.number}. ", :epub)}</aside>\n)
     end)
   end
 
@@ -138,14 +138,14 @@ defmodule Playcode.Export.NoteMarkup do
     end)
   end
 
-  defp body(note, prefix) do
+  defp body(note, prefix, format) do
     label =
       Gettext.with_locale(PlaycodeWeb.Gettext, "en", fn ->
         PlayLabels.note_type_label(note.type)
       end)
 
-    term = if note.term, do: " <i>#{inline(note.term, [], :html)}</i>", else: ""
-    paragraphs = Enum.map_join(Note.paragraphs(note), &"<p>#{inline(&1, [], :html)}</p>")
+    term = if note.term, do: " <i>#{inline(note.term, [], format)}</i>", else: ""
+    paragraphs = Enum.map_join(Note.paragraphs(note), &"<p>#{inline(&1, [], format)}</p>")
     "<p><b>#{prefix}#{escape(label)}</b>#{term}</p>#{paragraphs}"
   end
 
