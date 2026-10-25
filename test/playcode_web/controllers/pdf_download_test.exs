@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.PdfDownloadTest do
   """
   use PlaycodeWeb.ConnCase, async: false
 
+  import ExUnit.CaptureLog
   import Playcode.TestFixtures
 
   alias Playcode.Catalogue
@@ -88,17 +89,20 @@ defmodule PlaycodeWeb.PdfDownloadTest do
   end
 
   # Each render starts a Chrome of its own, so by default only one runs: two at once
-  # would not fit the 1 GB machine.
-  test "while one play's PDF renders, another play's answers busy",
+  # would not fit the 1 GB machine. Each refusal is logged: how often readers are turned
+  # away is what decides whether a queue is worth building.
+  test "while one play's PDF renders, another play's answers busy, and the refusal is logged",
        %{conn: conn, play: play} do
     stub(mode: :block)
 
     assert response(download(conn, play), 503) =~ preparing()
     assert_received {:rendering, _code, renderer}
 
-    refused = download(conn, play_fixture(%{"is_complete" => true}))
+    other = play_fixture(%{"is_complete" => true})
+    {refused, log} = with_log(fn -> download(conn, other) end)
     assert response(refused, 503) =~ busy()
     assert get_resp_header(refused, "retry-after") == ["60"]
+    assert log =~ "PDF #{other.code}: busy"
     refute_received {:rendering, _code, _renderer}
 
     send(renderer, :release)
