@@ -90,6 +90,12 @@ three ordinary notes.
 _Avoid_: apparatus note, textual note, note (a note glosses a word; a variant lists what the
 witnesses read)
 
+**Critical edition**:
+A play with variants, or an appendix headed "Critical Apparatus" after the text (decided by
+Playcode, 2026-10-19; no file marks one): EMOTHE0010, 0187, 0435, 0460, 0530, 0551, 0560
+and 0644. Its downloads print its witnesses; with its variants switched off, they do not.
+_Avoid_: scholarly edition, variorum
+
 **Folio passage**:
 Words only the 1623 Folio prints, in Hamlet, whose base text is the Second Quarto. Kept as
 a `<folio>…</folio>` marker in the text it sits in (in the TEI file an `<app type="folio">`
