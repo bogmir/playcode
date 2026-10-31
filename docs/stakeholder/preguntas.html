@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 25 October 2026. 52 questions, 27 of them answered (ten decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 31 October 2026. 57 questions, 28 of them answered (ten decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -284,7 +284,7 @@
       <li><a href="#t-performances">Historical performances</a><span class="nums">11–12</span></li>
       <li><a href="#t-witnesses">Witnesses</a><span class="nums">13</span></li>
       <li><a href="#t-catalogue">The catalogue</a><span class="nums">14</span></li>
-      <li><a href="#t-site">The public site</a><span class="nums">15–17</span></li>
+      <li><a href="#t-site">The public site</a><span class="nums">15–17, 40</span></li>
       <li><a href="#t-credits">Credits</a><span class="nums">18–21</span></li>
       <li><a href="#t-form">Verse, prose or both</a><span class="nums">22–23</span></li>
       <li><a href="#t-downloads">The downloads</a><span class="nums">24</span></li>
@@ -300,6 +300,7 @@
       <li><a href="#t-credits-fixed">Credits corrected</a><span class="nums">49</span></li>
       <li><a href="#t-nested-stanza">A stanza inside a stanza</a><span class="nums">51</span></li>
       <li><a href="#t-stage-study">Studying the stage directions</a><span class="nums">52</span></li>
+      <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–57</span></li>
       <li><a href="#t-spaces-fixed">Spaces corrected</a><span class="nums">—</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
@@ -934,7 +935,7 @@
   <section id="t-site" aria-labelledby="h-site">
     <h2 id="h-site">The public site</h2>
 
-    <div class="q" data-q="q15" data-n="15" data-answered="2026-10-16">
+    <div class="q" id="q15" data-q="q15" data-n="15" data-answered="2026-10-16">
       <span class="q-num" aria-hidden="true">15</span>
       <div class="q-body">
         <h3>Eleven plays are adaptations. How should the public site label them?</h3>
@@ -960,6 +961,7 @@
         <div class="answered">
           <p><strong>Decided by Playcode on 16 October 2026:</strong> each by its own name, as the files call them: adaptation, and refundición when one comes. Three links in the table will be corrected: <i>Annabella</i> to Ford’s play (EMOTHE0283), <i>El pastor fido</i> to Guarini’s (EMOTHE0006), and <i>Las mocedades del Cid</i> shown as an original, linked to nothing. Its file calls it an adaptation of <i>Le Cid</i> and names Corneille as the original’s author; please correct that in your copy.</p>
           <p>Built on 18 October 2026: the other ten are adaptations in Playcode, in the files it exports and on the public site, and the three links are corrected; our copy of the file of <i>Las mocedades del Cid</i> is corrected as asked above. Two families FileMaker had the wrong way round are corrected with them: Ford’s play and its two translations had been listed under <i>Annabella</i>, and Guarini’s <i>Il pastor fido</i> and its two translations under Calderón’s auto. The three plays whose files say “version” keep the word until <a href="#q40">question 40</a> is answered. Readers see it once the site is generated again.</p>
+          <p><strong>Amended on 26 October 2026</strong>, by the team’s email: in English a refundición is only an adaptation, and the team’s list of kinds files the two together, as FileMaker does (“adaptación-refundición”). So Playcode will keep one kind for both, adaptation, and drop refundición; no play is one, so readers see no change. <strong>Built on 31 October 2026:</strong> refundición is no longer a kind in Playcode’s form or on the site, and a file that says <code>refundicion</code> comes in as an adaptation and goes back to the file as one. The same exchange confirms the direction found above: Corneille’s <i>Le Cid</i> is a version of Guillén de Castro’s <i>Las mocedades del Cid</i>, which is older.</p>
           <button type="button" class="reopen" aria-expanded="false" aria-controls="q15-form">Change this answer</button>
         </div>
         <div class="answer-form" id="q15-form" hidden>
@@ -980,16 +982,22 @@
       </div>
     </div>
 
-    <div class="q" id="q40" data-q="q40" data-n="40">
+    <div class="q" id="q40" data-q="q40" data-n="40" data-answered="2026-10-26">
       <span class="q-num" aria-hidden="true">40</span>
       <div class="q-body">
         <h3>Follow-up to question 15: three files call their play a “version”. What is a version?</h3>
         <p class="why">The files of <i>The Rover, Part I</i> (EMOTHE0503), <i>Every Man In His Humour</i>, folio version (EMOTHE0715) and <i>Didon se sacrifiant</i> (EMOTHE0750) mark their main title <code>&lt;title type="version"&gt;</code>, where a translation’s says <code>traduccion</code> and an adaptation’s <code>adaptacion</code>. Each also gives an original title: <i>The Rover, or the Banished Cavaliers</i>, <i>Every Man In His Humor</i> and <i>Didon se sacrifiant</i>. Until now Playcode read the three as originals and lost the word.</p>
         <p class="why">For now Playcode keeps it, as a fourth kind beside translation, adaptation and refundición: it writes it back to the file, and the public site calls the three plays versions. If a version is not a kind of play, a curator changes it in each play’s form.</p>
+        <div class="answered">
+          <p><strong>Answered on 26 October 2026</strong>, by email: most likely what the team’s list of kinds calls an <i>original no principal</i>, a later version of a play whose principal version is another, such as a <i>Hamlet</i> later than the one printed in 1604–05. The team asked which plays these are.</p>
+          <p>There are four, not three: the file of Marlowe’s <i>The Tragedy of Doctor Faustus</i> (EMOTHE0106), the 1616 text, says “version” too, and we had missed it. Read with that answer, two are later versions of a play Playcode holds: <i>Doctor Faustus</i>, of the 1604 text (EMOTHE0103), and the folio <i>Every Man In His Humour</i>, of the quarto (EMOTHE0471). The other two name only themselves as their original. <a href="#q53">Question 53</a> asks whether that reading is right; nothing changes until it is answered.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q40-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q40-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q40-o1"><input type="radio" id="q40-o1" name="q40-choice" value="A kind of play made from another: link each to the play it is a version of">A kind of play made from another: link each to the play it is a version of</label>
+            <label for="q40-o1"><input type="radio" id="q40-o1" name="q40-choice" value="A kind of play made from another: link each to the play it is a version of" checked>A kind of play made from another: link each to the play it is a version of</label>
             <label for="q40-o2"><input type="radio" id="q40-o2" name="q40-choice" value="Only a way of naming the title: the three are originals">Only a way of naming the title: the three are originals</label>
             <label for="q40-o3"><input type="radio" id="q40-o3" name="q40-choice" value="Not sure yet">Not sure yet</label>
           </div>
@@ -999,6 +1007,7 @@
           <textarea id="q40-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -2011,6 +2020,145 @@
         <div>
           <label class="label" for="q52-text">Notes, and what you would look for in the stage directions</label>
           <textarea id="q52-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-relations" aria-labelledby="h-relations">
+    <h2 id="h-relations">Plays made from other plays</h2>
+    <p>The project’s next phase studies how Spanish plays circulated in Europe up to the mid-eighteenth century, and it needs more ways of relating plays than Playcode’s translation, adaptation and version. The team’s list of kinds, sent in October, adds a free translation, a partial adaptation and a play with borrowings. It also tells an adaptation that names its source from an appropriation that does not, and a historical translation or adaptation from a modern one. The emails of 24 to 26 October settled part of it (questions <a href="#q15">15</a> and <a href="#q40">40</a>): the editor decides whether a play is historical or modern, with no cut-off year; a play can have more than one source; and Playcode will hold plays it has no text of. Playcode will build this once it does everything FileMaker does for EMOTHE. These questions are what the design still needs.</p>
+
+    <div class="q" id="q53" data-q="q53" data-n="53">
+      <span class="q-num" aria-hidden="true">53</span>
+      <div class="q-body">
+        <h3>Follow-up to question 40: are two of the “version” plays later versions, and the other two originals?</h3>
+        <p class="why">Four files call their play a version. Each also gives an original title, and for two of them Playcode holds the play that title names.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Play</th><th>Original title in its file</th><th>Our reading</th></tr></thead>
+            <tbody>
+              <tr><td>EMOTHE0106 <i>The Tragedy of Doctor Faustus</i>, Marlowe, the 1616 text</td><td><i>The Tragical History of Doctor Faustus</i>, the 1604 text (EMOTHE0103)</td><td>A later version of EMOTHE0103</td></tr>
+              <tr><td>EMOTHE0715 <i>Every Man In His Humour</i>, folio version, Jonson</td><td><i>Every Man In His Humor</i>, the quarto (EMOTHE0471)</td><td>A later version of EMOTHE0471</td></tr>
+              <tr><td>EMOTHE0503 <i>The Rover, Part I</i>, Behn</td><td><i>The Rover, or the Banished Cavaliers</i>, the play’s own full title</td><td>An original</td></tr>
+              <tr><td>EMOTHE0750 <i>Didon se sacrifiant</i>, Jodelle</td><td><i>Didon se sacrifiant</i>, the same title</td><td>An original, with its Spanish translation (EMOTHE0749) under it, as now</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="why">Today Playcode files <i>Doctor Faustus</i> the other way round, as FileMaker’s index lists it: the 1616 text heads the family, and the 1604 text and the Spanish, French and Italian translations (EMOTHE0107, 0119 and 0144) hang from it, though each translation’s file names the 1604 text as its original. With this reading the 1604 text heads the family, and the 1616 text and the three translations hang from it.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q53-o1"><input type="radio" id="q53-o1" name="q53-choice" value="Right: two later versions and two originals">Right: two later versions and two originals</label>
+            <label for="q53-o2"><input type="radio" id="q53-o2" name="q53-choice" value="Another reading (in the notes)">Another reading (in the notes)</label>
+            <label for="q53-o3"><input type="radio" id="q53-o3" name="q53-choice" value="Not sure yet">Not sure yet</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q53-text">Notes</label>
+          <textarea id="q53-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q54" data-q="q54" data-n="54">
+      <span class="q-num" aria-hidden="true">54</span>
+      <div class="q-body">
+        <h3>What are the kinds of relation called in English?</h3>
+        <p class="why">The team offered to translate its list. Playcode’s admin is in Spanish and the published site in English, so each kind needs a name in both. Our English names, for you to correct:</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>The team’s list</th><th>Our English</th></tr></thead>
+            <tbody>
+              <tr><td>original</td><td>original</td></tr>
+              <tr><td>original no principal</td><td>later version</td></tr>
+              <tr><td>traducción</td><td>translation</td></tr>
+              <tr><td>traducción libre</td><td>free translation</td></tr>
+              <tr><td>adaptación o refundición</td><td>adaptation</td></tr>
+              <tr><td>apropiación</td><td>appropriation</td></tr>
+              <tr><td>adaptación o apropiación parcial</td><td>partial adaptation, partial appropriation</td></tr>
+              <tr><td>obra con préstamos</td><td>play with borrowings</td></tr>
+              <tr><td>interlingüística, intralingüística</td><td>interlingual, intralingual</td></tr>
+              <tr><td>transformación directa, imitación</td><td>transformation, imitation</td></tr>
+              <tr><td>histórica, moderna</td><td>historical, modern</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q54-o1"><input type="radio" id="q54-o1" name="q54-choice" value="Right as they are">Right as they are</label>
+            <label for="q54-o2"><input type="radio" id="q54-o2" name="q54-choice" value="With corrections (in the notes)">With corrections (in the notes)</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q54-text">Notes: each name to change, and the English you prefer</label>
+          <textarea id="q54-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q55" data-q="q55" data-n="55">
+      <span class="q-num" aria-hidden="true">55</span>
+      <div class="q-body">
+        <h3>Should Playcode record whether an adaptation transforms its source or imitates it?</h3>
+        <p class="why">The team’s list divides an adaptation into another language two ways: a direct transformation of its source or an imitation of it; and an adaptation, which names its source or says it is “based on” it, or an appropriation, which does not. The list adds that transformation and imitation are often hard to tell apart. Playcode will record the second pair for every adaptation, whole or partial, as the list does. The first is worth recording only if the editors will fill it in.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q55-o1"><input type="radio" id="q55-o1" name="q55-choice" value="Yes, where the editor can tell; left blank otherwise">Yes, where the editor can tell; left blank otherwise</label>
+            <label for="q55-o2"><input type="radio" id="q55-o2" name="q55-choice" value="Yes, for every adaptation into another language">Yes, for every adaptation into another language</label>
+            <label for="q55-o3"><input type="radio" id="q55-o3" name="q55-choice" value="No: adaptation or appropriation is enough">No: adaptation or appropriation is enough</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q55-text">Notes</label>
+          <textarea id="q55-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q56" data-q="q56" data-n="56">
+      <span class="q-num" aria-hidden="true">56</span>
+      <div class="q-body">
+        <h3>Does a play with borrowings also say whether it names the play it borrows from?</h3>
+        <p class="why">The list calls an adaptation, whole or partial, an adaptation when it names its source and an appropriation when it does not. A play with borrowings, which takes situations, episodes, characters or ideas from another play, is not divided that way in the list.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q56-o1"><input type="radio" id="q56-o1" name="q56-choice" value="Yes, borrowings too">Yes, borrowings too</label>
+            <label for="q56-o2"><input type="radio" id="q56-o2" name="q56-choice" value="No: only adaptations">No: only adaptations</label>
+            <label for="q56-o3"><input type="radio" id="q56-o3" name="q56-choice" value="Not sure yet">Not sure yet</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q56-text">Notes</label>
+          <textarea id="q56-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q57" data-q="q57" data-n="57">
+      <span class="q-num" aria-hidden="true">57</span>
+      <div class="q-body">
+        <h3>What should Playcode record about a play it holds no text of, and where should readers see it?</h3>
+        <p class="why">The emails say Playcode will hold source plays, and their translations and adaptations, even without a text: a source no one has edited for EMOTHE, say, or a seventeenth-century adaptation of it. Today every play in Playcode comes from a file with its text, and the published site lists only finished plays, each with its text. A play without one would have its title, author, language, date and its relations to other plays. What else it needs, and whether readers see it, is for you to say.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q57-o1"><input type="radio" id="q57-o1" name="q57-choice" value="In the catalogue, with a page of its own and no text">In the catalogue, with a page of its own and no text</label>
+            <label for="q57-o2"><input type="radio" id="q57-o2" name="q57-choice" value="Only named on the pages of the plays it is related to">Only named on the pages of the plays it is related to</label>
+            <label for="q57-o3"><input type="radio" id="q57-o3" name="q57-choice" value="Not on the published site: for researchers only">Not on the published site: for researchers only</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q57-text">Notes: what such a play needs besides its title, author, language, date and relations (where its text can be found, for instance)</label>
+          <textarea id="q57-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
