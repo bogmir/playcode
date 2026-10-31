@@ -266,7 +266,7 @@ defmodule Playcode.Export.StaticSite.Components do
     <section :if={@original || @derived != []}>
       <h2>Work family</h2>
       <p :if={@original}>
-        {String.capitalize(kind_name(kind(@play)))} of
+        {String.capitalize(kind(@play))} of
         <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
       </p>
       <ul :if={@derived != []}>
@@ -1137,11 +1137,10 @@ defmodule Playcode.Export.StaticSite.Components do
   @kinds %{
     "traduccion" => "translation",
     "adaptacion" => "adaptation",
-    "refundicion" => "refundicion",
     "version" => "version"
   }
 
-  @doc "The site's word for a play's kind: original, translation, adaptation, refundicion or version."
+  @doc "The site's word for a play's kind: original, translation, adaptation or version."
   def kind(%{relationship_type: nil}), do: "original"
   def kind(%{relationship_type: type}), do: Map.fetch!(@kinds, type)
 
@@ -1150,13 +1149,9 @@ defmodule Playcode.Export.StaticSite.Components do
   defp family_role(play) do
     case kind(play) do
       "original" -> Play.language_name(play.language)
-      kind -> "#{Play.language_name(play.language)}, #{kind_name(kind)}"
+      kind -> "#{Play.language_name(play.language)}, #{kind}"
     end
   end
-
-  @doc ~s(A kind in a sentence: "adaptation", "refundición".)
-  def kind_name("refundicion"), do: "refundición"
-  def kind_name(kind), do: kind
 
   def collection(%{code: "AL" <> _}), do: "ARTELOPE"
   def collection(_play), do: "EMOTHE"
@@ -1184,7 +1179,7 @@ defmodule Playcode.Export.StaticSite.Components do
         {@play.title}
       </a>
       <span class="code">{@play.code}</span>
-      <span :if={kind(@play) != "original"} class="tag">{kind_name(kind(@play))}</span>
+      <span :if={kind(@play) != "original"} class="tag">{kind(@play)}</span>
       <span class="meta">{entry_meta(@play)}</span>
       <span :if={@lead} class="author">{@play.author_name}</span>
     </div>

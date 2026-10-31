@@ -417,10 +417,7 @@ defmodule Playcode.Import.TeiParser do
 
     # The main title: the one that says what kind of play this is (question 15), else the
     # first with no key or type, else the first with no key.
-    kind_title =
-      Enum.find(titles, fn {_, attrs, _} ->
-        attr_value(attrs, "type") in Play.relationship_types()
-      end)
+    kind_title = Enum.find(titles, &title_kind/1)
 
     plain_title =
       Enum.find(titles, fn {_, attrs, _} ->
@@ -440,7 +437,7 @@ defmodule Playcode.Import.TeiParser do
     edition_title_el =
       Enum.find(titles, fn {_, attrs, _} -> attr_value(attrs, "type") == "edicion" end)
 
-    relationship_type = kind_title && attr_value(elem(kind_title, 1), "type")
+    relationship_type = kind_title && title_kind(kind_title)
 
     # Extract sponsor and funder from titleStmt
     sponsor_el = if title_stmt, do: find_child(elem(title_stmt, 2), "sponsor"), else: nil
@@ -511,6 +508,15 @@ defmodule Playcode.Import.TeiParser do
       historical_time: historical_time,
       historical_time_note: historical_time_note
     }
+  end
+
+  # The kind a title's type names, nil for any other title. A refundición is an adaptation
+  # (question 15, amended 2026-10-26), so a file that says one keeps its main title and kind.
+  defp title_kind({_, attrs, _}) do
+    case attr_value(attrs, "type") do
+      "refundicion" -> "adaptacion"
+      type -> if type in Play.relationship_types(), do: type
+    end
   end
 
   # Extract the 2-letter language code from profileDesc/langUsage/language[@ident]

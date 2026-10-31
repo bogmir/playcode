@@ -7,9 +7,8 @@ defmodule Playcode.Catalogue.Play do
   `<idno type="EMOTHE">`, not the application.
 
   Plays form families. An original has a nil `relationship_type`. A translation,
-  adaptation or reworking (`relationship_types/0`) points at it through
-  `parent_play_id`; `version` is what three files call their play, kept until question
-  40 says whether it is a kind. A TEI file names the original by its `short_code/1`; while no
+  adaptation or later version (`relationship_types/0`) points at it through
+  `parent_play_id`. A TEI file names the original by its `short_code/1`; while no
   play has that code, `pending_original_code` holds it, and
   `Catalogue.link_waiting_translations/0` links the two when the original arrives.
 
@@ -172,12 +171,12 @@ defmodule Playcode.Catalogue.Play do
 
   def composition_year_range, do: @composition_year_range
 
-  @relationship_types ~w(traduccion adaptacion refundicion version)
+  @relationship_types ~w(traduccion adaptacion version)
 
   @doc """
   The kinds of play made from another, as a TEI file's main title names them
-  (`<title type="adaptacion">`): the values of `relationship_type`. `version` is kept until
-  question 40 says whether it is one.
+  (`<title type="adaptacion">`): the values of `relationship_type`. A `version` is a later
+  version of a play (question 40). A refundición is an adaptation (question 15).
   """
   def relationship_types, do: @relationship_types
 

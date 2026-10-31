@@ -161,7 +161,7 @@ msgstr "Catalán"
 #: lib/playcode_web/components/layouts/app.html.heex:33
 #: lib/playcode_web/live/play_compare_live.ex:30
 #: lib/playcode_web/live/play_show_live.ex:75
-#: lib/playcode_web/play_labels.ex:277
+#: lib/playcode_web/play_labels.ex:276
 #, elixir-autogen, elixir-format
 msgid "Catalogue"
 msgstr "Catálogo"
@@ -723,7 +723,7 @@ msgstr "Ya existe una obra con el código %{code}"
 #: lib/playcode_web/live/admin/export_site_live.ex:362
 #: lib/playcode_web/live/admin/place_list_live.ex:147
 #: lib/playcode_web/live/admin/play_list_live.ex:197
-#: lib/playcode_web/play_labels.ex:256
+#: lib/playcode_web/play_labels.ex:255
 #, elixir-autogen, elixir-format
 msgid "Plays"
 msgstr "Obras"
@@ -1313,8 +1313,8 @@ msgid "Institutional authority"
 msgstr "Autoridad institucional"
 
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1353
-#: lib/playcode_web/play_labels.ex:243
-#: lib/playcode_web/play_labels.ex:247
+#: lib/playcode_web/play_labels.ex:242
+#: lib/playcode_web/play_labels.ex:246
 #, elixir-autogen, elixir-format
 msgid "Jornada"
 msgstr "Jornada"
@@ -1378,7 +1378,7 @@ msgstr "Investigador principal"
 
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1354
 #: lib/playcode_web/play_labels.ex:96
-#: lib/playcode_web/play_labels.ex:311
+#: lib/playcode_web/play_labels.ex:310
 #, elixir-autogen, elixir-format
 msgid "Prologue"
 msgstr "Prólogo"
@@ -1513,52 +1513,52 @@ msgstr "p. ej. CC BY-NC-ND 4.0"
 msgid "e.g. traductor"
 msgstr "p. ej. traducción"
 
-#: lib/playcode_web/play_labels.ex:244
-#: lib/playcode_web/play_labels.ex:248
+#: lib/playcode_web/play_labels.ex:243
+#: lib/playcode_web/play_labels.ex:247
 #, elixir-autogen, elixir-format
 msgid "Act"
 msgstr "Acto"
 
-#: lib/playcode_web/play_labels.ex:245
+#: lib/playcode_web/play_labels.ex:244
 #, elixir-autogen, elixir-format
 msgid "Acte"
 msgstr "Acte"
 
-#: lib/playcode_web/play_labels.ex:255
+#: lib/playcode_web/play_labels.ex:254
 #, elixir-autogen, elixir-format
 msgid "Actes"
 msgstr "Actes"
 
-#: lib/playcode_web/play_labels.ex:242
+#: lib/playcode_web/play_labels.ex:241
 #, elixir-autogen, elixir-format
 msgid "Acto"
 msgstr "Acto"
 
-#: lib/playcode_web/play_labels.ex:252
+#: lib/playcode_web/play_labels.ex:251
 #, elixir-autogen, elixir-format
 msgid "Actos"
-msgstr "Actos"
-
-#: lib/playcode_web/play_labels.ex:254
-#: lib/playcode_web/play_labels.ex:258
-#, elixir-autogen, elixir-format
-msgid "Acts"
 msgstr "Actos"
 
 #: lib/playcode_web/play_labels.ex:253
 #: lib/playcode_web/play_labels.ex:257
 #, elixir-autogen, elixir-format
+msgid "Acts"
+msgstr "Actos"
+
+#: lib/playcode_web/play_labels.ex:252
+#: lib/playcode_web/play_labels.ex:256
+#, elixir-autogen, elixir-format
 msgid "Jornadas"
 msgstr "Jornadas"
 
 #: lib/playcode_web/live/admin/activity_log_live.ex:306
-#: lib/playcode_web/play_labels.ex:246
+#: lib/playcode_web/play_labels.ex:245
 #, elixir-autogen, elixir-format
 msgid "Play"
 msgstr "Obra"
 
 #: lib/playcode_web/play_labels.ex:231
-#: lib/playcode_web/play_labels.ex:276
+#: lib/playcode_web/play_labels.ex:275
 #, elixir-autogen, elixir-format
 msgid "Adaptation"
 msgstr "Adaptación"
@@ -1739,11 +1739,6 @@ msgstr "Redondilla"
 msgid "Relationship Type"
 msgstr "Tipo de relación"
 
-#: lib/playcode_web/play_labels.ex:232
-#, elixir-autogen, elixir-format
-msgid "Reworking"
-msgstr "Refundición"
-
 #: lib/playcode_web/live/admin/play_editors_live.ex:206
 #: lib/playcode_web/live/admin/play_places_live.ex:259
 #: lib/playcode_web/live/admin/play_places_live.ex:351
@@ -1786,7 +1781,7 @@ msgid "Title (sort)"
 msgstr "Título (ordenación)"
 
 #: lib/playcode_web/play_labels.ex:230
-#: lib/playcode_web/play_labels.ex:275
+#: lib/playcode_web/play_labels.ex:274
 #, elixir-autogen, elixir-format
 msgid "Translation"
 msgstr "Traducción"
@@ -1829,7 +1824,7 @@ msgstr "no vinculado"
 msgid "of"
 msgstr "de"
 
-#: lib/playcode_web/play_labels.ex:237
+#: lib/playcode_web/play_labels.ex:236
 #, elixir-autogen, elixir-format
 msgid "— (Original / standalone)"
 msgstr "— (Original / independiente)"
@@ -2687,7 +2682,7 @@ msgid "Total Size"
 msgstr "Tamaño total"
 
 #: lib/playcode_web/live/admin/export_site_live.ex:190
-#: lib/playcode_web/play_labels.ex:233
+#: lib/playcode_web/play_labels.ex:232
 #, elixir-autogen, elixir-format
 msgid "Version"
 msgstr "Versión"
@@ -3726,7 +3721,7 @@ msgstr[1] "%{count} obras"
 msgid "Accessed on"
 msgstr "Consultado el"
 
-#: lib/playcode_web/play_labels.ex:265
+#: lib/playcode_web/play_labels.ex:264
 #, elixir-autogen, elixir-format
 msgid "Adaptations"
 msgstr "Adaptaciones"
@@ -3771,12 +3766,12 @@ msgstr "Bibliografía"
 msgid "Bibliography sections"
 msgstr "Secciones de la bibliografía"
 
-#: lib/playcode_web/play_labels.ex:309
+#: lib/playcode_web/play_labels.ex:308
 #, elixir-autogen, elixir-format
 msgid "Book"
 msgstr "Libro"
 
-#: lib/playcode_web/play_labels.ex:307
+#: lib/playcode_web/play_labels.ex:306
 #, elixir-autogen, elixir-format
 msgid "Book chapter"
 msgstr "Capítulo de libro"
@@ -3793,19 +3788,19 @@ msgstr "Libro o revista"
 msgid "Close"
 msgstr "Cerrar"
 
-#: lib/playcode_web/play_labels.ex:291
-#: lib/playcode_web/play_labels.ex:315
+#: lib/playcode_web/play_labels.ex:290
+#: lib/playcode_web/play_labels.ex:314
 #, elixir-autogen, elixir-format
 msgid "Collection"
 msgstr "Colección"
 
-#: lib/playcode_web/play_labels.ex:310
+#: lib/playcode_web/play_labels.ex:309
 #, elixir-autogen, elixir-format
 msgid "Conference proceedings"
 msgstr "Actas"
 
-#: lib/playcode_web/play_labels.ex:263
-#: lib/playcode_web/play_labels.ex:274
+#: lib/playcode_web/play_labels.ex:262
+#: lib/playcode_web/play_labels.ex:273
 #, elixir-autogen, elixir-format
 msgid "Criticism"
 msgstr "Bibliografía crítica"
@@ -3815,7 +3810,7 @@ msgstr "Bibliografía crítica"
 msgid "Delete this entry? No other play uses it."
 msgstr "¿Borrar esta entrada? Ninguna otra obra la usa."
 
-#: lib/playcode_web/play_labels.ex:314
+#: lib/playcode_web/play_labels.ex:313
 #, elixir-autogen, elixir-format
 msgid "Doctoral thesis"
 msgstr "Tesis doctoral"
@@ -3825,7 +3820,7 @@ msgstr "Tesis doctoral"
 msgid "Edition"
 msgstr "Edición"
 
-#: lib/playcode_web/play_labels.ex:313
+#: lib/playcode_web/play_labels.ex:312
 #, elixir-autogen, elixir-format
 msgid "Electronic publication"
 msgstr "Publicación electrónica"
@@ -3847,7 +3842,7 @@ msgstr "Entrada borrada: ninguna otra obra la usaba."
 msgid "Entry saved."
 msgstr "Entrada guardada."
 
-#: lib/playcode_web/play_labels.ex:312
+#: lib/playcode_web/play_labels.ex:311
 #, elixir-autogen, elixir-format
 msgid "Festschrift"
 msgstr "Homenaje"
@@ -3887,7 +3882,7 @@ msgstr "Nota interna, solo para investigadores"
 msgid "Issue"
 msgstr "Número"
 
-#: lib/playcode_web/play_labels.ex:306
+#: lib/playcode_web/play_labels.ex:305
 #, elixir-autogen, elixir-format
 msgid "Journal article"
 msgstr "Artículo de revista"
@@ -3899,17 +3894,17 @@ msgstr "Artículo de revista"
 msgid "Kind"
 msgstr "Tipo"
 
-#: lib/playcode_web/play_labels.ex:321
+#: lib/playcode_web/play_labels.ex:320
 #, elixir-autogen, elixir-format
 msgid "Language not stated"
 msgstr "Idioma sin indicar"
 
-#: lib/playcode_web/play_labels.ex:273
+#: lib/playcode_web/play_labels.ex:272
 #, elixir-autogen, elixir-format
 msgid "Modern edition"
 msgstr "Edición moderna"
 
-#: lib/playcode_web/play_labels.ex:262
+#: lib/playcode_web/play_labels.ex:261
 #, elixir-autogen, elixir-format
 msgid "Modern editions"
 msgstr "Ediciones modernas"
@@ -4001,7 +3996,7 @@ msgstr "¿Quitar esta entrada de esta obra? Las demás obras la conservan."
 msgid "Removed from this play. The other plays keep it."
 msgstr "Quitada de esta obra. Las demás obras la conservan."
 
-#: lib/playcode_web/play_labels.ex:308
+#: lib/playcode_web/play_labels.ex:307
 #, elixir-autogen, elixir-format
 msgid "Scholarly edition"
 msgstr "Edición de estudioso"
@@ -4032,7 +4027,7 @@ msgstr "Sigla"
 msgid "That entry is already in this play's bibliography."
 msgstr "Esa entrada ya está en la bibliografía de esta obra."
 
-#: lib/playcode_web/play_labels.ex:264
+#: lib/playcode_web/play_labels.ex:263
 #, elixir-autogen, elixir-format
 msgid "Translations"
 msgstr "Traducciones"
@@ -4306,7 +4301,7 @@ msgstr "Añadir testimonio"
 msgid "As it will print"
 msgstr "Así se imprimirá"
 
-#: lib/playcode_web/play_labels.ex:285
+#: lib/playcode_web/play_labels.ex:284
 #, elixir-autogen, elixir-format
 msgid "Autograph"
 msgstr "Autógrafo"
@@ -4316,17 +4311,17 @@ msgstr "Autógrafo"
 msgid "Click to show or hide the whole note"
 msgstr "Pulsa para mostrar u ocultar la nota entera"
 
-#: lib/playcode_web/play_labels.ex:292
+#: lib/playcode_web/play_labels.ex:291
 #, elixir-autogen, elixir-format
 msgid "Collection of one author"
 msgstr "Colección de autor"
 
-#: lib/playcode_web/play_labels.ex:293
+#: lib/playcode_web/play_labels.ex:292
 #, elixir-autogen, elixir-format
 msgid "Collection of several authors"
 msgstr "Colección de diversos autores"
 
-#: lib/playcode_web/play_labels.ex:286
+#: lib/playcode_web/play_labels.ex:285
 #, elixir-autogen, elixir-format
 msgid "Copy"
 msgstr "Copia"
@@ -4336,8 +4331,8 @@ msgstr "Copia"
 msgid "Delete this witness?"
 msgstr "¿Eliminar este testimonio?"
 
-#: lib/playcode_web/play_labels.ex:288
-#: lib/playcode_web/play_labels.ex:290
+#: lib/playcode_web/play_labels.ex:287
+#: lib/playcode_web/play_labels.ex:289
 #, elixir-autogen, elixir-format
 msgid "Early edition"
 msgstr "Edición antigua"
@@ -4352,8 +4347,8 @@ msgstr "Editar testimonio"
 msgid "Format"
 msgstr "Formato"
 
-#: lib/playcode_web/play_labels.ex:282
-#: lib/playcode_web/play_labels.ex:284
+#: lib/playcode_web/play_labels.ex:281
+#: lib/playcode_web/play_labels.ex:283
 #, elixir-autogen, elixir-format
 msgid "Manuscript"
 msgstr "Manuscrito"
@@ -4383,7 +4378,7 @@ msgstr "Observación"
 msgid "Shelfmark"
 msgstr "Signatura"
 
-#: lib/playcode_web/play_labels.ex:294
+#: lib/playcode_web/play_labels.ex:293
 #, elixir-autogen, elixir-format
 msgid "Suelta"
 msgstr "Suelta"
@@ -5242,17 +5237,17 @@ msgstr "En verso"
 msgid "e.g. FIN"
 msgstr "ej. FIN"
 
-#: lib/playcode_web/play_labels.ex:326
+#: lib/playcode_web/play_labels.ex:325
 #, elixir-autogen, elixir-format
 msgid "a first part that nothing completes"
 msgstr "una parte inicial que nada completa"
 
-#: lib/playcode_web/play_labels.ex:332
+#: lib/playcode_web/play_labels.ex:331
 #, elixir-autogen, elixir-format
 msgid "a last part that completes no verse"
 msgstr "una parte final que no completa ningún verso"
 
-#: lib/playcode_web/play_labels.ex:329
+#: lib/playcode_web/play_labels.ex:328
 #, elixir-autogen, elixir-format
 msgid "a middle part that completes no verse"
 msgstr "una parte media que no completa ningún verso"

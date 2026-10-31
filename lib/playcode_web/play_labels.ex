@@ -229,7 +229,6 @@ defmodule PlaycodeWeb.PlayLabels do
   @doc "The name of a kind of play made from another (`Play.relationship_types/0`)."
   def relationship_type_label("traduccion"), do: gettext("Translation")
   def relationship_type_label("adaptacion"), do: gettext("Adaptation")
-  def relationship_type_label("refundicion"), do: gettext("Reworking")
   def relationship_type_label("version"), do: gettext("Version")
 
   @doc "The kinds for the play form's select, an original first."

@@ -560,11 +560,25 @@ defmodule Playcode.TeiRoundtripTest do
   end
 
   # Question 15: each kind by its own name, as the files call them. 11 files call their play
-  # an adaptation and 3 a version (question 40); only "traduccion" used to be read.
+  # an adaptation and 4 a version (question 40); only "traduccion" used to be read.
+  # Amended 2026-10-26: a refundición is an adaptation, no kind of its own, so it left
+  # this list for the test below it.
   describe "the kind of play a title names" do
     alias Playcode.Catalogue
 
-    for kind <- ~w(adaptacion refundicion version) do
+    test "a refundición is read as an adaptation, and written back as one" do
+      play = import_tei!(tei(title_stmt: ~s(<title type="refundicion">Abre el ojo</title>)))
+
+      assert %{relationship_type: "adaptacion", title: "Abre el ojo"} =
+               Catalogue.get_play!(play.id)
+
+      assert {%{"type" => "adaptacion"}, "Abre el ojo"} in xml_elements(
+               export_tei(play),
+               "title"
+             )
+    end
+
+    for kind <- ~w(adaptacion version) do
       test "a #{kind} is read from its title and written back there" do
         play =
           import_tei!(tei(title_stmt: ~s(<title type="#{unquote(kind)}">Le Menteur</title>)))

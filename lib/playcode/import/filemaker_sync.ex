@@ -10,7 +10,7 @@ defmodule Playcode.Import.FilemakerSync do
     * **Derived fields** — `language`, `relationship_type`, `parent_play_id`. The
       published index is authoritative, so a difference is an error in our data and
       gets overwritten; but the index knows only originals and translations, so an
-      adaptation, refundición or version keeps its kind and its original (question 15).
+      adaptation or version keeps its kind and its original (question 15).
     * **Curated fields** — `historical_time`, `historical_time_note` and the three
       `composition_date_*` columns. A researcher is expected to edit these in the admin
       form, so the export is a bootstrap: a blank column is filled, a disagreement is

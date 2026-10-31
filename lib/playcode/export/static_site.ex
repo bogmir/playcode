@@ -620,7 +620,6 @@ defmodule Playcode.Export.StaticSite do
          "original" => "Originals",
          "translation" => "Translations",
          "adaptation" => "Adaptations",
-         "refundicion" => "Refundiciones",
          "version" => "Versions"
        })},
       {"coll", "Collection",
