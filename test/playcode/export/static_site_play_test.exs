@@ -272,6 +272,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert Enum.map(characters, &hd/1) == ["Segismundo", "Criado 2", "Clarín", "Clotaldo"]
       assert ["Segismundo", "1", "5" | _] = hd(characters)
       assert "I, 1" in hd(characters)
+      assert "Redondilla" in hd(characters)
 
       assert texts(stats, "#presence tbody th") == [
                "Segismundo",
@@ -300,6 +301,32 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       assert length(rows(stats, "#characters tbody tr")) == 13
       assert length(rows(stats, "#presence tbody tr")) == 13
+    end
+
+    # Regression: King Lear showed Edgar's first speech as "I" (prose) and Lear's as
+    # "I, 34" (which scene?) under "First words", and an empty "Main forms" column.
+    test "says in which act, scene and line each character first speaks" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <div2 type="escena" n="1"><head>Escena 1</head>
+            <sp><speaker>KENT</speaker><p n="1">I thought the King had more affected the Duke.</p></sp>
+            <sp><speaker>LEAR</speaker><lg type="free"><l n="2">Attend the lords of France.</l></lg></sp>
+          </div2>
+          <div2 type="escena" n="2"><head>Escena 2</head>
+            <sp><speaker>EDGAR</speaker><p n="144">How now, brother Edmund?</p></sp>
+          </div2>
+        </div1>
+        """)
+
+      stats = page(dir, play, "statistics.html")
+      first = Map.new(rows(stats, "#characters tbody tr"), &{hd(&1), List.last(&1)})
+
+      assert first == %{"KENT" => "I.1, 1", "LEAR" => "I.1, 2", "EDGAR" => "I.2, 144"}
+
+      # No verse names its form, so no character has a main form to show.
+      assert texts(stats, "#characters thead th") ==
+               ["Character", "Speeches", "Lines", "Words", "Share of the play", "First speaks"]
     end
 
     test "a passage of verses with no number names no range" do

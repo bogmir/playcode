@@ -995,9 +995,14 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :total, :integer, required: true
 
   def character_table(assigns) do
-    characters = Enum.sort_by(assigns.characters, &(-&1[assigns.unit]))
+    characters =
+      assigns.characters
+      |> Enum.sort_by(&(-&1[assigns.unit]))
+      |> Enum.map(&Map.put(&1, "main_forms", main_forms(&1["forms"])))
+
     max = characters |> Enum.map(& &1[assigns.unit]) |> Enum.max(fn -> 1 end) |> max(1)
-    assigns = assign(assigns, characters: characters, max: max)
+    forms? = Enum.any?(characters, &(&1["main_forms"] != ""))
+    assigns = assign(assigns, characters: characters, max: max, forms?: forms?)
 
     ~H"""
     <section :if={@characters != []} id="characters">
@@ -1013,8 +1018,8 @@ defmodule Playcode.Export.StaticSite.Components do
             <th class="num">Lines</th>
             <th class="num">Words</th>
             <th>Share of the play</th>
-            <th>First words</th>
-            <th>Main forms</th>
+            <th>First speaks</th>
+            <th :if={@forms?}>Main forms</th>
           </tr>
         </thead>
         <tbody>
@@ -1029,8 +1034,8 @@ defmodule Playcode.Export.StaticSite.Components do
                 @total
               )}
             </td>
-            <td>{first_words(character["first"])}</td>
-            <td>{main_forms(character["forms"])}</td>
+            <td>{first_speaks(character["first"])}</td>
+            <td :if={@forms?}>{character["main_forms"]}</td>
           </tr>
         </tbody>
       </table>
@@ -1038,11 +1043,13 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
-  defp first_words(%{"act" => act, "line" => line}) when is_integer(act) and is_integer(line),
-    do: "#{Edition.roman(act)}, #{line}"
+  # "I.2, 144": the act, its scene when it has scenes, and the line when it has a number.
+  defp first_speaks(%{"act" => act} = first) when is_integer(act) do
+    place = Enum.join([Edition.roman(act) | List.wrap(first["scene"])], ".")
+    Enum.join([place | List.wrap(first["line"])], ", ")
+  end
 
-  defp first_words(%{"act" => act}) when is_integer(act), do: Edition.roman(act)
-  defp first_words(_first), do: "—"
+  defp first_speaks(_first), do: "—"
 
   defp main_forms(forms) do
     forms

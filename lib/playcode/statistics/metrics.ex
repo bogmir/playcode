@@ -298,7 +298,7 @@ defmodule Playcode.Statistics.Metrics do
       "speeches" => length(speeches),
       "lines" => length(verses),
       "words" => sum_words(spoken),
-      "first" => %{"act" => first.act, "line" => first.number},
+      "first" => %{"act" => first.act, "scene" => first.scene_number, "line" => line(first)},
       "aside_verses" => Enum.count(verses, & &1.element.is_aside),
       "longest_speech" => %{
         "lines" =>
@@ -319,6 +319,12 @@ defmodule Playcode.Statistics.Metrics do
         |> Enum.map(&Tuple.to_list/1)
     }
   end
+
+  # A verse's number or, for prose, the paragraph's own (TEI's p@n), a string.
+  defp line(%{kind: :prose, element: element}),
+    do: element.content |> InlineMarkup.paragraph_number() |> elem(0)
+
+  defp line(item), do: item.number
 
   defp sum_words(items), do: items |> Enum.map(&words(&1.element.content)) |> Enum.sum()
 
