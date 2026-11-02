@@ -59,6 +59,7 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 | `mix playcode.export.site` | Build the static site (also `/admin/export`). Runs in its own VM, outside `SiteBuilder`: pass `-o` while a server is building |
 | `mix playcode.invite EMAIL --admin --print-url` | Break-glass admin invite; bypasses SMTP |
 | `mix playcode.fly.reimport prepare` / `run` / `generate` / `deploy` | Re-import the corpus on Fly (`docs/production-reimport.md`) |
+| `mix playcode.fly.reimport files --dir DIR` | A few corrected files on Fly in one go: snapshot, upload, dry run, and when it needs no look, the import and Generate; never Deploy |
 | `Playcode.Release.import_*` | The imports on Fly; `dry_run: true` first |
 | `bin/playcode rpc 'Playcode.Release.invite_url("...")'` | An invite URL on Fly, bypassing SMTP (or `Playcode.Release.invite_url/1` from `fly ssh console`) |
 | `fly secrets list` | Production's secrets, names only |

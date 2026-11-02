@@ -7,6 +7,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   first, and push nothing to `main` until it is done: a deploy restarts the app.
 
       mix playcode.fly.reimport prepare [--dir doc/tei_corpus]
+      mix playcode.fly.reimport files --dir DIR
       mix playcode.fly.reimport run
       mix playcode.fly.reimport generate
       mix playcode.fly.reimport deploy
@@ -16,6 +17,9 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   machines up with autostop off, runs the dry run, and stops: it lists the plays whose
   hand fixes the re-import would lose, for a person to look at with the project. Running
   it again is safe; a new upload starts the re-import over.
+
+  `files` is the three in one for a few corrected files: `prepare` with them, and when the
+  dry run needs no look, `run` and `generate`. It never deploys.
 
   `run` re-imports every play not imported since its file was uploaded
   (`Release.import_tei/2` with `force: true, resume: true`), running again up to three
@@ -55,6 +59,63 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
   @impl Mix.Task
   def run(["prepare" | args]) do
+    prepare(args)
+    Mix.shell().info("\nThen: mix playcode.fly.reimport run")
+  end
+
+  def run(["files" | args]) do
+    if args == [], do: Mix.raise("usage: mix playcode.fly.reimport files --dir DIR")
+
+    if prepare(args) == :clean do
+      import!()
+      generate!()
+
+      Mix.shell().info(
+        "\nDone. Check the preview on /admin/export, then: mix playcode.fly.reimport deploy"
+      )
+    end
+  end
+
+  def run(["run"]) do
+    import!()
+
+    Mix.shell().info(
+      "\nDone; the machines stay up. Check the counts, then: mix playcode.fly.reimport generate"
+    )
+  end
+
+  def run(["generate"]) do
+    generate!()
+
+    Mix.shell().info(
+      "\nDone. Check the preview on /admin/export, then: mix playcode.fly.reimport deploy"
+    )
+  end
+
+  def run(["deploy"]) do
+    step("Deploying the site, autostop off")
+    wake!()
+    fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
+    result = until_done(@deploy, "site deployed", "deploy failed")
+    fly!(~w(machine update #{@app_machine} --autostop=stop -a #{@app} --yes))
+
+    unless match?({:ok, _output}, result),
+      do: Mix.raise("the deploy failed or did not finish; see above")
+  end
+
+  def run(["scale-down"]) do
+    step("Scaling back, autostop on")
+    scale_down!()
+  end
+
+  def run(_args) do
+    Mix.raise(
+      "usage: mix playcode.fly.reimport prepare [--dir DIR] | files --dir DIR | run | generate | deploy | scale-down"
+    )
+  end
+
+  # :clean when the dry run needs no look.
+  defp prepare(args) do
     {opts, _, _} = OptionParser.parse(args, strict: [dir: :string])
     dir = Keyword.get(opts, :dir, "doc/tei_corpus")
     files = dir |> Path.join("*.xml") |> Path.wildcard() |> Enum.map(&Path.basename/1)
@@ -89,25 +150,21 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     case output |> String.split("\n") |> Enum.filter(&(&1 =~ @needs_a_look)) do
       [] ->
         Mix.shell().info("\nNothing needs a look.")
+        :clean
 
       flagged ->
         Mix.shell().info("\nLook at these with the project before running:")
         for line <- flagged, do: Mix.shell().info(line)
+        :flagged
     end
-
-    Mix.shell().info("\nThen: mix playcode.fly.reimport run")
   end
 
-  def run(["run"]) do
+  defp import! do
     step("Re-importing")
     import_until_done(1)
-
-    Mix.shell().info(
-      "\nDone; the machines stay up. Check the counts, then: mix playcode.fly.reimport generate"
-    )
   end
 
-  def run(["generate"]) do
+  defp generate! do
     step("Scaling up, autostop off")
     scale_up!()
 
@@ -129,32 +186,6 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
     step("Scaling back, autostop on")
     scale_down!()
-
-    Mix.shell().info(
-      "\nDone. Check the preview on /admin/export, then: mix playcode.fly.reimport deploy"
-    )
-  end
-
-  def run(["deploy"]) do
-    step("Deploying the site, autostop off")
-    wake!()
-    fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
-    result = until_done(@deploy, "site deployed", "deploy failed")
-    fly!(~w(machine update #{@app_machine} --autostop=stop -a #{@app} --yes))
-
-    unless match?({:ok, _output}, result),
-      do: Mix.raise("the deploy failed or did not finish; see above")
-  end
-
-  def run(["scale-down"]) do
-    step("Scaling back, autostop on")
-    scale_down!()
-  end
-
-  def run(_args) do
-    Mix.raise(
-      "usage: mix playcode.fly.reimport prepare [--dir DIR] | run | generate | deploy | scale-down"
-    )
   end
 
   defp snapshot! do

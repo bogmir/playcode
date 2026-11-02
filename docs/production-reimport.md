@@ -42,6 +42,11 @@ mix playcode.fly.reimport deploy      # step 10's Deploy, after the preview
 mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or build
 ```
 
+A few corrected files, rather than the corpus, go in one command: `mix playcode.fly.reimport
+files --dir DIR` is `prepare` with them, and when the dry run needs no look, `run` and
+`generate`. It stops after the dry run otherwise, and never deploys. Put only the corrected
+files in `DIR`.
+
 1. **Deploy the code** (step 1 below).
 2. **`prepare`** snapshots the database volume and waits for the snapshot, starts the app
    if the proxy stopped it for want of traffic (on 2026-10-17 the upload found no VM), uploads

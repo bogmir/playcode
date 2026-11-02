@@ -157,6 +157,54 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     end
   end
 
+  # Corrected files, given in one go (2026-11-02): every step to the site built, and none
+  # past a dry run that needs a person.
+  describe "files" do
+    @clean """
+    2 file(s) in /data/tei
+      EMOTHE0001  replaces 3 division(s), 40 element(s), 5 character(s), 2 TEI record(s)
+
+    dry run, nothing written — 0 new, 2 already imported, 0 unreadable
+    """
+
+    test "a clean dry run goes on to the import and Generate, then scales back",
+         %{dir: dir, corpus: corpus} do
+      answer(dir, "dry_run", @clean)
+      answer(dir, "run.1", "imported 2, skipped 0, failed 0\n")
+      answer(dir, "generate.1", "site generated: %{plays: 2}\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["files", "--dir", corpus])
+
+      calls = calls(dir)
+
+      assert_in_order(calls, [
+        "volumes snapshots create vol_40l3p92ozj187o94 -a emothe-db-1g",
+        "ssh sftp put",
+        ~s[import_tei("/data/tei", dry_run: true, force: true)],
+        ~s[import_tei("/data/tei", force: true, resume: true)],
+        "generate_site()",
+        "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes"
+      ])
+
+      refute Enum.any?(calls, &(&1 =~ "deploy_site"))
+      assert output() =~ "mix playcode.fly.reimport deploy"
+    end
+
+    test "a dry run that needs a look stops before the import", %{dir: dir, corpus: corpus} do
+      answer(dir, "dry_run", """
+      2 file(s) in /data/tei
+        EMOTHE0002  replaces 2 division(s), 9 element(s), 4 character(s), 1 TEI record(s), undoes 2 hand edit(s) to its text
+
+      dry run, nothing written — 0 new, 2 already imported (1 with hand edits since their last import), 0 unreadable
+      """)
+
+      Mix.Task.rerun("playcode.fly.reimport", ["files", "--dir", corpus])
+
+      refute Enum.any?(calls(dir), &(&1 =~ ~r/resume: true|generate_site/))
+      assert output() =~ ~r/look.*\n.*EMOTHE0002 .*undoes 2 hand edit/i
+    end
+  end
+
   describe "run" do
     # It used to scale back at the end; the machines now stay up for `generate`, which
     # builds the site faster on them and scales back after it (2026-10-17).
