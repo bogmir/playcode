@@ -69,6 +69,8 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:has_variants, divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1))
      |> assign(:show_folio, false)
      |> assign(:has_folio, Element.folio_passages?(divisions))
+     |> assign(:show_rs, false)
+     |> assign(:has_rs, Element.tagged_names?(divisions))
      |> assign(:active_tab, :text)
      |> assign(:sidebar_open, true)
      |> assign(:breadcrumbs, [
@@ -100,6 +102,10 @@ defmodule PlaycodeWeb.PlayShowLive do
 
   def handle_event("toggle_variants", _, socket) do
     {:noreply, assign(socket, :show_variants, !socket.assigns.show_variants)}
+  end
+
+  def handle_event("toggle_rs", _, socket) do
+    {:noreply, assign(socket, :show_rs, !socket.assigns.show_rs)}
   end
 
   def handle_event("toggle_folio", _, socket) do
@@ -289,6 +295,17 @@ defmodule PlaycodeWeb.PlayShowLive do
                   phx-click="toggle_folio"
                   class="checkbox checkbox-xs checkbox-primary"
                 /> {gettext("Folio interpolations")}
+              </label>
+              <label
+                :if={@has_rs}
+                class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70"
+              >
+                <input
+                  type="checkbox"
+                  checked={@show_rs}
+                  phx-click="toggle_rs"
+                  class="checkbox checkbox-xs checkbox-primary"
+                /> {gettext("Tagged names")}
               </label>
             </div>
           </div>
@@ -577,6 +594,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               show_verse_type={@show_verse_type}
               show_variants={@show_variants}
               show_folio={@show_folio}
+              show_rs={@show_rs}
             />
           </div>
 

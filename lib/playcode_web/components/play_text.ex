@@ -22,6 +22,7 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_verse_type, :boolean, default: false
   attr :show_variants, :boolean, default: true
   attr :show_folio, :boolean, default: false
+  attr :show_rs, :boolean, default: false
   attr :sync_keys, :boolean, default: false
 
   def play_body(assigns) do
@@ -30,6 +31,7 @@ defmodule PlaycodeWeb.Components.PlayText do
       class="play-text"
       data-variants={if @show_variants, do: "on", else: "off"}
       data-folio={if @show_folio, do: "on", else: "off"}
+      data-rs={if @show_rs, do: "on", else: "off"}
     >
       <div
         :for={{division, div_key} <- outline(@paratexts, @divisions, @sync_keys)}
@@ -432,6 +434,15 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   defp part_html(%{folio: _} = part, show),
     do: [~s(<span class="folio">), part_html(Map.delete(part, :folio), show), "</span>"]
+
+  # The words an <rs> tags, named by its kind; underlined while the "Tagged names" switch
+  # is on (app.css). A note at their end is the words' own, outside the span: its button
+  # is named already. ponytail: a title shows on hover only, not on a tap.
+  defp part_html(%{rs: %{} = rs, text: _} = part, show) do
+    title = PlayLabels.tag_type_label(rs.type)
+    attr = if title, do: [~s( title="), escape(title), ~s(")], else: []
+    [~s(<span class="rs"), attr, ">", part_html(Map.delete(part, :rs), show), "</span>"]
+  end
 
   # Where a printed line of the source starts; gone while the line numbers are hidden.
   defp part_html(%{number: _}, %{numbers: false}), do: ""

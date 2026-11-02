@@ -1091,6 +1091,51 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  # Question 63: the words an <rs> tags (229 in EMOTHE0551) carry its kind's name, and a
+  # switch, off at first, underlines them.
+  test "tagged names are named by their kind, underlined by a switch that starts off" do
+    body = """
+    <div1 type="acto" n="1"><head>ACT I</head>
+      <sp><speaker>ANA</speaker>
+        <l n="1">Como <rs n="5163" type="mitologia_antroponimo">Adonis</rs> en <rs type="toponimo_accion">Castilla</rs></l>
+        <l n="2"><stage>(Coge <rs type="atrezzo">la adarga</rs>.)</stage> ¡Vamos!</l>
+      </sp>
+    </div1>
+    """
+
+    play = import_tei!(tei(body: body))
+    dir = generate!([play], all: true)
+    act = page(dir, play, "act-1.html")
+
+    assert act |> LazyHTML.query(~s(input[data-toggle="rs"])) |> Enum.count() == 1
+    assert act |> LazyHTML.query(~s(input[data-toggle="rs"][checked])) |> Enum.count() == 0
+    assert act |> LazyHTML.query(~s(body[data-rs="off"])) |> Enum.count() == 1
+
+    tags = LazyHTML.query(act, "span.rs")
+    assert Enum.map(tags, &LazyHTML.text/1) == ["Adonis", "Castilla", "la adarga"]
+
+    assert LazyHTML.attribute(tags, "title") == [
+             "Mythological figure",
+             "Place of the action",
+             "Props"
+           ]
+
+    # style.css underlines them while the switch is on; site.js remembers it.
+    assert read!(dir, "assets/style.css") =~ ~s(body[data-rs="on"] .rs)
+    assert read!(dir, "assets/site.js") =~ ~s('fo', 'rs'])
+
+    # A play with none has no switch.
+    other =
+      import_tei!(
+        tei(
+          body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>)
+        )
+      )
+
+    plain = page(generate!([other], all: true), other, "act-1.html")
+    assert plain |> LazyHTML.query(~s(input[data-toggle="rs"])) |> Enum.count() == 0
+  end
+
   describe "Hamlet's Folio passages" do
     @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
     @folio_close ~s(<code>&lt;/span&gt;</code>)
@@ -1133,7 +1178,8 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       # style.css hides what the class marks while the switch is off; site.js remembers it.
       assert read!(dir, "assets/style.css") =~ ~s(body[data-fo="off"] .fo)
-      assert read!(dir, "assets/site.js") =~ ~s('fo'])
+      # (The list of remembered switches goes on past 'fo' since the tagged names joined it.)
+      assert read!(dir, "assets/site.js") =~ ~s('va', 'fo')
     end
 
     # Each kind of element that can be the Folio's wholly goes with its words; a group with

@@ -50,6 +50,19 @@ defmodule PlaycodeWeb.PlayLabels do
   def note_type_label(type) when type in ["variante", "variantes"], do: gettext("Textual variant")
   def note_type_label(_other), do: gettext("Note")
 
+  @doc "The kinds an `<rs>` may take: the subjects, and EMOTHE0551's mythological ones."
+  def tag_types, do: Note.subject_types() ++ ~w(mitologia_antroponimo mitologia_toponimo)
+
+  @doc """
+  The name of an `<rs>`'s kind, as its words' title: a subject's, as a note of that kind
+  reads, or a mythological figure or place (EMOTHE0551); nil for a kind with none.
+  """
+  def tag_type_label("mitologia_antroponimo"), do: gettext("Mythological figure")
+  def tag_type_label("mitologia_toponimo"), do: gettext("Mythological place")
+
+  def tag_type_label(type),
+    do: if(type in Note.subject_types(), do: note_type_label(type))
+
   @doc """
   The type a note is filtered by: its own when it has a label (`Note.types/0`), else
   `"other"`, so the types the corpus carries without one (`falta_tipo`, …) are one plain
@@ -57,16 +70,20 @@ defmodule PlaycodeWeb.PlayLabels do
   ordinary notes of kind `variantes` share (question 17), as they share its label.
   """
   def note_type_key(type) when type in ["variante", "variantes"], do: "variante"
-  def note_type_key(type), do: if(type in Note.types(), do: type, else: "other")
+
+  def note_type_key(type),
+    do: if(type in Note.types() or type in Note.subject_types(), do: type, else: "other")
 
   @doc """
-  `{label, type}` pairs for a select: an untyped note first, then the corpus's types; and
-  `current`, a type with no label of its own (`falta_tipo`, …), as itself, so saving a
-  note's other fields does not drop its type.
+  `{label, type}` pairs for a select: an untyped note first, then who may write one; and
+  `current`, a subject by its name and a type with no label of its own (`falta_tipo`, …)
+  as itself, so saving a note's other fields does not drop its type.
   """
   def note_type_options(current \\ nil) do
-    [{note_type_label(nil), ""} | Enum.map(Note.types(), &{note_type_label(&1), &1})]
-    |> with_current(Note.types(), current)
+    types = if current in Note.subject_types(), do: Note.types() ++ [current], else: Note.types()
+
+    [{note_type_label(nil), ""} | Enum.map(types, &{note_type_label(&1), &1})]
+    |> with_current(types, current)
   end
 
   @doc "The name of a kind of stage direction (`Element.stage_types/0`)."

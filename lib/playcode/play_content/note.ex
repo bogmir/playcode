@@ -27,11 +27,15 @@ defmodule Playcode.PlayContent.Note do
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
-  # The types the admin offers. Not "variantes", three notes' in EMOTHE0560: labelled
-  # "Textual variant" (PlayLabels), it would read like an entry of the apparatus.
-  @types ~w(traductor editor editor_critico editor_digital autor latinismo toponimo_aludido
-              toponimo_accion atrezzo oficio vestuario espacio gesto_movimiento
-              efectos_especiales)
+  # The types the admin offers: who wrote the note. Not "variantes", three notes' in
+  # EMOTHE0560: labelled "Textual variant" (PlayLabels), it would read like an entry of
+  # the apparatus.
+  @types ~w(traductor editor editor_critico editor_digital autor)
+
+  # What a note is about, as 151 notes in five files type it: the kind of the <rs> around
+  # the words since question 63, so not offered; those notes keep theirs until task A8.
+  @subject_types ~w(latinismo toponimo_aludido toponimo_accion atrezzo oficio vestuario
+                    espacio gesto_movimiento efectos_especiales)
 
   # The type of an entry of the critical apparatus. Not "variantes", an ordinary note's.
   @variant "variante"
@@ -61,6 +65,9 @@ defmodule Playcode.PlayContent.Note do
 
   @doc "The note types the admin offers, as TEI spells them."
   def types, do: @types
+
+  @doc "The subjects a note or an `<rs>` can name (question 17's kinds)."
+  def subject_types, do: @subject_types
 
   @doc "The `type` a variant is stored with: an entry of the critical apparatus, a TEI `<app>`."
   def variant, do: @variant

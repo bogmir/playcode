@@ -136,16 +136,21 @@ defmodule Playcode.PlayContent.Element do
   def folio_only?(element), do: InlineMarkup.whole_folio?(Map.get(element, :content))
 
   @doc "True when an element of `divisions`, as `PlayContent.load_play_content/2` gives them, holds a Folio passage."
-  def folio_passages?(divisions) do
+  def folio_passages?(divisions), do: any_holds?(divisions, "<folio")
+
+  @doc "True when an element of `divisions`, loaded as for `folio_passages?/1`, holds an `<rs>`."
+  def tagged_names?(divisions), do: any_holds?(divisions, "<rs")
+
+  defp any_holds?(divisions, tag) do
     Enum.any?(divisions, fn division ->
-      Enum.any?(Map.get(division, :loaded_elements, []), &holds_folio?/1) or
-        folio_passages?(children_of(division))
+      Enum.any?(Map.get(division, :loaded_elements, []), &holds?(&1, tag)) or
+        any_holds?(children_of(division), tag)
     end)
   end
 
-  defp holds_folio?(element) do
-    Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, "<folio"))) or
-      Enum.any?(children_of(element), &holds_folio?/1)
+  defp holds?(element, tag) do
+    Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, tag))) or
+      Enum.any?(children_of(element), &holds?(&1, tag))
   end
 
   # What `load_play_content/2` loaded: a verse line's children are not.

@@ -1317,6 +1317,53 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     end
   end
 
+  # Question 63: the words an <rs> tags (229 in EMOTHE0551) carry its kind's name, and a
+  # switch, off at first, underlines them.
+  describe "tagged names" do
+    test "are underlined while the switch is on, each named by its kind", %{conn: conn} do
+      body = """
+      <div1 type="acto" n="1"><head>ACT I</head>
+        <sp><speaker>ANA</speaker>
+          <l n="1">Como <rs n="5163" type="mitologia_antroponimo">Adonis</rs> en <rs type="toponimo_accion">Castilla</rs></l>
+          <l n="2"><stage>(Coge <rs type="atrezzo">la adarga</rs>.)</stage> ¡Vamos!</l>
+        </sp>
+      </div1>
+      """
+
+      play = [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      assert has_element?(view, "label", t("Tagged names"))
+      assert has_element?(view, ~s(#play-tab-text [data-rs="off"]))
+
+      tags =
+        view |> render() |> LazyHTML.from_fragment() |> LazyHTML.query("#play-tab-text span.rs")
+
+      assert Enum.map(tags, &LazyHTML.text/1) == ["Adonis", "Castilla", "la adarga"]
+
+      assert LazyHTML.attribute(tags, "title") ==
+               [t("Mythological figure"), t("Place of the action"), t("Props")]
+
+      render_click(view, "toggle_rs")
+      assert has_element?(view, ~s(#play-tab-text [data-rs="on"]))
+    end
+
+    test "have no switch in a play with none", %{conn: conn} do
+      play =
+        [
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">En Castilla</l></sp></div1>)
+        ]
+        |> tei()
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      refute has_element?(view, "label", t("Tagged names"))
+    end
+  end
+
   describe "Hamlet's Folio passages" do
     @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
     @folio_close ~s(<code>&lt;/span&gt;</code>)

@@ -155,6 +155,46 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
     assert LazyHTML.attribute(LazyHTML.query(options, "[selected]"), "value") == ["variantes"]
   end
 
+  # Question 63: a subject (a place, a prop, a Latinism) is the kind of the <rs> around the
+  # words, not of a note. The 151 notes the files type so are converted (task A8); until
+  # then they keep their kind, its name and its filter.
+  test "a subject is not a kind of note to choose; a note so typed keeps its kind",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">en Fressingfield<note n="1" type="toponimo_accion"><term>Fressingfield</term><p>Un pueblo.</p></note></l></sp></div1>)
+        )
+      )
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(user_fixture(role: :researcher))
+      |> live(~p"/admin/plays/#{play.id}/notes")
+
+    [note] = notes(play)
+
+    assert texts(view, "#notes-filter select option") == [
+             t("All types"),
+             t("Place of the action")
+           ]
+
+    assert texts(view, "##{row(note)} .note-type") == [t("Place of the action")]
+
+    view |> element("##{row(note)} button", t("Edit")) |> render_click()
+    options = view |> doc() |> LazyHTML.query(~s(#note-form select[name="note[type]"] option))
+    labels = Enum.map(options, &String.trim(LazyHTML.text(&1)))
+
+    assert t("Place of the action") in labels
+    refute t("Latinism") in labels
+    refute t("Place mentioned") in labels
+
+    assert LazyHTML.attribute(LazyHTML.query(options, "[selected]"), "value") == [
+             "toponimo_accion"
+           ]
+  end
+
   # A reading with nothing in it (a damaged entry, kept as written) adds no stray " · ".
   test "a variant's list entry skips a reading with nothing in it", %{conn: conn} do
     play =

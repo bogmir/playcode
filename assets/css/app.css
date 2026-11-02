@@ -222,6 +222,12 @@
   display: none;
 }
 
+/* Tagged names (<rs>): underlined while the switch is on. */
+.play-text[data-rs="on"] .rs {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+
 .play-notes ol,
 .play-notes ul {
   margin: 0;

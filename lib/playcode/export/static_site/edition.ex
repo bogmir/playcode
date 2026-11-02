@@ -34,7 +34,8 @@ defmodule Playcode.Export.StaticSite.Edition do
     :page_of,
     :notes,
     :variants,
-    :folio
+    :folio,
+    :tagged
   ]
 
   @doc "Loads play `id` and everything the site derives from it."
@@ -71,7 +72,8 @@ defmodule Playcode.Export.StaticSite.Edition do
       page_of: page_of(pages, items),
       notes: notes(divisions, items, pages, refs),
       variants: divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1),
-      folio: Element.folio_passages?(divisions)
+      folio: Element.folio_passages?(divisions),
+      tagged: Element.tagged_names?(divisions)
     }
   end
 

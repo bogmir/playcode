@@ -3378,6 +3378,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <p class="mt-1 text-xs text-base-content/70">
             {gettext("Words only the Folio prints: <folio>…</folio>")}
           </p>
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext(
+              "A tagged name, place or prop: <rs type=\"atrezzo\">…</rs>; its kind one of %{kinds}",
+              kinds: Enum.join(PlayLabels.tag_types(), ", ")
+            )}
+          </p>
         </div>
         <div class="grid grid-cols-2 gap-4">
           <div>
@@ -3425,6 +3431,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           {gettext("Words only the Folio prints: <folio>…</folio>")}
         </p>
         <p class="mt-1 text-xs text-base-content/70">
+          {gettext(
+            "A tagged name, place or prop: <rs type=\"atrezzo\">…</rs>; its kind one of %{kinds}",
+            kinds: Enum.join(PlayLabels.tag_types(), ", ")
+          )}
+        </p>
+        <p class="mt-1 text-xs text-base-content/70">
           {gettext("Number of a printed line in the text: <lb n=\"1320\"/>")}
         </p>
       </div>
@@ -3469,6 +3481,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           />
           <p class="mt-1 text-xs text-base-content/70">
             {gettext("Words only the Folio prints: <folio>…</folio>")}
+          </p>
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext(
+              "A tagged name, place or prop: <rs type=\"atrezzo\">…</rs>; its kind one of %{kinds}",
+              kinds: Enum.join(PlayLabels.tag_types(), ", ")
+            )}
           </p>
         </div>
         <div class="grid grid-cols-2 gap-4">

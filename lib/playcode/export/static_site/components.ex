@@ -47,7 +47,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <script src={@root <> "assets/site.js?v=" <> @site.assets} defer>
         </script>
       </head>
-      <body data-ln="5" data-fo="off">
+      <body data-ln="5" data-fo="off" data-rs="off">
         <header class="bar">
           <a class="wordmark" href={@root <> "index.html"}>EMOTHE</a>
           <nav aria-label="Site">
@@ -124,6 +124,9 @@ defmodule Playcode.Export.StaticSite.Components do
       </label>
       <label :if={@edition.folio}>
         <input type="checkbox" data-toggle="fo" /> Folio interpolations
+      </label>
+      <label :if={@edition.tagged}>
+        <input type="checkbox" data-toggle="rs" /> Tagged names
       </label>
       <%= if @cast != [] do %>
         <h2>Highlight</h2>
@@ -744,6 +747,15 @@ defmodule Playcode.Export.StaticSite.Components do
 
   defp part(%{folio: _} = part),
     do: [~s(<span class="fo">), part(Map.delete(part, :folio)), "</span>"]
+
+  # The words an <rs> tags, named by its kind; underlined while the "Tagged names" toggle
+  # is on (style.css). A note at their end stays outside: its button is named already.
+  # ponytail: a title shows on hover only, not on a tap.
+  defp part(%{rs: %{} = rs, text: _} = part) do
+    title = PlayLabels.tag_type_label(rs.type)
+    attr = if title, do: [~s( title="), escape(title), ~s(")], else: []
+    [~s(<span class="rs"), attr, ">", part(Map.delete(part, :rs)), "</span>"]
+  end
 
   # Where a printed line of the source starts, in prose: its number, which the "Line
   # numbers" control hides (style.css), every fifth kept by "5". Not a link: a play that

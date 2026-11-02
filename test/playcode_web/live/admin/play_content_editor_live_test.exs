@@ -768,6 +768,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
       assert has_element?(lv, "#element-form", t("Words spoken aside: <aside>…</aside>"))
       assert has_element?(lv, "#element-form", t("Words only the Folio prints: <folio>…</folio>"))
+
+      # Question 63: a tagged name, with the kinds a tag may take.
+      assert has_element?(lv, "#element-form", ~s(<rs type="atrezzo">))
+      assert has_element?(lv, "#element-form", "toponimo_aludido, toponimo_accion")
+      assert has_element?(lv, "#element-form", "mitologia_toponimo")
     end
 
     # A Folio passage may also be a stage direction's words or a speaker label.
