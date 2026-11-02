@@ -699,6 +699,30 @@ defmodule PlaycodeWeb.ExportControllerTest do
       assert html |> LazyHTML.query("script") |> LazyHTML.text() =~ "E.align = function"
     end
 
+    # An e-book reader may run no script: the EPUB lines a part up when the whole shared
+    # line is 45 characters or less (question 61), and steps it in otherwise.
+    test "the EPUB lines up a short shared line and steps in a long one", %{conn: conn} do
+      for {last, aligned?} <- [{"qu'ai-je fait? Ah", true}, {"qu'ai-je fait? Ah!", false}] do
+        play = shared!("Sire, miséricorde! Ô Dieux!", last)
+
+        {:ok, files} =
+          :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+        part =
+          files
+          |> Enum.map_join(fn {_name, content} -> content end)
+          |> LazyHTML.from_document()
+          |> LazyHTML.query(".verse-line .content")
+          |> Enum.at(1)
+
+        assert LazyHTML.attribute(part, "class") == [
+                 if(aligned?, do: "content", else: "content part-f")
+               ]
+
+        assert part |> LazyHTML.query(".ghost") |> Enum.count() == 1 == aligned?
+      end
+    end
+
     test "the HTML download's lead steps in after an indented opening part", %{conn: conn} do
       play = shared!("Verso", "partido", "indent")
       html = response(get(conn, ~p"/export/#{play.id}/html"), 200) |> LazyHTML.from_document()

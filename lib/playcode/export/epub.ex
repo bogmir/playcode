@@ -8,14 +8,18 @@ defmodule Playcode.Export.Epub do
   alias Playcode.Export.{Html, NoteMarkup}
   alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note}
+  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note, SplitVerses}
   alias PlaycodeWeb.PlayLabels
 
   @act_types ~w(acto act acte jornada)
 
   def generate(play) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
-    divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
+
+    divisions =
+      play.id
+      |> PlayContent.load_play_content(variants: play.show_variants)
+      |> SplitVerses.with_leads()
 
     {front, rest} =
       play.paratexts
@@ -316,9 +320,12 @@ defmodule Playcode.Export.Epub do
   end
 
   defp render_element(%{type: "verse_line"} = el) do
+    lead = if el.lead && fits?(el.lead.line), do: el.lead
+
     content_class =
       cond do
         el.rend == "indent" -> "content indent"
+        lead -> "content"
         el.part == "F" -> "content part-f"
         el.part == "M" -> "content part-m"
         true -> "content"
@@ -329,7 +336,7 @@ defmodule Playcode.Export.Epub do
         do: "<span class=\"line-number\">#{el.line_number}</span>",
         else: "<span class=\"line-number\"></span>"
 
-    "<div class=\"verse-line\"><span class=\"#{content_class}\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</span>#{line_num}</div>\n"
+    "<div class=\"verse-line\"><span class=\"#{content_class}\">#{ghost(lead)}#{NoteMarkup.inline(el.content, el.notes, :epub)}</span>#{line_num}</div>\n"
   end
 
   defp render_element(%{type: "stage_direction"} = el) do
@@ -346,6 +353,19 @@ defmodule Playcode.Export.Epub do
   end
 
   defp render_element(_), do: ""
+
+  # An e-book reader may run no script, so a shared line's later part is lined up after
+  # the earlier ones only when the whole line is short enough for a phone at its default
+  # size (question 61: 45 characters, proposed with the corpus's figures); a longer one
+  # takes the fixed step.
+  @align_max 45
+  defp fits?(line), do: line |> InlineMarkup.plain() |> String.length() <= @align_max
+
+  defp ghost(nil), do: ""
+
+  defp ghost(%{lead: lead, indent: indent}),
+    do:
+      "<span class=\"ghost#{if indent, do: " indent"}\" aria-hidden=\"true\">#{NoteMarkup.inline(lead, [], :epub)} </span>"
 
   # --- CSS (adapted from Html export for EPUB readers) ---
 
@@ -484,6 +504,8 @@ defmodule Playcode.Export.Epub do
     .verse-line .content.indent { padding-left: 2em; }
     .verse-line .content.part-m { padding-left: 50px; }
     .verse-line .content.part-f { padding-left: 100px; }
+    .ghost { visibility: hidden; }
+    .ghost.indent { padding-left: 2rem; }
 
     .line-number {
       font-size: 0.7em;
