@@ -338,6 +338,18 @@ defmodule Playcode.ContentVersionTest do
     end
   end
 
+  # Question 58: printed nowhere, so its edits rebuild no page and reload no reader's.
+  test "an edit to the team note moves no play" do
+    %{original: original, translation: translation} = translation_family_fixture()
+    plays = [original, translation]
+
+    next_transaction()
+    before = Enum.map(plays, &version/1)
+    {:ok, _} = Catalogue.update_play(original, %{team_note: "Revisar."})
+
+    assert Enum.map(plays, &version/1) == before
+  end
+
   test "caching a play's statistics does not move it" do
     %{play: play} = play_with_structure_fixture()
     refute moves?(play, fn -> Statistics.recompute(play.id) end)

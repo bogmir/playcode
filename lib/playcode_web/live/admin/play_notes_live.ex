@@ -130,10 +130,14 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
 
     Enum.filter(entries, fn %{note: note} ->
       (type == "" or PlayLabels.note_type_key(note.type) == type) and
-        (q == "" or String.contains?(Bibliography.fold("#{Note.summary(note)} #{note.term}"), q)) and
+        (q == "" or String.contains?(searched(note), q)) and
         (no_term != "true" or note.term in [nil, ""])
     end)
   end
+
+  # A note's words, without the markers of its tags and italics.
+  defp searched(note),
+    do: Bibliography.fold(InlineMarkup.plain("#{Note.summary(note)} #{note.term}"))
 
   defp type_options(entries) do
     entries

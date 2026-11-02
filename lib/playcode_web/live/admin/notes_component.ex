@@ -9,7 +9,7 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
 
   alias Phoenix.LiveView.JS
   alias Playcode.{ActivityLog, PlayContent}
-  alias Playcode.PlayContent.{Division, Note}
+  alias Playcode.PlayContent.{Division, InlineMarkup, Note}
   alias Playcode.PlayContent.Note.Reading
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
@@ -197,8 +197,10 @@ defmodule PlaycodeWeb.Admin.NotesComponent do
         <li :for={note <- @notes} class="flex items-start gap-2 text-sm">
           <div class="flex-1">
             <span class="font-medium">{PlayLabels.note_type_label(note.type)}</span>
-            <em :if={note.term}>{note.term}</em>
-            <span class="text-base-content/70">{String.slice(Note.summary(note), 0, 80)}</span>
+            <em :if={note.term}>{InlineMarkup.plain(note.term)}</em>
+            <span class="text-base-content/70">
+              {note |> Note.summary() |> InlineMarkup.plain() |> String.slice(0, 80)}
+            </span>
           </div>
           <button
             type="button"

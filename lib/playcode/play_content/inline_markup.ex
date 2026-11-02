@@ -52,7 +52,8 @@ defmodule Playcode.PlayContent.InlineMarkup do
   number is `%{number: binary, text: "", italic: boolean, stage: stage}`.
 
   A part inside an `<rs>` also has `rs: %{type: binary | nil, n: binary | nil, run:
-  integer}`; `run` tells two touching tags apart. Outside one the key is absent.
+  integer}`; `run` tells two touching tags apart within one stage or passage (it starts
+  again in each, as no tag crosses one). Outside one the key is absent.
 
   A part inside a Folio passage also has `folio: %{part: nil | "I" | "M" | "F", run:
   integer}`, `run` counting the passages in the text; outside one the key is absent.
@@ -361,7 +362,8 @@ defmodule Playcode.PlayContent.InlineMarkup do
 
   @doc """
   True when every `<rs` and `</rs>` in `text` belongs to a closed, flat marker with words
-  in it and plain-word attributes, none sits inside italics, and none holds a stage.
+  in it and plain-word attributes, none sits inside italics, and none holds or crosses a
+  stage or a Folio passage.
   """
   def rs_well_formed?(nil), do: true
 
@@ -370,7 +372,7 @@ defmodule Playcode.PlayContent.InlineMarkup do
 
     not (Regex.match?(~r/<\/?rs[\s>]/, without_rs) or
            Regex.match?(~r/<<(?:(?!>>).)*?<\/?rs[\s>]/s, text) or
-           Regex.match?(~r/<rs[^>]*>(?:(?!<\/rs>).)*?<\/?stage/s, text))
+           Regex.match?(~r/<rs[^>]*>(?:(?!<\/rs>).)*?<\/?(?:stage|folio)/s, text))
   end
 
   @doc "True when every `<lb` in `text` is a well-formed number marker."

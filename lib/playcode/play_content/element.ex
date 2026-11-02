@@ -42,7 +42,7 @@ defmodule Playcode.PlayContent.Element do
   use Ecto.Schema
   import Ecto.Changeset
 
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{InlineMarkup, Note}
 
   @stage_types ~w(setting entrance exit business novelistic delivery modifier location mixed)
 
@@ -138,8 +138,16 @@ defmodule Playcode.PlayContent.Element do
   @doc "True when an element of `divisions`, as `PlayContent.load_play_content/2` gives them, holds a Folio passage."
   def folio_passages?(divisions), do: any_holds?(divisions, "<folio")
 
-  @doc "True when an element of `divisions`, loaded as for `folio_passages?/1`, holds an `<rs>`."
-  def tagged_names?(divisions), do: any_holds?(divisions, "<rs")
+  @doc """
+  True when an element of `divisions`, loaded as for `folio_passages?/1`, or a note's term
+  or text holds an `<rs>`.
+  """
+  def tagged_names?(divisions) do
+    any_holds?(divisions, "<rs") or
+      divisions
+      |> Note.reading_order()
+      |> Enum.any?(&String.contains?("#{&1.term} #{&1.body}", "<rs"))
+  end
 
   defp any_holds?(divisions, tag) do
     Enum.any?(divisions, fn division ->

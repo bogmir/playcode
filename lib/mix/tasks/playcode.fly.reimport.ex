@@ -59,20 +59,25 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
   @impl Mix.Task
   def run(["prepare" | args]) do
-    prepare(args)
+    args |> dir("doc/tei_corpus") |> prepare()
     Mix.shell().info("\nThen: mix playcode.fly.reimport run")
   end
 
+  # Without --dir, `prepare`'s default is the whole corpus: never what `files` means.
   def run(["files" | args]) do
-    if args == [], do: Mix.raise("usage: mix playcode.fly.reimport files --dir DIR")
+    dir = dir(args, nil) || Mix.raise("usage: mix playcode.fly.reimport files --dir DIR")
 
-    if prepare(args) == :clean do
-      import!()
-      generate!()
+    case prepare(dir) do
+      :clean ->
+        import!()
+        generate!()
 
-      Mix.shell().info(
-        "\nDone. Check the preview on /admin/export, then: mix playcode.fly.reimport deploy"
-      )
+        Mix.shell().info(
+          "\nDone. Check the preview on /admin/export, then: mix playcode.fly.reimport deploy"
+        )
+
+      :flagged ->
+        Mix.shell().info("\nThen: mix playcode.fly.reimport run, or scale-down")
     end
   end
 
@@ -114,10 +119,13 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     )
   end
 
-  # :clean when the dry run needs no look.
-  defp prepare(args) do
+  defp dir(args, default) do
     {opts, _, _} = OptionParser.parse(args, strict: [dir: :string])
-    dir = Keyword.get(opts, :dir, "doc/tei_corpus")
+    Keyword.get(opts, :dir, default)
+  end
+
+  # :clean when the dry run needs no look.
+  defp prepare(dir) do
     files = dir |> Path.join("*.xml") |> Path.wildcard() |> Enum.map(&Path.basename/1)
     if files == [], do: Mix.raise("no .xml files in #{dir}")
 

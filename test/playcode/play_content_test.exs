@@ -259,7 +259,9 @@ defmodule Playcode.PlayContentTest do
             "<rs>a <rs>b</rs></rs>",
             ~s(<rs type="a b">c</rs>),
             "<<a <rs>b>></rs>",
-            "<rs>a <stage>b</stage></rs>"
+            "<rs>a <stage>b</stage></rs>",
+            "<rs>a <folio>b</folio></rs>",
+            "<folio>a <rs>b</folio> c</rs>"
           ] do
         assert {:error, changeset} = PlayContent.create_element(attrs.(content))
         assert %{content: [^message]} = errors_on(changeset), content

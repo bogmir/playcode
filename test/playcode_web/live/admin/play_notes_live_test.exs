@@ -195,6 +195,30 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
            ]
   end
 
+  # A tag inside a note's text or term is searched by its words, not its markup.
+  test "the filter reads a tagged name's words, not its tag", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">las cuestas<note n="1" type="editor"><p>Las cuestas en <rs type="toponimo_aludido">Toledo</rs>.</p></note></l></sp></div1>)
+        )
+      )
+
+    {:ok, view, _html} =
+      conn
+      |> log_in_user(user_fixture(role: :researcher))
+      |> live(~p"/admin/plays/#{play.id}/notes")
+
+    [note] = notes(play)
+
+    view |> form("#notes-filter", filter: %{q: "en toledo"}) |> render_change()
+    assert rows(view) == [row(note)]
+
+    view |> form("#notes-filter", filter: %{q: "toponimo"}) |> render_change()
+    assert rows(view) == []
+  end
+
   # A reading with nothing in it (a damaged entry, kept as written) adds no stray " · ".
   test "a variant's list entry skips a reading with nothing in it", %{conn: conn} do
     play =

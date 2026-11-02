@@ -201,7 +201,22 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       Mix.Task.rerun("playcode.fly.reimport", ["files", "--dir", corpus])
 
       refute Enum.any?(calls(dir), &(&1 =~ ~r/resume: true|generate_site/))
-      assert output() =~ ~r/look.*\n.*EMOTHE0002 .*undoes 2 hand edit/i
+      output = output()
+      assert output =~ ~r/look.*\n.*EMOTHE0002 .*undoes 2 hand edit/i
+
+      # The machines stay up for the import: the next step is said, as `prepare` says it.
+      assert output =~ "mix playcode.fly.reimport run"
+    end
+
+    # Without --dir, `prepare` takes the whole corpus: a directory given bare would have
+    # re-imported and rebuilt every play.
+    test "refuses a directory given without --dir, touching nothing", %{dir: dir, corpus: corpus} do
+      assert_raise Mix.Error, ~r/--dir DIR/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["files", corpus])
+      end
+
+      # No flyctl call was made, so none was recorded.
+      refute File.exists?(Path.join(dir, "calls"))
     end
   end
 

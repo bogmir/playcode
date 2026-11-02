@@ -1929,11 +1929,12 @@ defmodule Playcode.Import.TeiParser do
 
   # An emphasis of nothing (EMOTHE0187's `<emph></emph>, if`) is no italics: kept as
   # "<<>>", it came back from the export as a stray space, a different file each time.
-  # An italic run cut around an <rs> (emph_child/2) leaves no empty italics at its edges.
+  # An italic run cut around an <rs> (emph_child/2) leaves no empty italics at its edges,
+  # nor italics of a space between two tags.
   defp italics(text) do
     if String.trim(text) == "",
       do: text,
-      else: String.replace("<<" <> text <> ">>", "<<>>", "")
+      else: Regex.replace(~r/<<(\s*)>>/, "<<" <> text <> ">>", "\\1")
   end
 
   @stage_parents ~w(l p seg)

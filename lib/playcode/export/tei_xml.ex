@@ -1502,8 +1502,16 @@ defmodule Playcode.Export.TeiXml do
   end
 
   # A tagged name, place or phrase: its pieces, a note at its end included, inside one <rs>.
-  defp inline_nodes([%{rs: %{run: run} = rs} | _] = parts) do
-    {inside, rest} = Enum.split_while(parts, &match?(%{rs: %{run: ^run}}, &1))
+  # A tag's run is counted within its stage or passage (InlineMarkup), which no tag
+  # crosses: a piece of the same run in another stage or passage is another tag.
+  defp inline_nodes([%{rs: %{run: run} = rs, stage: stage} = first | _] = parts) do
+    folio = Map.get(first, :folio)
+
+    {inside, rest} =
+      Enum.split_while(
+        parts,
+        &(match?(%{rs: %{run: ^run}, stage: ^stage}, &1) and Map.get(&1, :folio) == folio)
+      )
 
     content =
       case inside |> Enum.map(&Map.delete(&1, :rs)) |> inline_nodes() do

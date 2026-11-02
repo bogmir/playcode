@@ -2174,6 +2174,53 @@ defmodule Playcode.TeiRoundtripTest do
         assert xml =~ ~s(<emph>Tarquino</emph></rs>, a esta leyenda.)
       end
     end
+
+    # A tag's run is counted within a stage or a Folio passage, so a tag just before one
+    # shares the number of the first tag inside it: they are two tags all the same. The
+    # importer puts a space between the two, so the editor writes them touching.
+    test "two touching tags, the second in a stage, stay two" do
+      body =
+        ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><lg><l n="1">y</l></lg></sp></div1>)
+
+      play = import_tei!(tei(body: body))
+      line = Enum.find(texts(play), &(&1.type == "verse_line"))
+
+      {:ok, _} =
+        Playcode.PlayContent.update_element(line, %{
+          content:
+            ~s(y <rs type="atrezzo">la capa</rs><stage><rs type="oficio">paje</rs> sale</stage>)
+        })
+
+      xml = export_tei(play)
+
+      for xml <- [xml, roundtrip(xml)] do
+        assert xml_elements(xml, "rs") == [
+                 {%{"type" => "atrezzo"}, "la capa"},
+                 {%{"type" => "oficio"}, "paje"}
+               ]
+
+        assert xml_texts(xml, "rs", within: "stage") == ["paje"]
+      end
+    end
+
+    # Italics cut around two tags with a space between them leave no italic space, the
+    # stray <emph> </emph> an empty emphasis was (EMOTHE0187).
+    test "italics cut around two tags leave no italic space between them" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l n="1">dijo <emph><rs type="latinismo">nobile</rs> <rs type="latinismo">decus</rs></emph></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      refute xml =~ ~r{<emph>\s*</emph>}
+      assert xml_texts(xml, "emph", within: "rs") == ["nobile", "decus"]
+    end
   end
 
   describe "in-text notes" do

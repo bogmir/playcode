@@ -1765,6 +1765,33 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
   describe "the note editor" do
     defp notes_section, do: "section[aria-label='#{t("Notes")}']"
 
+    # An imported term or text keeps its tags and italics (EMOTHE0551's notes tag names):
+    # the list shows their words, not the markers.
+    test "lists a note's term and text without their markers", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      lv |> element("button", t("Add note")) |> render_click()
+
+      lv
+      |> form("#note-form",
+        note: %{
+          "offset" => "7",
+          "term" => ~s(<rs type="toponimo_aludido">Segunda</rs>),
+          "body" => "Una <<glosa>> en <rs>Toledo</rs>."
+        }
+      )
+      |> render_submit()
+
+      listed = lv |> element(notes_section()) |> render()
+      assert listed =~ "Segunda"
+      assert listed =~ "Una glosa en Toledo."
+      refute listed =~ "&lt;"
+    end
+
     test "a note is added to a verse, changed and deleted, each logged",
          %{conn: conn, play: play} do
       lv = open_scene(conn, play)

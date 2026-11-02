@@ -1348,6 +1348,22 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       assert has_element?(view, ~s(#play-tab-text [data-rs="on"]))
     end
 
+    # Hamlet and Friar Bacon tag words inside their notes too.
+    test "in a note alone bring the switch", %{conn: conn} do
+      play =
+        [
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">Las cuestas<note n="1" type="editor"><p>Las de <rs type="toponimo_aludido">Toledo</rs>.</p></note></l></sp></div1>)
+        ]
+        |> tei()
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      assert has_element?(view, "label", t("Tagged names"))
+    end
+
     test "have no switch in a play with none", %{conn: conn} do
       play =
         [
