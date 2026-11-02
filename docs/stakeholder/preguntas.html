@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 31 October 2026. 57 questions, 28 of them answered (ten decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 2 November 2026. 65 questions, 38 of them answered (ten decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -301,6 +301,7 @@
       <li><a href="#t-nested-stanza">A stanza inside a stanza</a><span class="nums">51</span></li>
       <li><a href="#t-stage-study">Studying the stage directions</a><span class="nums">52</span></li>
       <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–57</span></li>
+      <li><a href="#t-followups">Follow-ups to your answers of 1 November</a><span class="nums">58–65</span></li>
       <li><a href="#t-spaces-fixed">Spaces corrected</a><span class="nums">—</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
@@ -1052,7 +1053,7 @@
       </div>
     </div>
 
-    <div class="q" data-q="q17" data-n="17">
+    <div class="q" data-q="q17" data-n="17" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">17</span>
       <div class="q-body">
         <h3>What should these thirteen kinds of note be called?</h3>
@@ -1081,11 +1082,15 @@
         <div class="answered">
           <p><strong>Decided by Playcode on 16 October 2026, for the other twelve:</strong> the names in the last column, and the two slips read as what they plainly are, <code>video</code> as a translator’s note and <code>nota_editor_digital</code> as a digital editor’s note. Only <code>falta_tipo</code> is still yours.</p>
           <p>Built on 18 October 2026: readers see it once the site is generated.</p>
+          <p><strong>Answered on 1 November 2026, for <code>falta_tipo</code>:</strong> the play’s usual kind, an editor’s note in an original and a translator’s note in a translation, so the 100 glosses of <i>Félismène</i> become editor’s notes. Your note adds that the kinds of <i>Friar Bacon</i> and <i>Hamlet</i> name features of the plays (latinisms, special effects) rather than glosses, which the project encoded with <code>&lt;rs&gt;</code>: <a href="#q63">question 63</a> asks how that bears on question 48.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q17-form">Change this answer</button>
         </div>
+        <div class="answer-form" id="q17-form" hidden>
         <fieldset>
           <legend>Answer for <code>falta_tipo</code></legend>
           <div class="options">
-            <label for="q17-o1"><input type="radio" id="q17-o1" name="q17-choice" value="The play’s usual kind: editor’s note in an original, translator’s note in a translation">The play’s usual kind: editor’s note in an original, translator’s note in a translation</label>
+            <label for="q17-o1"><input type="radio" id="q17-o1" name="q17-choice" value="The play’s usual kind: editor’s note in an original, translator’s note in a translation" checked>The play’s usual kind: editor’s note in an original, translator’s note in a translation</label>
             <label for="q17-o2"><input type="radio" id="q17-o2" name="q17-choice" value="A plain “Note”, as now">A plain “Note”, as now</label>
             <label for="q17-o3"><input type="radio" id="q17-o3" name="q17-choice" value="See my note">See my note</label>
           </div>
@@ -1095,6 +1100,7 @@
           <textarea id="q17-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1346,17 +1352,23 @@
     </ul>
     <p>emothe.uv.es shows none of them. Playcode now keeps them, in the play’s form and in the file it writes, and, like emothe.uv.es, shows them to no reader.</p>
 
-    <div class="q" data-q="q26" data-n="26">
+    <div class="q" data-q="q26" data-n="26" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">26</span>
       <div class="q-body">
         <h3>Should readers see the notes on the edition?</h3>
         <p class="why">If they should, the reminders above would be printed too unless they are rewritten or removed first, and the witness lists would repeat what the witnesses already say. Tell us in the notes what to do with those, if anything. The file keeps every note whatever the answer, since the file is a complete copy of the edition.</p>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> readers see every note on the edition, on the play page, the published site and in the downloads, except the editor’s reminders and the licence. The licence stays in the header, where TEI keeps a licence (<i>Timón de Atenas</i>’s moves there from the notes). The reminders are copied to an internal list, so that someone can later check whether they can be deleted; <a href="#q58">question 58</a> asks whether they also leave the files.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q26-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q26-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q26-o1"><input type="radio" id="q26-o1" name="q26-choice" value="No, as on emothe.uv.es: they stay in Playcode and the file">No, as on emothe.uv.es: they stay in Playcode and the file</label>
             <label for="q26-o2"><input type="radio" id="q26-o2" name="q26-choice" value="In the downloads only">In the downloads only</label>
-            <label for="q26-o3"><input type="radio" id="q26-o3" name="q26-choice" value="On the play page and the published site, and in the downloads">On the play page and the published site, and in the downloads</label>
+            <label for="q26-o3"><input type="radio" id="q26-o3" name="q26-choice" value="On the play page and the published site, and in the downloads" checked>On the play page and the published site, and in the downloads</label>
             <label for="q26-o4"><input type="radio" id="q26-o4" name="q26-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
@@ -1365,6 +1377,7 @@
           <textarea id="q26-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1488,11 +1501,17 @@
       </div>
     </div>
 
-    <div class="q" data-q="q31" data-n="31">
+    <div class="q" data-q="q31" data-n="31" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">31</span>
       <div class="q-body">
         <h3>Is a prologue to the reader a different thing from a spoken prologue?</h3>
         <p class="why">A prologue spoken by a character before the first act is part of the play’s text: it has lines, and they are counted. A prologue printed for readers (“Al lector”, “Prólogo [a la edición de 1635]”, “To the reader”) is a text around the play. The files call both <code>prologo</code>; and they also file “Al lector”, “Advertencia para el lector” and “Avertissement au lecteur” as an author’s address to the reader (<code>introduccion_autor</code>).</p>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> the line falls by whether the prologue is spoken. One spoken on the stage is part of the play’s text, a division of TEI’s <code>&lt;body&gt;</code>; one that is not spoken is a text around the play (a paratext, as FileMaker’s editing interface calls it), in the <code>&lt;front&gt;</code>. A heading such as “Al lector” marks a paratext. Some files may not tell them apart: we will list the prologues that sit on the wrong side, for you to confirm before any file changes. <a href="#q59">Question 59</a> asks the part still open, and <a href="#q60">question 60</a> how this rule bears on question 34.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q31-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q31-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
@@ -1507,6 +1526,7 @@
           <textarea id="q31-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1756,7 +1776,7 @@
     <h2 id="h-split">Split verses</h2>
     <p>A verse shared between speakers is split into parts, each in its speech: in <i>La vida es sueño</i>, v. 1688 is Clotaldo’s “no he de soltarte.”, Rosaura’s “¡Ay, cielos!” and Segismundo’s “¡Suelta, digo,”. The files split 37,523 verses this way, and mark each part as the first, a middle or the last. Playcode keeps the parts as the files give them, prints the verse’s number beside its first part, as emothe.uv.es does, and counts the verse once. The first two questions are about how readers see them, where emothe.uv.es, Playcode’s play page and the published site do not agree; the third, about the few the files leave out of order.</p>
 
-    <div class="q" id="q44" data-q="q44" data-n="44">
+    <div class="q" id="q44" data-q="q44" data-n="44" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">44</span>
       <div class="q-body">
         <h3>How should the parts of a split verse be laid out?</h3>
@@ -1776,11 +1796,17 @@
             <span class="who">SEGISMUNDO</span><p><span class="ghost" aria-hidden="true">no he de soltarte. ¡Ay, cielos! </span>¡Suelta, digo,</p>
           </div>
         </div>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> each part where the one before it ended, so the play page and the downloads change to match the published site. Where the box or the page is too narrow, a last part could fall oddly, so past some length the fixed step takes over: <a href="#q61">question 61</a> asks where.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q44-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q44-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q44-o1"><input type="radio" id="q44-o1" name="q44-choice" value="A fixed step, as emothe.uv.es: the published site changes">A fixed step, as emothe.uv.es: the published site changes</label>
-            <label for="q44-o2"><input type="radio" id="q44-o2" name="q44-choice" value="Each part where the one before it ended: the play page changes">Each part where the one before it ended: the play page changes</label>
+            <label for="q44-o2"><input type="radio" id="q44-o2" name="q44-choice" value="Each part where the one before it ended: the play page changes" checked>Each part where the one before it ended: the play page changes</label>
             <label for="q44-o3"><input type="radio" id="q44-o3" name="q44-choice" value="Not sure">Not sure</label>
           </div>
         </fieldset>
@@ -1789,18 +1815,25 @@
           <textarea id="q44-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" id="q45" data-q="q45" data-n="45">
+    <div class="q" id="q45" data-q="q45" data-n="45" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">45</span>
       <div class="q-body">
         <h3>What should a switch for split verses do?</h3>
         <p class="why">emothe.uv.es has a switch, “Versos truncados”, in its side panel. It shades every split verse, the first, middle and last parts in three greys with a legend, and its arrows step from one split verse to the next, with a count: in <i>El amor al uso</i>, “1 de 380”. Playcode’s play page has a switch, “Split verses”, that only takes the steps away, so every part starts at the margin. The published site has no switch, and always moves the parts in.</p>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> shade them and step through them, as emothe.uv.es does, on the play page and the published site. The switch is called “Shared lines”, and its only purpose is to highlight them and to jump to the next or the previous one with the arrows. Its count is of shared lines, not of their parts. <a href="#q65">Question 65</a> asks whether the statistics use the name too.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q45-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q45-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q45-o1"><input type="radio" id="q45-o1" name="q45-choice" value="Shade them and step through them, as emothe.uv.es, on the play page and the published site">Shade them and step through them, as emothe.uv.es, on the play page and the published site</label>
+            <label for="q45-o1"><input type="radio" id="q45-o1" name="q45-choice" value="Shade them and step through them, as emothe.uv.es, on the play page and the published site" checked>Shade them and step through them, as emothe.uv.es, on the play page and the published site</label>
             <label for="q45-o2"><input type="radio" id="q45-o2" name="q45-choice" value="Take the steps away, as Playcode's play page does now">Take the steps away, as Playcode’s play page does now</label>
             <label for="q45-o3"><input type="radio" id="q45-o3" name="q45-choice" value="No switch: the parts always moved in, as the published site does now">No switch: the parts always moved in, as the published site does now</label>
             <label for="q45-o4"><input type="radio" id="q45-o4" name="q45-choice" value="Not sure">Not sure</label>
@@ -1811,6 +1844,7 @@
           <textarea id="q45-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1851,17 +1885,23 @@
     <h2 id="h-github">Work only in the GitHub copy</h2>
     <p>The <code>TEI_XML</code> folder of <a href="https://github.com/JesusTronch/EMOTHE/tree/main/TEI_XML">github.com/JesusTronch/EMOTHE</a> holds the project’s working files as they stood on 10 December 2024. For four plays it has work that the <code>[xml]</code> download of emothe.uv.es lacks and that Playcode cannot take without you: it may be unfinished, or it leaves something out. Playcode keeps the published version of each until you answer.</p>
 
-    <div class="q" id="q46" data-q="q46" data-n="46">
+    <div class="q" id="q46" data-q="q46" data-n="46" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">46</span>
       <div class="q-body">
         <h3>Is the critical apparatus of <i>El bastardo Mudarra</i> (EMOTHE0435) in the GitHub copy finished?</h3>
         <p class="why">The GitHub file <code>EMOTHE0435_ElBastardoMudarraTragicomedia.xml</code> (July 2017) has about 210 variant entries and 135 notes, where the published file has 10 and 5. The readings are attributed to three witnesses, “Aut.”, “PXXIV” and, once, “DA”, but neither file describes them. Playcode would show the entries as it shows the published ten.</p>
         <p class="why">GitHub also has a second file, <code>EMOTHE0435_ElBastardoMudarra.xml</code> (May 2017), without the apparatus and close to the published one.</p>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> it is not finished, so Playcode keeps the published text of <i>El bastardo Mudarra</i>. Nothing changes.</p>
+          <p>Recorded on 2 November 2026.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q46-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q46-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q46-o1"><input type="radio" id="q46-o1" name="q46-choice" value="It is finished: Playcode takes the GitHub file">It is finished: Playcode takes the GitHub file</label>
-            <label for="q46-o2"><input type="radio" id="q46-o2" name="q46-choice" value="It is not finished: keep the published text">It is not finished: keep the published text</label>
+            <label for="q46-o2"><input type="radio" id="q46-o2" name="q46-choice" value="It is not finished: keep the published text" checked>It is not finished: keep the published text</label>
             <label for="q46-o3"><input type="radio" id="q46-o3" name="q46-choice" value="We will send a newer file">We will send a newer file</label>
             <label for="q46-o4"><input type="radio" id="q46-o4" name="q46-choice" value="Not sure">Not sure</label>
           </div>
@@ -1871,18 +1911,25 @@
           <textarea id="q46-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
-    <div class="q" id="q47" data-q="q47" data-n="47">
+    <div class="q" id="q47" data-q="q47" data-n="47" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">47</span>
       <div class="q-body">
         <h3>Should <i>A Woman Killed with Kindness</i> (EMOTHE0369) take the newer header of the GitHub copy?</h3>
         <p class="why">The text is the same in both files. The GitHub file’s header is the one the project’s newer files use: it credits Robert Lawrence’s edition and Laura Monrós Gaspar for the electronic edition, names the current funding (PID2019-104045GB) and the CC BY-NC-ND 4.0 licence, and gives the language as English (<code>en-EN</code>; the published file says <code>es-EN</code>). It also leaves out the published file’s one revision, Carlos Muñoz Pons’s of 2019.</p>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> take the GitHub header, keeping Carlos Muñoz Pons’s revision of 2019. We will list the changed file for your own copy.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q47-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q47-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q47-o1"><input type="radio" id="q47-o1" name="q47-choice" value="Take the GitHub header, keeping the 2019 revision">Take the GitHub header, keeping the 2019 revision</label>
+            <label for="q47-o1"><input type="radio" id="q47-o1" name="q47-choice" value="Take the GitHub header, keeping the 2019 revision" checked>Take the GitHub header, keeping the 2019 revision</label>
             <label for="q47-o2"><input type="radio" id="q47-o2" name="q47-choice" value="Take the GitHub header as it is">Take the GitHub header as it is</label>
             <label for="q47-o3"><input type="radio" id="q47-o3" name="q47-choice" value="Keep the published header">Keep the published header</label>
             <label for="q47-o4"><input type="radio" id="q47-o4" name="q47-choice" value="Not sure">Not sure</label>
@@ -1893,6 +1940,7 @@
           <textarea id="q47-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
 
@@ -1929,16 +1977,22 @@
       <li><strong><i>El lacayo fingido</i> (EMOTHE0359):</strong> Irina Ionescu’s group was her own name; now “Grupo DICAT”, as the source’s note gives it.</li>
     </ul>
 
-    <div class="q" id="q49" data-q="q49" data-n="49">
+    <div class="q" id="q49" data-q="q49" data-n="49" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">49</span>
       <div class="q-body">
         <h3>Who translated <i>Fray Bacon y Fray Bungay</i> (EMOTHE0299)?</h3>
         <p class="why">Its file credits “FaltaTraductor” as translator, and its source says only “ReferenciaFuente”, another placeholder, so neither names the translation it reproduces. Francisco Lázaro Lázaro is credited as its editor. Playcode now credits no translator for the play.</p>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> Francisco Lázaro Lázaro translated it. He also edited the English text and prepared the digital editions of both, the original and the translation. <a href="#q64">Question 64</a> asks about the translation’s source, which the file names with a placeholder too.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q49-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q49-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q49-o1"><input type="radio" id="q49-o1" name="q49-choice" value="The translator is named in the notes">The translator is named in the notes</label>
-            <label for="q49-o2"><input type="radio" id="q49-o2" name="q49-choice" value="It is the project’s own translation, by the editor">It is the project’s own translation, by the editor</label>
+            <label for="q49-o2"><input type="radio" id="q49-o2" name="q49-choice" value="It is the project’s own translation, by the editor" checked>It is the project’s own translation, by the editor</label>
             <label for="q49-o3"><input type="radio" id="q49-o3" name="q49-choice" value="Not known: credit no translator">Not known: credit no translator</label>
             <label for="q49-o4"><input type="radio" id="q49-o4" name="q49-choice" value="Not sure">Not sure</label>
           </div>
@@ -1948,6 +2002,7 @@
           <textarea id="q49-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -1955,7 +2010,7 @@
   <section id="t-nested-stanza" aria-labelledby="h-nested-stanza">
     <h2 id="h-nested-stanza">A stanza inside a stanza</h2>
 
-    <div class="q" id="q51" data-q="q51" data-n="51">
+    <div class="q" id="q51" data-q="q51" data-n="51" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">51</span>
       <div class="q-body">
         <h3>How should the song in <i>Love for Love</i> be encoded?</h3>
@@ -1979,10 +2034,16 @@
   &lt;lg type="free"&gt;&lt;stage&gt;1&lt;/stage&gt;&lt;l n="528"&gt;…&lt;/l&gt; … &lt;l n="531"&gt;…&lt;/l&gt;&lt;/lg&gt;
   &lt;lg type="free"&gt;&lt;stage&gt;2&lt;/stage&gt;&lt;l n="532"&gt;…&lt;/l&gt; … &lt;l n="535"&gt;…&lt;/l&gt;&lt;/lg&gt;
 &lt;/sp&gt;</pre>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> two stanzas, one for each number, with “1” and “2” as each stanza’s heading (<code>&lt;head&gt;</code>, which TEI allows inside <code>&lt;lg&gt;</code>) rather than stage directions. Playcode will read a stanza’s heading, which also brings back the two it drops today in <i>The Broken Heart</i> (EMOTHE0354), “A Song” and “The Epilogue”.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q51-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q51-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q51-o1"><input type="radio" id="q51-o1" name="q51-choice" value="Re-encode it as two stanzas, one for each number">Re-encode it as two stanzas, one for each number</label>
+            <label for="q51-o1"><input type="radio" id="q51-o1" name="q51-choice" value="Re-encode it as two stanzas, one for each number" checked>Re-encode it as two stanzas, one for each number</label>
             <label for="q51-o2"><input type="radio" id="q51-o2" name="q51-choice" value="Keep the file; Playcode reads the inner stanza as part of the outer one">Keep the file; Playcode reads the inner stanza as part of the outer one</label>
             <label for="q51-o3"><input type="radio" id="q51-o3" name="q51-choice" value="Keep the file; Playcode keeps a stanza inside a stanza">Keep the file; Playcode keeps a stanza inside a stanza</label>
             <label for="q51-o4"><input type="radio" id="q51-o4" name="q51-choice" value="Not sure">Not sure</label>
@@ -1993,6 +2054,7 @@
           <textarea id="q51-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -2001,19 +2063,25 @@
     <h2 id="h-stage-study">Studying the stage directions</h2>
     <p class="note">The three ways, each drawn as the published site would show it: <a href="acotaciones.html">Studying a play’s stage directions</a>.</p>
 
-    <div class="q" id="q52" data-q="q52" data-n="52">
+    <div class="q" id="q52" data-q="q52" data-n="52" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">52</span>
       <div class="q-body">
         <h3>How should the published site help a reader study a play’s stage directions?</h3>
         <p class="why">Today a reader can only show or hide them. Someone studying the stage directions themselves (where the entrances and exits fall, how the business is written, how often an aside is marked) has to scroll for them: an act page holds about 23, a whole play about 120, <i>Le Roi Lear</i> 440. One in four stands inside a verse or a speech, not on a line of its own.</p>
         <p class="why">A: two arrows in the side panel step through the stage directions of the page, one at a time. B: a study mode fades the speeches and opens a bar under the text that steps through them, with the keys J and K. C: a page of the play’s stage directions, like the Notes page, to read them all together, each linked to its place; a filter by kind works only where the file gives one, about one in five.</p>
+        <div class="answered">
+          <p><strong>Answered on 1 November 2026:</strong> A and C. As with “Versos truncados”, the switch in the side panel highlights the stage directions and jumps from one to the next; another button leads to a page of the play’s stage directions only. The study mode (B) was not clear: <a href="#q62">question 62</a> explains it.</p>
+          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <button type="button" class="reopen" aria-expanded="false" aria-controls="q52-form">Change this answer</button>
+        </div>
+        <div class="answer-form" id="q52-form" hidden>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
             <label for="q52-o1"><input type="radio" id="q52-o1" name="q52-choice" value="A: arrows in the side panel">A: arrows in the side panel</label>
             <label for="q52-o2"><input type="radio" id="q52-o2" name="q52-choice" value="B: a study mode">B: a study mode</label>
             <label for="q52-o3"><input type="radio" id="q52-o3" name="q52-choice" value="C: a page of the play’s stage directions">C: a page of the play’s stage directions</label>
-            <label for="q52-o4"><input type="radio" id="q52-o4" name="q52-choice" value="Two of them together (see my note)">Two of them together (see my note)</label>
+            <label for="q52-o4"><input type="radio" id="q52-o4" name="q52-choice" value="Two of them together (see my note)" checked>Two of them together (see my note)</label>
             <label for="q52-o5"><input type="radio" id="q52-o5" name="q52-choice" value="None: showing and hiding them is enough">None: showing and hiding them is enough</label>
           </div>
         </fieldset>
@@ -2022,6 +2090,7 @@
           <textarea id="q52-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
+        </div>
       </div>
     </div>
   </section>
@@ -2165,6 +2234,182 @@
     </div>
   </section>
 
+  <section id="t-followups" aria-labelledby="h-followups">
+    <h2 id="h-followups">Follow-ups to your answers of 1 November</h2>
+    <p>Your answers to questions 17, 26, 31, 44, 45, 49 and 52 leave a smaller question each, and two of them bear on older questions (34 and 48).</p>
+
+    <div class="q" id="q58" data-q="q58" data-n="58">
+      <span class="q-num" aria-hidden="true">58</span>
+      <div class="q-body">
+        <h3>Follow-up to question 26: should the editor’s reminders also leave the files?</h3>
+        <p class="why">Three notes on the edition are reminders: <i>La vita è un sogno</i> (EMOTHE0021), <i>La vie est un songe</i> (EMOTHE0023) and <i>Orbecche</i> (EMOTHE0163). They will be copied to an internal list, as you asked. Every TEI file can be downloaded from the published site, though, so a reminder left in its file stays public even when no page prints it.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q58-o1"><input type="radio" id="q58-o1" name="q58-choice" value="Yes: copy them to the internal list and take them out of the files">Yes: copy them to the internal list and take them out of the files</label>
+            <label for="q58-o2"><input type="radio" id="q58-o2" name="q58-choice" value="No: keep them in the files too, and print them nowhere">No: keep them in the files too, and print them nowhere</label>
+            <label for="q58-o3"><input type="radio" id="q58-o3" name="q58-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q58-text">Notes: where the internal list should live (a document beside these pages, say, or a field only the team sees in Playcode)</label>
+          <textarea id="q58-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q59" data-q="q59" data-n="59">
+      <span class="q-num" aria-hidden="true">59</span>
+      <div class="q-body">
+        <h3>Follow-up to question 31: are a prologue to the reader and an author’s address to the reader one kind or two?</h3>
+        <p class="why">By your rule both are texts around the play. The files call an address to readers sometimes <code>prologo</code> (“Al lector”, “To the reader”) and sometimes <code>introduccion_autor</code> (“Al lector”, “Advertencia para el lector”, “Avertissement au lecteur”). The first part of question 31 is still open: should these stay two kinds, or become one?</p>
+        <p class="why">Your note also names <code>introduccion_autor</code> among the values of a spoken division. Is there an author’s introduction spoken on the stage?</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q59-o1"><input type="radio" id="q59-o1" name="q59-choice" value="Two kinds, as now">Two kinds, as now</label>
+            <label for="q59-o2"><input type="radio" id="q59-o2" name="q59-choice" value="One kind">One kind</label>
+            <label for="q59-o3"><input type="radio" id="q59-o3" name="q59-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q59-text">Notes, and whether an author’s introduction is ever spoken</label>
+          <textarea id="q59-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q60" data-q="q60" data-n="60">
+      <span class="q-num" aria-hidden="true">60</span>
+      <div class="q-body">
+        <h3>Follow-up to question 34: by the rule of question 31, are the epilogues of <i>The Rover</i> and <i>El hombre a la moda</i> part of the play?</h3>
+        <p class="why">Both are spoken to the audience, in verse. Their files give them after the text as one paragraph with no speaker, which Playcode prints as a text around the play. By the rule of question 31, a spoken epilogue is a division of the play: their files would be re-encoded as a division of verses, naming who speaks it where the edition does.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q60-o1"><input type="radio" id="q60-o1" name="q60-choice" value="Yes: re-encode them as divisions of the play">Yes: re-encode them as divisions of the play</label>
+            <label for="q60-o2"><input type="radio" id="q60-o2" name="q60-choice" value="No: keep them as texts around the play">No: keep them as texts around the play</label>
+            <label for="q60-o3"><input type="radio" id="q60-o3" name="q60-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q60-text">Notes: who speaks each epilogue, if the editions say</label>
+          <textarea id="q60-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q61" data-q="q61" data-n="61">
+      <span class="q-num" aria-hidden="true">61</span>
+      <div class="q-body">
+        <h3>Follow-up to question 44: where should the fixed step take over?</h3>
+        <p class="why">A part that starts where the one before it ended needs room, and a phone has little. There are two ways to fall back to the fixed step. By the length of the whole shared line, as you suggest: past a number of characters, that line takes the fixed step for every reader, on any screen. Or by the room on the reader’s screen: a line takes the fixed step only where it does not fit, so a wide screen keeps every line aligned.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q61-o1"><input type="radio" id="q61-o1" name="q61-choice" value="By length: you propose a number, with examples to judge it by">By length: you propose a number, with examples to judge it by</label>
+            <label for="q61-o2"><input type="radio" id="q61-o2" name="q61-choice" value="By the room on the reader’s screen">By the room on the reader’s screen</label>
+            <label for="q61-o3"><input type="radio" id="q61-o3" name="q61-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q61-text">Notes</label>
+          <textarea id="q61-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q62" data-q="q62" data-n="62">
+      <span class="q-num" aria-hidden="true">62</span>
+      <div class="q-body">
+        <h3>Follow-up to question 52: is the study mode (B) wanted beside A and C?</h3>
+        <p class="why">In B, the speeches turn pale, so that the stage directions stand out from the text around them, and a bar under the text steps from one stage direction to the next. J and K are keys on the keyboard for the next and the previous one, as on many reading sites; the bar’s arrows do the same with the mouse. B is A with the paling and the bar. All three are drawn in <a href="acotaciones.html">Studying a play’s stage directions</a>.</p>
+        <p class="why">Today the switch in the side panel shows or hides the stage directions; with A it highlights them and steps through them.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q62-o1"><input type="radio" id="q62-o1" name="q62-choice" value="A and C are enough">A and C are enough</label>
+            <label for="q62-o2"><input type="radio" id="q62-o2" name="q62-choice" value="A, B and C">A, B and C</label>
+            <label for="q62-o3"><input type="radio" id="q62-o3" name="q62-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q62-text">Notes, and whether readers should still be able to hide the stage directions</label>
+          <textarea id="q62-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q63" data-q="q63" data-n="63">
+      <span class="q-num" aria-hidden="true">63</span>
+      <div class="q-body">
+        <h3>Follow-up to questions 17 and 48: should the latinisms and the other features keep their explanations?</h3>
+        <p class="why">Your note to question 17 says the kinds of <i>Friar Bacon</i> and <i>Hamlet</i> (latinisms, places, props, special effects) name features of the plays, which the project encoded with <code>&lt;rs&gt;</code>. That is how the GitHub files of <i>Friar Bacon</i> and <i>Fray Bacon</i> do it (question 48), but they drop the explanations: 60 in the English play and 24 in the Spanish one. In the files Playcode holds, these are still notes, each with its explanation, and <i>Hamlet</i>’s are notes in both copies.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q63-o1"><input type="radio" id="q63-o1" name="q63-choice" value="Tag the words with &lt;rs&gt; and keep each explanation">Tag the words with <code>&lt;rs&gt;</code> and keep each explanation</label>
+            <label for="q63-o2"><input type="radio" id="q63-o2" name="q63-choice" value="Tag the words with &lt;rs&gt;, without explanations, as the GitHub files do">Tag the words with <code>&lt;rs&gt;</code>, without explanations, as the GitHub files do</label>
+            <label for="q63-o3"><input type="radio" id="q63-o3" name="q63-choice" value="Keep them as notes, as now">Keep them as notes, as now</label>
+            <label for="q63-o4"><input type="radio" id="q63-o4" name="q63-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q63-text">Notes</label>
+          <textarea id="q63-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q64" data-q="q64" data-n="64">
+      <span class="q-num" aria-hidden="true">64</span>
+      <div class="q-body">
+        <h3>Follow-up to question 49: what is the source of <i>Fray Bacon y Fray Bungay</i>’s text?</h3>
+        <p class="why">Its file names the source with another placeholder, “ReferenciaFuente”. If Francisco Lázaro Lázaro made the translation for EMOTHE, from the English text he edited (<i>Friar Bacon and Friar Bungay</i>, EMOTHE0187), there is no printed edition to name.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q64-o1"><input type="radio" id="q64-o1" name="q64-choice" value="The English text of EMOTHE0187: no printed edition">The English text of EMOTHE0187: no printed edition</label>
+            <label for="q64-o2"><input type="radio" id="q64-o2" name="q64-choice" value="A printed edition, named in the notes">A printed edition, named in the notes</label>
+            <label for="q64-o3"><input type="radio" id="q64-o3" name="q64-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q64-text">Notes</label>
+          <textarea id="q64-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q65" data-q="q65" data-n="65">
+      <span class="q-num" aria-hidden="true">65</span>
+      <div class="q-body">
+        <h3>Follow-up to question 45: should the statistics call them shared lines too?</h3>
+        <p class="why">The play page’s statistics count “Split verses”, and these pages have said split verses throughout. The switch will be called “Shared lines”.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q65-o1"><input type="radio" id="q65-o1" name="q65-choice" value="Yes: “Shared lines” wherever readers see them">Yes: “Shared lines” wherever readers see them</label>
+            <label for="q65-o2"><input type="radio" id="q65-o2" name="q65-choice" value="Only the switch">Only the switch</label>
+            <label for="q65-o3"><input type="radio" id="q65-o3" name="q65-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q65-text">Notes</label>
+          <textarea id="q65-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
   <section id="t-spaces-fixed" aria-labelledby="h-spaces-fixed">
     <h2 id="h-spaces-fixed">Spaces corrected</h2>
     <p>Not questions: 41 places in 14 files glue a word to an italic, with no space between them, so readers saw “Dominesimplón” in <i>Fray Bacon y Fray Bungay</i>. Playcode has added the space in its copies of the files and the plays it holds, on 25 October. For your own copies, each place as your file has it, to search for; the space goes where the italic meets the word:</p>
@@ -2204,7 +2449,7 @@
       <p>Your answers are kept in this browser as you type, so you can come back to them. Answer as many as you can; unanswered ones can wait. When you are done, copy them and paste them into your reply to Bogdan.</p>
       <div class="send-row">
         <button type="button" id="copy-answers">Copy answers</button>
-        <span class="count" id="answered-count">0 of 20 answered</span>
+        <span class="count" id="answered-count">0 of 27 answered</span>
       </div>
       <p class="status" id="copy-status" aria-live="polite"></p>
       <label class="label" for="answers-out" id="answers-out-label" hidden>Your answers as text</label>
