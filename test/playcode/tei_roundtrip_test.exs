@@ -2319,6 +2319,22 @@ defmodule Playcode.TeiRoundtripTest do
       assert Enum.map(xml_notes(xml), & &1.type) == ["traductor", "editor_digital"]
     end
 
+    # Question 17: a note whose kind was never chosen ("falta_tipo", 132 in 10 plays) is
+    # the play's usual kind: an editor's in an original, a translator's in a translation.
+    test "a note of no chosen kind comes back as the play's usual kind" do
+      body = """
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <l n="1">Belona<note n="1" type="falta_tipo"><p>Diosa.</p></note></l>
+      </sp></div1>
+      """
+
+      original = roundtrip(tei(body: body))
+      translation = roundtrip(tei(body: body, title_stmt: ~s(<title type="traduccion">X</title>)))
+
+      assert Enum.map(xml_notes(original), & &1.type) == ["editor"]
+      assert Enum.map(xml_notes(translation), & &1.type) == ["traductor"]
+    end
+
     # Regression: EMOTHE0187's notes 2115 and 2320 open with an emphasis of nothing. It
     # was stored as "<<>>, if"; the first export wrote "<p> , if", the second "<p>, if",
     # so the export of the export differed from the first.

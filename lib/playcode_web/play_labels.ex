@@ -65,7 +65,7 @@ defmodule PlaycodeWeb.PlayLabels do
 
   @doc """
   The type a note is filtered by: its own when it has a label (`Note.types/0`), else
-  `"other"`, so the types the corpus carries without one (`falta_tipo`, …) are one plain
+  `"other"`, so the types a file carries without one are one plain
   Note, not several options that read the same. A variant is a key of its own, which the
   ordinary notes of kind `variantes` share (question 17), as they share its label.
   """
@@ -76,7 +76,7 @@ defmodule PlaycodeWeb.PlayLabels do
 
   @doc """
   `{label, type}` pairs for a select: an untyped note first, then who may write one; and
-  `current`, a subject by its name and a type with no label of its own (`falta_tipo`, …)
+  `current`, a subject by its name and a type with no label of its own
   as itself, so saving a note's other fields does not drop its type.
   """
   def note_type_options(current \\ nil) do

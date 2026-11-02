@@ -624,6 +624,33 @@ defmodule PlaycodeWeb.ExportControllerTest do
       for text <- [html, epub], do: refute(text =~ "Las presentes ediciones")
     end
 
+    # Question 26: the notes on the edition, after the sources, a paragraph each.
+    test "the downloads print the notes on the edition", %{conn: conn, play: play} do
+      refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "edition-notes"
+
+      {:ok, play} =
+        Playcode.Catalogue.update_play(play, %{
+          edition_notes: [
+            "Con correcciones de <<Guillermo>> Carrascón.",
+            "Texto base:\nQ1, 1604."
+          ]
+        })
+
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+
+      assert html
+             |> LazyHTML.from_document()
+             |> LazyHTML.query(".edition-notes h3")
+             |> Enum.map(&LazyHTML.text/1) == ["Notes on the edition"]
+
+      assert html =~ "<p>Con correcciones de <em>Guillermo</em> Carrascón.</p>"
+      assert html =~ "<p>Texto base:<br>Q1, 1604.</p>"
+
+      epub = epub_text(conn, play)
+      assert epub =~ "<p>Con correcciones de <em>Guillermo</em> Carrascón.</p>"
+      assert epub =~ "<p>Texto base:<br/>Q1, 1604.</p>"
+    end
+
     test "the downloads print only what the play has, and link a licence only to a web address",
          %{conn: conn, play: play} do
       assert publication_lines(response(get(conn, ~p"/export/#{play.id}/html"), 200)) ==

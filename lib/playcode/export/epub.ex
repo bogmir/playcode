@@ -138,6 +138,7 @@ defmodule Playcode.Export.Epub do
     #{render_dating(play)}
     </div>
     #{Html.publication(play, :epub)}
+    #{Html.edition_notes(play, :epub)}
     #{Html.witnesses(play, divisions)}
     #{Enum.map_join(items, "\n", &render_item/1)}
     """

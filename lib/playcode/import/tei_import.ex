@@ -805,7 +805,13 @@ defmodule Playcode.Import.TeiImport do
       Enum.reduce(notes, {rows, %{}}, fn note, {rows, next} ->
         row =
           %Note{id: Ecto.UUID.generate()}
-          |> Note.changeset(Map.merge(note, %{anchor => anchor_row.id, play_id: play.id}))
+          |> Note.changeset(
+            Map.merge(note, %{
+              anchor => anchor_row.id,
+              play_id: play.id,
+              type: chosen_kind(note.type, play)
+            })
+          )
           |> checked(&{:note_create_failed, &1})
 
         position = Map.get(next, row.offset, 0)
@@ -814,6 +820,13 @@ defmodule Playcode.Import.TeiImport do
 
     rows
   end
+
+  # A kind never chosen ("falta_tipo") is the play's usual one (question 17): a translator's
+  # note in a translation, an editor's elsewhere. The play as stored decides, its
+  # relationship being Playcode's own on a re-import.
+  defp chosen_kind("falta_tipo", %{relationship_type: "traduccion"}), do: "traductor"
+  defp chosen_kind("falta_tipo", _play), do: "editor"
+  defp chosen_kind(type, _play), do: type
 
   defp add(rows, schema, row), do: Map.update!(rows, schema, &[row | &1])
 

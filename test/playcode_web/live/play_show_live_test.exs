@@ -341,7 +341,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
           body: """
           <div1 type="acto" n="1"><head>Acto I</head>
             <div2 type="escena" n="1"><head>Escena 1</head>
-              <sp><speaker>ANA<note n="1" type="falta_tipo"><p>La dama.</p></note></speaker>
+              <sp><speaker>ANA<note n="1" type="sin_tipo"><p>La dama.</p></note></speaker>
                 <lg><l n="12">Nous voyent<note n="2" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l></lg>
                 <lg><l n="13">Ni un ratón se ha movido.<note n="3" type="traductor"><p>De soldado.</p></note></l></lg>
               </sp>
@@ -1014,6 +1014,36 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       refute section =~ "Revisar la fecha"
       refute section =~ "Préstamo interbibliotecario"
       assert has_element?(view, ~s(a[href="#meta-bibliography"]), t("Bibliography"))
+    end
+  end
+
+  # Question 26: readers see the notes on the edition (the licence and the editors'
+  # reminders left them, tasks A4 and A6); a witness list is printed whole.
+  describe "the notes on the edition" do
+    test "are printed with their italics and line breaks, with a sidebar entry", %{conn: conn} do
+      {:ok, play} =
+        Playcode.Catalogue.update_play(TestFixtures.play_fixture(), %{
+          edition_notes: [
+            "Con correcciones de <<Guillermo>> Carrascón.",
+            "Texto base:\nQ1, 1604."
+          ]
+        })
+
+      TestFixtures.mark_complete!(play)
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+      section = view |> element("#meta-edition-notes") |> render()
+
+      assert section =~ "Con correcciones de <em>Guillermo</em> Carrascón."
+      assert section =~ "Texto base:<br/>Q1, 1604."
+      assert has_element?(view, ~s(a[href="#meta-edition-notes"]), t("Notes on the edition"))
+    end
+
+    test "are absent when the play has none", %{conn: conn} do
+      play = TestFixtures.mark_complete!(TestFixtures.play_fixture())
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      refute has_element?(view, "#meta-edition-notes")
+      refute has_element?(view, ~s(a[href="#meta-edition-notes"]))
     end
   end
 

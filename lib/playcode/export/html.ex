@@ -39,6 +39,7 @@ defmodule Playcode.Export.Html do
     #{render_dating(play)}
         </header>
     #{publication(play, :html)}
+    #{edition_notes(play, :html)}
     #{witnesses(play, divisions)}
 
         <div class="play-text">
@@ -403,6 +404,21 @@ defmodule Playcode.Export.Html do
     """
         <section class="publication">
     #{Enum.map_join(paragraphs, "\n", &"      <p>#{&1}</p>")}
+        </section>
+    """
+  end
+
+  @doc """
+  The notes on the edition (`notesStmt`), a paragraph each, a witness list whole
+  (question 26). The EPUB prints the same block.
+  """
+  def edition_notes(%{edition_notes: []}, _format), do: ""
+
+  def edition_notes(play, format) do
+    """
+        <section class="edition-notes">
+          <h3>Notes on the edition</h3>
+    #{Enum.map_join(play.edition_notes, "\n", &"      <p>#{NoteMarkup.inline(&1, [], format)}</p>")}
         </section>
     """
   end

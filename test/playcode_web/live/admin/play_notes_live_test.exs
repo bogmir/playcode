@@ -14,7 +14,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
           body: """
           <div1 type="acto" n="1"><head>Acto I</head>
             <div2 type="escena" n="1"><head>Escena 1</head>
-              <sp><speaker>ANA<note n="1" type="falta_tipo"><p>La dama.</p></note></speaker>
+              <sp><speaker>ANA<note n="1" type="sin_tipo"><p>La dama.</p></note></speaker>
                 <l n="12">Nous voyent<note n="2" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l>
                 <l n="13">Ni un ratón se ha movido.<note n="3" type="editor"><p>Expresión de soldado, según Moratín.</p></note></l>
               </sp>
@@ -328,7 +328,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLiveTest do
     view |> form("#note-form", note: %{body: "Otra glosa."}) |> render_submit()
 
     saved = PlayContent.get_note(play.id, ana.id)
-    assert {saved.type, saved.body} == {"falta_tipo", "Otra glosa."}
+    assert {saved.type, saved.body} == {"sin_tipo", "Otra glosa."}
   end
 
   test "cancelling leaves the note as it was", %{view: view, play: play, voyent: voyent} do

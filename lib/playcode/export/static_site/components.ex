@@ -189,6 +189,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <li :if={@edition.notes != []}>
         <a href="notes.html" aria-current={@current == "notes" && "page"}>Notes</a>
       </li>
+      <li :if={@edition.play.edition_notes != []}>
+        <a href="index.html#edition-notes">Notes on the edition</a>
+      </li>
       <li :if={@edition.play.witnesses != []}>
         <a href="index.html#witnesses">Witnesses</a>
       </li>
@@ -278,6 +281,18 @@ defmodule Playcode.Export.StaticSite.Components do
           <span class="role">{family_role(play)}</span>
         </li>
       </ul>
+    </section>
+    """
+  end
+
+  attr :play, :map, required: true
+
+  # The notes on the edition (question 26), a witness list whole.
+  def edition_notes(assigns) do
+    ~H"""
+    <section :if={@play.edition_notes != []} id="edition-notes">
+      <h2>Notes on the edition</h2>
+      <p :for={note <- @play.edition_notes}><.inline text={note} /></p>
     </section>
     """
   end

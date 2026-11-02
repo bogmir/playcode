@@ -1989,14 +1989,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     end
 
     # The Notes tab links a note's line or heading here; its modal opens on arrival.
-    # falta_tipo, the one kind question 17 left unnamed; it was latinismo, named since.
+    # sin_tipo, a kind with no name; it was latinismo, then falta_tipo, both named since.
     test "?division= opens a heading's modal, and a type the select does not list survives an edit",
          %{conn: conn} do
       play =
         import_tei!(
           tei(
             body: """
-            <div1 type="acto" n="1"><head>ACTO PRIMERO<note n="1" type="falta_tipo"><p>Glosa.</p></note></head>
+            <div1 type="acto" n="1"><head>ACTO PRIMERO<note n="1" type="sin_tipo"><p>Glosa.</p></note></head>
               <sp><speaker>ANA</speaker><l n="1">Una línea</l></sp>
             </div1>
             """
@@ -2009,7 +2009,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       lv |> element("#{notes_section()} button", t("Edit")) |> render_click()
       lv |> form("#note-form", note: %{"body" => "Glosa corregida."}) |> render_submit()
 
-      assert [%{type: "falta_tipo", paragraphs: ["Glosa corregida."]}] =
+      assert [%{type: "sin_tipo", paragraphs: ["Glosa corregida."]}] =
                xml_notes(export_tei(play))
 
       # Another play's id, or none of the play's rows, opens nothing.

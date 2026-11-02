@@ -714,7 +714,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
     setup do
       {play, dir} =
         publish!("""
-        <div1 type="acto" n="1"><head>Acto I<note n="1" type="falta_tipo"><p>Del encabezado.</p></note></head>
+        <div1 type="acto" n="1"><head>Acto I<note n="1" type="sin_tipo"><p>Del encabezado.</p></note></head>
           <sp><speaker>ANA<note n="2" type="editor"><p>La dama.</p></note></speaker>
             <l n="1">Nous voyent<note n="3" type="traductor"><term>voyent</term><p>Forma arcaica.</p><p>Dos sílabas.</p></note> dans la ville</l>
             <l n="2">Ni un ratón se ha movido.<note n="4" type="traductor"><p>Expresión de soldado.</p></note></l>
@@ -732,8 +732,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       assert LazyHTML.attribute(items, "value") == ["1", "2", "3", "4"]
 
-      # A type with no label of its own (falta_tipo here, the one kind question 17 left
-      # unnamed; or none) is a plain Note. It was latinismo, which has had a name since.
+      # A type with no label of its own (sin_tipo here, or none) is a plain Note. It was
+      # latinismo, then falta_tipo, which the import reads as the play's usual kind since
+      # question 17's answer.
       assert LazyHTML.attribute(items, "data-type") == [
                "other",
                "editor",
@@ -813,10 +814,11 @@ defmodule Playcode.Export.StaticSitePlayTest do
     refute "notes.html" in LazyHTML.attribute(rail, "href")
   end
 
-  # Question 17 named every kind but falta_tipo, which is still a plain Note.
+  # Question 17 named every kind; falta_tipo is read as the play's usual kind
+  # (tei_roundtrip_test.exs), so a kind no file names, sin_tipo, stands for a plain Note.
   test "each kind of note the project named is shown by its name and filtered by itself" do
     kinds =
-      ~w(latinismo toponimo_aludido toponimo_accion atrezzo oficio vestuario espacio gesto_movimiento efectos_especiales variantes falta_tipo)
+      ~w(latinismo toponimo_aludido toponimo_accion atrezzo oficio vestuario espacio gesto_movimiento efectos_especiales variantes sin_tipo)
 
     lines =
       kinds
@@ -890,6 +892,32 @@ defmodule Playcode.Export.StaticSitePlayTest do
       |> LazyHTML.attribute("href")
 
     assert "index.html#bibliography" in rail
+  end
+
+  # Question 26: the notes on the edition, after the sources, linked from the contents.
+  test "the title page prints the notes on the edition, linked from the contents" do
+    play = import_tei!(tei(body: @two_acts))
+
+    {:ok, play} =
+      Playcode.Catalogue.update_play(play, %{
+        edition_notes: ["Con correcciones de <<Guillermo>> Carrascón.", "Texto base:\nQ1, 1604."]
+      })
+
+    dir = generate!([play], all: true)
+    section = dir |> page(play, "index.html") |> LazyHTML.query("#edition-notes")
+
+    assert texts(section, "h2") == ["Notes on the edition"]
+    assert LazyHTML.to_html(section) =~ "Con correcciones de <em>Guillermo</em> Carrascón."
+
+    assert LazyHTML.to_html(section) =~ ~r"Texto base:<br/?>Q1, 1604."
+
+    rail =
+      dir
+      |> page(play, "act-1.html")
+      |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+      |> LazyHTML.attribute("href")
+
+    assert "index.html#edition-notes" in rail
   end
 
   test "the title page lists the witnesses in order, linked from the contents, without siglum or type" do

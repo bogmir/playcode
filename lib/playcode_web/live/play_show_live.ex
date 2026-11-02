@@ -481,6 +481,20 @@ defmodule PlaycodeWeb.PlayShowLive do
             </dl>
           </section>
 
+          <%!-- The notes on the edition (question 26), a witness list whole --%>
+          <section
+            :if={@play.edition_notes != []}
+            id="meta-edition-notes"
+            class="mb-8 max-w-2xl mx-auto scroll-mt-20 text-sm"
+          >
+            <dl class="grid gap-x-4 gap-y-2 sm:grid-cols-[max-content_1fr]">
+              <dt class="text-base-content/70">{gettext("Notes on the edition")}</dt>
+              <dd class="min-w-0 space-y-2 font-serif leading-relaxed">
+                <p :for={note <- @play.edition_notes}><.inline_content text={note} /></p>
+              </dd>
+            </dl>
+          </section>
+
           <%!-- Witnesses: emothe.uv.es's Testimonios, laid out like the bibliography --%>
           <section
             :if={@play.witnesses != []}
@@ -644,6 +658,11 @@ defmodule PlaycodeWeb.PlayShowLive do
     |> maybe_add_section(play.play_places != [], "meta-places", gettext("Places"))
     |> maybe_add_section(play.sources != [], "meta-sources", gettext("Source"))
     |> maybe_add_section(play.editors != [], "meta-editors", gettext("Editors"))
+    |> maybe_add_section(
+      play.edition_notes != [],
+      "meta-edition-notes",
+      gettext("Notes on the edition")
+    )
     |> maybe_add_section(play.witnesses != [], "meta-witnesses", gettext("Witnesses"))
     |> maybe_add_section(
       performances.lines != [],
