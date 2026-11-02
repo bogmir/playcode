@@ -36,6 +36,13 @@ const Stepper = {
   updated() { this.stepper.refresh() },
 }
 
+// AlignParts hook: a shared line's later parts lined up where they fit (EMOTHE.align). The
+// patch drops data-aligned; the element's data-switches change with it, so updated() runs.
+const AlignParts = {
+  mounted() { window.EMOTHE.align(this.el) },
+  updated() { window.EMOTHE.align(this.el) },
+}
+
 // ScrollSpy hook: highlights the sidebar link matching the currently visible section
 const ScrollSpy = {
   mounted() { this._setup() },
@@ -137,7 +144,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss, Stepper},
+  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss, Stepper, AlignParts},
 })
 
 // Show progress bar on live navigation and form submits

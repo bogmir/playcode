@@ -189,6 +189,21 @@
   }
 }
 
+/* A shared line's later part, lined up after the earlier ones by site.js's EMOTHE.align
+   (the AlignParts hook) where it fits on the line; the fixed step otherwise. */
+.play-text .ghost {
+  display: none;
+}
+
+.play-text [data-aligned] > .ghost {
+  display: inline;
+  visibility: hidden;
+}
+
+.play-text .verse-line [data-aligned] {
+  padding-left: 0;
+}
+
 /* The Highlight switches (questions 45, 52): a shared line's first, middle and last parts
    in three greys, and the stage directions tinted; the one the arrows landed on outlined.
    Text and muted text over each keep 4.5:1 in both themes (darkest: 7.2 and 4.5 in dark). */

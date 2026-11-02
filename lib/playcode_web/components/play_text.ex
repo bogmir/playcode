@@ -19,6 +19,11 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_stage_directions, :boolean, default: true
   attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
+
+  attr :leads, :map,
+    default: %{},
+    doc: "each later part's earlier parts, from SplitVerses.leads/1"
+
   attr :show_verse_type, :boolean, default: false
   attr :show_variants, :boolean, default: true
   attr :show_folio, :boolean, default: false
@@ -57,6 +62,7 @@ defmodule PlaycodeWeb.Components.PlayText do
                     show_stage_directions={@show_stage_directions}
                     show_asides={@show_asides}
                     show_split_verses={@show_split_verses}
+                    leads={@leads}
                     show_verse_type={@show_verse_type}
                     show_folio={@show_folio}
                     act_key={div_key}
@@ -79,6 +85,7 @@ defmodule PlaycodeWeb.Components.PlayText do
                       show_stage_directions={@show_stage_directions}
                       show_asides={@show_asides}
                       show_split_verses={@show_split_verses}
+                      leads={@leads}
                       show_verse_type={@show_verse_type}
                       show_folio={@show_folio}
                       act_key={div_key}
@@ -202,6 +209,11 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_stage_directions, :boolean, default: true
   attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
+
+  attr :leads, :map,
+    default: %{},
+    doc: "each later part's earlier parts, from SplitVerses.leads/1"
+
   attr :show_verse_type, :boolean, default: false
   attr :show_folio, :boolean, default: false
   attr :act_key, :string, default: nil
@@ -216,6 +228,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           show_stage_directions={@show_stage_directions}
           show_asides={@show_asides}
           show_split_verses={@show_split_verses}
+          leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={sync_act(@act_key, element, @show_folio)}
         />
@@ -235,6 +248,11 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_stage_directions, :boolean, default: true
   attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
+
+  attr :leads, :map,
+    default: %{},
+    doc: "each later part's earlier parts, from SplitVerses.leads/1"
+
   attr :show_verse_type, :boolean, default: false
   attr :act_key, :string, default: nil
 
@@ -262,6 +280,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           show_stage_directions={@show_stage_directions}
           show_asides={@show_asides}
           show_split_verses={@show_split_verses}
+          leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={@act_key}
         />
@@ -296,6 +315,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           show_stage_directions={@show_stage_directions}
           show_asides={@show_asides}
           show_split_verses={@show_split_verses}
+          leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={@act_key}
         />
@@ -319,6 +339,12 @@ defmodule PlaycodeWeb.Components.PlayText do
           @show_split_verses && @element.part == "M" && "part-m"
         ]}
       >
+        <span :if={@leads[@element.id]} class="ghost" aria-hidden="true">
+          <.inline_content
+            text={@leads[@element.id]}
+            show_stage={@show_stage_directions}
+          />
+        </span>
         <.inline_content
           text={@element.content}
           notes={@element.notes}

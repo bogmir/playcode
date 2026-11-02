@@ -35,6 +35,33 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "&lt;&lt;"
   end
 
+  # B2 (questions 44, 61): the part keeps its step for a reader without scripts; the
+  # AlignParts hook shows the invisible lead where the line has room.
+  test "a shared line's later part carries the earlier part's words, hidden, and the fixed step",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>ANA</speaker><lg><l n="1" part="I">Verso</l></lg></sp>
+            <sp><speaker>BLAS</speaker><lg><l part="F">partido</l></lg></sp>
+          </div1>
+          """
+        )
+      )
+
+    TestFixtures.mark_complete!(play)
+
+    {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+    part = view |> render() |> LazyHTML.from_document() |> LazyHTML.query(~s([data-part="F"]))
+    assert part |> LazyHTML.attribute("class") |> hd() |> String.split() |> Enum.member?("part-f")
+    ghost = LazyHTML.query(part, ~s(.ghost[aria-hidden="true"]))
+    assert ghost |> LazyHTML.text() |> String.trim() == "Verso"
+    assert has_element?(view, ~s([phx-hook="AlignParts"]))
+  end
+
   # Question 10: readers see every break of a paratext, as its file gives them.
   test "a paratext's line breaks are shown", %{conn: conn} do
     play =

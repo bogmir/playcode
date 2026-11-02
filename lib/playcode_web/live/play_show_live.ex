@@ -16,7 +16,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Catalogue.{Paratext, Play}
   alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
+  alias Playcode.PlayContent.{Element, InlineMarkup, Note, SplitVerses}
   alias Playcode.Performances
   alias Playcode.Places
   alias Playcode.Places.Authority
@@ -72,6 +72,7 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:has_rs, Element.tagged_names?(divisions))
      |> assign(:shade_shared, false)
      |> assign(:has_shared_lines, Element.shared_lines?(divisions))
+     |> assign(:leads, leads(divisions))
      |> assign(:shade_stage, false)
      |> assign(:has_stage_directions, Element.stage_directions?(divisions))
      |> assign(:active_tab, :text)
@@ -666,10 +667,17 @@ defmodule PlaycodeWeb.PlayShowLive do
           </section>
 
           <%!-- Text tab --%>
-          <div :if={@active_tab == :text} id="play-tab-text">
+          <%!-- AlignParts: site.js's EMOTHE.align, re-run after each patch (data-switches). --%>
+          <div
+            :if={@active_tab == :text}
+            id="play-tab-text"
+            phx-hook="AlignParts"
+            data-switches={text_switches(assigns)}
+          >
             <.play_body
               paratexts={@play.paratexts}
               divisions={@divisions}
+              leads={@leads}
               show_line_numbers={@show_line_numbers}
               show_stage_directions={@show_stage_directions}
               show_asides={@show_asides}
@@ -789,6 +797,13 @@ defmodule PlaycodeWeb.PlayShowLive do
       {form, _} ->
         PlayLabels.form_label(form)
     end
+  end
+
+  # Each shared line's later part, with the earlier parts' text that lines it up.
+  defp leads(divisions) do
+    for {id, %{lead: lead}} <- divisions |> Element.verse_lines() |> SplitVerses.leads(),
+        into: %{},
+        do: {id, lead}
   end
 
   # The switches whose turning re-renders the play's text, for the stepper's hook.
