@@ -33,6 +33,7 @@ defmodule Playcode.Export.StaticSite.Edition do
     :aside_starts,
     :page_of,
     :notes,
+    :stage_directions,
     :variants,
     :folio,
     :tagged
@@ -49,6 +50,8 @@ defmodule Playcode.Export.StaticSite.Edition do
     pages = pages(divisions, items)
     outline = outline(play.paratexts, divisions, pages)
     refs = refs(items)
+    anchors = Map.merge(anchors(items, pages), outline.anchors)
+    page_of = page_of(pages, items)
 
     %__MODULE__{
       play: play,
@@ -64,13 +67,14 @@ defmodule Playcode.Export.StaticSite.Edition do
       contents: outline.contents,
       item_pages: outline.item_pages,
       items: items,
-      anchors: Map.merge(anchors(items, pages), outline.anchors),
+      anchors: anchors,
       refs: refs,
       ghosts: ghosts(items),
       passage_starts: passage_starts(Metrics.passages(items)),
       aside_starts: aside_starts(items),
-      page_of: page_of(pages, items),
+      page_of: page_of,
       notes: notes(divisions, items, pages, refs),
+      stage_directions: stage_directions(items, anchors, page_of, refs),
       variants: divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1),
       folio: Element.folio_passages?(divisions),
       tagged: Element.tagged_names?(divisions)
@@ -337,6 +341,38 @@ defmodule Playcode.Export.StaticSite.Edition do
         glossed: Note.glossed(note, PlayContent.anchor_text(anchor))
       }
     end
+  end
+
+  # Each stage direction in reading order, a line's own among them, as the Stage directions
+  # page lists them: its kind (nil where the file gives none), its words, the page and
+  # anchor of its place, and where it is: a line's citation; for one between lines, the
+  # verse before it in its scene ("I, after 2"), else its division.
+  defp stage_directions(items, anchors, page_of, refs) do
+    {entries, _last} =
+      Enum.flat_map_reduce(items, nil, fn %{element: el} = item, last ->
+        at = %{slug: page_of[el.id], anchor: anchors[el.id]}
+        here = {item.division.id, item.scene && item.scene.id}
+
+        case item.kind do
+          :stage ->
+            ref =
+              case last do
+                {^here, n} -> "#{refs[el.id]}, after #{n}"
+                _ -> refs[el.id]
+              end
+
+            {[Map.merge(at, %{type: el.stage_type, text: el.content, ref: ref})], last}
+
+          _ ->
+            inline =
+              for stage <- InlineMarkup.stages(el.content),
+                  do: Map.merge(at, Map.put(stage, :ref, refs[el.id]))
+
+            {inline, if(item.number, do: {here, item.number}, else: last)}
+        end
+      end)
+
+    Enum.reject(entries, &is_nil(&1.slug))
   end
 
   # A line's, or a speech's first line's, citation; a scene heading's scene; otherwise the

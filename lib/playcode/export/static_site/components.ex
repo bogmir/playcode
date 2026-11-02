@@ -234,6 +234,11 @@ defmodule Playcode.Export.StaticSite.Components do
       <li :if={@edition.notes != []}>
         <a href="notes.html" aria-current={@current == "notes" && "page"}>Notes</a>
       </li>
+      <li :if={@edition.stage_directions != []}>
+        <a href="stage-directions.html" aria-current={@current == "stage-directions" && "page"}>
+          Stage directions
+        </a>
+      </li>
       <li :if={@edition.play.edition_notes != []}>
         <a href="index.html#edition-notes">Notes on the edition</a>
       </li>

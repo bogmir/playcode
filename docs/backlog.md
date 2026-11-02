@@ -6,7 +6,7 @@ items with a longer write-up live in `docs/static-site-improvements.md`.
 
 ## Proposed from the answers of 1 and 2 November (2026-11-02), awaiting approval
 
-The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the owner settled the follow-ups 58-65 on 2 November, 64 from FileMaker's sources table (all recorded in `docs/stakeholder/preguntas.html`). Nothing here is approved: each task waits for the owner's go-ahead, then moves to its priority section, and to `docs/history.md` once built. Suggested order: B8, B1, B9, B6, B7, B3 and B4 are built (2026-11-02), and every A; then B2; B5; C1 once the team confirms its list.
+The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the owner settled the follow-ups 58-65 on 2 November, 64 from FileMaker's sources table (all recorded in `docs/stakeholder/preguntas.html`). Nothing here is approved: each task waits for the owner's go-ahead, then moves to its priority section, and to `docs/history.md` once built. Suggested order: B8, B1, B9, B6, B7, B3, B4 and B5 are built (2026-11-02), and every A; then B2; C1 once the team confirms its list.
 
 **A. File corrections** (no code unless named; one re-import on dev and production, then Generate; every changed file listed for the team's own copy)
 
@@ -15,7 +15,6 @@ The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the 
 **B. Code**
 
 - [ ] **B2. A shared line's parts where the one before ended** (questions 44, 61) - the play page, the PDF and the EPUB align each part as the site does (`ghosts/1`), in place of the fixed `.part-m`/`.part-f` steps. The fallback to the fixed step: on the play page and the site, by the room on the screen (a script measures each shared line, again on resize; with scripts off, every shared line takes the fixed step); in the PDF, measured once when ChromicPDF prints it; in the EPUB, by the whole line's length, a number proposed to the owner with examples. Medium
-- [ ] **B5. A page of the play's stage directions** (question 52, C) - like `notes.html`, each linked to its place; a filter by kind only where the file gives one (about one in five). Medium
 
 **C. Corpus check**
 
@@ -61,7 +60,6 @@ The project's next phase studies how Spanish plays circulated in Europe up to th
 
 ## Medium Priority
 
-- [ ] **Stage direction navigator** (`« N / M »`; question 52, answered 2026-11-01: A and C; A built 2026-11-02 as task B4 (`docs/history.md`), C is task B5 in *Proposed from the answers of 1 and 2 November*; B dropped by question 62, 2026-11-02, and the hide switch stays) - for a reader studying the stage directions themselves. Three ways drawn in `docs/stakeholder/acotaciones.html`: A, arrows in the rail stepping through the page's stage directions; B, a study mode that fades the speeches and steps through them from a bar under the text (J/K), the owner's preference; C, a page of the play's stage directions like `notes.html`. A and B share their core (the page's `.sd` and `.sdi` in order, skipping hidden ones, the next one after the scroll position, shaded): B is A plus the bar, the fading and the keys. Fading by `opacity` on `.sp` would fade the inline stage directions with it, so B fades by colour. B's place label ("I.1, before v. 14") needs the export to stamp each stage direction; the bar can start without it
 - [ ] **Two split-verse parts in *Giovanni e Annabella*, and a stage direction's place in *The Malcontent*** (2026-10-22) - question 50. `em0284-it-2686` ("O molto", `F`, after prose) and `em0284-it-1459` ("Sei qui, fratello?", `I`, prose after it) are the two parts out of order left of the 27 the corpus had (*Split-verse parts out of order*, `docs/history.md`); emothe.uv.es and the published site move them in by a fixed step. And `em0363-en-st-0115` "(To Aurelia.)" may belong before "Woman of shame,". Correct our copies under `doc/tei_corpus/` and list the change for the team's if the answer says so
 
 ## Found by the corpus round trip (2026-10-09)

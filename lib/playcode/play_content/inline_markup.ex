@@ -301,6 +301,17 @@ defmodule Playcode.PlayContent.InlineMarkup do
       @folio |> Regex.replace(text, "") |> String.replace(@number, "") |> String.trim() == ""
   end
 
+  @doc """
+  The stages `text` holds, in order: `%{type: binary | nil, text: binary}`, the text with
+  its markers (italics, tagged names) as stored.
+  """
+  def stages(nil), do: []
+
+  def stages(text) do
+    for [type, words] <- Regex.scan(@stage, text, capture: :all_but_first),
+        do: %{type: if(type != "", do: type), text: words}
+  end
+
   @doc "How many stage markers `text` holds."
   def stage_count(nil), do: 0
   def stage_count(text), do: @stage |> Regex.scan(text) |> length()

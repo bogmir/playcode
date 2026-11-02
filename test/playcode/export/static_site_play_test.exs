@@ -798,6 +798,107 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  # Question 52, C (task B5): the play's stage directions on a page of their own, each
+  # linked to its place, with a filter by kind where the file gives kinds.
+  describe "the Stage directions page" do
+    setup do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <stage type="entrance">Sale ANA <emph>sola</emph>.</stage>
+          <sp><speaker>ANA</speaker>
+            <l n="1">Dulce <stage type="delivery">(Llora.)</stage> sueño</l>
+            <l n="2">mío.</l>
+          </sp>
+          <stage>Vase.</stage>
+        </div1>
+        """)
+
+      %{play: play, dir: dir, stages: page(dir, play, "stage-directions.html")}
+    end
+
+    test "lists each stage direction in reading order: its kind, where it is, its words", %{
+      stages: stages
+    } do
+      items = LazyHTML.query(stages, "ol[data-notes] > li")
+
+      assert LazyHTML.attribute(items, "data-type") == ["entrance", "delivery", "none"]
+
+      assert texts(stages, "ol[data-notes] > li > p:first-child") == [
+               "Entrance I",
+               "Delivery I, 1",
+               "Stage direction I, after 2"
+             ]
+
+      assert texts(stages, "ol[data-notes] > li > p + p") == [
+               "Sale ANA sola.",
+               "(Llora.)",
+               "Vase."
+             ]
+
+      assert texts(stages, "ol[data-notes] em") == ["sola"]
+    end
+
+    test "links each to its place on the page that shows it", %{
+      play: play,
+      dir: dir,
+      stages: stages
+    } do
+      links = stages |> LazyHTML.query("ol[data-notes] a") |> LazyHTML.attribute("href")
+
+      assert length(links) == 3
+
+      for link <- links do
+        [file, id] = String.split(link, "#")
+        assert file == "act-1.html"
+        assert id in ids(page(dir, play, file))
+      end
+    end
+
+    test "offers a filter by kind, shown by site.js", %{stages: stages} do
+      [filter] = stages |> LazyHTML.query("fieldset[data-note-filter]") |> Enum.to_list()
+
+      assert LazyHTML.attribute(filter, "hidden") == [""]
+
+      assert filter |> LazyHTML.query("input") |> LazyHTML.attribute("value") ==
+               ["", "entrance", "delivery", "none"]
+
+      assert texts(filter, "label") == ["All", "Entrance", "Delivery", "No kind given"]
+    end
+
+    test "is linked from every page's contents", %{play: play, dir: dir} do
+      for file <- ["index.html", "act-1.html", "statistics.html", "stage-directions.html"] do
+        rail = page(dir, play, file) |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+        assert "stage-directions.html" in LazyHTML.attribute(rail, "href"), file
+      end
+
+      current =
+        page(dir, play, "stage-directions.html") |> LazyHTML.query(~s(a[aria-current="page"]))
+
+      assert LazyHTML.attribute(current, "href") == ["stage-directions.html"]
+    end
+  end
+
+  test "stage directions with no kinds have no filter; a play without any, no page" do
+    {plain, plain_dir} =
+      publish!("""
+      <div1 type="acto" n="1"><stage>Sale A.</stage><sp><speaker>A</speaker><l n="1">uno</l></sp><stage>Vase.</stage></div1>
+      """)
+
+    assert plain_dir
+           |> page(plain, "stage-directions.html")
+           |> LazyHTML.query("fieldset")
+           |> Enum.empty?()
+
+    {none, none_dir} =
+      publish!(~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>))
+
+    refute File.exists?(Path.join([none_dir, "plays", none.code, "stage-directions.html"]))
+
+    rail = page(none_dir, none, "index.html") |> LazyHTML.query(~s(nav[aria-label="Contents"] a))
+    refute "stage-directions.html" in LazyHTML.attribute(rail, "href")
+  end
+
   test "a play with one type of note has no filter; a play without notes, no Notes page" do
     {one, one_dir} =
       publish!("""

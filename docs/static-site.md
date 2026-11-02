@@ -39,6 +39,7 @@ _site/
         ├── text.html          full text
         ├── statistics.html
         ├── notes.html         every note, filterable by type; only for a play with notes
+        ├── stage-directions.html  every stage direction, filterable by kind; only for a play with one
         └── <CODE>.xml         TEI-XML
 ```
 

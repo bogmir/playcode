@@ -1,0 +1,31 @@
+<Components.shell
+  root="../../"
+  title={"Stage directions — #{@edition.play.title} — EMOTHE"}
+  site={@site}
+  play={@edition.play}
+>
+  <:rail><Components.play_rail edition={@edition} current="stage-directions" /></:rail>
+  <Components.play_header play={@edition.play} />
+  <h2>Stage directions</h2>
+  <fieldset
+    :if={length(stage_types(@edition)) > 1}
+    class="facet note-filter"
+    data-note-filter
+    hidden
+  >
+    <legend>Show</legend>
+    <label><input type="radio" name="stage-type" value="" checked /> All</label>
+    <label :for={type <- stage_types(@edition)}>
+      <input type="radio" name="stage-type" value={type} /> {stage_label(type, "No kind given")}
+    </label>
+  </fieldset>
+  <ol class="note-list sd-list" data-notes>
+    <li :for={entry <- @edition.stage_directions} data-type={stage_type(entry)}>
+      <p class="note-head">
+        <b>{stage_label(stage_type(entry), "Stage direction")}</b>
+        <a href={"#{entry.slug}.html##{entry.anchor}"}>{entry.ref}</a>
+      </p>
+      <p><Components.inline text={entry.text} /></p>
+    </li>
+  </ol>
+</Components.shell>

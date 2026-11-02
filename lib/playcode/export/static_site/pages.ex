@@ -8,7 +8,7 @@ defmodule Playcode.Export.StaticSite.Pages do
 
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Components, Edition}
-  alias Playcode.PlayContent.Note
+  alias Playcode.PlayContent.{Element, Note}
   alias PlaycodeWeb.PlayLabels
 
   embed_templates "pages/*"
@@ -21,6 +21,20 @@ defmodule Playcode.Export.StaticSite.Pages do
 
   # The note types a play uses, in the order they first appear.
   defp note_types(edition), do: edition.notes |> Enum.map(&note_type(&1.note)) |> Enum.uniq()
+
+  # A stage direction's kind for the filter: the file's, or "none".
+  defp stage_type(entry), do: entry.type || "none"
+
+  # The kinds a play's stage directions use, in the order they first appear.
+  defp stage_types(edition),
+    do: edition.stage_directions |> Enum.map(&stage_type/1) |> Enum.uniq()
+
+  # A kind's name: TEI's kinds by their label, a file's other word as itself.
+  defp stage_label("none", none), do: none
+
+  defp stage_label(type, _none) do
+    if type in Element.stage_types(), do: PlayLabels.stage_type_label(type), else: type
+  end
 
   @doc "Renders page template `name` (`:title`, `:division`, …) with `assigns` to HTML."
   def render(name, assigns) do
