@@ -324,8 +324,8 @@ defmodule Playcode.Export.Epub do
 
     content_class =
       cond do
-        el.rend == "indent" -> "content indent"
         lead -> "content"
+        el.rend == "indent" -> "content indent"
         el.part == "F" -> "content part-f"
         el.part == "M" -> "content part-m"
         true -> "content"
@@ -505,7 +505,7 @@ defmodule Playcode.Export.Epub do
     .verse-line .content.part-m { padding-left: 50px; }
     .verse-line .content.part-f { padding-left: 100px; }
     .ghost { visibility: hidden; }
-    .ghost.indent { padding-left: 2rem; }
+    .ghost.indent { padding-left: 2em; }
 
     .line-number {
       font-size: 0.7em;

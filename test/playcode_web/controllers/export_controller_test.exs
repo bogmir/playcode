@@ -723,6 +723,34 @@ defmodule PlaycodeWeb.ExportControllerTest do
       end
     end
 
+    # A later part encoded indented (es-1612 and others) is lined up as any other: the
+    # lead alone places it, or it starts 2em past where the earlier part ended.
+    test "the EPUB lines up an indented later part by its lead alone", %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1">
+            <sp><speaker>ANA</speaker><l n="1" part="I">Verso</l></sp>
+            <sp><speaker>BLAS</speaker><l part="F" rend="indent">partido</l></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> Playcode.TestFixtures.mark_complete!()
+
+      {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+      part =
+        files
+        |> Enum.map_join(fn {_name, content} -> content end)
+        |> LazyHTML.from_document()
+        |> LazyHTML.query(".verse-line .content")
+        |> Enum.at(1)
+
+      assert LazyHTML.attribute(part, "class") == ["content"]
+      assert part |> LazyHTML.query(".ghost") |> Enum.count() == 1
+    end
+
     test "the HTML download's lead steps in after an indented opening part", %{conn: conn} do
       play = shared!("Verso", "partido", "indent")
       html = response(get(conn, ~p"/export/#{play.id}/html"), 200) |> LazyHTML.from_document()
