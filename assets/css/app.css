@@ -221,6 +221,12 @@
   outline-offset: 2px;
 }
 
+@media print {
+  .play-text [data-current] {
+    outline: none;
+  }
+}
+
 .shared-swatch {
   display: inline-block;
   width: 1.4rem;

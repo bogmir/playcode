@@ -1185,9 +1185,19 @@ defmodule Playcode.Export.StaticSitePlayTest do
              |> Enum.count() == 1
     end
 
+    # The count shows; a live region says it with the words landed on (site.js). The
+    # highlight's checkbox is named apart from the Show group's "Stage directions".
     assert act
-           |> LazyHTML.query(~s([data-stepper] [data-step-count][aria-live="polite"]))
+           |> LazyHTML.query(~s([data-stepper] .sr-only[data-step-said][aria-live="polite"]))
            |> Enum.count() == 2
+
+    assert act |> LazyHTML.query(~s([data-step-count][aria-live])) |> Enum.count() == 0
+
+    assert act
+           |> LazyHTML.query(
+             ~s(input[data-toggle="sdm"][aria-label="Highlight stage directions"])
+           )
+           |> Enum.count() == 1
 
     assert act |> LazyHTML.query(".shared-legend li") |> Enum.map(&String.trim(LazyHTML.text(&1))) ==
              ["First part", "Middle part", "Last part"]
@@ -1208,6 +1218,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert css =~ ~s(body[data-sh="on"] .l[data-current])
     assert css =~ ~s(body[data-sdm="on"] :is(.sd, .sdi\)[data-current])
     refute css =~ ~r/^\[data-current\]/m
+    assert css =~ ~r/@media print \{[^@]*\[data-current\] \{ outline: none/
     assert css =~ ~r/@media \(max-width: 959px\) \{[^}]*\[data-stepper\] \{ position: fixed/
 
     # A prose act with no stage direction offers neither.

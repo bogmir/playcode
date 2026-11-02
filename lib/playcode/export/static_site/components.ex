@@ -102,17 +102,12 @@ defmodule Playcode.Export.StaticSite.Components do
     ~H"""
     <div class="stepper" data-stepper={@targets} data-for={@for}>
       <button type="button" data-step="-1" aria-label={"Previous " <> @name}>‹</button>
-      <span data-step-count aria-live="polite"></span>
+      <span data-step-count></span>
+      <span class="sr-only" data-step-said aria-live="polite"></span>
       <button type="button" data-step="1" aria-label={"Next " <> @name}>›</button>
     </div>
     """
   end
-
-  # What a division page prints, as Element's predicates walk it: the division whole; a
-  # division split by scene, its own elements only; or one scene.
-  defp page_divisions(%{scene: nil, split: false, division: division}), do: [division]
-  defp page_divisions(%{scene: nil, division: division}), do: [%{division | children: []}]
-  defp page_divisions(%{scene: scene}), do: [scene]
 
   def licence?(play), do: play.licence_text not in [nil, ""] or play.licence_url not in [nil, ""]
 
@@ -127,7 +122,7 @@ defmodule Playcode.Export.StaticSite.Components do
     doc: "the division page, whose text the Highlight switches step through"
 
   def play_rail(assigns) do
-    shown = if assigns.page, do: page_divisions(assigns.page), else: []
+    shown = if assigns.page, do: Edition.page_divisions(assigns.page), else: []
 
     assigns =
       assign(assigns,
@@ -180,7 +175,10 @@ defmodule Playcode.Export.StaticSite.Components do
           </ul>
         <% end %>
         <%= if @stage do %>
-          <label><input type="checkbox" data-toggle="sdm" /> Stage directions</label>
+          <label>
+            <input type="checkbox" data-toggle="sdm" aria-label="Highlight stage directions" />
+            Stage directions
+          </label>
           <.stepper for="sdm" targets=".text .sd, .text .sdi" name="stage direction" />
         <% end %>
       <% end %>

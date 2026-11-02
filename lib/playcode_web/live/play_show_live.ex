@@ -338,7 +338,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                   selector="#play-tab-text [data-part=I]"
                   previous={gettext("Previous shared line")}
                   next={gettext("Next shared line")}
-                  watch={"#{@show_folio}"}
+                  switches={text_switches(assigns)}
                 />
                 <ul
                   :if={@shade_shared}
@@ -361,6 +361,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                   <input
                     type="checkbox"
                     id="sd-highlight-switch"
+                    aria-label={gettext("Highlight stage directions")}
                     checked={@shade_stage}
                     phx-click="toggle_stage_highlight"
                     class="checkbox checkbox-xs checkbox-primary"
@@ -372,7 +373,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                   selector="#play-tab-text [data-sd]"
                   previous={gettext("Previous stage direction")}
                   next={gettext("Next stage direction")}
-                  watch={"#{@show_stage_directions} #{@show_folio}"}
+                  switches={text_switches(assigns)}
                 />
               </div>
             </div>
@@ -790,14 +791,25 @@ defmodule PlaycodeWeb.PlayShowLive do
     end
   end
 
+  # The switches whose turning re-renders the play's text, for the stepper's hook.
+  defp text_switches(assigns) do
+    assigns
+    |> Map.take(~w(show_line_numbers show_stage_directions show_asides show_verse_type
+                   show_variants show_folio show_rs shade_shared shade_stage)a)
+    |> Enum.map_join(" ", fn {key, on} -> "#{key}=#{on}" end)
+  end
+
   attr :id, :string, required: true
   attr :selector, :string, required: true
   attr :previous, :string, required: true
   attr :next, :string, required: true
-  attr :watch, :string, doc: "the switches that hide targets: a change re-counts them"
+  attr :switches, :string, required: true
 
-  # The arrows and the count, run by site.js's EMOTHE.stepper through the Stepper hook.
-  # The count is the hook's: LiveView leaves it alone.
+  # The arrows, the count and its live region, run by site.js's EMOTHE.stepper through the
+  # Stepper hook. The count and the live region are the hook's: LiveView leaves them alone.
+  # LiveView calls the hook's updated() only when this element changes, so it carries the
+  # switches that re-render the text (data-switches): turning one re-counts, and puts back
+  # the outline LiveView's patch drops.
   defp stepper(assigns) do
     ~H"""
     <div
@@ -805,7 +817,7 @@ defmodule PlaycodeWeb.PlayShowLive do
       phx-hook="Stepper"
       data-selector={@selector}
       data-of={gettext("of")}
-      data-watch={@watch}
+      data-switches={@switches}
       class={
         [
           "flex items-center gap-1 pl-6 text-xs text-base-content/70",
@@ -822,9 +834,10 @@ defmodule PlaycodeWeb.PlayShowLive do
         id={@id <> "-count"}
         phx-update="ignore"
         data-step-count
-        aria-live="polite"
         class="tabular-nums"
       >
+      </span>
+      <span id={@id <> "-said"} phx-update="ignore" data-step-said aria-live="polite" class="sr-only">
       </span>
       <button type="button" data-step="1" aria-label={@next} class="btn btn-ghost btn-xs">
         ›

@@ -29,7 +29,8 @@ import {syncPanels} from "./sync_scroll.mjs"
 import "../../priv/static_site/site.js"
 
 // Stepper hook: the arrows that step through the shared lines or the stage directions.
-// A change to the switches that hide some of them (data-watch) re-counts them.
+// Its element carries the switches that re-render the text (data-switches), so turning
+// one calls updated(): a re-count, and the outline LiveView's patch dropped goes back on.
 const Stepper = {
   mounted() { this.stepper = window.EMOTHE.stepper(this.el, this.el.dataset.selector) },
   updated() { this.stepper.refresh() },

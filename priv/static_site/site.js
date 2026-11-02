@@ -31,9 +31,11 @@
 
   // Arrows in `box` ([data-step="1"] and [data-step="-1"]) that step through what
   // `selector` finds, skipping what is hidden, from where the reader has scrolled to:
-  // the one they land on is centred, marked data-current, and counted in [data-step-count].
+  // the one they land on is centred, marked data-current, counted in [data-step-count]
+  // and, with its words, announced in [data-step-said] (a live region).
   E.stepper = function (box, selector) {
     var count = box.querySelector('[data-step-count]');
+    var said = box.querySelector('[data-step-said]');
     var current = null;
 
     function targets() {
@@ -42,7 +44,9 @@
       });
     }
 
+    // A re-count also puts the outline back: LiveView drops the attribute when it patches.
     function refresh() {
+      if (current && current.isConnected) current.setAttribute('data-current', '');
       var all = targets();
       var at = all.indexOf(current) + 1;
       count.textContent = (at || '–') + ' ' + (box.dataset.of || 'of') + ' ' + all.length;
@@ -66,6 +70,8 @@
       current.setAttribute('data-current', '');
       current.scrollIntoView({ block: 'center' });
       refresh();
+      var words = (current.querySelector('.t') || current).textContent.replace(/\s+/g, ' ').trim();
+      if (said) said.textContent = count.textContent + ': ' + words.slice(0, 80);
     });
 
     refresh();

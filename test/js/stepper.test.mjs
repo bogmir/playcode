@@ -41,3 +41,46 @@ test('from a current one on screen, the next and previous are its neighbours', (
   assert.equal(step(tops, 300, 1, 2), -1);
   assert.equal(step(tops, 300, -1, 0), -1);
 });
+
+// EMOTHE.stepper against a page of three targets, the least DOM it touches.
+function page(texts) {
+  const el = (props) => ({
+    attrs: {}, isConnected: true, dataset: {},
+    setAttribute(k, v) { this.attrs[k] = v; }, removeAttribute(k) { delete this.attrs[k]; },
+    getClientRects() { return [1]; }, scrollIntoView() {}, querySelector() { return null; },
+    ...props,
+  });
+  const targets = texts.map((t, i) => el({ textContent: t, getBoundingClientRect: () => ({ top: 1000 * (i + 1), bottom: 1000 * (i + 1) + 20 }) }));
+  const count = el({ textContent: '' });
+  const said = el({ textContent: '' });
+  const next = el({ dataset: { step: '1' } });
+  let click;
+  const box = el({
+    dataset: { of: 'de' },
+    querySelector: (s) => (s === '[data-step-count]' ? count : s === '[data-step-said]' ? said : null),
+    addEventListener: (_type, fn) => { click = fn; },
+  });
+  const ctx = vm.createContext({ innerHeight: 800, document: { querySelectorAll: () => targets, addEventListener() {} } });
+  vm.runInContext(readFileSync(new URL('../../priv/static_site/site.js', import.meta.url), 'utf8'), ctx);
+  const stepper = ctx.EMOTHE.stepper(box, '.t');
+  const press = () => click({ target: { closest: () => next } });
+  return { targets, count, said, stepper, press };
+}
+
+test('a screen reader hears where the arrows landed, not only the count', () => {
+  const p = page(['  ¿Quién   va?  ', 'Yo.', 'Ya.']);
+  assert.equal(p.count.textContent, '– de 3');
+  p.press();
+  assert.equal(p.count.textContent, '1 de 3');
+  assert.equal(p.said.textContent, '1 de 3: ¿Quién va?');
+});
+
+// LiveView drops attributes the browser set when it patches the page; a re-count puts
+// the outline back on the one the arrows landed on.
+test('a re-count keeps the outline on the current one', () => {
+  const p = page(['uno', 'dos', 'tres']);
+  p.press();
+  delete p.targets[0].attrs['data-current'];
+  p.stepper.refresh();
+  assert.ok('data-current' in p.targets[0].attrs);
+});

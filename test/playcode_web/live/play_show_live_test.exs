@@ -1394,9 +1394,24 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
                ~s(#step-shared button[aria-label="#{t("Previous shared line")}"])
              )
 
-      # Another switch re-renders the text: the shading stays.
+      # The count shows; a live region says it with the words landed on (site.js).
+      assert has_element?(view, ~s(#step-shared .sr-only[data-step-said][aria-live="polite"]))
+      refute has_element?(view, "#step-shared [data-step-count][aria-live]")
+
+      # Another switch re-renders the text: the shading stays, and the stepper's element
+      # changes with it, so its hook re-counts and puts the outline back.
+      switches = fn ->
+        view
+        |> element("#step-shared")
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.attribute("data-switches")
+      end
+
+      before = switches.()
       render_click(view, "toggle_line_numbers")
       assert has_element?(view, ~s(#play-tab-text [data-shared="on"]))
+      refute switches.() == before
     end
 
     test "highlight the stage directions, a line's own among them, and step through them",
@@ -1415,8 +1430,13 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
                ~s(#step-sd button[aria-label="#{t("Next stage direction")}"])
              )
 
-      # The switch that hides them stays.
+      # The switch that hides them stays; the highlight's is named apart from it.
       assert has_element?(view, "label", t("Stage directions"))
+
+      assert has_element?(
+               view,
+               ~s(#sd-highlight-switch[aria-label="#{t("Highlight stage directions")}"])
+             )
     end
 
     test "are not offered for what a play does not have", %{conn: conn} do

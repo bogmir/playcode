@@ -284,13 +284,22 @@ defmodule Playcode.Export.StaticSite.Edition do
   def scene_title(%{title: nil}, n), do: "Scene #{n}"
   def scene_title(scene, _n), do: InlineMarkup.plain(scene.title)
 
+  @doc """
+  What a page's text prints: the division whole; a division split by scene, its own
+  elements only (its scenes have pages of their own); or one scene.
+  """
+  def page_divisions(%{scene: nil, split: false, division: division}), do: [division]
+
+  def page_divisions(%{scene: nil, split: true, division: division}),
+    do: [%{division | children: []}]
+
+  def page_divisions(%{scene: scene}), do: [scene]
+
   @doc "The notes in a page's text, in reading order: the endnotes it lists."
-  def page_notes(%{scene: nil, split: false, division: division}),
-    do: Note.reading_order(division)
+  def page_notes(%{scene: nil} = page),
+    do: page |> page_divisions() |> Note.reading_order()
 
-  def page_notes(%{scene: nil, split: true, division: division}),
-    do: Note.reading_order(%{division | children: []})
-
+  # A scene page prints its act's heading again, and the heading's notes with it.
   def page_notes(%{scene: scene, division: division}),
     do: division.notes ++ Note.reading_order(scene)
 
