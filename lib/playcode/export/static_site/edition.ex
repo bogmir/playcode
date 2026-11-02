@@ -9,7 +9,7 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   alias Playcode.{Bibliography, Catalogue, Outline, Performances, PlayContent, Statistics}
   alias Playcode.Catalogue.Paratext
-  alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note, SplitVerses}
   alias Playcode.Statistics.Metrics
 
   defstruct [
@@ -515,26 +515,13 @@ defmodule Playcode.Export.StaticSite.Edition do
   # the page draws it as the fragments themselves are drawn, so a stage direction in an
   # earlier fragment is hidden in the lead as it is in the fragment (`Components.el/1`).
   defp ghosts(items) do
-    {ghosts, _open} =
-      items
-      |> Enum.filter(&(&1.kind == :verse))
-      |> Enum.reduce({%{}, []}, fn %{element: el}, {ghosts, open} ->
-        text = el.content
-
-        case el.part do
-          "I" ->
-            {ghosts, [text]}
-
-          part when part in ["M", "F"] and open != [] ->
-            ghosts = Map.put(ghosts, el.id, open |> Enum.reverse() |> Enum.join(" "))
-            {ghosts, if(part == "M", do: [text | open], else: [])}
-
-          _ ->
-            {ghosts, []}
-        end
-      end)
-
-    ghosts
+    for {id, %{lead: lead}} <-
+          items
+          |> Enum.filter(&(&1.kind == :verse))
+          |> Enum.map(& &1.element)
+          |> SplitVerses.leads(),
+        into: %{},
+        do: {id, lead}
   end
 
   defp passage_starts(passages) do

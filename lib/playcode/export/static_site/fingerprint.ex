@@ -44,6 +44,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.PlayContent.Element,
     Playcode.PlayContent.Note,
     Playcode.PlayContent.Note.Reading,
+    Playcode.PlayContent.SplitVerses,
     Playcode.Places,
     Playcode.Places.Place,
     Playcode.Places.PlayPlace,

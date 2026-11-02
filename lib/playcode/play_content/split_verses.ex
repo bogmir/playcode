@@ -31,4 +31,34 @@ defmodule Playcode.PlayContent.SplitVerses do
 
   defp never_completed(problems, nil), do: problems
   defp never_completed(problems, line), do: [{line, :never_completed} | problems]
+
+  @doc """
+  What lines up each later part of a shared line where the one before it ended, from
+  `lines`, verse lines in reading order: `%{id => %{lead: …, line: …}}` for each middle or
+  last part with an earlier one, `lead` the earlier parts' content, `line` every part's.
+  A part with nothing open before it (an orphan) has no entry.
+  """
+  def leads(lines) do
+    {groups, open} =
+      Enum.reduce(lines, {[], []}, fn line, {groups, open} ->
+        case {line.part, open} do
+          {"I", _} -> {close(groups, open), [line]}
+          {"M", [_ | _]} -> {groups, [line | open]}
+          {"F", [_ | _]} -> {close(groups, [line | open]), []}
+          _ -> {close(groups, open), []}
+        end
+      end)
+
+    for parts <- close(groups, open),
+        whole = Enum.map_join(parts, " ", & &1.content),
+        {part, i} <- Enum.with_index(parts),
+        i > 0,
+        into: %{},
+        do:
+          {part.id,
+           %{lead: parts |> Enum.take(i) |> Enum.map_join(" ", & &1.content), line: whole}}
+  end
+
+  defp close(groups, []), do: groups
+  defp close(groups, open), do: [Enum.reverse(open) | groups]
 end

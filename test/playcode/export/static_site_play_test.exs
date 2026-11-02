@@ -544,13 +544,17 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       assert classes["O molto"] == ["l", "part-f"]
       assert classes["Hippolita!"] == ["l", "part-m"]
-      # Lined up after "Verso" by its invisible lead, so no step on top of it.
-      assert classes["Verso partido"] == ["l"]
+      # B2 (2026-11-02): every later part takes the step, the lined-up one too, so a
+      # reader without scripts sees the step; site.js lines it up where it fits.
+      assert classes["Verso partido"] == ["l", "part-f"]
     end
 
     css = read!(dir, "assets/style.css")
     assert css =~ ~r/^\.l\.part-m \.t \{[^}]*padding-left/m
     assert css =~ ~r/^\.l\.part-f \.t \{[^}]*padding-left/m
+    # The lead shows only once the script has measured the line and found room.
+    assert css =~ ~r/^\.ghost \{[^}]*display: none/m
+    assert css =~ ~r/\[data-aligned\] > \.ghost \{[^}]*visibility: hidden/
   end
 
   describe "a division too long for one page" do

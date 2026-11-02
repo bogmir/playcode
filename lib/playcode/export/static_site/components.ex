@@ -738,7 +738,7 @@ defmodule Playcode.Export.StaticSite.Components do
         "l",
         @el.rend == "indent" && "indent",
         Element.folio_only?(@el) && "fo",
-        orphan_part(@el, @ghost)
+        part_step(@el)
       ]}
       data-part={@el.part}
       id={@anchor}
@@ -767,12 +767,10 @@ defmodule Playcode.Export.StaticSite.Components do
 
   defp el(assigns), do: ~H""
 
-  # A middle or last part with no earlier part to line up after (prose or a whole verse
-  # before it) steps in by a fixed indent instead, as emothe.uv.es printed it.
-  defp orphan_part(%{part: part}, nil) when part in ["M", "F"],
-    do: "part-" <> String.downcase(part)
-
-  defp orphan_part(_el, _ghost), do: nil
+  # Every middle or last part steps in by a fixed indent, as emothe.uv.es printed it;
+  # site.js lines a part with an earlier one up after it instead, where the line has room.
+  defp part_step(%{part: part}) when part in ["M", "F"], do: "part-" <> String.downcase(part)
+  defp part_step(_el), do: nil
 
   defp who(speech) do
     case for(character <- Element.characters(speech), character.xml_id, do: character.xml_id) do

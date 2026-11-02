@@ -158,6 +158,17 @@ defmodule Playcode.PlayContent.Element do
     do:
       any_element?(divisions, &(&1.type == "stage_direction")) or any_holds?(divisions, "<stage")
 
+  @doc "The verse lines of `divisions`, loaded as for `folio_passages?/1`, in reading order."
+  def verse_lines(divisions) do
+    Enum.flat_map(divisions, fn division ->
+      Enum.flat_map(Map.get(division, :loaded_elements, []), &lines_in/1) ++
+        verse_lines(children_of(division))
+    end)
+  end
+
+  defp lines_in(%{type: "verse_line"} = line), do: [line]
+  defp lines_in(element), do: Enum.flat_map(children_of(element), &lines_in/1)
+
   defp any_holds?(divisions, tag) do
     any_element?(divisions, fn element ->
       Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, tag)))

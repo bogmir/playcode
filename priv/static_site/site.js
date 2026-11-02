@@ -29,6 +29,19 @@
 
   if (!root.document) return;
 
+  // A shared line's later parts: each takes a fixed step in the markup, and is lined up
+  // after the earlier ones (its .ghost shown, invisible) only where the line still fits on
+  // one line. All writes, then all reads, then all writes: one layout, not one per line.
+  E.align = function (scope) {
+    var boxes = Array.prototype.map.call(scope.querySelectorAll('.ghost'), function (g) { return g.parentElement; });
+    boxes.forEach(function (box) { box.setAttribute('data-aligned', ''); });
+    boxes.map(function (box) {
+      var style = root.getComputedStyle(box);
+      var line = parseFloat(style.lineHeight) || 1.2 * parseFloat(style.fontSize);
+      return box.getBoundingClientRect().height >= 1.5 * line;
+    }).forEach(function (wraps, i) { if (wraps) boxes[i].removeAttribute('data-aligned'); });
+  };
+
   // Arrows in `box` ([data-step="1"] and [data-step="-1"]) that step through what
   // `selector` finds, skipping what is hidden, from where the reader has scrolled to:
   // the one they land on is centred, marked data-current, counted in [data-step-count]
@@ -182,6 +195,7 @@
         body.setAttribute('data-' + key, value);
         remembered(key, value);
         steppers.forEach(function (stepper) { stepper.refresh(); });
+        realign();
       });
     });
 
@@ -236,5 +250,14 @@
     initNotes();
     initTools();
     initLinks();
+    realign();
+    if (document.fonts) document.fonts.ready.then(realign);
+    // A phone's address bar hiding changes the height only: nothing to re-measure.
+    var width = root.innerWidth;
+    root.addEventListener('resize', function () {
+      if (root.innerWidth !== width) { width = root.innerWidth; realign(); }
+    });
   });
+
+  function realign() { E.align(document); }
 })(typeof window !== 'undefined' ? window : globalThis);
