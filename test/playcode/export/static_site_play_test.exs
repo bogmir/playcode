@@ -1164,6 +1164,53 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert plain |> LazyHTML.query(~s(input[data-toggle="rs"])) |> Enum.count() == 0
   end
 
+  # Questions 45, 52, 62 and 65: the rail's Highlight switches, each with arrows that step
+  # through what it highlights (site.js, test/js/stepper.test.mjs). Offered per page, only
+  # where there is one to step to.
+  test "the shared lines and the stage directions are highlighted and stepped through" do
+    {play, dir} = publish!(@two_acts)
+    act = page(dir, play, "act-1.html")
+
+    assert act |> LazyHTML.query(~s(body[data-sh="off"][data-sdm="off"])) |> Enum.count() == 1
+    assert act |> LazyHTML.query(~s(input[data-toggle="sh"])) |> Enum.count() == 1
+    assert act |> LazyHTML.query(~s(input[data-toggle="sh"][checked])) |> Enum.count() == 0
+    assert act |> LazyHTML.query(~s(input[data-toggle="sdm"])) |> Enum.count() == 1
+
+    for label <- ~w(Next Previous) do
+      assert act |> LazyHTML.query(~s(button[aria-label="#{label} shared line"])) |> Enum.count() ==
+               1
+
+      assert act
+             |> LazyHTML.query(~s(button[aria-label="#{label} stage direction"]))
+             |> Enum.count() == 1
+    end
+
+    assert act
+           |> LazyHTML.query(~s([data-stepper] [data-step-count][aria-live="polite"]))
+           |> Enum.count() == 2
+
+    assert act |> LazyHTML.query(".shared-legend li") |> Enum.map(&String.trim(LazyHTML.text(&1))) ==
+             ["First part", "Middle part", "Last part"]
+
+    assert act
+           |> LazyHTML.query(~s(.l[data-part="I"]))
+           |> Enum.map(&LazyHTML.text/1)
+           |> Enum.map(&String.trim/1) ==
+             ["6A mí."]
+
+    assert act |> LazyHTML.query(~s(.l[data-part="F"])) |> Enum.count() == 1
+
+    css = read!(dir, "assets/style.css")
+    assert css =~ ~s(body[data-sh="on"] .l[data-part="I"] .t)
+    assert css =~ ~s(body[data-sdm="on"] .sd)
+
+    # A prose act with no stage direction offers neither.
+    prose = page(dir, play, "act-2.html")
+    assert prose |> LazyHTML.query(~s(input[data-toggle="sh"])) |> Enum.count() == 0
+    assert prose |> LazyHTML.query(~s(input[data-toggle="sdm"])) |> Enum.count() == 0
+    assert prose |> LazyHTML.query("[data-stepper]") |> Enum.count() == 0
+  end
+
   describe "Hamlet's Folio passages" do
     @folio_open ~s(<code>&lt;span class="folio"&gt;</code>)
     @folio_close ~s(<code>&lt;/span&gt;</code>)

@@ -47,7 +47,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <script src={@root <> "assets/site.js?v=" <> @site.assets} defer>
         </script>
       </head>
-      <body data-ln="5" data-fo="off" data-rs="off">
+      <body data-ln="5" data-fo="off" data-rs="off" data-sh="off" data-sdm="off">
         <header class="bar">
           <a class="wordmark" href={@root <> "index.html"}>EMOTHE</a>
           <nav aria-label="Site">
@@ -93,6 +93,27 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
+  attr :for, :string, required: true, doc: "the toggle that shows it"
+  attr :targets, :string, required: true
+  attr :name, :string, required: true
+
+  # The arrows and the count site.js's EMOTHE.stepper runs; shown while its toggle is on.
+  defp stepper(assigns) do
+    ~H"""
+    <div class="stepper" data-stepper={@targets} data-for={@for}>
+      <button type="button" data-step="-1" aria-label={"Previous " <> @name}>‹</button>
+      <span data-step-count aria-live="polite"></span>
+      <button type="button" data-step="1" aria-label={"Next " <> @name}>›</button>
+    </div>
+    """
+  end
+
+  # What a division page prints, as Element's predicates walk it: the division whole; a
+  # division split by scene, its own elements only; or one scene.
+  defp page_divisions(%{scene: nil, split: false, division: division}), do: [division]
+  defp page_divisions(%{scene: nil, division: division}), do: [%{division | children: []}]
+  defp page_divisions(%{scene: scene}), do: [scene]
+
   def licence?(play), do: play.licence_text not in [nil, ""] or play.licence_url not in [nil, ""]
 
   defp web_url?(url), do: is_binary(url) and String.starts_with?(url, ["http://", "https://"])
@@ -101,8 +122,19 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :current, :string, required: true
   attr :tools, :boolean, default: false
 
+  attr :page, :map,
+    default: nil,
+    doc: "the division page, whose text the Highlight switches step through"
+
   def play_rail(assigns) do
-    assigns = assign(assigns, :cast, Enum.filter(cast(assigns.edition.characters), & &1.xml_id))
+    shown = if assigns.page, do: page_divisions(assigns.page), else: []
+
+    assigns =
+      assign(assigns,
+        cast: Enum.filter(cast(assigns.edition.characters), & &1.xml_id),
+        shared: Element.shared_lines?(shown),
+        stage: Element.stage_directions?(shown)
+      )
 
     ~H"""
     <nav aria-label="Contents">
@@ -128,14 +160,29 @@ defmodule Playcode.Export.StaticSite.Components do
       <label :if={@edition.tagged}>
         <input type="checkbox" data-toggle="rs" /> Tagged names
       </label>
-      <%= if @cast != [] do %>
+      <%= if @cast != [] or @shared or @stage do %>
         <h2>Highlight</h2>
-        <select data-highlight aria-label="Highlight a character">
+        <select :if={@cast != []} data-highlight aria-label="Highlight a character">
           <option value="">No one</option>
           <option :for={character <- @cast} value={character.xml_id}>
             {InlineMarkup.plain(character.name)}
           </option>
         </select>
+        <%= if @shared do %>
+          <label><input type="checkbox" data-toggle="sh" /> Shared lines</label>
+          <.stepper for="sh" targets=".text .l[data-part=I]" name="shared line" />
+          <ul class="shared-legend">
+            <li :for={
+              {part, label} <- [{"I", "First part"}, {"M", "Middle part"}, {"F", "Last part"}]
+            }>
+              <i class="sw" data-part={part}></i>{label}
+            </li>
+          </ul>
+        <% end %>
+        <%= if @stage do %>
+          <label><input type="checkbox" data-toggle="sdm" /> Stage directions</label>
+          <.stepper for="sdm" targets=".text .sd, .text .sdi" name="stage direction" />
+        <% end %>
       <% end %>
     </div>
     """
@@ -690,6 +737,7 @@ defmodule Playcode.Export.StaticSite.Components do
         Element.folio_only?(@el) && "fo",
         orphan_part(@el, @ghost)
       ]}
+      data-part={@el.part}
       id={@anchor}
     ><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class="ghost" aria-hidden="true"><.inline text={@ghost} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@aside} class="aparte">aparte</span></span></div>
     """

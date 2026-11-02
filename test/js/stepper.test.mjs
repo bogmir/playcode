@@ -31,3 +31,13 @@ test('past the last, before the first, or with none, there is nowhere to go', ()
   assert.equal(step([], 300, 1), -1);
   assert.equal(step([], 300, -1), -1);
 });
+
+// The site scrolls smoothly: a second press comes before the first one's scroll ends, so
+// while the current one is on screen the arrows step from it, not from the scroll.
+test('from a current one on screen, the next and previous are its neighbours', () => {
+  const tops = [100, 2000, 2100];
+  assert.equal(step(tops, 300, 1, 0), 1);
+  assert.equal(step(tops, 300, -1, 1), 0);
+  assert.equal(step(tops, 300, 1, 2), -1);
+  assert.equal(step(tops, 300, -1, 0), -1);
+});

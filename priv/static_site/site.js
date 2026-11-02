@@ -14,8 +14,11 @@
 
   // The arrows' choice: of the targets' positions in reading order (each one's middle,
   // from the top of the window), the first below the reading line for 1, the last above
-  // it for -1; -1 when there is none. The one on the line is the current one.
-  E.step = function (positions, line, dir) {
+  // it for -1; -1 when there is none. The one on the line is the current one. While the
+  // last one stepped to is on screen (`at`, else -1), its neighbour: a smooth scroll may
+  // not have brought it to the line yet.
+  E.step = function (positions, line, dir, at) {
+    if (at >= 0) return at + dir >= 0 && at + dir < positions.length ? at + dir : -1;
     if (dir > 0) {
       for (var i = 0; i < positions.length; i++) if (positions[i] > line + 1) return i;
     } else {
@@ -49,11 +52,14 @@
       var button = event.target.closest('[data-step]');
       if (!button) return;
       var all = targets();
-      var middles = all.map(function (el) { var r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2; });
+      var rects = all.map(function (el) { return el.getBoundingClientRect(); });
+      var middles = rects.map(function (r) { return (r.top + r.bottom) / 2; });
+      var at = all.indexOf(current);
+      if (at >= 0 && (rects[at].bottom < 0 || rects[at].top > root.innerHeight)) at = -1;
       // The first press goes from the top of the window, not from its middle: a reader at
       // the start of the play lands on the first one, not the one after.
       var line = current ? root.innerHeight / 2 : 0;
-      var i = E.step(middles, line, Number(button.dataset.step));
+      var i = E.step(middles, line, Number(button.dataset.step), at);
       if (i < 0) return refresh();
       if (current) current.removeAttribute('data-current');
       current = all[i];
@@ -145,7 +151,7 @@
     if (!tools) return;
     var body = document.body;
     tools.hidden = false;
-    ['ln', 'sd', 'vf', 'va', 'fo', 'rs'].forEach(function (key) { var v = remembered(key); if (v) body.setAttribute('data-' + key, v); });
+    ['ln', 'sh', 'sdm', 'sd', 'vf', 'va', 'fo', 'rs'].forEach(function (key) { var v = remembered(key); if (v) body.setAttribute('data-' + key, v); });
 
     var buttons = tools.querySelectorAll('[data-ln-set]');
     buttons.forEach(function (button) {
@@ -157,6 +163,11 @@
       });
     });
 
+    // A toggle that hides some of what the arrows step through re-counts them.
+    var steppers = Array.prototype.map.call(tools.querySelectorAll('[data-stepper]'), function (box) {
+      return E.stepper(box, box.dataset.stepper);
+    });
+
     tools.querySelectorAll('[data-toggle]').forEach(function (box) {
       var key = box.dataset.toggle;
       box.checked = body.getAttribute('data-' + key) !== 'off';
@@ -164,6 +175,7 @@
         var value = box.checked ? 'on' : 'off';
         body.setAttribute('data-' + key, value);
         remembered(key, value);
+        steppers.forEach(function (stepper) { stepper.refresh(); });
       });
     });
 
