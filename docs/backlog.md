@@ -6,7 +6,7 @@ items with a longer write-up live in `docs/static-site-improvements.md`.
 
 ## Proposed from the answers of 1 and 2 November (2026-11-02), awaiting approval
 
-The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the owner settled the follow-ups 58-65 on 2 November, 64 from FileMaker's sources table (all recorded in `docs/stakeholder/preguntas.html`). Nothing here is approved: each task waits for the owner's go-ahead, then moves to its priority section, and to `docs/history.md` once built. Suggested order: B8, B1, B9, B6, B7, B3, B4 and B5 are built (2026-11-02), and every A; then B2; C1 once the team confirms its list.
+The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the owner settled the follow-ups 58-65 on 2 November, 64 from FileMaker's sources table (all recorded in `docs/stakeholder/preguntas.html`). Nothing here is approved: each task waits for the owner's go-ahead, then moves to its priority section, and to `docs/history.md` once built. Suggested order: B8, B1, B9, B6, B7, B3, B4 and B5 and B2 are built (2026-11-02), and every A; C1 once the team confirms its list.
 
 **A. File corrections** (no code unless named; one re-import on dev and production, then Generate; every changed file listed for the team's own copy)
 
@@ -14,7 +14,7 @@ The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the 
 
 **B. Code**
 
-- [ ] **B2. A shared line's parts where the one before ended** (questions 44, 61) - the play page, the PDF and the EPUB align each part as the site does (`ghosts/1`), in place of the fixed `.part-m`/`.part-f` steps. The fallback to the fixed step: on the play page and the site, by the room on the screen (a script measures each shared line, again on resize; with scripts off, every shared line takes the fixed step); in the PDF, measured once when ChromicPDF prints it; in the EPUB, by the whole line's length, a number proposed to the owner with examples. Medium
+All built (2026-11-02): `docs/history.md`.
 
 **C. Corpus check**
 
@@ -79,7 +79,6 @@ Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode
 
 ## Awaiting the project (static site)
 Questions only the stakeholders can answer, recorded in `docs/static-site-improvements.md`, "Awaiting the project", and asked as question 17 in `docs/stakeholder/preguntas.html` (question 15 was decided on 2026-10-16 and built on 2026-10-18: *The kind of an adaptation* in `docs/history.md`; question 16 was decided and built on 2026-10-19: *No verse-form families* there; question 17 was decided and built on 2026-10-16 and 2026-10-18 for every kind of note but `falta_tipo`: *The names of the kinds of note* there):
-- [ ] **How split verses are laid out, and what their switch does** (2026-10-21) - questions 44 and 45, answered 2026-11-01: the switch built 2026-11-02 as task B3 (`docs/history.md`); the layout is task B2 in *Proposed from the answers of 1 and 2 November*. emothe.uv.es and the play page move a part in by a fixed step (the old site's `versoM` 50px and `versoF` 100px; `.part-m` and `.part-f` in `app.css`, the same, halved on a phone); the published site starts it where the earlier parts ended (`ghosts/1` in `StaticSite.Edition`, `.ghost` in `style.css`). emothe.uv.es's "Versos truncados" switch shades the parts (`#ededed`, `#cccccc`, `#b1b1b1`) and its arrows step through the split verses with a count ("N de 380" in EMOTHE0384); the play page's "Split verses" switch only drops the steps, and the site has none. A verse split inside one speech by an aside (EMOTHE0384's 20; 867 verses in 152 plays are split inside one speech, how many by an aside not counted) emothe.uv.es prints as an ordinary verse followed by a `versoF2` (118px) with "(Aparte.)" floated right; Playcode lays it out like any split verse
 
 ## Low Priority / Future
 
