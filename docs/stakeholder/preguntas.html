@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 2 November 2026. 65 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 2 November 2026. 66 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -302,6 +302,7 @@
       <li><a href="#t-stage-study">Studying the stage directions</a><span class="nums">52</span></li>
       <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–57</span></li>
       <li><a href="#t-followups">Follow-ups to your answers of 1 November</a><span class="nums">58–65</span></li>
+      <li><a href="#t-prologues">Prologues on the wrong side</a><span class="nums">66</span></li>
       <li><a href="#t-spaces-fixed">Spaces corrected</a><span class="nums">—</span></li>
       <li><a href="#t-files-fixed">Files corrected</a><span class="nums">—</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
@@ -1502,14 +1503,14 @@
       </div>
     </div>
 
-    <div class="q" data-q="q31" data-n="31" data-answered="2026-11-01">
+    <div class="q" id="q31" data-q="q31" data-n="31" data-answered="2026-11-01">
       <span class="q-num" aria-hidden="true">31</span>
       <div class="q-body">
         <h3>Is a prologue to the reader a different thing from a spoken prologue?</h3>
         <p class="why">A prologue spoken by a character before the first act is part of the play’s text: it has lines, and they are counted. A prologue printed for readers (“Al lector”, “Prólogo [a la edición de 1635]”, “To the reader”) is a text around the play. The files call both <code>prologo</code>; and they also file “Al lector”, “Advertencia para el lector” and “Avertissement au lecteur” as an author’s address to the reader (<code>introduccion_autor</code>).</p>
         <div class="answered">
           <p><strong>Answered on 1 November 2026:</strong> the line falls by whether the prologue is spoken. One spoken on the stage is part of the play’s text, a division of TEI’s <code>&lt;body&gt;</code>; one that is not spoken is a text around the play (a paratext, as FileMaker’s editing interface calls it), in the <code>&lt;front&gt;</code>. A heading such as “Al lector” marks a paratext. Some files may not tell them apart: we will list the prologues that sit on the wrong side, for you to confirm before any file changes. <a href="#q59">Question 59</a> asks the part still open, and <a href="#q60">question 60</a> how this rule bears on question 34.</p>
-          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <p>The list is ready, 3 November 2026: <a href="prologos.html">Prologues on the wrong side</a>. Question 66 asks you to confirm it; the files change after that.</p>
           <button type="button" class="reopen" aria-expanded="false" aria-controls="q31-form">Change this answer</button>
         </div>
         <div class="answer-form" id="q31-form" hidden>
@@ -2275,7 +2276,7 @@
         <p class="why">Your note also names <code>introduccion_autor</code> among the values of a spoken division. Is there an author’s introduction spoken on the stage?</p>
         <div class="answered">
           <p><strong>Decided by Playcode on 2 November 2026:</strong> one kind. A prologue is a prologue whether it is spoken or printed for readers, and where it stands says which: a spoken one is a division of the play, one for readers a text around it. Playcode already files both as “Prologue”. The texts headed “Al lector” keep the kind each file gives them (prologue, author’s address to the reader or letter); the list promised in <a href="#q31">question 31</a> will show the doubtful ones. None of the eight authors’ introductions is spoken: all are prose, before the play.</p>
-          <p>Not built yet: the work it needs is planned, and waits to be scheduled.</p>
+          <p>The list of the doubtful ones is ready, 3 November 2026: <a href="prologos.html">Prologues on the wrong side</a>, question 66.</p>
           <button type="button" class="reopen" aria-expanded="false" aria-controls="q59-form">Change this answer</button>
         </div>
         <div class="answer-form" id="q59-form" hidden>
@@ -2463,6 +2464,32 @@
         </div>
         <p class="status" aria-live="polite"></p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-prologues" aria-labelledby="h-prologues">
+    <h2 id="h-prologues">Prologues on the wrong side</h2>
+    <p>The list promised in questions 31 and 59, on a page of its own: <a href="prologos.html">Prologues on the wrong side</a>.</p>
+
+    <div class="q" id="q66" data-q="q66" data-n="66">
+      <span class="q-num" aria-hidden="true">66</span>
+      <div class="q-body">
+        <h3>Do you confirm the list of prologues on the wrong side?</h3>
+        <p class="why">By your rule (question 31), 45 texts filed before the play look spoken, in 33 plays: <i>La Calandria</i>’s prologues, <i>Volpone</i>’s, <i>Love for Love</i>’s… We propose to move each into the play’s text, as a prologue before the first act, so its lines are counted and printed with the play. <i>The Man of Mode</i> (EMOTHE0449) holds its prologue twice, before the play and in the text: the copy before would go. <i>El caballero de la ardiente mano</i>’s prologue of the 1635 edition (EMOTHE0444) stays after the play, unless you read it as spoken. All 40 prologues already in the text are spoken, and no dedication is on the wrong side. The page also lists 25 addresses to the reader filed under four kinds, and 13 other texts whose kind looks doubtful: each keeps its file’s kind unless you choose another there. Choose on the page where you disagree, and paste what it copies into your reply.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q66-o1"><input type="radio" id="q66-o1" name="q66-choice" value="Yes, all as proposed">Yes, all as proposed</label>
+            <label for="q66-o2"><input type="radio" id="q66-o2" name="q66-choice" value="Yes, with the changes we copied from the list">Yes, with the changes we copied from the list</label>
+            <label for="q66-o3"><input type="radio" id="q66-o3" name="q66-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q66-text">Notes: paste here what the list copies, if you changed anything</label>
+          <textarea id="q66-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
       </div>
     </div>
   </section>
