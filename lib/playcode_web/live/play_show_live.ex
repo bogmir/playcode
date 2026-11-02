@@ -72,7 +72,7 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:has_rs, Element.tagged_names?(divisions))
      |> assign(:shade_shared, false)
      |> assign(:has_shared_lines, Element.shared_lines?(divisions))
-     |> assign(:leads, leads(divisions))
+     |> assign(:leads, divisions |> Element.verse_lines() |> SplitVerses.leads())
      |> assign(:shade_stage, false)
      |> assign(:has_stage_directions, Element.stage_directions?(divisions))
      |> assign(:active_tab, :text)
@@ -797,13 +797,6 @@ defmodule PlaycodeWeb.PlayShowLive do
       {form, _} ->
         PlayLabels.form_label(form)
     end
-  end
-
-  # Each shared line's later part, with the earlier parts' text that lines it up.
-  defp leads(divisions) do
-    for {id, %{lead: lead}} <- divisions |> Element.verse_lines() |> SplitVerses.leads(),
-        into: %{},
-        do: {id, lead}
   end
 
   # The switches whose turning re-renders the play's text, for the stepper's hook.

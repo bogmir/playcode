@@ -6,6 +6,8 @@ defmodule Playcode.PlayContent.SplitVerses do
   both list the parts that break it, and neither refuses them.
   """
 
+  alias Playcode.PlayContent.Element
+
   @doc """
   The parts out of order in `acts`, each an act's verse lines in reading order (its own,
   then its scenes'), as `{line, problem}`: `:completes_nothing` for a middle or last part
@@ -35,7 +37,8 @@ defmodule Playcode.PlayContent.SplitVerses do
   @doc """
   What lines up each later part of a shared line where the one before it ended, from
   `lines`, verse lines in reading order: `%{id => %{lead: …, line: …}}` for each middle or
-  last part with an earlier one, `lead` the earlier parts' content, `line` every part's.
+  last part with an earlier one, `lead` the earlier parts' content, `indent` whether the
+  first part steps in (`rend="indent"`), so the lead must too, `line` every part's.
   A part with nothing open before it (an orphan) has no entry.
   """
   def leads(lines) do
@@ -56,7 +59,37 @@ defmodule Playcode.PlayContent.SplitVerses do
         into: %{},
         do:
           {part.id,
-           %{lead: parts |> Enum.take(i) |> Enum.map_join(" ", & &1.content), line: whole}}
+           %{
+             lead: parts |> Enum.take(i) |> Enum.map_join(" ", & &1.content),
+             indent: hd(parts).rend == "indent",
+             line: whole
+           }}
+  end
+
+  @doc """
+  `divisions`, loaded by `PlayContent.load_play_content/2`, with each verse line's entry
+  of `leads/1` under `:lead` (nil for a line with none), for the exporters' render pass.
+  """
+  def with_leads(divisions) do
+    leads = divisions |> Element.verse_lines() |> leads()
+    Enum.map(divisions, &division_with(&1, leads))
+  end
+
+  defp division_with(division, leads) do
+    division
+    |> update_list(:loaded_elements, &element_with(&1, leads))
+    |> update_list(:children, &division_with(&1, leads))
+  end
+
+  defp element_with(%{type: "verse_line"} = line, leads), do: Map.put(line, :lead, leads[line.id])
+  defp element_with(element, leads), do: update_list(element, :children, &element_with(&1, leads))
+
+  # A key not loaded (an association, a verse line's children) is left as it is.
+  defp update_list(map, key, fun) do
+    case Map.get(map, key) do
+      list when is_list(list) -> Map.put(map, key, Enum.map(list, fun))
+      _ -> map
+    end
   end
 
   defp close(groups, []), do: groups

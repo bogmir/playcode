@@ -6,8 +6,11 @@ defmodule Playcode.Export.Pdf do
 
   alias Playcode.Export.Html
 
+  # Letter, Chrome's default paper, is 8.5in wide; less the two 0.8in margins below.
+  @text_width "6.9in"
+
   def generate(play) do
-    html = Html.generate(play)
+    html = Html.generate(play, text_width: @text_width)
 
     case ChromicPDF.print_to_pdf({:html, html},
            print_to_pdf: %{

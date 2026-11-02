@@ -339,9 +339,13 @@ defmodule PlaycodeWeb.Components.PlayText do
           @show_split_verses && @element.part == "M" && "part-m"
         ]}
       >
-        <span :if={@leads[@element.id]} class="ghost" aria-hidden="true">
+        <span
+          :if={@leads[@element.id]}
+          class={["ghost", @leads[@element.id].indent && "pl-8"]}
+          aria-hidden="true"
+        >
           <.inline_content
-            text={@leads[@element.id]}
+            text={@leads[@element.id].lead}
             show_stage={@show_stage_directions}
           />
         </span>

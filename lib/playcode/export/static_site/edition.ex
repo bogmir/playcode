@@ -514,15 +514,9 @@ defmodule Playcode.Export.StaticSite.Edition do
   # F fragment so it starts where the previous fragment ended. Content, markers and all:
   # the page draws it as the fragments themselves are drawn, so a stage direction in an
   # earlier fragment is hidden in the lead as it is in the fragment (`Components.el/1`).
-  defp ghosts(items) do
-    for {id, %{lead: lead}} <-
-          items
-          |> Enum.filter(&(&1.kind == :verse))
-          |> Enum.map(& &1.element)
-          |> SplitVerses.leads(),
-        into: %{},
-        do: {id, lead}
-  end
+  defp ghosts(items),
+    do:
+      items |> Enum.filter(&(&1.kind == :verse)) |> Enum.map(& &1.element) |> SplitVerses.leads()
 
   defp passage_starts(passages) do
     for %{form: form, element_ids: [first | _]} <- passages, form != "unmarked", into: %{} do

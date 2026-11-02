@@ -8,13 +8,27 @@ defmodule Playcode.Export.Html do
   alias Playcode.Export.NoteMarkup
   alias Playcode.Outline
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note}
+  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note, SplitVerses}
   alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
-  def generate(play) do
+  # The published site's script, inlined: its EMOTHE.align lines up a shared line's later
+  # parts where the line has room, on screen and once before ChromicPDF prints.
+  @site_js_path Path.expand("../../../priv/static_site/site.js", __DIR__)
+  @external_resource @site_js_path
+  @site_js File.read!(@site_js_path)
+
+  @doc """
+  The play as one HTML page. `text_width:` pins the page to the printed text's width on
+  screen too (the PDF's), so the script measures the lines as they will be printed.
+  """
+  def generate(play, opts \\ []) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
-    divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
+
+    divisions =
+      play.id
+      |> PlayContent.load_play_content(variants: play.show_variants)
+      |> SplitVerses.with_leads()
 
     """
     <!DOCTYPE html>
@@ -24,7 +38,7 @@ defmodule Playcode.Export.Html do
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>#{escape(play.title)} — #{escape(play.author_name || "")}</title>
       <style>
-    #{css()}
+    #{css()}#{text_width(opts[:text_width])}
       </style>
     </head>
     <body>
@@ -46,10 +60,16 @@ defmodule Playcode.Export.Html do
     #{play.paratexts |> Outline.items(divisions) |> Enum.map_join("\n", &render_item/1)}
         </div>
       </div>
+      <script>#{@site_js}</script>
     </body>
     </html>
     """
   end
+
+  defp text_width(nil), do: ""
+
+  defp text_width(width),
+    do: "    @media screen { .page { max-width: none; width: #{width}; padding: 0.5rem 0; } }\n"
 
   defp css do
     ~s"""
@@ -226,6 +246,11 @@ defmodule Playcode.Export.Html do
         .verse-line .content.indent { padding-left: 2rem; }
         .verse-line .content.part-m { padding-left: 50px; }
         .verse-line .content.part-f { padding-left: 100px; }
+        /* A later part lined up after the earlier ones, where the line has room (site.js) */
+        .ghost { display: none; }
+        [data-aligned] > .ghost { display: inline; visibility: hidden; }
+        .ghost.indent { padding-left: 2rem; }
+        .verse-line .content[data-aligned] { padding-left: 0; }
 
         .pn {
           font-size: x-small;
@@ -623,7 +648,7 @@ defmodule Playcode.Export.Html do
         do: "<span class=\"line-number\">#{el.line_number}</span>",
         else: "<span class=\"line-number\"></span>"
 
-    "        <div class=\"verse-line\"><span class=\"#{content_class}\">#{NoteMarkup.inline(el.content, el.notes, :html)}</span>#{line_num}</div>\n"
+    "        <div class=\"verse-line\"><span class=\"#{content_class}\">#{ghost(el.lead)}#{NoteMarkup.inline(el.content, el.notes, :html)}</span>#{line_num}</div>\n"
   end
 
   defp render_element(%{type: "stage_direction"} = el) do
@@ -640,6 +665,13 @@ defmodule Playcode.Export.Html do
   end
 
   defp render_element(_), do: ""
+
+  # A later part's earlier parts, invisible: shown only where site.js finds room.
+  defp ghost(nil), do: ""
+
+  defp ghost(%{lead: lead, indent: indent}),
+    do:
+      "<span class=\"ghost#{if indent, do: " indent"}\" aria-hidden=\"true\">#{NoteMarkup.inline(lead, [], :html)} </span>"
 
   defp escape(nil), do: ""
 

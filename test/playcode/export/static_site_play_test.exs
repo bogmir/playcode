@@ -520,6 +520,22 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  # A stanza's first line steps in (rend="indent", 1,968 opening parts on dev): the lead
+  # carries the step, or the later part starts 2em short of where the earlier one ended.
+  test "a part after an indented opening part is lined up past the indent too" do
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <sp><speaker>A</speaker><lg><l n="1" part="I" rend="indent">Verso</l></lg></sp>
+        <sp><speaker>B</speaker><lg><l part="F">partido</l></lg></sp>
+      </div1>
+      """)
+
+    [ghost] = dir |> page(play, "act-1.html") |> LazyHTML.query(".ghost") |> Enum.to_list()
+    assert ghost |> LazyHTML.attribute("class") |> hd() |> String.split() == ["ghost", "indent"]
+    assert read!(dir, "assets/style.css") =~ ~r/^\.ghost\.indent \{[^}]*padding-left: 2em/m
+  end
+
   # EMOTHE0284's "O molto", EMOTHE0283's "Hippolita!": a part with no words before it to
   # line up after was printed at the margin. emothe.uv.es indented it by a fixed step
   # (`.versoM`, `.versoF`), as the play page does.

@@ -44,7 +44,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         tei(
           body: """
           <div1 type="acto" n="1"><head>Acto I</head>
-            <sp><speaker>ANA</speaker><lg><l n="1" part="I">Verso</l></lg></sp>
+            <sp><speaker>ANA</speaker><lg><l n="1" part="I" rend="indent">Verso</l></lg></sp>
             <sp><speaker>BLAS</speaker><lg><l part="F">partido</l></lg></sp>
           </div1>
           """
@@ -59,6 +59,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert part |> LazyHTML.attribute("class") |> hd() |> String.split() |> Enum.member?("part-f")
     ghost = LazyHTML.query(part, ~s(.ghost[aria-hidden="true"]))
     assert ghost |> LazyHTML.text() |> String.trim() == "Verso"
+    # The opening part steps in (a stanza's first line), so its lead does too.
+    assert ghost |> LazyHTML.attribute("class") |> hd() |> String.split() |> Enum.member?("pl-8")
     assert has_element?(view, ~s([phx-hook="AlignParts"]))
   end
 

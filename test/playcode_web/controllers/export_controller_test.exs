@@ -667,4 +667,43 @@ defmodule PlaycodeWeb.ExportControllerTest do
       refute html =~ ~s(href="javascript:)
     end
   end
+
+  # B2 (questions 44, 61): a shared line's later part lined up where the one before ended.
+  describe "a shared line" do
+    defp shared!(first, last, rend \\ nil) do
+      rend = if rend, do: ~s( rend="#{rend}"), else: ""
+
+      tei(
+        body: """
+        <div1 type="acto" n="1">
+          <sp><speaker>ANA</speaker><l n="1" part="I"#{rend}>#{first}</l></sp>
+          <sp><speaker>BLAS</speaker><l part="F">#{last}</l></sp>
+        </div1>
+        """
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+    end
+
+    # Its step stays for a reader without scripts, and for a line with no room; the page's
+    # script (site.js's, inlined) shows the lead where the line fits, once in the PDF.
+    test "the HTML download keeps the step and carries the earlier part's words, hidden",
+         %{conn: conn} do
+      play = shared!("Verso", "partido")
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200) |> LazyHTML.from_document()
+
+      [part] = html |> LazyHTML.query(".verse-line .content.part-f") |> Enum.to_list()
+      ghost = LazyHTML.query(part, ~s(.ghost[aria-hidden="true"]))
+      assert ghost |> LazyHTML.text() |> String.trim() == "Verso"
+
+      assert html |> LazyHTML.query("script") |> LazyHTML.text() =~ "E.align = function"
+    end
+
+    test "the HTML download's lead steps in after an indented opening part", %{conn: conn} do
+      play = shared!("Verso", "partido", "indent")
+      html = response(get(conn, ~p"/export/#{play.id}/html"), 200) |> LazyHTML.from_document()
+
+      assert html |> LazyHTML.query(".ghost") |> LazyHTML.attribute("class") == ["ghost indent"]
+    end
+  end
 end
