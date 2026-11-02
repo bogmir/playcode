@@ -66,7 +66,7 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
 
       <%!-- Additional stats --%>
       <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <.stat_card label={gettext("Split Verses")} value={@data["split_verses"]} icon="↔️" />
+        <.stat_card label={gettext("Shared lines")} value={@data["split_verses"]} icon="↔️" />
         <.stat_card label={gettext("Asides")} value={@data["total_asides"]} icon="🤫" />
         <.stat_card label={gettext("Aside Verses")} value={@data["aside_verses"]} icon="💬" />
       </div>

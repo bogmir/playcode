@@ -149,17 +149,30 @@ defmodule Playcode.PlayContent.Element do
       |> Enum.any?(&String.contains?("#{&1.term} #{&1.body}", "<rs"))
   end
 
+  @doc "True when `divisions`, loaded as for `folio_passages?/1`, hold a shared line (a first part)."
+  def shared_lines?(divisions),
+    do: any_element?(divisions, &(&1.type == "verse_line" and &1.part == "I"))
+
+  @doc "True when `divisions`, loaded as for `folio_passages?/1`, hold a stage direction, inline ones included."
+  def stage_directions?(divisions),
+    do:
+      any_element?(divisions, &(&1.type == "stage_direction")) or any_holds?(divisions, "<stage")
+
   defp any_holds?(divisions, tag) do
-    Enum.any?(divisions, fn division ->
-      Enum.any?(Map.get(division, :loaded_elements, []), &holds?(&1, tag)) or
-        any_holds?(children_of(division), tag)
+    any_element?(divisions, fn element ->
+      Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, tag)))
     end)
   end
 
-  defp holds?(element, tag) do
-    Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, tag))) or
-      Enum.any?(children_of(element), &holds?(&1, tag))
+  defp any_element?(divisions, fun) do
+    Enum.any?(divisions, fn division ->
+      Enum.any?(Map.get(division, :loaded_elements, []), &element?(&1, fun)) or
+        any_element?(children_of(division), fun)
+    end)
   end
+
+  defp element?(element, fun),
+    do: fun.(element) or Enum.any?(children_of(element), &element?(&1, fun))
 
   # What `load_play_content/2` loaded: a verse line's children are not.
   defp children_of(%{children: children}) when is_list(children), do: children

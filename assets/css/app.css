@@ -189,6 +189,47 @@
   }
 }
 
+/* The Highlight switches (questions 45, 52): a shared line's first, middle and last parts
+   in three greys, and the stage directions tinted; the one the arrows landed on outlined.
+   Text and muted text over each keep 4.5:1 in both themes (darkest: 7.2 and 4.5 in dark). */
+.play-text[data-shared="on"] [data-part="I"],
+.shared-swatch[data-part="I"] {
+  background: oklch(from var(--color-base-content) l c h / 0.06);
+}
+
+.play-text[data-shared="on"] [data-part="M"],
+.shared-swatch[data-part="M"] {
+  background: oklch(from var(--color-base-content) l c h / 0.12);
+}
+
+.play-text[data-shared="on"] [data-part="F"],
+.shared-swatch[data-part="F"] {
+  background: oklch(from var(--color-base-content) l c h / 0.18);
+}
+
+.play-text[data-shared="on"] [data-part] {
+  background-clip: content-box;
+}
+
+.play-text[data-sd-mark="on"] [data-sd] {
+  background: oklch(from var(--color-primary) l c h / 0.1);
+}
+
+.play-text [data-current] {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.shared-swatch {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-right: 0.4rem;
+  vertical-align: -0.1rem;
+  border: 1px solid oklch(from var(--color-base-content) l c h / 0.3);
+  border-radius: 2px;
+}
+
 /* In-text notes: the number after a glossed word opens its note, a popover. A textual
    variant's asterisk opens its readings; the Variants switch hides the asterisks. */
 .play-text .nref,

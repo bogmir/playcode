@@ -271,10 +271,12 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       assert html =~ "<em>&lt;b&gt;fuerte</em>"
 
       # Each piece of a stage is in a span of its own, an italic one included.
+      # data-sd since 2026-11-02: the arrows that step through the stage directions find
+      # an inline one by it (`data-sd=""` once render/1 has parsed the page).
       assert html =~
-               ~s|<span class="inline-stage">(&lt;script&gt;alert(2)&lt;/script&gt; &amp; &quot;bajo&quot; </span>|
+               ~r|<span class="inline-stage" data-sd(="")?>\(&lt;script&gt;alert\(2\)&lt;/script&gt; &amp; &quot;bajo&quot; </span>|
 
-      assert html =~ ~s|<span class="inline-stage"><em>&lt;i&gt;x</em></span>|
+      assert html =~ ~r|<span class="inline-stage" data-sd(="")?><em>&lt;i&gt;x</em></span>|
 
       refute html =~ "<script>alert"
       refute html =~ "<b>fuerte"
@@ -1349,6 +1351,102 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
   # Question 63: the words an <rs> tags (229 in EMOTHE0551) carry its kind's name, and a
   # switch, off at first, underlines them.
+  # Questions 45, 52, 62 and 65: two switches that highlight the shared lines and the stage
+  # directions, each with arrows that step through them. What the arrows do is site.js's
+  # (test/js/stepper.test.mjs); here, the markup they work on.
+  describe "the highlight switches" do
+    @shared """
+    <div1 type="acto" n="1"><head>Acto I</head>
+      <sp><speaker>ANA</speaker><l n="1" part="I">¿Quién va?</l></sp>
+      <sp><speaker>BLAS</speaker><l part="M">Yo.</l></sp>
+      <sp><speaker>ANA</speaker><l part="F">¿Tan tarde?</l></sp>
+      <stage>Vase.</stage>
+      <sp><speaker>BLAS</speaker><l n="2"><stage>(Aparte.)</stage>Ya es hora.</l></sp>
+    </div1>
+    """
+
+    defp shown(body) do
+      [body: body] |> tei() |> import_tei!() |> TestFixtures.mark_complete!()
+    end
+
+    test "shade the shared lines' parts and step through them", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/plays/#{shown(@shared).code}")
+
+      refute has_element?(view, "label", "Split verses")
+      assert has_element?(view, "label", t("Shared lines"))
+      assert has_element?(view, ~s(#play-tab-text [data-shared="off"]))
+      refute has_element?(view, "#step-shared")
+
+      render_click(view, "toggle_shared_lines")
+
+      assert has_element?(view, ~s(#play-tab-text [data-shared="on"]))
+
+      for part <- ~w(I M F),
+          do: assert(has_element?(view, ~s(#play-tab-text [data-part="#{part}"])))
+
+      for label <- ["First part", "Middle part", "Last part"],
+          do: assert(has_element?(view, "#shared-legend li", t(label)))
+
+      assert has_element?(view, ~s(#step-shared button[aria-label="#{t("Next shared line")}"]))
+
+      assert has_element?(
+               view,
+               ~s(#step-shared button[aria-label="#{t("Previous shared line")}"])
+             )
+
+      # Another switch re-renders the text: the shading stays.
+      render_click(view, "toggle_line_numbers")
+      assert has_element?(view, ~s(#play-tab-text [data-shared="on"]))
+    end
+
+    test "highlight the stage directions, a line's own among them, and step through them",
+         %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/plays/#{shown(@shared).code}")
+
+      refute has_element?(view, "#step-sd")
+      render_click(view, "toggle_stage_highlight")
+
+      assert has_element?(view, ~s(#play-tab-text [data-sd-mark="on"]))
+      assert has_element?(view, "#play-tab-text [data-sd]", "Vase.")
+      assert has_element?(view, "#play-tab-text [data-sd]", "(Aparte.)")
+
+      assert has_element?(
+               view,
+               ~s(#step-sd button[aria-label="#{t("Next stage direction")}"])
+             )
+
+      # The switch that hides them stays.
+      assert has_element?(view, "label", t("Stage directions"))
+    end
+
+    test "are not offered for what a play does not have", %{conn: conn} do
+      body =
+        ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">En Castilla</l></sp></div1>)
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{shown(body).code}")
+
+      refute has_element?(view, "label", t("Shared lines"))
+      refute has_element?(view, "h3", t("Highlight"))
+
+      body =
+        ~s(<div1 type="acto" n="1"><sp><speaker>ANA</speaker><l n="1">En Castilla</l></sp><stage>Vase.</stage></div1>)
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{shown(body).code}")
+
+      refute has_element?(view, "label", t("Shared lines"))
+      assert has_element?(view, "h3", t("Highlight"))
+    end
+
+    test "the statistics call them shared lines", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/plays/#{shown(@shared).code}")
+
+      html = render_click(view, "switch_tab", %{"tab" => "statistics"})
+
+      assert html =~ t("Shared lines")
+      refute html =~ "Split Verses"
+    end
+  end
+
   describe "tagged names" do
     test "are underlined while the switch is on, each named by its kind", %{conn: conn} do
       body = """

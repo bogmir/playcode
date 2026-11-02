@@ -25,6 +25,15 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/playcode"
 import topbar from "../vendor/topbar"
 import {syncPanels} from "./sync_scroll.mjs"
+// The published site's script: its EMOTHE.stepper runs the play page's arrows too.
+import "../../priv/static_site/site.js"
+
+// Stepper hook: the arrows that step through the shared lines or the stage directions.
+// A change to the switches that hide some of them (data-watch) re-counts them.
+const Stepper = {
+  mounted() { this.stepper = window.EMOTHE.stepper(this.el, this.el.dataset.selector) },
+  updated() { this.stepper.refresh() },
+}
 
 // ScrollSpy hook: highlights the sidebar link matching the currently visible section
 const ScrollSpy = {
@@ -127,7 +136,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss},
+  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss, Stepper},
 })
 
 // Show progress bar on live navigation and form submits

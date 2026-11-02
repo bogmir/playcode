@@ -12,7 +12,59 @@
   };
   E.words = function (s) { return E.normalise(s).match(/[\p{L}\p{N}]+/gu) || []; };
 
+  // The arrows' choice: of the targets' positions in reading order (each one's middle,
+  // from the top of the window), the first below the reading line for 1, the last above
+  // it for -1; -1 when there is none. The one on the line is the current one.
+  E.step = function (positions, line, dir) {
+    if (dir > 0) {
+      for (var i = 0; i < positions.length; i++) if (positions[i] > line + 1) return i;
+    } else {
+      for (var j = positions.length - 1; j >= 0; j--) if (positions[j] < line - 1) return j;
+    }
+    return -1;
+  };
+
   if (!root.document) return;
+
+  // Arrows in `box` ([data-step="1"] and [data-step="-1"]) that step through what
+  // `selector` finds, skipping what is hidden, from where the reader has scrolled to:
+  // the one they land on is centred, marked data-current, and counted in [data-step-count].
+  E.stepper = function (box, selector) {
+    var count = box.querySelector('[data-step-count]');
+    var current = null;
+
+    function targets() {
+      return Array.prototype.filter.call(document.querySelectorAll(selector), function (el) {
+        return el.getClientRects().length > 0;
+      });
+    }
+
+    function refresh() {
+      var all = targets();
+      var at = all.indexOf(current) + 1;
+      count.textContent = (at || '–') + ' ' + (box.dataset.of || 'of') + ' ' + all.length;
+    }
+
+    box.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-step]');
+      if (!button) return;
+      var all = targets();
+      var middles = all.map(function (el) { var r = el.getBoundingClientRect(); return (r.top + r.bottom) / 2; });
+      // The first press goes from the top of the window, not from its middle: a reader at
+      // the start of the play lands on the first one, not the one after.
+      var line = current ? root.innerHeight / 2 : 0;
+      var i = E.step(middles, line, Number(button.dataset.step));
+      if (i < 0) return refresh();
+      if (current) current.removeAttribute('data-current');
+      current = all[i];
+      current.setAttribute('data-current', '');
+      current.scrollIntoView({ block: 'center' });
+      refresh();
+    });
+
+    refresh();
+    return { refresh: refresh };
+  };
 
   function initCatalogue() {
     var list = document.querySelector('[data-works]');

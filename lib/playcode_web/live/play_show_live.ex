@@ -63,7 +63,6 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:show_line_numbers, true)
      |> assign(:show_stage_directions, true)
      |> assign(:show_asides, true)
-     |> assign(:show_split_verses, true)
      |> assign(:show_verse_type, false)
      |> assign(:show_variants, true)
      |> assign(:has_variants, divisions |> Note.reading_order() |> Enum.any?(&Note.variant?/1))
@@ -71,6 +70,10 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:has_folio, Element.folio_passages?(divisions))
      |> assign(:show_rs, false)
      |> assign(:has_rs, Element.tagged_names?(divisions))
+     |> assign(:shade_shared, false)
+     |> assign(:has_shared_lines, Element.shared_lines?(divisions))
+     |> assign(:shade_stage, false)
+     |> assign(:has_stage_directions, Element.stage_directions?(divisions))
      |> assign(:active_tab, :text)
      |> assign(:sidebar_open, true)
      |> assign(:breadcrumbs, [
@@ -92,8 +95,12 @@ defmodule PlaycodeWeb.PlayShowLive do
     {:noreply, assign(socket, :show_asides, !socket.assigns.show_asides)}
   end
 
-  def handle_event("toggle_split_verses", _, socket) do
-    {:noreply, assign(socket, :show_split_verses, !socket.assigns.show_split_verses)}
+  def handle_event("toggle_shared_lines", _, socket) do
+    {:noreply, assign(socket, :shade_shared, !socket.assigns.shade_shared)}
+  end
+
+  def handle_event("toggle_stage_highlight", _, socket) do
+    {:noreply, assign(socket, :shade_stage, !socket.assigns.shade_stage)}
   end
 
   def handle_event("toggle_verse_type", _, socket) do
@@ -261,14 +268,6 @@ defmodule PlaycodeWeb.PlayShowLive do
               <label class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70">
                 <input
                   type="checkbox"
-                  checked={@show_split_verses}
-                  phx-click="toggle_split_verses"
-                  class="checkbox checkbox-xs checkbox-primary"
-                /> {gettext("Split verses")}
-              </label>
-              <label class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70">
-                <input
-                  type="checkbox"
                   checked={@show_verse_type}
                   phx-click="toggle_verse_type"
                   class="checkbox checkbox-xs checkbox-primary"
@@ -307,6 +306,72 @@ defmodule PlaycodeWeb.PlayShowLive do
                   class="checkbox checkbox-xs checkbox-primary"
                 /> {gettext("Tagged names")}
               </label>
+            </div>
+
+            <%!-- Highlight and step through (questions 45, 52) --%>
+            <div
+              :if={
+                @sidebar_open && @active_tab == :text &&
+                  (@has_shared_lines || @has_stage_directions)
+              }
+              class="border-t border-base-300 px-3 py-2.5 space-y-2"
+            >
+              <h3 class="text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
+                {gettext("Highlight")}
+              </h3>
+              <div :if={@has_shared_lines}>
+                <label class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70">
+                  <input
+                    type="checkbox"
+                    id="shared-lines-switch"
+                    checked={@shade_shared}
+                    phx-click="toggle_shared_lines"
+                    class="checkbox checkbox-xs checkbox-primary"
+                  /> {gettext("Shared lines")}
+                </label>
+                <.stepper
+                  :if={@shade_shared}
+                  id="step-shared"
+                  selector="#play-tab-text [data-part=I]"
+                  previous={gettext("Previous shared line")}
+                  next={gettext("Next shared line")}
+                  watch={"#{@show_folio}"}
+                />
+                <ul
+                  :if={@shade_shared}
+                  id="shared-legend"
+                  class="pl-6 space-y-0.5 text-xs text-base-content/70"
+                >
+                  <li :for={
+                    {part, label} <- [
+                      {"I", gettext("First part")},
+                      {"M", gettext("Middle part")},
+                      {"F", gettext("Last part")}
+                    ]
+                  }>
+                    <i class="shared-swatch" data-part={part}></i>{label}
+                  </li>
+                </ul>
+              </div>
+              <div :if={@has_stage_directions}>
+                <label class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70">
+                  <input
+                    type="checkbox"
+                    id="sd-highlight-switch"
+                    checked={@shade_stage}
+                    phx-click="toggle_stage_highlight"
+                    class="checkbox checkbox-xs checkbox-primary"
+                  /> {gettext("Stage directions")}
+                </label>
+                <.stepper
+                  :if={@shade_stage}
+                  id="step-sd"
+                  selector="#play-tab-text [data-sd]"
+                  previous={gettext("Previous stage direction")}
+                  next={gettext("Next stage direction")}
+                  watch={"#{@show_stage_directions} #{@show_folio}"}
+                />
+              </div>
             </div>
           </div>
 
@@ -604,7 +669,8 @@ defmodule PlaycodeWeb.PlayShowLive do
               show_line_numbers={@show_line_numbers}
               show_stage_directions={@show_stage_directions}
               show_asides={@show_asides}
-              show_split_verses={@show_split_verses}
+              shade_shared={@shade_shared}
+              shade_stage={@shade_stage}
               show_verse_type={@show_verse_type}
               show_variants={@show_variants}
               show_folio={@show_folio}
@@ -719,5 +785,41 @@ defmodule PlaycodeWeb.PlayShowLive do
       {form, _} ->
         PlayLabels.form_label(form)
     end
+  end
+
+  attr :id, :string, required: true
+  attr :selector, :string, required: true
+  attr :previous, :string, required: true
+  attr :next, :string, required: true
+  attr :watch, :string, doc: "the switches that hide targets: a change re-counts them"
+
+  # The arrows and the count, run by site.js's EMOTHE.stepper through the Stepper hook.
+  # The count is the hook's: LiveView leaves it alone.
+  defp stepper(assigns) do
+    ~H"""
+    <div
+      id={@id}
+      phx-hook="Stepper"
+      data-selector={@selector}
+      data-of={gettext("of")}
+      data-watch={@watch}
+      class="flex items-center gap-1 pl-6 text-xs text-base-content/70"
+    >
+      <button type="button" data-step="-1" aria-label={@previous} class="btn btn-ghost btn-xs">
+        ‹
+      </button>
+      <span
+        id={@id <> "-count"}
+        phx-update="ignore"
+        data-step-count
+        aria-live="polite"
+        class="tabular-nums"
+      >
+      </span>
+      <button type="button" data-step="1" aria-label={@next} class="btn btn-ghost btn-xs">
+        ›
+      </button>
+    </div>
+    """
   end
 end

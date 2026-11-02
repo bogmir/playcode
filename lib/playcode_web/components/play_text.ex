@@ -23,6 +23,8 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_variants, :boolean, default: true
   attr :show_folio, :boolean, default: false
   attr :show_rs, :boolean, default: false
+  attr :shade_shared, :boolean, default: false
+  attr :shade_stage, :boolean, default: false
   attr :sync_keys, :boolean, default: false
 
   def play_body(assigns) do
@@ -32,6 +34,8 @@ defmodule PlaycodeWeb.Components.PlayText do
       data-variants={if @show_variants, do: "on", else: "off"}
       data-folio={if @show_folio, do: "on", else: "off"}
       data-rs={if @show_rs, do: "on", else: "off"}
+      data-shared={if @shade_shared, do: "on", else: "off"}
+      data-sd-mark={if @shade_stage, do: "on", else: "off"}
     >
       <div
         :for={{division, div_key} <- outline(@paratexts, @divisions, @sync_keys)}
@@ -306,12 +310,15 @@ defmodule PlaycodeWeb.Components.PlayText do
       "verse-line flex items-baseline gap-1 sm:gap-2 ml-1 sm:ml-4",
       Element.folio_only?(@element) && "folio"
     ]}>
-      <span class={[
-        "flex-1",
-        @element.rend == "indent" && "pl-8",
-        @show_split_verses && @element.part == "F" && "part-f",
-        @show_split_verses && @element.part == "M" && "part-m"
-      ]}>
+      <span
+        data-part={@element.part}
+        class={[
+          "flex-1",
+          @element.rend == "indent" && "pl-8",
+          @show_split_verses && @element.part == "F" && "part-f",
+          @show_split_verses && @element.part == "M" && "part-m"
+        ]}
+      >
         <.inline_content
           text={@element.content}
           notes={@element.notes}
@@ -339,6 +346,7 @@ defmodule PlaycodeWeb.Components.PlayText do
     ~H"""
     <div
       :if={@show_stage_directions}
+      data-sd
       class={[
         "stage-direction text-center my-4 px-2 sm:px-8",
         Element.folio_only?(@element) && "folio"
@@ -423,7 +431,11 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp part_html(%{stage: %{}}, %{stage: false}), do: ""
 
   defp part_html(%{stage: %{}} = part, show),
-    do: [~s(<span class="inline-stage">), part_html(%{part | stage: nil}, show), "</span>"]
+    do: [
+      ~s(<span class="inline-stage" data-sd>),
+      part_html(%{part | stage: nil}, show),
+      "</span>"
+    ]
 
   # Hamlet's Folio passages: an F where one starts and ends, and its words, in grey; gone
   # while the "Folio interpolations" switch is off (app.css), a note inside one with it.
