@@ -15,11 +15,17 @@ defmodule Playcode.PlayContent.InlineMarkup do
   passage that crosses elements is a marker in each, with `part="I"` (its start, ending the
   text), `"M"` (all of it) or `"F"` (its end, starting the text). Its parts carry `:folio`.
 
+  The words of a name, a place or a phrase the edition tags (TEI's `<rs>`) are
+  `<rs type="…" n="…">…</rs>`, both attributes optional: flat, inside or outside a stage
+  but never holding one, and outside italics, though italics may sit inside it. Its parts
+  carry `:rs`.
+
   `parts/1` turns that back into pieces a renderer can mark up; `plain/1` gives the
   text without the markers, stage words kept, for search and word counts; `spoken/1`
   and `staged/1` split the words by where they are said. `parts/2` also places a
   line's notes between the pieces. `well_formed?/1`, `asides_well_formed?/1`,
-  `numbers_well_formed?/1` and `folios_well_formed?/1` say whether the markers are sound.
+  `numbers_well_formed?/1`, `folios_well_formed?/1` and `rs_well_formed?/1` say whether the
+  markers are sound.
   """
 
   # The type and the text of one stage. Groups: type (empty when there is none), text.
@@ -32,6 +38,10 @@ defmodule Playcode.PlayContent.InlineMarkup do
   # text), the words. Flat, like a stage; one with nothing but white space is no passage.
   @folio ~r/<folio(?: part="([IMF])")?>(\s*(?:(?!<\/?folio[\s>])\S)(?:(?!<\/?folio[\s>]).)*?)<\/folio>/s
 
+  # One tagged name, place or phrase. Groups: its type, its number (each empty when
+  # absent), its words. Flat, like a stage.
+  @rs ~r/<rs(?: type="([A-Za-z0-9_.\-]+)")?(?: n="([A-Za-z0-9_.\-]+)")?>((?:(?!<\/?rs[\s>]).)+?)<\/rs>/s
+
   # A printed line's number. Group: the number, letters, digits, "." and "-".
   @number ~r/<lb n="([A-Za-z0-9.\-]+)"\/>/
 
@@ -40,6 +50,9 @@ defmodule Playcode.PlayContent.InlineMarkup do
   `stage` is nil outside a stage, else `%{type: binary | nil, run: integer}`, `run`
   counting the stages in the text, so two touching stages stay two. A printed line's
   number is `%{number: binary, text: "", italic: boolean, stage: stage}`.
+
+  A part inside an `<rs>` also has `rs: %{type: binary | nil, n: binary | nil, run:
+  integer}`; `run` tells two touching tags apart. Outside one the key is absent.
 
   A part inside a Folio passage also has `folio: %{part: nil | "I" | "M" | "F", run:
   integer}`, `run` counting the passages in the text; outside one the key is absent.
@@ -111,9 +124,33 @@ defmodule Playcode.PlayContent.InlineMarkup do
     end)
   end
 
+  # The tagged words of a text are its italics' parts, each carrying its tag.
+  defp italics(text, stage) do
+    if String.contains?(text, "<rs") do
+      @rs
+      |> Regex.split(text, include_captures: true)
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {piece, run} ->
+        case Regex.run(@rs, piece) do
+          [_whole, type, n, words] ->
+            rs = %{type: blank_to_nil(type), n: blank_to_nil(n), run: run}
+            words |> plain_italics(stage) |> Enum.map(&Map.put(&1, :rs, rs))
+
+          nil ->
+            plain_italics(piece, stage)
+        end
+      end)
+    else
+      plain_italics(text, stage)
+    end
+  end
+
+  defp blank_to_nil(""), do: nil
+  defp blank_to_nil(value), do: value
+
   # A number marker is read whole inside the italics, so its "/>" cannot be taken for the
   # start of their closing ">>" (`<<sic <lb n="5"/>>>`).
-  defp italics(text, stage) do
+  defp plain_italics(text, stage) do
     ~r/<<((?:<lb n="[A-Za-z0-9.\-]+"\/>|.)*?)>>/s
     |> Regex.split(text, include_captures: true)
     |> Enum.flat_map(fn part ->
@@ -148,7 +185,9 @@ defmodule Playcode.PlayContent.InlineMarkup do
 
   A note strictly inside a stage, or between two pieces of one stage, carries that
   stage; one at the start or the end of a stage's text is outside it. A note takes a
-  Folio passage the same way, as `:folio`.
+  Folio passage the same way, as `:folio`. A note at the end of an `<rs>`'s words takes
+  its tag, `:rs`, unless the tag ends a stage the note is outside: it is taken to be about
+  those words, the form question 63 chose (EMOTHE0551 puts 19 such notes inside, 22 after).
   """
   def parts(text, []), do: parts(text)
 
@@ -182,9 +221,11 @@ defmodule Playcode.PlayContent.InlineMarkup do
         folio =
           if k > 0 and (k < length or same_run?(part, next, :folio)), do: Map.get(part, :folio)
 
+        rs = if k > 0 and (is_nil(part.stage) or inside), do: Map.get(part, :rs)
         italic = part.italic and k > 0 and k < length
         note = %{note: note, stage: inside, italic: italic}
         note = if folio, do: Map.put(note, :folio, folio), else: note
+        note = if rs, do: Map.put(note, :rs, rs), else: note
         {[note | prepend_text(pieces, piece)], k}
       end)
 
@@ -317,6 +358,20 @@ defmodule Playcode.PlayContent.InlineMarkup do
 
   # A passage whose markers hold nothing but tags: a printed line's number, empty italics.
   defp wordless?([_whole, _part, words]), do: words |> plain() |> String.trim() == ""
+
+  @doc """
+  True when every `<rs` and `</rs>` in `text` belongs to a closed, flat marker with words
+  in it and plain-word attributes, none sits inside italics, and none holds a stage.
+  """
+  def rs_well_formed?(nil), do: true
+
+  def rs_well_formed?(text) do
+    without_rs = Regex.replace(@rs, text, "")
+
+    not (Regex.match?(~r/<\/?rs[\s>]/, without_rs) or
+           Regex.match?(~r/<<(?:(?!>>).)*?<\/?rs[\s>]/s, text) or
+           Regex.match?(~r/<rs[^>]*>(?:(?!<\/rs>).)*?<\/?stage/s, text))
+  end
 
   @doc "True when every `<lb` in `text` is a well-formed number marker."
   def numbers_well_formed?(nil), do: true

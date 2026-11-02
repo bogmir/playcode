@@ -1915,7 +1915,12 @@ defmodule Playcode.Import.TeiParser do
 
   # An emphasis of nothing (EMOTHE0187's `<emph></emph>, if`) is no italics: kept as
   # "<<>>", it came back from the export as a stray space, a different file each time.
-  defp italics(text), do: if(String.trim(text) == "", do: text, else: "<<" <> text <> ">>")
+  # An italic run cut around an <rs> (emph_child/2) leaves no empty italics at its edges.
+  defp italics(text) do
+    if String.trim(text) == "",
+      do: text,
+      else: String.replace("<<" <> text <> ">>", "<<>>", "")
+  end
 
   @stage_parents ~w(l p seg)
   @leading_marks ~r/\A((?:\x{E000}\d+[sn]\x{E001} ?)*)(.*)\z/su
@@ -1933,6 +1938,11 @@ defmodule Playcode.Import.TeiParser do
     if aside_seg?(seg), do: marker(seg, "<aside>", "</aside>"), else: text_content(seg, :mark)
   end
 
+  # An <rs> in the play text or a note's: the words of a name, a place or a phrase, kept
+  # as a marker with its kind and number (InlineMarkup), a note at its end inside it.
+  defp read_child({"rs", attrs, _children} = rs, notes, _parent) when notes in [:mark, :breaks],
+    do: marker(rs, rs_tag(attrs), "</rs>", notes)
+
   # A line break in the play text (:mark) or a note's body (:breaks); elsewhere, a space.
   defp read_child({"lb", attrs, _children}, notes, _parent) when notes in [:mark, :breaks],
     do: line_break(attrs)
@@ -1944,8 +1954,8 @@ defmodule Playcode.Import.TeiParser do
   # The note leads with a space ("s") because the pieces of the element are joined by
   # one: the offset the first import stores is the one a re-import of the export
   # computes, a note before the marker.
-  defp marker(element, open, close) do
-    [_all, lead, words] = Regex.run(@leading_marks, text_content(element, :mark))
+  defp marker(element, open, close, notes \\ :mark) do
+    [_all, lead, words] = Regex.run(@leading_marks, text_content(element, notes))
     lead = Regex.replace(~r/\A(\x{E000}\d+)[sn]/u, String.trim(lead), "\\1s")
 
     case String.trim(words) do
@@ -2009,6 +2019,17 @@ defmodule Playcode.Import.TeiParser do
     if type && type =~ ~r/\A[A-Za-z0-9_]+\z/, do: ~s(<stage type="#{type}">), else: "<stage>"
   end
 
+  # The kind and the number go into the marker when each is a plain word it allows.
+  defp rs_tag(attrs) do
+    pairs =
+      for key <- ~w(type n),
+          value = attr_value(attrs, key),
+          value =~ ~r/\A[A-Za-z0-9_.\-]+\z/,
+          do: ~s( #{key}="#{value}")
+
+    "<rs#{pairs}>"
+  end
+
   # A <stage>'s @type. 24 source files spell TEI's "delivery" "delivery_".
   defp stage_type(attrs) do
     case attr_value(attrs, "type") do
@@ -2039,6 +2060,15 @@ defmodule Playcode.Import.TeiParser do
     do: children |> pieces(notes, &emph_child(&1, notes)) |> squeeze()
 
   defp emph_child({"lb", attrs, _}, notes) when notes in [:mark, :breaks], do: line_break(attrs)
+  # An <rs> inside italics: the italics close before it and open again after it, its words
+  # italic inside it, since a tag sits outside italics (InlineMarkup).
+  defp emph_child({"rs", attrs, _children} = rs, notes) when notes in [:mark, :breaks] do
+    case marker(rs, rs_tag(attrs) <> "<<", ">></rs>", notes) do
+      "" -> ""
+      tagged -> ">>" <> tagged <> "<<"
+    end
+  end
+
   defp emph_child({_name, _attrs, children}, notes), do: extract_plain_text(children, notes)
 
   # Pieces of text as one string, a space between them, whitespace collapsed. A break
@@ -2241,7 +2271,7 @@ defmodule Playcode.Import.TeiParser do
 
   defp strays(_app, _own), do: []
 
-  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<folio(?: part="[IMF]")?>|<\/folio>|<lb n="[A-Za-z0-9.\-]+"\/>/
+  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<folio(?: part="[IMF]")?>|<\/folio>|<rs(?: type="[A-Za-z0-9_.\-]+")?(?: n="[A-Za-z0-9_.\-]+")?>|<\/rs>|<lb n="[A-Za-z0-9.\-]+"\/>/
 
   # Graphemes of `text` without its markers, one marker at a time: a note inside an
   # italic run or a stage is read while the run is still open, so InlineMarkup.plain/1,
@@ -2270,7 +2300,7 @@ defmodule Playcode.Import.TeiParser do
         []
 
       body ->
-        term = safe_text(find_child(children, "term"))
+        term = term_text(find_child(children, "term"))
 
         [
           %{
@@ -2308,6 +2338,12 @@ defmodule Playcode.Import.TeiParser do
       }
     ]
   end
+
+  # A note's <term>, its tagged names kept (read_child/3), a break read as a space.
+  defp term_text(nil), do: nil
+
+  defp term_text(term),
+    do: term |> text_content(:breaks) |> String.replace(@break, " ") |> String.trim()
 
   # A note's text: its paragraphs, a blank line between them, its <term> left out; nil for
   # no note, or one with no text (a note of nothing but breaks, EMOTHE0299's <p><lb/></p>).

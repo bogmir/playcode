@@ -190,12 +190,12 @@ defmodule Playcode.Statistics.Metrics do
   end
 
   # The closing tags (and number markers) that send a line through `InlineMarkup.spoken/1`.
-  @spoken_markers ["</stage>", "<lb ", "</aside>", "</folio>"]
+  @spoken_markers ["</stage>", "<lb ", "</aside>", "</folio>", "</rs>"]
 
   @doc """
   Number of spoken words in element content: the `<<`/`>>` and aside markers, a Folio
-  passage's tags, a printed line's number and the words of an inline stage direction are
-  not spoken (a passage's words are).
+  passage's tags, a tagged name's tag, a printed line's number and the words of an inline
+  stage direction are not spoken (a passage's and a tagged name's words are).
   """
   def words(nil), do: 0
 

@@ -2032,6 +2032,101 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # La paloma de Toledo (EMOTHE0551) tags 229 names, places, props and gestures with <rs>,
+  # and the plays of question 63 will: the words a note explains, the note inside the tag.
+  describe "names, places and phrases tagged with rs" do
+    test "an rs comes back with its kind, its number and its words, wherever the text has one" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l n="1">pues te llaman en <rs n="5087" type="toponimo_accion">Castilla</rs></l>
+                <l n="2">feudo <rs type="mitologia_antroponimo">Adonis</rs> y <stage>coge <rs n="7" type="atrezzo">la capa</rs></stage></l>
+                <l n="3"><stage type="delivery">[Aparte.]</stage><seg type="aside">mira el <rs n="8" type="espacio">jardín</rs></seg></l>
+              </lg></sp>
+              <stage>Sale un CRIADO con unos <rs n="5195" type="atrezzo">memoriales</rs></stage>
+              """)
+          )
+        )
+
+      assert xml_elements(xml, "rs") == [
+               {%{"n" => "5087", "type" => "toponimo_accion"}, "Castilla"},
+               {%{"type" => "mitologia_antroponimo"}, "Adonis"},
+               {%{"n" => "7", "type" => "atrezzo"}, "la capa"},
+               {%{"n" => "8", "type" => "espacio"}, "jardín"},
+               {%{"n" => "5195", "type" => "atrezzo"}, "memoriales"}
+             ]
+
+      assert reading_texts(xml, "l") == [
+               "pues te llaman en Castilla",
+               "feudo Adonis y coge la capa",
+               "mira el jardín"
+             ]
+
+      assert xml_texts(xml, "rs", within: "stage") == ["la capa", "memoriales"]
+      assert xml_texts(xml, "rs", within: "seg") == ["jardín"]
+    end
+
+    # Playcode stores where a note is in the text, not which side of the tag it stood: one
+    # just after an rs is taken to be about its words and goes inside, the form question 63
+    # chose. EMOTHE0551 has 19 notes inside and 22 just after; all 41 come back inside.
+    test "a note or an entry at the end of an rs goes inside it" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l n="1">la <rs n="5094" type="toponimo_aludido">Montalbán<note n="1" type="editor_digital"><term>Montalbán</term><p>Un pueblo.</p></note></rs> y más</l>
+                <l n="2">es <rs n="5253" type="mitologia_antroponimo">Jove<app type="substantive" n="712"><lem wit="#MP">Jove</lem><rdg wit="#P">joven</rdg></app></rs> sin duda</l>
+                <l n="3">dijo <rs type="latinismo">nobile decus</rs><note n="2" type="editor"><p>Después.</p></note></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      for xml <- [xml, roundtrip(xml)] do
+        assert xml_texts(xml, "term", within: "rs") == ["Montalbán"]
+        assert xml_texts(xml, "p", within: "rs") == ["Un pueblo.", "Después."]
+        assert [{%{"n" => "712"}, _}] = xml_elements(xml, "app", within: "rs")
+
+        assert reading_texts(xml, "l") == [
+                 "la Montalbán y más",
+                 "es Jove sin duda",
+                 "dijo nobile decus"
+               ]
+      end
+    end
+
+    # EMOTHE0551's notes tag 58 names, in their terms and their text, two of them in a title
+    # in italics: an italic run that ends in a tag is cut around it.
+    test "an rs in a note's term or text comes back, one in italics too" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l n="1">en Toledo<note n="1" type="editor_digital"><term><rs n="5098" type="toponimo_aludido">Toledo</rs></term><p>Las cuestas en <rs n="5098" type="toponimo_aludido">Toledo</rs>. Rojas escribió <emph>Lucrecia y <rs n="5108" type="mitologia_toponimo">Tarquino</rs></emph>, a esta leyenda.</p></note></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      for xml <- [xml, roundtrip(xml)] do
+        assert xml_texts(xml, "rs", within: "term") == ["Toledo"]
+        assert xml_texts(xml, "rs", within: "p") == ["Toledo", "Tarquino"]
+        assert xml_texts(xml, "emph", within: "rs") == ["Tarquino"]
+
+        # The importer trims italics, so the space after them moves outside on a re-import.
+        assert xml =~ ~r{Toledo</rs>\. Rojas escribió <emph>Lucrecia y ?</emph> ?<rs}
+        assert xml =~ ~s(<emph>Tarquino</emph></rs>, a esta leyenda.)
+      end
+    end
+  end
+
   describe "in-text notes" do
     @noted """
     <div1 type="acto" n="1"><head>ACTO I</head>

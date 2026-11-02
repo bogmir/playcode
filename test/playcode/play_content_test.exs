@@ -220,6 +220,53 @@ defmodule Playcode.PlayContentTest do
     end
   end
 
+  describe "a tagged name in an element's text" do
+    setup do
+      %{play: play, scene: scene, line_group: line_group} =
+        TestFixtures.play_with_structure_fixture()
+
+      attrs = fn content ->
+        %{
+          play_id: play.id,
+          division_id: scene.id,
+          parent_id: line_group.id,
+          type: "verse_line",
+          content: content,
+          position: 9
+        }
+      end
+
+      %{attrs: attrs}
+    end
+
+    test "is kept when it is sound, in a line, a stage or italics", %{attrs: attrs} do
+      for content <- [
+            ~s(en <rs type="toponimo_accion" n="5087">Castilla</rs>),
+            ~s(<rs>Adonis</rs> y <stage>coge <rs type="atrezzo">la capa</rs></stage>),
+            ~s(<rs type="latinismo"><<nobile decus>></rs>)
+          ] do
+        assert {:ok, _line} = PlayContent.create_element(attrs.(content)), content
+      end
+    end
+
+    test "is refused when it is not sound", %{attrs: attrs} do
+      message = "has an rs marker that is not well formed"
+
+      for content <- [
+            "<rs>sin cerrar",
+            "a</rs>b",
+            "<rs></rs>",
+            "<rs>a <rs>b</rs></rs>",
+            ~s(<rs type="a b">c</rs>),
+            "<<a <rs>b>></rs>",
+            "<rs>a <stage>b</stage></rs>"
+          ] do
+        assert {:error, changeset} = PlayContent.create_element(attrs.(content))
+        assert %{content: [^message]} = errors_on(changeset), content
+      end
+    end
+  end
+
   describe "a Folio marker in an element's text" do
     setup do
       %{play: play, scene: scene, line_group: line_group} =

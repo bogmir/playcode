@@ -147,6 +147,7 @@ defmodule Playcode.StatisticsTest do
           "Dulce &lt;&lt;sueño&gt;&gt; mío",
           "Dulce <aside>sueño</aside> mío",
           "O God, <folio>O</folio> God,",
+          ~s(pues te llaman en <rs type="toponimo_accion" n="5087">Castilla</rs>),
           "",
           "!?"
         ] do
@@ -161,6 +162,8 @@ defmodule Playcode.StatisticsTest do
     assert Metrics.words("Dulce <aside><<sueño>></aside> mío") == 3
     # A Folio passage's words count with the rest; its tags are no word.
     assert Metrics.words("O God, <folio>O</folio> God,") == 4
+    # A tagged name's words count; its tag, kind and number are no word.
+    assert Metrics.words(~s(en <rs type="toponimo_accion" n="5087">Castilla</rs>)) == 2
     assert Metrics.words(nil) == 0
   end
 

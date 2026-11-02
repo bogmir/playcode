@@ -1496,6 +1496,19 @@ defmodule Playcode.Export.TeiXml do
     [element(:stage, attrs, content) | inline_nodes(rest)]
   end
 
+  # A tagged name, place or phrase: its pieces, a note at its end included, inside one <rs>.
+  defp inline_nodes([%{rs: %{run: run} = rs} | _] = parts) do
+    {inside, rest} = Enum.split_while(parts, &match?(%{rs: %{run: ^run}}, &1))
+
+    content =
+      case inside |> Enum.map(&Map.delete(&1, :rs)) |> inline_nodes() do
+        [text] when is_binary(text) -> text
+        nodes -> nodes
+      end
+
+    [element(:rs, attributes(type: rs.type, n: rs.n), content) | inline_nodes(rest)]
+  end
+
   # A note inside an italic run, which InlineMarkup.parts/2 splits there, goes back inside
   # its <emph>, as the source had it: split, the space after the note would open the
   # second <emph>, and the importer, which trims italics, would glue the words together.

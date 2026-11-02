@@ -187,6 +187,7 @@ defmodule Playcode.PlayContent.Element do
     )
     |> validate_stage_markers()
     |> validate_aside_markers()
+    |> validate_rs_markers()
     |> validate_folio_markers()
     |> validate_number_markers()
     |> continue_only_an_aside()
@@ -240,6 +241,15 @@ defmodule Playcode.PlayContent.Element do
       true ->
         add_error(changeset, :content, "has an aside marker that is not well formed")
     end
+  end
+
+  # A tagged name, place or phrase is sound or refused: a broken one would print as tags
+  # and could not be written back as <rs>.
+  defp validate_rs_markers(changeset) do
+    if changed?(changeset, :content) and
+         not InlineMarkup.rs_well_formed?(get_field(changeset, :content)),
+       do: add_error(changeset, :content, "has an rs marker that is not well formed"),
+       else: changeset
   end
 
   # A malformed <lb would print as literal tags and could not be written back as <lb n>.
