@@ -187,6 +187,7 @@ defmodule PlaycodeWeb.API.PlayController do
     %{
       type: "line_group",
       verse_type: element.verse_type,
+      heading: element.content,
       children: element |> Map.get(:children, []) |> Enum.map(&serialize_element/1)
     }
   end

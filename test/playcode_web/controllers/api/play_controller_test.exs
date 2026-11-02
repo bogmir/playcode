@@ -20,7 +20,7 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
           """,
           body: """
           <div1 type="acto" n="1"><head>ACTO I</head>
-            <sp who="#REY"><speaker>EL REY</speaker><lg type="redondilla"><l n="1">Primer verso</l></lg></sp>
+            <sp who="#REY"><speaker>EL REY</speaker><lg type="redondilla"><head>Canción</head><l n="1">Primer verso</l></lg></sp>
             <stage>Vase</stage>
           </div1>
           """
@@ -187,6 +187,7 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
 
     assert %{
              "verse_type" => "redondilla",
+             "heading" => "Canción",
              "children" => [
                %{"content" => "Primer verso", "line_number" => 1, "aside_continues" => false}
              ]

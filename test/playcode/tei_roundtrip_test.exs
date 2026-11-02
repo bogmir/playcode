@@ -2032,6 +2032,55 @@ defmodule Playcode.TeiRoundtripTest do
     end
   end
 
+  # The Broken Heart (EMOTHE0354) heads two stanzas, "A Song" and "The Epilogue"; the
+  # importer kept only a group's lines and stage directions, so both were lost.
+  describe "a verse group's heading" do
+    test "comes back first in its group, italics and notes and all" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ITHOCLES</speaker>
+                <lg type="free"><head>A <emph>Song</emph><note n="1" type="editor"><p>Sung offstage.</p></note></head>
+                  <l n="1">Can you paint a thought?</l>
+                </lg>
+                <lg type="free"><l n="2">No heading here</l></lg>
+              </sp>
+              """)
+          )
+        )
+
+      for xml <- [xml, roundtrip(xml)] do
+        assert reading_texts(xml, "head") == ["ACTO", "A Song"]
+        assert xml_texts(xml, "emph", within: "lg") == ["Song"]
+        assert [%{in: "head", after: "A Song", paragraphs: ["Sung offstage."]}] = xml_notes(xml)
+        assert reading_texts(xml, "l") == ["Can you paint a thought?", "No heading here"]
+        assert xml =~ ~r{<lg type="free">\s*<head>}
+      end
+    end
+
+    # Love for Love's song (EMOTHE0478 vv. 528-535) is a group inside a group, which the
+    # importer reads only its outer lines of: its eight verses were lost without a word.
+    test "a group inside a group is reported, its lines named, not dropped silently" do
+      log =
+        ExUnit.CaptureLog.capture_log(fn ->
+          tei(
+            body:
+              scene("""
+              <sp><speaker>SCANDAL</speaker><lg type="free" part="M"><stage>1</stage>
+                <lg type="free"><l n="528">A nymph and a swain to Apollo once prayed,</l><l n="529">The swain had been jilted</l></lg>
+              </lg></sp>
+              """)
+          )
+          |> import_tei!()
+        end)
+
+      assert log =~ "a verse group inside a verse group"
+      assert log =~ "2 line(s) left out"
+    end
+  end
+
   # La paloma de Toledo (EMOTHE0551) tags 229 names, places, props and gestures with <rs>,
   # and the plays of question 63 will: the words a note explains, the note inside the tag.
   describe "names, places and phrases tagged with rs" do

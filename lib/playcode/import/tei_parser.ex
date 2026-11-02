@@ -1621,13 +1621,27 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Line group ---
 
+  # A group's <head> ("A Song") is its content, its notes the heading's. A group inside it
+  # is not read (EMOTHE0478's song): it is reported, so its lines are not lost unseen.
   defp line_group(attrs, children, pos) do
+    {heading, notes} = text_and_notes(find_child(children, "head"))
+
+    for {"lg", _, inner} <- children do
+      lines = inner |> find_children("l") |> length()
+
+      Logger.warning(
+        "TEI import: a verse group inside a verse group, #{lines} line(s) left out: " <>
+          "make it a group of its own"
+      )
+    end
+
     %{
       type: "line_group",
       position: pos,
+      content: heading,
       verse_type: attr_value(attrs, "type"),
       part: attr_value(attrs, "part"),
-      notes: [],
+      notes: notes,
       elements:
         children
         |> Enum.filter(&match?({name, _, _} when name in ~w(l stage), &1))

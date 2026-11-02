@@ -644,6 +644,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp el(%{el: %{type: "line_group"}} = assigns) do
     ~H"""
     <div class={["lg", Element.folio_only?(@el) && "fo"]}>
+      <p :if={@el.content} class="tr"><.inline text={@el.content} notes={@el.notes} /></p>
       <.el :for={child <- @el.children} el={child} edition={@edition} />
     </div>
     """

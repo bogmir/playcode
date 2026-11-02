@@ -582,8 +582,15 @@ defmodule Playcode.Export.Html do
     "      <div class=\"speech#{aside_class}\">\n#{speaker}#{children}      </div>\n"
   end
 
+  # A group's heading ("A Song") centred and in italics, as a closing formula is.
   defp render_element(%{type: "line_group"} = el) do
-    Map.get(el, :children, []) |> Enum.map(&render_element/1) |> Enum.join()
+    heading =
+      if el.content,
+        do:
+          "        <div class=\"trailer\">#{NoteMarkup.inline(el.content, el.notes, :html)}</div>\n",
+        else: ""
+
+    heading <> (Map.get(el, :children, []) |> Enum.map(&render_element/1) |> Enum.join())
   end
 
   defp render_element(%{type: "verse_line"} = el) do

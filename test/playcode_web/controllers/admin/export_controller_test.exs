@@ -118,6 +118,21 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert body =~ ~r/\.trailer em \{[^}]*font-style: normal/
   end
 
+  test "a downloaded comparison prints a verse group's heading", %{conn: conn, play: play} do
+    sung =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ITHOCLES</speaker><lg><head>A <emph>Song</emph></head><l n="1">Can you paint a thought?</l></lg></sp></div1>)
+        )
+      )
+
+    conn = get(conn, ~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{sung.id}"]}")
+
+    assert response(conn, 200) =~
+             ~r{<div class="trailer">A <em>Song</em></div>\s*<div class="verse-line}
+  end
+
   # Question 41: the Arte nuevo and its translations, compared, each poem's dedication.
   test "a downloaded comparison prints a poem's opener", %{conn: conn, play: play} do
     poem =

@@ -100,6 +100,28 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert xml_texts(export_tei(play), "stage") == ["Sale el Rey", "Entra un criado"]
   end
 
+  # The Broken Heart's "A Song": a stanza's heading, written to the file as its <head>.
+  test "a heading given to a stanza goes into the file, before its lines", %{
+    conn: conn,
+    play: play
+  } do
+    lv = open_scene(conn, play)
+
+    [stanza_id] =
+      Regex.run(
+        ~r/phx-value-parent-id="([^"]+)"/,
+        lv |> element("button", t("Add Verse Line")) |> render(),
+        capture: :all_but_first
+      )
+
+    render_click(lv, "edit_element", %{"id" => stanza_id})
+    lv |> form("#element-form", element: %{"content" => "A <<Song>>"}) |> render_submit()
+
+    xml = export_tei(play)
+    assert xml_texts(xml, "head", within: "lg") == ["A Song"]
+    assert xml =~ ~r{<lg type="redondilla">\s*<head>A <emph>Song</emph></head>\s*<l}
+  end
+
   # A verse's number is the edition's, the one readers cite (TEI's `n`, a reference system),
   # so adding or deleting a verse renumbers no other (decided 2026-10-22). These tests asserted
   # the renumbering until then; it renumbered other acts' verses in a play whose numbering

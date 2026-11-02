@@ -65,6 +65,26 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert Enum.any?(files, fn {_name, content} -> content =~ "FIN DEL PRIMER ACTO" end)
   end
 
+  # The Broken Heart's "A Song" and "The Epilogue" head their stanzas, centred and in
+  # italics as a closing formula is.
+  test "the HTML and EPUB downloads print a verse group's heading before its lines", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>ITHOCLES</speaker><lg type="free"><head>A <emph>Song</emph></head><l n="1">Can you paint a thought?</l></lg></sp></div1>)
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for text <- [html, epub_text(files)] do
+      assert text =~ ~r{<div class="trailer">A <em>Song</em></div>\s*<div class="verse-line}
+    end
+  end
+
   # As emothe.uv.es set it: centred, in italics, an italic word in it set upright.
   test "the HTML and EPUB downloads set the closing formula centred and in italics",
        %{conn: conn, play: play} do

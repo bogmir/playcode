@@ -267,6 +267,13 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp render_element(%{element: %{type: "line_group"}} = assigns) do
     ~H"""
     <div class={["line-group", Element.folio_only?(@element) && "folio"]}>
+      <p :if={@element.content} class="my-4 text-center italic [&_em]:not-italic">
+        <.inline_content
+          text={@element.content}
+          notes={@element.notes}
+          show_stage={@show_stage_directions}
+        />
+      </p>
       <div
         :if={@show_verse_type && @element.verse_type}
         class="flex items-baseline gap-2 ml-1 sm:ml-4 -mb-0.5"

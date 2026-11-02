@@ -50,6 +50,17 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  test "a verse group's heading stands before its lines" do
+    {play, dir} =
+      publish!(
+        ~s(<div1 type="acto" n="1"><sp><speaker>ITHOCLES</speaker><lg type="free"><head>A <emph>Song</emph></head><l n="1">Can you paint a thought?</l></lg></sp></div1>)
+      )
+
+    for file <- ["act-1.html", "text.html"] do
+      assert dir |> page(play, file) |> LazyHTML.text() =~ ~r/A Song\s*1?\s*Can you paint/, file
+    end
+  end
+
   # Regression: WordParser puts a stanza straight under the division when {m} opens
   # with no speaker; its verses used to get no item, no anchor, and the build raised.
   test "a Word-imported stanza with no speaker is published, and counted" do

@@ -411,8 +411,14 @@ defmodule Playcode.Export.CompareHtml do
     "      <div class=\"speech#{aside_class}\"#{key_attr}>\n#{speaker}#{children}      </div>\n"
   end
 
+  # A group's heading ("A Song") centred and in italics, as a closing formula is.
   defp render_element(%{type: "line_group"} = el, _key) do
-    Map.get(el, :children, []) |> Enum.map(&render_element(&1, nil)) |> Enum.join()
+    heading =
+      if el.content,
+        do: "        <div class=\"trailer\">#{NoteMarkup.inline(el.content, [], :html)}</div>\n",
+        else: ""
+
+    heading <> (Map.get(el, :children, []) |> Enum.map(&render_element(&1, nil)) |> Enum.join())
   end
 
   defp render_element(%{type: "verse_line"} = el, _key) do

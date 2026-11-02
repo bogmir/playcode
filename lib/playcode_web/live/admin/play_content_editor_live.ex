@@ -3435,6 +3435,13 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <span class="label-text font-medium">{gettext("Verse Type")}</span>
         </label>
         <.input field={@form[:verse_type]} type="select" options={verse_types()} />
+        <label class="label mt-4" for={@form[:content].id}>
+          <span class="label-text font-medium">{gettext("Heading")}</span>
+        </label>
+        <.input field={@form[:content]} type="text" placeholder={gettext("A Song")} />
+        <p class="mt-1 text-xs text-base-content/70">
+          {gettext("Printed before the stanza's lines, as a song's title is; blank for none.")}
+        </p>
       </div>
 
       <%!-- Verse line fields --%>

@@ -1297,8 +1297,13 @@ defmodule Playcode.Export.TeiXml do
     attrs = if el.verse_type, do: Map.put(attrs, :type, el.verse_type), else: attrs
     attrs = if el.part, do: Map.put(attrs, :part, el.part), else: attrs
 
+    head =
+      if el.content,
+        do: [inline_element(:head, %{}, build_inline_content(el.content, el.notes))],
+        else: []
+
     lines = Map.get(el, :children, []) |> Enum.map(&build_element/1) |> Enum.reject(&is_nil/1)
-    element(:lg, attrs, lines)
+    element(:lg, attrs, head ++ lines)
   end
 
   defp build_element(%{type: "verse_line"} = el) do

@@ -52,6 +52,20 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert html =~ ~r{The banished cavaliers!<br/?>A roving blade!}
   end
 
+  test "a verse group's heading stands before its lines", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><sp><speaker>ITHOCLES</speaker><lg type="free"><head>A <emph>Song</emph></head><l n="1">Can you paint a thought?</l></lg></sp></div1>)
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert html |> LazyHTML.from_fragment() |> LazyHTML.text() =~ ~r/A Song\s*1?\s*Can you paint/
+  end
+
   # Where emothe.uv.es prints them: after the text, each listed in the navigation, an
   # untitled one by its kind.
   test "the paratexts after the text follow it", %{conn: conn} do
