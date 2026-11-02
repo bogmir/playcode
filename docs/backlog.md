@@ -6,12 +6,12 @@ items with a longer write-up live in `docs/static-site-improvements.md`.
 
 ## Proposed from the answers of 1 and 2 November (2026-11-02), awaiting approval
 
-The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the owner settled the follow-ups 58-65 on 2 November, 64 from FileMaker's sources table (all recorded in `docs/stakeholder/preguntas.html`). Nothing here is approved: each task waits for the owner's go-ahead, then moves to its priority section, and to `docs/history.md` once built. Suggested order: B8 and B1 are built (2026-11-02); then every A with one re-import; B3, B4 and B2 as one reading-tools project; B6, B7 and B9; B5; C1 once the team confirms its list.
+The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the owner settled the follow-ups 58-65 on 2 November, 64 from FileMaker's sources table (all recorded in `docs/stakeholder/preguntas.html`). Nothing here is approved: each task waits for the owner's go-ahead, then moves to its priority section, and to `docs/history.md` once built. Suggested order: B8, B1 and B9 are built (2026-11-02); then every A with one re-import; B3, B4 and B2 as one reading-tools project; B6 and B7; B5; C1 once the team confirms its list.
 
 **A. File corrections** (no code unless named; one re-import on dev and production, then Generate; every changed file listed for the team's own copy)
 
 - [x] **A5. *El bastardo Mudarra*'s GitHub apparatus** (question 46) - not finished: the published text stays. Nothing to do
-- [ ] **A6. The editor's reminders out of the files** (question 58) - the three `notesStmt` reminders of EMOTHE0021, 0023 and 0163 copied to B9's team note, then removed from the files. Needs B9 first. Small
+- [ ] **A6. The editor's reminders out of the files** (question 58) - the three `notesStmt` reminders of EMOTHE0021, 0023 and 0163 copied to B9's team note, then removed from the files. B9 built it (2026-11-02). Small
 
 **B. Code**
 
@@ -21,7 +21,6 @@ The team answered questions 17, 26, 31, 44-47, 49, 51 and 52 on 1 November; the 
 - [ ] **B5. A page of the play's stage directions** (question 52, C) - like `notes.html`, each linked to its place; a filter by kind only where the file gives one (about one in five). Medium
 - [ ] **B6. The notes on the edition printed** (question 26) - on the play page, the site and the downloads, all but the licence (A4); the reminders leave the files (A6); the four witness lists (0312, 0323, 0357, 0358) in full. Small to medium
 - [ ] **B7. `falta_tipo` takes the play's usual kind** (question 17) - 132 notes in 10 plays: an editor's note in an original, a translator's in a translation (*Félismène*'s 100 glosses become editor's notes). On import, so the exported file is corrected. Small
-- [ ] **B9. A team note on a play** (question 58) - a text only staff see in the admin, never printed and never written to the TEI file: the third column kept out of the file on purpose, beside `is_complete` and `show_variants`, so `CLAUDE.md`'s rule and `complete_copy_test.exs` name it. Holds A6's reminders. Small
 
 **C. Corpus check**
 

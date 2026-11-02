@@ -200,6 +200,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
         parent_play_id: {relative.id, "parent play"},
         is_complete: {true, "completeness"},
         show_variants: {false, "variant readings"},
+        team_note: {"Recordatorio", "team note"},
         historical_time: {"edad_media", "historical time"},
         historical_time_note: {"Reinado de Juan I", "historical time note"},
         composition_date_from: {1606, "composition date (from)"},

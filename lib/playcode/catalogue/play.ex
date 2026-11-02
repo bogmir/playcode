@@ -27,7 +27,8 @@ defmodule Playcode.Catalogue.Play do
 
   `is_complete` decides what the static site publishes. `show_variants` decides whether
   readers see the play's textual variants; like `is_complete` it is Playcode's, never written
-  to or read from the TEI file.
+  to or read from the TEI file. So is `team_note`, a text only staff read (question 58),
+  printed nowhere.
   """
 
   use Ecto.Schema
@@ -69,6 +70,7 @@ defmodule Playcode.Catalogue.Play do
     field :edition_title, :string
     field :is_complete, :boolean, default: false
     field :show_variants, :boolean, default: true
+    field :team_note, :string
     field :historical_time, :string
     field :historical_time_note, :string
     field :composition_date_from, :integer
@@ -211,6 +213,7 @@ defmodule Playcode.Catalogue.Play do
       :edition_title,
       :is_complete,
       :show_variants,
+      :team_note,
       :historical_time,
       :historical_time_note,
       :composition_date_from,

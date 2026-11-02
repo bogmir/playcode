@@ -427,4 +427,53 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     {:ok, _} = play |> export_tei() |> write_tmp!() |> Playcode.Import.TeiImport.import_file()
     assert hidden?.()
   end
+
+  # Question 58: the editor's reminders leave the files and stay in Playcode, where only the
+  # team reads them.
+  describe "a team note" do
+    @note "Recordatorio: cotejar la jornada II con la príncipe."
+
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Verso</l></sp></div1>)
+        )
+        |> import_tei!()
+        |> mark_complete!()
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+      save(view, %{"team_note" => @note})
+      %{play: play}
+    end
+
+    test "is saved, shown on the form and kept by a re-import", %{conn: conn, play: play} do
+      file = play |> export_tei() |> write_tmp!()
+      # The import page and --dry-run say the re-import keeps it.
+      assert {:ok, preview} = Playcode.Import.TeiImport.preview_import(file)
+      assert :team_note in preview.preserves_fields
+      {:ok, _} = Playcode.Import.TeiImport.import_file(file)
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+      assert view |> element("#play-form textarea[name='play[team_note]']") |> render() =~ @note
+    end
+
+    test "is printed nowhere and written to no file", %{conn: conn, play: play} do
+      {:ok, _page, html} = live(conn, ~p"/plays/#{play.code}")
+      refute html =~ "Recordatorio"
+
+      for path <- [~p"/export/#{play.id}/tei", ~p"/export/#{play.id}/html"] do
+        refute get(conn, path).resp_body =~ "Recordatorio", path
+      end
+
+      for path <- ["/api/v1/plays/#{play.code}", "/api/v1/plays/#{play.code}/text"] do
+        refute get(build_conn(), path).resp_body =~ "Recordatorio", path
+      end
+
+      dir = Playcode.StaticSiteHelpers.generate!([play], all: true)
+
+      for file <- Path.wildcard(Path.join(dir, "**/*")), File.regular?(file) do
+        refute File.read!(file) =~ "Recordatorio", file
+      end
+    end
+  end
 end

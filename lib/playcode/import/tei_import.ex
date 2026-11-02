@@ -39,6 +39,7 @@ defmodule Playcode.Import.TeiImport do
     :parent_play_id,
     :is_complete,
     :show_variants,
+    :team_note,
     :historical_time,
     :historical_time_note,
     :composition_date_from,

@@ -716,6 +716,18 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           </div>
         </div>
 
+        <div>
+          <label class="label" for={@form[:team_note].id}>
+            <span class="label-text font-medium">{gettext("Team note")}</span>
+          </label>
+          <.input field={@form[:team_note]} type="textarea" />
+          <p class="mt-1 text-xs text-base-content/70">
+            {gettext(
+              "Only the team reads it: it is printed nowhere and never written to the TEI file."
+            )}
+          </p>
+        </div>
+
         <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
           <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
             {gettext("Project & Editorial")}

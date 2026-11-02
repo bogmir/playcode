@@ -38,9 +38,14 @@ defmodule Playcode.CompleteCopyTest do
               show_variants source_entry_id company_id actor_id performance_id
               cast_list_id character_id)a
 
-  # The researchers' private notes, never written to the file: it is published with the
-  # site. Dropped by schema, not by name: every other `note` is the play's.
-  @private %{Bibliography.Entry => [:note], Bibliography.Link => [:note]}
+  # The researchers' private notes and the play's team note (question 58), never written to
+  # the file: it is published with the site. Dropped by schema, not by name: every other
+  # `note` is the play's.
+  @private %{
+    Bibliography.Entry => [:note],
+    Bibliography.Link => [:note],
+    Catalogue.Play => [:team_note]
+  }
 
   test "an ordinary play comes back whole from its TEI file" do
     original = play_fixture(%{"code" => "CCO#{System.unique_integer([:positive])}"})
@@ -275,13 +280,14 @@ defmodule Playcode.CompleteCopyTest do
   # What only a few plays use: Hamlet's variant readings and Folio passages, the printed
   # lines of prose, a line partly aside, the original cast, the notes on the edition, a
   # paratext after the text or a heading alone, the places of the action, and what
-  # Playcode alone holds (a researcher credit, text nobody speaks inside a scene).
+  # Playcode alone holds (a researcher credit, text nobody speaks inside a scene, a team note).
   defp rare_play do
     {:ok, play} =
       Catalogue.create_play(%{
         title: "Una comedia rara",
         code: "CR#{System.unique_integer([:positive])}",
-        edition_notes: ["Una nota sobre la edición.", "Otra nota,\nen dos líneas."]
+        edition_notes: ["Una nota sobre la edición.", "Otra nota,\nen dos líneas."],
+        team_note: "Recordatorio para el equipo."
       })
 
     credits!(play, [{"researcher", "Investigadora, Inés", "Instituto"}])
