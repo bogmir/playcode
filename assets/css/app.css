@@ -215,7 +215,8 @@
   background: oklch(from var(--color-primary) l c h / 0.1);
 }
 
-.play-text [data-current] {
+.play-text[data-shared="on"] [data-part][data-current],
+.play-text[data-sd-mark="on"] [data-sd][data-current] {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }

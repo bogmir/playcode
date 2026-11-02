@@ -1203,6 +1203,12 @@ defmodule Playcode.Export.StaticSitePlayTest do
     css = read!(dir, "assets/style.css")
     assert css =~ ~s(body[data-sh="on"] .l[data-part="I"] .t)
     assert css =~ ~s(body[data-sdm="on"] .sd)
+    # The outline of the one the arrows landed on goes with its switch, and on a narrow
+    # screen, where the rail scrolls away, the arrows stay at the foot of the window.
+    assert css =~ ~s(body[data-sh="on"] .l[data-current])
+    assert css =~ ~s(body[data-sdm="on"] :is(.sd, .sdi\)[data-current])
+    refute css =~ ~r/^\[data-current\]/m
+    assert css =~ ~r/@media \(max-width: 959px\) \{[^}]*\[data-stepper\] \{ position: fixed/
 
     # A prose act with no stage direction offers neither.
     prose = page(dir, play, "act-2.html")

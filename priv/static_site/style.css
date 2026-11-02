@@ -162,7 +162,13 @@ body[data-sh="on"] .l[data-part="I"] .t, .sw[data-part="I"] { background: var(--
 body[data-sh="on"] .l[data-part="M"] .t, .sw[data-part="M"] { background: var(--sh-m); }
 body[data-sh="on"] .l[data-part="F"] .t, .sw[data-part="F"] { background: var(--sh-f); }
 body[data-sdm="on"] .sd, body[data-sdm="on"] .sdi { background: var(--mark); }
-[data-current] { outline: 2px solid var(--accent); outline-offset: 2px; }
+body[data-sh="on"] .l[data-current], body[data-sdm="on"] :is(.sd, .sdi)[data-current] { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* Below 960px the rail is a block above the text: while it is open, the arrows stay at the
+   foot of the window, so a reader need not scroll back up for each press. */
+@media (max-width: 959px) {
+  [data-stepper] { position: fixed; right: 1rem; bottom: 1rem; z-index: 5; background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; padding: .3rem .5rem; box-shadow: 0 2px 8px rgb(0 0 0 / .15); }
+  [data-stepper][data-for="sdm"] { bottom: 3.75rem; }
+}
 body[data-sh="off"] [data-for="sh"], body[data-sh="off"] .shared-legend, body[data-sdm="off"] [data-for="sdm"] { display: none; }
 .stepper { display: flex; align-items: center; gap: .5rem; padding: .1rem 0 .3rem 1.5rem; font-variant-numeric: tabular-nums; }
 .stepper button { font: inherit; border: 1px solid var(--hair); border-radius: 6px; background: var(--raised); color: var(--ink-2); padding: 0 .55rem; cursor: pointer; }

@@ -149,8 +149,11 @@ defmodule PlaycodeWeb.PlayShowLive do
     <div class="play-text-page min-h-screen">
       <div class="max-w-7xl mx-auto px-4 py-6 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-6">
         <%!-- Sidebar --%>
-        <aside id="play-sections-panel" class="mb-4 lg:mb-0 lg:sticky lg:top-16 lg:self-start">
-          <div class="rounded-box border border-base-300 bg-base-100/90 backdrop-blur-sm shadow-sm">
+        <aside
+          id="play-sections-panel"
+          class="mb-4 lg:mb-0 lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto"
+        >
+          <div class="rounded-box border border-base-300 bg-base-100/90 lg:backdrop-blur-sm shadow-sm">
             <div class="flex items-center justify-between px-3 py-2.5">
               <button
                 phx-click="toggle_sidebar"
@@ -803,7 +806,14 @@ defmodule PlaycodeWeb.PlayShowLive do
       data-selector={@selector}
       data-of={gettext("of")}
       data-watch={@watch}
-      class="flex items-center gap-1 pl-6 text-xs text-base-content/70"
+      class={
+        [
+          "flex items-center gap-1 pl-6 text-xs text-base-content/70",
+          # Below lg the side panel scrolls away: the arrows stay at the foot of the window.
+          "max-lg:fixed max-lg:right-4 max-lg:z-30 max-lg:rounded-box max-lg:border max-lg:border-base-300 max-lg:bg-base-100 max-lg:p-1 max-lg:shadow",
+          if(@id == "step-sd", do: "max-lg:bottom-16", else: "max-lg:bottom-4")
+        ]
+      }
     >
       <button type="button" data-step="-1" aria-label={@previous} class="btn btn-ghost btn-xs">
         ‹
