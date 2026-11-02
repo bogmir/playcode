@@ -142,6 +142,7 @@ main { padding: 1.75rem clamp(1rem, 4vw, 2.75rem) 3rem; min-width: 0; }
 .ghost { display: none; }
 /* site.js's EMOTHE.align: a part lined up after the earlier ones, where it fits on the line. */
 [data-aligned] > .ghost { display: inline; visibility: hidden; }
+.ghost.indent { padding-left: 2em; }
 .l.part-m .t[data-aligned], .l.part-f .t[data-aligned] { padding-left: 0; }
 .sd { margin: .6rem var(--margin) .6rem var(--gutter); font-style: italic; color: var(--ink-2); }
 .pr { margin: .2rem var(--margin) .5rem var(--gutter); text-align: justify; }
