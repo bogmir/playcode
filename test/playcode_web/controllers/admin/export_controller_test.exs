@@ -141,10 +141,15 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
           front: """
           <div type="elenco"><castList>
             <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
+            <castGroup><head><emph>Criados</emph></head><castItem><role xml:id="BLAS">BLAS</role></castItem></castGroup>
           </castList></div>
           """,
-          body:
-            ~s(<div1 type="acto" n="1"><head>Acto <emph>primero</emph></head><sp who="#CORT"><speaker>CORTESANOS</speaker><l n="1">Verso</l></sp></div1>)
+          body: """
+          <div1 type="prologo" n="1"><head><emph>Loa</emph></head><sp who="#BLAS"><speaker>BLAS</speaker><l n="1">Verso</l></sp></div1>
+          <div1 type="acto" n="1"><head>Acto <emph>primero</emph></head>
+            <div2 type="escena" n="1"><head>Escena <emph>única</emph></head><sp who="#CORT"><speaker>CORTESANOS</speaker><l n="2">Verso</l></sp></div2>
+          </div1>
+          """
         )
       )
 
@@ -152,7 +157,9 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     body = response(conn, 200)
 
     refute body =~ "&lt;&lt;"
-    for text <- ["The courtiers", "Spela", "primero"], do: assert(body =~ "<em>#{text}</em>")
+
+    for text <- ["The courtiers", "Spela", "Criados", "Loa", "primero", "única"],
+        do: assert(body =~ "<em>#{text}</em>", "#{text} is not in italics")
   end
 
   # Question 41: the Arte nuevo and its translations, compared, each poem's dedication.
