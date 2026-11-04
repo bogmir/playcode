@@ -44,7 +44,7 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 | `mix deps.get`, `mix ecto.create`, `mix ecto.migrate`, `git config core.hooksPath bin/git-hooks` | Getting started: set up a fresh checkout (the last enables the pre-commit hook: CI's compile and format checks), then load the data with the imports below |
 | `mix phx.server` | Dev server: import TEI at http://localhost:4000/admin/plays/import, browse at http://localhost:4000/plays |
 | `mix test` | The whole suite; `mix test 2>&1 \| tail -10` for the summary |
-| `mix test --include slow` | Adds the TEI schema validation and the full corpus sweep in `test/playcode/roundtrip_test.exs` (every tracked `test/fixtures/*.xml` plus the git-ignored `test/fixtures/tei_files/`), a few minutes. The default run covers two of those files |
+| `mix test --include slow` | Adds the TEI schema validation and the full corpus sweep in `test/playcode/roundtrip_test.exs` (every tracked `test/fixtures/*.xml` plus the git-ignored `test/fixtures/tei_files/`), a few minutes. The default run covers two of those files. A `DBConnection` timeout or `query_canceled` there: check whether two slow tests import one play code (give one a code of its own, as `apparatus_corpus_test.exs` does); otherwise it is load, and no rerun loop tells more. A deadlock or an assertion failure is real |
 | `node --test test/js/*.test.mjs` | The static site's browser JS; CI runs it after `mix test` |
 | `mix format` | After every task: CI checks it, and a noisy diff hides the real change |
 | `mix compile`, `mix compile --warnings-as-errors` | Compile; the pre-commit hook runs the second |
@@ -100,7 +100,7 @@ the FileMaker sync rules through `FilemakerSync.plan/3`, the account token rules
 - **Import and export are asserted as round trips.** Import a TEI snippet, export it, query the XML: `roundtrip/1`, `xml_elements/3`, `xml_texts/3`, `outline/1` and `docx/1` in `test/support/import_helpers.ex`. Not `parent_id`, `position` or element types.
 - **Read back through a context's public functions**, not `Repo`. `DataCase` does not import `Repo` or `Ecto.Query`; the rare test that must reach past the contexts (ageing a token, say) aliases them in place and says why.
 - **Select by what the user sees or by a stable id**: `element(lv, "#user-#{id} button", t("Reactivate"))`, an `aria-label` on an icon-only button, `aria-current` in the sidebar. Not `phx-click` attributes, CSS classes or regexes over markup. `t/2` in ConnCase gives the Spanish text the page renders.
-- **Prove a new test bites.** A test written for code that already works passes at once, which proves nothing. Break the line it covers, watch it go red, put it back, and say so in the commit.
+- **Prove a new test bites.** A test written for code that already works passes at once, which proves nothing. Break the line it covers, watch it go red, put it back, and say so in the commit: `bin/bites FILE OLD NEW TEST_PATH` does the three, restoring FILE whatever happens.
 - **Delete a test only when you can name what still covers its behaviour.**
 
 Where the tests live: `test/playcode/` for contexts, importers and exporters
