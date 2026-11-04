@@ -63,10 +63,11 @@ lib/
 │   │   └── performances.ex           # S5's one-time FileMaker performance import: the plan, the hand list of works, the write
 │   └── export/
 │       ├── tei_xml.ex                # Generate TEI-XML from DB
-│       ├── html.ex                   # Standalone HTML document export
+│       ├── download.ex               # The HTML/PDF and EPUB downloads' front matter and outline, in either format
+│       ├── html.ex                   # Standalone HTML document export: page, CSS and script around Download
 │       ├── pdf.ex                    # PDF via ChromicPDF (headless Chrome)
 │       ├── pdf_cache.ex              # Each play's PDF rendered once per version, kept on the volume
-│       ├── epub.ex                   # EPUB 3 generation via BUPE
+│       ├── epub.ex                   # EPUB 3 generation via BUPE: package, CSS and chapters around Download
 │       ├── note_markup.ex            # Italics and note references for the HTML/PDF and EPUB downloads
 │       ├── compare_html.ex           # Standalone comparison HTML with sync scroll
 │       ├── site_builder.ex           # The one process that writes and ships the admin's site
