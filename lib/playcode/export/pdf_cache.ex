@@ -141,9 +141,12 @@ defmodule Playcode.Export.PdfCache do
   end
 
   # What the PDF is rendered with: the HTML export and the PDF export around it, the
-  # downloads' render pass (`Download`), the modules that draw the text, the notes and the variants in it (a variant's readings and
-  # the names its witnesses go by), those that word the dating, and those that order the
-  # outline and print its cast lists, and those that line up a shared line's parts.
+  # downloads' render pass (`Download`), the modules that draw the text, the notes and the
+  # variants in it (a variant's readings and the names its witnesses go by, from their
+  # bibliography entries), those that word the dating, those that order the outline, split
+  # off an act's opening lists and print its cast lists, and those that line up a shared
+  # line's parts. ponytail: `Download` also holds the EPUB's 45-character rule, so changing
+  # it renders every PDF again; split the module if that rule ever changes often.
   defp code_version do
     [
       Playcode.Export.Html,
@@ -156,7 +159,10 @@ defmodule Playcode.Export.PdfCache do
       Playcode.PlayContent.Note,
       Playcode.PlayContent.Note.Reading,
       Playcode.Witnesses,
+      Playcode.Bibliography.Entry,
+      Playcode.Text,
       Playcode.Outline,
+      Playcode.PlayContent.Division,
       Playcode.PlayContent.CastListEntry,
       Playcode.PlayContent.SplitVerses,
       Playcode.PlayContent.Element

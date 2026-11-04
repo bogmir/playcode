@@ -122,6 +122,17 @@ defmodule Playcode.Export.Html do
 
         .publication p + p { margin-top: 0.4rem; }
 
+        /* The notes on the edition */
+        .edition-notes {
+          max-width: 640px;
+          margin: 0 auto 2rem;
+          font-size: 0.8rem;
+          text-align: justify;
+        }
+
+        .edition-notes h3 { font-size: 0.875rem; text-align: center; margin-bottom: 0.5rem; }
+        .edition-notes p + p { margin-top: 0.4rem; }
+
         /* A critical edition's witnesses, each a hanging indent as on the site */
         .witnesses {
           max-width: 640px;

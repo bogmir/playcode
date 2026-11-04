@@ -143,6 +143,8 @@ defmodule Playcode.Export.Epub do
     """
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    header, section, aside { display: block; }
+
     nav ol { list-style-type: none; padding-left: 0; }
 
     body {
@@ -198,6 +200,10 @@ defmodule Playcode.Export.Epub do
     .publication { margin: 0 auto 2em; font-size: 0.75em; color: rgba(51, 51, 51, 0.5); text-align: justify; }
     .publication p + p { margin-top: 0.4em; }
 
+    .edition-notes { margin: 0 auto 2em; font-size: 0.8em; text-align: justify; }
+    .edition-notes h3 { font-size: 0.875em; text-align: center; margin-bottom: 0.5em; }
+    .edition-notes p + p { margin-top: 0.4em; }
+
     .witnesses { margin: 0 auto 2em; font-size: 0.8em; }
     .witnesses h2 { font-size: 0.875em; text-align: center; margin-bottom: 0.5em; }
     .witnesses ul { list-style: none; }
@@ -208,6 +214,8 @@ defmodule Playcode.Export.Epub do
       text-align: justify;
       font-size: 0.875em;
     }
+
+    .paratext p + p { margin-top: 0.75em; }
 
     .paratext h3 {
       font-weight: bold;

@@ -99,6 +99,23 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  # Both stylesheets reset every margin, so each must set a paratext's paragraphs apart and
+  # style the notes on the edition as it styles the publication details.
+  test "the HTML and EPUB downloads style a paratext's paragraphs and the notes on the edition",
+       %{conn: conn, play: play} do
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, epub_css} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ "style.css" end)
+
+    for {format, css} <- [html: html, epub: epub_css] do
+      assert css =~ ~r/\.paratext p \+ p \{[^}]*margin-top/, "#{format}: paratext paragraphs"
+      assert css =~ ~r/\.edition-notes \{[^}]*margin/, "#{format}: notes on the edition"
+    end
+
+    # An e-reader whose own stylesheet predates HTML5 lays these out inline.
+    assert epub_css =~ ~r/header, section, aside \{[^}]*display: block/
+  end
+
   # As the published site prints them, in the downloads' English.
   test "the HTML and EPUB downloads print the dating and the historical time",
        %{conn: conn, play: play} do
@@ -224,8 +241,8 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
-  # Question 10: the HTML keeps the break for its white-space: pre-line; an EPUB reader
-  # need not honour that, so the EPUB writes <br/>.
+  # Question 10: both downloads print a line break as a break, <br> in the HTML and <br/>
+  # in the EPUB's XHTML.
   test "a paratext's line breaks are printed", %{conn: conn} do
     play =
       tei(
@@ -295,6 +312,26 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
     refute epub =~ "&lt;&lt;"
     assert epub =~ "<em>una<br/>dos</em>"
+  end
+
+  # The paragraphs are split after the markers are read, so an italic run over a blank line
+  # closes at the end of one paragraph and opens again in the next.
+  test "an italic run over two paragraphs is printed in italics in both",
+       %{conn: conn, play: play} do
+    {:ok, _} =
+      Playcode.Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "dedicatoria",
+        content: "<<Al lector.\n\nVale.>>"
+      })
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for {format, text} <- [html: html, epub: epub_text(files)] do
+      refute text =~ "&lt;&lt;", "#{format} prints the markers"
+      assert text =~ ~r{<p><em>Al lector\.</em></p>\s*<p><em>Vale\.</em></p>}, "#{format}"
+    end
   end
 
   test "the paratexts after the text are printed after it", %{conn: conn} do
@@ -643,7 +680,9 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
     # Question 26: the notes on the edition, after the sources, a paragraph each.
     test "the downloads print the notes on the edition", %{conn: conn, play: play} do
-      refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "edition-notes"
+      # The section, not the stylesheet's rule for it, which every page carries.
+      refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~
+               ~s(<section class="edition-notes">)
 
       {:ok, play} =
         Playcode.Catalogue.update_play(play, %{

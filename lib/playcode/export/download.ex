@@ -264,11 +264,13 @@ defmodule Playcode.Export.Download do
 
   # Each paragraph a <p>; NoteMarkup turns each line break into a <br>, inside the italics
   # too: an EPUB reader need not honour white-space: pre-line.
-  defp paragraphs(content, format) do
-    for paragraph <- String.split(content || "", "\n\n", trim: true), into: "" do
-      "<p>#{inline(paragraph, format)}</p>\n"
-    end
-  end
+  defp paragraphs(content, format),
+    do:
+      for(
+        paragraph <- NoteMarkup.paragraphs(content, format),
+        into: "",
+        do: "<p>#{paragraph}</p>\n"
+      )
 
   defp children(children, format) do
     Enum.map_join(children, "\n", fn child ->
