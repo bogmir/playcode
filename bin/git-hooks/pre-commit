@@ -1,0 +1,7 @@
+#!/bin/sh
+# CI's first two checks, run before a commit instead of after a push: a push to main
+# bypasses the required status check, so CI only reports what is already there.
+# Enabled per clone: git config core.hooksPath bin/git-hooks
+set -e
+mix compile --warnings-as-errors
+mix format --check-formatted

@@ -15,6 +15,7 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
+  alias Playcode.Export.TeiXml
   alias Playcode.Import.TeiParser
   alias Playcode.Performances
   alias Playcode.Performances.Performance
@@ -68,6 +69,48 @@ defmodule Playcode.Import.TeiImport do
         Logger.error("Import failed for #{path}: #{inspect(reason)}")
         {:error, reason}
     end
+  end
+
+  @doc """
+  Imports the file at `path`, exports the play, imports that export and exports it again,
+  then rolls it all back. `{:ok, xml}`, the export, when both exports are the same file;
+  `{:changed, line, first, second}`, the first line that differs and its text in each,
+  when they are not; `{:error, reason}` when the file does not import. A file that fails
+  this changes on every re-import of its own export.
+  """
+  def check_round_trip(path) do
+    tmp = Path.join(System.tmp_dir!(), "round-trip-#{System.unique_integer([:positive])}.xml")
+
+    try do
+      {:error, result} =
+        Repo.transaction(fn -> Repo.rollback(round_trip(path, tmp)) end, timeout: :infinity)
+
+      result
+    after
+      File.rm(tmp)
+    end
+  end
+
+  defp round_trip(path, tmp) do
+    with {:ok, play} <- import_file(path),
+         first = export(play),
+         :ok <- File.write(tmp, first),
+         {:ok, again} <- import_file(tmp) do
+      case export(again) do
+        ^first -> {:ok, first}
+        second -> first_difference(first, second)
+      end
+    end
+  end
+
+  defp export(play), do: TeiXml.generate(Catalogue.get_play_with_all!(play.id))
+
+  # The `nil` after each file's last line marks the shorter file's end as a difference.
+  defp first_difference(first, second) do
+    (String.split(first, "\n") ++ [nil])
+    |> Enum.zip(String.split(second, "\n") ++ [nil])
+    |> Enum.with_index(1)
+    |> Enum.find_value(fn {{a, b}, line} -> if a != b, do: {:changed, line, a, b} end)
   end
 
   @doc """
@@ -353,17 +396,19 @@ defmodule Playcode.Import.TeiImport do
   # bibliography, or one earlier in the same file — is left out (Witnesses.taken_sigla/1,
   # after reset_tei_content/1 removed the file's own). So is a witness printing the same
   # line as one the play kept: most FileMaker witnesses have no siglum, and the play's own
-  # export lists them. A witness with nothing to print fails its changeset and is left
-  # out too.
+  # export lists them. The lines are compared as a page prints them, whitespace collapsed:
+  # a kept witness's italics ending in a space ("<<…ser >> fol.") come back from its own
+  # export with the space outside them (EMOTHE0671). A witness with nothing to print fails
+  # its changeset and is left out too.
   defp write_witnesses([], _play), do: :ok
 
   defp write_witnesses(witnesses, play) do
-    kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&Witnesses.plain/1)
+    kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&printed_line/1)
 
     Enum.reduce(witnesses, Witnesses.taken_sigla(play.id), fn witness, taken ->
       attrs = tei_row(witness, play)
 
-      if attrs.siglum in taken or Witnesses.plain(struct(Witness, attrs)) in kept do
+      if attrs.siglum in taken or printed_line(struct(Witness, attrs)) in kept do
         taken
       else
         _ = Witnesses.create_witness(attrs)
@@ -373,6 +418,8 @@ defmodule Playcode.Import.TeiImport do
 
     :ok
   end
+
+  defp printed_line(witness), do: witness |> Witnesses.plain() |> String.split() |> Enum.join(" ")
 
   # --- Performances ---
 

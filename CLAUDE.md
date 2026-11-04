@@ -41,13 +41,13 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 
 | Command | What it does |
 |---|---|
-| `mix deps.get`, `mix ecto.create`, `mix ecto.migrate` | Getting started: set up a fresh checkout, then load the data with the imports below |
+| `mix deps.get`, `mix ecto.create`, `mix ecto.migrate`, `git config core.hooksPath bin/git-hooks` | Getting started: set up a fresh checkout (the last enables the pre-commit hook: CI's compile and format checks), then load the data with the imports below |
 | `mix phx.server` | Dev server: import TEI at http://localhost:4000/admin/plays/import, browse at http://localhost:4000/plays |
 | `mix test` | The whole suite; `mix test 2>&1 \| tail -10` for the summary |
 | `mix test --include slow` | Adds the TEI schema validation and the full corpus sweep in `test/playcode/roundtrip_test.exs` (every tracked `test/fixtures/*.xml` plus the git-ignored `test/fixtures/tei_files/`), a few minutes. The default run covers two of those files |
 | `node --test test/js/*.test.mjs` | The static site's browser JS; CI runs it after `mix test` |
 | `mix format` | After every task: CI checks it, and a noisy diff hides the real change |
-| `mix compile`, `mix compile --warnings-as-errors` | Compile; the second before every commit |
+| `mix compile`, `mix compile --warnings-as-errors` | Compile; the pre-commit hook runs the second |
 | `mix precommit` | `compile --warnings-as-errors`, `deps.unlock --unused`, `format` and `test` in one go |
 | `mix gettext.extract --merge` | Extract strings. It fuzzy-matches new strings onto unrelated existing translations: check every entry it marks fuzzy |
 | `mix playcode.import.tei` | The TEI corpus: `doc/tei_corpus/` and `test/fixtures/` (`--force`, `--resume`) |
@@ -59,7 +59,7 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 | `mix playcode.export.site` | Build the static site (also `/admin/export`). Runs in its own VM, outside `SiteBuilder`: pass `-o` while a server is building |
 | `mix playcode.invite EMAIL --admin --print-url` | Break-glass admin invite; bypasses SMTP |
 | `mix playcode.fly.reimport prepare` / `run` / `generate` / `deploy` | Re-import the corpus on Fly (`docs/production-reimport.md`) |
-| `mix playcode.fly.reimport files --dir DIR` | A few corrected files on Fly in one go: snapshot, upload, dry run, and when it needs no look, the import and Generate; never Deploy |
+| `mix playcode.fly.reimport files --dir DIR` | A few corrected files on Fly in one go: a local round-trip check of each file, snapshot, upload, dry run, and when it needs no look, the import and Generate; never Deploy |
 | `Playcode.Release.import_*` | The imports on Fly; `dry_run: true` first |
 | `bin/playcode rpc 'Playcode.Release.invite_url("...")'` | An invite URL on Fly, bypassing SMTP (or `Playcode.Release.invite_url/1` from `fly ssh console`) |
 | `fly secrets list` | Production's secrets, names only |

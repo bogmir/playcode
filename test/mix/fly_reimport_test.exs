@@ -3,10 +3,13 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
   `mix playcode.fly.reimport` against a fake flyctl (`FLYCTL`) that records its calls and
   answers the ones the task reads: what production receives, in order, and where the
   task stops for a person. The fake keeps the uploaded tarball, so the file count the
-  "machine" reports is the upload's.
+  "machine" reports is the upload's. `files` imports each file locally first, so the
+  corpus holds real TEI and the tests run against the database.
   """
   # Mix.shell/1 and FLYCTL are global to the VM.
-  use ExUnit.Case, async: false
+  use Playcode.DataCase, async: false
+
+  import Playcode.ImportHelpers, only: [tei: 1]
 
   @fake ~S"""
   #!/bin/sh
@@ -28,8 +31,8 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     dir = Path.join(System.tmp_dir!(), "fly-#{System.unique_integer([:positive])}")
     corpus = Path.join(dir, "corpus")
     File.mkdir_p!(corpus)
-    File.write!(Path.join(corpus, "EMOTHE0001_Uno.xml"), "<TEI/>")
-    File.write!(Path.join(corpus, "EMOTHE0002_Dos.xml"), "<TEI/>")
+    File.write!(Path.join(corpus, "FLY0001_Uno.xml"), tei(code: "FLY0001", title: "Uno"))
+    File.write!(Path.join(corpus, "FLY0002_Dos.xml"), tei(code: "FLY0002", title: "Dos"))
 
     flyctl = Path.join(dir, "flyctl")
     File.write!(flyctl, @fake)
@@ -206,6 +209,20 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
 
       # The machines stay up for the import: the next step is said, as `prepare` says it.
       assert output =~ "mix playcode.fly.reimport run"
+    end
+
+    # EMOTHE0187's corrected file reached production on 2026-11-02 and did not come back
+    # the same from its own export ("Jove's" gained a space); only the slow suite, which
+    # CI cannot run on the git-ignored corpus, re-imports an export.
+    test "a file that does not import stops it before production is touched",
+         %{dir: dir, corpus: corpus} do
+      File.write!(Path.join(corpus, "FLY0003_Tres.xml"), "<TEI/>")
+
+      assert_raise Mix.Error, ~r/FLY0003_Tres.xml does not import.*Nothing was sent/s, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["files", "--dir", corpus])
+      end
+
+      refute File.exists?(Path.join(dir, "calls"))
     end
 
     # Without --dir, `prepare` takes the whole corpus: a directory given bare would have

@@ -1932,16 +1932,13 @@ defmodule Playcode.Import.TeiParser do
   # An emphasis of nothing (EMOTHE0187's `<emph></emph>, if`) is no italics: kept as
   # "<<>>", it came back from the export as a stray space, a different file each time.
   # An italic run cut around an <rs> (emph_child/2) leaves no empty italics at its edges,
-  # nor italics of a space between two tags, and the space at a cut stands outside the
-  # italics, where an import of the exported file reads it ("<<From>> <rs>").
+  # nor italics of a space between two tags; squeeze/1 has put the space at a cut outside
+  # the italics.
   defp italics(text) do
     if String.trim(text) == "" do
       text
     else
-      ("<<" <> text <> ">>")
-      |> String.replace(~r/(\s+)>>(?=<rs[\s>])/, ">>\\1")
-      |> String.replace(~r/(?<=<\/rs>)<<(\s+)/, "\\1<<")
-      |> String.replace(~r/<<(\s*)>>/, "\\1")
+      String.replace("<<" <> text <> ">>", ~r/<<(\s*)>>/, "\\1")
     end
   end
 
@@ -2086,10 +2083,15 @@ defmodule Playcode.Import.TeiParser do
 
   # Pieces of text as one string, a space between them, whitespace collapsed. A break
   # takes the place of the spaces around it; a number keeps the space before it and none
-  # after, as the text read before it was kept had them.
+  # after, as the text read before it was kept had them. A space at an italic's inside
+  # edge stands outside it, where an import of the exported <emph> reads it: italics typed
+  # as text in the file (EMOTHE0357's "14.927,&lt;&lt; La gran…") and the halves of one
+  # cut around an <rs> ("<<From>> <rs>").
   defp squeeze(pieces) do
     pieces
     |> join_pieces()
+    |> String.replace(~r/<<(\s+)/, "\\1<<")
+    |> String.replace(~r/(\s+)>>/, ">>\\1")
     |> String.replace(~r/\s+/, " ")
     |> String.replace(~r/ ?\x{E002} ?/u, @break)
     |> String.replace(~r/(<lb n="[^"]*"\/>) /, "\\1")
