@@ -155,6 +155,11 @@ defmodule PlaycodeWeb.ExportControllerTest do
         expected <- ["1600–1601", "¿1600? y ¿1601?", "16th century", "reinado de Felipe II"] do
       assert text =~ expected, "#{format} lacks #{expected}"
     end
+
+    # The historical time first, as the site's title page and the play page list them.
+    for {format, text} <- [html: html, epub: epub] do
+      assert text =~ ~r/Historical time:.*Composition:/s, "#{format} lists composition first"
+    end
   end
 
   test "the HTML and EPUB downloads print a prose break as a new line, and its numbers",

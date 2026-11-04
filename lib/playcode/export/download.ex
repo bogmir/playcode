@@ -141,17 +141,17 @@ defmodule Playcode.Export.Download do
     end
   end
 
-  # The dating and the historical time, one line each, as the published site's title page
-  # shows them (`StaticSite.Components.study/1`), in the downloads' English.
+  # The historical time and the dating, one line each, in the order the published site's
+  # title page shows them (`StaticSite.Components.study/1`), in the downloads' English.
   defp dating(play) do
     [
-      (play.composition_date_from || play.composition_date_note) &&
-        dating_line("Composition", [Play.composition_years(play), play.composition_date_note]),
       play.historical_time &&
         dating_line("Historical time", [
           in_english(fn -> PlayLabels.historical_time_label(play.historical_time) end),
           play.historical_time_note
-        ])
+        ]),
+      (play.composition_date_from || play.composition_date_note) &&
+        dating_line("Composition", [Play.composition_years(play), play.composition_date_note])
     ]
     |> Enum.filter(& &1)
     |> Enum.map_join("\n", &"<p class=\"dating\">#{escape(&1)}</p>")
