@@ -34,6 +34,7 @@ defmodule Playcode.Import.TeiParserTest do
     {Playcode.PlayContent.InlineMarkup, :number_marker, 1},
     {Playcode.PlayContent.InlineMarkup, :rs_marker, 2},
     {Playcode.PlayContent.InlineMarkup, :stage_marker, 1},
+    {Playcode.PlayContent.InlineMarkup, :strip, 1},
     {Playcode.PlayContent.Note, :variant, 0},
     {Playcode.PlayContent.Division, :body_types, 0},
     # strings only: a performance's text is squeezed as the changeset squeezes it

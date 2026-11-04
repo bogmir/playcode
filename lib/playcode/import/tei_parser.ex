@@ -2278,12 +2278,10 @@ defmodule Playcode.Import.TeiParser do
 
   defp strays(_app, _own), do: []
 
-  @inline_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<folio(?: part="[IMF]")?>|<\/folio>|<rs(?: type="[A-Za-z0-9_.\-]+")?(?: n="[A-Za-z0-9_.\-]+")?>|<\/rs>|<lb n="[A-Za-z0-9.\-]+"\/>/
-
   # Graphemes of `text` without its markers, one marker at a time: a note inside an
   # italic run or a stage is read while the run is still open, so InlineMarkup.plain/1,
   # which needs the closing marker, cannot do it.
-  defp plain_length(text), do: text |> String.replace(@inline_marker, "") |> String.length()
+  defp plain_length(text), do: text |> InlineMarkup.strip() |> String.length()
 
   # The elements named `names` inside `element`, not counting those inside them: a line's
   # notes and entries, not a note's own entries or an entry's readings' notes.

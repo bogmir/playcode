@@ -347,6 +347,16 @@ defmodule Playcode.PlayContent.InlineMarkup do
     {"<rs#{pairs}>", "</rs>"}
   end
 
+  # Any one marker, opening or closing, whether or not its partner is in the text.
+  @any_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<folio(?: part="[IMF]")?>|<\/folio>|<rs(?: type="[A-Za-z0-9_.\-]+")?(?: n="[A-Za-z0-9_.\-]+")?>|<\/rs>|<lb n="[A-Za-z0-9.\-]+"\/>/
+
+  @doc """
+  `text` with every marker taken out, one at a time, its words kept: a text cut inside an
+  italic run or a stage, its closing marker still to come, loses its opening one too,
+  which `plain/1`, reading whole markers, leaves.
+  """
+  def strip(text), do: String.replace(text, @any_marker, "")
+
   @doc "An aside's markers, `{open, close}`."
   def aside_marker, do: {"<aside>", "</aside>"}
 
