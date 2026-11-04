@@ -34,8 +34,10 @@ flattening a child too. The project fixed the notes only. Done (2026-10-09), see
 ## 2. Italics show as literal `<<word>>` in the other exporters
 
 Done for `Export.Html`, `Export.Pdf` and `Export.Epub` with the notes (`Export.NoteMarkup`), and for
-`Export.CompareHtml` with the inline stage directions (2026-10-09): done for the lines; the comparison
-page's speaker labels and headings still print `<<…>>`.
+`Export.CompareHtml` with the inline stage directions (2026-10-09), and for the comparison's
+headings and cast lists (2026-11-04). Left: the front matter's title, author, editors' names and
+dating notes, and the comparison panel's title, still go through `escape/1` (a latent gap, in
+`docs/backlog.md`).
 
 **Problem**: the importer stores `<emph>` / `<hi rend="italic">` as `<<…>>` inside the text.
 Only the live page (`PlaycodeWeb.Components.PlayText`, private `split_inline_markup/1`) turns it back into `<em>`.
@@ -44,20 +46,22 @@ print the brackets. The redesign fixes the static site only.
 
 **Fix**: switch them to the shared inline-markup helper the redesign introduces.
 
-## 3. Move `Html`, `CompareHtml` and `Epub` onto HEEx and the shared helpers
+## 3. Move the downloads and `CompareHtml` onto HEEx and the shared helpers
 
-**Problem**: each has its own `render_element` clauses and its own hand-rolled `escape/1`,
-building HTML by string interpolation. A fix in one copy misses the others (item 2 is the
-proof), and any `#{}` without `escape/1` writes raw HTML.
+Half done (2026-11-04): `Html` and `Epub` share one render pass, `Export.Download`
+(`docs/history.md`, *Found by the architecture review*). `CompareHtml` keeps its own.
+
+**Problem**: `Download` and `CompareHtml` each have their own element clauses and build HTML
+by string interpolation. A fix in one copy misses the other (item 2 is the proof), and any
+`#{}` without `escape/1` writes raw HTML.
 
 **Fix**: the pattern the static site redesign establishes — HEEx templates rendered with
 `Phoenix.HTML.Safe.to_iodata/1`, CSS as real files, labels and inline markup from the shared
 module. One exporter per change; the output must stay byte-comparable where tests pin it.
 
-**Also**: `render_verse_info/1` in `export/html.ex` and `export/epub.ex` prints "N verses" or
-"Prose" from `is_verse`, so a curator's `plays.form` override (verse, prose or mixed) does not
-reach the HTML, PDF and EPUB downloads. Read `Play.form/1` instead, when each exporter moves
-onto the shared helpers.
+**Also**: `Download.verse_info/1` prints "N verses" or "Prose" from `is_verse`, so a curator's
+`plays.form` override (verse, prose or mixed) does not reach the HTML, PDF and EPUB downloads.
+Read `Play.form/1` instead (in `docs/backlog.md`).
 
 ## 4. Show the new statistics on the live play page
 
