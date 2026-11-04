@@ -61,21 +61,21 @@ defmodule Playcode.Export.Epub do
           %BUPE.Item{
             href: path,
             id: Path.basename(path, ".xhtml"),
-            description: title
+            description: metadata(title)
           }
         end)
 
       config =
         BUPE.Config.new(%{
-          title: play.title,
-          creator: play.author_name || "",
+          title: metadata(play.title),
+          creator: metadata(play.author_name) || "",
           language: play.language || "es",
-          publisher: publisher_from(play),
-          identifier: "urn:playcode:#{play.code}",
+          publisher: metadata(play.publisher),
+          identifier: metadata("urn:playcode:#{play.code}"),
           unique_identifier: "EMOTHE",
-          rights: play.licence_text || play.licence_url,
-          description: play.original_title,
-          date: play.publication_date,
+          rights: metadata(play.licence_text || play.licence_url),
+          description: metadata(play.original_title),
+          date: metadata(play.publication_date),
           pages: all_pages,
           styles: [css_path],
           # BUPE 0.6.5 names a "cover" in every spine and writes its page only with this
@@ -117,12 +117,10 @@ defmodule Playcode.Export.Epub do
     path
   end
 
-  defp publisher_from(play) do
-    case play.sources do
-      [source | _] -> source.publisher
-      _ -> nil
-    end
-  end
+  # BUPE 0.6.5 writes the package's metadata and its tables of contents with plain EEx, so
+  # each value goes in as plain text, escaped; nil leaves the element out.
+  defp metadata(nil), do: nil
+  defp metadata(text), do: text |> InlineMarkup.plain() |> escape()
 
   # --- Front matter ---
 

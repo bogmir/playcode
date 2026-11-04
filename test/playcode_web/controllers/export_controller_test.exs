@@ -112,6 +112,27 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert Enum.reject(spine, &MapSet.member?(ids, &1)) == []
   end
 
+  # The edition's publisher, as the front matter's "Publication" names it. BUPE writes the
+  # package with plain EEx, so an "&" left unescaped makes it ill-formed.
+  test "the EPUB names the edition's publisher in its metadata, escaped",
+       %{conn: conn, play: play} do
+    {:ok, play} =
+      Playcode.Catalogue.update_play(play, %{
+        "title" => "Romeo & Juliet",
+        "publisher" => "Norton & Company"
+      })
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, opf} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ ~r/\.opf$/ end)
+
+    assert opf =~ ~s(<dc:publisher id="publisher">Norton &amp; Company</dc:publisher>)
+
+    for {name, content} <- files,
+        String.ends_with?(to_string(name), [".opf", ".ncx", "nav.xhtml"]) do
+      assert {:ok, _} = Saxy.SimpleForm.parse_string(content), "#{name} is not well-formed"
+    end
+  end
+
   # As the play page and the published site name them, in the downloads' English.
   test "the HTML and EPUB downloads name each editor's role", %{conn: conn, play: play} do
     {:ok, _} =
