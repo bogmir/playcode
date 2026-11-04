@@ -316,8 +316,61 @@ defmodule Playcode.PlayContent.InlineMarkup do
   def stage_count(nil), do: 0
   def stage_count(text), do: @stage |> Regex.scan(text) |> length()
 
-  @doc "The marker the importer stores where printed line `n` of the source starts."
-  def number_marker(n), do: ~s(<lb n="#{n}"/>)
+  @doc """
+  The marker the importer stores where printed line `n` of the source starts, or `""` when
+  `n` is absent or not a number the marker can hold (letters, digits, `.` and `-`).
+  """
+  def number_marker(nil), do: ""
+  def number_marker(n), do: if(n =~ ~r/\A[A-Za-z0-9.\-]+\z/, do: ~s(<lb n="#{n}"/>), else: "")
+
+  @doc """
+  A stage's opening and closing markers, `{open, close}`, its `type` in the opening one
+  when it is the plain word the marker allows (letters, digits and `_`).
+  """
+  def stage_marker(type) do
+    open =
+      if type && type =~ ~r/\A[A-Za-z0-9_]+\z/, do: ~s(<stage type="#{type}">), else: "<stage>"
+
+    {open, "</stage>"}
+  end
+
+  @doc """
+  A tagged name, place or phrase's markers, `{open, close}`, its `type` and `n` each in the
+  opening one when it is a plain word the marker allows (letters, digits, `_`, `.`, `-`).
+  """
+  def rs_marker(type, n) do
+    pairs =
+      for {key, value} <- [type: type, n: n],
+          value && value =~ ~r/\A[A-Za-z0-9_.\-]+\z/,
+          do: ~s( #{key}="#{value}")
+
+    {"<rs#{pairs}>", "</rs>"}
+  end
+
+  @doc "An aside's markers, `{open, close}`."
+  def aside_marker, do: {"<aside>", "</aside>"}
+
+  @doc """
+  A Folio passage's markers, `{open, close}`: `part` nil for a passage inside one text, else
+  `"I"`, `"M"` or `"F"` for the piece of one that crosses texts.
+  """
+  def folio_marker(nil), do: {"<folio>", "</folio>"}
+  def folio_marker(part) when part in ~w(I M F), do: {~s(<folio part="#{part}">), "</folio>"}
+
+  @folio_part ~r/<folio part="([IMF])">/
+
+  @doc "The parts of the crossing Folio pieces in `text`, in order (`folio_marker/1`)."
+  def folio_parts(text), do: for([_, part] <- Regex.scan(@folio_part, text || ""), do: part)
+
+  @doc """
+  `text` with each crossing Folio piece's part given by `fun`, which takes its part and
+  returns the new one, or nil to make it a passage inside the text.
+  """
+  def map_folio_parts(text, fun),
+    do:
+      Regex.replace(@folio_part, text, fn _tag, part ->
+        part |> fun.() |> folio_marker() |> elem(0)
+      end)
 
   @doc """
   A prose paragraph's own number (TEI's `p@n`): the number of a marker at the very start

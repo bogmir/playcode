@@ -1090,7 +1090,7 @@ defmodule Playcode.Export.TeiXml do
   defp with_folio_parts(divisions) do
     {_divisions, texts} = map_reduce_texts(divisions, [], &{&1, [&1 | &2]})
 
-    if Enum.any?(texts, &String.contains?(&1, "<folio part=")) do
+    if Enum.any?(texts, &(InlineMarkup.folio_parts(&1) != [])) do
       parts =
         ([nil | Enum.reverse(texts)] ++ [nil])
         |> Enum.chunk_every(3, 1, :discard)
@@ -1113,23 +1113,23 @@ defmodule Playcode.Export.TeiXml do
   defp joined?(_text, nil), do: false
 
   defp joined?(text, next) do
-    String.contains?(text, [~s(<folio part="I">), ~s(<folio part="M">)]) and
-      String.contains?(next, [~s(<folio part="M">), ~s(<folio part="F">)])
+    Enum.any?(InlineMarkup.folio_parts(text), &(&1 in ~w(I M))) and
+      Enum.any?(InlineMarkup.folio_parts(next), &(&1 in ~w(M F)))
   end
 
   # `text` with the parts its joins give its pieces: the first ("M" or "F") comes from the
   # text before only when joined to it, the last ("I" or "M") goes on only when joined to
   # the next.
   defp rejoined(text, open_before, goes_on) do
-    Regex.replace(~r/<folio part="([IMF])">/, text, fn _tag, part ->
-      folio_tag(part in ~w(M F) and open_before, part in ~w(I M) and goes_on)
+    InlineMarkup.map_folio_parts(text, fn part ->
+      folio_part(part in ~w(M F) and open_before, part in ~w(I M) and goes_on)
     end)
   end
 
-  defp folio_tag(true, true), do: ~s(<folio part="M">)
-  defp folio_tag(true, false), do: ~s(<folio part="F">)
-  defp folio_tag(false, true), do: ~s(<folio part="I">)
-  defp folio_tag(false, false), do: "<folio>"
+  defp folio_part(true, true), do: "M"
+  defp folio_part(true, false), do: "F"
+  defp folio_part(false, true), do: "I"
+  defp folio_part(false, false), do: nil
 
   # The texts of the body that may hold a piece, in the order the file reads them, each
   # through `fun` with an accumulator: a speech's label, then its lines, paragraphs and
