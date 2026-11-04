@@ -26,6 +26,13 @@ defmodule Playcode.PlayContent.InlineMarkup do
   line's notes between the pieces. `well_formed?/1`, `asides_well_formed?/1`,
   `numbers_well_formed?/1`, `folios_well_formed?/1` and `rs_well_formed?/1` say whether the
   markers are sound.
+
+  This module is the one place the syntax is written: the importer builds the markers with
+  `stage_marker/1`, `rs_marker/2`, `aside_marker/0`, `folio_marker/1` and
+  `number_marker/1`, and counts a half-read text with `strip/1`; the TEI export reads the
+  asides with `asides/1` and rejoins a passage's pieces with `folio_parts/1` and
+  `map_folio_parts/2`; `holds?/2` says which markers a text holds. The content editor's
+  help texts spell the syntax out for curators, who type it.
   """
 
   # The type and the text of one stage. Groups: type (empty when there is none), text.
