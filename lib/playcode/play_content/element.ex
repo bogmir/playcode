@@ -103,13 +103,13 @@ defmodule Playcode.PlayContent.Element do
 
   defp later_piece_starts(content) do
     {starts, _spoken} =
-      ~r{<aside>.*?</aside>}s
-      |> Regex.split(content, include_captures: true, trim: true)
-      |> Enum.drop_while(&(not String.starts_with?(&1, "<aside>")))
+      content
+      |> InlineMarkup.asides()
+      |> Enum.drop_while(&match?({:spoken, _}, &1))
       |> Enum.drop(1)
       |> Enum.flat_map_reduce(false, fn
-        "<aside>" <> _, spoken -> {[spoken], false}
-        text, spoken -> {[], spoken or String.trim(InlineMarkup.spoken(text)) != ""}
+        {:aside, _}, spoken -> {[spoken], false}
+        {:spoken, text}, spoken -> {[], spoken or String.trim(InlineMarkup.spoken(text)) != ""}
       end)
 
     starts

@@ -1350,8 +1350,8 @@ defmodule Playcode.Export.TeiXml do
 
       el.is_aside ->
         {nodes, _} =
-          ~r{<aside>.*?</aside>}s
-          |> Regex.split(text, include_captures: true, trim: true)
+          text
+          |> InlineMarkup.asides()
           |> Enum.flat_map_reduce({0, el.notes, el.aside_links}, &aside_piece/2)
 
         nodes
@@ -1363,13 +1363,8 @@ defmodule Playcode.Export.TeiXml do
 
   # One piece of a text partly aside, starting `at` graphemes into its plain form, with the
   # notes not yet placed. Its notes go in with offsets counted from its own start.
-  defp aside_piece(piece, {at, notes, links}) do
-    {aside?, words} =
-      case piece do
-        "<aside>" <> rest -> {true, String.replace_suffix(rest, "</aside>", "")}
-        words -> {false, words}
-      end
-
+  defp aside_piece({kind, words}, {at, notes, links}) do
+    aside? = kind == :aside
     stop = at + String.length(InlineMarkup.plain(words))
     {here, later} = Enum.split_with(notes, &(&1.offset <= stop))
     inline = build_inline_content(words, Enum.map(here, &%{&1 | offset: &1.offset - at}))

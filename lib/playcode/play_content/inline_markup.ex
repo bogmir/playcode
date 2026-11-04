@@ -351,6 +351,22 @@ defmodule Playcode.PlayContent.InlineMarkup do
   def aside_marker, do: {"<aside>", "</aside>"}
 
   @doc """
+  `text` in the order it is read, cut where each aside starts and ends: `{:aside, words}`
+  for the words inside an `<aside>` marker, `{:spoken, words}` for those around them,
+  each with its other markers; no empty piece.
+  """
+  def asides(nil), do: []
+
+  def asides(text) do
+    ~r{<aside>.*?</aside>}s
+    |> Regex.split(text, include_captures: true, trim: true)
+    |> Enum.map(fn
+      "<aside>" <> rest -> {:aside, String.replace_suffix(rest, "</aside>", "")}
+      words -> {:spoken, words}
+    end)
+  end
+
+  @doc """
   A Folio passage's markers, `{open, close}`: `part` nil for a passage inside one text, else
   `"I"`, `"M"` or `"F"` for the piece of one that crosses texts.
   """
