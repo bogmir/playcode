@@ -245,6 +245,23 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert epub =~ "The banished cavaliers!<br/>A roving blade!"
   end
 
+  # Both downloads print a paratext's paragraphs as the file has them; the HTML used to run
+  # them into one block, set apart only by its white-space: pre-line.
+  test "the HTML and EPUB downloads print a paratext's paragraphs", %{conn: conn} do
+    play =
+      tei(front: ~s(<div type="dedicatoria"><p>Al lector.</p><p>Vale.</p></div>))
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for {format, text} <- [html: html, epub: epub_text(files)] do
+      assert text =~ ~r{<p>Al lector\.</p>\s*<p>Vale\.</p>},
+             "#{format} runs the paragraphs together"
+    end
+  end
+
   # An EPUB chapter is XHTML: a note's line break is <br/> there, or the chapter does not
   # parse and a strict e-reader refuses the book.
   test "the EPUB prints a note's line break as XHTML", %{conn: conn} do

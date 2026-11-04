@@ -141,12 +141,13 @@ defmodule Playcode.Export.PdfCache do
   end
 
   # What the PDF is rendered with: the HTML export and the PDF export around it, the
-  # modules that draw the text, the notes and the variants in it (a variant's readings and
+  # downloads' render pass (`Download`), the modules that draw the text, the notes and the variants in it (a variant's readings and
   # the names its witnesses go by), those that word the dating, and those that order the
   # outline and print its cast lists, and those that line up a shared line's parts.
   defp code_version do
     [
       Playcode.Export.Html,
+      Playcode.Export.Download,
       Playcode.Export.Pdf,
       Playcode.Catalogue.Play,
       PlaycodeWeb.PlayLabels,

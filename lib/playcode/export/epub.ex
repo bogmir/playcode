@@ -1,25 +1,17 @@
 defmodule Playcode.Export.Epub do
   @moduledoc """
-  Generates an EPUB 3 ebook from a play record using the BUPE library.
-  Reuses rendering patterns from `Playcode.Export.Html`.
+  Generates an EPUB 3 ebook from a play record using the BUPE library: the front matter
+  and one chapter per outline item from the text on, each as `Export.Download` prints it.
   """
 
   alias Playcode.Catalogue.Paratext
-  alias Playcode.Export.{Html, NoteMarkup}
+  alias Playcode.Export.Download
   alias Playcode.Outline
-  alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note, SplitVerses}
+  alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
 
-  @act_types ~w(acto act acte jornada)
-
   def generate(play) do
-    play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
-
-    divisions =
-      play.id
-      |> PlayContent.load_play_content(variants: play.show_variants)
-      |> SplitVerses.with_leads()
+    {play, divisions} = Download.load(play)
 
     {front, rest} =
       play.paratexts
@@ -58,7 +50,9 @@ defmodule Playcode.Export.Epub do
         |> Enum.map(fn {{_placement, item}, i} ->
           filename = "chapter-#{String.pad_leading("#{i}", 3, "0")}"
           title = chapter_title(item, i)
-          {write_chapter(tmp_dir, filename, title, play.language, render_item(item)), title}
+
+          {write_chapter(tmp_dir, filename, title, play.language, Download.item(item, :epub)),
+           title}
         end)
 
       all_pages =
@@ -131,21 +125,8 @@ defmodule Playcode.Export.Epub do
   # --- Front matter ---
 
   defp render_front(play, divisions, items) do
-    """
-    <div class="header">
-      <p class="author">#{escape(play.author_name || "")}</p>
-      <h1 class="title">#{escape(play.title)}</h1>
-    #{Html.original(play)}
-    #{render_sources(play.sources)}
-    #{render_editors(play.editors)}
-    #{render_verse_info(play)}
-    #{render_dating(play)}
-    </div>
-    #{Html.publication(play, :epub)}
-    #{Html.edition_notes(play, :epub)}
-    #{Html.witnesses(play, divisions)}
-    #{Enum.map_join(items, "\n", &render_item/1)}
-    """
+    Download.front(play, divisions, :epub) <>
+      Enum.map_join(items, "\n", &Download.item(&1, :epub))
   end
 
   defp chapter_title(%Paratext{} = paratext, _index), do: PlayLabels.paratext_title(paratext)
@@ -155,217 +136,6 @@ defmodule Playcode.Export.Epub do
 
   defp chapter_title(%{type: "elenco"}, _index), do: "Dramatis personae"
   defp chapter_title(div, index), do: "#{div.type} #{index}"
-
-  defp render_sources(sources) do
-    sources
-    |> Enum.map(fn s ->
-      if s.note,
-        do: "  <p class=\"source-note\">#{NoteMarkup.inline(s.note, [], :epub)}</p>",
-        else: ""
-    end)
-    |> Enum.reject(&(&1 == ""))
-    |> Enum.join("\n")
-  end
-
-  defp render_dating(play),
-    do: play |> Html.dating() |> Enum.map_join("\n", &"  <p class=\"dating\">#{escape(&1)}</p>")
-
-  defp render_editors([]), do: ""
-
-  defp render_editors(editors) do
-    items =
-      Enum.map(editors, fn ed ->
-        "    <span>#{escape(ed.person_name)} <span class=\"role\">(#{escape(ed.role)})</span></span>"
-      end)
-      |> Enum.join("\n")
-
-    "  <div class=\"editors\">\n#{items}\n  </div>"
-  end
-
-  defp render_verse_info(play) do
-    cond do
-      play.verse_count && play.is_verse ->
-        "  <p class=\"verse-info\">#{play.verse_count} verses</p>"
-
-      play.verse_count ->
-        "  <p class=\"verse-info\">Prose</p>"
-
-      true ->
-        ""
-    end
-  end
-
-  # Each paragraph a <p>; NoteMarkup turns each line break into a <br/>, inside the
-  # italics too: an EPUB reader need not honour white-space: pre-line.
-  defp paratext_paragraphs(content) do
-    for paragraph <- String.split(content || "", "\n\n", trim: true), into: "" do
-      "  <p>#{NoteMarkup.inline(paragraph, [], :epub)}</p>\n"
-    end
-  end
-
-  # An outline item: a paratext, or a division with its cast list if it is one, its
-  # elements and its children.
-  defp render_item(%Paratext{} = paratext) do
-    heading =
-      if paratext.heading,
-        do: "  <h3>#{NoteMarkup.inline(paratext.heading, [], :epub)}</h3>\n",
-        else: ""
-
-    trailer =
-      if paratext.trailer,
-        do: "  <div class=\"trailer\">#{NoteMarkup.inline(paratext.trailer, [], :epub)}</div>\n",
-        else: ""
-
-    "<div class=\"paratext\">\n#{heading}#{paratext_paragraphs(paratext.content)}#{trailer}</div>"
-  end
-
-  defp render_item(div) do
-    heading = division_heading(div)
-    cast = render_cast_list(div)
-    elements = render_elements(Map.get(div, :loaded_elements, []))
-
-    {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
-    notes = NoteMarkup.endnotes(Note.reading_order(div), :epub)
-
-    "<div class=\"division\">\n#{heading}#{cast}#{render_children(opening)}#{elements}#{render_children(children)}\n#{notes}</div>"
-  end
-
-  defp render_children(children) do
-    children
-    |> Enum.map(fn child ->
-      ch = child_heading(child)
-      cc = render_cast_list(child)
-      ce = render_elements(Map.get(child, :loaded_elements, []))
-      "<div class=\"child-division\">\n#{ch}#{cc}#{ce}</div>"
-    end)
-    |> Enum.join("\n")
-  end
-
-  # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its
-  # heading; nothing for a division of the text.
-  defp render_cast_list(%{type: "elenco", entries: entries}) do
-    case CastListEntry.printed_groups(entries) do
-      [] ->
-        ""
-
-      groups ->
-        "<div class=\"cast-list\">\n#{Enum.map_join(groups, "\n", &render_cast_group/1)}\n</div>\n"
-    end
-  end
-
-  defp render_cast_list(_division), do: ""
-
-  defp render_cast_group([first | _] = entries) do
-    heading =
-      if first.group_heading,
-        do:
-          "  <p class=\"cast-group\">#{NoteMarkup.inline(first.group_heading, [], :epub)}</p>\n",
-        else: ""
-
-    heading <> Enum.map_join(entries, "\n", &render_cast_item/1)
-  end
-
-  defp render_cast_item(entry) do
-    desc =
-      if entry.description,
-        do:
-          " <span class=\"cast-desc\">#{NoteMarkup.inline(entry.description, [], :epub)}</span>",
-        else: ""
-
-    "  <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(entry.name, [], :epub)}</span>#{desc}</div>"
-  end
-
-  defp division_heading(%{title: nil}), do: ""
-  defp division_heading(%{title: ""}), do: ""
-
-  defp division_heading(%{title: title, type: type} = div) when type in @act_types do
-    "<h2 class=\"act-heading\">#{NoteMarkup.inline(title, div.notes, :epub)}</h2>\n"
-  end
-
-  defp division_heading(%{title: title} = div) do
-    "<h3 class=\"scene-heading\">#{NoteMarkup.inline(title, div.notes, :epub)}</h3>\n"
-  end
-
-  defp child_heading(%{title: nil}), do: ""
-  defp child_heading(%{title: ""}), do: ""
-
-  defp child_heading(%{title: title} = div),
-    do: "<h3 class=\"scene-heading\">#{NoteMarkup.inline(title, div.notes, :epub)}</h3>\n"
-
-  defp render_elements(elements) do
-    Enum.map(elements, &render_element/1) |> Enum.join()
-  end
-
-  defp render_element(%{type: "speech"} = el) do
-    aside_class = if el.is_aside, do: " aside", else: ""
-
-    speaker =
-      if el.speaker_label,
-        do:
-          "<div class=\"speaker\">#{NoteMarkup.inline(el.speaker_label, el.notes, :epub)}</div>\n",
-        else: ""
-
-    children = Map.get(el, :children, []) |> Enum.map(&render_element/1) |> Enum.join()
-    "<div class=\"speech#{aside_class}\">\n#{speaker}#{children}</div>\n"
-  end
-
-  # A group's heading ("A Song") centred and in italics, as a closing formula is.
-  defp render_element(%{type: "line_group"} = el) do
-    heading =
-      if el.content,
-        do: "<div class=\"trailer\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</div>\n",
-        else: ""
-
-    heading <> (Map.get(el, :children, []) |> Enum.map(&render_element/1) |> Enum.join())
-  end
-
-  defp render_element(%{type: "verse_line"} = el) do
-    lead = if el.lead && fits?(el.lead.line), do: el.lead
-
-    content_class =
-      cond do
-        lead -> "content"
-        el.rend == "indent" -> "content indent"
-        el.part == "F" -> "content part-f"
-        el.part == "M" -> "content part-m"
-        true -> "content"
-      end
-
-    line_num =
-      if el.line_number,
-        do: "<span class=\"line-number\">#{el.line_number}</span>",
-        else: "<span class=\"line-number\"></span>"
-
-    "<div class=\"verse-line\"><span class=\"#{content_class}\">#{ghost(lead)}#{NoteMarkup.inline(el.content, el.notes, :epub)}</span>#{line_num}</div>\n"
-  end
-
-  defp render_element(%{type: "stage_direction"} = el) do
-    "<div class=\"stage-direction\">(#{NoteMarkup.inline(el.content, el.notes, :epub)})</div>\n"
-  end
-
-  defp render_element(%{type: "prose"} = el) do
-    "<div class=\"prose-block\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</div>\n"
-  end
-
-  # An opening formula (the Arte nuevo's dedication) or a closing one, centred alike.
-  defp render_element(%{type: type} = el) when type in ~w(opener trailer) do
-    "<div class=\"trailer\">#{NoteMarkup.inline(el.content, el.notes, :epub)}</div>\n"
-  end
-
-  defp render_element(_), do: ""
-
-  # An e-book reader may run no script, so a shared line's later part is lined up after
-  # the earlier ones only when the whole line is short enough for a phone at its default
-  # size (question 61: 45 characters, proposed with the corpus's figures); a longer one
-  # takes the fixed step.
-  @align_max 45
-  defp fits?(line), do: line |> InlineMarkup.plain() |> String.length() <= @align_max
-
-  defp ghost(nil), do: ""
-
-  defp ghost(%{lead: lead, indent: indent}),
-    do:
-      "<span class=\"ghost#{if indent, do: " indent"}\" aria-hidden=\"true\">#{NoteMarkup.inline(lead, [], :epub)} </span>"
 
   # --- CSS (adapted from Html export for EPUB readers) ---
 

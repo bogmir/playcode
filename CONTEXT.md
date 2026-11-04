@@ -79,6 +79,12 @@ Words a character speaks for the audience, or for one other character, unheard b
 The part of an aside inside one verse or paragraph, TEI's `<seg type="aside">`, which cannot cross a line. The files number each piece within its aside (`es-0412-seg02`).
 _Avoid_: segment, fragment (a fragment is a split verse's part)
 
+**Download**:
+A play as a file a reader takes away: HTML, PDF or EPUB. All three print the same
+edition, front matter and outline alike; they differ only where the format does (an
+EPUB reader may run no script, so a shared line is lined up only when it is short).
+_Avoid_: export (also the TEI file and the static site), the text (the play itself)
+
 ### The critical apparatus
 
 **Variant**:
