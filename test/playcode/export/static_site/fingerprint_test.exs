@@ -6,6 +6,8 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
   """
   use ExUnit.Case, async: true
 
+  import Playcode.ModuleReach
+
   alias Playcode.Export.StaticSite.Fingerprint
 
   test "the same settings give the same fingerprint, another version another" do
@@ -56,10 +58,6 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     File.write!(path, String.replace(po, old, ~s(msgid "#{msgid}"\nmsgstr "#{to}"\n)))
   end
 
-  # What these return is play data, which plays.content_version tracks. Ecto schemas
-  # count too. The Gettext backend's English translations are fingerprinted as data.
-  @data_access [Playcode.Catalogue, Playcode.PlayContent, Playcode.Repo, PlaycodeWeb.Gettext]
-
   # Pushing the site and hashing it shape no page, but their names put them among the
   # StaticSite modules: a change to the deploy rebuilt all 371 plays.
   test "the deploy and the fingerprint itself are left out of it" do
@@ -70,62 +68,17 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
   end
 
   test "every module the export calls is in the fingerprint, or only reads play data" do
-    reached = reach(Fingerprint.modules(), MapSet.new())
+    modules = Fingerprint.modules()
 
-    assert Enum.reject(
-             reached,
-             &(&1 in Fingerprint.modules() or &1 in Fingerprint.left_out() or data_access?(&1))
-           ) == []
+    assert modules
+           |> reach(modules)
+           |> Enum.reject(&(&1 in modules or &1 in Fingerprint.left_out() or data_access?(&1))) ==
+             []
   end
 
   # A schema is play data, but a function on it can decide what a page shows: the order of
   # a bibliography's sections is Bibliography.Entry.kinds/0. Found by the S4 review.
   test "a schema the export calls a function of is in the fingerprint" do
-    called =
-      for module <- Fingerprint.modules(),
-          {callee, function, _arity} <- imports(module),
-          callee not in Fingerprint.modules(),
-          callee in Application.spec(:playcode, :modules),
-          Code.ensure_loaded!(callee) && function_exported?(callee, :__schema__, 1),
-          # Struct and schema reflection, and changesets, which only write.
-          not String.starts_with?(Atom.to_string(function), "__"),
-          not String.ends_with?(Atom.to_string(function), "changeset"),
-          uniq: true,
-          do: {callee, function}
-
-    assert called == []
-  end
-
-  # Follows the remote calls out of the fingerprinted modules, through every module of
-  # this app they reach, stopping at data access.
-  defp reach([], seen), do: seen
-
-  defp reach([module | rest], seen) do
-    cond do
-      module in seen ->
-        reach(rest, seen)
-
-      module not in Fingerprint.modules() and data_access?(module) ->
-        reach(rest, MapSet.put(seen, module))
-
-      true ->
-        reach(rest ++ calls(module), MapSet.put(seen, module))
-    end
-  end
-
-  defp data_access?(module) do
-    Code.ensure_loaded!(module)
-    module in @data_access or function_exported?(module, :__schema__, 1)
-  end
-
-  # This app's modules that `module` calls, from the imports in its compiled BEAM file.
-  defp calls(module) do
-    ours = Application.spec(:playcode, :modules)
-    for {callee, _function, _arity} <- imports(module), callee in ours, uniq: true, do: callee
-  end
-
-  defp imports(module) do
-    {:ok, {^module, [imports: imports]}} = :beam_lib.chunks(:code.which(module), [:imports])
-    imports
+    assert schema_functions_called(Fingerprint.modules()) == []
   end
 end
