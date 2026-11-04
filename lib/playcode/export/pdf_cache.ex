@@ -143,16 +143,31 @@ defmodule Playcode.Export.PdfCache do
   # What the PDF is rendered with: the HTML export and the PDF export around it, the
   # downloads' render pass (`Download`), the modules that draw the text, the notes and the
   # variants in it (a variant's readings and the names its witnesses go by, from their
-  # bibliography entries), those that word the dating, those that order the outline, split
+  # bibliography entries), those that word the dating and name the paratexts' kinds and
+  # the places' types and roles, those that order the outline, split
   # off an act's opening lists and print its cast lists, and those that line up a shared
   # line's parts. ponytail: `Download` also holds the EPUB's 45-character rule, so changing
   # it renders every PDF again; split the module if that rule ever changes often.
   defp code_version do
+    code_modules()
+    |> Enum.map(& &1.module_info(:md5))
+    |> then(&:crypto.hash(:sha256, &1))
+    |> Base.encode16(case: :lower)
+    |> binary_part(0, 12)
+  end
+
+  @doc false
+  # The cache key's modules; `pdf_cache_test.exs` checks they are all the PDF is
+  # rendered with.
+  def code_modules do
     [
       Playcode.Export.Html,
       Playcode.Export.Download,
       Playcode.Export.Pdf,
       Playcode.Catalogue.Play,
+      Playcode.Catalogue.Paratext,
+      Playcode.Places.Place,
+      Playcode.Places.PlayPlace,
       PlaycodeWeb.PlayLabels,
       Playcode.Export.NoteMarkup,
       Playcode.PlayContent.InlineMarkup,
@@ -167,10 +182,6 @@ defmodule Playcode.Export.PdfCache do
       Playcode.PlayContent.SplitVerses,
       Playcode.PlayContent.Element
     ]
-    |> Enum.map(& &1.module_info(:md5))
-    |> then(&:crypto.hash(:sha256, &1))
-    |> Base.encode16(case: :lower)
-    |> binary_part(0, 12)
   end
 
   defp renderer, do: Application.get_env(:playcode, :pdf_renderer, Playcode.Export.Pdf)

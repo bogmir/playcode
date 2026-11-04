@@ -1,0 +1,35 @@
+#!/bin/sh
+# Proves a test bites (CLAUDE.md, "Testing through the outermost API"): replaces OLD with
+# NEW, once and literally, in FILE, runs `mix test` with the arguments left, and puts
+# FILE back whatever happens. Exits 0 when the tests go red, 1 when the change survives
+# them, 2 when it cannot tell (OLD not found once, or the change does not compile).
+#
+#   bin/bites lib/playcode/text.ex 'String.trim()' 'String.trim_leading()' test/playcode/text_test.exs
+set -eu
+[ $# -ge 3 ] || { echo "usage: bin/bites FILE OLD NEW [mix test arguments...]" >&2; exit 2; }
+file=$1 old=$2 new=$3
+[ -n "$old" ] || { echo "bites: OLD is empty" >&2; exit 2; }
+shift 3
+
+count=$(OLD=$old perl -0ne 'print scalar(() = /\Q$ENV{OLD}\E/g)' "$file")
+[ "$count" = 1 ] || { echo "bites: OLD occurs $count times in $file, not once" >&2; exit 2; }
+
+backup=$(mktemp)
+cp "$file" "$backup"
+trap 'cp "$backup" "$file"; rm -f "$backup"' EXIT INT TERM
+OLD=$old NEW=$new perl -0pi -e 's/\Q$ENV{OLD}\E/$ENV{NEW}/' "$file"
+
+out=$(mix test "$@" 2>&1) || true
+summary=$(printf '%s\n' "$out" | grep -E '^[0-9]+ (tests?|doctests?|propert)' | tail -1)
+
+if printf '%s' "$summary" | grep -qE ', [1-9][0-9]* failures?'; then
+  printf '%s\n' "$out" | grep -E '^ +[0-9]+\) test' || true
+  echo "bites: red, $summary"
+elif [ -z "$summary" ]; then
+  printf '%s\n' "$out" | tail -15 >&2
+  echo "bites: no test ran; the change may not compile" >&2
+  exit 2
+else
+  echo "bites: the change survives, $summary" >&2
+  exit 1
+fi
