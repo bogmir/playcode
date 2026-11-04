@@ -99,6 +99,19 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  # BUPE writes a "cover" item in every spine; one the manifest lacks makes epubcheck, and a
+  # strict ingestion, refuse the book.
+  test "the EPUB's spine names only items in its manifest", %{conn: conn, play: play} do
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, opf} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ ~r/\.opf$/ end)
+
+    ids = for [_, id] <- Regex.scan(~r/<item id="([^"]+)"/, opf), into: MapSet.new(), do: id
+    spine = for [_, id] <- Regex.scan(~r/<itemref idref="([^"]+)"/, opf), do: id
+
+    assert spine != []
+    assert Enum.reject(spine, &MapSet.member?(ids, &1)) == []
+  end
+
   # As the play page and the published site name them, in the downloads' English.
   test "the HTML and EPUB downloads name each editor's role", %{conn: conn, play: play} do
     {:ok, _} =

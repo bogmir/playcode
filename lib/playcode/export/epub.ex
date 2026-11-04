@@ -78,7 +78,9 @@ defmodule Playcode.Export.Epub do
           date: play.publication_date,
           pages: all_pages,
           styles: [css_path],
-          cover: false
+          # BUPE 0.6.5 names a "cover" in every spine and writes its page only with this
+          # on: a plain title page, out of the reading order (linear="no").
+          cover: true
         })
 
       output_path = Path.join(tmp_dir, "#{play.code}.epub")
