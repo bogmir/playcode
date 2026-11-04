@@ -99,6 +99,25 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  # As the play page and the published site name them, in the downloads' English.
+  test "the HTML and EPUB downloads name each editor's role", %{conn: conn, play: play} do
+    {:ok, _} =
+      Playcode.Catalogue.create_play_editor(%{
+        play_id: play.id,
+        person_name: "Joan Oleza",
+        role: "principal",
+        position: 1
+      })
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for {format, text} <- [html: html, epub: epub_text(files)] do
+      assert text =~ ~s{Joan Oleza <span class="role">(Principal investigator)</span>},
+             "#{format}"
+    end
+  end
+
   # Both stylesheets reset every margin, so each must set a paratext's paragraphs apart and
   # style the notes on the edition as it styles the publication details.
   test "the HTML and EPUB downloads style a paratext's paragraphs and the notes on the edition",

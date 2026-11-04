@@ -121,7 +121,8 @@ defmodule Playcode.Export.Download do
   defp editors(editors) do
     items =
       Enum.map_join(editors, "\n", fn ed ->
-        "<span>#{escape(ed.person_name)} <span class=\"role\">(#{escape(ed.role)})</span></span>"
+        role = in_english(fn -> PlayLabels.editor_role_label(ed.role) end)
+        "<span>#{escape(ed.person_name)} <span class=\"role\">(#{escape(role)})</span></span>"
       end)
 
     "<div class=\"editors\">\n#{items}\n</div>"
