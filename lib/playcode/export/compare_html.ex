@@ -344,18 +344,19 @@ defmodule Playcode.Export.CompareHtml do
   defp division_heading(%{title: ""}, _key), do: ""
 
   defp division_heading(%{title: title, type: type}, key) when type in @act_types do
-    "      <h2 class=\"act-heading\" data-sync-div=\"#{key}\">#{escape(title)}</h2>\n"
+    "      <h2 class=\"act-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h2>\n"
   end
 
   defp division_heading(%{title: title}, key) do
-    "      <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{escape(title)}</h3>\n"
+    "      <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h3>\n"
   end
 
   defp child_heading(%{title: nil}, _key), do: ""
   defp child_heading(%{title: ""}, _key), do: ""
 
   defp child_heading(%{title: title}, key),
-    do: "        <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{escape(title)}</h3>\n"
+    do:
+      "        <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h3>\n"
 
   # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its
   # heading; nothing for a division of the text.
@@ -378,7 +379,8 @@ defmodule Playcode.Export.CompareHtml do
   defp render_cast_group([first | _] = entries) do
     heading =
       if first.group_heading,
-        do: "          <p class=\"cast-group\">#{escape(first.group_heading)}</p>\n",
+        do:
+          "          <p class=\"cast-group\">#{NoteMarkup.inline(first.group_heading, [], :html)}</p>\n",
         else: ""
 
     heading <> Enum.map_join(entries, "\n", &render_cast_item/1)
@@ -387,10 +389,11 @@ defmodule Playcode.Export.CompareHtml do
   defp render_cast_item(entry) do
     desc =
       if entry.description,
-        do: " <span class=\"cast-desc\">#{escape(entry.description)}</span>",
+        do:
+          " <span class=\"cast-desc\">#{NoteMarkup.inline(entry.description, [], :html)}</span>",
         else: ""
 
-    "          <div class=\"cast-item\"><span class=\"cast-name\">#{escape(entry.name)}</span>#{desc}</div>"
+    "          <div class=\"cast-item\"><span class=\"cast-name\">#{NoteMarkup.inline(entry.name, [], :html)}</span>#{desc}</div>"
   end
 
   defp render_elements(elements, act_key) do

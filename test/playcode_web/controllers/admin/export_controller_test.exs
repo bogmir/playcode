@@ -133,6 +133,28 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
              ~r{<div class="trailer">A <em>Song</em></div>\s*<div class="verse-line}
   end
 
+  test "a downloaded comparison prints italics in headings and cast lists as italics",
+       %{conn: conn, play: play} do
+    italic =
+      import_tei!(
+        tei(
+          front: """
+          <div type="elenco"><castList>
+            <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
+          </castList></div>
+          """,
+          body:
+            ~s(<div1 type="acto" n="1"><head>Acto <emph>primero</emph></head><sp who="#CORT"><speaker>CORTESANOS</speaker><l n="1">Verso</l></sp></div1>)
+        )
+      )
+
+    conn = get(conn, ~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{italic.id}"]}")
+    body = response(conn, 200)
+
+    refute body =~ "&lt;&lt;"
+    for text <- ["The courtiers", "Spela", "primero"], do: assert(body =~ "<em>#{text}</em>")
+  end
+
   # Question 41: the Arte nuevo and its translations, compared, each poem's dedication.
   test "a downloaded comparison prints a poem's opener", %{conn: conn, play: play} do
     poem =
