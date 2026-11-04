@@ -347,6 +347,20 @@ defmodule Playcode.PlayContent.InlineMarkup do
     {"<rs#{pairs}>", "</rs>"}
   end
 
+  @tags %{
+    stage: ["<stage", "</stage>"],
+    aside: ["<aside>", "</aside>"],
+    folio: ["<folio", "</folio>"],
+    rs: ["<rs", "</rs>"]
+  }
+
+  @doc """
+  True when `text` holds a `kind` of marker (`:stage`, `:aside`, `:folio` or `:rs`),
+  opening or closing, sound or not: whether it is worth checking, or printing as one.
+  """
+  def holds?(nil, _kind), do: false
+  def holds?(text, kind), do: String.contains?(text, Map.fetch!(@tags, kind))
+
   # Any one marker, opening or closing, whether or not its partner is in the text.
   @any_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<folio(?: part="[IMF]")?>|<\/folio>|<rs(?: type="[A-Za-z0-9_.\-]+")?(?: n="[A-Za-z0-9_.\-]+")?>|<\/rs>|<lb n="[A-Za-z0-9.\-]+"\/>/
 

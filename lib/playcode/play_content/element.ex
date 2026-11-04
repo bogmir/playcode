@@ -117,7 +117,7 @@ defmodule Playcode.PlayContent.Element do
 
   @doc "True when every word of the element is spoken aside: no marker says which are."
   def whole_aside?(%{is_aside: aside, content: content}),
-    do: aside and not String.contains?(content || "", "<aside>")
+    do: aside and not InlineMarkup.holds?(content, :aside)
 
   @doc """
   True when every word of `element` is the Folio's alone (`InlineMarkup.whole_folio?/1`):
@@ -136,17 +136,17 @@ defmodule Playcode.PlayContent.Element do
   def folio_only?(element), do: InlineMarkup.whole_folio?(Map.get(element, :content))
 
   @doc "True when an element of `divisions`, as `PlayContent.load_play_content/2` gives them, holds a Folio passage."
-  def folio_passages?(divisions), do: any_holds?(divisions, "<folio")
+  def folio_passages?(divisions), do: any_holds?(divisions, :folio)
 
   @doc """
   True when an element of `divisions`, loaded as for `folio_passages?/1`, or a note's term
   or text holds an `<rs>`.
   """
   def tagged_names?(divisions) do
-    any_holds?(divisions, "<rs") or
+    any_holds?(divisions, :rs) or
       divisions
       |> Note.reading_order()
-      |> Enum.any?(&String.contains?("#{&1.term} #{&1.body}", "<rs"))
+      |> Enum.any?(&InlineMarkup.holds?("#{&1.term} #{&1.body}", :rs))
   end
 
   @doc "True when `divisions`, loaded as for `folio_passages?/1`, hold a shared line (a first part)."
@@ -155,8 +155,7 @@ defmodule Playcode.PlayContent.Element do
 
   @doc "True when `divisions`, loaded as for `folio_passages?/1`, hold a stage direction, inline ones included."
   def stage_directions?(divisions),
-    do:
-      any_element?(divisions, &(&1.type == "stage_direction")) or any_holds?(divisions, "<stage")
+    do: any_element?(divisions, &(&1.type == "stage_direction")) or any_holds?(divisions, :stage)
 
   @doc "The verse lines of `divisions`, loaded as for `folio_passages?/1`, in reading order."
   def verse_lines(divisions) do
@@ -169,9 +168,9 @@ defmodule Playcode.PlayContent.Element do
   defp lines_in(%{type: "verse_line"} = line), do: [line]
   defp lines_in(element), do: Enum.flat_map(children_of(element), &lines_in/1)
 
-  defp any_holds?(divisions, tag) do
+  defp any_holds?(divisions, kind) do
     any_element?(divisions, fn element ->
-      Enum.any?([element.content, element.speaker_label], &(&1 && String.contains?(&1, tag)))
+      Enum.any?([element.content, element.speaker_label], &InlineMarkup.holds?(&1, kind))
     end)
   end
 
@@ -248,7 +247,7 @@ defmodule Playcode.PlayContent.Element do
         text = get_field(changeset, field)
 
         cond do
-          not String.contains?(text || "", ["<folio", "</folio>"]) ->
+          not InlineMarkup.holds?(text, :folio) ->
             changeset
 
           get_field(changeset, :type) in types and
@@ -268,7 +267,7 @@ defmodule Playcode.PlayContent.Element do
     content = get_field(changeset, :content)
 
     cond do
-      not String.contains?(content || "", ["<aside>", "</aside>"]) ->
+      not InlineMarkup.holds?(content, :aside) ->
         changeset
 
       get_field(changeset, :type) in ~w(verse_line prose) and
@@ -311,7 +310,7 @@ defmodule Playcode.PlayContent.Element do
       sound? =
         if get_field(changeset, :type) in ~w(verse_line prose),
           do: Playcode.PlayContent.InlineMarkup.well_formed?(content),
-          else: not String.contains?(content || "", ["<stage", "</stage>"])
+          else: not InlineMarkup.holds?(content, :stage)
 
       if sound?,
         do: changeset,
