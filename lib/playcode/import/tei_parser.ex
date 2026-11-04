@@ -1932,11 +1932,17 @@ defmodule Playcode.Import.TeiParser do
   # An emphasis of nothing (EMOTHE0187's `<emph></emph>, if`) is no italics: kept as
   # "<<>>", it came back from the export as a stray space, a different file each time.
   # An italic run cut around an <rs> (emph_child/2) leaves no empty italics at its edges,
-  # nor italics of a space between two tags.
+  # nor italics of a space between two tags, and the space at a cut stands outside the
+  # italics, where an import of the exported file reads it ("<<From>> <rs>").
   defp italics(text) do
-    if String.trim(text) == "",
-      do: text,
-      else: Regex.replace(~r/<<(\s*)>>/, "<<" <> text <> ">>", "\\1")
+    if String.trim(text) == "" do
+      text
+    else
+      ("<<" <> text <> ">>")
+      |> String.replace(~r/(\s+)>>(?=<rs[\s>])/, ">>\\1")
+      |> String.replace(~r/(?<=<\/rs>)<<(\s+)/, "\\1<<")
+      |> String.replace(~r/<<(\s*)>>/, "\\1")
+    end
   end
 
   @stage_parents ~w(l p seg)
@@ -2171,27 +2177,29 @@ defmodule Playcode.Import.TeiParser do
   end
 
   # Whether the file writes `child` and `next` with no white space between them where one
-  # is an italic and the other a word or an italic (italics are formatting), or where an
+  # is an italic or a tagged name and the other a word, an italic or a tag (italics are
+  # formatting, an <rs> the text's own words: EMOTHE0187's "<rs>Jove</rs>'s"), or where an
   # element is followed by closing punctuation ("(ti priego), dimmi"): no space is added
   # there. Otherwise an element (a stage, an aside, a printed line's number) is set apart
   # from its neighbours whatever the spacing.
   defp glued?(_child, nil), do: false
 
   defp glued?(child, next) do
-    (italic_beside_word?(child, next) or (is_tuple(child) and closing_punctuation?(next))) and
+    (words_beside_word?(child, next) or (is_tuple(child) and closing_punctuation?(next))) and
       not space_at?(child, :trail) and not space_at?(next, :lead)
   end
 
-  defp italic_beside_word?(child, next),
-    do: (italic?(child) and word_or_italic?(next)) or (italic?(next) and word_or_italic?(child))
+  defp words_beside_word?(child, next),
+    do: (words?(child) and word_or_words?(next)) or (words?(next) and word_or_words?(child))
 
   defp closing_punctuation?(text) when is_binary(text), do: text =~ ~r/\A[,.;:!?)\]»…]/u
   defp closing_punctuation?(_node), do: false
 
-  defp word_or_italic?(node), do: is_binary(node) or italic?(node)
+  defp word_or_words?(node), do: is_binary(node) or words?(node)
 
-  defp italic?({name, attrs, _children}), do: emph_element?(name, attrs)
-  defp italic?(_text), do: false
+  defp words?({"rs", _attrs, _children}), do: true
+  defp words?({name, attrs, _children}), do: emph_element?(name, attrs)
+  defp words?(_text), do: false
 
   # Whether `node`'s text starts (`:lead`) or ends (`:trail`) with white space, an
   # element's own text, its notes and entries of the apparatus left out.
