@@ -4108,6 +4108,29 @@ defmodule Playcode.TeiRoundtripTest do
       assert listed.(roundtrip(first)) == listed.(first)
     end
 
+    # EMOTHE0671's FileMaker witness, its italics ending in a space: the import reads that
+    # space outside the italics, so the file's copy no longer printed the same line as the
+    # kept witness and came in beside it, one more on every re-import of the export.
+    test "a kept witness whose italics end in a space comes back once" do
+      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(
+          %{
+            "play_id" => play.id,
+            "note" => "<<La gran / comedia / de No puede ser >> fol. 1v-23v",
+            "origin" => "filemaker"
+          },
+          %Playcode.Witnesses.Witness{filemaker_id: "T03:671"}
+        )
+
+      first = export_tei(play)
+      listed = fn xml -> for {_, text} <- xml_elements(xml, "witness"), do: text end
+
+      assert [_one] = listed.(first)
+      assert listed.(roundtrip(first)) == listed.(first)
+    end
+
     # This test used to assert the opposite: the export wrote the FileMaker record number
     # as <idno type="filemaker"> and the import made the witness FileMaker's again. A TEI
     # file names no FileMaker or Playcode identifier (decided 2026-10-13): the record
@@ -4916,6 +4939,21 @@ defmodule Playcode.TeiRoundtripTest do
         )
 
       assert reading_texts(xml, "l") == ["Uno dos", "trescuatro"]
+    end
+
+    # EMOTHE0357's source note types its italics as text ("14.927,&lt;&lt; La gran…"): read
+    # as italics, they kept the space an <emph> would have had moved outside them, so the
+    # export changed on the next import of it.
+    test "italics typed as text, a space at their edge, come back the same from the export" do
+      xml =
+        tei(
+          code: "LIT#{System.unique_integer([:positive])}",
+          source_desc:
+            "<bibl><title>Base</title><note>Ms. 14.927,&lt;&lt; La gran comedia &gt;&gt;firmado</note></bibl>"
+        )
+
+      assert {:ok, export} = xml |> write_tmp!() |> Playcode.Import.TeiImport.check_round_trip()
+      assert export =~ "14.927, <emph>La gran comedia</emph> firmado"
     end
 
     # Glued to a stage or a printed line's number, an italic is still set apart from it:

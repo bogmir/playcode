@@ -396,17 +396,19 @@ defmodule Playcode.Import.TeiImport do
   # bibliography, or one earlier in the same file — is left out (Witnesses.taken_sigla/1,
   # after reset_tei_content/1 removed the file's own). So is a witness printing the same
   # line as one the play kept: most FileMaker witnesses have no siglum, and the play's own
-  # export lists them. A witness with nothing to print fails its changeset and is left
-  # out too.
+  # export lists them. The lines are compared as a page prints them, whitespace collapsed:
+  # a kept witness's italics ending in a space ("<<…ser >> fol.") come back from its own
+  # export with the space outside them (EMOTHE0671). A witness with nothing to print fails
+  # its changeset and is left out too.
   defp write_witnesses([], _play), do: :ok
 
   defp write_witnesses(witnesses, play) do
-    kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&Witnesses.plain/1)
+    kept = play.id |> Witnesses.list_for_play() |> MapSet.new(&printed_line/1)
 
     Enum.reduce(witnesses, Witnesses.taken_sigla(play.id), fn witness, taken ->
       attrs = tei_row(witness, play)
 
-      if attrs.siglum in taken or Witnesses.plain(struct(Witness, attrs)) in kept do
+      if attrs.siglum in taken or printed_line(struct(Witness, attrs)) in kept do
         taken
       else
         _ = Witnesses.create_witness(attrs)
@@ -416,6 +418,8 @@ defmodule Playcode.Import.TeiImport do
 
     :ok
   end
+
+  defp printed_line(witness), do: witness |> Witnesses.plain() |> String.split() |> Enum.join(" ")
 
   # --- Performances ---
 
