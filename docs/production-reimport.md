@@ -45,7 +45,10 @@ mix playcode.fly.reimport scale-down  # step 9 alone, after an aborted run or bu
 A few corrected files, rather than the corpus, go in one command: `mix playcode.fly.reimport
 files --dir DIR` is `prepare` with them, and when the dry run needs no look, `run` and
 `generate`. It stops after the dry run otherwise, and never deploys. Put only the corrected
-files in `DIR`.
+files in `DIR`. Before touching production it imports each file into your local database,
+exports it, imports that export and compares the two (all rolled back): a file that changes
+on every re-import of its own export (EMOTHE0187, 2026-11-02), or does not import, stops it
+there, naming the first line that differs. It needs the local database up.
 
 1. **Deploy the code** (step 1 below).
 2. **`prepare`** snapshots the database volume and waits for the snapshot, starts the app

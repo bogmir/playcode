@@ -3,7 +3,8 @@ defmodule Playcode.ApparatusCorpusTest do
   The six plays of the production corpus that carry a critical apparatus, read from
   doc/tei_corpus/ (git-ignored; without it nothing runs): every entry outside a note comes
   back as an entry, with EMOTHE0530's one found only in a note; none is left inside a note
-  or pasted into a line; and the export, imported again, gives the same file.
+  or pasted into a line; and the export, imported again, gives the same file
+  (`TeiImport.check_round_trip/1`).
   `mix test --include slow`.
   """
   use Playcode.DataCase, async: true
@@ -44,9 +45,8 @@ defmodule Playcode.ApparatusCorpusTest do
   def assert_entries(path) do
     code = path |> Path.basename() |> String.slice(0, 10)
 
-    {:ok, play} = path |> own_copy() |> write_tmp!() |> TeiImport.import_file()
-    refute play.code =~ "EMOTHE"
-    first = export_tei(play)
+    assert {:ok, first} = path |> own_copy() |> write_tmp!() |> TeiImport.check_round_trip()
+    assert first =~ ~s(<title key="archivo">APP)
 
     assert first |> xml_apps() |> Enum.reject(&(&1.type == "folio")) |> length() ==
              @entries[code]
@@ -56,17 +56,11 @@ defmodule Playcode.ApparatusCorpusTest do
     if pasted = @pasted[code],
       do: refute(Enum.any?(reading_texts(first, "l"), &String.contains?(&1, pasted)))
 
-    {:ok, again} = first |> write_tmp!() |> TeiImport.import_file()
-    second = export_tei(again)
-
-    assert second == first
-
     # Hamlet's 132 Folio passages: 119 inside one element, 13 across elements, each of
     # those with an F at its start and its end.
     if code == "EMOTHE0010" do
       assert Enum.count(xml_apps(first), &(&1.type == "folio")) == 119
       assert first |> xml_texts("code") |> Enum.count(&(&1 == "<sup>")) == 26
-      assert xml_texts(second, "code") == xml_texts(first, "code")
     end
   end
 end

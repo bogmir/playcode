@@ -15,6 +15,7 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Bibliography.{Citation, Entry, Link}
   alias Playcode.Catalogue
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
+  alias Playcode.Export.TeiXml
   alias Playcode.Import.TeiParser
   alias Playcode.Performances
   alias Playcode.Performances.Performance
@@ -68,6 +69,48 @@ defmodule Playcode.Import.TeiImport do
         Logger.error("Import failed for #{path}: #{inspect(reason)}")
         {:error, reason}
     end
+  end
+
+  @doc """
+  Imports the file at `path`, exports the play, imports that export and exports it again,
+  then rolls it all back. `{:ok, xml}`, the export, when both exports are the same file;
+  `{:changed, line, first, second}`, the first line that differs and its text in each,
+  when they are not; `{:error, reason}` when the file does not import. A file that fails
+  this changes on every re-import of its own export.
+  """
+  def check_round_trip(path) do
+    tmp = Path.join(System.tmp_dir!(), "round-trip-#{System.unique_integer([:positive])}.xml")
+
+    try do
+      {:error, result} =
+        Repo.transaction(fn -> Repo.rollback(round_trip(path, tmp)) end, timeout: :infinity)
+
+      result
+    after
+      File.rm(tmp)
+    end
+  end
+
+  defp round_trip(path, tmp) do
+    with {:ok, play} <- import_file(path),
+         first = export(play),
+         :ok <- File.write(tmp, first),
+         {:ok, again} <- import_file(tmp) do
+      case export(again) do
+        ^first -> {:ok, first}
+        second -> first_difference(first, second)
+      end
+    end
+  end
+
+  defp export(play), do: TeiXml.generate(Catalogue.get_play_with_all!(play.id))
+
+  # The `nil` after each file's last line marks the shorter file's end as a difference.
+  defp first_difference(first, second) do
+    (String.split(first, "\n") ++ [nil])
+    |> Enum.zip(String.split(second, "\n") ++ [nil])
+    |> Enum.with_index(1)
+    |> Enum.find_value(fn {{a, b}, line} -> if a != b, do: {:changed, line, a, b} end)
   end
 
   @doc """

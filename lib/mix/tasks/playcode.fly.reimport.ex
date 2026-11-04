@@ -19,7 +19,10 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   it again is safe; a new upload starts the re-import over.
 
   `files` is the three in one for a few corrected files: `prepare` with them, and when the
-  dry run needs no look, `run` and `generate`. It never deploys.
+  dry run needs no look, `run` and `generate`. It never deploys. Before production sees
+  them, it imports each file into the local database, exports it, imports that export and
+  compares the two exports (`TeiImport.check_round_trip/1`, rolled back): a file that
+  changes on every re-import, or does not import, stops it there.
 
   `run` re-imports every play not imported since its file was uploaded
   (`Release.import_tei/2` with `force: true, resume: true`), running again up to three
@@ -39,6 +42,8 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   """
 
   use Mix.Task
+
+  alias Playcode.Import.TeiImport
 
   @app "playcode"
   @app_machine "7847063c04e7e8"
@@ -66,6 +71,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   # Without --dir, `prepare`'s default is the whole corpus: never what `files` means.
   def run(["files" | args]) do
     dir = dir(args, nil) || Mix.raise("usage: mix playcode.fly.reimport files --dir DIR")
+    check_round_trips!(dir)
 
     case prepare(dir) do
       :clean ->
@@ -124,9 +130,38 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     Keyword.get(opts, :dir, default)
   end
 
+  defp check_round_trips!(dir) do
+    step("Checking that each file comes back the same from its own export")
+    Mix.Task.run("app.start")
+
+    for path <- xml_files(dir) do
+      case TeiImport.check_round_trip(path) do
+        {:ok, _xml} ->
+          :ok
+
+        {:changed, line, first, second} ->
+          Mix.raise("""
+          #{Path.basename(path)} does not come back the same from its own export, line #{line}:
+            export:    #{first}
+            re-export: #{second}
+          Nothing was sent to production.
+          """)
+
+        {:error, reason} ->
+          Mix.raise(
+            "#{Path.basename(path)} does not import: #{inspect(reason)}. Nothing was sent to production."
+          )
+      end
+    end
+
+    Mix.shell().info("Every file comes back the same.")
+  end
+
+  defp xml_files(dir), do: dir |> Path.join("*.xml") |> Path.wildcard()
+
   # :clean when the dry run needs no look.
   defp prepare(dir) do
-    files = dir |> Path.join("*.xml") |> Path.wildcard() |> Enum.map(&Path.basename/1)
+    files = dir |> xml_files() |> Enum.map(&Path.basename/1)
     if files == [], do: Mix.raise("no .xml files in #{dir}")
 
     step("Snapshot of the database volume")
