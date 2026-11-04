@@ -536,8 +536,8 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   @doc """
   The play's notes in reading order, each with what it hangs on (`anchor`), the word it
-  glosses and where it is: the division's and the scene's titles, and the line's number
-  when it has one. The public Notes view and the admin's Notes tab both list these.
+  glosses and where it is: the division's and the scene's titles, plain (a button's
+  label), and the line's number when it has one. The public Notes view and the admin's Notes tab both list these.
   """
   def note_entries(divisions) do
     for %{note: note, anchor: anchor, division: division, scene: scene} <-
@@ -552,6 +552,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         ]
         |> Enum.reject(&is_nil/1)
         |> Enum.join(", ")
+        |> InlineMarkup.plain()
 
       %{
         note: note,

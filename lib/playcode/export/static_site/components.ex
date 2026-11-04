@@ -1101,7 +1101,7 @@ defmodule Playcode.Export.StaticSite.Components do
         </thead>
         <tbody>
           <tr :for={character <- @characters}>
-            <th scope="row">{character["name"]}</th>
+            <th scope="row"><.inline text={character["name"]} /></th>
             <td class="num">{number(character["speeches"])}</td>
             <td class="num">{number(character["lines"])}</td>
             <td class="num">{number(character["words"])}</td>
@@ -1170,11 +1170,14 @@ defmodule Playcode.Export.StaticSite.Components do
           </thead>
           <tbody>
             <tr :for={{name, cells} <- @rows}>
-              <th scope="row">{name}</th>
+              <th scope="row"><.inline text={name} /></th>
               <td
                 :for={{column, i} <- Enum.with_index(@columns)}
                 class={["c", cells[i] && "on", act_start(@columns, i)]}
-                title={cells[i] && "#{name} · #{column_title(column)} · #{cells[i]} lines"}
+                title={
+                  cells[i] &&
+                    "#{InlineMarkup.plain(name)} · #{column_title(column)} · #{cells[i]} lines"
+                }
               >
                 <span :if={cells[i]} class="sr-only">
                   {cells[i]} {if cells[i] == 1, do: "line", else: "lines"}

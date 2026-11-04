@@ -4,7 +4,9 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
   """
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext
+  alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
+  alias PlaycodeWeb.Components.PlayText
 
   attr :statistic, :map, required: true
   attr :play, :map, required: true
@@ -109,9 +111,9 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
           <div :for={char <- @data["character_appearances"]} class="flex items-center gap-3">
             <span
               class="w-28 text-sm font-medium text-base-content/80 truncate shrink-0"
-              title={char["name"]}
+              title={InlineMarkup.plain(char["name"])}
             >
-              {char["name"]}
+              <PlayText.inline_content text={char["name"]} />
             </span>
             <div class="flex-1 bg-base-200 rounded-full h-6 overflow-hidden">
               <div
