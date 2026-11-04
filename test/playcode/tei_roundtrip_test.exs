@@ -2169,10 +2169,53 @@ defmodule Playcode.TeiRoundtripTest do
         assert xml_texts(xml, "rs", within: "p") == ["Toledo", "Tarquino"]
         assert xml_texts(xml, "emph", within: "rs") == ["Tarquino"]
 
-        # The importer trims italics, so the space after them moves outside on a re-import.
-        assert xml =~ ~r{Toledo</rs>\. Rojas escribió <emph>Lucrecia y ?</emph> ?<rs}
+        # The space at the cut stands outside the italics from the first import on; it used
+        # to move there only on a re-import, and this assertion allowed either.
+        assert xml =~ ~s(Toledo</rs>. Rojas escribió <emph>Lucrecia y</emph> <rs)
         assert xml =~ ~s(<emph>Tarquino</emph></rs>, a esta leyenda.)
       end
+    end
+
+    # EMOTHE0187's "If Jove's great royalty": the note stands after the tag, glued to "'s",
+    # and goes inside the tag. A tag is the text's own words, so the word glued to it stays
+    # glued, on the first import and on every one after.
+    test "a word glued to an rs stays glued, a note between them or inside the tag" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l n="1">If <rs type="mitologia_toponimo">Jove</rs><note n="1" type="editor_digital"><term>Jove</term><p>Jove.</p></note>'s great royalty</l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      assert reading_texts(xml, "l") == ["If Jove's great royalty"]
+      assert roundtrip(xml) == xml
+    end
+
+    # EMOTHE0187's note on "From Dover to the marketplace of Rye": italics round two tags,
+    # cut around each. The space at a cut goes outside the italics on the first import, as
+    # every later import puts it.
+    test "italics cut around an rs keep their spaces outside them, from the first import" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l n="1">From Dover<note n="1" type="editor"><p><emph>From <rs type="toponimo_aludido">Dover</rs> to <rs type="toponimo_aludido">Rye</rs></emph>, the island.</p></note></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      assert xml =~
+               ~s(<emph>From</emph> <rs type="toponimo_aludido"><emph>Dover</emph></rs> <emph>to</emph> <rs)
+
+      assert roundtrip(xml) == xml
     end
 
     # A tag's run is counted within a stage or a Folio passage, so a tag just before one

@@ -26,6 +26,13 @@ defmodule Playcode.PlayContent.InlineMarkup do
   line's notes between the pieces. `well_formed?/1`, `asides_well_formed?/1`,
   `numbers_well_formed?/1`, `folios_well_formed?/1` and `rs_well_formed?/1` say whether the
   markers are sound.
+
+  This module is the one place the syntax is written: the importer builds the markers with
+  `stage_marker/1`, `rs_marker/2`, `aside_marker/0`, `folio_marker/1` and
+  `number_marker/1`, and counts a half-read text with `strip/1`; the TEI export reads the
+  asides with `asides/1` and rejoins a passage's pieces with `folio_parts/1` and
+  `map_folio_parts/2`; `holds?/2` says which markers a text holds. The content editor's
+  help texts spell the syntax out for curators, who type it.
   """
 
   # The type and the text of one stage. Groups: type (empty when there is none), text.
@@ -316,8 +323,101 @@ defmodule Playcode.PlayContent.InlineMarkup do
   def stage_count(nil), do: 0
   def stage_count(text), do: @stage |> Regex.scan(text) |> length()
 
-  @doc "The marker the importer stores where printed line `n` of the source starts."
-  def number_marker(n), do: ~s(<lb n="#{n}"/>)
+  @doc """
+  The marker the importer stores where printed line `n` of the source starts, or `""` when
+  `n` is absent or not a number the marker can hold (letters, digits, `.` and `-`).
+  """
+  def number_marker(nil), do: ""
+  def number_marker(n), do: if(n =~ ~r/\A[A-Za-z0-9.\-]+\z/, do: ~s(<lb n="#{n}"/>), else: "")
+
+  @doc """
+  A stage's opening and closing markers, `{open, close}`, its `type` in the opening one
+  when it is the plain word the marker allows (letters, digits and `_`).
+  """
+  def stage_marker(type) do
+    open =
+      if type && type =~ ~r/\A[A-Za-z0-9_]+\z/, do: ~s(<stage type="#{type}">), else: "<stage>"
+
+    {open, "</stage>"}
+  end
+
+  @doc """
+  A tagged name, place or phrase's markers, `{open, close}`, its `type` and `n` each in the
+  opening one when it is a plain word the marker allows (letters, digits, `_`, `.`, `-`).
+  """
+  def rs_marker(type, n) do
+    pairs =
+      for {key, value} <- [type: type, n: n],
+          value && value =~ ~r/\A[A-Za-z0-9_.\-]+\z/,
+          do: ~s( #{key}="#{value}")
+
+    {"<rs#{pairs}>", "</rs>"}
+  end
+
+  @tags %{
+    stage: ["<stage", "</stage>"],
+    aside: ["<aside>", "</aside>"],
+    folio: ["<folio", "</folio>"],
+    rs: ["<rs", "</rs>"]
+  }
+
+  @doc """
+  True when `text` holds a `kind` of marker (`:stage`, `:aside`, `:folio` or `:rs`),
+  opening or closing, sound or not: whether it is worth checking, or printing as one.
+  """
+  def holds?(nil, _kind), do: false
+  def holds?(text, kind), do: String.contains?(text, Map.fetch!(@tags, kind))
+
+  # Any one marker, opening or closing, whether or not its partner is in the text.
+  @any_marker ~r/<<|>>|<stage(?: type="[A-Za-z0-9_]+")?>|<\/stage>|<\/?aside>|<folio(?: part="[IMF]")?>|<\/folio>|<rs(?: type="[A-Za-z0-9_.\-]+")?(?: n="[A-Za-z0-9_.\-]+")?>|<\/rs>|<lb n="[A-Za-z0-9.\-]+"\/>/
+
+  @doc """
+  `text` with every marker taken out, one at a time, its words kept: a text cut inside an
+  italic run or a stage, its closing marker still to come, loses its opening one too,
+  which `plain/1`, reading whole markers, leaves.
+  """
+  def strip(text), do: String.replace(text, @any_marker, "")
+
+  @doc "An aside's markers, `{open, close}`."
+  def aside_marker, do: {"<aside>", "</aside>"}
+
+  @doc """
+  `text` in the order it is read, cut where each aside starts and ends: `{:aside, words}`
+  for the words inside an `<aside>` marker, `{:spoken, words}` for those around them,
+  each with its other markers; no empty piece.
+  """
+  def asides(nil), do: []
+
+  def asides(text) do
+    ~r{<aside>.*?</aside>}s
+    |> Regex.split(text, include_captures: true, trim: true)
+    |> Enum.map(fn
+      "<aside>" <> rest -> {:aside, String.replace_suffix(rest, "</aside>", "")}
+      words -> {:spoken, words}
+    end)
+  end
+
+  @doc """
+  A Folio passage's markers, `{open, close}`: `part` nil for a passage inside one text, else
+  `"I"`, `"M"` or `"F"` for the piece of one that crosses texts.
+  """
+  def folio_marker(nil), do: {"<folio>", "</folio>"}
+  def folio_marker(part) when part in ~w(I M F), do: {~s(<folio part="#{part}">), "</folio>"}
+
+  @folio_part ~r/<folio part="([IMF])">/
+
+  @doc "The parts of the crossing Folio pieces in `text`, in order (`folio_marker/1`)."
+  def folio_parts(text), do: for([_, part] <- Regex.scan(@folio_part, text || ""), do: part)
+
+  @doc """
+  `text` with each crossing Folio piece's part given by `fun`, which takes its part and
+  returns the new one, or nil to make it a passage inside the text.
+  """
+  def map_folio_parts(text, fun),
+    do:
+      Regex.replace(@folio_part, text, fn _tag, part ->
+        part |> fun.() |> folio_marker() |> elem(0)
+      end)
 
   @doc """
   A prose paragraph's own number (TEI's `p@n`): the number of a marker at the very start

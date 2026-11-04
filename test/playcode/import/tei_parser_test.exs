@@ -29,7 +29,12 @@ defmodule Playcode.Import.TeiParserTest do
     {Playcode.Performances.Performance, :venue_types, 0},
     {Playcode.Performances.Performance, :year_range, 0},
     {Playcode.Places.Place, :authorities, 0},
+    {Playcode.PlayContent.InlineMarkup, :aside_marker, 0},
+    {Playcode.PlayContent.InlineMarkup, :folio_marker, 1},
     {Playcode.PlayContent.InlineMarkup, :number_marker, 1},
+    {Playcode.PlayContent.InlineMarkup, :rs_marker, 2},
+    {Playcode.PlayContent.InlineMarkup, :stage_marker, 1},
+    {Playcode.PlayContent.InlineMarkup, :strip, 1},
     {Playcode.PlayContent.Note, :variant, 0},
     {Playcode.PlayContent.Division, :body_types, 0},
     # strings only: a performance's text is squeezed as the changeset squeezes it
