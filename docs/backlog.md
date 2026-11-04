@@ -62,6 +62,15 @@ The project's next phase studies how Spanish plays circulated in Europe up to th
 
 - [ ] **Two split-verse parts in *Giovanni e Annabella*, and a stage direction's place in *The Malcontent*** (2026-10-22) - question 50. `em0284-it-2686` ("O molto", `F`, after prose) and `em0284-it-1459` ("Sei qui, fratello?", `I`, prose after it) are the two parts out of order left of the 27 the corpus had (*Split-verse parts out of order*, `docs/history.md`); emothe.uv.es and the published site move them in by a fixed step. And `em0363-en-st-0115` "(To Aurelia.)" may belong before "Woman of shame,". Correct our copies under `doc/tei_corpus/` and list the change for the team's if the answer says so
 
+## Found by the review of the downloads' render pass (2026-11-04), latent
+
+None shows in the corpus or on dev today; each waits for the data that would show it.
+
+- [ ] **A paratext chapter with no heading is titled in the reader's UI language** - `Epub.chapter_title/2` uses `PlayLabels.paratext_title/1` in the request's locale ("Colofón" for a Spanish visitor), while the rest of the download is English; `export_controller_test.exs` pins the Spanish. Wrap it in the downloads' English, as `Download.in_english/1` does
+- [ ] **The downloads ignore `plays.form`** - `Download.verse_info/1` reads `is_verse`; the play page and the site print `Play.form/1`. See `docs/static-site-improvements.md`, item 3
+- [ ] **The front matter prints the header's texts through `escape/1`** - title, author, the original's title, the editors' names and the dating notes in `Download.front/3`, and the comparison panel's title, would show `<<…>>` for an `<emph>` in the TEI header. Print them through `NoteMarkup.inline/3`
+- [ ] **`@act_types` leaves out `play`** - a titled top-level `play` division prints in the downloads as a scene heading, with no page break before it, where the play page treats it as an act (`play_text.ex`). The list has six hand copies; one shared predicate (`Division`) would settle them
+
 ## Found by the corpus round trip (2026-10-09)
 Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode_dev`, the 360 whose code matches their file name exported again with `TeiXml.generate/1`, and every element and attribute counted in both (per section, `parent>child`). Counts below are source totals over the 360 unless they say otherwise. Nothing here is fixed yet; each is a decision or a project of its own.
 

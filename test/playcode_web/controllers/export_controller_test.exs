@@ -99,6 +99,76 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  # BUPE writes a "cover" item in every spine; one the manifest lacks makes epubcheck, and a
+  # strict ingestion, refuse the book.
+  test "the EPUB's spine names only items in its manifest", %{conn: conn, play: play} do
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, opf} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ ~r/\.opf$/ end)
+
+    ids = for [_, id] <- Regex.scan(~r/<item id="([^"]+)"/, opf), into: MapSet.new(), do: id
+    spine = for [_, id] <- Regex.scan(~r/<itemref idref="([^"]+)"/, opf), do: id
+
+    assert spine != []
+    assert Enum.reject(spine, &MapSet.member?(ids, &1)) == []
+  end
+
+  # The edition's publisher, as the front matter's "Publication" names it. BUPE writes the
+  # package with plain EEx, so an "&" left unescaped makes it ill-formed.
+  test "the EPUB names the edition's publisher in its metadata, escaped",
+       %{conn: conn, play: play} do
+    {:ok, play} =
+      Playcode.Catalogue.update_play(play, %{
+        "title" => "Romeo & Juliet",
+        "publisher" => "Norton & Company"
+      })
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, opf} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ ~r/\.opf$/ end)
+
+    assert opf =~ ~s(<dc:publisher id="publisher">Norton &amp; Company</dc:publisher>)
+
+    for {name, content} <- files,
+        String.ends_with?(to_string(name), [".opf", ".ncx", "nav.xhtml"]) do
+      assert {:ok, _} = Saxy.SimpleForm.parse_string(content), "#{name} is not well-formed"
+    end
+  end
+
+  # As the play page and the published site name them, in the downloads' English.
+  test "the HTML and EPUB downloads name each editor's role", %{conn: conn, play: play} do
+    {:ok, _} =
+      Playcode.Catalogue.create_play_editor(%{
+        play_id: play.id,
+        person_name: "Joan Oleza",
+        role: "principal",
+        position: 1
+      })
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for {format, text} <- [html: html, epub: epub_text(files)] do
+      assert text =~ ~s{Joan Oleza <span class="role">(Principal investigator)</span>},
+             "#{format}"
+    end
+  end
+
+  # Both stylesheets reset every margin, so each must set a paratext's paragraphs apart and
+  # style the notes on the edition as it styles the publication details.
+  test "the HTML and EPUB downloads style a paratext's paragraphs and the notes on the edition",
+       %{conn: conn, play: play} do
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, epub_css} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ "style.css" end)
+
+    for {format, css} <- [html: html, epub: epub_css] do
+      assert css =~ ~r/\.paratext p \+ p \{[^}]*margin-top/, "#{format}: paratext paragraphs"
+      assert css =~ ~r/\.edition-notes \{[^}]*margin/, "#{format}: notes on the edition"
+    end
+
+    # An e-reader whose own stylesheet predates HTML5 lays these out inline.
+    assert epub_css =~ ~r/header, section, aside \{[^}]*display: block/
+  end
+
   # As the published site prints them, in the downloads' English.
   test "the HTML and EPUB downloads print the dating and the historical time",
        %{conn: conn, play: play} do
@@ -118,6 +188,11 @@ defmodule PlaycodeWeb.ExportControllerTest do
     for {format, text} <- [html: html, epub: epub],
         expected <- ["1600–1601", "¿1600? y ¿1601?", "16th century", "reinado de Felipe II"] do
       assert text =~ expected, "#{format} lacks #{expected}"
+    end
+
+    # The historical time first, as the site's title page and the play page list them.
+    for {format, text} <- [html: html, epub: epub] do
+      assert text =~ ~r/Historical time:.*Composition:/s, "#{format} lists composition first"
     end
   end
 
@@ -224,8 +299,8 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
-  # Question 10: the HTML keeps the break for its white-space: pre-line; an EPUB reader
-  # need not honour that, so the EPUB writes <br/>.
+  # Question 10: both downloads print a line break as a break, <br> in the HTML and <br/>
+  # in the EPUB's XHTML.
   test "a paratext's line breaks are printed", %{conn: conn} do
     play =
       tei(
@@ -243,6 +318,23 @@ defmodule PlaycodeWeb.ExportControllerTest do
     # text shares; it used to be the \n itself, shown by white-space: pre-line.
     assert html =~ "The banished cavaliers!<br>A roving blade!"
     assert epub =~ "The banished cavaliers!<br/>A roving blade!"
+  end
+
+  # Both downloads print a paratext's paragraphs as the file has them; the HTML used to run
+  # them into one block, set apart only by its white-space: pre-line.
+  test "the HTML and EPUB downloads print a paratext's paragraphs", %{conn: conn} do
+    play =
+      tei(front: ~s(<div type="dedicatoria"><p>Al lector.</p><p>Vale.</p></div>))
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for {format, text} <- [html: html, epub: epub_text(files)] do
+      assert text =~ ~r{<p>Al lector\.</p>\s*<p>Vale\.</p>},
+             "#{format} runs the paragraphs together"
+    end
   end
 
   # An EPUB chapter is XHTML: a note's line break is <br/> there, or the chapter does not
@@ -278,6 +370,26 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
     refute epub =~ "&lt;&lt;"
     assert epub =~ "<em>una<br/>dos</em>"
+  end
+
+  # The paragraphs are split after the markers are read, so an italic run over a blank line
+  # closes at the end of one paragraph and opens again in the next.
+  test "an italic run over two paragraphs is printed in italics in both",
+       %{conn: conn, play: play} do
+    {:ok, _} =
+      Playcode.Catalogue.create_paratext(%{
+        play_id: play.id,
+        kind: "dedicatoria",
+        content: "<<Al lector.\n\nVale.>>"
+      })
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for {format, text} <- [html: html, epub: epub_text(files)] do
+      refute text =~ "&lt;&lt;", "#{format} prints the markers"
+      assert text =~ ~r{<p><em>Al lector\.</em></p>\s*<p><em>Vale\.</em></p>}, "#{format}"
+    end
   end
 
   test "the paratexts after the text are printed after it", %{conn: conn} do
@@ -626,7 +738,9 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
     # Question 26: the notes on the edition, after the sources, a paragraph each.
     test "the downloads print the notes on the edition", %{conn: conn, play: play} do
-      refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~ "edition-notes"
+      # The section, not the stylesheet's rule for it, which every page carries.
+      refute response(get(conn, ~p"/export/#{play.id}/html"), 200) =~
+               ~s(<section class="edition-notes">)
 
       {:ok, play} =
         Playcode.Catalogue.update_play(play, %{

@@ -28,6 +28,36 @@ defmodule Playcode.Export.NoteMarkup do
     |> Enum.map_join(&part(&1, format))
   end
 
+  @doc """
+  `text` as `inline/3` prints it, a paragraph each where a blank line stands. The markers
+  are read first, so an italic run or a stage direction over a blank line closes at the
+  end of one paragraph and opens again in the next.
+  """
+  def paragraphs(text, format) do
+    (text || "")
+    |> InlineMarkup.parts()
+    |> InlineMarkup.folio_labels()
+    |> Enum.flat_map(&split_paragraphs/1)
+    |> Enum.chunk_by(&(&1 == :paragraph_break))
+    |> Enum.reject(&(&1 |> hd() == :paragraph_break))
+    |> Enum.map(fn parts -> Enum.map_join(parts, &part(&1, format)) end)
+    |> Enum.reject(&(String.trim(&1) == ""))
+  end
+
+  defp split_paragraphs(%{text: text} = part) when is_binary(text) do
+    if text =~ ~r/\n\s*\n/ do
+      text
+      |> String.split(~r/\n\s*\n/)
+      |> Enum.map(&%{part | text: &1})
+      |> Enum.intersperse(:paragraph_break)
+      |> Enum.reject(&match?(%{text: ""}, &1))
+    else
+      [part]
+    end
+  end
+
+  defp split_paragraphs(part), do: [part]
+
   # A piece of an inline stage direction, a note's number among them.
   defp part(%{stage: %{}} = part, format),
     do: ~s(<span class="stage">) <> part(%{part | stage: nil}, format) <> "</span>"
