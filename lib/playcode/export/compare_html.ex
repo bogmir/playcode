@@ -300,8 +300,6 @@ defmodule Playcode.Export.CompareHtml do
     |> Enum.join("\n")
   end
 
-  @act_types ~w(acto act acte jornada)
-
   # A speech carries its act's key (`data-sync-act`) whatever scene it is in; headings
   # carry their own (`data-sync-div`). See `Division.sync_keys/1`.
   defp render_divisions(divisions) do
@@ -343,12 +341,12 @@ defmodule Playcode.Export.CompareHtml do
   defp division_heading(%{title: nil}, _key), do: ""
   defp division_heading(%{title: ""}, _key), do: ""
 
-  defp division_heading(%{title: title, type: type}, key) when type in @act_types do
-    "      <h2 class=\"act-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h2>\n"
-  end
-
-  defp division_heading(%{title: title}, key) do
-    "      <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h3>\n"
+  defp division_heading(%{title: title} = division, key) do
+    if Division.headed_as_act?(division),
+      do:
+        "      <h2 class=\"act-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h2>\n",
+      else:
+        "      <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h3>\n"
   end
 
   defp child_heading(%{title: nil}, _key), do: ""

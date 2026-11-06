@@ -126,13 +126,11 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp sync_keyed(divisions, true), do: Enum.zip(divisions, Division.sync_keys(divisions))
   defp sync_keyed(divisions, false), do: Enum.map(divisions, &{&1, nil})
 
-  @act_types ~w(acto act acte jornada play)
-
   attr :division, :map, required: true
   attr :sync_key, :string, default: nil
 
   defp division_heading(assigns) do
-    assigns = assign(assigns, :is_act, assigns.division.type in @act_types)
+    assigns = assign(assigns, :is_act, Division.headed_as_act?(assigns.division))
 
     ~H"""
     <h2

@@ -25,8 +25,6 @@ defmodule Playcode.Export.Download do
   alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
-  @act_types ~w(acto act acte jornada)
-
   @doc """
   `play` with what its front matter prints, and its divisions as the downloads print
   them: its variants if it shows them, each later part of a shared line with its lead.
@@ -304,10 +302,11 @@ defmodule Playcode.Export.Download do
 
   defp division_heading(%{title: title}, _format) when title in [nil, ""], do: ""
 
-  defp division_heading(%{title: title, type: type} = div, format) when type in @act_types,
-    do: "<h2 class=\"act-heading\">#{inline(title, div.notes, format)}</h2>\n"
-
-  defp division_heading(div, format), do: child_heading(div, format)
+  defp division_heading(div, format) do
+    if Division.headed_as_act?(div),
+      do: "<h2 class=\"act-heading\">#{inline(div.title, div.notes, format)}</h2>\n",
+      else: child_heading(div, format)
+  end
 
   defp child_heading(%{title: title}, _format) when title in [nil, ""], do: ""
 

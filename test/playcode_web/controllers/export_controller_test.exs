@@ -273,6 +273,34 @@ defmodule PlaycodeWeb.ExportControllerTest do
     end
   end
 
+  # A text not parted into acts is one `play` division (21 plays); the play page heads it
+  # as an act, and the downloads headed a titled one as a scene, with no page break.
+  test "the downloads and the comparison head a play division as an act", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div type="play"><head>La farsa entera</head>
+          <sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div>
+          """
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    compare =
+      conn
+      |> log_in_user(Playcode.TestFixtures.user_fixture(role: :researcher))
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{play.id}"]}")
+      |> response(200)
+
+    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}, {compare, "comparison"}] do
+      assert body =~ ~r{<h2 class="act-heading"[^>]*>La farsa entera</h2>}, where
+    end
+  end
+
   # As the published site prints them, in the downloads' English.
   test "the HTML and EPUB downloads print the dating and the historical time",
        %{conn: conn, play: play} do
