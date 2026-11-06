@@ -161,6 +161,15 @@ defmodule PlaycodeWeb.PlayLabels do
   def form_label("prose"), do: gettext("Prose")
   def form_label("mixed"), do: gettext("Verse and prose")
 
+  @doc "The play's form and its verses, as a line: \"Verse · 2400 verses\", \"Prose\"."
+  def form_line(%Play{} = play) do
+    case {Play.form(play), play.verse_count} do
+      {"prose", _} -> form_label("prose")
+      {form, n} when is_integer(n) and n > 0 -> "#{form_label(form)} · #{n} #{gettext("verses")}"
+      {form, _} -> form_label(form)
+    end
+  end
+
   @doc "The form select's options: automatic first, saying what it currently gives."
   def form_options(%Play{} = play) do
     automatic = Play.form(%{play | form: nil})

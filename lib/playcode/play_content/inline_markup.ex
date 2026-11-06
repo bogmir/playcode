@@ -52,6 +52,12 @@ defmodule Playcode.PlayContent.InlineMarkup do
   # A printed line's number. Group: the number, letters, digits, "." and "-".
   @number ~r/<lb n="([A-Za-z0-9.\-]+)"\/>/
 
+  # An aside's markers while its text is read: two private-use characters, ordinary text to
+  # the reading of the other markers, which `parts/1` takes out again.
+  @aside_opens "\u{E0A0}"
+  @aside_closes "\u{E0A1}"
+  @aside_cut ~r/(\x{E0A0}|\x{E0A1})/u
+
   @doc """
   Splits `text` into `%{text: binary, italic: boolean, stage: stage}` parts, in order.
   `stage` is nil outside a stage, else `%{type: binary | nil, run: integer}`, `run`
@@ -61,6 +67,9 @@ defmodule Playcode.PlayContent.InlineMarkup do
   A part inside an `<rs>` also has `rs: %{type: binary | nil, n: binary | nil, run:
   integer}`; `run` tells two touching tags apart within one stage or passage (it starts
   again in each, as no tag crosses one). Outside one the key is absent.
+
+  A part of words inside an `<aside>` marker also has `aside: true`; outside one the key
+  is absent.
 
   A part inside a Folio passage also has `folio: %{part: nil | "I" | "M" | "F", run:
   integer}`, `run` counting the passages in the text; outside one the key is absent.
@@ -74,8 +83,20 @@ defmodule Playcode.PlayContent.InlineMarkup do
       text
       |> String.replace("&lt;&lt;", "<<")
       |> String.replace("&gt;&gt;", ">>")
-      |> String.replace(["<aside>", "</aside>"], "")
 
+    if String.contains?(text, "<aside>") do
+      text
+      |> String.replace("<aside>", @aside_opens)
+      |> String.replace("</aside>", @aside_closes)
+      |> unmarked_parts()
+      |> Enum.flat_map_reduce(false, &aside_pieces/2)
+      |> elem(0)
+    else
+      unmarked_parts(text)
+    end
+  end
+
+  defp unmarked_parts(text) do
     if String.contains?(text, "<folio") do
       with_folios(text)
     else
@@ -83,6 +104,22 @@ defmodule Playcode.PlayContent.InlineMarkup do
       parts
     end
   end
+
+  # A marker stands in plain text only (`asides_well_formed?/1`), so cutting a part there
+  # cuts no italics or stage. Only its words are marked: a note or a line's number inside an
+  # aside stays as it is.
+  defp aside_pieces(%{text: text} = part, inside) when is_binary(text) do
+    @aside_cut
+    |> Regex.split(text, include_captures: true, trim: true)
+    |> Enum.flat_map_reduce(inside, fn
+      @aside_opens, _inside -> {[], true}
+      @aside_closes, _inside -> {[], false}
+      words, true -> {[Map.put(%{part | text: words}, :aside, true)], true}
+      words, false -> {[%{part | text: words}], false}
+    end)
+  end
+
+  defp aside_pieces(part, inside), do: {[part], inside}
 
   # The parts of each passage carry it; stages are counted through the whole text.
   defp with_folios(text) do

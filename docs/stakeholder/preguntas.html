@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 3 November 2026. 66 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 6 November 2026. 67 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -303,6 +303,7 @@
       <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–57</span></li>
       <li><a href="#t-followups">Follow-ups to your answers of 1 November</a><span class="nums">58–65</span></li>
       <li><a href="#t-prologues">Prologues on the wrong side</a><span class="nums">66</span></li>
+      <li><a href="#t-speakers">Who counts as a character in the statistics</a><span class="nums">67</span></li>
       <li><a href="#t-spaces-fixed">Spaces corrected</a><span class="nums">—</span></li>
       <li><a href="#t-files-fixed">Files corrected</a><span class="nums">—</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
@@ -2488,6 +2489,32 @@
         <div>
           <label class="label" for="q66-text">Notes: paste here what the list copies, if you changed anything</label>
           <textarea id="q66-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-speakers" aria-labelledby="h-speakers">
+    <h2 id="h-speakers">Who counts as a character in the statistics</h2>
+
+    <div class="q" id="q67" data-q="q67" data-n="67">
+      <span class="q-num" aria-hidden="true">67</span>
+      <div class="q-body">
+        <h3>Does a chorus, or “TODOS”, count as a speaking character in the statistics?</h3>
+        <p class="why">The statistics list each character’s speeches and verses, and count a play’s speaking characters. A speech said by several people, where the file names them one by one (<code>who="#horatio #marcellus"</code>), counts for each of them: 943 speeches, and nothing needs changing there. But about 120 roles in about 90 plays are a collective speaker themselves, 919 speeches: the CORO of <i>Sofonisba</i> (72 speeches), the CORO DE PASTORES of <i>El pastor fido</i>, TODOS. Today each counts as one more character, with its own row in the tables, and adds one to the play’s speaking characters. We found them by their names, so the number may move. Any that should not count would be marked as a group in the file (<code>ana="grupo"</code>), and the statistics would list them apart; we would send you the list first.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q67-o1"><input type="radio" id="q67-o1" name="q67-choice" value="They all count, as today">They all count, as today</label>
+            <label for="q67-o2"><input type="radio" id="q67-o2" name="q67-choice" value="A chorus counts; TODOS and the like are listed apart">A chorus counts; TODOS and the like are listed apart</label>
+            <label for="q67-o3"><input type="radio" id="q67-o3" name="q67-choice" value="None counts: all are listed apart">None counts: all are listed apart</label>
+            <label for="q67-o4"><input type="radio" id="q67-o4" name="q67-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q67-text">Notes</label>
+          <textarea id="q67-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>

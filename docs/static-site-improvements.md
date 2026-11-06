@@ -59,10 +59,6 @@ by string interpolation. A fix in one copy misses the other (item 2 is the proof
 `Phoenix.HTML.Safe.to_iodata/1`, CSS as real files, labels and inline markup from the shared
 module. One exporter per change; the output must stay byte-comparable where tests pin it.
 
-**Also**: `Download.verse_info/1` prints "N verses" or "Prose" from `is_verse`, so a curator's
-`plays.form` override (verse, prose or mixed) does not reach the HTML, PDF and EPUB downloads.
-Read `Play.form/1` instead (in `docs/backlog.md`).
-
 ## 4. Show the new statistics on the live play page
 
 **Problem**: the redesign adds a metrical synopsis, a per-act/scene table, a configuration
