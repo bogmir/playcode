@@ -479,7 +479,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2 class={@head}>
         <.inline text={@item.title || "Dramatis personae"} notes={@item.notes} />
       </h2>
-      <.cast_entries entries={@item.entries} />
+      <.cast_entries list={@item} />
     </section>
     """
   end
@@ -490,17 +490,19 @@ defmodule Playcode.Export.StaticSite.Components do
       <h3 :if={@item.title} class="scene-head">
         <.inline text={@item.title} notes={@item.notes} />
       </h3>
-      <.cast_entries entries={@item.entries} />
+      <.cast_entries list={@item} />
     </section>
     """
   end
 
-  attr :entries, :list, required: true
+  attr :list, :map, required: true
 
-  # A cast list's own entries, a group's under its heading.
+  # A cast list's own entries, a group's under its heading; the line introducing it before
+  # them and its note after.
   defp cast_entries(assigns) do
     ~H"""
-    <%= for [first | _] = group <- CastListEntry.printed_groups(@entries) do %>
+    <p :for={paragraph <- paragraphs(@list.intro)}><.inline text={paragraph} /></p>
+    <%= for [first | _] = group <- CastListEntry.printed_groups(@list.entries) do %>
       <p :if={first.group_heading} class="cast-group"><.inline text={first.group_heading} /></p>
       <dl class="cast">
         <%= for entry <- group do %>
@@ -509,6 +511,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <% end %>
       </dl>
     <% end %>
+    <p :for={paragraph <- paragraphs(@list.note)} class="cast-note"><.inline text={paragraph} /></p>
     """
   end
 

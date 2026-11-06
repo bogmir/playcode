@@ -880,17 +880,32 @@ defmodule Playcode.Export.TeiXml do
     |> MapSet.new(& &1.id)
   end
 
-  # A cast list in a div (div1, div2) of its own, its heading the div's; one with no entries
-  # yet is the div and its heading alone, a castList holding at least one castItem.
+  # A cast list in a div (div1, div2) of its own, its heading the div's, the line before
+  # the list and the note after it beside the castList, as the corpus has them; one with no
+  # entries yet is the div without a castList, which must hold at least one castItem.
   defp cast_list_div(list, tag, cast),
-    do: element(tag, %{type: "elenco"}, heading(list.title) ++ cast_list(list, [], cast))
+    do:
+      element(
+        tag,
+        %{type: "elenco"},
+        heading(list.title) ++
+          paragraphs(list.intro) ++ cast_list(list, {[], []}, cast) ++ list_note(list)
+      )
 
-  defp cast_list(%{entries: []}, _head, _cast), do: []
+  # An act's opening list is a bare castList: its heading, the line before and the note
+  # after go inside it (`around`), where TEI allows a `<p>` and a `<note>`.
+  defp opening_cast_list(list, cast),
+    do: cast_list(list, {heading(list.title) ++ paragraphs(list.intro), list_note(list)}, cast)
 
-  defp cast_list(list, head, cast) do
+  defp cast_list(%{entries: []}, _around, _cast), do: []
+
+  defp cast_list(list, {before, after_items}, cast) do
     attrs = if list.id == cast.castlist, do: %{"xml:id" => "castlist"}, else: %{}
-    [element(:castList, attrs, head ++ cast_items(list.entries, cast))]
+    [element(:castList, attrs, before ++ cast_items(list.entries, cast) ++ after_items)]
   end
+
+  defp list_note(%{note: nil}), do: []
+  defp list_note(%{note: note}), do: [element(:note, paragraphs(note))]
 
   defp heading(nil), do: []
   defp heading(text), do: [inline_element(:head, %{}, build_inline_content(text))]
@@ -1239,7 +1254,7 @@ defmodule Playcode.Export.TeiXml do
       if(div.type in Division.whole_text_types(), do: :div, else: :div1),
       attrs,
       division_heading(div) ++
-        Enum.flat_map(opening, &cast_list(&1, heading(&1.title), cast)) ++
+        Enum.flat_map(opening, &opening_cast_list(&1, cast)) ++
         (Enum.map(elements, &build_element/1) |> Enum.reject(&is_nil/1)) ++
         Enum.map(children, &build_div2(&1, cast)) ++
         Enum.map(trailers, &build_element/1)

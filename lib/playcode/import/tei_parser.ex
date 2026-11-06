@@ -1406,10 +1406,19 @@ defmodule Playcode.Import.TeiParser do
 
   # --- Cast list ---
 
-  # A div (div1, div2) of type `elenco`: its heading, and the castList inside, if any.
-  defp elenco(children, pos),
-    do:
+  # A div (div1, div2) of type `elenco`: its heading, and the castList inside, if any. The
+  # line introducing the list and the note after it stand in the div, as the corpus has
+  # them, or inside the castList, as an act's opening list writes them.
+  defp elenco(children, pos) do
+    list =
       cast_list(find_child(children, "head"), children_of(find_child(children, "castList")), pos)
+
+    Map.merge(list, beside_list(children), fn _key, inside, div -> div || inside end)
+  end
+
+  # The `<p>`s among `children` (the line before a cast list) and its `<note>`.
+  defp beside_list(children),
+    do: %{intro: paragraphs({"p", [], children}), note: paragraphs(find_child(children, "note"))}
 
   # A cast list: an `elenco` division holding its entries, one per castItem, those of a
   # castGroup under the group's head. An entry names the character it declares
@@ -1418,7 +1427,9 @@ defmodule Playcode.Import.TeiParser do
   defp cast_list(head, list_children, pos) do
     items = Enum.flat_map(list_children, &cast_items/1)
 
-    %{
+    list_children
+    |> beside_list()
+    |> Map.merge(%{
       type: "elenco",
       number: nil,
       title: safe_text(head),
@@ -1431,7 +1442,7 @@ defmodule Playcode.Import.TeiParser do
         |> Enum.with_index()
         |> Enum.map(fn {{entry, _character}, position} -> %{entry | position: position} end),
       characters: for({_entry, character} <- items, character, do: character)
-    }
+    })
   end
 
   defp cast_items({"castItem", attrs, children}), do: cast_item(attrs, children, nil)

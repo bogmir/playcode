@@ -269,15 +269,24 @@ defmodule Playcode.Export.Download do
   end
 
   # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its
-  # heading; nothing for a division of the text.
-  defp cast_list(%{type: "elenco", entries: entries}, format) do
-    case CastListEntry.printed_groups(entries) do
-      [] ->
-        ""
+  # heading, the line introducing it before them and its note after; nothing for a
+  # division of the text.
+  defp cast_list(%{type: "elenco", entries: entries} = list, format) do
+    entries =
+      case CastListEntry.printed_groups(entries) do
+        [] ->
+          ""
 
-      groups ->
-        "<div class=\"cast-list\">\n#{Enum.map_join(groups, "\n", &cast_group(&1, format))}\n</div>\n"
-    end
+        groups ->
+          "<div class=\"cast-list\">\n#{Enum.map_join(groups, "\n", &cast_group(&1, format))}\n</div>\n"
+      end
+
+    note =
+      if list.note,
+        do: "<div class=\"cast-note\">\n#{paragraphs(list.note, format)}</div>\n",
+        else: ""
+
+    paragraphs(list.intro, format) <> entries <> note
   end
 
   defp cast_list(_division, _format), do: ""

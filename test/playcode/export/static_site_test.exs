@@ -115,9 +115,9 @@ defmodule Playcode.Export.StaticSiteTest do
           "<bibl><title><emph>Aminta</emph></title><note>Tasso. <emph>Aminta</emph>. Venezia.</note></bibl>",
         front: """
         <div type="dedicatoria"><head>A <emph>Damone</emph></head><p>Dedica <emph>Egle</emph>.</p></div>
-        <div type="elenco"><head><emph>Dramatis Personae</emph></head><castList>
+        <div type="elenco"><head><emph>Dramatis Personae</emph></head><p>Hablan <emph>Fabia</emph>:</p><castList>
           <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
-        </castList></div>
+        </castList><note><p>Con <emph>criados</emph>.</p></note></div>
         <set><p><emph>La Scena è in Atene.</emph></p></set>
         """,
         body:
@@ -134,7 +134,7 @@ defmodule Playcode.Export.StaticSiteTest do
     ems = dir |> title_page(play) |> texts("em")
 
     for italic <-
-          ~w(Aminta Damone Egle Spela) ++
+          ~w(Aminta Damone Egle Spela Fabia criados) ++
             ["The courtiers", "La Scena è in Atene.", "Dramatis Personae"],
         do: assert(italic in ems, italic)
   end

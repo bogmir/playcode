@@ -529,7 +529,13 @@ defmodule Playcode.CompleteCopyTest do
 
   # The cast list, under its heading, second in the outline; returns the characters.
   defp cast!(play, characters) do
-    division!(play, %{type: "elenco", title: "DRAMATIS PERSONAE", position: 1})
+    division!(play, %{
+      type: "elenco",
+      title: "DRAMATIS PERSONAE",
+      intro: "Hablan en ella las <<siguientes>>:",
+      note: "Criados.\n\nLa escena es en Madrid.",
+      position: 1
+    })
 
     for {attrs, position} <- Enum.with_index(characters) do
       {:ok, character} =
@@ -559,7 +565,14 @@ defmodule Playcode.CompleteCopyTest do
   # with a description of its own and a line naming no one.
   defp outline!(play, act, blas) do
     opening =
-      division!(play, %{parent_id: act.id, type: "elenco", title: "En el acto", position: 0})
+      division!(play, %{
+        parent_id: act.id,
+        type: "elenco",
+        title: "En el acto",
+        intro: "Salen:",
+        note: "Y <<criados>>.",
+        position: 0
+      })
 
     entry!(play, opening, %{character_id: blas.id, name: "Blas", description: "disfrazado"})
 

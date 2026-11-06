@@ -38,6 +38,7 @@
       </set>
       <div type="elenco">
         <head>PERSONAS</head>
+        <p>Hablan en ella las personas siguientes:</p>
         <castList>
           <castItem>
             <role xml:id="ANA">ANA</role>
@@ -56,6 +57,10 @@
             <role>Músicos</role>
           </castItem>
         </castList>
+        <note>
+          <p>Acompañamiento.</p>
+          <p>La escena es en <emph>Valencia</emph>.</p>
+        </note>
       </div>
       <div type="head_title">
         <head>COMEDIA DE LOS ELENCOS</head>
@@ -66,10 +71,14 @@
         <head>ACTO PRIMERO</head>
         <castList>
           <head>Personas del acto primero</head>
+          <p>En este acto:</p>
           <castItem>
             <role corresp="#ANA">ANA, disfrazada</role>
             <roleDesc>de hombre</roleDesc>
           </castItem>
+          <note>
+            <p>Sale sola.</p>
+          </note>
         </castList>
         <stage>Suenan cajas.</stage>
         <div2 type="escena" n="1">

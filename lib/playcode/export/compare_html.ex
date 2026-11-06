@@ -357,22 +357,34 @@ defmodule Playcode.Export.CompareHtml do
       "        <h3 class=\"scene-heading\" data-sync-div=\"#{key}\">#{NoteMarkup.inline(title, [], :html)}</h3>\n"
 
   # A cast list's own entries (`CastListEntry.printed_groups/1`), each group under its
-  # heading; nothing for a division of the text.
-  defp render_cast_list(%{type: "elenco", entries: entries}) do
-    case CastListEntry.printed_groups(entries) do
-      [] ->
-        ""
+  # heading, the line introducing it before them and its note after; nothing for a
+  # division of the text.
+  defp render_cast_list(%{type: "elenco", entries: entries} = list) do
+    entries =
+      case CastListEntry.printed_groups(entries) do
+        [] ->
+          ""
 
-      groups ->
-        """
-              <div class="cast-list">
-        #{Enum.map_join(groups, "\n", &render_cast_group/1)}
-              </div>
-        """
-    end
+        groups ->
+          """
+                <div class="cast-list">
+          #{Enum.map_join(groups, "\n", &render_cast_group/1)}
+                </div>
+          """
+      end
+
+    render_paragraphs(list.intro, "cast-intro") <>
+      entries <> render_paragraphs(list.note, "cast-note")
   end
 
   defp render_cast_list(_division), do: ""
+
+  defp render_paragraphs(text, class),
+    do:
+      Enum.map_join(
+        NoteMarkup.paragraphs(text, :html),
+        &"      <p class=\"#{class}\">#{&1}</p>\n"
+      )
 
   defp render_cast_group([first | _] = entries) do
     heading =

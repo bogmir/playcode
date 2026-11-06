@@ -1103,6 +1103,50 @@ defmodule Playcode.TeiRoundtripTest do
     assert xml =~ ~r{</set>\s*<div type="elenco">}
   end
 
+  # The 2026-11-06 check against FileMaker's names: 78 corpus files say something beside
+  # their cast list, and every one lost it. Before the list a line introducing it (24, as
+  # EMOTHE0013's "Hablan en ella las personas siguientes:"); after it a note of paragraphs
+  # (55: Hamlet's attendants, the scene in prose, the editor's remarks on the list).
+  test "a cast list keeps the line before it and the note after it" do
+    xml =
+      roundtrip(
+        tei(
+          front: """
+          <div type="elenco"><head>PERSONAS</head><p>Hablan en ella las <emph>siguientes</emph>:</p>
+            <castList><castItem><role xml:id="DON">Don</role></castItem></castList>
+            <note><p>Criados y <emph>guardas</emph>.</p><p>La escena es en Madrid.</p></note>
+          </div>
+          """
+        )
+      )
+
+    assert xml =~
+             ~r{<head>PERSONAS</head>\s*<p>Hablan en ella las <emph>siguientes</emph>:</p>\s*<castList>}
+
+    assert xml =~
+             ~r{</castList>\s*<note>\s*<p>Criados y <emph>guardas</emph>.</p>\s*<p>La escena es en Madrid.</p>\s*</note>\s*</div>}
+  end
+
+  # An act's opening list is a bare castList, which holds them itself.
+  test "an act's opening list keeps them inside its castList" do
+    xml =
+      roundtrip(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>ACTO I</head>
+            <castList><head>En este acto</head><p>Salen:</p>
+              <castItem><role xml:id="DON">Don</role></castItem><note><p>Y criados.</p></note>
+            </castList>
+            <sp who="#DON"><speaker>DON</speaker><l n="1">Verso.</l></sp>
+          </div1>
+          """
+        )
+      )
+
+    assert xml =~
+             ~r{<castList>\s*<head>En este acto</head>\s*<p>Salen:</p>\s*<castItem>.*</castItem>\s*<note>\s*<p>Y criados.</p>\s*</note>\s*</castList>}s
+  end
+
   test "a paratext keeps its kind, heading and paragraphs" do
     xml =
       roundtrip(

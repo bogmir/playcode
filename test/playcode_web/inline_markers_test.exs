@@ -39,9 +39,9 @@ defmodule PlaycodeWeb.InlineMarkersTest do
         """,
         front: """
         <div type="dedicatoria"><head>Al <emph>lector</emph></head><p>Prosa <emph>cursiva</emph> del prólogo.</p></div>
-        <div type="elenco"><head>Las <emph>personas</emph></head><castList>
+        <div type="elenco"><head>Las <emph>personas</emph></head><p>Hablan las <emph>siguientes</emph>:</p><castList>
           <castItem><role xml:id="ANA">Doña <emph>Ana</emph></role><roleDesc>una <emph>dama</emph></roleDesc></castItem>
-        </castList></div>
+        </castList><note><p>Con <emph>criados</emph>.</p></note></div>
         """,
         body: """
         <div1 type="acto" n="1"><head>Acto <emph>primero</emph></head>
@@ -98,10 +98,14 @@ defmodule PlaycodeWeb.InlineMarkersTest do
   test "the comparison download", %{conn: conn, play: play} do
     other = italics_everywhere()
 
-    conn
-    |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{other.id}"]}")
-    |> response(200)
-    |> refute_leak("the comparison")
+    html =
+      conn
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{other.id}"]}")
+      |> response(200)
+
+    refute_leak(html, "the comparison")
+    assert html =~ "<em>siguientes</em>"
+    assert html =~ "<em>criados</em>"
   end
 
   test "the static site's pages", %{play: play} do

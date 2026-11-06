@@ -77,4 +77,20 @@ defmodule Playcode.CastListsTest do
     assert Enum.map(PlayContent.list_characters(play.id), & &1.name) == ~w(CARLOS ANA BLAS)
     assert entry_names(play) == [~w(CARLOS ANA BLAS)]
   end
+
+  # Only a cast list holds what its file says beside it. A division retyped from a cast
+  # list keeps no hidden intro or note the file would drop, and text of spaces alone is
+  # none, so no output prints an empty note.
+  test "only a cast list keeps a line before it and a note after it, and only real text" do
+    play = play_fixture()
+
+    list =
+      division!(play, %{type: "elenco", position: 0, intro: "  ", note: "Criados.", title: "P"})
+
+    assert list.intro == nil
+    assert list.note == "Criados."
+
+    {:ok, act} = PlayContent.update_division(list, %{type: "acto"})
+    assert {act.intro, act.note} == {nil, nil}
+  end
 end

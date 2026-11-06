@@ -50,7 +50,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         <.paratext :if={match?(%Paratext{}, division)} paratext={division} />
         <%= if match?(%Division{}, division) do %>
           <.division_heading division={division} sync_key={div_key} />
-          <.cast_list :if={division.type == "elenco"} entries={division.entries} />
+          <.cast_list :if={division.type == "elenco"} list={division} />
 
           <%= for part <- act_parts(division, @sync_keys) do %>
             <%= case part do %>
@@ -77,7 +77,7 @@ defmodule PlaycodeWeb.Components.PlayText do
                     division={child}
                     sync_key={child_key && "#{div_key}/#{child_key}"}
                   />
-                  <.cast_list :if={child.type == "elenco"} entries={child.entries} />
+                  <.cast_list :if={child.type == "elenco"} list={child} />
                   <div :if={Map.has_key?(child, :loaded_elements)}>
                     <.element_list
                       elements={Map.get(child, :loaded_elements, [])}
@@ -150,14 +150,17 @@ defmodule PlaycodeWeb.Components.PlayText do
     """
   end
 
-  attr :entries, :list, required: true
+  attr :list, :map, required: true
 
   # A cast list's own entries, a hidden character's left out, those of a group under its
-  # heading.
+  # heading; the line introducing it before them and its note after.
   defp cast_list(assigns) do
-    assigns = assign(assigns, :groups, CastListEntry.printed_groups(assigns.entries))
+    assigns = assign(assigns, :groups, CastListEntry.printed_groups(assigns.list.entries))
 
     ~H"""
+    <p :for={paragraph <- Note.paragraphs(@list.intro)} class="cast-intro max-w-xl mx-auto mb-2">
+      <.inline_content text={paragraph} />
+    </p>
     <div :if={@groups != []} class="cast-list mb-8 max-w-xl mx-auto">
       <div :for={[first | _] = group <- @groups}>
         <p
@@ -177,6 +180,9 @@ defmodule PlaycodeWeb.Components.PlayText do
           </span>
         </div>
       </div>
+    </div>
+    <div :if={@list.note} class="cast-note max-w-xl mx-auto mb-8 text-sm space-y-2">
+      <p :for={paragraph <- Note.paragraphs(@list.note)}><.inline_content text={paragraph} /></p>
     </div>
     """
   end

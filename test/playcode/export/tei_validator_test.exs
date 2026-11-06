@@ -326,6 +326,8 @@ defmodule Playcode.Export.TeiValidatorTest do
     xml = outline_xml() |> import_tei!() |> export_tei()
 
     assert xml =~ ~r{<div1 type="elenco">}
+    assert xml =~ ~r{<head>PERSONAS</head>\s*<p>Hablan en ella}
+    assert xml =~ ~r{<p>En este acto:</p>.*<p>Sale sola.</p>\s*</note>\s*</castList>}s
     xml
   end
 
