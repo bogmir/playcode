@@ -237,8 +237,8 @@ defmodule Playcode.Import.TeiImportTest do
     assert {:ok, returned} = TeiImport.import_file(write_tmp!(xml))
     stored = Catalogue.get_play!(returned.id)
 
-    assert {returned.verse_count, returned.is_verse} == {stored.verse_count, stored.is_verse}
-    assert {stored.verse_count, stored.is_verse} == {0, false}
+    assert {returned.verse_count, returned.auto_form} == {stored.verse_count, stored.auto_form}
+    assert {stored.verse_count, stored.auto_form} == {0, "prose"}
   end
 
   test "respStmt wording decides the editor's role, in titleStmt and editionStmt alike" do

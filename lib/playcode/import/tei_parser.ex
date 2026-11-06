@@ -484,7 +484,7 @@ defmodule Playcode.Import.TeiParser do
       author_sort: safe_text(sort_author),
       author_attribution: attribution,
       verse_count: verse_count,
-      is_verse: verse_count != nil && verse_count > 0,
+      form: chosen_form(extent),
       pub_place: pub_place,
       publication_date: pub_date,
       publisher: publisher_text,
@@ -676,6 +676,16 @@ defmodule Playcode.Import.TeiParser do
       _ -> nil
     end
   end
+
+  # A form a researcher chose, which Playcode marks on `extent` with `resp="#equipo"`
+  # (question 23). An unmarked label is not read: the old files' labels proved wrong both
+  # ways, and an unmarked one Playcode writes is the form worked out from the text.
+  defp chosen_form({_name, attrs, _children}) do
+    if attr_value(attrs, "resp") == "#equipo",
+      do: Play.form_of_file_label(attr_value(attrs, "ana"))
+  end
+
+  defp chosen_form(nil), do: nil
 
   defp extract_verse_count({_name, _attrs, _children} = extent) do
     text = text_content(extent)

@@ -5,7 +5,7 @@ defmodule Playcode.Export.TeiXml do
 
   alias Playcode.Bibliography.Entry
   alias Playcode.Catalogue
-  alias Playcode.Catalogue.Paratext
+  alias Playcode.Catalogue.{Paratext, Play}
   alias Playcode.Outline
   alias Playcode.Performances
   alias Playcode.PlayContent
@@ -259,12 +259,14 @@ defmodule Playcode.Export.TeiXml do
     element(:respStmt, [element(:resp, resp), element(:persName, editor.person_name) | org])
   end
 
+  # The form as the EMOTHE files label it (question 22), with the numbered verses; a form a
+  # researcher chose is marked, so an import reads it back and no old label passes for one.
   defp build_extent(play) do
-    if play.verse_count do
-      element(:extent, %{ana: "verso"}, "#{play.verse_count} versos")
-    else
-      element(:extent, "")
-    end
+    label = %{ana: Play.file_label(Play.form(play))}
+    label = if play.form, do: Map.put(label, :resp, "#equipo"), else: label
+    count = if (play.verse_count || 0) > 0, do: "#{play.verse_count} versos", else: ""
+
+    element(:extent, label, count)
   end
 
   defp build_publication_stmt(play) do

@@ -11,7 +11,7 @@ defmodule PlaycodeWeb.Demo.UIDemoData do
       author_name: "Lope de Vega",
       language: "es",
       verse_count: 3021,
-      is_verse: true,
+      auto_form: "verse",
       publication_date: "1613",
       pub_place: "Madrid",
       author_attribution: "atrib.",
@@ -38,7 +38,7 @@ defmodule PlaycodeWeb.Demo.UIDemoData do
         author_name: "Lope de Vega",
         language: "es",
         verse_count: 3250,
-        is_verse: true
+        auto_form: "verse"
       },
       %Play{
         id: "00000000-0000-0000-0000-000000000003",
@@ -47,7 +47,7 @@ defmodule PlaycodeWeb.Demo.UIDemoData do
         author_name: "Calderón de la Barca",
         language: "es",
         verse_count: 0,
-        is_verse: false
+        auto_form: "prose"
       }
     ]
   end

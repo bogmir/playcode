@@ -15,7 +15,7 @@ defmodule Playcode.TestFixtures do
           "author_name" => "Author",
           "author_sort" => "Author",
           "language" => "es",
-          "is_verse" => true
+          "auto_form" => "verse"
         },
         attrs
       )

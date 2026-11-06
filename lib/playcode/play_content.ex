@@ -51,7 +51,7 @@ defmodule Playcode.PlayContent do
   Call it after a content edit. Subscribers hear of the edit from Postgres, on commit;
   the cached statistics go stale by themselves, with the play's `content_version`.
   """
-  def refresh_derived(play_id), do: Playcode.Catalogue.update_verse_count(play_id)
+  def refresh_derived(play_id), do: Playcode.Catalogue.update_form_and_verse_count(play_id)
 
   defp topic(play_id), do: "play_content:#{play_id}"
 

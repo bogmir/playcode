@@ -543,12 +543,13 @@ defmodule Playcode.RoundtripTest do
     assert play.verse_count == expected,
            "#{code} derived verse_count mismatch: expected=#{expected} got=#{inspect(play.verse_count)}"
 
-    expected_is_verse = expected > 0
+    # A play with no numbered verse is labelled with no count (play_form_test.exs).
+    extent =
+      if expected > 0,
+        do: ~r/<extent[^>]*>\s*#{expected}\s+versos\s*<\/extent>/u,
+        else: ~r/<extent ana="[a-z]+"(?: resp="[^"]*")?\s*(?:\/>|><\/extent>)/u
 
-    assert play.is_verse == expected_is_verse,
-           "#{code} derived is_verse mismatch: expected=#{expected_is_verse} got=#{inspect(play.is_verse)}"
-
-    assert exported_xml =~ ~r/<extent[^>]*>\s*#{expected}\s+versos\s*<\/extent>/u,
+    assert exported_xml =~ extent,
            "#{code} export missing computed <extent> for verse_count=#{expected}"
   end
 

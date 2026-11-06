@@ -158,13 +158,14 @@ defmodule PlaycodeWeb.PlayLabels do
 
   @doc "The name of a play's form, as `Play.form/1` gives it."
   def form_label("verse"), do: gettext("Verse")
+  def form_label("occasional_verse"), do: gettext("Prose with occasional verse")
   def form_label("prose"), do: gettext("Prose")
   def form_label("mixed"), do: gettext("Verse and prose")
 
   @doc "The play's form and its verses, as a line: \"Verse · 2400 verses\", \"Prose\"."
   def form_line(%Play{} = play) do
     case {Play.form(play), play.verse_count} do
-      {"prose", _} -> form_label("prose")
+      {form, _} when form in ["prose", "occasional_verse"] -> form_label(form)
       {form, n} when is_integer(n) and n > 0 -> "#{form_label(form)} · #{n} #{gettext("verses")}"
       {form, _} -> form_label(form)
     end
