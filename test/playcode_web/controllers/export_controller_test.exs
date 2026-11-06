@@ -410,9 +410,9 @@ defmodule PlaycodeWeb.ExportControllerTest do
             "<bibl><title>Aminta</title><note>Tasso. <emph>Aminta</emph>. Venezia.</note></bibl>",
           front: """
           <div type="dedicatoria"><head>A <emph>Damone</emph></head><p>Dedica <emph>Egle</emph>.</p></div>
-          <div type="elenco"><head><emph>Dramatis Personae</emph></head><castList>
+          <div type="elenco"><head><emph>Dramatis Personae</emph></head><p>Hablan <emph>Fabia</emph>:</p><castList>
             <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
-          </castList></div>
+          </castList><note><p>Con <emph>criados</emph>.</p></note></div>
           <set><p><emph>La Scena è in Atene.</emph></p></set>
           """
         )
@@ -426,7 +426,9 @@ defmodule PlaycodeWeb.ExportControllerTest do
     for {format, text} <- [html: html, epub: epub] do
       refute text =~ "&lt;&lt;", "#{format} prints the markers"
 
-      for italic <- ~w(Aminta Damone Egle Spela) ++ ["The courtiers", "La Scena è in Atene."],
+      for italic <-
+            ~w(Aminta Damone Egle Spela Fabia criados) ++
+              ["The courtiers", "La Scena è in Atene."],
           do: assert(text =~ "<em>#{italic}</em>", "#{format} lacks #{italic}")
     end
   end

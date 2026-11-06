@@ -8,7 +8,7 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
   alias Playcode.TestFixtures
 
-  @italics ~w(Aminta Damone Egle Spela) ++
+  @italics ~w(Aminta Damone Egle Spela Fabia criados) ++
              ["The courtiers", "La Scena è in Atene.", "Dramatis Personae", "Actus Primus"]
 
   test "italics in the text render as emphasis, without the storage markers", %{conn: conn} do
@@ -747,9 +747,9 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
             "<bibl><title><emph>Aminta</emph></title><note>Tasso. <emph>Aminta</emph>. Venezia.</note></bibl>",
           front: """
           <div type="dedicatoria"><head>A <emph>Damone</emph></head><p>Dedica <emph>Egle</emph>.</p></div>
-          <div type="elenco"><head><emph>Dramatis Personae</emph></head><castList>
+          <div type="elenco"><head><emph>Dramatis Personae</emph></head><p>Hablan <emph>Fabia</emph>:</p><castList>
             <castItem><role xml:id="CORT"><emph>The courtiers</emph></role><roleDesc>(<emph>Spela</emph>), a servant</roleDesc></castItem>
-          </castList></div>
+          </castList><note><p>Con <emph>criados</emph>.</p></note></div>
           <set><p><emph>La Scena è in Atene.</emph></p></set>
           """,
           body:

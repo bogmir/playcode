@@ -1302,6 +1302,31 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       assert List.last(Playcode.PlayContent.list_cast_lists(play.id)).title == "Personas añadidas"
     end
 
+    # The line before a cast list and the note after it, as 78 corpus files have them; the
+    # form asks for them only once the division is a cast list.
+    test "a cast list takes the line before it and the note after it", %{conn: conn, play: play} do
+      lv = open_structure(conn, play)
+      lv |> element("button", t("Add division")) |> render_click()
+      refute has_element?(lv, "#division-form textarea")
+
+      lv |> form("#division-form", division: %{"type" => "elenco"}) |> render_change()
+
+      lv
+      |> form("#division-form",
+        division: %{
+          "type" => "elenco",
+          "title" => "Personas",
+          "intro" => "Hablan en ella:",
+          "note" => "Criados.\n\nLa escena es en Madrid."
+        }
+      )
+      |> render_submit()
+
+      xml = export_tei(play)
+      assert xml =~ ~r{<head>Personas</head>\s*<p>Hablan en ella:</p>}
+      assert xml =~ ~r{<note>\s*<p>Criados.</p>\s*<p>La escena es en Madrid.</p>\s*</note>}
+    end
+
     test "Add subdivision offers Scene and Cast list", %{conn: conn, play: play} do
       act = division(play, "ACTO SEGUNDO")
       lv = open_structure(conn, play)

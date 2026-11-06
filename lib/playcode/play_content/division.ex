@@ -6,6 +6,9 @@ defmodule Playcode.PlayContent.Division do
   `type` is the TEI `@type` as the edition spells it: Spanish (`acto`, `jornada`,
   `escena`), English (`act`, `scene`) or French (`acte`). `PlaycodeWeb.PlayLabels` names
   it for display. `title` is the `<head>`. `position` orders a division among its siblings.
+  A cast list also holds what its file says beside it: `intro`, the line before the list
+  ("Hablan en ella las personas siguientes:"), and `note`, the note after it, each in
+  paragraphs parted by a blank line.
 
   `loaded_elements` is filled when the play's content is loaded as a tree, never
   stored.
@@ -22,6 +25,8 @@ defmodule Playcode.PlayContent.Division do
     field :number, :integer
     field :title, :string
     field :position, :integer, default: 0
+    field :intro, :string
+    field :note, :string
 
     belongs_to :play, Playcode.Catalogue.Play
     belongs_to :parent, __MODULE__
@@ -102,7 +107,7 @@ defmodule Playcode.PlayContent.Division do
 
   def changeset(division, attrs) do
     division
-    |> cast(attrs, [:type, :number, :title, :position, :play_id, :parent_id])
+    |> cast(attrs, [:type, :number, :title, :position, :intro, :note, :play_id, :parent_id])
     |> validate_required([:type])
     |> validate_inclusion(:type, ~w(
       acto escena prologo argumento dedicatoria elenco front jornada introduccion_editor
