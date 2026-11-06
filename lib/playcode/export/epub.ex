@@ -266,6 +266,17 @@ defmodule Playcode.Export.Epub do
       border-left: 2px solid #ccc;
     }
 
+    /* The bar takes no room from the line: its words stay where the others are. */
+    .verse-line.aside, .prose-block.aside {
+      margin-left: calc(0.5em - 2px);
+      padding-left: 0.5em;
+      border-left: 2px solid #ccc;
+    }
+
+    span.aside {
+      text-decoration: underline dotted #888;
+    }
+
     .speaker {
       font-weight: bold;
       font-size: 0.8em;

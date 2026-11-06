@@ -169,6 +169,80 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert epub_css =~ ~r/header, section, aside \{[^}]*display: block/
   end
 
+  # The corpus holds 18,616 lines and paragraphs spoken aside and 1,755 only partly so, and
+  # no speech that is: the downloads marked only a speech, so they marked none of them.
+  test "the HTML and EPUB downloads mark a line spoken aside, and the words of one partly so",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><sp><speaker>REY</speaker>
+            <l n="1"><seg type="aside">Todo aparte</seg></l>
+            <l n="2">Dicho <seg type="aside">entre dientes</seg> y alto</l>
+            <l n="3">Verso dicho</l>
+            <p><seg type="aside">Prosa aparte</seg></p>
+            <p>Prosa <seg type="aside">medio aparte</seg> final</p>
+            <p>Prosa dicha</p>
+          </sp></div1>
+          """
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    {_name, epub} = Enum.find(files, fn {_, content} -> content =~ "Verso dicho" end)
+    {_name, epub_css} = Enum.find(files, fn {name, _} -> List.to_string(name) =~ "style.css" end)
+
+    for {format, body, css} <- [{:html, html, html}, {:epub, epub, epub_css}] do
+      assert body =~ ~s(<div class="verse-line aside"><span class="content">Todo aparte),
+             "#{format}: a whole verse"
+
+      assert body =~ ~s(<div class="prose-block aside">Prosa aparte),
+             "#{format}: a whole paragraph"
+
+      assert body =~
+               ~s(<div class="verse-line"><span class="content">Dicho <span class="aside">entre dientes</span> y alto),
+             "#{format}: a verse partly aside marks its words, not the line"
+
+      assert body =~
+               ~s(<div class="prose-block">Prosa <span class="aside">medio aparte</span> final),
+             "#{format}: a paragraph partly aside"
+
+      assert body =~ ~s(<div class="verse-line"><span class="content">Verso dicho), "#{format}"
+      assert body =~ ~s(<div class="prose-block">Prosa dicha), "#{format}"
+
+      assert css =~ ~r/\.verse-line\.aside[^{]*\{[^}]*border-left/, "#{format}: the line's bar"
+      assert css =~ ~r/span\.aside \{[^}]*underline/, "#{format}: the words' mark"
+    end
+  end
+
+  # The form as every page names it: `is_verse` alone said a play set by hand to verse and
+  # prose was verse.
+  test "the HTML and EPUB downloads print the form a curator set", %{conn: conn, play: play} do
+    {:ok, play} = Playcode.Catalogue.update_play(play, %{"form" => "mixed"})
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    for body <- [html | Enum.map(files, &elem(&1, 1))], body =~ ~s(class="verse-info") do
+      assert body =~ ~r{<p class="verse-info">Verse and prose · 1 verses?</p>}
+    end
+
+    assert html =~ ~s(class="verse-info")
+  end
+
+  test "the downloads name a prose play's form when it has a verse count", %{
+    conn: conn,
+    play: play
+  } do
+    {:ok, play} = Playcode.Catalogue.update_play(play, %{"form" => "prose"})
+
+    assert response(get(conn, ~p"/export/#{play.id}/html"), 200) =~
+             ~s(<p class="verse-info">Prose</p>)
+  end
+
   # As the published site prints them, in the downloads' English.
   test "the HTML and EPUB downloads print the dating and the historical time",
        %{conn: conn, play: play} do

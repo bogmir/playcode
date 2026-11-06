@@ -13,14 +13,15 @@ defmodule Playcode.Export.Download do
   `source-note`, `editors`, `role`, `verse-info`, `dating`, `publication`,
   `edition-notes`, `witnesses`, `paratext`, `division`, `child-division`, `act-heading`,
   `scene-heading`, `cast-list`, `cast-group`, `cast-item`, `cast-name`, `cast-desc`,
-  `speech` (`aside`), `speaker`, `verse-line`, `content` (`indent`, `part-m`, `part-f`),
-  `ghost` (`indent`), `line-number`, `stage-direction`, `prose-block`, `trailer`.
+  `speech` (`aside`), `speaker`, `verse-line` (`aside`), `content` (`indent`, `part-m`,
+  `part-f`), `ghost` (`indent`), `line-number`, `stage-direction`, `prose-block` (`aside`),
+  `trailer`. `NoteMarkup` adds its own inside a line's text, `span.aside` among them.
   """
 
   alias Playcode.Catalogue.{Paratext, Play}
   alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{CastListEntry, Division, InlineMarkup, Note, SplitVerses}
+  alias Playcode.PlayContent.{CastListEntry, Division, Element, InlineMarkup, Note, SplitVerses}
   alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
@@ -128,18 +129,8 @@ defmodule Playcode.Export.Download do
     "<div class=\"editors\">\n#{items}\n</div>"
   end
 
-  defp verse_info(play) do
-    cond do
-      play.verse_count && play.is_verse ->
-        "<p class=\"verse-info\">#{play.verse_count} verses</p>"
-
-      play.verse_count ->
-        "<p class=\"verse-info\">Prose</p>"
-
-      true ->
-        ""
-    end
-  end
+  defp verse_info(play),
+    do: ~s(<p class="verse-info">#{in_english(fn -> PlayLabels.form_line(play) end)}</p>)
 
   # The historical time and the dating, one line each, in the order the published site's
   # title page shows them (`StaticSite.Components.study/1`), in the downloads' English.
@@ -358,20 +349,24 @@ defmodule Playcode.Export.Download do
         true -> "content"
       end
 
-    "<div class=\"verse-line\"><span class=\"#{content_class}\">#{ghost(lead, format)}#{inline(el.content, el.notes, format)}</span><span class=\"line-number\">#{el.line_number}</span></div>\n"
+    "<div class=\"verse-line#{aside_class(el)}\"><span class=\"#{content_class}\">#{ghost(lead, format)}#{inline(el.content, el.notes, format)}</span><span class=\"line-number\">#{el.line_number}</span></div>\n"
   end
 
   defp element(%{type: "stage_direction"} = el, format),
     do: "<div class=\"stage-direction\">(#{inline(el.content, el.notes, format)})</div>\n"
 
   defp element(%{type: "prose"} = el, format),
-    do: "<div class=\"prose-block\">#{inline(el.content, el.notes, format)}</div>\n"
+    do:
+      "<div class=\"prose-block#{aside_class(el)}\">#{inline(el.content, el.notes, format)}</div>\n"
 
   # An opening formula (the Arte nuevo's dedication) or a closing one, centred alike.
   defp element(%{type: type} = el, format) when type in ~w(opener trailer),
     do: "<div class=\"trailer\">#{inline(el.content, el.notes, format)}</div>\n"
 
   defp element(_element, _format), do: ""
+
+  # A line all aside is marked as a line; one partly aside marks its words (`NoteMarkup`).
+  defp aside_class(element), do: if(Element.whole_aside?(element), do: " aside", else: "")
 
   # A later part's earlier parts. The HTML draws each, invisible, and the published site's
   # script shows it where the line has room, or leaves the part its fixed step. An e-book

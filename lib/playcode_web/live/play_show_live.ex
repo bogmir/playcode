@@ -463,7 +463,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             </div>
 
             <p class="mt-2 text-xs text-base-content/70">
-              {Play.language_name(@play.language)}{" · " <> form_line(@play)}
+              {Play.language_name(@play.language)}{" · " <> PlayLabels.form_line(@play)}
             </p>
             <p
               :if={@play.licence_url || @play.licence_text}
@@ -784,19 +784,6 @@ defmodule PlaycodeWeb.PlayShowLive do
       |> Enum.flat_map(&division_navigation_item(&1, depth + 1))
 
     current ++ children
-  end
-
-  defp form_line(play) do
-    case {Play.form(play), play.verse_count} do
-      {"prose", _} ->
-        PlayLabels.form_label("prose")
-
-      {form, n} when is_integer(n) and n > 0 ->
-        "#{PlayLabels.form_label(form)} · #{n} #{gettext("verses")}"
-
-      {form, _} ->
-        PlayLabels.form_label(form)
-    end
   end
 
   # The switches whose turning re-renders the play's text, for the stepper's hook.

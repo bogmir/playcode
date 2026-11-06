@@ -18,8 +18,9 @@ defmodule Playcode.Export.NoteMarkup do
   @doc """
   `text`, with `<<…>>` italics as `<em>`, each inline stage direction in a `<span class="stage">`
   (a note's number inside it when the note falls inside the stage), and its `notes`, as escaped HTML;
-  each line break a `<br>` (`<br/>` in the EPUB), each printed line's number a `span.pn`, and
-  each Folio passage's words a `span.folio` between its F's.
+  each line break a `<br>` (`<br/>` in the EPUB), each printed line's number a `span.pn`,
+  each Folio passage's words a `span.folio` between its F's, and words spoken aside a
+  `span.aside`.
   """
   def inline(text, notes, format) do
     text
@@ -57,6 +58,10 @@ defmodule Playcode.Export.NoteMarkup do
   end
 
   defp split_paragraphs(part), do: [part]
+
+  # Words spoken aside in a line that is not all aside.
+  defp part(%{aside: true} = part, format),
+    do: ~s(<span class="aside">) <> part(Map.delete(part, :aside), format) <> "</span>"
 
   # A piece of an inline stage direction, a note's number among them.
   defp part(%{stage: %{}} = part, format),
