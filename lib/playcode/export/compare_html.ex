@@ -5,7 +5,7 @@ defmodule Playcode.Export.CompareHtml do
   scrolling between panels. No external dependencies.
   """
 
-  alias Playcode.Export.NoteMarkup
+  alias Playcode.Export.{Download, NoteMarkup}
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{CastListEntry, Division}
 
@@ -442,7 +442,7 @@ defmodule Playcode.Export.CompareHtml do
   end
 
   defp render_element(%{type: "stage_direction"} = el, _key) do
-    "        <div class=\"stage-direction\">(#{NoteMarkup.inline(el.content, [], :html)})</div>\n"
+    "        <div class=\"stage-direction\">#{Download.in_parentheses(el, NoteMarkup.inline(el.content, [], :html))}</div>\n"
   end
 
   defp render_element(%{type: "prose"} = el, _key) do

@@ -35,6 +35,28 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "&lt;&lt;"
   end
 
+  test "a stage direction gets parentheses only when it has none of its own", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><stage>(Vase.)</stage><stage>Sale Ana.</stage>
+          <sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div1>
+          """
+        )
+      )
+
+    TestFixtures.mark_complete!(play)
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert ["(Vase.)", "(Sale Ana.)"] ==
+             html
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(".stage-direction")
+             |> Enum.map(&(&1 |> LazyHTML.text() |> String.split() |> Enum.join(" ")))
+  end
+
   # B2 (questions 44, 61): the part keeps its step for a reader without scripts; the
   # AlignParts hook shows the invisible lead where the line has room.
   test "a shared line's later part carries the earlier part's words, hidden, and the fixed step",

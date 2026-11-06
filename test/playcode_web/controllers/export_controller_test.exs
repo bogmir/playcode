@@ -243,6 +243,36 @@ defmodule PlaycodeWeb.ExportControllerTest do
              ~s(<p class="verse-info">Prose</p>)
   end
 
+  # A quarter of the corpus's stage directions bring their own parentheses, "(Vase.)";
+  # the outputs that add them printed those as "((Vase.))".
+  test "the downloads and the comparison put parentheses only around a stage direction without them",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><stage>(Vase.)</stage><stage>Sale Ana.</stage>
+          <sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div1>
+          """
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    compare =
+      conn
+      |> log_in_user(Playcode.TestFixtures.user_fixture(role: :researcher))
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{play.id}"]}")
+      |> response(200)
+
+    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}, {compare, "comparison"}] do
+      assert body =~ ~s{<div class="stage-direction">(Vase.)</div>}, where
+      assert body =~ ~s{<div class="stage-direction">(Sale Ana.)</div>}, where
+    end
+  end
+
   # As the published site prints them, in the downloads' English.
   test "the HTML and EPUB downloads print the dating and the historical time",
        %{conn: conn, play: play} do

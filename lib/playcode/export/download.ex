@@ -353,7 +353,8 @@ defmodule Playcode.Export.Download do
   end
 
   defp element(%{type: "stage_direction"} = el, format),
-    do: "<div class=\"stage-direction\">(#{inline(el.content, el.notes, format)})</div>\n"
+    do:
+      "<div class=\"stage-direction\">#{in_parentheses(el, inline(el.content, el.notes, format))}</div>\n"
 
   defp element(%{type: "prose"} = el, format),
     do:
@@ -388,6 +389,10 @@ defmodule Playcode.Export.Download do
       "<span class=\"ghost#{if indent, do: " indent"}\" aria-hidden=\"true\">#{inline(lead, format)} </span>"
 
   defp inline(text, notes \\ [], format), do: NoteMarkup.inline(text, notes, format)
+
+  @doc "A stage direction's printed words, in parentheses unless it brings its own."
+  def in_parentheses(element, printed),
+    do: if(Element.needs_parentheses?(element), do: "(#{printed})", else: printed)
 
   defp in_english(fun), do: Gettext.with_locale(PlaycodeWeb.Gettext, "en", fun)
 

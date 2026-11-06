@@ -373,6 +373,9 @@ defmodule PlaycodeWeb.Components.PlayText do
   end
 
   defp render_element(%{element: %{type: "stage_direction"}} = assigns) do
+    {open, close} = if Element.needs_parentheses?(assigns.element), do: {"(", ")"}, else: {"", ""}
+    assigns = assign(assigns, open: open, close: close)
+
     ~H"""
     <div
       :if={@show_stage_directions}
@@ -382,7 +385,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         Element.folio_only?(@element) && "folio"
       ]}
     >
-      (<.inline_content text={@element.content} notes={@element.notes} />)
+      {@open}<.inline_content text={@element.content} notes={@element.notes} />{@close}
     </div>
     """
   end
