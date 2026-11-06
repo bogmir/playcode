@@ -515,14 +515,16 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert [_text, after_text] = String.split(html, "Verso final.")
     assert after_text =~ ~r/EPILOGUE.*<em>cavaliers<\/em>.*Loado sea\./s
 
-    # A chapter each, after the text's, in the reader's table of contents.
+    # A chapter each, after the text's, in the reader's table of contents. A paratext with
+    # no heading is named by its kind in the download's English, whatever the visitor's
+    # language: this asserted the Spanish "Colofón" until 2026-11-06.
     {_name, toc} = Enum.find(files, fn {_name, content} -> content =~ ~s(epub:type="toc") end)
 
     assert Regex.scan(~r{<a href="[^"]+">([^<]+)</a>}, toc, capture: :all_but_first) ==
-             [["Test Play"], ["ACTO I"], ["EPILOGUE"], [t("Colophon")]]
+             [["Test Play"], ["ACTO I"], ["EPILOGUE"], ["Colophon"]]
 
     assert Enum.any?(files, fn {_name, content} ->
-             content =~ "Loado sea." and content =~ "<title>#{t("Colophon")}</title>"
+             content =~ "Loado sea." and content =~ "<title>Colophon</title>"
            end)
   end
 

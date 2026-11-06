@@ -394,7 +394,8 @@ defmodule Playcode.Export.Download do
   def in_parentheses(element, printed),
     do: if(Element.needs_parentheses?(element), do: "(#{printed})", else: printed)
 
-  defp in_english(fun), do: Gettext.with_locale(PlaycodeWeb.Gettext, "en", fun)
+  @doc "`fun`'s labels in the downloads' English, whatever the visitor's language."
+  def in_english(fun), do: Gettext.with_locale(PlaycodeWeb.Gettext, "en", fun)
 
   defp escape(nil), do: ""
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()

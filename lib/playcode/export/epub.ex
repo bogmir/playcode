@@ -129,7 +129,8 @@ defmodule Playcode.Export.Epub do
       Enum.map_join(items, "\n", &Download.item(&1, :epub))
   end
 
-  defp chapter_title(%Paratext{} = paratext, _index), do: PlayLabels.paratext_title(paratext)
+  defp chapter_title(%Paratext{} = paratext, _index),
+    do: Download.in_english(fn -> PlayLabels.paratext_title(paratext) end)
 
   defp chapter_title(%{title: title}, _index) when title not in [nil, ""],
     do: InlineMarkup.plain(title)
