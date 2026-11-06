@@ -243,6 +243,64 @@ defmodule PlaycodeWeb.ExportControllerTest do
              ~s(<p class="verse-info">Prose</p>)
   end
 
+  # A quarter of the corpus's stage directions bring their own parentheses, "(Vase.)";
+  # the outputs that add them printed those as "((Vase.))".
+  test "the downloads and the comparison put parentheses only around a stage direction without them",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="acto" n="1"><stage>(Vase.)</stage><stage>Sale Ana.</stage>
+          <sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div1>
+          """
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    compare =
+      conn
+      |> log_in_user(Playcode.TestFixtures.user_fixture(role: :researcher))
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{play.id}"]}")
+      |> response(200)
+
+    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}, {compare, "comparison"}] do
+      assert body =~ ~s{<div class="stage-direction">(Vase.)</div>}, where
+      assert body =~ ~s{<div class="stage-direction">(Sale Ana.)</div>}, where
+    end
+  end
+
+  # A text not parted into acts is one `play` division (21 plays); the play page heads it
+  # as an act, and the downloads headed a titled one as a scene, with no page break.
+  test "the downloads and the comparison head a play division as an act", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div type="play"><head>La farsa entera</head>
+          <sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div>
+          """
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    compare =
+      conn
+      |> log_in_user(Playcode.TestFixtures.user_fixture(role: :researcher))
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{play.id}"]}")
+      |> response(200)
+
+    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}, {compare, "comparison"}] do
+      assert body =~ ~r{<h2 class="act-heading"[^>]*>La farsa entera</h2>}, where
+    end
+  end
+
   # As the published site prints them, in the downloads' English.
   test "the HTML and EPUB downloads print the dating and the historical time",
        %{conn: conn, play: play} do
@@ -485,14 +543,16 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert [_text, after_text] = String.split(html, "Verso final.")
     assert after_text =~ ~r/EPILOGUE.*<em>cavaliers<\/em>.*Loado sea\./s
 
-    # A chapter each, after the text's, in the reader's table of contents.
+    # A chapter each, after the text's, in the reader's table of contents. A paratext with
+    # no heading is named by its kind in the download's English, whatever the visitor's
+    # language: this asserted the Spanish "Colofón" until 2026-11-06.
     {_name, toc} = Enum.find(files, fn {_name, content} -> content =~ ~s(epub:type="toc") end)
 
     assert Regex.scan(~r{<a href="[^"]+">([^<]+)</a>}, toc, capture: :all_but_first) ==
-             [["Test Play"], ["ACTO I"], ["EPILOGUE"], [t("Colophon")]]
+             [["Test Play"], ["ACTO I"], ["EPILOGUE"], ["Colophon"]]
 
     assert Enum.any?(files, fn {_name, content} ->
-             content =~ "Loado sea." and content =~ "<title>#{t("Colophon")}</title>"
+             content =~ "Loado sea." and content =~ "<title>Colophon</title>"
            end)
   end
 

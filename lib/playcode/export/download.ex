@@ -25,8 +25,6 @@ defmodule Playcode.Export.Download do
   alias Playcode.Witnesses
   alias PlaycodeWeb.PlayLabels
 
-  @act_types ~w(acto act acte jornada)
-
   @doc """
   `play` with what its front matter prints, and its divisions as the downloads print
   them: its variants if it shows them, each later part of a shared line with its lead.
@@ -304,10 +302,11 @@ defmodule Playcode.Export.Download do
 
   defp division_heading(%{title: title}, _format) when title in [nil, ""], do: ""
 
-  defp division_heading(%{title: title, type: type} = div, format) when type in @act_types,
-    do: "<h2 class=\"act-heading\">#{inline(title, div.notes, format)}</h2>\n"
-
-  defp division_heading(div, format), do: child_heading(div, format)
+  defp division_heading(div, format) do
+    if Division.headed_as_act?(div),
+      do: "<h2 class=\"act-heading\">#{inline(div.title, div.notes, format)}</h2>\n",
+      else: child_heading(div, format)
+  end
 
   defp child_heading(%{title: title}, _format) when title in [nil, ""], do: ""
 
@@ -353,7 +352,8 @@ defmodule Playcode.Export.Download do
   end
 
   defp element(%{type: "stage_direction"} = el, format),
-    do: "<div class=\"stage-direction\">(#{inline(el.content, el.notes, format)})</div>\n"
+    do:
+      "<div class=\"stage-direction\">#{in_parentheses(el, inline(el.content, el.notes, format))}</div>\n"
 
   defp element(%{type: "prose"} = el, format),
     do:
@@ -389,7 +389,12 @@ defmodule Playcode.Export.Download do
 
   defp inline(text, notes \\ [], format), do: NoteMarkup.inline(text, notes, format)
 
-  defp in_english(fun), do: Gettext.with_locale(PlaycodeWeb.Gettext, "en", fun)
+  @doc "A stage direction's printed words, in parentheses unless it brings its own."
+  def in_parentheses(element, printed),
+    do: if(Element.needs_parentheses?(element), do: "(#{printed})", else: printed)
+
+  @doc "`fun`'s labels in the downloads' English, whatever the visitor's language."
+  def in_english(fun), do: Gettext.with_locale(PlaycodeWeb.Gettext, "en", fun)
 
   defp escape(nil), do: ""
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()

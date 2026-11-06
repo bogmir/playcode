@@ -56,7 +56,16 @@ defmodule Playcode.PlayContent.Division do
     keys
   end
 
-  defp kind(type) when type in ~w(acto act acte jornada play), do: "act"
+  @headed_as_act ~w(acto act acte jornada play)
+
+  @doc """
+  True when every output heads `division` as an act: an act, or the whole text of a play
+  not parted into acts (`play`, 21 plays). The statistics count acts with their own list,
+  which leaves `play` out: such a text has no acts to count.
+  """
+  def headed_as_act?(%{type: type}), do: type in @headed_as_act
+
+  defp kind(type) when type in @headed_as_act, do: "act"
   defp kind(type) when type in ~w(escena scene), do: "scene"
   defp kind(type) when type in ~w(prologo prologue), do: "prologue"
   defp kind(type), do: type

@@ -115,6 +115,15 @@ defmodule Playcode.PlayContent.Element do
     starts
   end
 
+  @doc """
+  True when an output that sets stage directions in parentheses must add them: a quarter
+  of the corpus's stage directions bring their own, "(Vase.)", and printed in another
+  pair they read "((Vase.))".
+  """
+  def needs_parentheses?(%{content: content}),
+    do:
+      not (content |> InlineMarkup.plain() |> String.trim() |> String.match?(~r/\A\(.*\)\.?\z/s))
+
   @doc "True when every word of the element is spoken aside: no marker says which are."
   def whole_aside?(%{is_aside: aside, content: content}),
     do: aside and not InlineMarkup.holds?(content, :aside)
