@@ -87,7 +87,7 @@
         </div>
 
         <p :if={@play.verse_count} class="mt-2 text-xs text-base-content/70">
-          {if @play.is_verse, do: "#{@play.verse_count} verses", else: "Prose"}
+          {PlaycodeWeb.PlayLabels.form_line(@play)}
         </p>
       </header>
 

@@ -46,7 +46,7 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
 
   test "facets count the plays by language, form, kind and collection" do
     es = play_fixture(%{"is_complete" => true, "language" => "es"})
-    fr = play_fixture(%{"is_complete" => true, "language" => "fr", "is_verse" => false})
+    fr = play_fixture(%{"is_complete" => true, "language" => "fr", "auto_form" => "prose"})
 
     al =
       play_fixture(%{"is_complete" => true, "code" => "AL#{System.unique_integer([:positive])}"})

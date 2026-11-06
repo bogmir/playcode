@@ -304,7 +304,7 @@ defmodule Playcode.Import.TeiImport do
     # Recompute verse_count from actual verse_line elements (the TEI header
     # <extent> value is often inaccurate or includes non-verse lines), and return
     # the play as that left it rather than the stale struct from before.
-    {:ok, play} = Catalogue.update_verse_count(play.id)
+    {:ok, play} = Catalogue.update_form_and_verse_count(play.id)
     play
   end
 

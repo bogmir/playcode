@@ -210,25 +210,37 @@ defmodule Playcode.Catalogue do
   @doc "Destroys a play and every row that hangs off it. There is no undo."
   def purge_play(%Play{} = play), do: Repo.delete(play)
 
-  @doc "Recomputes and updates play.verse_count from the actual verse_line elements."
-  def update_verse_count(play_id) do
+  @doc """
+  Recomputes the play's `verse_count`, its numbered verses, and `auto_form`, the form its
+  verse and prose give (`Play.auto_form/2`), from its text.
+  """
+  def update_form_and_verse_count(play_id) do
     alias Playcode.PlayContent.Element
 
     # The numbered verses, a split verse once, by its first part: distinct numbers undercount
-    # a play whose numbering starts again in each act or scene. A verse with no number waits
-    # on question 23's rule for the form (docs/backlog.md, *The automatic form*).
-    count =
+    # a play whose numbering starts again in each act or scene. The form counts every verse
+    # line, numbered or not, by its length against the prose's.
+    {count, verse_length, prose_length} =
       Element
       |> where(play_id: ^play_id)
-      |> where(type: "verse_line")
-      |> where([e], not is_nil(e.line_number))
-      |> where([e], is_nil(e.part) or e.part in ["", "I"])
-      |> select([e], count(e.id))
+      |> where([e], e.type in ["verse_line", "prose"])
+      |> select([e], {
+        filter(
+          count(e.id),
+          e.type == "verse_line" and not is_nil(e.line_number) and
+            (is_nil(e.part) or e.part in ["", "I"])
+        ),
+        coalesce(filter(sum(fragment("char_length(?)", e.content)), e.type == "verse_line"), 0),
+        coalesce(filter(sum(fragment("char_length(?)", e.content)), e.type == "prose"), 0)
+      })
       |> Repo.one()
 
     Play
     |> Repo.get!(play_id)
-    |> Ecto.Changeset.change(%{verse_count: count, is_verse: count > 0})
+    |> Ecto.Changeset.change(%{
+      verse_count: count,
+      auto_form: Play.auto_form(verse_length, prose_length)
+    })
     |> Repo.update()
   end
 

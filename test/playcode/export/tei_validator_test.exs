@@ -35,6 +35,7 @@ defmodule Playcode.Export.TeiValidatorTest do
         {"line breaks and prose line numbers", &line_breaks/0},
         {"witnesses of every type", &witnesses/0},
         {"a historical time", &historical_time/0},
+        {"a form a researcher chose", &chosen_form/0},
         {"places with a historical state", &historical_state/0},
         {"an original cast", &original_cast/0},
         {"a scene of the action", &scene_of_the_action/0},
@@ -249,6 +250,15 @@ defmodule Playcode.Export.TeiValidatorTest do
 
   # A play with no places: its settingDesc holds a <setting> with the <time> alone. Under
   # a code of its own, for the same reason as the bibliography test.
+  defp chosen_form do
+    play = own_copy(@fixture_file, "CF")
+    {:ok, _} = Catalogue.update_play(play, %{"form" => "mixed"})
+    xml = export_tei(play)
+
+    assert xml =~ ~s(<extent ana="versoprosa" resp="#equipo">)
+    xml
+  end
+
   defp historical_time do
     play = own_copy(@fixture_file, "HT")
 

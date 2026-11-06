@@ -55,7 +55,6 @@ defmodule Playcode.CompleteCopyTest do
     # path in the snapshot, what the round trip makes of the value there}. Closing a gap
     # turns the test red until its entry goes.
     known_gaps = [
-      {"Verse, prose or mixed", [:play, :form], fn _form -> nil end},
       # Not a gap to close but the file's limit, kept on purpose (docs/history.md): the
       # principal investigator comes back first, as every file is read, and the edition
       # statement's credits after the title statement's, an order TEI has no way to say.

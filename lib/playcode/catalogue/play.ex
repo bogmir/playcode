@@ -20,8 +20,8 @@ defmodule Playcode.Catalogue.Play do
     * The TEI importer owns most of them. A re-import overwrites them in place.
     * The curators own the columns in `TeiImport`'s `@platform_owned`, which a
       re-import never touches.
-    * `verse_count` and `is_verse` are derived from the verse lines by
-      `Catalogue.update_verse_count/1`. Read the play's form through `form/1`.
+    * `verse_count` and `auto_form` are derived from the text by
+      `Catalogue.update_form_and_verse_count/1`. Read the play's form through `form/1`.
     * `deleted_at` and `content_version` are written only by the functions and the
       triggers named next to them.
 
@@ -50,7 +50,7 @@ defmodule Playcode.Catalogue.Play do
     field :author_attribution, :string
     field :publication_date, :string
     field :verse_count, :integer
-    field :is_verse, :boolean, default: true
+    field :auto_form, :string, default: "prose"
     field :form, :string
     field :publisher, :string
     field :pub_place, :string
@@ -132,19 +132,47 @@ defmodule Playcode.Catalogue.Play do
 
   def historical_times, do: @historical_times
 
-  @forms ~w(verse prose mixed)
+  @forms ~w(verse occasional_verse prose mixed)
 
   def forms, do: @forms
 
   @doc """
-  The play's form as every page names it: the curator's choice when set, else "verse"
-  when the text has any verse and "prose" otherwise. `is_verse` is recomputed from the
-  verse lines on every import and content edit, so the automatic value follows the text;
-  only a curator says "mixed".
+  The play's form as every page names it: the curator's choice when set, else the one
+  worked out from the text (`auto_form/2`), which every import and content edit
+  recomputes. Only a curator says "mixed" (question 23).
   """
   def form(%__MODULE__{form: form}) when is_binary(form), do: form
-  def form(%__MODULE__{is_verse: true}), do: "verse"
-  def form(%__MODULE__{}), do: "prose"
+  def form(%__MODULE__{auto_form: auto_form}), do: auto_form
+
+  # ponytail: question 23 still asks where verse and prose ends (proposed nine tenths);
+  # until it is answered, over a tenth is verse and "mixed" only a curator's choice.
+  @occasional_share 0.1
+
+  @doc """
+  The form a text's verse and prose give, by the length of each (question 23): no verse
+  is prose, under a tenth of the text in verse prose with occasional verse, more verse.
+  """
+  def auto_form(0, _prose_length), do: "prose"
+
+  def auto_form(verse_length, prose_length) do
+    if verse_length < @occasional_share * (verse_length + prose_length),
+      do: "occasional_verse",
+      else: "verse"
+  end
+
+  @file_labels %{
+    "verse" => "verso",
+    "occasional_verse" => "prosaverso",
+    "prose" => "prosa",
+    "mixed" => "versoprosa"
+  }
+
+  @doc "A form as the EMOTHE files label it on `extent/@ana` (question 22): `verso`…"
+  def file_label(form), do: Map.fetch!(@file_labels, form)
+
+  @doc "The form a file's `extent/@ana` names, or nil for any other word."
+  def form_of_file_label(label),
+    do: Enum.find_value(@file_labels, fn {form, word} -> if word == label, do: form end)
 
   @doc """
   The part of a code before its first `_`: `EMOTHE0530` of
@@ -194,7 +222,7 @@ defmodule Playcode.Catalogue.Play do
       :author_attribution,
       :publication_date,
       :verse_count,
-      :is_verse,
+      :auto_form,
       :form,
       :publisher,
       :pub_place,

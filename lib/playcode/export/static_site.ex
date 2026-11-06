@@ -617,6 +617,7 @@ defmodule Playcode.Export.StaticSite do
       {"form", "Form",
        options(plays, &Play.form/1, %{
          "verse" => "Verse",
+         "occasional_verse" => "Prose with occasional verse",
          "prose" => "Prose",
          "mixed" => "Verse and prose"
        })},

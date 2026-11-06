@@ -703,7 +703,7 @@ defmodule Playcode.Import.WordParser do
           if is_numbered, do: act_number + 1, else: act_number
         end)
 
-        Catalogue.update_verse_count(play_id)
+        Catalogue.update_form_and_verse_count(play_id)
 
         play
       end)

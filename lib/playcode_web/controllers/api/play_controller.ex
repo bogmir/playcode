@@ -80,7 +80,7 @@ defmodule PlaycodeWeb.API.PlayController do
       title: play.title,
       author: play.author_name,
       verse_count: play.verse_count,
-      is_verse: play.is_verse,
+      is_verse: play.auto_form != "prose",
       form: Play.form(play)
     }
   end
@@ -100,7 +100,7 @@ defmodule PlaycodeWeb.API.PlayController do
       original_title: play.original_title,
       author: play.author_name,
       verse_count: play.verse_count,
-      is_verse: play.is_verse,
+      is_verse: play.auto_form != "prose",
       form: Play.form(play),
       pub_place: play.pub_place,
       publication_date: play.publication_date,

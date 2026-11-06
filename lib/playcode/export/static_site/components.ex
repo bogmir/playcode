@@ -518,6 +518,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
     case {Play.form(play), verses} do
       {"prose", _} -> "Prose"
+      {"occasional_verse", _} -> "Prose with occasional verse"
       {"verse", n} when n > 0 -> "Verse · #{number(n)} verses"
       {"verse", _} -> "Verse"
       {"mixed", n} when n > 0 -> "Verse and prose · #{number(n)} verses"
@@ -1271,6 +1272,9 @@ defmodule Playcode.Export.StaticSite.Components do
       case Play.form(play) do
         "prose" ->
           "Prose"
+
+        "occasional_verse" ->
+          "Prose with occasional verse"
 
         "mixed" ->
           "Verse and prose"
