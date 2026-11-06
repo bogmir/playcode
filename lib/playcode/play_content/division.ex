@@ -108,6 +108,7 @@ defmodule Playcode.PlayContent.Division do
   def changeset(division, attrs) do
     division
     |> cast(attrs, [:type, :number, :title, :position, :intro, :note, :play_id, :parent_id])
+    |> beside_list_only()
     |> validate_required([:type])
     |> validate_inclusion(:type, ~w(
       acto escena prologo argumento dedicatoria elenco front jornada introduccion_editor
@@ -116,5 +117,13 @@ defmodule Playcode.PlayContent.Division do
       play circunstancia_accion introduccion_editor_digital nota_edicion_digital head_title
       interlude dumb_show auto poem prose
     ))
+  end
+
+  # Only a cast list holds what its file says beside it: a division retyped from one drops
+  # them, as its file would.
+  defp beside_list_only(changeset) do
+    if get_field(changeset, :type) == "elenco",
+      do: changeset,
+      else: change(changeset, intro: nil, note: nil)
   end
 end
