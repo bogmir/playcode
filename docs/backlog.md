@@ -68,13 +68,10 @@ The project's next phase studies how Spanish plays circulated in Europe up to th
 
 None shows in the corpus or on dev today; each waits for the data that would show it.
 
-- [ ] **A paratext chapter with no heading is titled in the reader's UI language** - `Epub.chapter_title/2` uses `PlayLabels.paratext_title/1` in the request's locale ("Colofón" for a Spanish visitor), while the rest of the download is English; `export_controller_test.exs` pins the Spanish. Wrap it in the downloads' English, as `Download.in_english/1` does
 - [ ] **The front matter prints the header's texts through `escape/1`** - title, author, the original's title, the editors' names and the dating notes in `Download.front/3`, and the comparison panel's title, would show `<<…>>` for an `<emph>` in the TEI header. Print them through `NoteMarkup.inline/3` (and the play page's header, the catalogue and the static site's index, which print them the same way). No play has italics there yet (none in the dev corpus, 2026-11-04); `test/playcode_web/inline_markers_test.exs` leaves these fields plain until it is done, then gives them italics
-- [ ] **`@act_types` leaves out `play`** - a titled top-level `play` division prints in the downloads as a scene heading, with no page break before it, where the play page treats it as an act (`play_text.ex`). The list has six hand copies; one shared predicate (`Division`) would settle them
 
 ## Found by the inline-marker refactor (2026-11-04)
 
-- [ ] **The word counts strip escaped italics** - `Statistics.Metrics` takes `&lt;&lt;` and `&gt;&gt;` out of a text beside `<<` and `>>`, so some text reaching it was escaped before it was counted. Find where, and whether a word count is off by it
 
 ## Found by the corpus round trip (2026-10-09)
 Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode_dev`, the 360 whose code matches their file name exported again with `TeiXml.generate/1`, and every element and attribute counted in both (per section, `parent>child`). Counts below are source totals over the 360 unless they say otherwise. Nothing here is fixed yet; each is a decision or a project of its own.
