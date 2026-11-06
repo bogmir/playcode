@@ -77,6 +77,10 @@ there, naming the first line that differs. It needs the local database up.
    ten minutes on performance-1x and over two hours on the shared CPU (2026-10-17, 373 plays
    in ten minutes on 2026-10-18), so run
    `generate`, not the export page's button.
+   A session can also hang without dropping: on 2026-11-06 flyctl's tunnel died at 250/373, and
+   the command waited silently at 0% CPU while the build finished on the machine. Nothing
+   printed for minutes, with `flyctl ssh` answering "tunnel unavailable", means
+   `~/.fly/bin/flyctl agent restart`: that ends the session, and it asks again.
 6. **Check the preview** on `/admin/export`, then **`deploy`**: Deploy, over SSH, with
    autostop off while it pushes and back on after it. It asks again as `generate` does: turning
    autostop off restarts the app, and on 2026-10-18 the first call came before it answered
