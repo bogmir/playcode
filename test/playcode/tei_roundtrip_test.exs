@@ -1288,7 +1288,8 @@ defmodule Playcode.TeiRoundtripTest do
   end
 
   # With its opener removed in Playcode, the poem is still the play's text, not a paratext
-  # in verse, whose lines have no numbers.
+  # in verse, whose lines have no numbers. The numbers come back plain, as FileMaker has
+  # written them since 2013 (they were padded to "0001" before 2026-11-06).
   test "a poem with no opener comes back the text, its lines numbered" do
     xml =
       roundtrip(tei(body: ~s(<div type="poem"><lg><l n="1">Uno</l><l n="2">Dos</l></lg></div>)))
@@ -1296,7 +1297,7 @@ defmodule Playcode.TeiRoundtripTest do
     assert text_order(xml) -- ["front/titlePage"] == ["body/div[poem]"]
 
     assert for({attrs, _text} <- xml_elements(xml, "l", within: "body"), do: attrs["n"]) ==
-             ["0001", "0002"]
+             ["1", "2"]
   end
 
   # 12 head titles and 4 notes on the digital edition are a heading alone.
