@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 6 November 2026. 67 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 8 November 2026. 67 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -1617,6 +1617,7 @@
         <p class="why">TEI has elements for some of them: <code>&lt;performance&gt;</code> for a performance notice, <code>&lt;argument&gt;</code>, <code>&lt;postscript&gt;</code>, <code>&lt;prologue&gt;</code> and <code>&lt;epilogue&gt;</code>. The files use <code>&lt;div type="noticia_representacion"&gt;</code> and the like, and Playcode writes those words back. TEI does not let every element stand where the file put its text: <code>&lt;performance&gt;</code> can, but <code>&lt;argument&gt;</code> and <code>&lt;postscript&gt;</code> cannot sit between sections. The scene of the action is already written as TEI’s <code>&lt;set&gt;</code>, as 17 files give it, also where the file says <code>&lt;div type="circunstancia_accion"&gt;</code>. Either way this changes the files you publish and any tool that reads them.</p>
         <div class="answered">
           <p><strong>Decided by Playcode on 16 October 2026:</strong> keep the project’s words, as Playcode writes them now. Your files and the tools that read them use those words, and the file comes back whole either way.</p>
+          <p><strong>The team on 7 November 2026, for the scene of the action:</strong> it must be <code>&lt;set&gt;</code>, as Playcode already writes it, wherever the file says <code>&lt;div type="circunstancia_accion"&gt;</code>. It was a point the project had noted to review since Jan Jokisch advised <code>&lt;set&gt;</code>. The other texts keep the project’s words.</p>
           <button type="button" class="reopen" aria-expanded="false" aria-controls="q35-form">Change this answer</button>
         </div>
         <div class="answer-form" id="q35-form" hidden>
