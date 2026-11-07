@@ -245,14 +245,14 @@ defmodule Playcode.Export.TeiXml do
       (editor.role in @resp_roles and editor.position in 100..199)
   end
 
-  # The resp is the wording TeiParser reads the role back from: anything with "Edición"
-  # is an editor, so a digital editor is written in English.
+  # The resp is the wording TeiParser reads the role back from: "Edición" is an editor, and
+  # a digital editor is the one English formula.
   defp resp_stmt(editor) do
     resp =
       case editor.role do
         "editor" -> "Edición"
         "reviewer" -> "Revisión"
-        "digital_editor" -> "Electronic edition"
+        "digital_editor" -> "Electronic edition: text adapted, edited for XML and encoded by"
       end
 
     org = if editor.organization, do: [element(:orgName, editor.organization)], else: []
@@ -1358,12 +1358,21 @@ defmodule Playcode.Export.TeiXml do
 
   defp build_element(_), do: nil
 
+  @leading_stages ~r/\A((?:<stage(?: type="[A-Za-z0-9_]+")?>(?:(?!<\/?stage[\s>]).)+?<\/stage> ?)*)(.*)\z/s
+
   # The text of a line or paragraph: in one <seg type="aside"> when it is all aside, and
   # when it is partly, each <aside> marker a seg, a note at an aside's end inside it.
   defp spoken_content(el, text) do
     cond do
       Element.whole_aside?(el) ->
-        [aside_seg(el.aside_links, build_inline_content(text, el.notes))]
+        # The stage directions that open the line stand before the seg, not in it.
+        [_, lead, spoken] = Regex.run(@leading_stages, text)
+        at = String.length(InlineMarkup.plain(lead))
+        {here, later} = Enum.split_with(el.notes, &(&1.offset < at))
+        later = Enum.map(later, &%{&1 | offset: &1.offset - at})
+
+        if(lead == "", do: [], else: List.wrap(build_inline_content(lead, here))) ++
+          [aside_seg(el.aside_links, build_inline_content(spoken, later))]
 
       el.is_aside ->
         {nodes, _} =
