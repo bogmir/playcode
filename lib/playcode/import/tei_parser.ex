@@ -847,9 +847,18 @@ defmodule Playcode.Import.TeiParser do
 
   defp resp_role(resp) when is_binary(resp) do
     cond do
-      String.contains?(resp, "Edición") -> "editor"
-      String.contains?(resp, "Revisión") -> "reviewer"
-      true -> "digital_editor"
+      # The encoder's credit, in the two Spanish formulas the files use beside the English one.
+      String.contains?(resp, ["Edición digital", "Edición electrónica creada"]) ->
+        "digital_editor"
+
+      String.contains?(resp, "Edición") ->
+        "editor"
+
+      String.contains?(resp, "Revisión") ->
+        "reviewer"
+
+      true ->
+        "digital_editor"
     end
   end
 
@@ -1725,7 +1734,7 @@ defmodule Playcode.Import.TeiParser do
     else
       children
       |> without_stages()
-      |> pieces(:mark, &text_content(&1, :mark))
+      |> pieces(:mark, &read_child(&1, :mark, "l"))
       |> squeeze()
     end
   end
@@ -1905,9 +1914,13 @@ defmodule Playcode.Import.TeiParser do
   defp aside_content(children) do
     children
     |> without_stages()
-    |> Enum.filter(&(aside_seg?(&1) or match?({name, _, _} when name in ~w(note app lb), &1)))
+    |> Enum.filter(
+      &(aside_seg?(&1) or match?({name, _, _} when name in ~w(note app lb), &1) or
+          (match?({"stage", _, _}, &1) and more_than_aparte?(&1)))
+    )
     |> pieces(:mark, fn
       {"lb", attrs, _} -> line_break(attrs)
+      {"stage", _, _} = stage -> read_child(stage, :mark, "l")
       seg -> text_content(seg, :mark)
     end)
     |> squeeze()
@@ -2172,9 +2185,23 @@ defmodule Playcode.Import.TeiParser do
   # entries. A note inside the stage goes with it, and so does an entry that note copies.
   defp without_stages(children) do
     Enum.flat_map(children, fn
-      {"stage", _, _} = stage -> for {"app", _, _} = app <- outermost(stage, @apart), do: app
-      child -> [child]
+      {"stage", _, _} = stage ->
+        if more_than_aparte?(stage),
+          do: [stage],
+          else: for({"app", _, _} = app <- outermost(stage, @apart), do: app)
+
+      child ->
+        [child]
     end)
+  end
+
+  # A delivery stage that says more than "aparte" ("aparte, al salir") is text of the
+  # edition and stays; the bare "(Aparte.)" is what is_aside already says.
+  defp more_than_aparte?({"stage", attrs, children}) do
+    words = children |> Enum.filter(&is_binary/1) |> Enum.join()
+
+    stage_type(attrs) == "delivery" and
+      String.replace(words, ~r/[\s\[\]().]|aparte|aside/iu, "") != ""
   end
 
   # Each child's text, read by `fun`. Under :mark (the play text) a <note> or <app> child is

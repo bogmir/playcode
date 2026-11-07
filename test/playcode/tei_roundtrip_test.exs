@@ -78,7 +78,8 @@ defmodule Playcode.TeiRoundtripTest do
     {"translator", "editor", "titleStmt", %{"role" => "translator"}, "Sanderson, John D."},
     {"sponsor", "sponsor", "titleStmt", %{}, "Plan Nacional de I+D+i"},
     {"funder", "funder", "titleStmt", %{}, "Ministerio de Ciencia e Innovación"},
-    {"digital editor", "respStmt", "titleStmt", %{}, "Electronic edition Amelang, David J."},
+    {"digital editor", "respStmt", "titleStmt", %{},
+     "Electronic edition: text adapted, edited for XML and encoded by Amelang, David J."},
     {"principal", "principal", "titleStmt", %{}, "Joan Oleza Simó"},
     {"edition editor and organisation", "respStmt", "editionStmt", %{},
      "Edición Edition Editor University Lab"},
@@ -248,6 +249,26 @@ defmodule Playcode.TeiRoundtripTest do
 
     assert xml_texts(roundtrip(xml), "resp", within: "editionStmt") ==
              xml_texts(xml, "resp", within: "editionStmt")
+  end
+
+  # Answered 2026-11-07: the files carry three formulas for the same credit;
+  # Playcode writes the English one in every play.
+  test "the three formulas for the encoder's credit are written as one" do
+    formula = "Electronic edition: text adapted, edited for XML and encoded by"
+
+    for given <- ["Edición digital", "Edición electrónica creada por", "Electronic edition"] do
+      xml =
+        roundtrip(
+          tei(
+            file_desc: """
+            <editionStmt><respStmt><resp>#{given}</resp><persName>Tronch Pérez, Jesús</persName></respStmt></editionStmt>
+            """
+          )
+        )
+
+      assert xml_texts(xml, "resp", within: "editionStmt") == [formula]
+      assert xml_texts(roundtrip(xml), "resp", within: "editionStmt") == [formula]
+    end
   end
 
   test "an all-capitals title is title-cased, a mixed-case one is left alone" do
@@ -1818,6 +1839,26 @@ defmodule Playcode.TeiRoundtripTest do
       assert "Normal prose." in xml_texts(xml, "p", within: "sp")
     end
 
+    # EMOTHE0756 v. 230: "aparte, al salir". The stage said more than "aparte", and the
+    # import dropped all of it (answered 2026-11-07: keep every stage direction).
+    test "a delivery stage that says more than \"aparte\" is kept" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg type="decima">
+                <l n="1"><stage type="delivery">aparte, al salir</stage><seg type="aside">Por poco</seg></l>
+                <l n="2"><stage type="delivery">(Aparte.)</stage>Sin seg</l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      assert xml_texts(xml, "stage", within: "l") == ["aparte, al salir"]
+      assert xml_texts(xml, "seg") == ["Por poco", "Sin seg"]
+    end
+
     # How many asides the play's statistics count, once `body`'s speeches are imported.
     defp asides(speeches) do
       play = import_tei!(tei(body: scene(speeches)))
@@ -2668,12 +2709,14 @@ defmodule Playcode.TeiRoundtripTest do
 
       first = tei(code: "APP5", body: body) |> roundtrip()
 
-      assert reading_texts(first, "l") == ["I smell a tragedy."]
+      # "[Aside to Bungay]" says more than "aside": the stage stays (answered 2026-11-07), so the
+      # entry stays inside it. It used to be dropped with the stage.
+      assert reading_texts(first, "l") == ["[Aside to Bungay] I smell a tragedy."]
 
       assert [
                %{
                  in: "l",
-                 after: "",
+                 after: "[Aside to Bungay",
                  n: "481",
                  type: "substantive",
                  readings: [{"rdg", "#Bevington", "[Aside to Bungay]", nil}]
