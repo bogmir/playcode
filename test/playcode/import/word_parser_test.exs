@@ -86,7 +86,7 @@ defmodule Playcode.Import.WordParserTest do
 
       lines = Enum.map(xml_elements(xml, "l"), fn {attrs, _} -> attrs end)
 
-      assert Enum.map(lines, & &1["n"]) == ["0001", nil, nil, "0002"]
+      assert Enum.map(lines, & &1["n"]) == ["1", nil, nil, "2"]
 
       assert lines
              |> Enum.map(& &1["xml:id"])

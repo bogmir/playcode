@@ -1329,7 +1329,7 @@ defmodule Playcode.Export.TeiXml do
 
     attrs =
       if el.line_number,
-        do: Map.put(attrs, :n, String.pad_leading(to_string(el.line_number), 4, "0")),
+        do: Map.put(attrs, :n, to_string(el.line_number)),
         else: attrs
 
     attrs = if el.part, do: Map.put(attrs, :part, el.part), else: attrs
