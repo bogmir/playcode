@@ -24,7 +24,6 @@ All built (2026-11-02): `docs/history.md`.
 
 - [ ] **The text's editor in the `fileDesc`** - the `<editor>` of the `<sourceDesc>` ("García Calderón, Ángeles"), who established the text readers read, also in the `titleStmt`/`editionStmt`. Asked for "más adelante".
 - [ ] **VIAF identifier on `<author>`** - `<author ref="http://viaf.org/viaf/95301405">`. Asked for "más adelante".
-- [ ] **Bare "Aparte" stages** - the answer says every stage direction stays, bare "Aparte" included (any bracket). Playcode keeps the ones that say more; a bare one is `is_aside`, and no output writes it back as a stage. Confirm that the flag is enough, or store the stage. A `((…))` span with no stage in the text prints nothing in the web edition, as asked.
 - [ ] **Re-import the 2026-11-07 changes** - verse `n="0001"` files, the resp formula and the "aparte, al salir" stages reach production on the next corpus re-import and Generate.
 
 ## Production rollout
