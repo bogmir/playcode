@@ -787,6 +787,12 @@ defmodule Playcode.PlayContent do
 
   defp notes_query, do: from(n in Note, order_by: [n.offset, n.position])
 
+  @doc "How many variants (`Note.variant?/1`) the play has."
+  def count_variants(play_id) do
+    from(n in Note, where: n.play_id == ^play_id and n.type == ^Note.variant())
+    |> Repo.aggregate(:count)
+  end
+
   @doc """
   Creates a note; `attrs` carry its `play_id` and its `element_id` or `division_id`. It goes
   after the notes already at its offset, whatever `position` says.

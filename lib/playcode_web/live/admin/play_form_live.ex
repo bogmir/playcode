@@ -101,6 +101,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     |> assign(:parent_play_search, "")
     |> assign(:parent_play_suggestions, [])
     |> assign(:attribution_mode, :select)
+    |> assign(:variant_count, 0)
     |> assign(:play_context, nil)
   end
 
@@ -132,6 +133,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     |> assign(:parent_play_search, "")
     |> assign(:parent_play_suggestions, [])
     |> assign(:attribution_mode, attribution_mode)
+    |> assign(:variant_count, PlayContent.count_variants(play.id))
     |> assign(:play_context, %{play: play, active_tab: :metadata})
   end
 
@@ -771,17 +773,19 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           </div>
         </fieldset>
 
-        <div class="flex gap-4">
-          <div class="rounded-box bg-base-200 px-3 py-2">
-            <div class="text-sm text-base-content/85">
-              <.input field={@form[:is_complete]} type="checkbox" label={gettext("Complete")} />
-              <.input
-                field={@form[:show_variants]}
-                type="checkbox"
-                label={gettext("Show variant readings")}
-              />
-            </div>
-          </div>
+        <div :if={@variant_count > 0}>
+          <.input
+            field={@form[:show_variants]}
+            type="checkbox"
+            label={gettext("Show variant readings")}
+          />
+          <p class="mt-1 text-xs text-base-content/70">
+            {ngettext(
+              "Shows readers the play's one variant; the TEI file always keeps it.",
+              "Shows readers the play's %{count} variants; the TEI file always keeps them.",
+              @variant_count
+            )}
+          </p>
         </div>
 
         <div>
