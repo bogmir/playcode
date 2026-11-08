@@ -398,6 +398,7 @@ defmodule Playcode.Import.TeiParser do
       play:
         file_desc
         |> extract_play_attrs(find_child(children, "encodingDesc"), profile_desc)
+        |> Map.merge(numbering(find_child(children, "encodingDesc")))
         |> Map.put(:revisions, revisions(find_child(children, "revisionDesc"))),
       editors: editors(file_desc),
       sources: sources(file_desc),
@@ -508,6 +509,37 @@ defmodule Playcode.Import.TeiParser do
       historical_time: historical_time,
       historical_time_note: historical_time_note
     }
+  end
+
+  @numbering_types %{"verse" => "V", "line" => "VP", "printed-line" => "VL", "speech" => "S"}
+  @numbering_restarts %{[] => "never", ["act"] => "act", ["act", "scene"] => "scene"}
+
+  # The numbering rule as `TeiXml` writes it, a refsDecl of nested citeStructures: their
+  # nesting is where the count restarts, the innermost unit what is numbered, and
+  # `n="manual"` numbers typed by hand. Any other refsDecl, or none, says no rule.
+  defp numbering({_name, _attrs, children}) do
+    with {_name, attrs, inner} <- find_child(children, "refsDecl"),
+         {levels, [unit]} <- inner |> cite_units() |> Enum.split(-1),
+         {:ok, type} <- Map.fetch(@numbering_types, unit),
+         {:ok, restart} <- Map.fetch(@numbering_restarts, levels) do
+      %{
+        numbering_type: type,
+        numbering_restart: restart,
+        numbering_manual: attr_value(attrs, "n") == "manual",
+        numbering_from_header?: true
+      }
+    else
+      _ -> %{numbering_from_header?: false}
+    end
+  end
+
+  defp numbering(nil), do: %{numbering_from_header?: false}
+
+  defp cite_units(children) do
+    case find_children(children, "citeStructure") do
+      [{_name, attrs, inner}] -> [attr_value(attrs, "unit") | cite_units(inner)]
+      _ -> []
+    end
   end
 
   # The kind a title's type names, nil for any other title. A refundición is an adaptation

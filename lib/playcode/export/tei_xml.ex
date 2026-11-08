@@ -436,9 +436,59 @@ defmodule Playcode.Export.TeiXml do
         do: children ++ [element(:editorialDecl, paragraphs(play.editorial_declaration))],
         else: children
 
-    children = children ++ build_class_decl(play)
+    children = children ++ build_class_decl(play) ++ [build_refs_decl(play)]
 
     element(:encodingDesc, if(children == [], do: [element(:p, "")], else: children))
+  end
+
+  # The play's numbering rule as standard TEI: the citeStructures' nesting is where the count
+  # restarts, the innermost one's unit what is numbered (TeiParser reads these 12 shapes
+  # back), and a Manual play's refsDecl says `n="manual"`.
+  @numbered %{
+    "V" => {"verse", [".//l[@n]"], "@n"},
+    "VP" => {"line", [".//l[@n]", ".//p[@n]"], "@n"},
+    "VL" => {"printed-line", [".//l[@n]", ".//p[@n]", ".//lb[@n]"], "@n"},
+    "S" => {"speech", [".//sp[(.//l | .//p)[1][@n]]"], "(.//l | .//p)[1]/@n"}
+  }
+
+  defp build_refs_decl(play) do
+    {unit, paths, use} = Map.fetch!(@numbered, play.numbering_type)
+    attrs = if play.numbering_manual, do: %{n: "manual"}, else: %{}
+
+    numbered = fn paths, delim ->
+      element(
+        :citeStructure,
+        Map.merge(%{unit: unit, match: Enum.join(paths, " | "), use: use}, delim),
+        []
+      )
+    end
+
+    level = fn unit, match, delim, inner ->
+      element(
+        :citeStructure,
+        Map.merge(%{unit: unit, match: match, use: "position()"}, delim),
+        [inner]
+      )
+    end
+
+    structure =
+      case play.numbering_restart do
+        "never" ->
+          numbered.(Enum.map(paths, &("/TEI/text/body" <> String.trim_leading(&1, "."))), %{})
+
+        "act" ->
+          level.("act", "/TEI/text/body/div1", %{}, numbered.(paths, %{delim: ", "}))
+
+        "scene" ->
+          level.(
+            "act",
+            "/TEI/text/body/div1",
+            %{},
+            level.("scene", "div2", %{delim: "."}, numbered.(paths, %{delim: ", "}))
+          )
+      end
+
+    element(:refsDecl, attrs, [structure])
   end
 
   # The library classification of the source files, the Universal Decimal Classification

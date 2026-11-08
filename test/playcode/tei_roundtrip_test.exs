@@ -437,6 +437,67 @@ defmodule Playcode.TeiRoundtripTest do
 
   # 103 production files describe the project in two paragraphs, FileMaker's blurb and
   # its programmer's credit; read as one, they came back as a single <p>.
+  describe "the numbering rule" do
+    # One verse numbered 1 in one speech: it fits every rule, so no check of the numbers
+    # against the header's rule ever turns the play Manual.
+    @one_verse """
+    <div1 type="acto" n="1"><head>Acto I</head>
+      <div2 type="escena" n="1"><head>Escena I</head>
+        <sp><speaker>ANA</speaker><l n="1">Una línea sola.</l></sp>
+      </div2>
+    </div1>
+    """
+
+    alias Playcode.Catalogue
+
+    defp numbering(play),
+      do: {play.numbering_type, play.numbering_restart, play.numbering_manual}
+
+    for type <- ~w(V VP VL S), restart <- ~w(never act scene), manual <- [false, true] do
+      test "#{type} #{restart} manual=#{manual} survives export and import" do
+        play = import_tei!(tei(body: @one_verse))
+
+        {:ok, play} =
+          Catalogue.update_play(play, %{
+            numbering_type: unquote(type),
+            numbering_restart: unquote(restart),
+            numbering_manual: unquote(manual)
+          })
+
+        again = play |> export_tei() |> import_tei!()
+
+        assert numbering(again) == {unquote(type), unquote(restart), unquote(manual)}
+      end
+    end
+
+    test "V per scene is written as three citeStructures, the verse innermost" do
+      play = import_tei!(tei(body: @one_verse))
+
+      {:ok, play} =
+        Catalogue.update_play(play, %{numbering_type: "V", numbering_restart: "scene"})
+
+      xml = export_tei(play)
+
+      assert [{%{"unit" => "act"}, _}, {%{"unit" => "scene"}, _}, {%{"unit" => "verse"}, _}] =
+               xml_elements(xml, "citeStructure")
+
+      assert [{attrs, _}] = xml_elements(xml, "refsDecl")
+      refute Map.has_key?(attrs, "n")
+    end
+
+    test "a refsDecl Playcode does not write is no setting" do
+      play =
+        import_tei!(
+          tei(
+            encoding_desc: "<refsDecl><p>Cite by line.</p></refsDecl>",
+            body: @one_verse
+          )
+        )
+
+      assert numbering(play) == {"V", "never", false}
+    end
+  end
+
   describe "the project description" do
     test "keeps its paragraphs" do
       xml =
