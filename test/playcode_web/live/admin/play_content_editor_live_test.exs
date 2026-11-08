@@ -184,6 +184,74 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
            ]
   end
 
+  defp two_scenes do
+    import_tei!(
+      tei(
+        body: """
+        <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+          <div2 type="escena" n="1"><head>ESCENA I</head>
+            <sp><speaker>ANA</speaker><l n="1">Uno</l><l n="2">Dos</l></sp></div2>
+          <div2 type="escena" n="2"><head>ESCENA II</head>
+            <sp><speaker>ANA</speaker><l n="1">Tres</l><l n="2">Cuatro</l></sp></div2>
+        </div1>
+        """
+      )
+    )
+  end
+
+  test "a verse inserted in scene 2 of a V-per-scene play moves the later numbers of scene 2 only",
+       %{conn: conn} do
+    play = two_scenes()
+    lv = open_structure(conn, play)
+    lv |> element("button", "ESCENA II") |> render_click()
+
+    lv
+    |> element("#{card(lv, "Cuatro")} button[aria-label='#{t("Insert Above")}']")
+    |> render_click()
+
+    lv |> form("#element-form", element: %{"content" => "Nueva"}) |> render_submit()
+
+    assert lines(play) == [
+             {"Uno", 1},
+             {"Dos", 2},
+             {"Tres", 1},
+             {"Nueva", 2},
+             {"Cuatro", 3}
+           ]
+  end
+
+  test "reordering scenes recounts a play numbered through", %{conn: conn} do
+    play = two_scenes()
+    {:ok, _} = Playcode.Catalogue.update_play(play, %{numbering_restart: "never"})
+    PlayContent.refresh_derived(play.id)
+    [act] = PlayContent.list_top_divisions(play.id)
+    [first, second] = Enum.map(act.children, & &1.id)
+
+    conn
+    |> open_structure(play)
+    |> element("#children-#{act.id}")
+    |> render_hook("reorder_children", %{"parent" => act.id, "ids" => [second, first]})
+
+    assert lines(play) == [{"Tres", 1}, {"Cuatro", 2}, {"Uno", 3}, {"Dos", 4}]
+  end
+
+  test "the number field shows only on a Manual play", %{conn: conn, play: play} do
+    lv = open_scene(conn, play)
+    edit = fn -> element(lv, "#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']") end
+
+    edit.() |> render_click()
+    refute has_element?(lv, "#element-form input#element_line_number")
+
+    manual!(play)
+    lv = open_scene(conn, play)
+
+    lv
+    |> element("#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']")
+    |> render_click()
+
+    assert has_element?(lv, "#element-form input#element_line_number")
+  end
+
   test "the number typed for a new verse in a Manual play renumbers no other",
        %{conn: conn, play: play} do
     insert_above_third(conn, manual!(play), %{"content" => "Línea nueva", "line_number" => "3"})

@@ -8,6 +8,8 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
+  alias Playcode.PlayContent
+  alias Playcode.PlayContent.Numbering
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
@@ -74,7 +76,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, socket}
+    {:ok, assign(socket, :numbering_changes, nil)}
   end
 
   @impl true
@@ -302,9 +304,37 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     end
   end
 
+  # A save that would move numbers (Manual switched off, or the type or restart changed on a
+  # play that is not Manual) says how many first, and goes through on the second submit,
+  # which carries that count back (numbering spec, "The admin").
   defp save_play(socket, :edit, play_params) do
+    old = socket.assigns.play
+    rule = numbering_rule(Catalogue.change_play_form(old, play_params))
+
+    changes =
+      if rule.numbering_manual or rule == numbering_rule(old),
+        do: 0,
+        else: Numbering.changes(old, rule)
+
+    if changes > 0 and play_params["confirm_numbering"] != to_string(changes) do
+      changeset = Catalogue.change_play_form(old, play_params)
+      {:noreply, assign(socket, form: to_form(changeset), numbering_changes: changes)}
+    else
+      update_play(socket, play_params, rule != numbering_rule(old))
+    end
+  end
+
+  defp numbering_rule(%Ecto.Changeset{} = changeset),
+    do: changeset |> Ecto.Changeset.apply_changes() |> numbering_rule()
+
+  defp numbering_rule(play),
+    do: Map.take(play, [:numbering_type, :numbering_restart, :numbering_manual])
+
+  defp update_play(socket, play_params, renumber?) do
     case Catalogue.update_play_from_form(socket.assigns.play, play_params) do
       {:ok, play} ->
+        if renumber?, do: PlayContent.refresh_derived(play.id)
+
         LiveHelpers.log_activity(socket, "update", "play", play.id, %{
           title: play.title,
           code: play.code
@@ -702,6 +732,37 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             placeholder={gettext("Usage terms and citation info")}
           />
         </div>
+
+        <fieldset :if={@live_action == :edit} class="rounded-box bg-base-200 px-3 py-2">
+          <legend class="text-sm font-medium">{gettext("Numbering")}</legend>
+          <div class="grid gap-4 sm:grid-cols-3">
+            <.input
+              field={@form[:numbering_type]}
+              type="select"
+              label={gettext("What is numbered")}
+              options={PlayLabels.numbering_type_options()}
+            />
+            <.input
+              field={@form[:numbering_restart]}
+              type="select"
+              label={gettext("The count starts again")}
+              options={PlayLabels.numbering_restart_options()}
+            />
+            <.input
+              field={@form[:numbering_manual]}
+              type="checkbox"
+              label={gettext("Numbers typed by hand (never recounted)")}
+            />
+          </div>
+          <div :if={@numbering_changes} role="alert" class="mt-2 text-sm text-warning">
+            {ngettext(
+              "%{count} number will change. Save again to confirm.",
+              "%{count} numbers will change. Save again to confirm.",
+              @numbering_changes
+            )}
+            <input type="hidden" name="play[confirm_numbering]" value={@numbering_changes} />
+          </div>
+        </fieldset>
 
         <div class="flex gap-4">
           <div class="rounded-box bg-base-200 px-3 py-2">

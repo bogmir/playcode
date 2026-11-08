@@ -9,6 +9,8 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
   import Playcode.ImportHelpers,
     only: [
       export_tei: 1,
+      manual_numbering: 0,
+      xml_lines: 2,
       import_tei!: 1,
       tei: 1,
       write_tmp!: 1,
@@ -474,6 +476,60 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
       for file <- Path.wildcard(Path.join(dir, "**/*")), File.regular?(file) do
         refute File.read!(file) =~ "Recordatorio", file
       end
+    end
+  end
+
+  describe "the numbering rule" do
+    defp numbered_play(header, numbers) do
+      lines = Enum.map_join(numbers, &~s(<l n="#{&1}">Verso</l>))
+
+      import_tei!(
+        tei(
+          encoding_desc: header,
+          body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{lines}</sp></div1>)
+        )
+      )
+    end
+
+    defp numbers(play), do: for({attrs, _} <- xml_lines(export_tei(play), "l"), do: attrs["n"])
+
+    test "switching Manual off says how many numbers will change, and saves on the second submit",
+         %{conn: conn} do
+      play = numbered_play(manual_numbering(), ["5", "9"])
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+      html = save(view, %{"numbering_manual" => "false"})
+
+      assert html =~
+               n(
+                 "%{count} number will change. Save again to confirm.",
+                 "%{count} numbers will change. Save again to confirm.",
+                 2
+               )
+
+      assert Catalogue.get_play!(play.id).numbering_manual
+
+      assert {:error, {:live_redirect, _}} = save(view, %{"numbering_manual" => "false"})
+      refute Catalogue.get_play!(play.id).numbering_manual
+      assert numbers(play) == ["1", "2"]
+    end
+
+    test "a save that moves no number saves at once", %{conn: conn} do
+      play = numbered_play(nil, ["1", "2"])
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+      assert {:error, {:live_redirect, _}} = save(view, %{"title" => "Otro título"})
+      assert Catalogue.get_play!(play.id).title == "Otro título"
+      assert numbers(play) == ["1", "2"]
+    end
+
+    test "the rule's three fields are on the form", %{conn: conn} do
+      play = numbered_play(nil, ["1"])
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+      assert has_element?(view, "#play-form select[name='play[numbering_type]']")
+      assert has_element?(view, "#play-form select[name='play[numbering_restart]']")
+      assert has_element?(view, "#play-form input[name='play[numbering_manual]'][type=checkbox]")
     end
   end
 end
