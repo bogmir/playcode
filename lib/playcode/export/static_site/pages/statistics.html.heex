@@ -11,6 +11,7 @@
   <Components.synopsis
     :if={(@edition.stats["metrical_passages"] || []) != []}
     passages={@edition.stats["metrical_passages"]}
+    range_label={Play.number_label(@edition.play, :range)}
   />
   <Components.character_table
     characters={@edition.stats["characters"] || []}
@@ -19,5 +20,8 @@
       if words_unit?(@edition), do: @edition.stats["words"] || 0, else: @edition.stats["verses"]
     }
   />
-  <Components.presence stats={@edition.stats} />
+  <Components.presence
+    stats={@edition.stats}
+    range_label={Play.number_label(@edition.play, :range)}
+  />
 </Components.shell>

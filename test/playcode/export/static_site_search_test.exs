@@ -34,6 +34,33 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     assert Search.note_base() == cases()["note_base"]
   end
 
+  # A line's reference names the scene only where the count starts again at each scene, as
+  # the play's numbering rule says (numbering spec): in a play counted per act, "II, 3".
+  describe "a line's reference" do
+    @per_act """
+    <div1 type="acto" n="1"><head>Acto I</head>
+      <div2 type="escena" n="1"><head>Escena 1</head><sp><speaker>A</speaker><l n="1">uno</l></sp></div2></div1>
+    <div1 type="acto" n="2"><head>Acto II</head>
+      <div2 type="escena" n="1"><head>Escena 1</head><sp><speaker>A</speaker><l n="1">dos</l><l n="2">tres</l></sp></div2>
+      <div2 type="escena" n="2"><head>Escena 2</head><sp><speaker>A</speaker><l n="3">cuatro</l></sp></div2></div1>
+    """
+
+    defp ref(restart, text) do
+      play = import_tei!(tei(encoding_desc: manual_numbering(restart: restart), body: @per_act))
+      dir = generate!([play], all: true)
+      {"lines", _key, %{"lines" => lines}} = load_js!(dir, "search/lines/#{play.code}/0.js")
+      lines |> Enum.find(&(List.last(&1) == text)) |> Enum.at(2)
+    end
+
+    test "names the act alone in a play counted per act" do
+      assert ref("act", "cuatro") == "II, 3"
+    end
+
+    test "names the scene in a play counted per scene" do
+      assert ref("scene", "cuatro") == "II.2, 3"
+    end
+  end
+
   describe "the index files" do
     setup do
       play =

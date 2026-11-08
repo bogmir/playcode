@@ -227,7 +227,8 @@
         var number = event.target.closest('a[href^="#l"]');
         if (!number) return;
         var url = root.location.href.split('#')[0] + number.getAttribute('href');
-        copy(text.dataset.cite + ', v. ' + number.textContent.trim() + '. ' + url, number);
+        var label = number.closest('p.pr') ? text.dataset.citeProse : text.dataset.citeVerse;
+        copy(text.dataset.cite + ', ' + label + ' ' + number.textContent.trim() + '. ' + url, number);
       });
     }
     var button = document.querySelector('[data-copy-citation]');
