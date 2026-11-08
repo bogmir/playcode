@@ -770,9 +770,18 @@ defmodule Playcode.Import.TeiImport do
     rows =
       Enum.reduce(
         divisions,
-        %{Division => [], CastListEntry => [], Element => [], ElementCharacter => [], Note => []},
+        %{
+          Division => [],
+          CastListEntry => [],
+          Element => [],
+          ElementCharacter => [],
+          Note => [],
+          ids: %{},
+          ranges: %{}
+        },
         &collect_division(&1, play, nil, cast, &2)
       )
+      |> resolve_ranges()
 
     now = DateTime.utc_now(:second)
 
@@ -840,6 +849,7 @@ defmodule Playcode.Import.TeiImport do
       end
 
     rows = Enum.reduce(speakers, add(rows, Element, row), &add(&2, ElementCharacter, &1))
+    rows = if element[:line_id], do: put_in(rows, [:ids, element.line_id], row.id), else: rows
     rows = collect_notes(rows, element.notes, :element_id, row, play)
 
     Enum.reduce(element.elements, rows, &collect_element(&1, play, division_id, row.id, cast, &2))
@@ -862,10 +872,27 @@ defmodule Playcode.Import.TeiImport do
           |> checked(&{:note_create_failed, &1})
 
         position = Map.get(next, row.offset, 0)
+
+        rows =
+          if note[:range_end], do: put_in(rows, [:ranges, row.id], note.range_end), else: rows
+
         {add(rows, Note, %{row | position: position}), Map.put(next, row.offset, position + 1)}
       end)
 
     rows
+  end
+
+  # A variant's `to` names a line by the identifier the file gave it, which is not stored
+  # (identifiers are counted on export): it becomes the row of that line, or nothing when no
+  # line has it (`#em0551-es-0000`).
+  defp resolve_ranges(%{ids: ids, ranges: ranges} = rows) do
+    notes =
+      Enum.map(rows[Note], fn note ->
+        target = ranges[note.id] && ids[String.trim_leading(ranges[note.id], "#")]
+        %{note | range_end_id: target}
+      end)
+
+    %{rows | Note => notes}
   end
 
   # A kind never chosen ("falta_tipo") is the play's usual one (question 17): a translator's

@@ -419,9 +419,10 @@ defmodule Playcode.Export.StaticSite.Edition do
   end
 
   # A verse is `l<number>`. A play that numbers each scene from 1 gets
-  # `l<act>-<scene>-<number>`; a verse with no number is its identifier (`es-0412`), so a
-  # line added before it does not move it; anything else is `p<n>`, counted through the
-  # play. A clash left after that (a data error) gets a numeric suffix.
+  # `l<act>-<scene>-<number>`; anything else, a verse with no number included, is `p<n>`,
+  # counted through the play, so a line added before it moves it until problem 3
+  # (anchors from numbers) is done. A clash left after that (a data error) gets a numeric
+  # suffix.
   defp anchors(items, pages) do
     restarts? = restarts?(items)
 
@@ -434,9 +435,6 @@ defmodule Playcode.Export.StaticSite.Edition do
 
             %{line_number: n} when is_binary(n) ->
               {"l#{n}", p}
-
-            %{line_id: id} when is_binary(id) ->
-              {id, p}
 
             _ ->
               {"p#{p + 1}", p + 1}

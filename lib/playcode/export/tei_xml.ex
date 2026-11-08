@@ -24,6 +24,13 @@ defmodule Playcode.Export.TeiXml do
   defp sorted(attrs) when is_map(attrs), do: Enum.sort_by(attrs, &to_string(elem(&1, 0)))
   defp sorted(attrs), do: attrs
 
+  # The attribute a line or paragraph names its row by until `identify/2` gives it its
+  # identifier; never written.
+  @ref "_ref"
+
+  # The attribute that marks an element `inline_element/3` made; never written either.
+  @inline "_inline"
+
   @title_editor_roles %{
     "translator" => "translator",
     "researcher" => "researcher",
@@ -71,7 +78,7 @@ defmodule Playcode.Export.TeiXml do
       )
 
     "<?xml version=\"1.0\" ?>\n" <>
-      XmlBuilder.generate(tei, format: :indent, encoding: nil)
+      XmlBuilder.generate(realize(tei), format: :indent, encoding: nil)
   end
 
   # The places the play links and its performances name are written with their ancestors and
@@ -833,7 +840,7 @@ defmodule Playcode.Export.TeiXml do
           Enum.map(section.(:front), &outer_item(&1, :front, cast)) ++
           build_performances(performances, gazetteer)
       ),
-      element(:body, Enum.map(section.(:body), &body_item(&1, cast))),
+      element(:body, section.(:body) |> Enum.map(&{&1, body_item(&1, cast)}) |> identify(play)),
       build_back(
         Enum.map(section.(:back), &outer_item(&1, :back, cast)),
         Playcode.Bibliography.list_for_play(play.id)
@@ -1324,8 +1331,7 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp build_element(%{type: "verse_line"} = el) do
-    attrs = %{}
-    attrs = if el.line_id, do: Map.put(attrs, "xml:id", el.line_id), else: attrs
+    attrs = %{@ref => el.id}
 
     attrs =
       if el.line_number,
@@ -1346,7 +1352,8 @@ defmodule Playcode.Export.TeiXml do
   defp build_element(%{type: "prose"} = el) do
     # The number at the very start of the text is the paragraph's own (p@n).
     {number, text} = InlineMarkup.paragraph_number(el.content)
-    inline_element(:p, if(number, do: %{n: number}, else: %{}), spoken_content(el, text))
+    attrs = if number, do: %{@ref => el.id, n: number}, else: %{@ref => el.id}
+    inline_element(:p, attrs, spoken_content(el, text))
   end
 
   defp build_element(%{type: "trailer"} = el),
@@ -1405,20 +1412,15 @@ defmodule Playcode.Export.TeiXml do
 
   # Each aside piece's xml:id and, but for an aside's last, the next naming the piece after
   # it, in reading order, so a chain runs on into another speech
-  # (docs/superpowers/specs/2026-10-25-aside-chains-design.md). A piece in a line with an
-  # identifier is `<line_id>-segNN`, NN its number within its aside, the files' shape; one
-  # in a paragraph or a line with none `pNNNN-segNN`, NNNN counting such elements, a shape
-  # no line identifier has. A later piece of a line that starts an aside of its own would
-  # repeat its line's first identifier, so it takes a suffix: the import reads only an
-  # element's first piece. The pieces are paired as `with_folio_parts/1` pairs passages.
+  # (docs/superpowers/specs/2026-10-25-aside-chains-design.md). A piece is
+  # `<its line's identifier>-segN`, N its number within its aside, the files' shape. The
+  # line's identifier is counted later (`identify/2`), so here a piece names its line by the
+  # row's id, which `resolve/2` replaces. A later piece of a line that starts an aside of
+  # its own would repeat its line's first identifier, so it takes a suffix: the import
+  # reads only an element's first piece. The pieces are paired as `with_folio_parts/1`
+  # pairs passages.
   defp with_aside_links(divisions) do
-    {hosts, _others} =
-      divisions
-      |> Enum.flat_map(&asides_in/1)
-      |> Enum.map_reduce(0, fn
-        %{line_id: id} = element, others when is_binary(id) -> {{element, id}, others}
-        element, others -> {{element, "p" <> pad(others + 1, 4)}, others + 1}
-      end)
+    hosts = divisions |> Enum.flat_map(&asides_in/1) |> Enum.map(&{&1, &1.id})
 
     {pieces, _} =
       hosts
@@ -1427,7 +1429,7 @@ defmodule Playcode.Export.TeiXml do
       end)
       |> Enum.map_reduce({0, MapSet.new()}, fn {element_id, host, starts}, {number, used} ->
         number = if starts or number == 0, do: 1, else: number + 1
-        id = unique_id("#{host}-seg#{pad(number, 2)}", used)
+        id = unique_id("#{host}-seg#{number}", used)
         {{element_id, id, starts}, {number, MapSet.put(used, id)}}
       end)
 
@@ -1479,8 +1481,6 @@ defmodule Playcode.Export.TeiXml do
     candidate = if k == 1, do: id, else: "#{id}-#{k}"
     if MapSet.member?(used, candidate), do: unique_id(id, used, k + 1), else: candidate
   end
-
-  defp pad(number, width), do: number |> Integer.to_string() |> String.pad_leading(width, "0")
 
   # A text as TEI: <<…>> becomes <emph>, as the EMOTHE corpus writes italics (<hi
   # rend="italic"> would do too, per TEI P5), and each note goes back at its offset
@@ -1623,7 +1623,11 @@ defmodule Playcode.Export.TeiXml do
 
     element(
       :app,
-      attributes(type: note.variant_type, n: note.n, to: note.range_end),
+      attributes(
+        type: note.variant_type,
+        n: note.n,
+        to: note.range_end_id && "#" <> note.range_end_id
+      ),
       readings ++ note_element(note.body)
     )
   end
@@ -1647,9 +1651,114 @@ defmodule Playcode.Export.TeiXml do
 
   # An element whose text holds others (<emph>, <note>) goes out on one line, its text
   # exactly as it runs: :indent would put line breaks inside it, and a break before a
-  # <note> reads back as a space between the word and what follows it.
+  # <note> reads back as a space between the word and what follows it. It stays a tree, so
+  # `identify/2` can number what is in it, marked for `realize/1` to generate so.
   defp inline_element(name, attrs, content) when is_list(content),
-    do: {:iodata, XmlBuilder.generate(element(name, attrs, content), format: :none)}
+    do: element(name, Map.put(attrs, @inline, true), content)
 
   defp inline_element(name, attrs, content), do: element(name, attrs, content)
+
+  # --- Identifiers ---
+
+  # What each element's identifier counts: lines, paragraphs and line breaks share one
+  # counter, as FileMaker's did (question 30); speeches, stage directions, scenes and
+  # trailers have their own.
+  @counted %{l: "", p: "", lb: "", sp: "sp-", stage: "st-", div2: "sc-", trailer: "tr-"}
+
+  # Inside these nothing is the play's text: a note, an entry of the apparatus, a heading,
+  # a speaker's name, a cast list.
+  @not_text [:note, :app, :head, :speaker, :castList]
+
+  # FileMaker's identifiers, unpadded
+  # (docs/superpowers/specs/2026-11-08-identifiers-on-export-design.md), counted again on
+  # every export in text order through the divisions of the body: `em0756-es-1`,
+  # `em0756-es-sp-1`. Nothing stores them, so a line added anywhere moves the ones after
+  # it. Paratexts and cast lists have none. Then the pointers that name a row (an aside
+  # piece's `xml:id` and `next`, a variant's `to`) take that row's identifier.
+  defp identify(items, play) do
+    {body, state} =
+      Enum.map_reduce(items, %{prefix: id_prefix(play), refs: %{}}, fn
+        {%Division{type: type}, node}, state when type != "elenco" -> number(node, state)
+        {_item, node}, state -> {node, state}
+      end)
+
+    resolve(body, state.refs)
+  end
+
+  defp id_prefix(%{code: code, language: language}) do
+    case Regex.run(~r/^EMOTHE(\d+)$/, code, capture: :all_but_first) do
+      [number] -> "em#{number}-#{language || "es"}-"
+      nil -> "#{language || "es"}-"
+    end
+  end
+
+  defp number(nodes, state) when is_list(nodes), do: Enum.map_reduce(nodes, state, &number/2)
+  defp number({name, _, _} = node, state) when name in @not_text, do: {node, state}
+
+  defp number({name, attrs, content}, state) when is_map_key(@counted, name) do
+    if {:type, "elenco"} in (attrs || []) do
+      {{name, attrs, content}, state}
+    else
+      {ref, attrs} = pop_ref(attrs || [])
+      kind = if @counted[name] == "", do: :line, else: name
+      count = Map.get(state, kind, 0) + 1
+      id = state.prefix <> @counted[name] <> Integer.to_string(count)
+      refs = if ref, do: Map.put(state.refs, ref, id), else: state.refs
+      attrs = Enum.sort_by([{"xml:id", id} | attrs], &to_string(elem(&1, 0)))
+      {content, state} = number(content, Map.put(%{state | refs: refs}, kind, count))
+      {{name, attrs, content}, state}
+    end
+  end
+
+  defp number({name, attrs, content}, state) do
+    {content, state} = number(content, state)
+    {{name, attrs, content}, state}
+  end
+
+  defp number(other, state), do: {other, state}
+
+  defp pop_ref(attrs) do
+    case List.keytake(attrs, @ref, 0) do
+      {{_, ref}, attrs} -> {ref, attrs}
+      nil -> {nil, attrs}
+    end
+  end
+
+  defp resolve(nodes, refs) when is_list(nodes), do: Enum.map(nodes, &resolve(&1, refs))
+
+  defp resolve({name, attrs, content}, refs) when name in [:seg, :app] and is_list(attrs) do
+    attrs = for {key, value} <- attrs, value = resolved(name, key, value, refs), do: {key, value}
+    {name, attrs, resolve(content, refs)}
+  end
+
+  defp resolve({name, attrs, content}, refs), do: {name, attrs, resolve(content, refs)}
+  defp resolve(other, _refs), do: other
+
+  # An aside piece names its line's row and its number (`with_aside_links/1`); a variant's
+  # `to` a row, and names nothing when that row has no identifier.
+  defp resolved(:seg, key, value, refs) when key in ["xml:id", :next] do
+    {hash, rest} = if key == :next, do: String.split_at(value, 1), else: {"", value}
+    {row, piece} = String.split_at(rest, 36)
+    hash <> Map.fetch!(refs, row) <> piece
+  end
+
+  defp resolved(:app, :to, "#" <> row, refs), do: refs[row] && "#" <> refs[row]
+  defp resolved(_name, _key, value, _refs), do: value
+
+  # The elements whose text runs on one line (`inline_element/3`), generated as such.
+  defp realize(nodes) when is_list(nodes), do: Enum.map(nodes, &realize/1)
+
+  defp realize({name, attrs, content}) when is_list(attrs) do
+    case List.keytake(attrs, @inline, 0) do
+      {_, attrs} ->
+        line = XmlBuilder.generate({name, attrs, realize(content)}, format: :none)
+        XmlBuilder.element({:iodata, line})
+
+      nil ->
+        {name, attrs, realize(content)}
+    end
+  end
+
+  defp realize({name, attrs, content}), do: {name, attrs, realize(content)}
+  defp realize(other), do: other
 end

@@ -149,9 +149,9 @@ defmodule Playcode.Import.WordParserTest do
 
       assert for(
                {attrs, _} <- xml_elements(xml, "seg"),
-               do: String.slice(attrs["xml:id"], -5..-1//1)
+               do: attrs["xml:id"] |> String.split("-") |> List.last()
              ) ==
-               ["seg01", "seg02", "seg01"]
+               ["seg1", "seg2", "seg1"]
     end
 
     test "verse lines are numbered in order" do
@@ -385,8 +385,7 @@ defmodule Playcode.Import.WordParserTest do
     assert xml_texts(xml, "role") == ["RICARDO"]
   end
 
-  # Question 25: a .docx carries no identifiers, so each verse takes the next in the play's
-  # shape, in the document's order.
+  # A .docx carries no identifiers; the export counts them, in the play's shape (problem 2).
   test "each verse gets an identifier in the play's shape" do
     number = System.unique_integer([:positive])
     play = play_fixture(%{"code" => "EMOTHE#{number}", "language" => "en"})
@@ -394,7 +393,7 @@ defmodule Playcode.Import.WordParserTest do
     xml = import_word(["{e}Escena 1", "{p}FEBO  {v}uno", "{v}dos", "{p}ANA  {v}tres"], play)
 
     assert Enum.map(xml_elements(xml, "l"), fn {attrs, _} -> attrs["xml:id"] end) ==
-             Enum.map(1..3, &"em#{number}-en-000#{&1}")
+             Enum.map(1..3, &"em#{number}-en-#{&1}")
   end
 
   # A play is made in the form, which gives it a note on the digital edition, and its

@@ -234,7 +234,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
     lv |> form("#element-form", element: %{"aside_continues" => "true"}) |> render_submit()
 
-    assert seg_ids(play) == ["as-0001-seg01", "as-0002-seg02"]
+    assert seg_ids(play) == ["es-1-seg1", "es-2-seg2"]
   end
 
   test "deleting the verse an aside starts on leaves the rest an aside of their own",
@@ -247,7 +247,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       <l xml:id="as-0004"><seg type="aside" xml:id="as-0004-seg02">Cuatro aparte</seg></l>
       """)
 
-    assert seg_ids(play) == ["as-0001-seg01", "as-0003-seg01", "as-0004-seg02"]
+    assert seg_ids(play) == ["es-1-seg1", "es-3-seg1", "es-4-seg2"]
 
     lv = open_scene(conn, play)
 
@@ -255,9 +255,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     |> element("#{card(lv, "Tres aparte")} button[aria-label='#{t("Delete")}']")
     |> render_click()
 
-    # Not seg02: left as it was, Cuatro would continue the first aside, across the verse
-    # spoken aloud.
-    assert seg_ids(play) == ["as-0001-seg01", "as-0004-seg01"]
+    # Not seg2: left as it was, Cuatro would continue the first aside, across the verse
+    # spoken aloud. Its line's identifier is counted again: the third line now.
+    assert seg_ids(play) == ["es-1-seg1", "es-3-seg1"]
   end
 
   # "Delete selected" reads every selected row, then deletes them in its selection's order,
@@ -284,7 +284,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
     for element <- selected, do: {:ok, _} = PlayContent.delete_element(element)
 
-    assert seg_ids(play) == ["as-0001-seg01", "as-0005-seg01"]
+    assert seg_ids(play) == ["es-1-seg1", "es-3-seg1"]
   end
 
   test "a split verse's part out of order is listed, opening its line, until corrected",
@@ -314,7 +314,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert html =~ t("a last part that completes no verse")
 
     # The line's form opens in place: the tab, the scene and the selections stay.
-    lv |> element("button", "sv-0001") |> render_click()
+    lv |> element("button", "O molto") |> render_click()
     html = lv |> form("#element-form", element: %{"part" => ""}) |> render_submit()
 
     # At once, not when the relay of the commit arrives: the tests' sandbox never commits.
@@ -325,7 +325,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
                1
              )
 
-    assert [{%{"xml:id" => "sv-0001"} = line, "O molto"}] = xml_elements(export_tei(play), "l")
+    assert [{line, "O molto"}] = xml_elements(export_tei(play), "l")
     refute Map.has_key?(line, "part")
 
     # An edit made elsewhere arrives through what Playcode.Export.PlayChangeListener relays.
@@ -995,10 +995,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       |> form("#element-form", element: %{"stage_type" => "entrance"})
       |> render_submit()
 
-      assert {%{"type" => "entrance"}, "Sale don Pedro solo."} in xml_elements(
-               export_tei(play),
-               "stage"
-             )
+      assert {"entrance", "Sale don Pedro solo."} in stages(play)
     end
 
     test "a kind the list does not have survives an edit", %{conn: conn, play: play} do
@@ -1008,23 +1005,31 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       |> form("#element-form", element: %{"content" => "Vuela alto."})
       |> render_submit()
 
-      assert {%{"type" => "trick"}, "Vuela alto."} in xml_elements(export_tei(play), "stage")
+      assert {"trick", "Vuela alto."} in stages(play)
     end
 
-    test "a verse's identifier is shown and kept, not edited", %{conn: conn, play: play} do
+    defp stages(play),
+      do: for({attrs, text} <- xml_elements(export_tei(play), "stage"), do: {attrs["type"], text})
+
+    # Problem 2 (docs/superpowers/specs/2026-11-08-identifiers-on-export-design.md): an
+    # identifier is counted on export, so the form has none to show or edit. This test used
+    # to assert the stored one was shown and kept.
+    test "a verse's identifier is counted, not edited", %{conn: conn, play: play} do
       lv = conn |> open_scene(play) |> edit("Primera línea")
 
-      assert lv |> element("#element-form") |> render() =~ "es-0001"
+      refute lv |> element("#element-form") |> render() =~ "es-0001"
       refute has_element?(lv, "#element-form [name='element[line_id]']")
 
       lv |> form("#element-form", element: %{"content" => "Línea primera"}) |> render_submit()
 
-      assert [{%{"xml:id" => "es-0001"}, "Línea primera"}] = xml_elements(export_tei(play), "l")
+      assert [{%{"xml:id" => "es-1"}, "Línea primera"}] = xml_elements(export_tei(play), "l")
     end
   end
 
-  # Question 25: a verse added in Playcode takes the next free number in the play's shape,
-  # one past its highest, and no line is renumbered, so no link to a line breaks.
+  # Problem 2 retires question 25's next free identifier: every export counts the lines
+  # again, so a verse added in Playcode takes its place's identifier and moves the ones
+  # after it. What points at a line (an aside, a variant) moves along, and the EMOTHE
+  # prefix and the language are covered there too: tei_roundtrip_test.exs, "identifiers".
   describe "a new verse's identifier" do
     defp insert_above(lv, content) do
       lv
@@ -1041,8 +1046,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       |> Enum.map(fn {attrs, text} -> {text, attrs["xml:id"]} end)
     end
 
-    # Hamlet's numbers skip: 2,943 lines, the highest 4001.
-    test "is one past the play's highest, wherever the verse goes", %{conn: conn} do
+    # Hamlet's file skips: 0136, then 4001. The export counts them again, from 1.
+    test "is its place's, and the ones after it move", %{conn: conn} do
       play =
         import_tei!(
           tei(
@@ -1062,38 +1067,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       conn |> open_scene(play) |> insert_above("Segunda línea")
 
       assert ids(play) == [
-               {"Primera línea", "em0010-en-0136"},
-               {"Línea nueva", "em0010-en-4002"},
-               {"Segunda línea", "em0010-en-4001"}
+               {"Primera línea", "es-1"},
+               {"Línea nueva", "es-2"},
+               {"Segunda línea", "es-3"}
              ]
-    end
-
-    test "in a play with none is the language's first", %{conn: conn, play: play} do
-      conn |> open_scene(play) |> insert_above("Primera línea")
-
-      assert {"Línea nueva", "es-0001"} in ids(play)
-    end
-
-    test "in an EMOTHE play with none takes the play's number too", %{conn: conn} do
-      number = System.unique_integer([:positive])
-
-      play =
-        import_tei!(
-          tei(
-            code: "EMOTHE#{number}",
-            body: """
-            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
-              <div2 type="escena" n="1"><head>ESCENA I</head>
-                <sp><speaker>ANA</speaker><lg><l n="1">Primera línea</l></lg></sp>
-              </div2>
-            </div1>
-            """
-          )
-        )
-
-      conn |> open_scene(play) |> insert_above("Primera línea")
-
-      assert {"Línea nueva", "em#{number}-#{play.language}-0001"} in ids(play)
     end
   end
 

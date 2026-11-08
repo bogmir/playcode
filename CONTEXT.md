@@ -76,8 +76,15 @@ _Avoid_: character (the person the speeches point at, whatever each list calls t
 Words a character speaks for the audience, or for one other character, unheard by the rest of the stage. One aside may run over many verses (Clotaldo's in *La vida es sueño*, vv. 395–468) and on into another speaker's speech.
 
 **Piece** (of an aside):
-The part of an aside inside one verse or paragraph, TEI's `<seg type="aside">`, which cannot cross a line. The files number each piece within its aside (`es-0412-seg02`).
+The part of an aside inside one verse or paragraph, TEI's `<seg type="aside">`, which cannot cross a line. The files number each piece within its aside (`es-0412-seg02`), and so does the export (`em0756-es-412-seg2`).
 _Avoid_: segment, fragment (a fragment is a split verse's part)
+
+**Number** (of a line, `@n`):
+What readers see and cite: "v. 230". Decided per play, need not be unique ("3-4" in Hamlet), and unrelated to the identifier.
+
+**Identifier** (`xml:id`):
+An element's address inside its TEI file, which other elements point at (an aside's `next`, a variant's `to`). Nobody cites it. Counted on every export in text order, never stored, so it moves when a line is added before it.
+_Avoid_: line id, line identifier as a stored value
 
 **Download**:
 A play as a file a reader takes away: HTML, PDF or EPUB. All three print the same

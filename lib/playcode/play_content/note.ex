@@ -13,8 +13,9 @@ defmodule Playcode.PlayContent.Note do
   `body` is paragraphs separated by a blank line, italics as `<<…>>`.
 
   A variant (`variant?/1`) is an entry of the critical apparatus, a TEI `<app>`: `n` its
-  `n`, `variant_type` its `type`, `range_end` its `to`, both as written, `readings` its
-  `<lem>` and `<rdg>`s (`Note.Reading`), `body` its own note or nil. Spec:
+  `n`, `variant_type` its `type`, both as written, `range_end` the line its `to` reaches
+  (nil when the file named none it has), `readings` its `<lem>` and `<rdg>`s
+  (`Note.Reading`), `body` its own note or nil. Spec:
   docs/superpowers/specs/2026-10-16-critical-apparatus-design.md.
   """
 
@@ -51,13 +52,13 @@ defmodule Playcode.PlayContent.Note do
     field :term, :string
     field :body, :string
     field :variant_type, :string
-    field :range_end, :string
     field :number, :integer, virtual: true
 
     embeds_many :readings, Reading, on_replace: :delete
 
     belongs_to :play, Playcode.Catalogue.Play
     belongs_to :element, Playcode.PlayContent.Element
+    belongs_to :range_end, Playcode.PlayContent.Element
     belongs_to :division, Playcode.PlayContent.Division
 
     timestamps(type: :utc_datetime)
@@ -192,7 +193,7 @@ defmodule Playcode.PlayContent.Note do
         :term,
         :body,
         :variant_type,
-        :range_end,
+        :range_end_id,
         :play_id,
         :element_id,
         :division_id
