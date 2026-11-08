@@ -26,8 +26,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
   </div1>
   """
 
+  # Manual: the pages show the snippet's numbers as written, none added at import.
   defp publish!(body) do
-    play = import_tei!(tei(body: body))
+    play = import_tei!(tei(encoding_desc: manual_numbering(), body: body))
     {play, generate!([play], all: true)}
   end
 

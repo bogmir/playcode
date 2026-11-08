@@ -184,9 +184,11 @@ defmodule Playcode.Import.TeiImportTest do
     </castList></div>
     """
 
+    # Unnumbered, so one copy and twenty settle the same numbering rule: a repeated "1, 2"
+    # fits no rule and makes the play Manual, which a single copy does not (numbering spec).
     block = """
     <sp who="#ANA #BLAS"><speaker>ANA Y BLAS</speaker>
-      <lg type="redondilla"><l n="1">Uno<note n="1" type="editor"><p>Nota.</p></note></l><l n="2">dos</l></lg>
+      <lg type="redondilla"><l>Uno<note n="1" type="editor"><p>Nota.</p></note></l><l>dos</l></lg>
       <p>Prosa.</p></sp>
     <stage>Sale.</stage>
     """

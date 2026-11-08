@@ -302,6 +302,9 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                   <li :for={citation <- p.bibliography_skips}>{citation}</li>
                 </ul>
               </div>
+              <div class="mt-1 text-xs">
+                {gettext("Numbering: %{rule}", rule: p.numbering)}
+              </div>
               <div :if={p.split_verses != []} class="mt-1 text-xs text-warning">
                 {ngettext(
                   "%{count} part of a split verse out of order:",

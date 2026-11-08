@@ -93,7 +93,8 @@ defmodule Playcode.Import.TeiCorpus do
   end
 
   defp preview_lines(code, {:ok, %{existing: nil} = preview}, _force),
-    do: {:new, [{:info, "  #{code}  new" <> adds(preview)} | added(preview)]}
+    do:
+      {:new, [{:info, "  #{code}  new" <> adds(preview) <> numbering(preview)} | added(preview)]}
 
   defp preview_lines(code, {:ok, _preview}, false),
     do: {:existing, [{:info, "  #{code}  already imported, would be skipped"}]}
@@ -101,12 +102,15 @@ defmodule Playcode.Import.TeiCorpus do
   defp preview_lines(code, {:ok, preview}, true) do
     undone = hand_edits(preview.existing.id)
     outcome = if undone > 0, do: :edited, else: :existing
-    line = "  #{code}  " <> replaces(preview, undone) <> adds(preview)
+    line = "  #{code}  " <> replaces(preview, undone) <> adds(preview) <> numbering(preview)
     {outcome, [{:info, line} | added(preview)]}
   end
 
   defp preview_lines(code, {:error, reason}, _force),
     do: {:unreadable, [{:error, "  #{code}: #{inspect(reason)}"}]}
+
+  # The numbering rule the import would settle (`Numbering.describe/1`).
+  defp numbering(preview), do: ", numbering #{preview.numbering}"
 
   @doc """
   Imports `files` as `import_all/2` does, calling `report` with an `{:info | :error,

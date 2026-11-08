@@ -113,6 +113,8 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
 
     assert html =~ "imp-0001"
     assert html =~ t("a last part that completes no verse")
+    # Its one paragraph and one unnumbered verse piece: numbered by speech at import.
+    assert html =~ t("Numbering: %{rule}", rule: "S never, numbered at import")
     assert Catalogue.list_plays(search: code) == []
   end
 

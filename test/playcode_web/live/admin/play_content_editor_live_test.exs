@@ -934,6 +934,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     defp play_with_a_song do
       import_tei!(
         tei(
+          # Manual, so the paragraph is not numbered at import.
+          encoding_desc: manual_numbering(),
           body: """
           <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
             <div2 type="escena" n="1"><head>ESCENA I</head>

@@ -3755,8 +3755,10 @@ defmodule Playcode.TeiRoundtripTest do
   # Questions 9 and 10 (docs/stakeholder/preguntas.html): every break is shown, and a
   # printed line's number with it. Until 2026-10-16 each <lb/> was read as a space.
   describe "line breaks and prose line numbers" do
+    # Manual: the numbers come back as written, and a paragraph without one gets none.
     defp speech(paragraphs, code \\ nil) do
       opts = [
+        encoding_desc: manual_numbering(),
         body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{paragraphs}</sp></div1>)
       ]
 
@@ -5330,6 +5332,8 @@ defmodule Playcode.TeiRoundtripTest do
       xml =
         roundtrip(
           tei(
+            # Manual, so the paragraphs are not numbered at import.
+            encoding_desc: manual_numbering(),
             body: """
             <div1 type="acto" n="1"><sp><speaker>A</speaker>
               <p><emph>a<lb/></emph><emph>b</emph></p>
