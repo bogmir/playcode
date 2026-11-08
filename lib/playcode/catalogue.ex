@@ -217,9 +217,9 @@ defmodule Playcode.Catalogue do
   def update_form_and_verse_count(play_id) do
     alias Playcode.PlayContent.Element
 
-    # The numbered verses, a split verse once, by its first part: distinct numbers undercount
-    # a play whose numbering starts again in each act or scene. The form counts every verse
-    # line, numbered or not, by its length against the prose's.
+    # Every verse once, a split verse by its first part, numbered or not (Q10: the structure;
+    # a play numbered by speech numbers few of its verses). The form counts every verse line
+    # by its length against the prose's.
     {count, verse_length, prose_length} =
       Element
       |> where(play_id: ^play_id)
@@ -227,8 +227,7 @@ defmodule Playcode.Catalogue do
       |> select([e], {
         filter(
           count(e.id),
-          e.type == "verse_line" and not is_nil(e.line_number) and
-            (is_nil(e.part) or e.part in ["", "I"])
+          e.type == "verse_line" and (is_nil(e.part) or e.part in ["", "I"])
         ),
         coalesce(filter(sum(fragment("char_length(?)", e.content)), e.type == "verse_line"), 0),
         coalesce(filter(sum(fragment("char_length(?)", e.content)), e.type == "prose"), 0)
