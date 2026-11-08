@@ -227,6 +227,23 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert LazyHTML.text(para) =~ "I thought1 the King"
     end
 
+    # Timon of Athens numbers straight through but repeats prose 425 in I.2 and II.2: a
+    # number met again later is a data error, not a count starting again, which only a
+    # scene opening below where the last one ended shows.
+    test "a number repeated in a later scene does not make a continuous play restart" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <div2 type="scene" n="1"><head>Scene 1</head>
+            <sp><speaker>A</speaker><l n="1">uno</l><p n="2">dos</p><l n="3">tres</l></sp></div2>
+          <div2 type="scene" n="2"><head>Scene 2</head>
+            <sp><speaker>B</speaker><l n="4">cuatro</l><p n="2">otra vez dos</p><l n="5">cinco</l></sp></div2>
+        </div1>
+        """)
+
+      assert line_ids(page(dir, play, "act-1.html")) == ~w(l1 l2 l3 l4 l2-2 l5)
+    end
+
     # Counters start again after each number, so a direction added in act 1 moves only the
     # directions after the same verse, and act 2 not at all. Act 2 opens after verse 2.
     test "a direction added in act 1 moves no anchor in act 2" do
@@ -592,6 +609,12 @@ defmodule Playcode.Export.StaticSitePlayTest do
     # As emothe.uv.es printed its prose (`.prosa`), and the play page and downloads do.
     test "prose is justified", %{dir: dir} do
       assert read!(dir, "assets/style.css") =~ ~r/^\.pr \{[^}]*text-align: justify/m
+    end
+
+    # A prose paragraph's number is a link since problem 3; a verse's (`.l .n`) never
+    # showed a link's underline, and neither does it.
+    test "a paragraph's number is not underlined", %{dir: dir} do
+      assert read!(dir, "assets/style.css") =~ ~r/^\.pn \{[^}]*text-decoration: none/m
     end
   end
 

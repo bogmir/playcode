@@ -38,8 +38,12 @@ an address can be without stored identifiers, which Q2/Q11 ruled out.
   Recounting is problem 4.
 - The cite label. It stays "v." for every number, prose included, until problem 4 gives the
   play a numbering type.
-- Knowing whether a play restarts per act or per scene. The existing detection (`restarts?/1`:
-  a number repeated in another division or scene) stays; problem 4's setting replaces it.
+- Knowing whether a play restarts per act or per scene. Problem 4's setting replaces the guess.
+  (Ruled in the final review: the guess was "a number repeated in another scene", which counting
+  prose numbers tripped in Timon of Athens through two data errors, and which already took
+  Hamlet, numbered through, for a restart. It is now "a scene opens below where the one before
+  it ended", by leading digits: on the dev corpus it agrees on the 15 prose plays numbered per
+  scene or act, and fixes Timon and Hamlet.)
 - Search-result references ("II, 1236"): unchanged; a prose paragraph's reference stays its
   division alone.
 - Anchors inside a paragraph: a prose paragraph's inner printed line numbers (`<lb n>` after its
@@ -89,7 +93,7 @@ an address can be without stored identifiers, which Q2/Q11 ruled out.
 - **Clashes** (a number repeated within a unit, "3153c" against verse 3153's third piece) get
   `-2`, `-3`… (`unique/3`, unchanged), checked across the play.
 - `restarts?/1` takes numbered prose paragraphs as numbers too, so a VP play numbered per scene
-  is detected as one.
+  is detected as one (15 prose plays on the dev corpus).
 
 ### Example: `act-1.html` of a continuous play
 

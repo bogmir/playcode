@@ -497,19 +497,22 @@ defmodule Playcode.Export.StaticSite.Edition do
     if MapSet.member?(used, candidate), do: unique(base, used, k + 1), else: candidate
   end
 
-  # A play that numbers each scene from 1 gives a number again in another scene or division.
-  # One repeated within a scene (a data error, or a number a curator typed again) gets a
-  # suffix (`unique/3`) instead: taken for a restart, it changed every anchor in the play.
+  # A play that numbers each scene (or act) from 1 opens a scene below where the scene
+  # before it ended. A number met again further on is a data error, not a restart: Timon of
+  # Athens, numbered through, repeats prose 425 in I.2 and II.2. Numbers are compared by
+  # their leading digits ("3-4" is 3).
   defp restarts?(items) do
     for(
       item <- items,
       n = number(item),
       is_binary(n),
-      uniq: true,
-      do: {n, {item.division.id, item.scene && item.scene.id}}
+      {i, _rest} <- [Integer.parse(n)],
+      do: {{item.division.id, item.scene && item.scene.id}, i}
     )
-    |> Enum.frequencies_by(&elem(&1, 0))
-    |> Enum.any?(fn {_n, units} -> units > 1 end)
+    |> Enum.chunk_by(&elem(&1, 0))
+    |> Enum.map(fn unit -> {unit |> hd() |> elem(1), unit |> List.last() |> elem(1)} end)
+    |> Enum.chunk_every(2, 1, :discard)
+    |> Enum.any?(fn [{_first, last}, {first, _last}] -> first < last end)
   end
 
   # A division's children on its page: a scene by its number, `<page>-s<n>`; a cast list by
