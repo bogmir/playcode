@@ -244,6 +244,29 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert line_ids(page(dir, play, "act-1.html")) == ~w(l1 l2 l3 l4 l2-2 l5)
     end
 
+    # In a play numbered per scene a prologue and an epilogue are units of their own, named
+    # by their page: both took `l0-0-`, so a direction added to the prologue suffixed the
+    # epilogue's.
+    test "a prologue and an epilogue in a play numbered per scene are prefixed by their page" do
+      {play, dir} =
+        publish!("""
+        <div1 type="prologue"><head>Prologue</head><stage>Entra el Prólogo.</stage>
+          <sp><speaker>P</speaker><l n="1">uno</l><l n="2">dos</l></sp></div1>
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <div2 type="scene" n="1"><head>Scene 1</head><sp><speaker>A</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
+          <div2 type="scene" n="2"><head>Scene 2</head><sp><speaker>B</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
+        </div1>
+        <div1 type="epilogue"><head>Epilogue</head><stage>Entra el Epílogo.</stage>
+          <sp><speaker>E</speaker><l n="1">uno</l><l n="2">dos</l></sp></div1>
+        """)
+
+      assert line_ids(page(dir, play, "prologue.html")) ==
+               ~w(lprologue-0-sd1 lprologue-0-1 lprologue-0-2)
+
+      assert line_ids(page(dir, play, "epilogue.html")) ==
+               ~w(lepilogue-0-sd1 lepilogue-0-1 lepilogue-0-2)
+    end
+
     # Counters start again after each number, so a direction added in act 1 moves only the
     # directions after the same verse, and act 2 not at all. Act 2 opens after verse 2.
     test "a direction added in act 1 moves no anchor in act 2" do
@@ -743,6 +766,17 @@ defmodule Playcode.Export.StaticSitePlayTest do
         """)
 
       %{play: play, dir: dir}
+    end
+
+    # Anchors are counted through the play, not per page: the full text prints every page,
+    # and a line keeps one address on its scene's page and there.
+    test "a line has the same anchor on its scene's page and in the full text", %{
+      play: play,
+      dir: dir
+    } do
+      assert line_ids(page(dir, play, "act-1-s2.html")) == ~w(p2)
+      assert line_ids(page(dir, play, "act-2.html")) == ~w(p3)
+      assert line_ids(page(dir, play, "text.html")) == ~w(sd1 p1 p2 p3)
     end
 
     test "gets a page per scene, walked in order", %{play: play, dir: dir} do

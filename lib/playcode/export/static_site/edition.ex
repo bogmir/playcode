@@ -422,10 +422,11 @@ defmodule Playcode.Export.StaticSite.Edition do
   # kind (docs/superpowers/specs/2026-11-08-site-anchors-design.md): `l230`, a later piece
   # `l230b`, then `l230-sd1`, `l230-p1`, `l230-v1`; before the unit's first number `sd1`,
   # `p1`, `v1`. The unit is the play, or the scene in a play that numbers each scene from
-  # 1, whose anchors all carry `l<act>-<scene>-`. Not the page: the full text prints every
+  # 1, whose anchors all carry `l<act>-<scene>-` (`unit_start/4`). Not the page: the full text prints every
   # page at once. A clash left after that (a data error) gets a numeric suffix.
   defp anchors(items, pages) do
     restarts? = restarts?(items)
+    slug_of = for %{scene: nil} = page <- pages, into: %{}, do: {page.division.id, page.slug}
 
     {elements, _state} =
       Enum.map_reduce(items, %{unit: :none, used: MapSet.new()}, fn item, state ->
@@ -434,12 +435,9 @@ defmodule Playcode.Export.StaticSite.Edition do
         state =
           if unit == state.unit,
             do: state,
-            else: Map.merge(state, %{unit: unit, last: nil, counts: %{}, verse: nil})
+            else: Map.merge(state, unit_start(unit, item, restarts?, slug_of))
 
-        prefix = if restarts?, do: "l#{item.act || 0}-#{scene_ordinal(item)}-", else: "l"
-        lead = if restarts?, do: prefix, else: ""
-        {base, state} = base(item, number(item), {prefix, lead}, state)
-
+        {base, state} = base(item, number(item), state)
         anchor = unique(base, state.used, 1)
         {{item.element.id, anchor}, %{state | used: MapSet.put(state.used, anchor)}}
       end)
@@ -456,26 +454,39 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   @counted %{stage: "sd", prose: "p", verse: "v"}
 
+  # A unit's anchors start `l`, or in a play numbered per scene `l<act>-<scene>-`, where a
+  # division that is no act (a prologue, an epilogue) is named by its page; `lead` is what
+  # starts one before the unit's first number.
+  defp unit_start(unit, _item, false, _slug_of),
+    do: %{unit: unit, prefix: "l", lead: "", last: nil, counts: %{}, verse: nil}
+
+  defp unit_start(unit, item, true, slug_of) do
+    prefix = "l#{item.act || slug_of[item.division.id]}-#{scene_ordinal(item)}-"
+    %{unit: unit, prefix: prefix, lead: prefix, last: nil, counts: %{}, verse: nil}
+  end
+
   # A number opens the count after it, and a verse it numbers takes letters for its later
   # pieces. A later piece without a number of its own is its verse's anchor plus a letter.
   # Anything else counts among its kind since the last number; an unnumbered verse opens a
   # verse for its own pieces.
-  defp base(item, n, {prefix, _lead}, state) when is_binary(n) do
-    base = prefix <> n
+  defp base(item, n, state) when is_binary(n) do
+    base = state.prefix <> n
     verse = if item.kind == :verse, do: {base, ?b}
     {base, %{state | last: n, counts: %{}, verse: verse}}
   end
 
-  defp base(%{kind: :verse, element: %{part: part}}, nil, _at, %{verse: {verse, letter}} = state)
+  defp base(%{kind: :verse, element: %{part: part}}, nil, %{verse: {verse, letter}} = state)
        when part in ["M", "F"],
        do: {verse <> <<letter>>, %{state | verse: {verse, letter + 1}}}
 
-  defp base(item, nil, {prefix, lead}, state) do
+  defp base(item, nil, state) do
     kind = @counted[item.kind]
     count = Map.get(state.counts, kind, 0) + 1
 
     base =
-      if state.last, do: "#{prefix}#{state.last}-#{kind}#{count}", else: "#{lead}#{kind}#{count}"
+      if state.last,
+        do: "#{state.prefix}#{state.last}-#{kind}#{count}",
+        else: "#{state.lead}#{kind}#{count}"
 
     verse = if item.kind == :verse, do: {base, ?b}, else: state.verse
     {base, %{state | counts: Map.put(state.counts, kind, count), verse: verse}}

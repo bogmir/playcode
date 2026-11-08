@@ -62,7 +62,8 @@ an address can be without stored identifiers, which Q2/Q11 ruled out.
 
 - a play whose count restarts (`restarts?/1`): the scene (its division and scene, `item.act`,
   `item.scene_number`), and every anchor in it carries the prefix `l<act>-<scene>-`
-  (`item.act || 0`, `item.scene_number || 0`, as today);
+  (`item.scene_number || 0`; a division that is no act is named by its page, `lprologue-0-`,
+  so a prologue and an epilogue do not share `l0-0-`: ruled after the final review);
 - any other play: the whole play, across its pages. (Ruled while building: the spec first said
   the page, but `text.html` prints every page at once, so page-scoped counters gave it
   duplicate ids. Across pages a continuous play's numbers are unique anyway, so act 2 opens
