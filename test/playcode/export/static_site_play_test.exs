@@ -212,6 +212,21 @@ defmodule Playcode.Export.StaticSitePlayTest do
                ~w(l961 l962 l962b l3153 l3153b l3153c l3153c-2)
     end
 
+    test "a numbered paragraph's number links to it, as a verse's does; its inner line numbers do not" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>KENT</speaker><p n="4">I thought<note n="1" type="editor"><p>Glosa.</p></note> the King<lb n="5"/>had more affected the Duke.</p></sp>
+        </div1>
+        """)
+
+      para = page(dir, play, "act-1.html") |> LazyHTML.query("p#l4")
+
+      assert para |> LazyHTML.query(~s(a.pn[href="#l4"])) |> LazyHTML.text() == "4"
+      assert para |> LazyHTML.query("span.pn.m5") |> LazyHTML.text() == "5"
+      assert LazyHTML.text(para) =~ "I thought1 the King"
+    end
+
     # Counters start again after each number, so a direction added in act 1 moves only the
     # directions after the same verse, and act 2 not at all. Act 2 opens after verse 2.
     test "a direction added in act 1 moves no anchor in act 2" do

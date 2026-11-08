@@ -756,9 +756,17 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
+  # A numbered paragraph's own number links to its anchor, as a verse's does, so the cite
+  # button (site.js, `a[href^="#l"]`) takes it. Notes stay put: they are placed by
+  # grapheme offset, and a number marker has none.
   defp el(%{el: %{type: "prose"}} = assigns) do
+    {number, text} = InlineMarkup.paragraph_number(assigns.el.content)
+
+    assigns =
+      assign(assigns, number: number, text: text, anchor: assigns.edition.anchors[assigns.el.id])
+
     ~H"""
-    <p phx-no-format class={["pr", Element.folio_only?(@el) && "fo"]} id={@edition.anchors[@el.id]}><.inline text={@el.content} notes={@el.notes} /></p>
+    <p phx-no-format class={["pr", Element.folio_only?(@el) && "fo"]} id={@anchor}><a :if={@number} class={["pn", fifth?(@number) && "m5"]} href={"#" <> @anchor}>{@number}</a><.inline text={@text} notes={@el.notes} /></p>
     """
   end
 
@@ -825,9 +833,9 @@ defmodule Playcode.Export.StaticSite.Components do
     [~s(<span class="rs"), attr, ">", part(Map.delete(part, :rs)), "</span>"]
   end
 
-  # Where a printed line of the source starts, in prose: its number, which the "Line
-  # numbers" control hides (style.css), every fifth kept by "5". Not a link: a play that
-  # counts its paragraphs restarts at 1, so an id built from the number would repeat.
+  # Where a printed line of the source starts inside a paragraph: its number, which the
+  # "Line numbers" control hides (style.css), every fifth kept by "5". Plain text: only the
+  # paragraph's own number, at its start, is an anchor and a link (`el/1`).
   defp part(%{number: n}),
     do: [~s(<span class="pn), if(fifth?(n), do: " m5", else: ""), ~s(">), escape(n), "</span>"]
 
