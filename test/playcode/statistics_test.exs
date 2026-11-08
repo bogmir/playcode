@@ -180,6 +180,26 @@ defmodule Playcode.StatisticsTest do
   end
 
   describe "metrical passages" do
+    # Hamlet's "3-4": a passage and a first line are labelled with the number as written,
+    # not with its leading digits.
+    test "a verse numbered as the file writes it labels its passage and a first line" do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="jornada" n="1"><head>Jornada I</head>
+              <sp><speaker>A</speaker><lg type="redondilla"><l n="3-4">uno</l><l n="10">dos</l></lg></sp>
+            </div1>
+            """
+          )
+        )
+
+      data = Statistics.get_statistics(play.id).data
+
+      assert [%{"from" => "3-4", "to" => "10"}] = data["metrical_passages"]
+      assert [%{"first" => %{"line" => "3-4"}}] = data["characters"]
+    end
+
     # A passage's range is labelled by its verses' numbers, strings since 2026-11-08, as the
     # file writes them ("3-4" in Hamlet).
     test "fragments inherit the open passage's form, a new act closes it, same forms merge" do
