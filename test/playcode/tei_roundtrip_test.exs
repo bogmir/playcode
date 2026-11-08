@@ -1530,8 +1530,8 @@ defmodule Playcode.TeiRoundtripTest do
              ]
 
       assert xml_elements(xml, "div2") |> Enum.map(&elem(&1, 0)) == [
-               %{"type" => "escena", "n" => "1"},
-               %{"type" => "escena", "n" => "2"}
+               %{"type" => "escena", "n" => "1", "xml:id" => "es-sc-1"},
+               %{"type" => "escena", "n" => "2", "xml:id" => "es-sc-2"}
              ]
 
       assert xml_texts(xml, "head", within: "body") ==
@@ -1772,15 +1772,16 @@ defmodule Playcode.TeiRoundtripTest do
         )
 
       assert xml_elements(xml, "stage") == [
-               {%{"type" => "entrance"}, "Sale el REY"},
-               {%{"type" => "delivery"}, "[En aparté]"},
-               {%{"type" => "business"}, "Se sienta"},
-               {%{}, "Suena música"},
-               {%{"type" => "exit"}, "Vase"}
+               {%{"type" => "entrance", "xml:id" => "es-st-1"}, "Sale el REY"},
+               {%{"type" => "delivery", "xml:id" => "es-st-2"}, "[En aparté]"},
+               {%{"type" => "business", "xml:id" => "es-st-3"}, "Se sienta"},
+               {%{"xml:id" => "es-st-4"}, "Suena música"},
+               {%{"type" => "exit", "xml:id" => "es-st-5"}, "Vase"}
              ]
     end
 
-    test "split verses keep their part, id and indentation" do
+    # The file's xml:id is not kept: the export counts identifiers afresh (problem 2).
+    test "split verses keep their part and indentation, each piece an identifier" do
       xml =
         roundtrip(
           tei(
@@ -1798,12 +1799,11 @@ defmodule Playcode.TeiRoundtripTest do
         )
 
       assert [
-               {%{"part" => "I", "xml:id" => "v001"}, "First part"},
-               {%{"part" => "F"} = second, "Second part"},
+               {%{"part" => "I", "xml:id" => "es-1"}, "First part"},
+               {%{"part" => "F", "xml:id" => "es-2"}, "Second part"},
                {%{"rend" => "indent"} = full, "Full"}
              ] = xml_elements(xml, "l")
 
-      refute Map.has_key?(second, "xml:id")
       refute Map.has_key?(full, "part")
       assert [{%{"part" => "I"}, _}, {lg2, _}] = xml_elements(xml, "lg")
       refute Map.has_key?(lg2, "part")
@@ -1938,10 +1938,11 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
+      # The pieces take their lines' identifiers as the export counts them.
       assert seg_links(xml) == [
-               %{"xml:id" => "es-1203-seg01", "next" => "#es-1204-seg02"},
-               %{"xml:id" => "es-1204-seg02", "next" => "#es-1205-seg03"},
-               %{"xml:id" => "es-1205-seg03"}
+               %{"xml:id" => "es-1-seg1", "next" => "#es-2-seg2"},
+               %{"xml:id" => "es-2-seg2", "next" => "#es-3-seg3"},
+               %{"xml:id" => "es-3-seg3"}
              ]
     end
 
@@ -1959,13 +1960,14 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
-      assert seg_links(xml) == [%{"xml:id" => "es-0001-seg01"}, %{"xml:id" => "es-0002-seg01"}]
+      assert seg_links(xml) == [%{"xml:id" => "es-1-seg1"}, %{"xml:id" => "es-2-seg1"}]
 
       play = import_tei!(xml)
       assert Playcode.Statistics.get_statistics(play.id).data["total_asides"] == 2
     end
 
-    test "a paragraph's pieces get identifiers no line has, the same on every export" do
+    # A paragraph is counted with the lines (question 30), so its pieces take its identifier.
+    test "a paragraph's pieces take its identifier, the same on every export" do
       play =
         import_tei!(
           tei(
@@ -1983,11 +1985,7 @@ defmodule Playcode.TeiRoundtripTest do
       assert [%{"xml:id" => first, "next" => next}, %{"xml:id" => second} = last] = seg_links(xml)
       refute Map.has_key?(last, "next")
       assert next == "#" <> second
-      assert String.ends_with?(first, "-seg01") and String.ends_with?(second, "-seg02")
-
-      assert [] ==
-               [first, second] --
-                 ([first, second] -- for({a, _} <- xml_elements(xml, "l"), do: a["xml:id"]))
+      assert {first, second} == {"es-2-seg1", "es-2-seg2"}
 
       assert seg_links(export_tei(play)) == seg_links(xml)
     end
@@ -2020,8 +2018,10 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
-      assert xml_elements(xml, "stage") ==
-               [{%{"type" => "exit"}, "Vase."}, {%{"type" => "delivery"}, "A Juan."}]
+      assert xml_elements(xml, "stage") == [
+               {%{"type" => "exit", "xml:id" => "es-st-1"}, "Vase."},
+               {%{"type" => "delivery", "xml:id" => "es-st-2"}, "A Juan."}
+             ]
     end
 
     test "a stage direction that merely mentions an aside does not make the next line one" do
@@ -2559,7 +2559,7 @@ defmodule Playcode.TeiRoundtripTest do
                  after: "lovely",
                  n: "3",
                  type: "orthographical",
-                 to: "#l75",
+                 to: "#es-4",
                  readings: [{"rdg", "#Dyce #Collier", "lively", nil}],
                  note: "vv. 74-75 Faltan en Q1 y Q2."
                },
@@ -3664,7 +3664,7 @@ defmodule Playcode.TeiRoundtripTest do
         )
 
       # One piece, with the xml:id every piece has carried since 2026-10-25.
-      assert [{%{"type" => "aside", "xml:id" => _}, "Ay, marry, now there's [52] a wise man."}] =
+      assert [{%{"type" => "aside"}, "Ay, marry, now there's [52] a wise man."}] =
                xml_lines(xml, "seg")
 
       assert xml_texts(xml, "stage", within: "p") == ["(Aside.)"]
@@ -3750,7 +3750,7 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_lines(xml, "p") == [{%{}, "Uno, | dos."}]
       # Stored "Uno,\ndos.", as many characters as "Uno, dos." before: no space after the
       # break, so none after the note either.
-      assert xml =~ "<lb/><note"
+      assert xml =~ ~r{<lb xml:id="[^"]+"/><note}
       assert xml =~ "</note>dos."
     end
 
@@ -3773,6 +3773,141 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert String.replace(second, "LBR2", "LBR1") == first
     end
+  end
+
+  # FileMaker's identifiers, counted again on every export and stored nowhere
+  # (docs/superpowers/specs/2026-11-08-identifiers-on-export-design.md): a line added
+  # anywhere moves the identifiers after it, and the pointers to them move along.
+  describe "identifiers" do
+    alias Playcode.PlayContent
+
+    test "every element of the text gets one in text order; lines, paragraphs and breaks share a counter" do
+      code = "EMOTHE#{System.unique_integer([:positive])}"
+      "EMOTHE" <> number = code
+      id = &"em#{number}-es-#{&1}"
+
+      xml =
+        roundtrip(
+          tei(
+            code: code,
+            body:
+              scene("""
+              <sp><speaker>REY</speaker><lg><l n="1" part="I" xml:id="old-0009">¿Quién va?</l></lg></sp>
+              <sp><speaker>CRIADO</speaker><lg><l n="1" part="F">Yo, señor.</l></lg><stage>Vase.</stage></sp>
+              <sp><speaker>REY</speaker><p>Uno <stage>se sienta</stage><lb/>dos<note n="1" type="editor"><p>Glosa <lb/>larga.</p></note></p></sp>
+              <trailer>FIN</trailer>
+              """)
+          )
+        )
+
+      assert body_ids(xml) == [
+               {"div2", id.("sc-1")},
+               {"sp", id.("sp-1")},
+               {"l", id.("1")},
+               {"sp", id.("sp-2")},
+               {"l", id.("2")},
+               {"stage", id.("st-1")},
+               {"sp", id.("sp-3")},
+               {"p", id.("3")},
+               {"stage", id.("st-2")},
+               {"lb", id.("4")},
+               {"trailer", id.("tr-1")}
+             ]
+    end
+
+    test "a play whose code is not EMOTHE's has no em part" do
+      xml = roundtrip(tei(body: scene("<sp><speaker>A</speaker><lg><l>uno</l></lg></sp>")))
+
+      assert {"l", "es-1"} in body_ids(xml)
+    end
+
+    test "a line added before the first moves every identifier, and asides and variants follow" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              scene("""
+              <sp><speaker>ANA</speaker><lg>
+                <l n="1" xml:id="f-1">uno<app n="1" to="#f-3"><rdg wit="#B">otro</rdg></app></l>
+                <l n="2" xml:id="f-2"><seg type="aside" xml:id="f-2-seg01" next="#f-3-seg02">dos</seg></l>
+                <l n="3" xml:id="f-3"><seg type="aside" xml:id="f-3-seg02">tres</seg></l>
+              </lg></sp>
+              """)
+          )
+        )
+
+      before = export_tei(play)
+      assert [%{to: "#es-3"}] = xml_apps(before)
+
+      assert seg_ids(before) == [
+               %{"xml:id" => "es-2-seg1", "next" => "#es-3-seg2"},
+               %{"xml:id" => "es-3-seg2"}
+             ]
+
+      [act] = PlayContent.load_play_content(play.id)
+      [scene] = act.children
+      [%{children: [group]} = speech] = scene.loaded_elements
+      PlayContent.shift_element_positions(scene.id, group.id, 0)
+
+      {:ok, _} =
+        PlayContent.create_element(%{
+          play_id: play.id,
+          division_id: scene.id,
+          parent_id: group.id,
+          type: "verse_line",
+          content: "cero",
+          position: 0
+        })
+
+      after_insert = export_tei(play)
+      assert xml_texts(after_insert, "l") |> hd() == "cero"
+      assert speech.type == "speech"
+      assert [%{to: "#es-4"}] = xml_apps(after_insert)
+
+      assert seg_ids(after_insert) == [
+               %{"xml:id" => "es-3-seg1", "next" => "#es-4-seg2"},
+               %{"xml:id" => "es-4-seg2"}
+             ]
+    end
+
+    test "a variant pointing at no line in the file loses its pointer" do
+      xml =
+        roundtrip(
+          tei(
+            body:
+              scene(
+                ~s(<sp><speaker>A</speaker><lg><l>uno<app n="1" to="#es-0000"><rdg wit="#B">otro</rdg></app></l></lg></sp>)
+              )
+          )
+        )
+
+      assert [%{to: nil}] = xml_apps(xml)
+    end
+
+    defp seg_ids(xml),
+      do: for({attrs, _} <- xml_elements(xml, "seg"), do: Map.take(attrs, ["xml:id", "next"]))
+
+    # Every element in the body with an xml:id, in document order, as {tag, id}.
+    defp body_ids(xml) do
+      {:ok, root} =
+        xml |> String.replace(~r/^\s*<\?xml[^?]*\?>/, "") |> Saxy.SimpleForm.parse_string()
+
+      ids_in(root, false)
+    end
+
+    defp ids_in({tag, attrs, children}, in_body) do
+      in_body = in_body or tag == "body"
+
+      own =
+        case List.keyfind(attrs, "xml:id", 0) do
+          {_, id} when in_body -> [{tag, id}]
+          _ -> []
+        end
+
+      own ++ Enum.flat_map(children, &ids_in(&1, in_body))
+    end
+
+    defp ids_in(_text, _in_body), do: []
   end
 
   describe "the bibliography" do

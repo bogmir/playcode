@@ -195,8 +195,9 @@ defmodule Playcode.Export.TeiValidatorTest do
 
     xml = export_tei(play)
 
-    assert xml =~ ~s(<p n="7">)
-    assert xml =~ ~s(<lb n="8"/>)
+    # Each with the identifier the export counts.
+    assert xml =~ ~r/<p n="7" xml:id="[^"]+">/
+    assert xml =~ ~r/<lb n="8" xml:id="[^"]+"\/>/
     xml
   end
 

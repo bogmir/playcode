@@ -28,15 +28,15 @@ defmodule Playcode.CompleteCopyTest do
   # How rows are stored, not what they hold: identifiers and links (a row's place in the
   # tree is its place in the snapshot), order (the lists are in order), provenance and
   # timestamps. A performance's source, company and actors are named by the ids the file does
-  # not carry (`source_entry_id`, `company_id`, `actor_id`, `performance_id`): the rows they
-  # name are compared by value. Then what stays out of the file on purpose (CLAUDE.md, *The
+  # not carry (`source_entry_id`, `company_id`, `actor_id`, `performance_id`), and so is the
+  # line a variant reaches (`range_end_id`): the rows they name are compared by value. Then what stays out of the file on purpose (CLAUDE.md, *The
   # TEI file is a complete copy of a play*): whether the play is complete, and whether its
   # variants are shown, the two switches for what readers see.
   @dropped ~w(id play_id parent_id division_id element_id entry_id place_id parent_place_id
               historical_state_id parent_play_id position origin filemaker_id inserted_at
               updated_at content_version deleted_at pending_original_code is_complete
               show_variants source_entry_id company_id actor_id performance_id
-              cast_list_id character_id)a
+              cast_list_id character_id range_end_id)a
 
   # The researchers' private notes and the play's team note (question 58), never written to
   # the file: it is published with the site. Dropped by schema, not by name: every other
@@ -252,13 +252,12 @@ defmodule Playcode.CompleteCopyTest do
 
     group = element!(scene, speech, %{type: "line_group", verse_type: "redondilla"})
 
-    verse!(scene, group, %{content: "Uno", line_number: 1, line_id: "cc-0001", part: "I"})
-    verse!(scene, group, %{content: "dos", line_number: 1, line_id: "cc-0002", part: "F"})
+    verse!(scene, group, %{content: "Uno", line_number: 1, part: "I"})
+    verse!(scene, group, %{content: "dos", line_number: 1, part: "F"})
 
     verse!(scene, group, %{
       content: "tres <stage type=\"business\">Llora.</stage> sigue",
       line_number: 2,
-      line_id: "cc-0003",
       rend: "indent"
     })
 
@@ -316,7 +315,8 @@ defmodule Playcode.CompleteCopyTest do
     PlayContent.set_element_characters(speech.id, [blas.id])
     group = element!(scene, speech, %{type: "line_group"})
 
-    varied = verse!(scene, group, %{content: "Uno", line_number: 1, line_id: "cr-0001"})
+    varied = verse!(scene, group, %{content: "Uno", line_number: 1})
+    reached = verse!(scene, group, %{content: "dos <folio>del Folio</folio> fin"})
 
     note!(play, %{
       element_id: varied.id,
@@ -324,7 +324,7 @@ defmodule Playcode.CompleteCopyTest do
       n: "1",
       type: "variante",
       variant_type: "sustitucion",
-      range_end: "#cr-0002",
+      range_end_id: reached.id,
       body: "Variante dudosa.",
       readings: [
         %{lemma: true, wit: "#Q2", text: "Uno"},
@@ -332,7 +332,6 @@ defmodule Playcode.CompleteCopyTest do
       ]
     })
 
-    verse!(scene, group, %{content: "dos <folio>del Folio</folio> fin", line_id: "cr-0002"})
     verse!(scene, group, %{content: "tres <aside>a medias</aside> dicho", line_number: 2})
 
     element!(scene, speech, %{
@@ -738,7 +737,7 @@ defmodule Playcode.CompleteCopyTest do
     division
     |> fields()
     |> Map.merge(%{
-      notes: Enum.map(division.notes, &fields/1),
+      notes: Enum.map(division.notes, &note/1),
       elements: Enum.map(division.loaded_elements, &element/1),
       children: Enum.map(division.children, &division/1)
     })
@@ -749,9 +748,16 @@ defmodule Playcode.CompleteCopyTest do
     |> fields()
     |> Map.merge(%{
       who: Enum.map(element.element_characters, & &1.character.xml_id),
-      notes: Enum.map(element.notes, &fields/1),
+      notes: Enum.map(element.notes, &note/1),
       children: element.children |> loaded() |> Enum.map(&element/1)
     })
+  end
+
+  # The line a variant reaches by its text: the file names it by an identifier the export
+  # counts, never the database's id.
+  defp note(note) do
+    reached = note.range_end_id && PlayContent.get_element!(note.range_end_id).content
+    note |> fields() |> Map.put(:range_end, reached)
   end
 
   # load_play_content/1 loads three levels of elements: speech, line group, verse line.

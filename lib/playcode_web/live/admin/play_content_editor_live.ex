@@ -1417,7 +1417,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <ul class="ml-4 list-disc">
             <li :for={{line, problem} <- @split_verses}>
               <button type="button" class="link" phx-click="edit_element" phx-value-id={line.id}>
-                <code>{line.line_id || "?"}</code> “{InlineMarkup.plain(line.content)}”
+                <span :if={
+                  line.line_number
+                }>{gettext("v. %{number}", number: line.line_number)}</span>
+                “{InlineMarkup.plain(line.content)}”
               </button>, {PlayLabels.split_verse_problem(
                 problem,
                 line.part
@@ -3518,9 +3521,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             <.input field={@form[:part]} type="select" options={part_options()} />
           </div>
         </div>
-        <p :if={@editing && @editing.line_id} class="mt-2 text-sm text-base-content/70">
-          {gettext("Identifier")}: <code>{@editing.line_id}</code>
-        </p>
       </div>
 
       <div class="flex gap-2 pt-2">

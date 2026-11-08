@@ -125,9 +125,11 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert read!(dir, "plays/#{play.code}/act-1.html") =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
   end
 
-  # Regression: an unnumbered verse was `p<n>`, counted through the play, so a line added
-  # before it in the Content tab moved its anchor, and every link to it broke.
-  test "a verse with no number is anchored by its identifier; a paragraph is still counted" do
+  # An unnumbered verse was anchored by its stored identifier, which problem 2 retired
+  # (identifiers are counted on export): it is counted with the paragraphs, so a line added
+  # before it moves its anchor, until problem 3 anchors it from the number before it
+  # (docs/backlog.md).
+  test "a verse with no number is counted with the paragraphs" do
     {play, dir} =
       publish!("""
       <div1 type="acto" n="1"><head>Acto I</head>
@@ -137,7 +139,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
     act = page(dir, play, "act-1.html")
 
-    assert act |> LazyHTML.query("#es-0007") |> LazyHTML.text() =~ "Sin número."
+    assert act |> LazyHTML.query("#p2") |> LazyHTML.text() =~ "Sin número."
     assert act |> LazyHTML.query("#p1") |> LazyHTML.text() =~ "En prosa."
   end
 

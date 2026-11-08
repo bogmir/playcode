@@ -310,7 +310,8 @@ defmodule Playcode.ImportHelpers do
   Each `tag` element of the body, in document order, as `{attributes, text}`: its text
   with each `<lb/>` written " | " and each `<lb n="…"/>` " [n] ", its notes left out,
   whitespace collapsed. `in_notes: true` reads the `tag` elements inside the body's notes
-  instead.
+  instead. The attributes leave out the `xml:id`, which every export counts afresh
+  (tei_roundtrip_test.exs, "identifiers").
   """
   def xml_lines(xml, tag, opts \\ []) do
     body = xml |> parse() |> descendants("body") |> List.first()
@@ -324,7 +325,7 @@ defmodule Playcode.ImportHelpers do
       text =
         children |> Enum.map_join(&lined/1) |> String.replace(~r/\s+/u, " ") |> String.trim()
 
-      {Map.new(attrs), text}
+      {attrs |> Map.new() |> Map.delete("xml:id"), text}
     end)
   end
 

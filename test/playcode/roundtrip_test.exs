@@ -510,13 +510,9 @@ defmodule Playcode.RoundtripTest do
             _ -> nil
           end
 
-        line_id =
-          case Regex.run(~r/\bxml:id="([^"]+)"/u, attrs, capture: :all_but_first) do
-            [id] -> id
-            _ -> nil
-          end
-
-        {line_id, n, part}
+        # Not the xml:id: the export counts identifiers afresh (problem 2), and the files'
+        # own skip, repeat or run out of order.
+        {n, part}
     end)
   end
 
@@ -527,7 +523,7 @@ defmodule Playcode.RoundtripTest do
   defp numbered_verses(xml) do
     xml
     |> verse_line_tokens_in_order()
-    |> Enum.count(fn {_id, n, part} -> n != nil and part in [nil, "I"] end)
+    |> Enum.count(fn {n, part} -> n != nil and part in [nil, "I"] end)
   end
 
   defp assert_order_preserved(code, label, original_list, exported_list) do
