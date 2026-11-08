@@ -273,7 +273,7 @@
     <p class="lede">Decisions for the project, gathered in one place. Each question says what we found and what Playcode does today; your answer settles what it should do.</p>
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 8 November 2026. 67 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses and spaces corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 9 November 2026. 69 questions, 46 of them answered (eighteen decided by Playcode), lists of the credits, split verses, spaces and numbers corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -303,7 +303,8 @@
       <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–57</span></li>
       <li><a href="#t-followups">Follow-ups to your answers of 1 November</a><span class="nums">58–65</span></li>
       <li><a href="#t-prologues">Prologues on the wrong side</a><span class="nums">66</span></li>
-      <li><a href="#t-speakers">Who counts as a character in the statistics</a><span class="nums">67</span></li>
+      <li><a href="#t-speakers">Who counts as a character in the statistics</a><span class="nums">67–68</span></li>
+      <li><a href="#t-numbering">Plays numbered by hand</a><span class="nums">69</span></li>
       <li><a href="#t-spaces-fixed">Spaces corrected</a><span class="nums">—</span></li>
       <li><a href="#t-files-fixed">Files corrected</a><span class="nums">—</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
@@ -2544,6 +2545,33 @@
     </div>
   </section>
 
+  <section id="t-numbering" aria-labelledby="h-numbering">
+    <h2 id="h-numbering">Plays numbered by hand</h2>
+    <p>The list, on a page of its own: <a href="numeracion.html">Plays numbered by hand</a>.</p>
+
+    <div class="q" id="q69" data-q="q69" data-n="69">
+      <span class="q-num" aria-hidden="true">69</span>
+      <div class="q-body">
+        <h3>May we count again the numbers of sixteen plays numbered by hand?</h3>
+        <p class="why">After the “Configuración del texto” came in (question 68), the plays whose numbers no rule gives were left as typed (“Conteo manual”). In 28 of them only one number was wrong, or only a prologue or an epilogue went on with the count before it. We corrected those (<a href="#t-files-fixed">Files corrected</a>). <i>Hamlet</i> and <i>Timon of Athens</i> keep theirs on purpose. The other sixteen are wrong all through the play or from some point on. In <i>The Life of Henry V</i> the count starts at 35. In <i>Othello</i> 3.3 goes on from 3.2. In <i>El vergonzoso en palacio</i> the numbers go up by threes. The page lists each play with what is wrong, the rule it would get and how many numbers would change. Counting again changes numbers already published, which someone may have cited. Also, for <i>El vergonzoso en palacio</i>: could you send us the copy you corrected by hand?</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q69-o1"><input type="radio" id="q69-o1" name="q69-choice" value="Yes, count all sixteen again">Yes, count all sixteen again</label>
+            <label for="q69-o2"><input type="radio" id="q69-o2" name="q69-choice" value="Yes, except those in the notes">Yes, except those in the notes</label>
+            <label for="q69-o3"><input type="radio" id="q69-o3" name="q69-choice" value="No, keep them as typed">No, keep them as typed</label>
+            <label for="q69-o4"><input type="radio" id="q69-o4" name="q69-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q69-text">Notes: plays to leave as they are, another rule, or a file to correct first</label>
+          <textarea id="q69-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
   <section id="t-spaces-fixed" aria-labelledby="h-spaces-fixed">
     <h2 id="h-spaces-fixed">Spaces corrected</h2>
     <p>Not questions: 41 places in 14 files glue a word to an italic, with no space between them, so readers saw “Dominesimplón” in <i>Fray Bacon y Fray Bungay</i>. Playcode has added the space in its copies of the files and the plays it holds, on 25 October. For your own copies, each place as your file has it, to search for; the space goes where the italic meets the word:</p>
@@ -2568,6 +2596,12 @@
       <li><strong><i>La vita è un sogno</i> (EMOTHE0021), <i>La vie est un songe</i> (EMOTHE0023) and <i>Orbecche</i> (EMOTHE0163), <a href="#q58">question 58</a>:</strong> the <code>&lt;notesStmt&gt;</code> and its one note, the editor’s reminder, go; the reminder is the play’s team note in Playcode.</li>
       <li><strong><i>The Rover</i> (EMOTHE0503) and <i>El hombre a la moda</i> (EMOTHE0662), <a href="#q60">question 60</a>:</strong> the epilogue leaves <code>&lt;back&gt;</code> for the end of <code>&lt;body&gt;</code>, as <i>The Man of Mode</i> (EMOTHE0449) has its own: <code>&lt;div1 type="epilogue" n="6"&gt;</code>, its heading, then one <code>&lt;sp&gt;</code> with no speaker holding an <code>&lt;lg&gt;</code>, each line of the paragraph (each <code>&lt;lb/&gt;</code>) an <code>&lt;l&gt;</code> numbered on from the play’s last (<i>The Rover</i> 44 lines, <code>em0503-en-1498</code> on; <i>El hombre a la moda</i> 34, <code>em0662-es-1689</code> on). <i>El hombre a la moda</i>’s “POR MAESE DRYDEN” is a <code>&lt;stage&gt;</code> before the lines, as “BY MR. DRYDEN” is in <i>The Man of Mode</i>.</li>
       <li><strong>The tagged names, places and phrases, <a href="#q63">question 63</a>:</strong> each note typed <code>latinismo</code>, <code>toponimo_aludido</code>, <code>toponimo_accion</code>, <code>atrezzo</code>, <code>oficio</code>, <code>vestuario</code>, <code>espacio</code>, <code>gesto_movimiento</code> or <code>efectos_especiales</code> is an <code>&lt;rs&gt;</code> of that type around the words its <code>&lt;term&gt;</code> repeats, and the note, if it explains anything, is inside the tag with its <code>n</code> and its explanation, without the type or the term: <code>&lt;rs type="toponimo_accion"&gt;Fressingfield&lt;note n="1417"&gt;&lt;p&gt;…&lt;/p&gt;&lt;/note&gt;&lt;/rs&gt;</code>; one with no explanation leaves the tag alone. A translator’s note inside the term stays inside the tag. The same in the copies of these notes the files hold inside other notes. <i>Friar Bacon and Friar Bungay</i> (EMOTHE0187) 99, with the GitHub copy’s 50 tags <code>mitologia_toponimo</code> around the same words (47 of them followed by the digital editor’s note that explains them, which stays); <i>Fray Bacon y Fray Bungay</i> (EMOTHE0299) 25; <i>Hamlet</i> (EMOTHE0010) 23; <i>El bastardo Mudarra</i> (EMOTHE0435) 3; <i>La verdad sospechosa</i> (EMOTHE0013) 1, v. 14, where the note held only “la Corte” and is now <code>&lt;rs type="toponimo_aludido"&gt;la Corte&lt;/rs&gt;</code>. One note keeps its type: <i>Hamlet</i>’s 905, <code>gesto_movimiento</code>, on the first stage direction, since the words it is about, “sentinels”, carry a tag of their own (<code>oficio</code>) and a tag cannot sit inside another; it loses only its term.</li>
+    </ul>
+    <p>On 9 November 2026, the numbers of 28 plays in Playcode, and of the five ARTELOPE plays marked AL, which only Playcode’s development copy holds so far. In each play only one number was wrong, or a prologue, an induction, an interlude or an epilogue went on with the count of the text before it, where it should start again. Playcode now counts these plays by their rule (question 69 has the plays still numbered by hand). For your own copies:</p>
+    <ul class="requests">
+      <li><strong>The last verse, numbered out of order (19):</strong> <i>La corona merecida</i> (AL0569) 3038, now 3037; <i>La mocedad de Roldán</i> (AL0750) 5431, now 3097; <i>La ocasión perdida</i> (AL0784) 4372, now 3262; <i>La paloma de Toledo</i> (AL0790) 3455, now 2582; <i>La estrella de Sevilla</i> (AL2000) 6414, now 3029; <i>L’Aminta</i> (EMOTHE0005) 3170, now 2189; <i>Il pastor fido</i> (EMOTHE0006) 6741, now 6740; <i>Life is a dream</i> (EMOTHE0022) 3442, now 3436; <i>Lo fingido verdadero</i> (EMOTHE0044) 3131, now 3123; <i>The Great Pretenders</i> (EMOTHE0046) 2738, now 2185; <i>Le véritable Saint Genest</i> (EMOTHE0049) 3926, now 1743; <i>Aminta. The famous Pastoral</i> (EMOTHE0058) 2397, now 1819; <i>Aminta</i> (EMOTHE0061) 2788, now 2110; <i>Il diavolo bianco</i> (EMOTHE0175) 6971, now 2970; <i>El burlador de Sevilla</i> (EMOTHE0201) 2913, now 2901; <i>Los locos de Valencia</i> (EMOTHE0204) 4117, now 3071; <i>Sofonisba</i> (EMOTHE0268) 2095, now 2094; <i>El pastor fido</i> (EMOTHE0298) 4153, now 4152; <i>El alcalde de Zalamea</i> (EMOTHE0319) 2769, now 2768.</li>
+      <li><strong>One number missing or out of place (5):</strong> <i>Mariamne</i> (EMOTHE0544), the verse between 575 and 577 had none: 576. <i>The Rover, Part I</i> (EMOTHE0503) and <i>El hombre a la moda</i> (EMOTHE0662), the epilogue’s speech had none: 1 and 1592. <i>Eastward Ho!</i> (EMOTHE0341), the epilogue’s speech was numbered 75: now 1. <i>Endymion</i> (EMOTHE0367), the prologue’s last printed line was numbered <code>0032</code>, after <code>0014</code>: now 15.</li>
+      <li><strong>A prologue, an induction, an interlude or an epilogue that starts again (9):</strong> <i>The Tragical History of Doctor Faustus</i> (EMOTHE0103), the epilogue 125–132, now 1–8; <i>Así va el mundo</i> (EMOTHE0314), the epilogue had no numbers, now 1–36; <i>The Knight of the Burning Pestle</i> (EMOTHE0343), the first interlude 63–64, now 1–2, the second 70–80, now 1–11, the epilogue 163–164, now 1–2; <i>Bartholomew Fair</i> (EMOTHE0346), the induction 2–6, now 1–5, the epilogue 41, now 1; <i>The Broken Heart</i> (EMOTHE0354), the epilogue 27–40, now 1–14; <i>A Woman Killed with Kindness</i> (EMOTHE0369), the epilogue 102–119, now 1–18; <i>El malcontento</i> (EMOTHE0554), the prologue 133–146, now 1–14, the epilogue 163–180, now 1–18; <i>A Game at Chess</i> (EMOTHE0672), the induction 11–89, now 1–79, the epilogue 222–231, now 1–10; <i>The Jew of Malta</i> (EMOTHE0695), the second prologue 13–30, now 1–18, the third 31–65, now 1–35, the first epilogue 124–129, now 1–6, the second 130–137, now 1–8.</li>
     </ul>
   </section>
 
