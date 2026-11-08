@@ -122,29 +122,59 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert xml =~ ~r{<lg type="redondilla">\s*<head>A <emph>Song</emph></head>\s*<l}
   end
 
-  # A verse's number is the edition's, the one readers cite (TEI's `n`, a reference system),
-  # so adding or deleting a verse renumbers no other (decided 2026-10-22). These tests asserted
-  # the renumbering until then; it renumbered other acts' verses in a play whose numbering
-  # starts again in each act, and the whole play's after a deleted first part of a split verse.
-  test "deleting a verse leaves the others' numbers as they are", %{conn: conn, play: play} do
+  # Every save recounts a play that is not Manual by its numbering rule (numbering spec,
+  # 2026-11-08); a Manual play's numbers are the edition's, typed by hand, and adding or
+  # deleting a verse renumbers no other there (decided 2026-10-22, when every play was so).
+  defp manual!(play) do
+    {:ok, play} = Playcode.Catalogue.update_play(play, %{numbering_manual: true})
+    play
+  end
+
+  defp delete_first_line(conn, play) do
     lv = open_scene(conn, play)
 
     lv
     |> element("#{card(lv, "Primera línea")} button[aria-label='#{t("Delete")}']")
     |> render_click()
-
-    assert lines(play) == [{"Segunda línea", 2}, {"Tercera línea", 3}]
   end
 
-  # A number filled in was a guess, and a wrong one for a middle or last part of a split verse.
-  test "a verse inserted above another comes with no number", %{conn: conn, play: play} do
+  defp insert_above_third(conn, play, fields) do
     lv = open_scene(conn, play)
 
     lv
     |> element("#{card(lv, "Tercera línea")} button[aria-label='#{t("Insert Above")}']")
     |> render_click()
 
-    lv |> form("#element-form", element: %{"content" => "Línea nueva"}) |> render_submit()
+    lv |> form("#element-form", element: fields) |> render_submit()
+  end
+
+  test "deleting a verse recounts the others", %{conn: conn, play: play} do
+    delete_first_line(conn, play)
+
+    assert lines(play) == [{"Segunda línea", 1}, {"Tercera línea", 2}]
+  end
+
+  test "deleting a verse in a Manual play leaves the others' numbers", %{conn: conn, play: play} do
+    delete_first_line(conn, manual!(play))
+
+    assert lines(play) == [{"Segunda línea", 2}, {"Tercera línea", 3}]
+  end
+
+  test "a verse inserted above another takes its number, and the later ones move",
+       %{conn: conn, play: play} do
+    insert_above_third(conn, play, %{"content" => "Línea nueva"})
+
+    assert lines(play) == [
+             {"Primera línea", 1},
+             {"Segunda línea", 2},
+             {"Línea nueva", 3},
+             {"Tercera línea", 4}
+           ]
+  end
+
+  # A number filled in was a guess, and a wrong one for a middle or last part of a split verse.
+  test "a verse inserted in a Manual play comes with no number", %{conn: conn, play: play} do
+    insert_above_third(conn, manual!(play), %{"content" => "Línea nueva"})
 
     assert lines(play) == [
              {"Primera línea", 1},
@@ -154,16 +184,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
            ]
   end
 
-  test "the number typed for a new verse renumbers no other", %{conn: conn, play: play} do
-    lv = open_scene(conn, play)
-
-    lv
-    |> element("#{card(lv, "Tercera línea")} button[aria-label='#{t("Insert Above")}']")
-    |> render_click()
-
-    lv
-    |> form("#element-form", element: %{"content" => "Línea nueva", "line_number" => "3"})
-    |> render_submit()
+  test "the number typed for a new verse in a Manual play renumbers no other",
+       %{conn: conn, play: play} do
+    insert_above_third(conn, manual!(play), %{"content" => "Línea nueva", "line_number" => "3"})
 
     assert lines(play) == [
              {"Primera línea", 1},
@@ -176,7 +199,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
   # Hamlet numbers a verse "3-4": the form takes a number as the files write it, and a number
   # cleared is no number. The field was a number input until 2026-11-08.
   test "a verse's number is typed as the files write it, and cleared", %{conn: conn, play: play} do
-    lv = open_scene(conn, play)
+    lv = open_scene(conn, manual!(play))
     edit = fn -> element(lv, "#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']") end
 
     edit.() |> render_click()
@@ -426,7 +449,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
       render_submit(lv, "save_form", %{"element" => Map.put(foreign, "content", "Intrusa")})
 
-      assert {"Intrusa", nil} in lines(play)
+      # Counted by the play's rule, as every save is (numbering spec).
+      assert {"Intrusa", 3} in lines(play)
       refute "Intrusa" in xml_texts(export_tei(other), "l")
     end
 

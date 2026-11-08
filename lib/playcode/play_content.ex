@@ -47,11 +47,15 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Refreshes what is derived from the content and stored on the play: its verse count.
+  Refreshes what is derived from the content and stored on the play: its numbers, recounted
+  by its numbering rule unless it is Manual (`Numbering.recount/1`), and its verse count.
   Call it after a content edit. Subscribers hear of the edit from Postgres, on commit;
   the cached statistics go stale by themselves, with the play's `content_version`.
   """
-  def refresh_derived(play_id), do: Playcode.Catalogue.update_form_and_verse_count(play_id)
+  def refresh_derived(play_id) do
+    Playcode.PlayContent.Numbering.recount(Repo.get!(Playcode.Catalogue.Play, play_id))
+    Playcode.Catalogue.update_form_and_verse_count(play_id)
+  end
 
   defp topic(play_id), do: "play_content:#{play_id}"
 
@@ -405,11 +409,26 @@ defmodule Playcode.PlayContent do
   children's, cast lists included, at any depth of stanza.
   """
   def split_verses_out_of_order(play_id) do
-    rank =
+    play_id
+    |> reading_order()
+    |> Enum.filter(&(&1.type == "verse_line"))
+    |> Enum.chunk_by(& &1.act_id)
+    |> SplitVerses.out_of_order()
+  end
+
+  @doc """
+  The play's verse lines and prose paragraphs in reading order, as `Metrics.items/1` walks
+  them (a top-level division's own text, then its children's), read light, without
+  preloads: what counting numbers needs. Each row is `%{id, type, part, line_number,
+  content, speech_id, act_id, scene_id}`: the speech it belongs to (nil outside one), its
+  top-level division, and its child division (nil in the top-level division's own text).
+  """
+  def reading_order(play_id) do
+    place =
       for {act, i} <- Enum.with_index(list_top_divisions(play_id)),
           {division, j} <- Enum.with_index([act | act.children]),
           into: %{},
-          do: {division.id, {i, j}}
+          do: {division.id, {{i, j}, act.id, if(j > 0, do: division.id)}}
 
     children =
       Repo.all(
@@ -432,16 +451,30 @@ defmodule Playcode.PlayContent do
 
     children
     |> Map.get(nil, [])
-    |> Enum.sort_by(&rank[&1.division_id])
-    |> Enum.chunk_by(&elem(rank[&1.division_id], 0))
-    |> Enum.map(fn act -> Enum.flat_map(act, &verse_lines(&1, children)) end)
-    |> SplitVerses.out_of_order()
+    |> Enum.sort_by(&elem(place[&1.division_id], 0))
+    |> Enum.flat_map(fn element ->
+      {_rank, act_id, scene_id} = place[element.division_id]
+      leaves(element, nil, children, %{act_id: act_id, scene_id: scene_id})
+    end)
   end
 
-  defp verse_lines(%{type: "verse_line"} = line, _children), do: [line]
+  defp leaves(%{type: type} = element, speech_id, _children, where)
+       when type in ["verse_line", "prose"] do
+    [
+      element
+      |> Map.take([:id, :type, :part, :line_number, :content])
+      |> Map.merge(where)
+      |> Map.put(:speech_id, speech_id)
+    ]
+  end
 
-  defp verse_lines(element, children),
-    do: children |> Map.get(element.id, []) |> Enum.flat_map(&verse_lines(&1, children))
+  defp leaves(element, speech_id, children, where) do
+    speech_id = if element.type == "speech", do: element.id, else: speech_id
+
+    children
+    |> Map.get(element.id, [])
+    |> Enum.flat_map(&leaves(&1, speech_id, children, where))
+  end
 
   @doc """
   The play's top-level divisions in order, each with its children in order.
