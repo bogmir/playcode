@@ -185,11 +185,12 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
              %{"type" => "stage_direction", "content" => "Vase"}
            ] = act["elements"]
 
+    # A verse's number is a string since 2026-11-08, as the file writes it ("3-4" in Hamlet).
     assert %{
              "verse_type" => "redondilla",
              "heading" => "Canción",
              "children" => [
-               %{"content" => "Primer verso", "line_number" => 1, "aside_continues" => false}
+               %{"content" => "Primer verso", "line_number" => "1", "aside_continues" => false}
              ]
            } = lg
   end

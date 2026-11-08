@@ -3509,7 +3509,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             <label class="label" for={@form[:line_number].id}>
               <span class="label-text font-medium">{gettext("Line Number")}</span>
             </label>
-            <.input field={@form[:line_number]} type="number" />
+            <.input field={@form[:line_number]} type="text" />
           </div>
           <div>
             <label class="label" for={@form[:part].id}>

@@ -21,7 +21,8 @@ defmodule Playcode.PlayContent.Element do
 
   On a verse line:
 
-    * `line_number` is `@n`.
+    * `line_number` is `@n` as the file writes it (`"3-4"`), a number of digits only plain
+      (`"0001"` is `"1"`).
     * `line_id` is `@xml:id`.
     * `part` (`I`, `M`, `F`) marks a verse split between speakers.
     * `verse_type` (redondilla, romance…) sits on the `line_group`.
@@ -53,7 +54,7 @@ defmodule Playcode.PlayContent.Element do
     field :type, :string
     field :content, :string
     field :speaker_label, :string
-    field :line_number, :integer
+    field :line_number, :string
     field :line_id, :string
     field :verse_type, :string
     field :part, :string

@@ -891,7 +891,7 @@ defmodule Playcode.Import.WordParser do
       type: "verse_line",
       content: element.content,
       part: element[:part],
-      line_number: if(numbered?, do: :counters.get(verses.counter, 2)),
+      line_number: if(numbered?, do: Integer.to_string(:counters.get(verses.counter, 2))),
       line_id: Playcode.PlayContent.line_id(verses.play, :counters.get(verses.counter, 1)),
       is_aside: element[:is_aside] || false,
       aside_continues: element[:aside_continues] || false,

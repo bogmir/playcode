@@ -252,21 +252,21 @@ defmodule Playcode.CompleteCopyTest do
 
     group = element!(scene, speech, %{type: "line_group", verse_type: "redondilla"})
 
-    verse!(scene, group, %{content: "Uno", line_number: 1, line_id: "cc-0001", part: "I"})
-    verse!(scene, group, %{content: "dos", line_number: 1, line_id: "cc-0002", part: "F"})
+    verse!(scene, group, %{content: "Uno", line_number: "1", line_id: "cc-0001", part: "I"})
+    verse!(scene, group, %{content: "dos", line_number: "1", line_id: "cc-0002", part: "F"})
 
     verse!(scene, group, %{
       content: "tres <stage type=\"business\">Llora.</stage> sigue",
-      line_number: 2,
+      line_number: "2",
       line_id: "cc-0003",
       rend: "indent"
     })
 
-    verse!(scene, group, %{content: "cuatro todo aparte", line_number: 3, is_aside: true})
+    verse!(scene, group, %{content: "cuatro todo aparte", line_number: "3", is_aside: true})
     verse!(scene, group, %{content: "y sigue aparte", is_aside: true, aside_continues: true})
     verse!(scene, group, %{content: "otro aparte, a continuación", is_aside: true})
 
-    noted = verse!(scene, group, %{content: "cinco <<en cursiva>>", line_number: 4})
+    noted = verse!(scene, group, %{content: "cinco <<en cursiva>>", line_number: "4"})
     note!(play, %{element_id: noted.id, offset: 5, n: "4", type: "editor", body: "Cinco."})
 
     element!(scene, speech, %{type: "prose", content: "Prosa en una línea,\nen otra."})
@@ -316,7 +316,7 @@ defmodule Playcode.CompleteCopyTest do
     PlayContent.set_element_characters(speech.id, [blas.id])
     group = element!(scene, speech, %{type: "line_group"})
 
-    varied = verse!(scene, group, %{content: "Uno", line_number: 1, line_id: "cr-0001"})
+    varied = verse!(scene, group, %{content: "Uno", line_number: "1", line_id: "cr-0001"})
 
     note!(play, %{
       element_id: varied.id,
@@ -333,7 +333,7 @@ defmodule Playcode.CompleteCopyTest do
     })
 
     verse!(scene, group, %{content: "dos <folio>del Folio</folio> fin", line_id: "cr-0002"})
-    verse!(scene, group, %{content: "tres <aside>a medias</aside> dicho", line_number: 2})
+    verse!(scene, group, %{content: "tres <aside>a medias</aside> dicho", line_number: "2"})
 
     element!(scene, speech, %{
       type: "prose",

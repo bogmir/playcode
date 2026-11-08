@@ -481,6 +481,23 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  # Hamlet numbers a verse "3-4" beside its verse 3. Until 2026-11-08 both were 3, the second
+  # anchored `l3-2`, and the margin's every-fifth test could only take a whole number.
+  test "a verse's number as the file writes it is its label and its anchor" do
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <sp><speaker>A</speaker><l n="3">Tres</l><l n="3-4">Tres y cuatro</l><l n="5">Cinco</l></sp>
+      </div1>
+      """)
+
+    lines = page(dir, play, "act-1.html") |> LazyHTML.query("div.l")
+
+    assert LazyHTML.attribute(lines, "id") == ["l3", "l3-4", "l5"]
+    assert lines |> LazyHTML.query("a.n") |> Enum.map(&LazyHTML.text/1) == ["3", "3-4", "5"]
+    assert lines |> LazyHTML.query("a.n.m5") |> Enum.map(&LazyHTML.text/1) == ["5"]
+  end
+
   # Components.lines/1, the paratexts' renderer, folded into inline/1 on 2026-10-16.
   test "a dedication's line breaks are still new lines on the title page" do
     play =
