@@ -47,7 +47,8 @@ defmodule Playcode.PlayContent.Numbering do
         numbering_restart: "never",
         numbering_manual: false,
         differ: 0,
-        unnumbered: true
+        # A play without verse or prose has nothing to number.
+        unnumbered: rows != []
       }
     else
       {rule, differ} =

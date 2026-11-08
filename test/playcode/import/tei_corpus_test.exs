@@ -76,7 +76,8 @@ defmodule Playcode.Import.TeiCorpusTest do
 
       TeiCorpus.dry_run(TeiCorpus.collect_files([dir]), [], report)
 
-      assert_received {:line, "  STR0001  new"}
+      # The line names the numbering rule the import would settle; an empty play numbers nothing.
+      assert_received {:line, "  STR0001  new, numbering V never"}
       assert_received {:line, "  STR0002: " <> _unreadable}
     end
   end
