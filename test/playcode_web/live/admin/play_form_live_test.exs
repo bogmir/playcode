@@ -430,6 +430,66 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     assert hidden?.()
   end
 
+  # Only seven plays have an apparatus: elsewhere the box would be ticked and do nothing.
+  describe "the variants box" do
+    test "is left out of a play without variants, and saving keeps the setting",
+         %{conn: conn} do
+      play = play_fixture()
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+      refute has_element?(view, "#play-form label", t("Show variant readings"))
+
+      save(view, %{"title" => "Sin variantes"})
+      assert Catalogue.get_play!(play.id).show_variants
+    end
+
+    test "shows how many variants it hides", %{conn: conn} do
+      play =
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno<app n="1"><rdg wit="#B">dos</rdg></app> tres<note type="editor">Glosa</note><app n="2"><rdg wit="#B">cuatro</rdg></app></l></sp></div1>)
+        )
+        |> import_tei!()
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+      assert has_element?(view, "#play-form label", t("Show variant readings"))
+
+      assert has_element?(
+               view,
+               "#play-form p",
+               n(
+                 "Shows readers the play's one variant; the TEI file always keeps it.",
+                 "Shows readers the play's %{count} variants; the TEI file always keeps them.",
+                 2
+               )
+             )
+    end
+  end
+
+  # Publishing is the play page's Estado toggle; a second switch here was a stale copy
+  # waiting to be saved over it.
+  describe "Complete" do
+    test "is not on the form", %{conn: conn} do
+      play = play_fixture()
+
+      for path <- [~p"/admin/plays/new", ~p"/admin/plays/#{play.id}/edit"] do
+        {:ok, view, _html} = live(conn, path)
+        refute has_element?(view, "#play-form input[name='play[is_complete]']"), path
+      end
+    end
+
+    test "is kept as it was when the form is saved", %{conn: conn} do
+      for complete? <- [true, false] do
+        play = play_fixture(%{"is_complete" => complete?})
+        {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+        save(view, %{"title" => "Guardada"})
+        assert Catalogue.get_play!(play.id).is_complete == complete?
+      end
+    end
+  end
+
   # Question 58: the editor's reminders leave the files and stay in Playcode, where only the
   # team reads them.
   describe "a team note" do
