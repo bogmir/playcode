@@ -100,7 +100,7 @@ defmodule Playcode.Statistics.Metrics do
   defp number_fragments(items) do
     {items, _last} =
       Enum.map_reduce(items, nil, fn
-        %{kind: :verse, element: %{line_number: n}} = item, _last when is_integer(n) ->
+        %{kind: :verse, element: %{line_number: n}} = item, _last when is_binary(n) ->
           {Map.put(item, :number, n), n}
 
         %{kind: :verse, element: %{part: part}} = item, last when part in ["M", "F"] ->

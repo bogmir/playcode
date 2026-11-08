@@ -746,7 +746,7 @@ defmodule Playcode.Export.StaticSite.Components do
       ]}
       data-part={@el.part}
       id={@anchor}
-    ><a :if={@el.line_number} class={["n", rem(@el.line_number, 5) == 0 && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class={["ghost", @ghost.indent && "indent"]} aria-hidden="true"><.inline text={@ghost.lead} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@aside} class="aparte">aparte</span></span></div>
+    ><a :if={@el.line_number} class={["n", fifth?(@el.line_number) && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class={["ghost", @ghost.indent && "indent"]} aria-hidden="true"><.inline text={@ghost.lead} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@aside} class="aparte">aparte</span></span></div>
     """
   end
 

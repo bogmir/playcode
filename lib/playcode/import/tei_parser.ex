@@ -1693,7 +1693,7 @@ defmodule Playcode.Import.TeiParser do
       type: "verse_line",
       position: pos,
       content: with_folio_edges(content, attrs),
-      line_number: parse_int(attr_value(attrs, "n")),
+      line_number: verse_number(attr_value(attrs, "n")),
       line_id: attr_value(attrs, "xml:id") || attr_value(attrs, "id"),
       part: attr_value(attrs, "part"),
       rend: attr_value(attrs, "rend"),
@@ -2529,6 +2529,16 @@ defmodule Playcode.Import.TeiParser do
   defp attr_value(_, _), do: nil
 
   defp has_attr?(attrs, key), do: attr_value(attrs, key) != nil
+
+  # A verse's @n as written ("3-4", "124.1"); digits only lose their padding ("0001" is "1").
+  defp verse_number(nil), do: nil
+
+  defp verse_number(n) do
+    case String.trim(n) do
+      "" -> nil
+      n -> if n =~ ~r/\A\d+\z/, do: n |> String.to_integer() |> Integer.to_string(), else: n
+    end
+  end
 
   defp parse_int(nil), do: nil
 

@@ -54,7 +54,7 @@ defmodule Playcode.StatisticsTest do
         parent_id: line_group.id,
         type: "verse_line",
         content: "Aside line",
-        line_number: 1,
+        line_number: "1",
         is_aside: true,
         part: "F",
         position: 4
@@ -180,6 +180,8 @@ defmodule Playcode.StatisticsTest do
   end
 
   describe "metrical passages" do
+    # A passage's range is labelled by its verses' numbers, strings since 2026-11-08, as the
+    # file writes them ("3-4" in Hamlet).
     test "fragments inherit the open passage's form, a new act closes it, same forms merge" do
       play =
         import_tei!(
@@ -214,29 +216,29 @@ defmodule Playcode.StatisticsTest do
                %{
                  "act" => 1,
                  "form" => "redondilla",
-                 "from" => 1,
-                 "to" => 8,
+                 "from" => "1",
+                 "to" => "8",
                  "verses" => 8
                },
                %{
                  "act" => 1,
                  "form" => "romance_tirada",
-                 "from" => 9,
-                 "to" => 10,
+                 "from" => "9",
+                 "to" => "10",
                  "verses" => 2
                },
                %{
                  "act" => 2,
                  "form" => "romance_tirada",
-                 "from" => 11,
-                 "to" => 11,
+                 "from" => "11",
+                 "to" => "11",
                  "verses" => 1
                },
                %{
                  "act" => 2,
                  "form" => "unmarked",
-                 "from" => 12,
-                 "to" => 12,
+                 "from" => "12",
+                 "to" => "12",
                  "verses" => 1
                }
              ]
@@ -259,6 +261,7 @@ defmodule Playcode.StatisticsTest do
   end
 
   describe "characters" do
+    # The line a character first speaks on is its number, a string since 2026-11-08.
     test "speeches, lines, words, first words, asides, longest speech and forms" do
       play =
         import_tei!(
@@ -295,7 +298,7 @@ defmodule Playcode.StatisticsTest do
                "speeches" => 2,
                "lines" => 4,
                "words" => 8,
-               "first" => %{"act" => 1, "line" => 1},
+               "first" => %{"act" => 1, "line" => "1"},
                "aside_verses" => 0,
                "longest_speech" => %{"lines" => 3, "words" => 7},
                "forms" => %{"redondilla" => 4}
@@ -306,7 +309,7 @@ defmodule Playcode.StatisticsTest do
                "speeches" => 2,
                "lines" => 3,
                "words" => 5,
-               "first" => %{"line" => 3},
+               "first" => %{"line" => "3"},
                "aside_verses" => 1
              } =
                characters["Juan"]
@@ -387,6 +390,7 @@ defmodule Playcode.StatisticsTest do
                Map.new(data["characters"], &{&1["name"], &1["columns"]})
     end
 
+    # The columns' ranges are verse numbers, strings since 2026-11-08.
     test "with no scenes, columns are the metrical passages" do
       play =
         import_tei!(
@@ -405,8 +409,8 @@ defmodule Playcode.StatisticsTest do
       assert %{
                "basis" => "passage",
                "columns" => [
-                 %{"form" => "redondilla", "from" => 1, "to" => 1},
-                 %{"form" => "decima", "from" => 2, "to" => 3}
+                 %{"form" => "redondilla", "from" => "1", "to" => "1"},
+                 %{"form" => "decima", "from" => "2", "to" => "3"}
                ]
              } = data["presence"]
 
@@ -438,7 +442,7 @@ defmodule Playcode.StatisticsTest do
         parent_id: line_group.id,
         type: "verse_line",
         content: "New line",
-        line_number: 10,
+        line_number: "10",
         position: 10
       })
 
@@ -458,7 +462,7 @@ defmodule Playcode.StatisticsTest do
         parent_id: line_group.id,
         type: "verse_line",
         content: "New line",
-        line_number: 10,
+        line_number: "10",
         position: 10
       })
 

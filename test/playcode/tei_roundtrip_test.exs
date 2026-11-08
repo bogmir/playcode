@@ -1321,6 +1321,22 @@ defmodule Playcode.TeiRoundtripTest do
              ["1", "2"]
   end
 
+  # Hamlet numbers a verse the editions split "3-4" and Timon one "124.1": the number is the
+  # file's, kept as written (it was cut to its leading digits, 3 and 124, before 2026-11-08).
+  # A padded "0007" comes back plain, as decided on 2026-11-06; an empty one is no number.
+  test "a verse line's number comes back as the file writes it" do
+    xml =
+      roundtrip(
+        tei(
+          body:
+            ~s(<div type="poem"><lg><l n="3-4">Uno</l><l n="124.1">Dos</l><l n="0007">Tres</l><l n="">Cuatro</l></lg></div>)
+        )
+      )
+
+    assert for({attrs, _text} <- xml_elements(xml, "l", within: "body"), do: attrs["n"]) ==
+             ["3-4", "124.1", "7", nil]
+  end
+
   # 12 head titles and 4 notes on the digital edition are a heading alone.
   test "a paratext with a heading and no paragraphs comes back" do
     xml = roundtrip(tei(front: ~s(<div type="head_title"><head>THE MALCONTENT</head></div>)))
