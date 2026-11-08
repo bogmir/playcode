@@ -1839,9 +1839,9 @@ defmodule Playcode.TeiRoundtripTest do
       assert "Normal prose." in xml_texts(xml, "p", within: "sp")
     end
 
-    # EMOTHE0756 v. 230: "aparte, al salir". The stage said more than "aparte", and the
-    # import dropped all of it (answered 2026-11-07: keep every stage direction).
-    test "a delivery stage that says more than \"aparte\" is kept" do
+    # EMOTHE0756 v. 230: "aparte, al salir". The import dropped the stage of an aside line,
+    # bare "(Aparte)" or not (answered 2026-11-07: keep every stage direction).
+    test "every delivery stage of an aside line is kept, \"(Aparte)\" too" do
       xml =
         roundtrip(
           tei(
@@ -1850,13 +1850,14 @@ defmodule Playcode.TeiRoundtripTest do
               <sp><speaker>ANA</speaker><lg type="decima">
                 <l n="1"><stage type="delivery">aparte, al salir</stage><seg type="aside">Por poco</seg></l>
                 <l n="2"><stage type="delivery">(Aparte.)</stage>Sin seg</l>
+                <l n="3"><stage type="delivery">[Aparte]</stage><seg type="aside">Corchetes</seg></l>
               </lg></sp>
               """)
           )
         )
 
-      assert xml_texts(xml, "stage", within: "l") == ["aparte, al salir"]
-      assert xml_texts(xml, "seg") == ["Por poco", "Sin seg"]
+      assert xml_texts(xml, "stage", within: "l") == ["aparte, al salir", "(Aparte.)", "[Aparte]"]
+      assert xml_texts(xml, "seg") == ["Por poco", "Sin seg", "Corchetes"]
     end
 
     # How many asides the play's statistics count, once `body`'s speeches are imported.
@@ -2197,7 +2198,7 @@ defmodule Playcode.TeiRoundtripTest do
       assert reading_texts(xml, "l") == [
                "pues te llaman en Castilla",
                "feudo Adonis y coge la capa",
-               "mira el jardín"
+               "[Aparte.] mira el jardín"
              ]
 
       assert xml_texts(xml, "rs", within: "stage") == ["la capa", "memoriales"]
@@ -2604,12 +2605,12 @@ defmodule Playcode.TeiRoundtripTest do
       assert reading_texts(xml, "speaker") == ["ANA"]
       assert reading_texts(xml, "p") == ["Buscad por todas partes."]
 
-      # A line all aside stays so, its delivery stage dropped, though an entry follows the
-      # seg: the entry is not spoken text.
+      # A line all aside stays so, its delivery stage kept before the seg, though an entry
+      # follows the seg: the entry is not spoken text.
       assert reading_texts(xml, "l") == [
                "Dijo (en voz baja) y calló.",
                "un sueño breve fue",
-               "¡Ay de mí!",
+               "(Aparte.) ¡Ay de mí!",
                "Calla, que viene el rey."
              ]
 
@@ -2619,7 +2620,7 @@ defmodule Playcode.TeiRoundtripTest do
                {"stage", "Sale", "3"},
                {"l", "Dijo (en voz", "4"},
                {"l", "un sueño", "5"},
-               {"l", "¡Ay de mí!", "6"},
+               {"l", "(Aparte.) ¡Ay de mí!", "6"},
                {"l", "Calla, que viene", "7"},
                {"p", "Buscad", "8"}
              ]
@@ -2728,9 +2729,9 @@ defmodule Playcode.TeiRoundtripTest do
       assert String.replace(second, "APP6", "APP5") == first
     end
 
-    # The reviewer's repro: a note inside the dropped stage copies the stage's entry. The note
+    # The reviewer's repro: a note inside the stage copies the stage's entry. The note
     # goes with the stage; its copy is not a second entry.
-    test "an entry in a dropped delivery stage is kept once when a note inside the stage copies it" do
+    test "an entry in a delivery stage is kept once when a note inside the stage copies it" do
       entry = ~s(<app n="10"><rdg wit="#B">Aparte</rdg></app>)
 
       body = """
@@ -2741,11 +2742,11 @@ defmodule Playcode.TeiRoundtripTest do
 
       xml = roundtrip(tei(body: body))
 
-      assert reading_texts(xml, "l") == ["Adios."]
+      assert reading_texts(xml, "l") == ["(Aparte.) Adios."]
       assert [%{n: "10", readings: [{"rdg", "#B", "Aparte", nil}]}] = xml_apps(xml)
     end
 
-    # A line aside by its "(Aparte)" stage alone, no <seg>: the stage goes, the words stay.
+    # A line aside by its "(Aparte)" stage alone, no <seg>: the stage and the words stay.
     test "an entry in the delivery stage of a line aside with no seg is kept, and comes back the same" do
       body = """
       <div1 type="acto" n="1"><sp><speaker>A</speaker>
@@ -2755,7 +2756,7 @@ defmodule Playcode.TeiRoundtripTest do
 
       first = tei(code: "APP7", body: body) |> roundtrip()
 
-      assert reading_texts(first, "l") == ["Hola."]
+      assert reading_texts(first, "l") == ["(Aparte.) Hola."]
       assert [%{in: "l", n: "9", readings: [{"rdg", "#B", "Aparte", nil}]}] = xml_apps(first)
 
       second = first |> String.replace("APP7", "APP8") |> roundtrip()
@@ -3570,7 +3571,9 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(xml, "stage") == ["Entra (solo)"]
     end
 
-    test "a stage in an aside line is dropped with the aside's delivery, as before" do
+    # Since 2026-11-07 the delivery stage of an aside line stays too (the project: keep every
+    # stage direction).
+    test "a stage in an aside line is kept, the aside's delivery too" do
       xml =
         roundtrip(
           tei(
@@ -3579,7 +3582,7 @@ defmodule Playcode.TeiRoundtripTest do
           )
         )
 
-      assert xml_inline_stages(xml) == []
+      assert xml_texts(xml, "stage", within: "l") == ["Aparte"]
       assert xml_texts(xml, "seg") == ["qué haré"]
     end
 
@@ -3664,7 +3667,7 @@ defmodule Playcode.TeiRoundtripTest do
       assert [{%{"type" => "aside", "xml:id" => _}, "Ay, marry, now there's [52] a wise man."}] =
                xml_lines(xml, "seg")
 
-      assert xml_inline_stages(xml) == []
+      assert xml_texts(xml, "stage", within: "p") == ["(Aside.)"]
     end
   end
 

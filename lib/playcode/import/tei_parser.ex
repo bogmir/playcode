@@ -1733,7 +1733,6 @@ defmodule Playcode.Import.TeiParser do
       aside_text(line)
     else
       children
-      |> without_stages()
       |> pieces(:mark, &read_child(&1, :mark, "l"))
       |> squeeze()
     end
@@ -1895,9 +1894,9 @@ defmodule Playcode.Import.TeiParser do
   defp aside_in_children?(_), do: false
 
   # A line or paragraph holding a <seg type="aside">. All aside, when every word is in a
-  # seg: the segs' text, with the element's own notes and breaks, its stages dropped (the
-  # delivery, "(Aparte)", is what is_aside says) but their entries kept (without_stages/1). Partly aside: the whole text, each seg an
-  # <aside> marker (read_child/3).
+  # seg: the segs' text, with the element's own notes, breaks and stage directions (the
+  # delivery, "(Aparte)", too). Partly aside: the whole text, each seg an <aside> marker
+  # (read_child/3).
   defp aside_text({_name, _attrs, children} = element) do
     if Enum.any?(children, &spoken_outside_aside?/1),
       do: text_content(element, :mark),
@@ -1913,10 +1912,9 @@ defmodule Playcode.Import.TeiParser do
 
   defp aside_content(children) do
     children
-    |> without_stages()
     |> Enum.filter(
       &(aside_seg?(&1) or match?({name, _, _} when name in ~w(note app lb), &1) or
-          (match?({"stage", _, _}, &1) and more_than_aparte?(&1)))
+          match?({"stage", _, _}, &1))
     )
     |> pieces(:mark, fn
       {"lb", attrs, _} -> line_break(attrs)
@@ -2179,30 +2177,6 @@ defmodule Playcode.Import.TeiParser do
   # What leaves the play text and is stored at its offset: a note, and an entry of the
   # critical apparatus.
   @apart ~w(note app)
-
-  # `children` with each <stage> replaced by its own entries, where the stage stood: a line
-  # that drops its stages (the delivery, "(Aparte)", is what is_aside says) keeps their
-  # entries. A note inside the stage goes with it, and so does an entry that note copies.
-  defp without_stages(children) do
-    Enum.flat_map(children, fn
-      {"stage", _, _} = stage ->
-        if more_than_aparte?(stage),
-          do: [stage],
-          else: for({"app", _, _} = app <- outermost(stage, @apart), do: app)
-
-      child ->
-        [child]
-    end)
-  end
-
-  # A delivery stage that says more than "aparte" ("aparte, al salir") is text of the
-  # edition and stays; the bare "(Aparte.)" is what is_aside already says.
-  defp more_than_aparte?({"stage", attrs, children}) do
-    words = children |> Enum.filter(&is_binary/1) |> Enum.join()
-
-    stage_type(attrs) == "delivery" and
-      String.replace(words, ~r/[\s\[\]().]|aparte|aside/iu, "") != ""
-  end
 
   # Each child's text, read by `fun`. Under :mark (the play text) a <note> or <app> child is
   # its mark instead; elsewhere (a note's own text) an <app> is left out, its neighbours
