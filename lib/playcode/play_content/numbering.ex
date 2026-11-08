@@ -100,18 +100,18 @@ defmodule Playcode.PlayContent.Numbering do
 
   @doc """
   A `settle/2` report as the import preview and the corpus tools print it: "V per scene",
-  "V never, Manual: 3 numbers differ", "S never, numbered at import", "VP per act, Manual: the
+  "V never, Manual: 3 numbers differ", "S never, numbers added", "VP per act, Manual: the
   header's rule breaks on 2 numbers".
   """
   def describe(report) do
-    rule = "#{report.numbering_type} #{restart(report.numbering_restart)}"
+    rule = name(report)
 
     cond do
       report.header_broken ->
         "#{rule}, Manual: the header's rule breaks on #{count(report.differ)}"
 
       report.unnumbered ->
-        "#{rule}, numbered at import"
+        "#{rule}, numbers added"
 
       report.differ > 0 ->
         "#{rule}, Manual: #{differ(report.differ)}"
@@ -123,6 +123,9 @@ defmodule Playcode.PlayContent.Numbering do
         rule
     end
   end
+
+  @doc ~s(A rule by name: "V never", "VP per act", "S per scene".)
+  def name(rule), do: "#{rule.numbering_type} #{restart(rule.numbering_restart)}"
 
   defp restart("never"), do: "never"
   defp restart(unit), do: "per #{unit}"
@@ -158,10 +161,15 @@ defmodule Playcode.PlayContent.Numbering do
     |> expected(type, restart)
     |> Enum.zip(rows)
     |> Enum.reject(fn {new, old} ->
-      new.line_number == old.line_number and new.content == old.content
+      new.line_number == unpadded(old.line_number) and new.content == unpadded(old.content)
     end)
     |> Enum.map(&elem(&1, 0))
   end
+
+  # A padded number is the same number ("0001" is "1", as problem 1 stores a verse's): a
+  # paragraph's markers may still be padded as their file wrote them, and stay so.
+  defp unpadded(nil), do: nil
+  defp unpadded(text), do: Regex.replace(~r/(?<=\A|n=")0+(?=\d+(?:\z|"))/, text, "")
 
   @doc "`rows` with their numbers as the rule of `type` and `restart` counts them."
   def expected(rows, type, restart) do

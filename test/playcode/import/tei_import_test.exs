@@ -534,6 +534,25 @@ defmodule Playcode.Import.TeiImportTest do
       assert numbers(play, "l") == ["1", "3"]
     end
 
+    # Henry V and Endymion pad their prose numbers ("0001"), which problem 1 unpadded on
+    # verses only: a padded number is the same number, so they fit their rule.
+    test "a padded number is the same number: the file fits its rule, numbers as written" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act("""
+              <sp><speaker>ANA</speaker><l n="1">a</l></sp>
+              <sp><speaker>BLAS</speaker><p n="0002">Uno <lb n="0003"/>dos</p></sp>
+              <sp><speaker>ANA</speaker><l n="4">b</l></sp>
+              """)
+          )
+        )
+
+      assert rule(play) == {"VL", "never", false}
+      assert numbers(play, "p") == ["0002"]
+    end
+
     test "a Manual header stays Manual, though its numbers fit a rule" do
       play =
         import_tei!(
