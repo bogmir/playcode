@@ -3837,6 +3837,40 @@ defmodule Playcode.TeiRoundtripTest do
       assert {"l", "es-1"} in body_ids(xml)
     end
 
+    # The text's divisions are counted, an act's own elements before its scenes; a paratext
+    # or a cast list, between the acts or opening one, is not the text, and a character keeps
+    # its name.
+    test "a paratext or cast list gets none, and the count runs past it" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO I</head>
+              <stage>Salen.</stage>
+              <div2 type="escena" n="1"><sp><speaker>A</speaker><lg><l>uno</l></lg></sp></div2>
+            </div1>
+            <div1 type="prologo" ana="paratexto"><p>Entre actos.</p></div1>
+            <div1 type="elenco"><castList><castItem><role xml:id="CRIADO">CRIADO</role></castItem></castList></div1>
+            <div1 type="acto" n="2"><head>ACTO II</head>
+              <castList><p>Salen ahora:</p><castItem><role xml:id="B">B</role></castItem></castList>
+              <sp><speaker>B</speaker><lg><l>dos</l></lg></sp>
+            </div1>
+            """
+          )
+        )
+
+      assert body_ids(xml) == [
+               {"stage", "es-st-1"},
+               {"div2", "es-sc-1"},
+               {"sp", "es-sp-1"},
+               {"l", "es-1"},
+               {"role", "CRIADO"},
+               {"role", "B"},
+               {"sp", "es-sp-2"},
+               {"l", "es-2"}
+             ]
+    end
+
     test "a line added before the first moves every identifier, and asides and variants follow" do
       play =
         import_tei!(
