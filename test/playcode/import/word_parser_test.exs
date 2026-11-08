@@ -162,6 +162,17 @@ defmodule Playcode.Import.WordParserTest do
 
       assert numbers == [1, 2, 3]
     end
+
+    # The import leaves numbering to the play's rule, as every save does (numbering spec).
+    test "a play numbered by speech numbers each speech's first line" do
+      xml =
+        import_word(
+          ["{e}Escena 1", "{p}FEBO  {v}Uno.", "{v}Dos.", "{p}ANA {v}Tres."],
+          play_fixture(%{"numbering_type" => "S"})
+        )
+
+      assert for({attrs, _} <- xml_elements(xml, "l"), do: attrs["n"]) == ["1", nil, "2"]
+    end
   end
 
   describe "the speakers" do
