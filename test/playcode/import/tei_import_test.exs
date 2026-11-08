@@ -184,9 +184,11 @@ defmodule Playcode.Import.TeiImportTest do
     </castList></div>
     """
 
+    # Unnumbered, so one copy and twenty settle the same numbering rule: a repeated "1, 2"
+    # fits no rule and makes the play Manual, which a single copy does not (numbering spec).
     block = """
     <sp who="#ANA #BLAS"><speaker>ANA Y BLAS</speaker>
-      <lg type="redondilla"><l n="1">Uno<note n="1" type="editor"><p>Nota.</p></note></l><l n="2">dos</l></lg>
+      <lg type="redondilla"><l>Uno<note n="1" type="editor"><p>Nota.</p></note></l><l>dos</l></lg>
       <p>Prosa.</p></sp>
     <stage>Sale.</stage>
     """
@@ -438,4 +440,147 @@ defmodule Playcode.Import.TeiImportTest do
   @doc false
   def count_query(_event, _measurements, _metadata, {pid, counter}),
     do: if(self() == pid, do: :counters.add(counter, 1, 1))
+
+  describe "the numbering rule a file follows" do
+    # A file without the rule in its header (the whole corpus until 2026-11-08) gets the rule
+    # its numbers follow; one with it keeps it, unless its numbers break it (numbering spec).
+    defp rule(play), do: {play.numbering_type, play.numbering_restart, play.numbering_manual}
+
+    defp numbers(play, tag),
+      do: for({attrs, _} <- xml_lines(export_tei(play), tag), do: attrs["n"])
+
+    defp one_act(content), do: ~s(<div1 type="acto" n="1"><head>Acto I</head>#{content}</div1>)
+
+    @v_never ~s(<refsDecl><citeStructure unit="verse" match="/TEI/text/body//l[@n]" use="@n"/></refsDecl>)
+
+    test "a file that fits a rule exactly gets it, its numbers untouched" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act("""
+              <div2 type="escena" n="1"><head>Escena I</head>
+                <sp><speaker>ANA</speaker><l n="1">a</l><l n="2">b</l></sp></div2>
+              <div2 type="escena" n="2"><head>Escena II</head>
+                <sp><speaker>ANA</speaker><l n="1">c</l></sp></div2>
+              """)
+          )
+        )
+
+      assert rule(play) == {"V", "scene", false}
+      assert numbers(play, "l") == ["1", "2", "1"]
+    end
+
+    test "a file that fits no rule comes in Manual, with the closest rule, its numbers kept" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act(
+                ~s(<sp><speaker>ANA</speaker><l n="1">a</l><l n="2">b</l><l n="3170">c</l></sp>)
+              )
+          )
+        )
+
+      assert rule(play) == {"V", "never", true}
+      assert numbers(play, "l") == ["1", "2", "3170"]
+    end
+
+    test "an unnumbered file of more verse than prose is numbered by V" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act("""
+              <sp><speaker>ANA</speaker><l>a</l><l>b</l><l>c</l></sp>
+              <sp><speaker>BLAS</speaker><p>Prosa.</p></sp>
+              """)
+          )
+        )
+
+      assert rule(play) == {"V", "never", false}
+      assert numbers(play, "l") == ["1", "2", "3"]
+      assert numbers(play, "p") == [nil]
+    end
+
+    test "an unnumbered file of more prose than verse is numbered by speech" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act("""
+              <sp><speaker>ANA</speaker><l>a</l></sp>
+              <sp><speaker>BLAS</speaker><p>Uno.</p><p>Dos.</p></sp>
+              <sp><speaker>ANA</speaker><p>Tres.</p></sp>
+              """)
+          )
+        )
+
+      assert rule(play) == {"S", "never", false}
+      assert numbers(play, "l") == ["1"]
+      assert numbers(play, "p") == ["2", nil, "3"]
+    end
+
+    test "a header whose numbers break its rule comes in Manual, its numbers kept" do
+      play =
+        import_tei!(
+          tei(
+            encoding_desc: @v_never,
+            body: one_act(~s(<sp><speaker>ANA</speaker><l n="1">a</l><l n="3">b</l></sp>))
+          )
+        )
+
+      assert rule(play) == {"V", "never", true}
+      assert numbers(play, "l") == ["1", "3"]
+    end
+
+    # Henry V and Endymion pad their prose numbers ("0001"), which problem 1 unpadded on
+    # verses only: a padded number is the same number, so they fit their rule.
+    test "a padded number is the same number: the file fits its rule, numbers as written" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act("""
+              <sp><speaker>ANA</speaker><l n="1">a</l></sp>
+              <sp><speaker>BLAS</speaker><p n="0002">Uno <lb n="0003"/>dos</p></sp>
+              <sp><speaker>ANA</speaker><l n="4">b</l></sp>
+              """)
+          )
+        )
+
+      assert rule(play) == {"VL", "never", false}
+      assert numbers(play, "p") == ["0002"]
+    end
+
+    # Under VP a printed line's marker is the file's, left as written: padded, it is still
+    # the same text, so the play fits VP and is not made Manual.
+    test "a padded marker on a printed line is left as written: the file fits VP" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act("""
+              <sp><speaker>ANA</speaker><l n="1">a</l></sp>
+              <sp><speaker>BLAS</speaker><p n="2">Uno <lb n="0040"/>dos</p></sp>
+              <sp><speaker>ANA</speaker><l n="3">b</l></sp>
+              """)
+          )
+        )
+
+      assert rule(play) == {"VP", "never", false}
+    end
+
+    test "a Manual header stays Manual, though its numbers fit a rule" do
+      play =
+        import_tei!(
+          tei(
+            encoding_desc: String.replace(@v_never, "<refsDecl>", ~s(<refsDecl n="manual">)),
+            body: one_act(~s(<sp><speaker>ANA</speaker><l n="1">a</l><l n="2">b</l></sp>))
+          )
+        )
+
+      assert rule(play) == {"V", "never", true}
+    end
+  end
 end

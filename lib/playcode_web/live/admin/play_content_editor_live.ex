@@ -316,6 +316,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   def handle_event("reorder_children", %{"parent" => parent_id, "ids" => ids}, socket) do
     with_row(socket, PlayContent.get_division(socket.assigns.play.id, parent_id), fn act ->
       PlayContent.reorder_children(act, ids)
+      PlayContent.refresh_derived(socket.assigns.play.id)
       socket |> reload_divisions() |> reload_characters()
     end)
   end
@@ -2141,6 +2142,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <.modal_content
           modal={@modal}
           form={@form}
+          manual_numbers={@play.numbering_manual}
           editing={@editing}
           characters={@characters}
           modal_element_type={@modal_element_type}
@@ -2997,6 +2999,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   attr :character_form, :any, default: nil, doc: "the character an edited entry names"
   attr :existing_options, :list, default: []
 
+  attr :manual_numbers, :boolean,
+    default: false,
+    doc: "the play is Manual: its numbers are typed, not counted by its rule"
+
   defp modal_content(%{modal: :paratext} = assigns) do
     ~H"""
     <h3 class="text-lg font-bold mb-4">
@@ -3508,7 +3514,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           </p>
         </div>
         <div class="grid grid-cols-2 gap-4">
-          <div>
+          <%!-- A play not Manual is numbered by its rule on every save: a typed number would go. --%>
+          <div :if={@manual_numbers}>
             <label class="label" for={@form[:line_number].id}>
               <span class="label-text font-medium">{gettext("Line Number")}</span>
             </label>

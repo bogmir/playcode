@@ -644,11 +644,7 @@ defmodule Playcode.Import.WordParser do
             {%{}, 1}
           end
 
-        # Create structure in DB
-        # A whole verse or a first part takes the next number, as the files number a
-        # split verse once.
-        verses = %{counter: :counters.new(1, [:atomics])}
-
+        # Create structure in DB; the play's numbering rule numbers it afterwards.
         # Use reduce to track act numbering (skip prologo/epilogue)
         Enum.with_index(acts, first_act_position)
         |> Enum.reduce(1, fn {act, act_pos}, act_number ->
@@ -672,7 +668,6 @@ defmodule Playcode.Import.WordParser do
               play_id,
               act_div.id,
               nil,
-              verses,
               character_map
             )
           end
@@ -694,7 +689,6 @@ defmodule Playcode.Import.WordParser do
               play_id,
               scene_div.id,
               nil,
-              verses,
               character_map
             )
           end)
@@ -702,7 +696,9 @@ defmodule Playcode.Import.WordParser do
           if is_numbered, do: act_number + 1, else: act_number
         end)
 
-        Catalogue.update_form_and_verse_count(play_id)
+        # The text is new, so no number in it was typed by hand: it is counted by the rule.
+        {:ok, play} = Catalogue.update_play(play, %{numbering_manual: false})
+        PlayContent.refresh_derived(play_id)
 
         play
       end)
@@ -763,7 +759,7 @@ defmodule Playcode.Import.WordParser do
     if id =~ ~r/^[a-z]/, do: id, else: "character_#{idx + 1}"
   end
 
-  defp create_elements(elements, play_id, division_id, parent_id, verses, character_map) do
+  defp create_elements(elements, play_id, division_id, parent_id, character_map) do
     alias Playcode.PlayContent
 
     elements
@@ -789,7 +785,7 @@ defmodule Playcode.Import.WordParser do
           end
 
           children = Map.get(element, :children, [])
-          create_children(children, play_id, division_id, speech.id, verses)
+          create_children(children, play_id, division_id, speech.id)
 
         %{type: "stage_direction"} ->
           PlayContent.create_element(%{
@@ -802,7 +798,7 @@ defmodule Playcode.Import.WordParser do
           })
 
         %{type: "line_group"} ->
-          create_stanza(element, play_id, division_id, parent_id, pos, verses)
+          create_stanza(element, play_id, division_id, parent_id, pos)
 
         %{type: "unrecognized"} ->
           PlayContent.create_element(%{
@@ -815,7 +811,7 @@ defmodule Playcode.Import.WordParser do
           })
 
         %{type: "verse_line"} ->
-          create_verse(element, play_id, division_id, parent_id, pos, verses)
+          create_verse(element, play_id, division_id, parent_id, pos)
 
         %{type: "prose"} ->
           PlayContent.create_element(%{
@@ -835,7 +831,7 @@ defmodule Playcode.Import.WordParser do
     end)
   end
 
-  defp create_children(children, play_id, division_id, parent_id, verses) do
+  defp create_children(children, play_id, division_id, parent_id) do
     alias Playcode.PlayContent
 
     children
@@ -843,7 +839,7 @@ defmodule Playcode.Import.WordParser do
     |> Enum.each(fn {element, pos} ->
       case element do
         %{type: "verse_line"} ->
-          create_verse(element, play_id, division_id, parent_id, pos, verses)
+          create_verse(element, play_id, division_id, parent_id, pos)
 
         %{type: "prose"} ->
           PlayContent.create_element(%{
@@ -868,7 +864,7 @@ defmodule Playcode.Import.WordParser do
           })
 
         %{type: "line_group"} ->
-          create_stanza(element, play_id, division_id, parent_id, pos, verses)
+          create_stanza(element, play_id, division_id, parent_id, pos)
 
         _ ->
           :ok
@@ -876,10 +872,7 @@ defmodule Playcode.Import.WordParser do
     end)
   end
 
-  defp create_verse(element, play_id, division_id, parent_id, pos, verses) do
-    numbered? = element[:part] in [nil, "I"]
-    if numbered?, do: :counters.add(verses.counter, 1, 1)
-
+  defp create_verse(element, play_id, division_id, parent_id, pos) do
     Playcode.PlayContent.create_element(%{
       play_id: play_id,
       division_id: division_id,
@@ -887,14 +880,13 @@ defmodule Playcode.Import.WordParser do
       type: "verse_line",
       content: element.content,
       part: element[:part],
-      line_number: if(numbered?, do: Integer.to_string(:counters.get(verses.counter, 1))),
       is_aside: element[:is_aside] || false,
       aside_continues: element[:aside_continues] || false,
       position: pos
     })
   end
 
-  defp create_stanza(stanza, play_id, division_id, parent_id, pos, verses) do
+  defp create_stanza(stanza, play_id, division_id, parent_id, pos) do
     {:ok, group} =
       Playcode.PlayContent.create_element(%{
         play_id: play_id,
@@ -904,6 +896,6 @@ defmodule Playcode.Import.WordParser do
         position: pos
       })
 
-    create_children(Map.get(stanza, :children, []), play_id, division_id, group.id, verses)
+    create_children(Map.get(stanza, :children, []), play_id, division_id, group.id)
   end
 end

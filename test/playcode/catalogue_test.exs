@@ -5,6 +5,34 @@ defmodule Playcode.CatalogueTest do
 
   alias Playcode.Catalogue
 
+  describe "a play's verse count" do
+    import Playcode.ImportHelpers
+
+    # Q10: statistics count the structure; a number is only a location label. An S play
+    # numbers only a speech's first line, so counting numbers counted speeches.
+    test "counts every verse once, by its first piece, numbered or not" do
+      header =
+        ~s(<refsDecl n="manual"><citeStructure unit="speech" match="/TEI/text/body//sp" use="@n"/></refsDecl>)
+
+      play =
+        import_tei!(
+          tei(
+            encoding_desc: header,
+            body: """
+            <div1 type="acto" n="1"><head>Acto I</head>
+              <sp><speaker>ANA</speaker><l n="1">a</l><l>b</l><l part="I">c</l></sp>
+              <sp><speaker>BLAS</speaker><l part="F" n="2">y c</l><l>d</l></sp>
+            </div1>
+            """
+          )
+        )
+
+      Playcode.PlayContent.refresh_derived(play.id)
+
+      assert Catalogue.get_play!(play.id).verse_count == 4
+    end
+  end
+
   describe "finding plays" do
     test "search matches title, author and code" do
       play = play_fixture(%{"title" => "Comedia nueva", "author_name" => "Lope"})

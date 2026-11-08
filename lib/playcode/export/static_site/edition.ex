@@ -49,8 +49,8 @@ defmodule Playcode.Export.StaticSite.Edition do
     items = Metrics.items(divisions)
     pages = pages(divisions, items)
     outline = outline(play.paratexts, divisions, pages)
-    refs = refs(items)
-    anchors = Map.merge(anchors(items, pages), outline.anchors)
+    refs = refs(items, play.numbering_restart)
+    anchors = Map.merge(anchors(items, pages, play.numbering_restart), outline.anchors)
     page_of = page_of(pages, items)
 
     %__MODULE__{
@@ -421,11 +421,12 @@ defmodule Playcode.Export.StaticSite.Edition do
   # A line's anchor is the nearest number before it in its unit plus a counter of its own
   # kind (docs/superpowers/specs/2026-11-08-site-anchors-design.md): `l230`, a later piece
   # `l230b`, then `l230-sd1`, `l230-p1`, `l230-v1`; before the unit's first number `sd1`,
-  # `p1`, `v1`. The unit is the play, or the scene in a play that numbers each scene from
-  # 1, whose anchors all carry `l<act>-<scene>-` (`unit_start/4`). Not the page: the full text prints every
+  # `p1`, `v1`. The unit is the play, or the scene in a play whose numbering rule starts the
+  # count again (per act or per scene), whose anchors all carry `l<act>-<scene>-`
+  # (`unit_start/4`). Not the page: the full text prints every
   # page at once. A clash left after that (a data error) gets a numeric suffix.
-  defp anchors(items, pages) do
-    restarts? = restarts?(items)
+  defp anchors(items, pages, restart) do
+    restarts? = restart != "never"
     slug_of = for %{scene: nil} = page <- pages, into: %{}, do: {page.division.id, page.slug}
 
     {elements, _state} =
@@ -508,24 +509,6 @@ defmodule Playcode.Export.StaticSite.Edition do
     if MapSet.member?(used, candidate), do: unique(base, used, k + 1), else: candidate
   end
 
-  # A play that numbers each scene (or act) from 1 opens a scene below where the scene
-  # before it ended. A number met again further on is a data error, not a restart: Timon of
-  # Athens, numbered through, repeats prose 425 in I.2 and II.2. Numbers are compared by
-  # their leading digits ("3-4" is 3).
-  defp restarts?(items) do
-    for(
-      item <- items,
-      n = number(item),
-      is_binary(n),
-      {i, _rest} <- [Integer.parse(n)],
-      do: {{item.division.id, item.scene && item.scene.id}, i}
-    )
-    |> Enum.chunk_by(&elem(&1, 0))
-    |> Enum.map(fn unit -> {unit |> hd() |> elem(1), unit |> List.last() |> elem(1)} end)
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.any?(fn [{_first, last}, {first, _last}] -> first < last end)
-  end
-
   # A division's children on its page: a scene by its number, `<page>-s<n>`; a cast list by
   # its count among the division's lists, `<page>-elenco`, `<page>-elenco-2`…
   defp child_anchors(page) do
@@ -543,14 +526,15 @@ defmodule Playcode.Export.StaticSite.Edition do
 
   defp scene_ordinal(item), do: item.scene_number || 0
 
-  # How a line is cited in search results: "II, 1236"; "II.3, 45" when the play
-  # numbers each scene from 1; the division alone for prose and stage directions.
-  defp refs(items) do
-    restarts? = restarts?(items)
-
+  # How a line is cited in search results: "II, 1236"; "II.3, 45" when the play's count
+  # starts again at each scene; the division alone for prose and stage directions.
+  defp refs(items, restart) do
     Map.new(items, fn item ->
       where = where(item)
-      where = if restarts? and item.scene, do: "#{where}.#{scene_ordinal(item)}", else: where
+
+      where =
+        if restart == "scene" and item.scene, do: "#{where}.#{scene_ordinal(item)}", else: where
+
       {item.element.id, if(item.number, do: "#{where}, #{item.number}", else: where)}
     end)
   end

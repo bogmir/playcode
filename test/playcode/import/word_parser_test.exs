@@ -162,6 +162,28 @@ defmodule Playcode.Import.WordParserTest do
 
       assert numbers == [1, 2, 3]
     end
+
+    # The import leaves numbering to the play's rule, as every save does (numbering spec).
+    test "a play numbered by speech numbers each speech's first line" do
+      xml =
+        import_word(
+          ["{e}Escena 1", "{p}FEBO  {v}Uno.", "{v}Dos.", "{p}ANA {v}Tres."],
+          play_fixture(%{"numbering_type" => "S"})
+        )
+
+      assert for({attrs, _} <- xml_elements(xml, "l"), do: attrs["n"]) == ["1", nil, "2"]
+    end
+
+    # A Word import replaces the whole text, so no number in it was typed by hand: a Manual
+    # play (every play stored before the numbering rule) is numbered by its rule and leaves
+    # Manual, where it came out with no number at all.
+    test "a Manual play brought in from Word is numbered by its rule" do
+      play = play_fixture(%{"numbering_manual" => true})
+      xml = import_word(["{e}Escena 1", "{p}FEBO  {v}Uno.", "{v}Dos."], play)
+
+      assert for({attrs, _} <- xml_elements(xml, "l"), do: attrs["n"]) == ["1", "2"]
+      refute Playcode.Catalogue.get_play!(play.id).numbering_manual
+    end
   end
 
   describe "the speakers" do

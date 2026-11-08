@@ -93,6 +93,8 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
 
       assert out =~ "TASK0001  new"
+      # An empty play: no number to detect, the default rule.
+      assert out =~ "numbering V never"
       assert out =~ "dry run, nothing written"
       assert Catalogue.list_plays() == []
     end

@@ -10,6 +10,8 @@
     class="text"
     lang={@edition.play.language}
     data-cite={Components.cite_prefix(@edition.play, nil)}
+    data-cite-verse={Play.number_label(@edition.play, :verse)}
+    data-cite-prose={Play.number_label(@edition.play, :prose)}
   >
     <%= for entry <- @edition.contents do %>
       <%= case entry do %>

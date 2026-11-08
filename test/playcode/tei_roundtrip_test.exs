@@ -437,6 +437,67 @@ defmodule Playcode.TeiRoundtripTest do
 
   # 103 production files describe the project in two paragraphs, FileMaker's blurb and
   # its programmer's credit; read as one, they came back as a single <p>.
+  describe "the numbering rule" do
+    # One verse numbered 1 in one speech: it fits every rule, so no check of the numbers
+    # against the header's rule ever turns the play Manual.
+    @one_verse """
+    <div1 type="acto" n="1"><head>Acto I</head>
+      <div2 type="escena" n="1"><head>Escena I</head>
+        <sp><speaker>ANA</speaker><l n="1">Una línea sola.</l></sp>
+      </div2>
+    </div1>
+    """
+
+    alias Playcode.Catalogue
+
+    defp numbering(play),
+      do: {play.numbering_type, play.numbering_restart, play.numbering_manual}
+
+    for type <- ~w(V VP VL S), restart <- ~w(never act scene), manual <- [false, true] do
+      test "#{type} #{restart} manual=#{manual} survives export and import" do
+        play = import_tei!(tei(body: @one_verse))
+
+        {:ok, play} =
+          Catalogue.update_play(play, %{
+            numbering_type: unquote(type),
+            numbering_restart: unquote(restart),
+            numbering_manual: unquote(manual)
+          })
+
+        again = play |> export_tei() |> import_tei!()
+
+        assert numbering(again) == {unquote(type), unquote(restart), unquote(manual)}
+      end
+    end
+
+    test "V per scene is written as three citeStructures, the verse innermost" do
+      play = import_tei!(tei(body: @one_verse))
+
+      {:ok, play} =
+        Catalogue.update_play(play, %{numbering_type: "V", numbering_restart: "scene"})
+
+      xml = export_tei(play)
+
+      assert [{%{"unit" => "act"}, _}, {%{"unit" => "scene"}, _}, {%{"unit" => "verse"}, _}] =
+               xml_elements(xml, "citeStructure")
+
+      assert [{attrs, _}] = xml_elements(xml, "refsDecl")
+      refute Map.has_key?(attrs, "n")
+    end
+
+    test "a refsDecl Playcode does not write is no setting" do
+      play =
+        import_tei!(
+          tei(
+            encoding_desc: "<refsDecl><p>Cite by line.</p></refsDecl>",
+            body: @one_verse
+          )
+        )
+
+      assert numbering(play) == {"V", "never", false}
+    end
+  end
+
   describe "the project description" do
     test "keeps its paragraphs" do
       xml =
@@ -2119,10 +2180,10 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_elements(xml, "extent") == [{%{"ana" => "verso"}, "2 versos"}]
     end
 
-    # La tragedia española's file says "3820 versos", its numbered verses, where distinct
-    # numbers gave 309, its numbering starting again in each act. A verse with no number is
-    # not counted, until question 23's rule for the form (docs/backlog.md).
-    test "the extent counts each numbered verse where numbering starts again" do
+    # La tragedia española's file says "3820 versos", where distinct numbers gave 309, its
+    # numbering starting again in each act. Since the numbering rule (2026-11-08, Q10) a verse
+    # counts whether it has a number or not: an S play numbers only a speech's first line.
+    test "the extent counts each verse where numbering starts again, numbered or not" do
       act = fn n ->
         ~s(<div1 type="acto" n="#{n}"><head>ACTO #{n}</head>) <>
           ~s(<sp><speaker>A</speaker><lg><l n="1">uno</l><l n="2" part="I">dos</l></lg></sp>) <>
@@ -2131,7 +2192,7 @@ defmodule Playcode.TeiRoundtripTest do
 
       xml = roundtrip(tei(body: act.(1) <> act.(2)))
 
-      assert xml_elements(xml, "extent") == [{%{"ana" => "verso"}, "4 versos"}]
+      assert xml_elements(xml, "extent") == [{%{"ana" => "verso"}, "6 versos"}]
     end
   end
 
@@ -3694,8 +3755,10 @@ defmodule Playcode.TeiRoundtripTest do
   # Questions 9 and 10 (docs/stakeholder/preguntas.html): every break is shown, and a
   # printed line's number with it. Until 2026-10-16 each <lb/> was read as a space.
   describe "line breaks and prose line numbers" do
+    # Manual: the numbers come back as written, and a paragraph without one gets none.
     defp speech(paragraphs, code \\ nil) do
       opts = [
+        encoding_desc: manual_numbering(),
         body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{paragraphs}</sp></div1>)
       ]
 
@@ -5269,6 +5332,8 @@ defmodule Playcode.TeiRoundtripTest do
       xml =
         roundtrip(
           tei(
+            # Manual, so the paragraphs are not numbered at import.
+            encoding_desc: manual_numbering(),
             body: """
             <div1 type="acto" n="1"><sp><speaker>A</speaker>
               <p><emph>a<lb/></emph><emph>b</emph></p>

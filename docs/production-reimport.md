@@ -203,6 +203,20 @@ What the commands do, for when one of them fails part way, or something new is n
     Generate); the commands turn autostop off first. Deploy only pushes what Generate built:
     on 2026-10-17 a Deploy pressed before Generate sent the build of the day before again.
 
+## The numbering rule, once (2026-11-08)
+
+The migration that brought in the numbering rule left every play Manual, so no save recounts
+a play before its rule is known. After the deploy that carries it, settle every play once,
+the dry run first, then Generate (never Deploy while the site's deploy is blocked):
+
+    bin/playcode rpc 'Playcode.Release.settle_numbering(dry_run: true)'
+    bin/playcode rpc 'Playcode.Release.settle_numbering()'
+    bin/playcode rpc 'Playcode.Release.generate_site()'
+
+In dev it gave V never 239, V per scene 8, VL 11/1/17, VP 11/0/5, S 52/2/10 and Manual 51 of
+407; production should differ only by its plays. A re-import of the corpus settles each play
+itself.
+
 ## Why it is not all one command
 
 Each decision above is one someone should see: the snapshot exists, the dry run shows no

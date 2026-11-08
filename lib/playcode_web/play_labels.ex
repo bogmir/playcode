@@ -32,6 +32,25 @@ defmodule PlaycodeWeb.PlayLabels do
     [{"", nil} | Enum.map(Play.historical_times(), &{historical_time_label(&1), &1})]
   end
 
+  @doc "A numbering rule's types (`Play.numbering_types/0`) as the play form offers them."
+  def numbering_type_options do
+    [
+      {gettext("Each verse"), "V"},
+      {gettext("Verses and prose paragraphs"), "VP"},
+      {gettext("Verses and printed prose lines"), "VL"},
+      {gettext("Each speech"), "S"}
+    ]
+  end
+
+  @doc "Where a numbering rule's count starts again (`Play.numbering_restarts/0`)."
+  def numbering_restart_options do
+    [
+      {gettext("Never"), "never"},
+      {gettext("At each act"), "act"},
+      {gettext("At each scene"), "scene"}
+    ]
+  end
+
   @doc "The heading of a note of TEI `type`, as readers see it."
   def note_type_label("traductor"), do: gettext("Translator's note")
   def note_type_label("editor"), do: gettext("Editor's note")

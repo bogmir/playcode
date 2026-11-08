@@ -26,8 +26,10 @@ defmodule Playcode.Export.StaticSitePlayTest do
   </div1>
   """
 
-  defp publish!(body) do
-    play = import_tei!(tei(body: body))
+  # Manual: the pages show the snippet's numbers as written, none added at import; `rule`
+  # (`:type`, `:restart`) is the play's numbering rule, which the site reads.
+  defp publish!(body, rule \\ []) do
+    play = import_tei!(tei(encoding_desc: manual_numbering(rule), body: body))
     {play, generate!([play], all: true)}
   end
 
@@ -128,6 +130,33 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert read!(dir, "plays/#{play.code}/act-1.html") =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
   end
 
+  describe "the cite button's word" do
+    @speeches """
+    <div1 type="acto" n="1"><head>Acto I</head>
+      <sp><speaker>A</speaker><l n="1">Uno.</l></sp>
+      <sp><speaker>B</speaker><p n="2">Dos.</p></sp>
+    </div1>
+    """
+
+    defp cite(dir, play, attr),
+      do:
+        page(dir, play, "act-1.html") |> LazyHTML.query("[data-cite]") |> LazyHTML.attribute(attr)
+
+    test "a play numbered by speech cites int. for a verse and a paragraph" do
+      {play, dir} = publish!(@speeches, type: "S")
+
+      assert cite(dir, play, "data-cite-verse") == ["int."]
+      assert cite(dir, play, "data-cite-prose") == ["int."]
+    end
+
+    test "a play numbering verse and prose cites v. for a verse, l. for prose" do
+      {play, dir} = publish!(@speeches, type: "VP")
+
+      assert cite(dir, play, "data-cite-verse") == ["v."]
+      assert cite(dir, play, "data-cite-prose") == ["l."]
+    end
+  end
+
   # Problem 3 gives an unnumbered verse a counter of its own: a paragraph before it no
   # longer moves its anchor, as it did while every unnumbered line shared one counter.
   test "a verse with no number counts apart from the paragraphs" do
@@ -167,15 +196,19 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
     test "a play numbered per scene keeps the act-scene prefix and looks only inside the scene" do
       {play, dir} =
-        publish!("""
-        <div1 type="acto" n="1"><head>Acto I</head>
-          <stage>Antes de la escena.</stage>
-          <div2 type="scene" n="1"><head>Scene 1</head><stage>Salen.</stage>
-            <sp><speaker>A</speaker><l n="1">one</l><l n="2">two</l></sp></div2>
-          <div2 type="scene" n="2"><head>Scene 2</head><stage>Vanse.</stage>
-            <sp><speaker>B</speaker><l n="1">uno</l></sp><stage>Sale C.</stage></div2>
-        </div1>
-        """)
+        publish!(
+          """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <stage>Antes de la escena.</stage>
+            <div2 type="scene" n="1"><head>Scene 1</head><stage>Salen.</stage>
+              <sp><speaker>A</speaker><l n="1">one</l><l n="2">two</l></sp></div2>
+            <div2 type="scene" n="2"><head>Scene 2</head><stage>Vanse.</stage>
+              <sp><speaker>B</speaker><l n="1">uno</l></sp><stage>Sale C.</stage></div2>
+          </div1>
+          """,
+          # The numbering rule, not the numbers, says the count starts again (numbering spec).
+          restart: "scene"
+        )
 
       assert line_ids(page(dir, play, "act-1.html")) ==
                ~w(l1-0-sd1 l1-1-sd1 l1-1-1 l1-1-2 l1-2-sd1 l1-2-1 l1-2-1-sd1)
@@ -249,16 +282,20 @@ defmodule Playcode.Export.StaticSitePlayTest do
     # epilogue's.
     test "a prologue and an epilogue in a play numbered per scene are prefixed by their page" do
       {play, dir} =
-        publish!("""
-        <div1 type="prologue"><head>Prologue</head><stage>Entra el Prólogo.</stage>
-          <sp><speaker>P</speaker><l n="1">uno</l><l n="2">dos</l></sp></div1>
-        <div1 type="acto" n="1"><head>Acto I</head>
-          <div2 type="scene" n="1"><head>Scene 1</head><sp><speaker>A</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
-          <div2 type="scene" n="2"><head>Scene 2</head><sp><speaker>B</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
-        </div1>
-        <div1 type="epilogue"><head>Epilogue</head><stage>Entra el Epílogo.</stage>
-          <sp><speaker>E</speaker><l n="1">uno</l><l n="2">dos</l></sp></div1>
-        """)
+        publish!(
+          """
+          <div1 type="prologue"><head>Prologue</head><stage>Entra el Prólogo.</stage>
+            <sp><speaker>P</speaker><l n="1">uno</l><l n="2">dos</l></sp></div1>
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <div2 type="scene" n="1"><head>Scene 1</head><sp><speaker>A</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
+            <div2 type="scene" n="2"><head>Scene 2</head><sp><speaker>B</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
+          </div1>
+          <div1 type="epilogue"><head>Epilogue</head><stage>Entra el Epílogo.</stage>
+            <sp><speaker>E</speaker><l n="1">uno</l><l n="2">dos</l></sp></div1>
+          """,
+          # The numbering rule, not the numbers, says the count starts again (numbering spec).
+          restart: "scene"
+        )
 
       assert line_ids(page(dir, play, "prologue.html")) ==
                ~w(lprologue-0-sd1 lprologue-0-1 lprologue-0-2)
@@ -387,12 +424,16 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
   test "a play that numbers each scene from 1 still gives every line its own anchor" do
     {play, dir} =
-      publish!("""
-      <div1 type="act" n="1"><head>Act I</head>
-        <div2 type="scene" n="1"><head>Scene 1</head><sp><speaker>A</speaker><l n="1">one</l><l n="2">two</l></sp></div2>
-        <div2 type="scene" n="2"><head>Scene 2</head><sp><speaker>B</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
-      </div1>
-      """)
+      publish!(
+        """
+        <div1 type="act" n="1"><head>Act I</head>
+          <div2 type="scene" n="1"><head>Scene 1</head><sp><speaker>A</speaker><l n="1">one</l><l n="2">two</l></sp></div2>
+          <div2 type="scene" n="2"><head>Scene 2</head><sp><speaker>B</speaker><l n="1">uno</l><l n="2">dos</l></sp></div2>
+        </div1>
+        """,
+        # The numbering rule, not the numbers, says the count starts again (numbering spec).
+        restart: "scene"
+      )
 
     anchors = ids(page(dir, play, "text.html"))
 

@@ -29,6 +29,12 @@ defmodule Playcode.Catalogue.Play do
   readers see the play's textual variants; like `is_complete` it is Playcode's, never written
   to or read from the TEI file. So is `team_note`, a text only staff read (question 58),
   printed nowhere.
+
+  The numbering rule says how the play's numbers are counted: `numbering_type` what is
+  numbered (`V` each verse; `VP` verses and prose paragraphs; `VL` verses and printed prose
+  lines; `S` each speech), `numbering_restart` where the count starts again (`never`, at each
+  `act`, at each `scene`), and `numbering_manual`, numbers typed by hand and never recounted.
+  It is written to the TEI header's `refsDecl`. `number_label/2` is how a number is cited.
   """
 
   use Ecto.Schema
@@ -52,6 +58,9 @@ defmodule Playcode.Catalogue.Play do
     field :verse_count, :integer
     field :auto_form, :string, default: "prose"
     field :form, :string
+    field :numbering_type, :string, default: "V"
+    field :numbering_restart, :string, default: "never"
+    field :numbering_manual, :boolean, default: false
     field :publisher, :string
     field :pub_place, :string
     field :availability_note, :string
@@ -133,6 +142,24 @@ defmodule Playcode.Catalogue.Play do
   def historical_times, do: @historical_times
 
   @forms ~w(verse occasional_verse prose mixed)
+  @numbering_types ~w(V VP VL S)
+  @numbering_restarts ~w(never act scene)
+
+  @doc "What a numbering rule numbers: `numbering_type`'s values."
+  def numbering_types, do: @numbering_types
+
+  @doc "Where a numbering rule's count starts again: `numbering_restart`'s values."
+  def numbering_restarts, do: @numbering_restarts
+
+  @doc """
+  The word a number is cited with, by the play's numbering type: a verse's (`:verse`), a prose
+  paragraph's or printed line's (`:prose`), a range of verse numbers (`:range`). Placeholders
+  until the researcher picks the words.
+  """
+  def number_label(%{numbering_type: "S"}, _kind), do: "int."
+  def number_label(_play, :prose), do: "l."
+  def number_label(_play, :range), do: "vv."
+  def number_label(_play, :verse), do: "v."
 
   def forms, do: @forms
 
@@ -224,6 +251,9 @@ defmodule Playcode.Catalogue.Play do
       :verse_count,
       :auto_form,
       :form,
+      :numbering_type,
+      :numbering_restart,
+      :numbering_manual,
       :publisher,
       :pub_place,
       :availability_note,
@@ -256,6 +286,8 @@ defmodule Playcode.Catalogue.Play do
     |> validate_number(:verse_count, greater_than_or_equal_to: 0)
     |> validate_inclusion(:relationship_type, @relationship_types)
     |> validate_inclusion(:form, @forms)
+    |> validate_inclusion(:numbering_type, @numbering_types)
+    |> validate_inclusion(:numbering_restart, @numbering_restarts)
     |> validate_inclusion(:historical_time, @historical_times)
     |> validate_number(:composition_date_from,
       greater_than_or_equal_to: @composition_year_range.first,

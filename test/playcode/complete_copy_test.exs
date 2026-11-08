@@ -285,7 +285,11 @@ defmodule Playcode.CompleteCopyTest do
         title: "Una comedia rara",
         code: "CR#{System.unique_integer([:positive])}",
         edition_notes: ["Una nota sobre la edición.", "Otra nota,\nen dos líneas."],
-        team_note: "Recordatorio para el equipo."
+        team_note: "Recordatorio para el equipo.",
+        # A numbering rule other than the defaults, Manual so no recount touches its text.
+        numbering_type: "S",
+        numbering_restart: "act",
+        numbering_manual: true
       })
 
     credits!(play, [{"researcher", "Investigadora, Inés", "Instituto"}])

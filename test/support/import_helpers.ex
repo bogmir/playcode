@@ -56,6 +56,36 @@ defmodule Playcode.ImportHelpers do
     """
   end
 
+  @doc """
+  A header numbering rule that is Manual (`:type`, default V; `:restart`, default never), for
+  `tei/1`'s `:encoding_desc`: the import then
+  keeps the snippet's numbers as written and numbers nothing (an unnumbered file is
+  otherwise numbered at import, numbering spec), for a test whose numbers are beside its point.
+  """
+  def manual_numbering(opts \\ []) do
+    unit =
+      %{"V" => "verse", "VP" => "line", "VL" => "printed-line", "S" => "speech"}[
+        opts[:type] || "V"
+      ]
+
+    numbered = ~s(<citeStructure unit="#{unit}" match=".//l[@n]" use="@n"/>)
+
+    scene =
+      ~s|<citeStructure unit="scene" match="div2" use="position()">#{numbered}</citeStructure>|
+
+    act =
+      &~s|<citeStructure unit="act" match="/TEI/text/body/div1" use="position()">#{&1}</citeStructure>|
+
+    structure =
+      case opts[:restart] || "never" do
+        "never" -> numbered
+        "act" -> act.(numbered)
+        "scene" -> act.(scene)
+      end
+
+    ~s(<refsDecl n="manual">#{structure}</refsDecl>)
+  end
+
   # The importer strips hyphens from a code, so TestFixtures.unique_code/0 ("PLAY-1")
   # would be stored as something else.
   defp tei_code, do: "T#{System.unique_integer([:positive])}"

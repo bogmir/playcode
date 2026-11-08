@@ -975,6 +975,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp form_colour(form), do: Map.get(@coloured_forms, form, "f-other")
 
   attr :passages, :list, required: true
+  attr :range_label, :string, default: "vv.", doc: "the word a range of numbers is cited with"
 
   def synopsis(assigns) do
     total = assigns.passages |> Enum.map(& &1["verses"]) |> Enum.sum() |> max(1)
@@ -990,7 +991,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
     assigns =
       assign(assigns,
-        segments: segments(assigns.passages, total),
+        segments: segments(assigns.passages, total, assigns.range_label),
         forms: forms,
         total: total
       )
@@ -1054,7 +1055,7 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
-  defp segments(passages, total) do
+  defp segments(passages, total, range_label) do
     passages
     |> Enum.with_index()
     |> Enum.map(fn {passage, i} ->
@@ -1064,15 +1065,15 @@ defmodule Playcode.Export.StaticSite.Components do
         sep: i > 0 and Enum.at(passages, i - 1)["act"] != passage["act"],
         colour: form_colour(passage["form"]),
         verses: passage["verses"],
-        title: "#{label}#{verses_range(passage)} · #{passage["verses"]} verses",
+        title: "#{label}#{verses_range(passage, range_label)} · #{passage["verses"]} verses",
         label: if(passage["verses"] / total > 0.06, do: label)
       }
     end)
   end
 
   # A passage whose verses carry no number (a song) has no range to name.
-  defp verses_range(%{"from" => nil}), do: ""
-  defp verses_range(passage), do: " · vv. #{range(passage)}"
+  defp verses_range(%{"from" => nil}, _label), do: ""
+  defp verses_range(passage, label), do: " · #{label} #{range(passage)}"
 
   defp range(%{"from" => from, "to" => to}) when from == to, do: "#{from}"
   defp range(%{"from" => from, "to" => to}), do: "#{from}–#{to}"
@@ -1149,6 +1150,7 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   attr :stats, :map, required: true
+  attr :range_label, :string, default: "vv.", doc: "the word a range of numbers is cited with"
 
   def presence(assigns) do
     presence = assigns.stats["presence"] || %{}
@@ -1172,11 +1174,11 @@ defmodule Playcode.Export.StaticSite.Components do
               <th
                 :for={{column, i} <- Enum.with_index(@columns)}
                 scope="col"
-                title={column_title(column)}
+                title={column_title(column, @range_label)}
                 class={act_start(@columns, i)}
               >
                 <i :if={column["form"]} class={["sw", form_colour(column["form"])]}></i>
-                <span class="sr-only">{column_title(column)}</span>
+                <span class="sr-only">{column_title(column, @range_label)}</span>
               </th>
             </tr>
           </thead>
@@ -1188,7 +1190,7 @@ defmodule Playcode.Export.StaticSite.Components do
                 class={["c", cells[i] && "on", act_start(@columns, i)]}
                 title={
                   cells[i] &&
-                    "#{InlineMarkup.plain(name)} · #{column_title(column)} · #{cells[i]} lines"
+                    "#{InlineMarkup.plain(name)} · #{column_title(column, @range_label)} · #{cells[i]} lines"
                 }
               >
                 <span :if={cells[i]} class="sr-only">
@@ -1211,15 +1213,15 @@ defmodule Playcode.Export.StaticSite.Components do
 
   defp basis_note(_basis, _n), do: "A filled cell means the character speaks in that division."
 
-  defp column_title(%{"form" => form} = column),
-    do: "#{PlayLabels.verse_form_label(form)}#{verses_range(column)}"
+  defp column_title(%{"form" => form} = column, range_label),
+    do: "#{PlayLabels.verse_form_label(form)}#{verses_range(column, range_label)}"
 
   # The statistics keep a heading as stored, its italics marked: a title attribute takes
   # plain text.
-  defp column_title(%{"act" => act, "label" => label}) when is_integer(act),
+  defp column_title(%{"act" => act, "label" => label}, _range_label) when is_integer(act),
     do: "#{Edition.roman(act)}: #{InlineMarkup.plain(label)}"
 
-  defp column_title(%{"label" => label}), do: InlineMarkup.plain(label)
+  defp column_title(%{"label" => label}, _range_label), do: InlineMarkup.plain(label)
 
   defp act_start(columns, i),
     do:

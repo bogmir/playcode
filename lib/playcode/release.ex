@@ -1,7 +1,9 @@
 defmodule Playcode.Release do
   @moduledoc false
 
+  alias Playcode.{Catalogue, Repo}
   alias Playcode.Export.{SiteBuilder, StaticSite}
+  alias Playcode.PlayContent.Numbering
   alias Playcode.Import.{Bibliography, FilemakerSync, Performances, Places, TeiCorpus, Witnesses}
 
   @app :playcode
@@ -187,6 +189,51 @@ defmodule Playcode.Release do
       TeiCorpus.dry_run(files, [force: opts[:force] || false], report)
     else
       TeiCorpus.run(files, Keyword.take(opts, [:force, :resume]), report)
+    end
+  end
+
+  @doc """
+  Settles the numbering rule of every stored play, archived ones included, as an import of
+  its file does (`Numbering.settle/2`): the rule its numbers fit, else the closest, Manual; an
+  unnumbered play numbered. The migration that brought the rule in left every play Manual;
+  run this once after it, `dry_run: true` first (it writes nothing), then Generate. Prints a
+  line per play and returns the count per rule, the Manual ones under `"Manual"`.
+
+      bin/playcode rpc 'Playcode.Release.settle_numbering(dry_run: true)'
+  """
+  def settle_numbering(opts \\ []) do
+    load_app()
+    {:ok, _} = Application.ensure_all_started(@app)
+
+    settle = fn play ->
+      {_play, report} = Numbering.settle(play, false)
+      Catalogue.update_form_and_verse_count(play.id)
+      IO.puts("  #{play.code}  #{Numbering.describe(report)}")
+      if report.numbering_manual, do: "Manual", else: Numbering.name(report)
+    end
+
+    plays = Catalogue.list_plays(include_deleted: true)
+
+    if opts[:dry_run] do
+      {:error, counts} =
+        Repo.transaction(
+          fn -> plays |> Enum.map(settle) |> Enum.frequencies() |> Repo.rollback() end,
+          timeout: :infinity
+        )
+
+      IO.puts("dry run, nothing written: #{inspect(counts)}")
+      counts
+    else
+      counts =
+        plays
+        |> Enum.map(fn play ->
+          {:ok, rule} = Repo.transaction(fn -> settle.(play) end, timeout: :infinity)
+          rule
+        end)
+        |> Enum.frequencies()
+
+      IO.puts(inspect(counts))
+      counts
     end
   end
 

@@ -21,7 +21,7 @@ defmodule Playcode.Import.TeiImport do
   alias Playcode.Performances.Performance
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{CastListEntry, Character, Division, Element, ElementCharacter}
-  alias Playcode.PlayContent.{InlineMarkup, Note, SplitVerses}
+  alias Playcode.PlayContent.{InlineMarkup, Note, Numbering, SplitVerses}
   alias Playcode.Places
   alias Playcode.Repo
   alias Playcode.Text
@@ -138,9 +138,22 @@ defmodule Playcode.Import.TeiImport do
       edited: edited_count(existing),
       preserves: preserved_counts(existing),
       preserves_fields: preserved_fields(existing),
-      split_verses: parts_out_of_order(tei.divisions)
+      split_verses: parts_out_of_order(tei.divisions),
+      numbering: numbering(tei)
     }
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
+  end
+
+  # The numbering rule the import would settle, as `Numbering.describe/1` words it: the file
+  # written in a transaction rolled back, so detection reads the rows as the import stores them.
+  defp numbering(tei) do
+    {:error, text} =
+      Repo.transaction(
+        fn -> Repo.rollback(tei |> write_with_numbering() |> elem(1) |> Numbering.describe()) end,
+        timeout: :infinity
+      )
+
+    text
   end
 
   # The parts of the file's split verses out of order (`SplitVerses.out_of_order/1`), as the
@@ -282,7 +295,10 @@ defmodule Playcode.Import.TeiImport do
 
   # Everything the file supplies, in one transaction: the play, its header records, the
   # cast and front matter, then the text.
-  defp write(tei) do
+  defp write(tei), do: tei |> write_with_numbering() |> elem(0)
+
+  # As write/1, with the numbering rule settled (`Numbering.settle/2`) and its report.
+  defp write_with_numbering(tei) do
     play = write_play(tei.play)
 
     Enum.each(tei.editors, &Catalogue.create_play_editor(tei_row(&1, play)))
@@ -300,12 +316,13 @@ defmodule Playcode.Import.TeiImport do
     write_text(tei.divisions, play, cast)
     PlayContent.sync_characters(play.id)
     write_bibliography(tei.bibliography, play)
+    {_play, numbering} = Numbering.settle(play, Map.get(tei.play, :numbering_from_header?, false))
 
     # Recompute verse_count from actual verse_line elements (the TEI header
     # <extent> value is often inaccurate or includes non-verse lines), and return
     # the play as that left it rather than the stale struct from before.
     {:ok, play} = Catalogue.update_form_and_verse_count(play.id)
-    play
+    {play, numbering}
   end
 
   # The file's top-level items take the positions the paratexts kept from before (typed

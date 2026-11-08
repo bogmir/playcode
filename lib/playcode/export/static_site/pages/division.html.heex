@@ -13,6 +13,8 @@
     class="text"
     lang={@edition.play.language}
     data-cite={Components.cite_prefix(@edition.play, @page)}
+    data-cite-verse={Play.number_label(@edition.play, :verse)}
+    data-cite-prose={Play.number_label(@edition.play, :prose)}
   >
     <Components.outline_item
       :for={item <- if(@page.scene, do: [], else: Edition.before(@edition, @page))}
