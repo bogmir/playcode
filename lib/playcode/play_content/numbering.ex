@@ -19,12 +19,118 @@ defmodule Playcode.PlayContent.Numbering do
   top-level division's own text (`scene`), or never.
   """
 
-  alias Playcode.PlayContent
+  alias Playcode.{Catalogue, PlayContent, Repo}
   alias Playcode.PlayContent.InlineMarkup
-  alias Playcode.Repo
 
   @whole [nil, "", "I"]
   @marker ~r/<lb n="[A-Za-z0-9.\-]+"\/>/
+
+  # In the order a tie goes: the simpler rule first.
+  @rules for type <- ~w(V VP VL S),
+             restart <- ~w(never act scene),
+             do: %{numbering_type: type, numbering_restart: restart}
+
+  @doc """
+  The rule a play's stored numbers follow. A rule they fit exactly is taken, not Manual;
+  otherwise the closest (fewest rows differing), Manual. A play with no number at all is
+  `unnumbered`: V when it has at least as many verses as prose paragraphs, otherwise S,
+  never restarting, not Manual (the researcher, 2026-11-08). Returns the three columns plus
+  `differ` and `unnumbered`.
+  """
+  def detect(rows) do
+    if Enum.all?(rows, &unnumbered?/1) do
+      verses = Enum.count(rows, &(&1.type == "verse_line" and &1.part in @whole))
+      paragraphs = Enum.count(rows, &(&1.type == "prose"))
+
+      %{
+        numbering_type: if(paragraphs > verses, do: "S", else: "V"),
+        numbering_restart: "never",
+        numbering_manual: false,
+        differ: 0,
+        unnumbered: true
+      }
+    else
+      {rule, differ} =
+        @rules
+        |> Enum.map(&{&1, length(differences(rows, &1))})
+        |> Enum.min_by(&elem(&1, 1))
+
+      Map.merge(rule, %{numbering_manual: differ > 0, differ: differ, unnumbered: false})
+    end
+  end
+
+  defp unnumbered?(%{type: "verse_line", line_number: n}), do: is_nil(n)
+  defp unnumbered?(%{content: content}), do: not Regex.match?(@marker, content || "")
+
+  @doc """
+  Settles the numbering rule of a play just imported. `from_header?`: the file's header gave
+  the rule, which stands, but a play that is not Manual and whose numbers break it is made
+  Manual. Otherwise the rule is detected (`detect/1`). Then the play is recounted, which
+  numbers an unnumbered one and changes nothing else. Returns the play and a report for
+  `describe/1`.
+  """
+  def settle(play, true) do
+    differ =
+      if play.numbering_manual,
+        do: 0,
+        else: play.id |> PlayContent.reading_order() |> differences(play) |> length()
+
+    play = if differ > 0, do: update!(play, %{numbering_manual: true}), else: play
+
+    {play, Map.merge(rule(play), %{differ: differ, unnumbered: false, header_broken: differ > 0})}
+  end
+
+  def settle(play, false) do
+    detected = play.id |> PlayContent.reading_order() |> detect()
+
+    play =
+      update!(play, Map.take(detected, [:numbering_type, :numbering_restart, :numbering_manual]))
+
+    recount(play)
+    {play, Map.put(detected, :header_broken, false)}
+  end
+
+  defp rule(play), do: Map.take(play, [:numbering_type, :numbering_restart, :numbering_manual])
+
+  defp update!(play, attrs) do
+    {:ok, play} = Catalogue.update_play(play, attrs)
+    play
+  end
+
+  @doc """
+  A `settle/2` report as the import preview and the corpus tools print it: "V per scene",
+  "V never, Manual: 3 numbers differ", "S never, numbered at import", "VP per act, Manual: the
+  header's rule breaks on 2 numbers".
+  """
+  def describe(report) do
+    rule = "#{report.numbering_type} #{restart(report.numbering_restart)}"
+
+    cond do
+      report.header_broken ->
+        "#{rule}, Manual: the header's rule breaks on #{count(report.differ)}"
+
+      report.unnumbered ->
+        "#{rule}, numbered at import"
+
+      report.differ > 0 ->
+        "#{rule}, Manual: #{differ(report.differ)}"
+
+      report.numbering_manual ->
+        "#{rule}, Manual"
+
+      true ->
+        rule
+    end
+  end
+
+  defp restart("never"), do: "never"
+  defp restart(unit), do: "per #{unit}"
+
+  defp count(1), do: "1 number"
+  defp count(n), do: "#{n} numbers"
+
+  defp differ(1), do: "1 number differs"
+  defp differ(n), do: "#{n} numbers differ"
 
   @doc """
   Counts the play's numbers by its rule and writes the rows whose number changed, in one

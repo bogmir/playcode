@@ -271,4 +271,25 @@ defmodule Playcode.Import.TeiPreviewTest do
 
     assert {:error, {:xml_parse_error, _}} = TeiImport.preview_import(write_tmp!("<not valid>>>"))
   end
+
+  test "reports the numbering rule the import will set, and writes nothing" do
+    code = "T#{System.unique_integer([:positive])}"
+
+    path =
+      write_tmp!(
+        tei(
+          code: code,
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>ANA</speaker><l n="1">a</l><l n="2">b</l><l n="3170">c</l></sp>
+          </div1>
+          """
+        )
+      )
+
+    assert {:ok, %{numbering: "V never, Manual: 1 number differs"}} =
+             TeiImport.preview_import(path)
+
+    assert_raise Ecto.NoResultsError, fn -> Catalogue.get_play_by_code!(code) end
+  end
 end
