@@ -162,7 +162,8 @@ defmodule Playcode.PlayContent.Numbering do
     |> expected(type, restart)
     |> Enum.zip(rows)
     |> Enum.reject(fn {new, old} ->
-      new.line_number == unpadded(old.line_number) and new.content == unpadded(old.content)
+      new.line_number == unpadded(old.line_number) and
+        unpadded(new.content) == unpadded(old.content)
     end)
     |> Enum.map(&elem(&1, 0))
   end

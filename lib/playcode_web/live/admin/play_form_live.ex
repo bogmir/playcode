@@ -157,7 +157,14 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       end
 
     changeset = Catalogue.change_play_form(socket.assigns.play, play_params)
-    {:noreply, assign(socket, form: to_form(Map.put(changeset, :action, :validate)))}
+
+    # A count of the numbers a save would change was for the form as submitted; the next
+    # submit counts again.
+    {:noreply,
+     assign(socket,
+       form: to_form(Map.put(changeset, :action, :validate)),
+       numbering_changes: nil
+     )}
   end
 
   def handle_event("save", %{"play" => play_params}, socket) do
@@ -756,8 +763,8 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           </div>
           <div :if={@numbering_changes} role="alert" class="mt-2 text-sm text-warning">
             {ngettext(
-              "%{count} number will change. Save again to confirm.",
-              "%{count} numbers will change. Save again to confirm.",
+              "%{count} verse or paragraph will be renumbered. Save again to confirm.",
+              "%{count} verses or paragraphs will be renumbered. Save again to confirm.",
               @numbering_changes
             )}
             <input type="hidden" name="play[confirm_numbering]" value={@numbering_changes} />

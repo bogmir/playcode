@@ -502,8 +502,8 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
       assert html =~
                n(
-                 "%{count} number will change. Save again to confirm.",
-                 "%{count} numbers will change. Save again to confirm.",
+                 "%{count} verse or paragraph will be renumbered. Save again to confirm.",
+                 "%{count} verses or paragraphs will be renumbered. Save again to confirm.",
                  2
                )
 
@@ -512,6 +512,22 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
       assert {:error, {:live_redirect, _}} = save(view, %{"numbering_manual" => "false"})
       refute Catalogue.get_play!(play.id).numbering_manual
       assert numbers(play) == ["1", "2"]
+    end
+
+    # The count was for the rule submitted; once the form changes it may be wrong, and the
+    # next submit counts again.
+    test "a change to the form clears the count it no longer matches", %{conn: conn} do
+      play = numbered_play(manual_numbering(), ["5", "9"])
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+      save(view, %{"numbering_manual" => "false"})
+
+      html =
+        view
+        |> form("#play-form", play: %{"numbering_type" => "S"})
+        |> render_change()
+
+      refute html =~ "Save again to confirm"
+      refute html =~ "Guarda de nuevo para confirmar"
     end
 
     test "a save that moves no number saves at once", %{conn: conn} do

@@ -553,6 +553,24 @@ defmodule Playcode.Import.TeiImportTest do
       assert numbers(play, "p") == ["0002"]
     end
 
+    # Under VP a printed line's marker is the file's, left as written: padded, it is still
+    # the same text, so the play fits VP and is not made Manual.
+    test "a padded marker on a printed line is left as written: the file fits VP" do
+      play =
+        import_tei!(
+          tei(
+            body:
+              one_act("""
+              <sp><speaker>ANA</speaker><l n="1">a</l></sp>
+              <sp><speaker>BLAS</speaker><p n="2">Uno <lb n="0040"/>dos</p></sp>
+              <sp><speaker>ANA</speaker><l n="3">b</l></sp>
+              """)
+          )
+        )
+
+      assert rule(play) == {"VP", "never", false}
+    end
+
     test "a Manual header stays Manual, though its numbers fit a rule" do
       play =
         import_tei!(
