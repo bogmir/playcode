@@ -179,6 +179,27 @@ defmodule Playcode.StatisticsTest do
     assert Statistics.get_statistics(play.id).data["total_verses"] == 1
   end
 
+  # Rows cached before 2026-11-08 (version 9) hold passages' ranges as integers: a read
+  # computes them again as the verses' numbers, strings.
+  test "a row cached when verse numbers were integers is recomputed on read" do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="jornada" n="1"><sp><speaker>A</speaker><lg type="redondilla"><l n="1">uno</l></lg></sp></div1>)
+        )
+      )
+
+    stat = Statistics.get_statistics(play.id)
+
+    # No public function writes a stale row, by design, so the test ages it directly.
+    alias Playcode.Repo
+    aged = Map.merge(stat.data, %{"version" => 9, "metrical_passages" => [%{"from" => 1}]})
+    stat |> Ecto.Changeset.change(data: aged) |> Repo.update!()
+
+    assert [%{"from" => "1"}] = Statistics.get_statistics(play.id).data["metrical_passages"]
+  end
+
   describe "metrical passages" do
     # Hamlet's "3-4": a passage and a first line are labelled with the number as written,
     # not with its leading digits.

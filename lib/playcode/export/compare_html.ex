@@ -445,7 +445,7 @@ defmodule Playcode.Export.CompareHtml do
 
     line_num =
       if el.line_number,
-        do: "<span class=\"line-number\">#{el.line_number}</span>",
+        do: "<span class=\"line-number\">#{escape(el.line_number)}</span>",
         else: "<span class=\"line-number\"></span>"
 
     "        <div class=\"verse-line\"><span class=\"#{content_class}\">#{NoteMarkup.inline(el.content, [], :html)}</span>#{line_num}</div>\n"
