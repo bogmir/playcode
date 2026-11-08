@@ -173,6 +173,27 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
            ]
   end
 
+  # Hamlet numbers a verse "3-4": the form takes a number as the files write it, and a number
+  # cleared is no number. The field was a number input until 2026-11-08.
+  test "a verse's number is typed as the files write it, and cleared", %{conn: conn, play: play} do
+    lv = open_scene(conn, play)
+    edit = fn -> element(lv, "#{card(lv, "Segunda línea")} button[aria-label='#{t("Edit")}']") end
+
+    edit.() |> render_click()
+    assert has_element?(lv, "#element-form input#element_line_number[type=text]")
+    lv |> form("#element-form", element: %{"line_number" => "3-4"}) |> render_submit()
+
+    assert numbers(play) == ["1", "3-4", "3"]
+
+    edit.() |> render_click()
+    lv |> form("#element-form", element: %{"line_number" => ""}) |> render_submit()
+
+    assert numbers(play) == ["1", nil, "3"]
+  end
+
+  defp numbers(play),
+    do: for({attrs, _} <- play |> export_tei() |> xml_elements("l"), do: attrs["n"])
+
   # The form takes any part anywhere, as TEI's schema does, and a correction passes through
   # disorder, so the editor lists the parts out of order, as the import preview does, and
   # refuses nothing.

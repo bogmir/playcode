@@ -430,10 +430,10 @@ defmodule Playcode.Export.StaticSite.Edition do
       Enum.map_reduce(items, {MapSet.new(), 0}, fn item, {used, p} ->
         {base, p} =
           case item.element do
-            %{line_number: n} when is_integer(n) and restarts? ->
+            %{line_number: n} when is_binary(n) and restarts? ->
               {"l#{item.act || 0}-#{scene_ordinal(item)}-#{n}", p}
 
-            %{line_number: n} when is_integer(n) ->
+            %{line_number: n} when is_binary(n) ->
               {"l#{n}", p}
 
             _ ->
@@ -468,7 +468,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   defp restarts?(items) do
     for(
       %{element: %{line_number: n}} = item <- items,
-      is_integer(n),
+      is_binary(n),
       uniq: true,
       do: {n, {item.division.id, item.scene && item.scene.id}}
     )

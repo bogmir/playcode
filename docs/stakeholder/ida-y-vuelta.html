@@ -299,12 +299,13 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October, and the parts the TEI re-import brought in recounted after it on 15 October; the witnesses, the bibliography, the places of the action and the closing formulas recounted on 21 October, once production had 387 plays, the 13 of the GitHub copy among them. Last updated 6 November 2026.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October, and the parts the TEI re-import brought in recounted after it on 15 October; the witnesses, the bibliography, the places of the action and the closing formulas recounted on 21 October, once production had 387 plays, the 13 of the GitHub copy among them. Last updated 8 November 2026.</p>
     <details class="changes">
       <summary>What has changed since 11 October</summary>
       <ul>
         <li><strong>8 November</strong>
           <ul>
+            <li>A verse’s number comes back as the file writes it: <i>Hamlet</i>’s 235 verses numbered like “3-4” and <i>Timon of Athens</i>’ 61 like “124.1” were cut to 3 and 124, printed so, and on the published site the second verse 3 took a link of its own beside the real one. A padded “0001” still comes back “1”.</li>
             <li>Every line, paragraph, line break, speech, stage direction, scene and closing formula of the text gets an identifier in the file, in FileMaker’s shape without the leading zeros (<code>em0756-es-1</code>, <code>em0756-es-sp-1</code>), counted in the order of the text each time the file is written. Nothing stores them: a line added in Playcode moves the identifiers after it, and an aside over several verses and a variant reading that reaches a later line point at the right line all the same. The identifiers a file brings are read only to follow those links (note 39).</li>
           </ul>
         </li>

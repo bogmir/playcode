@@ -357,7 +357,7 @@ defmodule Playcode.Export.Download do
         true -> "content"
       end
 
-    "<div class=\"verse-line#{aside_class(el)}\"><span class=\"#{content_class}\">#{ghost(lead, format)}#{inline(el.content, el.notes, format)}</span><span class=\"line-number\">#{el.line_number}</span></div>\n"
+    "<div class=\"verse-line#{aside_class(el)}\"><span class=\"#{content_class}\">#{ghost(lead, format)}#{inline(el.content, el.notes, format)}</span><span class=\"line-number\">#{escape(el.line_number)}</span></div>\n"
   end
 
   defp element(%{type: "stage_direction"} = el, format),

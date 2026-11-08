@@ -167,7 +167,7 @@ defmodule Playcode.TestFixtures do
         parent_id: line_group.id,
         type: "verse_line",
         content: "A verse line",
-        line_number: 1,
+        line_number: "1",
         part: "I",
         position: 1
       })

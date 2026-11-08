@@ -83,7 +83,7 @@ defmodule Playcode.Import.TeiParserTest do
     assert %{
              type: "verse_line",
              content: "Uno dos",
-             line_number: 1,
+             line_number: "1",
              notes: [%{offset: 3, n: "1", body: "Glosa."}]
            } = line
   end

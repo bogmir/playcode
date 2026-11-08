@@ -219,7 +219,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
         parent_id: line_group.id,
         type: "verse_line",
         content: "otro verso",
-        line_number: 99,
+        line_number: "99",
         position: 99
       })
 
