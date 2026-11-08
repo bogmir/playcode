@@ -34,6 +34,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
   defp page(dir, play, file), do: html!(dir, "plays/#{play.code}/#{file}")
   defp ids(html), do: html |> LazyHTML.query("[id]") |> LazyHTML.attribute("id")
 
+  defp line_ids(html),
+    do: html |> LazyHTML.query("div.l, p.sd, p.pr") |> LazyHTML.attribute("id")
+
   defp next(html),
     do: html |> LazyHTML.query(~s(a[rel="next"])) |> LazyHTML.attribute("href") |> Enum.uniq()
 
@@ -125,11 +128,9 @@ defmodule Playcode.Export.StaticSitePlayTest do
     assert read!(dir, "plays/#{play.code}/act-1.html") =~ "&lt;script&gt;alert(1)&lt;/script&gt;"
   end
 
-  # An unnumbered verse was anchored by its stored identifier, which problem 2 retired
-  # (identifiers are counted on export): it is counted with the paragraphs, so a line added
-  # before it moves its anchor, until problem 3 anchors it from the number before it
-  # (docs/backlog.md).
-  test "a verse with no number is counted with the paragraphs" do
+  # Problem 3 gives an unnumbered verse a counter of its own: a paragraph before it no
+  # longer moves its anchor, as it did while every unnumbered line shared one counter.
+  test "a verse with no number counts apart from the paragraphs" do
     {play, dir} =
       publish!("""
       <div1 type="acto" n="1"><head>Acto I</head>
@@ -139,8 +140,104 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
     act = page(dir, play, "act-1.html")
 
-    assert act |> LazyHTML.query("#p2") |> LazyHTML.text() =~ "Sin número."
+    assert act |> LazyHTML.query("#v1") |> LazyHTML.text() =~ "Sin número."
     assert act |> LazyHTML.query("#p1") |> LazyHTML.text() =~ "En prosa."
+  end
+
+  # A line's anchor is the nearest number before it plus a counter of its own kind
+  # (docs/superpowers/specs/2026-11-08-site-anchors-design.md), so it moves when the
+  # citation moves, or when a line of its kind is put between it and that number.
+  describe "a line's anchor, from the nearest number" do
+    test "a continuous page: numbers, a later piece, directions and paragraphs after a number" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <stage>Sale el REY.</stage>
+          <sp><speaker>REY</speaker><l n="1">¿Quién va?</l><l n="2" part="I">Ya el sol se esconde.</l></sp>
+          <sp><speaker>CRIADO</speaker><l part="F">Yo, señor.</l></sp>
+          <sp><speaker>REY</speaker><l n="3">Mal me sirve este criado.</l><stage>Vase el criado.</stage></sp>
+          <stage>Sale la REINA.</stage>
+          <sp><speaker>REINA</speaker><p n="4">Señor, os traigo nuevas.</p><p>Y así lo cuentan todos.</p></sp>
+        </div1>
+        """)
+
+      assert line_ids(page(dir, play, "act-1.html")) ==
+               ~w(sd1 l1 l2 l2b l3 l3-sd1 l3-sd2 l4 l4-p1)
+    end
+
+    test "a play numbered per scene keeps the act-scene prefix and looks only inside the scene" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <stage>Antes de la escena.</stage>
+          <div2 type="scene" n="1"><head>Scene 1</head><stage>Salen.</stage>
+            <sp><speaker>A</speaker><l n="1">one</l><l n="2">two</l></sp></div2>
+          <div2 type="scene" n="2"><head>Scene 2</head><stage>Vanse.</stage>
+            <sp><speaker>B</speaker><l n="1">uno</l></sp><stage>Sale C.</stage></div2>
+        </div1>
+        """)
+
+      assert line_ids(page(dir, play, "act-1.html")) ==
+               ~w(l1-0-sd1 l1-1-sd1 l1-1-1 l1-1-2 l1-2-sd1 l1-2-1 l1-2-1-sd1)
+    end
+
+    test "unnumbered verses count apart, as in a play numbered by speech" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>A</speaker><l>Primero sin número.</l></sp>
+          <sp><speaker>B</speaker><l n="12">Doce.</l><l>Sigue.</l><l part="I">Parte uno.</l></sp>
+          <sp><speaker>C</speaker><l part="F">Parte dos.</l></sp>
+        </div1>
+        """)
+
+      assert line_ids(page(dir, play, "act-1.html")) == ~w(v1 l12 l12-v1 l12-v2 l12-v2b)
+    end
+
+    test "a piece with a number of its own is anchored by it; a clash takes a suffix" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>A</speaker><l n="961" part="I">a</l></sp>
+          <sp><speaker>B</speaker><l n="962" part="M">b</l></sp>
+          <sp><speaker>C</speaker><l part="F">c</l></sp>
+          <sp><speaker>A</speaker><l n="3153" part="I">d</l></sp>
+          <sp><speaker>B</speaker><l part="M">e</l></sp>
+          <sp><speaker>C</speaker><l part="F">f</l></sp>
+          <sp><speaker>A</speaker><l n="3153c">g</l></sp>
+        </div1>
+        """)
+
+      assert line_ids(page(dir, play, "act-1.html")) ==
+               ~w(l961 l962 l962b l3153 l3153b l3153c l3153c-2)
+    end
+
+    # Counters start again after each number, so a direction added in act 1 moves only the
+    # directions after the same verse, and act 2 not at all. Act 2 opens after verse 2.
+    test "a direction added in act 1 moves no anchor in act 2" do
+      act_2 = """
+      <div1 type="acto" n="2"><head>Acto II</head>
+        <stage>Salen.</stage><sp><speaker>A</speaker><l n="3">tres</l></sp><stage>Vase.</stage>
+      </div1>
+      """
+
+      act_1 = fn extra ->
+        """
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <stage>Sale.</stage><sp><speaker>A</speaker><l n="1">uno</l></sp>#{extra}
+          <stage>Otra.</stage><sp><speaker>A</speaker><l n="2">dos</l></sp>
+        </div1>
+        """
+      end
+
+      {before, before_dir} = publish!(act_1.("") <> act_2)
+      {added, added_dir} = publish!(act_1.("<stage>Nueva.</stage>") <> act_2)
+
+      assert line_ids(page(before_dir, before, "act-1.html")) == ~w(sd1 l1 l1-sd1 l2)
+      assert line_ids(page(added_dir, added, "act-1.html")) == ~w(sd1 l1 l1-sd1 l1-sd2 l2)
+      assert line_ids(page(before_dir, before, "act-2.html")) == ~w(l2-sd1 l3 l3-sd1)
+      assert line_ids(page(added_dir, added, "act-2.html")) == ~w(l2-sd1 l3 l3-sd1)
+    end
   end
 
   # Regression: the files cut an aside over several verses into one piece per verse, and

@@ -59,7 +59,11 @@ an address can be without stored identifiers, which Q2/Q11 ruled out.
 - a play whose count restarts (`restarts?/1`): the scene (its division and scene, `item.act`,
   `item.scene_number`), and every anchor in it carries the prefix `l<act>-<scene>-`
   (`item.act || 0`, `item.scene_number || 0`, as today);
-- any other play: the page (`act-2.html`, or a scene's page when an act is split).
+- any other play: the whole play, across its pages. (Ruled while building: the spec first said
+  the page, but `text.html` prints every page at once, so page-scoped counters gave it
+  duplicate ids. Across pages a continuous play's numbers are unique anyway, so act 2 opens
+  with `l<last verse of act 1>-sd1` and stays as stable; only a play with no numbers at all
+  counts `v`, `p`, `sd` through the whole play, until problem 4 numbers it.)
 
 **Anchors**, continuous play / per-scene play at act 1, scene 2:
 
@@ -83,8 +87,7 @@ an address can be without stored identifiers, which Q2/Q11 ruled out.
   separator stays `-`; act and scene are whole numbers, so the first two dashes split them
   off). "3153c" and "124.1" go in as they are.
 - **Clashes** (a number repeated within a unit, "3153c" against verse 3153's third piece) get
-  `-2`, `-3`… (`unique/3`, unchanged), checked **per page**, not per play: two pages may both
-  have `sd1`.
+  `-2`, `-3`… (`unique/3`, unchanged), checked across the play.
 - `restarts?/1` takes numbered prose paragraphs as numbers too, so a VP play numbered per scene
   is detected as one.
 
@@ -102,7 +105,7 @@ an address can be without stored identifiers, which Q2/Q11 ruled out.
 | REINA Señor, os traigo nuevas… **4** (prose, numbered) | `p5` | `l4`, and **4** is a link |
 | …y así lo cuentan todos. (prose, no number) | `p6` | `l4-p1` |
 
-`act-2.html` opens with a stage direction: `sd1`. An S play's speech 12 continuing over three
+`act-2.html` opens with a stage direction after act 1's last verse, 1500: `l1500-sd1`. An S play's speech 12 continuing over three
 verses: `l12`, `l12-v1`, `l12-v2`; a per-scene play's scene 2 opening with a direction: `l1-2-sd1`.
 
 ### The numbered paragraph's link
@@ -143,9 +146,11 @@ Through the export (`publish!/1`, as in `test/playcode/export/static_site_play_t
    `l962b`.
 5. Stability: two plays identical except for one extra stage direction early in act 1; act 2's
    ids are the same in both, and in act 1 only the directions after the same number differ.
+   It also covers test 7 as ruled: act 2 opens with `l2-sd1`.
 6. A numbered paragraph: `p#l4` holds `a.pn[href="#l4"]` with text "4", its inner `<lb n>`
    numbers stay `span.pn`, and a note in it stays where it was.
-7. Per-page clash scope: a continuous play's act 1 and act 2 pages both have `sd1`, unsuffixed.
+7. ~~Per-page clash scope~~: dropped with the ruling above; the existing full-text test
+   ("a division too long for one page", ids unique on `text.html`) guards it instead.
 
 Each new test is shown to bite (`bin/bites`). Existing tests asserting `p<k>` anchors are
 updated, with a comment saying why.
@@ -172,8 +177,8 @@ updated, with a comment saying why.
 
 ## Calls made while writing (check these)
 
-- Clash checking per page rather than per play, so counters restarting per page cannot collide
-  with another page's.
+- ~~Clash checking per page~~: ruled out while building (`text.html`); the unit and the clash
+  check are the play.
 - `restarts?/1` counts numbered paragraphs as numbers.
 - An orphan piece counts as an unnumbered verse.
 - No JS test: `site.js` does not change; test 6 asserts the markup the cite button selects.

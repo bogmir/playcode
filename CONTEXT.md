@@ -86,6 +86,10 @@ What readers see and cite: "v. 230". Decided per play, need not be unique ("3-4"
 An element's address inside its TEI file, which other elements point at (an aside's `next`, a variant's `to`). Nobody cites it. Counted on every export in text order, never stored, so it moves when a line is added before it.
 _Avoid_: line id, line identifier as a stored value
 
+**Anchor**:
+A line's address on the static site, `act-1.html#l230`: built from the nearest number before it and a counter of its own kind (`l230-sd1`), so it moves when the citation moves. Neither the number nor the identifier.
+_Avoid_: line id
+
 **Download**:
 A play as a file a reader takes away: HTML, PDF or EPUB. All three print the same
 edition, front matter and outline alike; they differ only where the format does (an

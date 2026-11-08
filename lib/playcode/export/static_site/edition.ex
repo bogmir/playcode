@@ -418,30 +418,30 @@ defmodule Playcode.Export.StaticSite.Edition do
         do: {item.element.id, slug}
   end
 
-  # A verse is `l<number>`. A play that numbers each scene from 1 gets
-  # `l<act>-<scene>-<number>`; anything else, a verse with no number included, is `p<n>`,
-  # counted through the play, so a line added before it moves it until problem 3
-  # (anchors from numbers) is done. A clash left after that (a data error) gets a numeric
-  # suffix.
+  # A line's anchor is the nearest number before it in its unit plus a counter of its own
+  # kind (docs/superpowers/specs/2026-11-08-site-anchors-design.md): `l230`, a later piece
+  # `l230b`, then `l230-sd1`, `l230-p1`, `l230-v1`; before the unit's first number `sd1`,
+  # `p1`, `v1`. The unit is the play, or the scene in a play that numbers each scene from
+  # 1, whose anchors all carry `l<act>-<scene>-`. Not the page: the full text prints every
+  # page at once. A clash left after that (a data error) gets a numeric suffix.
   defp anchors(items, pages) do
     restarts? = restarts?(items)
 
     {elements, _state} =
-      Enum.map_reduce(items, {MapSet.new(), 0}, fn item, {used, p} ->
-        {base, p} =
-          case item.element do
-            %{line_number: n} when is_binary(n) and restarts? ->
-              {"l#{item.act || 0}-#{scene_ordinal(item)}-#{n}", p}
+      Enum.map_reduce(items, %{unit: :none, used: MapSet.new()}, fn item, state ->
+        unit = if restarts?, do: {item.division.id, item.scene && item.scene.id}, else: :play
 
-            %{line_number: n} when is_binary(n) ->
-              {"l#{n}", p}
+        state =
+          if unit == state.unit,
+            do: state,
+            else: Map.merge(state, %{unit: unit, last: nil, counts: %{}, verse: nil})
 
-            _ ->
-              {"p#{p + 1}", p + 1}
-          end
+        prefix = if restarts?, do: "l#{item.act || 0}-#{scene_ordinal(item)}-", else: "l"
+        lead = if restarts?, do: prefix, else: ""
+        {base, state} = base(item, number(item), {prefix, lead}, state)
 
-        anchor = unique(base, used, 1)
-        {{item.element.id, anchor}, {MapSet.put(used, anchor), p}}
+        anchor = unique(base, state.used, 1)
+        {{item.element.id, anchor}, %{state | used: MapSet.put(state.used, anchor)}}
       end)
 
     divisions =
@@ -453,6 +453,41 @@ defmodule Playcode.Export.StaticSite.Edition do
 
     Map.new(elements ++ divisions)
   end
+
+  @counted %{stage: "sd", prose: "p", verse: "v"}
+
+  # A number opens the count after it, and a verse it numbers takes letters for its later
+  # pieces. A later piece without a number of its own is its verse's anchor plus a letter.
+  # Anything else counts among its kind since the last number; an unnumbered verse opens a
+  # verse for its own pieces.
+  defp base(item, n, {prefix, _lead}, state) when is_binary(n) do
+    base = prefix <> n
+    verse = if item.kind == :verse, do: {base, ?b}
+    {base, %{state | last: n, counts: %{}, verse: verse}}
+  end
+
+  defp base(%{kind: :verse, element: %{part: part}}, nil, _at, %{verse: {verse, letter}} = state)
+       when part in ["M", "F"],
+       do: {verse <> <<letter>>, %{state | verse: {verse, letter + 1}}}
+
+  defp base(item, nil, {prefix, lead}, state) do
+    kind = @counted[item.kind]
+    count = Map.get(state.counts, kind, 0) + 1
+
+    base =
+      if state.last, do: "#{prefix}#{state.last}-#{kind}#{count}", else: "#{lead}#{kind}#{count}"
+
+    verse = if item.kind == :verse, do: {base, ?b}, else: state.verse
+    {base, %{state | counts: Map.put(state.counts, kind, count), verse: verse}}
+  end
+
+  # A verse's number, or a prose paragraph's own (the marker at its start).
+  defp number(%{kind: :verse, element: %{line_number: n}}), do: n
+
+  defp number(%{kind: :prose, element: %{content: content}}),
+    do: content |> InlineMarkup.paragraph_number() |> elem(0)
+
+  defp number(_item), do: nil
 
   defp unique(base, used, 1),
     do: if(MapSet.member?(used, base), do: unique(base, used, 2), else: base)
@@ -467,7 +502,8 @@ defmodule Playcode.Export.StaticSite.Edition do
   # suffix (`unique/3`) instead: taken for a restart, it changed every anchor in the play.
   defp restarts?(items) do
     for(
-      %{element: %{line_number: n}} = item <- items,
+      item <- items,
+      n = number(item),
       is_binary(n),
       uniq: true,
       do: {n, {item.division.id, item.scene && item.scene.id}}
