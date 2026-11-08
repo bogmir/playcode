@@ -207,6 +207,7 @@ defmodule Playcode.Release do
 
     settle = fn play ->
       {_play, report} = Numbering.settle(play, false)
+      Catalogue.update_form_and_verse_count(play.id)
       IO.puts("  #{play.code}  #{Numbering.describe(report)}")
       if report.numbering_manual, do: "Manual", else: Numbering.name(report)
     end

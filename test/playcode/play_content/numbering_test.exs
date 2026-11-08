@@ -29,6 +29,18 @@ defmodule Playcode.PlayContent.NumberingTest do
 
   defp act(content), do: ~s(<div1 type="acto" n="1"><head>Acto I</head>#{content}</div1>)
 
+  # An empty paragraph holds no text to number lines in; it takes its own number.
+  test "VL: an empty paragraph takes a number and does not stop the count" do
+    play =
+      numbered(
+        act(~s(<sp><speaker>ANA</speaker><p>Uno</p><p></p><p>Tres</p></sp>)),
+        "VL",
+        "never"
+      )
+
+    assert numbers(play, "p") == ["1", "2", "3"]
+  end
+
   test "V never: a split verse takes one number, on its first piece; prose none" do
     play =
       numbered(

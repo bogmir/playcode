@@ -69,4 +69,27 @@ defmodule Playcode.ReleaseTest do
 
     assert for({attrs, _} <- xml_lines(export_tei(bare), "l"), do: attrs["n"]) == ["1", "2"]
   end
+
+  # A play stored before this branch counted only its numbered verses (an unnumbered play 0);
+  # settling recounts its numbers, so its verse count is counted again with them. The count is
+  # aged through Repo: no public function writes a stale one.
+  test "settle_numbering counts a play's verses again" do
+    alias Playcode.Repo
+    import Ecto.Query
+
+    play =
+      import_tei!(
+        tei(
+          encoding_desc: manual_numbering(),
+          body:
+            ~s(<div1 type="acto" n="1"><head>Acto I</head><sp><speaker>ANA</speaker><l>a</l><l>b</l></sp></div1>)
+        )
+      )
+
+    Repo.update_all(from(p in Catalogue.Play, where: p.id == ^play.id), set: [verse_count: 0])
+
+    capture_io(fn -> Release.settle_numbering() end)
+
+    assert Catalogue.get_play!(play.id).verse_count == 2
+  end
 end

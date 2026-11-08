@@ -173,6 +173,17 @@ defmodule Playcode.Import.WordParserTest do
 
       assert for({attrs, _} <- xml_elements(xml, "l"), do: attrs["n"]) == ["1", nil, "2"]
     end
+
+    # A Word import replaces the whole text, so no number in it was typed by hand: a Manual
+    # play (every play stored before the numbering rule) is numbered by its rule and leaves
+    # Manual, where it came out with no number at all.
+    test "a Manual play brought in from Word is numbered by its rule" do
+      play = play_fixture(%{"numbering_manual" => true})
+      xml = import_word(["{e}Escena 1", "{p}FEBO  {v}Uno.", "{v}Dos."], play)
+
+      assert for({attrs, _} <- xml_elements(xml, "l"), do: attrs["n"]) == ["1", "2"]
+      refute Playcode.Catalogue.get_play!(play.id).numbering_manual
+    end
   end
 
   describe "the speakers" do

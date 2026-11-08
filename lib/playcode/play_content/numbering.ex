@@ -143,8 +143,9 @@ defmodule Playcode.PlayContent.Numbering do
   def recount(%{numbering_manual: true}), do: 0
 
   def recount(play) do
-    rows = play.id |> PlayContent.reading_order() |> differences(play)
-    write(rows)
+    stored = PlayContent.reading_order(play.id)
+    rows = differences(stored, play)
+    write(rows, Map.new(stored, &{&1.id, &1.content}))
     length(rows)
   end
 
@@ -203,7 +204,7 @@ defmodule Playcode.PlayContent.Numbering do
 
   defp count("VL", row, {n, _previous}) do
     {_own, text} = InlineMarkup.paragraph_number(row.content)
-    [first | rest] = Regex.split(@marker, text)
+    [first | rest] = Regex.split(@marker, text || "")
 
     lines =
       rest
@@ -223,19 +224,22 @@ defmodule Playcode.PlayContent.Numbering do
     %{row | content: if(n, do: InlineMarkup.number_marker("#{n}") <> (text || ""), else: text)}
   end
 
-  defp write([]), do: :ok
+  defp write([], _read), do: :ok
 
-  defp write(rows) do
+  # A row whose text changed since it was read (another save in between) is left alone: its
+  # stale text would undo that save, whose own recount numbers it.
+  defp write(rows, read) do
     Repo.query!(
       """
       UPDATE play_elements AS e SET line_number = v.n, content = v.c
-      FROM unnest($1::uuid[], $2::text[], $3::text[]) AS v(id, n, c)
-      WHERE e.id = v.id
+      FROM unnest($1::uuid[], $2::text[], $3::text[], $4::text[]) AS v(id, n, c, read)
+      WHERE e.id = v.id AND e.content IS NOT DISTINCT FROM v.read
       """,
       [
         Enum.map(rows, &Ecto.UUID.dump!(&1.id)),
         Enum.map(rows, & &1.line_number),
-        Enum.map(rows, & &1.content)
+        Enum.map(rows, & &1.content),
+        Enum.map(rows, &read[&1.id])
       ]
     )
   end

@@ -696,6 +696,8 @@ defmodule Playcode.Import.WordParser do
           if is_numbered, do: act_number + 1, else: act_number
         end)
 
+        # The text is new, so no number in it was typed by hand: it is counted by the rule.
+        {:ok, play} = Catalogue.update_play(play, %{numbering_manual: false})
         PlayContent.refresh_derived(play_id)
 
         play
