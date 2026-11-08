@@ -207,14 +207,19 @@ What the commands do, for when one of them fails part way, or something new is n
 
 The migration that brought in the numbering rule left every play Manual, so no save recounts
 a play before its rule is known. After the deploy that carries it, settle every play once,
-the dry run first, then Generate (never Deploy while the site's deploy is blocked):
+the dry run first, then Generate (never Deploy while the site's deploy is blocked). Settling
+moves nearly every play, so Generate rebuilds the whole site: run it with `generate`, which
+scales up, not with a plain `generate_site()` rpc, which on the shared CPU crawled through 25
+plays in two minutes (2026-11-08). Turn autostop off for the settle, as for any SSH run:
 
+    ~/.fly/bin/flyctl machine update 7847063c04e7e8 --autostop=off -a playcode --yes
     bin/playcode rpc 'Playcode.Release.settle_numbering(dry_run: true)'
     bin/playcode rpc 'Playcode.Release.settle_numbering()'
-    bin/playcode rpc 'Playcode.Release.generate_site()'
+    mix playcode.fly.reimport generate    # locally; turns autostop back on when done
 
 In dev it gave V never 239, V per scene 8, VL 11/1/17, VP 11/0/5, S 52/2/10 and Manual 51 of
-407; production should differ only by its plays. A re-import of the corpus settles each play
+407; production, on 2026-11-08, V never 223, V per scene 8, VL 11/1/17, VP 11/0/5, S 52/2/10
+and Manual 47 of 387, every play as in dev. A re-import of the corpus settles each play
 itself.
 
 ## Why it is not all one command
