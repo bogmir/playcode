@@ -95,7 +95,7 @@ prints one line per play and a count per rule. Run once in dev and once on Fly, 
 
 A file whose numbers fit its rule is not changed by the import. `preview_import/1` (admin import
 page, `mix playcode.import.tei --dry-run`) reports what the import will set ("V per scene";
-"V, Manual: 3 numbers differ from V never"), computed by writing the play inside a transaction it
+"V never, Manual: 3 numbers differ"; an unnumbered one "S never, numbers added"), computed by writing the play inside a transaction it
 rolls back; the import prints the same per file.
 
 ## The TEI header (Q28)

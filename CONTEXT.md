@@ -80,7 +80,11 @@ The part of an aside inside one verse or paragraph, TEI's `<seg type="aside">`, 
 _Avoid_: segment, fragment (a fragment is a split verse's part)
 
 **Number** (of a line, `@n`):
-What readers see and cite: "v. 230". Decided per play, need not be unique ("3-4" in Hamlet), and unrelated to the identifier.
+What readers see and cite: "v. 230". Decided per play by its numbering rule, need not be unique ("3-4" in Hamlet), and unrelated to the identifier.
+
+**Numbering rule**:
+How a play's numbers are counted, set per play as FileMaker's "Configuración del texto" was: what is numbered (V each verse, VP verses and prose paragraphs, VL verses and printed prose lines, S each speech), where the count starts again (never, at each act, at each scene), and whether it is Manual (numbers typed by hand, never recounted). Every save recounts a play that is not Manual; the import detects the rule a file follows. The type decides the word a number is cited with ("v.", "l.", "int.").
+_Avoid_: numbering scheme, renumbering (there is no button: a save recounts)
 
 **Identifier** (`xml:id`):
 An element's address inside its TEI file, which other elements point at (an aside's `next`, a variant's `to`). Nobody cites it. Counted on every export in text order, never stored, so it moves when a line is added before it.
