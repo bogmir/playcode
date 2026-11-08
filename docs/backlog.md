@@ -67,7 +67,6 @@ The project's next phase studies how Spanish plays circulated in Europe up to th
 
 ## Medium Priority
 
-- [ ] **An unnumbered verse's anchor on the site moves again** (2026-11-08) - it was its stored identifier until problem 2 retired `line_id`; it is `p<n>`, counted through the play, so a line added before it moves it and a link to it breaks. Problem 3 (anchors from numbers: `l412-p1` after the last number) closes it
 - [ ] **Two split-verse parts in *Giovanni e Annabella*, and a stage direction's place in *The Malcontent*** (2026-10-22) - question 50. `em0284-it-2686` ("O molto", `F`, after prose) and `em0284-it-1459` ("Sei qui, fratello?", `I`, prose after it) are the two parts out of order left of the 27 the corpus had (*Split-verse parts out of order*, `docs/history.md`); emothe.uv.es and the published site move them in by a fixed step. And `em0363-en-st-0115` "(To Aurelia.)" may belong before "Woman of shame,". Correct our copies under `doc/tei_corpus/` and list the change for the team's if the answer says so
 
 ## Found by the review of the downloads' render pass (2026-11-04), latent
