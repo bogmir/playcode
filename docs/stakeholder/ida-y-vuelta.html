@@ -299,10 +299,16 @@
     <p class="eyebrow">Playcode · For the EMOTHE team · Status</p>
     <h1>Where each part of a play goes</h1>
     <p class="lede">A play in Playcode reaches six places. This page shows which parts of a play reach which, where something is lost on the way, above all between a play and its TEI file, and which parts are not in Playcode yet.</p>
-    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October, and the parts the TEI re-import brought in recounted after it on 15 October; the witnesses, the bibliography, the places of the action and the closing formulas recounted on 21 October, once production had 387 plays, the 13 of the GitHub copy among them. Last updated 8 November 2026.</p>
+    <p class="meta">Prepared by Bogdan. The round trip was measured on 11 October 2026 on the 394 plays of the development copy; the imported data was counted on production’s 373 plays on 12 October, and the parts the TEI re-import brought in recounted after it on 15 October; the witnesses, the bibliography, the places of the action and the closing formulas recounted on 21 October, once production had 387 plays, the 13 of the GitHub copy among them. Last updated 9 November 2026.</p>
     <details class="changes">
       <summary>What has changed since 11 October</summary>
       <ul>
+        <li><strong>9 November</strong>
+          <ul>
+            <li>A paratext’s note is read from the file, no longer dropped: the note closing <i>La Diana</i>’s introduction and argument, and 32 more in 19 plays, are printed after their paratext and written back to the file. Three notes that glossed a word inside a paragraph (0709, 0739) are printed after the paratext too, and their words have left the paragraph. The plays get them from their next re-import.</li>
+            <li>The identifiers the file gives the text carry the play’s number, <code>em0756-es-sp-1</code>, as decided; until now every play’s came out as <code>es-sp-1</code>.</li>
+          </ul>
+        </li>
         <li><strong>8 November</strong>
           <ul>
             <li>A verse’s number comes back as the file writes it: <i>Hamlet</i>’s 235 verses numbered like “3-4” and <i>Timon of Athens</i>’ 61 like “124.1” were cut to 3 and 124, printed so, and on the published site the second verse 3 took a link of its own beside the real one. A padded “0001” still comes back “1”.</li>
@@ -771,6 +777,16 @@
           <tr>
             <th scope="row" class="feature">A paratext in verse after the text: a sonnet, with its “FIN”<span class="where">2 plays · <a href="preguntas.html#t-paratexts">question 30</a> · never counted among the play’s verse</span></th>
             <td class="imp" data-label="Imported data"><span class="n">2</span><span class="src">TEI; 14 lines each</span></td>
+            <td data-label="Edited"><span class="s yes">Yes</span></td>
+            <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Read from TEI"><span class="s yes">Yes</span></td>
+            <td data-label="Downloads"><span class="s yes">Yes</span></td>
+            <td data-label="Play page"><span class="s yes">Yes</span></td>
+            <td data-label="Published site"><span class="s yes">Yes</span></td>
+          </tr>
+          <tr>
+            <th scope="row" class="feature">A paratext’s note: the note closing an introduction, an argument, a dedication (“NOTA: Incluida en la edición de 1820…”)<span class="where">34 notes in 19 plays · 3 of them glossed a word of a paragraph, and are printed after the paratext now</span></th>
+            <td class="imp" data-label="Imported data"><span class="n">34</span><span class="src">TEI; from each play’s next re-import</span></td>
             <td data-label="Edited"><span class="s yes">Yes</span></td>
             <td data-label="Written to TEI"><span class="s yes">Yes</span></td>
             <td data-label="Read from TEI"><span class="s yes">Yes</span></td>

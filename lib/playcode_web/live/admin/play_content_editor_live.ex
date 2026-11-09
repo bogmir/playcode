@@ -3060,6 +3060,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </label>
         <.input field={@form[:trailer]} type="text" placeholder={gettext("e.g. FIN")} />
       </div>
+      <div>
+        <label class="label" for={@form[:note].id}>
+          <span class="label-text font-medium">{gettext("Closing note")}</span>
+        </label>
+        <.input field={@form[:note]} type="textarea" rows="3" />
+        <p class="text-xs text-base-content/70 mt-1">
+          {gettext("A blank line starts a new paragraph; <<…>> marks italics.")}
+        </p>
+      </div>
       <.input field={@form[:position]} type="hidden" />
       <div class="flex gap-2 pt-2">
         <button type="submit" class="btn btn-primary">{gettext("Save")}</button>

@@ -1277,6 +1277,43 @@ defmodule Playcode.TeiRoundtripTest do
     refute "EPILOGUE" in xml_texts(xml, "head", within: "front")
   end
 
+  # The researcher's review of 0756 (2026-11-09): its introduction and its argument end
+  # with a <note>, and 30 more paratexts in the corpus do; they were dropped on import. Three
+  # notes sit inside a paragraph, a word glossed (0709, 0739): they join the paratext's
+  # note in the file's order, their anchor lost, and leave the paragraph's words.
+  test "a paratext's note comes back as the paratext's closing note" do
+    xml =
+      roundtrip(
+        tei(
+          front: """
+          <div type="argumento"><head>ARGUMENTO</head>
+            <p>Para cambiar este brillante<note><term>brillante</term>El término.</note> y poner otro.</p>
+            <note><p>NOTA: <emph>Œuvres</emph> de Rotrou.</p><p>Otra<lb/>línea.</p></note>
+          </div>
+          """,
+          body: scene("<sp><speaker>A</speaker><lg><l>uno</l></lg></sp>"),
+          back: """
+          <div type="licencia"><p>Licencia.</p><note><p>Maestro de Ceremonias.</p></note></div>
+          """
+        )
+      )
+
+    assert xml_texts(xml, "p", within: "front") == [
+             "Para cambiar este brillante y poner otro.",
+             "brillante El término.",
+             "NOTA: Œuvres de Rotrou.",
+             "Otra línea."
+           ]
+
+    assert xml_texts(xml, "note", within: "front") == [
+             "brillante El término. NOTA: Œuvres de Rotrou. Otra línea."
+           ]
+
+    assert xml_texts(xml, "emph", within: "front") == ["Œuvres"]
+    assert length(xml_elements(xml, "lb", within: "front")) == 1
+    assert xml_texts(xml, "p", within: "back") == ["Licencia.", "Maestro de Ceremonias."]
+  end
+
   # Question 30: the commendatory sonnet after Les Contents (EMOTHE0542) and Los contentos
   # (0743), a paratext in verse with its closing formula.
   test "a paratext in verse comes back as verse, with its closing formula" do
@@ -3892,6 +3929,20 @@ defmodule Playcode.TeiRoundtripTest do
                {"lb", id.("4")},
                {"trailer", id.("tr-1")}
              ]
+    end
+
+    # Real codes carry the title after the number (EMOTHE0756_LaDianaComedia); the prefix
+    # used to match only a bare EMOTHE0756, so every real play lost its em part.
+    test "an EMOTHE code with the title after the number keeps the play number" do
+      n = System.unique_integer([:positive])
+      code = "EMOTHE#{n}_LaDianaComedia"
+
+      xml =
+        roundtrip(
+          tei(code: code, body: scene("<sp><speaker>A</speaker><lg><l>uno</l></lg></sp>"))
+        )
+
+      assert {"sp", "em#{n}-es-sp-1"} in body_ids(xml)
     end
 
     test "a play whose code is not EMOTHE's has no em part" do

@@ -298,7 +298,14 @@ defmodule Playcode.CompleteCopyTest do
 
     paratexts!(play, [
       %{kind: "head_title", heading: "UNA COMEDIA RARA"},
-      %{kind: "loa", heading: "LOA", content: "Entre los actos.", position: 4},
+      # The researcher's review of 0756: a note closing a paratext, here between the acts.
+      %{
+        kind: "loa",
+        heading: "LOA",
+        content: "Entre los actos.",
+        note: "NOTA: de <<Rotrou>>.\n\nOtra\nlínea.",
+        position: 4
+      },
       %{kind: "epilogo", heading: "EPÍLOGO", content: "Fin de la obra.", position: 6},
       # Question 30: a sonnet after the text, in verse, with its closing formula.
       %{

@@ -107,7 +107,7 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
         body: ~s(<div1 type="acto" n="1"><head>ACTE I</head><p>Texte.</p></div1>),
         back: """
         <div type="epilogo"><head>SONNET</head>
-          <lg><l>Réjouis-toi, Paris,</l><l>Un de tes citoyens</l></lg><trailer>FIN</trailer>
+          <lg><l>Réjouis-toi, Paris,</l><l>Un de tes citoyens</l></lg><trailer>FIN</trailer><note><p>Nota.</p></note>
         </div>
         """
       )
@@ -121,7 +121,8 @@ defmodule PlaycodeWeb.API.PlayControllerTest do
                "heading" => "SONNET",
                "content" => "Réjouis-toi, Paris,\nUn de tes citoyens",
                "verse" => true,
-               "trailer" => "FIN"
+               "trailer" => "FIN",
+               "note" => "Nota."
              }
            ] = json["paratexts"]
   end

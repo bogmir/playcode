@@ -148,6 +148,7 @@ defmodule PlaycodeWeb.API.PlayController do
       content: paratext.content,
       verse: paratext.verse,
       trailer: paratext.trailer,
+      note: paratext.note,
       back: back?,
       editorial: Paratext.editorial?(paratext.kind)
     }

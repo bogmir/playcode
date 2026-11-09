@@ -164,6 +164,22 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert Playcode.Catalogue.Play.form(play) == "prose"
   end
 
+  # The researcher's review of 0756: its introduction ends with a note.
+  test "a paratext's note is printed after it", %{conn: conn} do
+    play =
+      tei(
+        front:
+          ~s(<div type="introduccion_editor_digital"><p>Introducción.</p><note><p>NOTA: <emph>Œuvres</emph> de Rotrou.</p></note></div>),
+        body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><p>Réplica.</p></sp></div1>)
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert html =~ ~r{Introducción\..*NOTA: <em>Œuvres</em> de Rotrou\..*Réplica\.}s
+  end
+
   # As emothe.uv.es set them, an act's closing formula and a paratext's.
   test "a closing formula is centred and in italics", %{conn: conn} do
     play =

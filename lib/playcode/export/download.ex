@@ -74,7 +74,7 @@ defmodule Playcode.Export.Download do
         do: "<div class=\"trailer\">#{inline(paratext.trailer, format)}</div>\n",
         else: ""
 
-    "<div class=\"paratext\">\n#{heading}#{paragraphs(paratext.content, format)}#{trailer}</div>"
+    "<div class=\"paratext\">\n#{heading}#{paragraphs(paratext.content, format)}#{trailer}#{paragraphs(paratext.note, format)}</div>"
   end
 
   def item(div, format) do
