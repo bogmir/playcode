@@ -1268,13 +1268,13 @@ defmodule Playcode.Import.TeiParser do
   end
 
   # A div1 between the acts holding only what a paratext holds (a heading, paragraphs or
-  # stanzas, a closing formula) is a paratext, as Playcode writes one there, unless its
+  # stanzas, a closing formula, a note) is a paratext, as Playcode writes one there, unless its
   # type is a division's: Gorboduc's dumb shows and La Silvanira's inductions are
   # divisions of the text. A paratext whose kind is a division's type too (`prologo`,
   # `argumento`) says so, `ana="paratexto"`.
   defp paratext_div1?(type, attrs, children) do
     (attr_value(attrs, "ana") == "paratexto" or type not in Division.body_types()) and
-      Enum.all?(children, &(not is_tuple(&1) or elem(&1, 0) in ~w(head p lg trailer)))
+      Enum.all?(children, &(not is_tuple(&1) or elem(&1, 0) in ~w(head p lg trailer note)))
   end
 
   # The characters the file declares, each by its first role with that xml:id, in the
@@ -1410,9 +1410,33 @@ defmodule Playcode.Import.TeiParser do
           content: if(content != "", do: content),
           verse: verse,
           trailer: with("" <- safe_text(find_child(children, "trailer")), do: nil),
+          note: paratext_note(children),
           position: pos
         }
       ]
+    end
+  end
+
+  # A paratext's notes, in the file's order, one paragraph each of theirs: the note closing
+  # the div (30 in the corpus, 0756's introduction's), and the 3 inside a paragraph, a word
+  # glossed (0709, 0739), which lose their anchor. Each <lb/> a line break.
+  defp paratext_note(children) do
+    children
+    |> Enum.flat_map(fn
+      {"note", _, _} = note -> [note]
+      {"p", _, words} -> find_children(words, "note")
+      _ -> []
+    end)
+    |> Enum.flat_map(fn {_, _, parts} = note ->
+      case find_children(parts, "p") do
+        [] -> [text_content(note)]
+        paragraphs -> Enum.map(paragraphs, &lines_text/1)
+      end
+    end)
+    |> Enum.reject(&(&1 == ""))
+    |> case do
+      [] -> nil
+      paragraphs -> Enum.join(paragraphs, "\n\n")
     end
   end
 
@@ -1421,7 +1445,9 @@ defmodule Playcode.Import.TeiParser do
   defp paratext_paragraphs(children) do
     children
     |> find_children("p")
-    |> Enum.map_join("\n\n", &lines_text/1)
+    |> Enum.map_join("\n\n", fn {name, attrs, words} ->
+      lines_text({name, attrs, without(words, "note")})
+    end)
     |> String.split(~r/\n\s*\n/)
     |> Enum.map(&String.trim/1)
     |> Enum.reject(&(&1 == ""))

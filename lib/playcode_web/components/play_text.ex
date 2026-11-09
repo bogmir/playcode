@@ -204,6 +204,11 @@ defmodule PlaycodeWeb.Components.PlayText do
       <p :if={@paratext.trailer} class="text-center italic [&_em]:not-italic mt-4">
         <.inline_content text={@paratext.trailer} />
       </p>
+      <div :if={@paratext.note} class="mt-4 space-y-2">
+        <p :for={paragraph <- Note.paragraphs(@paratext.note)}>
+          <.inline_content text={paragraph} />
+        </p>
+      </div>
     </div>
     """
   end

@@ -1016,6 +1016,23 @@ defmodule Playcode.Export.StaticSiteTest do
     refute LazyHTML.text(title) =~ "Loado sea."
   end
 
+  # The researcher's review of 0756: a paratext's note, after it.
+  test "a paratext's note is printed after it" do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><head>ACTO I</head><sp><speaker>A</speaker><p>Réplica final.</p></sp></div1>),
+        back:
+          ~s(<div type="epilogo"><head>EPÍLOGO</head><p>Adiós.</p><note><p>NOTA: <emph>Œuvres</emph>.</p></note></div>)
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = read!(generate!([play]), "plays/#{play.code}/text.html")
+
+    assert page =~ ~r{EPÍLOGO.*Adiós\..*NOTA: <em>Œuvres</em>\.}s
+  end
+
   # Question 30: the sonnet after Les Contents, as verse, with its closing formula.
   test "a paratext in verse is printed with its closing formula" do
     play =

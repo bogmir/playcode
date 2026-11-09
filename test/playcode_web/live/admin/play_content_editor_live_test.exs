@@ -1192,6 +1192,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
     assert has_element?(lv, "#paratext-form label", t("In verse"))
     assert has_element?(lv, "#paratext-form label", t("Closing formula"))
+    assert has_element?(lv, "#paratext-form label", t("Closing note"))
 
     lv
     |> form("#paratext-form",
@@ -1200,7 +1201,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
         "heading" => "SONETO",
         "content" => "Alégrate, París,\nuno de tus vecinos\n\nTerencio no hacía",
         "verse" => "true",
-        "trailer" => "FIN"
+        "trailer" => "FIN",
+        "note" => "Nota."
       }
     )
     |> render_submit()
@@ -1212,6 +1214,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
 
     assert length(xml_elements(xml, "lg", within: "back")) == 2
     assert xml_texts(xml, "trailer", within: "back") == ["FIN"]
+    assert xml_texts(xml, "note", within: "back") == ["Nota."]
   end
 
   # As a stage direction's: the select offers the known kinds and keeps a file's other word.

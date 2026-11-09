@@ -604,6 +604,24 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert epub =~ ~r{Dirigido a la Academia de Madrid.*Mándanme, ingenios nobles}s
   end
 
+  # The researcher's review of 0756: its argument ends with a note.
+  test "a paratext's note is printed after it", %{conn: conn} do
+    play =
+      tei(
+        back:
+          ~s(<div type="argumento"><p>Argumento.</p><trailer>FIN</trailer><note><p>NOTA: Pierre Rotrou.</p></note></div>)
+      )
+      |> import_tei!()
+      |> Playcode.TestFixtures.mark_complete!()
+
+    html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+    epub = Enum.map_join(files, fn {_name, content} -> content end)
+
+    assert html =~ ~r{Argumento\..*FIN.*NOTA: Pierre Rotrou\.}s
+    assert epub =~ ~r{Argumento\..*FIN.*NOTA: Pierre Rotrou\.}s
+  end
+
   # Question 30: the sonnet after Les Contents, as verse, with its closing formula.
   test "a paratext in verse is printed with its closing formula", %{conn: conn} do
     play =

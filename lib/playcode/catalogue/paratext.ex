@@ -3,7 +3,8 @@ defmodule Playcode.Catalogue.Paratext do
   A paratext (CONTEXT.md): a text that stands before the play's text, between its acts or
   after it, without being part of it: a heading, paragraphs, or both. A paratext in `verse`
   (the sonnet after Les Contents) holds a line to a line and a blank line between stanzas,
-  and none of it is the play's verse; `trailer` is its closing formula. Its `position` is its
+  and none of it is the play's verse; `trailer` is its closing formula, and `note` the note
+  the file writes after it, in paragraphs, as a cast list's (`Division`). Its `position` is its
   place in the play's outline (`Playcode.Outline`). Its `kind` says what it is and decides
   the concept: an editorial text, written for this edition (`editorial?/1`); the scene of
   the action (`lugar_accion`, TEI's `<set>`, `scene?/1`), which is not a paratext but is
@@ -30,6 +31,7 @@ defmodule Playcode.Catalogue.Paratext do
     field :content, :string
     field :verse, :boolean, default: false
     field :trailer, :string
+    field :note, :string
     field :position, :integer, default: 0
     field :origin, :string, default: "manual"
 
@@ -55,8 +57,19 @@ defmodule Playcode.Catalogue.Paratext do
 
   def changeset(paratext, attrs) do
     paratext
-    |> cast(attrs, [:kind, :heading, :content, :verse, :trailer, :position, :play_id, :origin])
+    |> cast(attrs, [
+      :kind,
+      :heading,
+      :content,
+      :verse,
+      :trailer,
+      :note,
+      :position,
+      :play_id,
+      :origin
+    ])
     |> update_change(:content, &paragraphs/1)
+    |> update_change(:note, &paragraphs/1)
     |> validate_required([:kind])
     |> validate_heading_or_content()
     |> verse_only_with_lines()

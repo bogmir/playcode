@@ -469,6 +469,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <% end %>
       <p :for={paragraph <- paragraphs(@item.content)}><.inline text={paragraph} /></p>
       <p :if={@item.trailer} class="tr"><.inline text={@item.trailer} /></p>
+      <p :for={paragraph <- paragraphs(@item.note)}><.inline text={paragraph} /></p>
     </section>
     """
   end

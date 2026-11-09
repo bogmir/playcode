@@ -946,13 +946,13 @@ defmodule Playcode.Export.TeiXml do
         tag,
         %{type: "elenco"},
         heading(list.title) ++
-          paragraphs(list.intro) ++ cast_list(list, {[], []}, cast) ++ list_note(list)
+          paragraphs(list.intro) ++ cast_list(list, {[], []}, cast) ++ closing_note(list)
       )
 
   # An act's opening list is a bare castList: its heading, the line before and the note
   # after go inside it (`around`), where TEI allows a `<p>` and a `<note>`.
   defp opening_cast_list(list, cast),
-    do: cast_list(list, {heading(list.title) ++ paragraphs(list.intro), list_note(list)}, cast)
+    do: cast_list(list, {heading(list.title) ++ paragraphs(list.intro), closing_note(list)}, cast)
 
   defp cast_list(%{entries: []}, _around, _cast), do: []
 
@@ -961,8 +961,9 @@ defmodule Playcode.Export.TeiXml do
     [element(:castList, attrs, before ++ cast_items(list.entries, cast) ++ after_items)]
   end
 
-  defp list_note(%{note: nil}), do: []
-  defp list_note(%{note: note}), do: [element(:note, paragraphs(note))]
+  # The note after a cast list, or closing a paratext: its paragraphs.
+  defp closing_note(%{note: nil}), do: []
+  defp closing_note(%{note: note}), do: [element(:note, paragraphs(note))]
 
   defp heading(nil), do: []
   defp heading(text), do: [inline_element(:head, %{}, build_inline_content(text))]
@@ -1261,7 +1262,7 @@ defmodule Playcode.Export.TeiXml do
         do: [inline_element(:trailer, %{}, build_inline_content(paratext.trailer))],
         else: []
 
-    content = heading(paratext.heading) ++ paragraphs ++ trailer
+    content = heading(paratext.heading) ++ paragraphs ++ trailer ++ closing_note(paratext)
 
     tag = if section == :body, do: :div1, else: :div
 
