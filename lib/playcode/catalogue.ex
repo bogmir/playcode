@@ -211,7 +211,7 @@ defmodule Playcode.Catalogue do
   def purge_play(%Play{} = play), do: Repo.delete(play)
 
   @doc """
-  Recomputes the play's `verse_count`, its numbered verses, and `auto_form`, the form its
+  Recomputes the play's `verse_count`, every verse numbered or not, and `auto_form`, the form its
   verse and prose give (`Play.auto_form/2`), from its text.
   """
   def update_form_and_verse_count(play_id) do

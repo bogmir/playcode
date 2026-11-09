@@ -516,14 +516,28 @@ defmodule Playcode.RoundtripTest do
     end)
   end
 
-  # The numbered verse lines that are whole verses or a split verse's first part. This
-  # counted distinct numbers until 2026-10-22, the rule `Catalogue.update_verse_count/1` had,
-  # which gave 309 for La tragedia española, whose file says "3820 versos", its numbering
-  # starting again in each act.
-  defp numbered_verses(xml) do
+  # The verse lines that are whole verses or a split verse's first part, numbered or not.
+  # This counted distinct numbers until 2026-10-22, which gave 309 for La tragedia española,
+  # whose file says "3820 versos", its numbering starting again in each act; then numbered
+  # verses only, until the numbering rule (2026-11-08) made `verse_count` structural: an S
+  # play's verses carry no number, and EMOTHE0753 has 1,610 verses, 163 of them numbered.
+  defp verses(xml) do
     xml
     |> verse_line_tokens_in_order()
-    |> Enum.count(fn {n, part} -> n != nil and part in [nil, "I"] end)
+    |> Enum.count(fn {_n, part} -> part in [nil, "I"] end)
+  end
+
+  # A file that numbers no verse and no paragraph is numbered at import (numbering spec,
+  # Q22): by speech, each speech's first paragraph, unless it holds more verses than
+  # paragraphs, whose verses are then numbered and its paragraphs left alone.
+  defp numbered_at_import(orig_counts, original_xml, play) do
+    unnumbered? =
+      orig_counts.paragraph_numbers == 0 and
+        not Enum.any?(verse_line_tokens_in_order(original_xml), fn {n, _part} -> n end)
+
+    if unnumbered? and play.numbering_type == "S",
+      do: %{orig_counts | paragraph_numbers: orig_counts.speeches},
+      else: orig_counts
   end
 
   defp assert_order_preserved(code, label, original_list, exported_list) do
@@ -534,12 +548,12 @@ defmodule Playcode.RoundtripTest do
   end
 
   defp assert_derived_verse_fields(code, play, original_xml, exported_xml) do
-    expected = numbered_verses(original_xml)
+    expected = verses(original_xml)
 
     assert play.verse_count == expected,
            "#{code} derived verse_count mismatch: expected=#{expected} got=#{inspect(play.verse_count)}"
 
-    # A play with no numbered verse is labelled with no count (play_form_test.exs).
+    # A play with no verse is labelled with no count (play_form_test.exs).
     extent =
       if expected > 0,
         do: ~r/<extent[^>]*>\s*#{expected}\s+versos\s*<\/extent>/u,
@@ -654,6 +668,7 @@ defmodule Playcode.RoundtripTest do
     play_full = Playcode.Catalogue.get_play_with_all!(play.id)
     exported_xml = Playcode.Export.TeiXml.generate(play_full)
     export_counts = structural_counts(exported_xml)
+    orig_counts = numbered_at_import(orig_counts, original_xml, play_full)
 
     mismatches =
       for field <- @fields,
