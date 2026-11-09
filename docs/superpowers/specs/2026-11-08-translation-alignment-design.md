@@ -1,6 +1,6 @@
 # Aligning a translation with its original (problem 5, parked)
 
-**Parked by the owner on 2026-11-09**, not designed or built. This is problem 5 of the six on
+**Parked by the owner on 2026-11-09**; Q26 decided the same day (see *Design*), nothing built. This is problem 5 of the six on
 numbering, identifiers and alignment. Problems 1–4 and 6 are built: see the 2026-11-08 specs
 beside this one. This file is the handoff written during the grilling (2026-11-08), kept
 here so the analysis survives. Start with a grilling or brainstorming session on the open
@@ -66,10 +66,10 @@ original has sp1–sp5 (Philo, Cleopatra, Antony, Cleopatra, Antony):
    - The file alone says nothing about what it aligns with.
 
 `corresp` on the translation's speeches, for example
-`<sp who="#antoine" corresp="EMOTHE0038.xml#em0038-en-sp-0003">`:
+`<sp who="#antoine" corresp="EMOTHE0038.xml#em0038-en-sp-3">`:
 - **Splits:** both French Antony halves point at sp3.
 - **Cuts:** nothing points at sp4.
-- **Merges:** one speech points at two: `corresp="… #…-sp-0004 #…-sp-0005"`.
+- **Merges:** one speech points at two: `corresp="… #…-sp-4 #…-sp-5"`.
 - **Mistakes stay local:** a wrong pointer is wrong for one speech only.
 - **Nothing is renumbered:** Playcode stores the pairing as a relation between rows, not as
   text, and writes the current identifiers at each export. Adding Demetrius changes nothing
@@ -77,13 +77,29 @@ original has sp1–sp5 (Philo, Cleopatra, Antony, Cleopatra, Antony):
 - **Remaining gap:** a file downloaded before the original changed keeps old pointers.
 - **Standard:** it is standard TEI, and self-describing.
 
-## Proposed design (Q26, open)
+## Design (Q26, decided by the owner on 2026-11-09)
+
+The four parts of Q26 and their answers:
+- **A. Storage: links between rows,** not the `corresp` text as written. Identifiers are
+  recounted at every export (problem 2), so a stored pointer would silently name the wrong
+  speech once the original gains one.
+- **B. Characters are paired too, and stored,** so a wrong character pair can be corrected
+  and the correction lasts.
+- **C. The first pass is automatic (speaker sequence), but only after a proof of concept**
+  shows it works on the test plays (0038 against 0084, 0052 and 0139; 0010 against 0050;
+  0012 against 0090; 0013 against 0120). The POC reads only: no tables, no TEI change.
+- **D. Correction both ways:** on the comparison page, and by editing `corresp` and
+  re-importing.
 
 - **Storage:**
   - speech pairs: a relation from a translation speech to one or more original speeches;
   - character pairs: a relation from a translation character to one or more original
     characters.
-- **First pass (automatic):**
+  - **Re-importing the original** replaces its speech rows, which would delete every
+    translation's links to it. Before the replace, each link is written down as the
+    original's current speech identifier and resolved again afterwards; a speech the new
+    file no longer has loses its pair, and the import preview says how many.
+- **First pass (automatic, after the POC):**
   1. Map characters, starting from names and the order in which they first speak; the coder
      confirms.
   2. Align speeches by the sequence of speakers, as a diff does. The French repeated speaker
@@ -109,9 +125,9 @@ original has sp1–sp5 (Philo, Cleopatra, Antony, Cleopatra, Antony):
    speaker pair with original sp3.
 3. The researcher spots one wrong pair at a cut and re-pairs it with a click. Only that speech
    changes.
-4. Export 0084: `<sp who="#antoine" corresp="EMOTHE0038.xml#em0038-en-sp-0003">`, twice.
+4. Export 0084: `<sp who="#antoine" corresp="EMOTHE0038.xml#em0038-en-sp-3">`, twice.
 5. Later 0038 gains a speech at the start. At the next export of 0084 the pointers read
-   `…-sp-0004` by themselves.
+   `…-sp-4` by themselves.
 
 ## How it interacts with the others
 
@@ -121,7 +137,7 @@ original has sp1–sp5 (Philo, Cleopatra, Antony, Cleopatra, Antony):
 
 ## Open
 
-- **Q26:** the design above.
+- **Q26:** decided 2026-11-09, see *Design* above. Next: the proof of concept.
 - **Statistics:** should a speech repeated after a stage direction (same `@who`) count once?
   The researcher says it inflates speech counts.
 - **Adaptations** (Dom Juan, Le Menteur, Saint Genest): align them, or leave them out of the
