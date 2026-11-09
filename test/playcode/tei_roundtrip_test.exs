@@ -3894,6 +3894,20 @@ defmodule Playcode.TeiRoundtripTest do
              ]
     end
 
+    # Real codes carry the title after the number (EMOTHE0756_LaDianaComedia); the prefix
+    # used to match only a bare EMOTHE0756, so every real play lost its em part.
+    test "an EMOTHE code with the title after the number keeps the play number" do
+      n = System.unique_integer([:positive])
+      code = "EMOTHE#{n}_LaDianaComedia"
+
+      xml =
+        roundtrip(
+          tei(code: code, body: scene("<sp><speaker>A</speaker><lg><l>uno</l></lg></sp>"))
+        )
+
+      assert {"sp", "em#{n}-es-sp-1"} in body_ids(xml)
+    end
+
     test "a play whose code is not EMOTHE's has no em part" do
       xml = roundtrip(tei(body: scene("<sp><speaker>A</speaker><lg><l>uno</l></lg></sp>")))
 

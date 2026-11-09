@@ -1736,7 +1736,7 @@ defmodule Playcode.Export.TeiXml do
   end
 
   defp id_prefix(%{code: code, language: language}) do
-    case Regex.run(~r/^EMOTHE(\d+)$/, code, capture: :all_but_first) do
+    case Regex.run(~r/^EMOTHE(\d+)/, code, capture: :all_but_first) do
       [number] -> "em#{number}-#{language || "es"}-"
       nil -> "#{language || "es"}-"
     end
