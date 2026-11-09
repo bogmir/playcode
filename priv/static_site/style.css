@@ -100,9 +100,11 @@ main { padding: 1.75rem clamp(1rem, 4vw, 2.75rem) 3rem; min-width: 0; }
 .facts dd { margin: 0; }
 .facts .note { display: block; }
 .role { font: .8125rem var(--sans); color: var(--muted); }
-.cast { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: .2rem 1rem; }
+.cast { display: grid; grid-template-columns: fit-content(40%) minmax(0, 1fr); gap: .2rem 1rem; }
 .cast dt { font: 600 .75rem/1.9 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
 .cast dd { margin: 0; color: var(--ink-2); }
+.cast dt:has(+ dd:empty) { grid-column: 1 / -1; }
+.cast dd:empty { display: none; }
 .cast-group { font: italic 400 .9rem var(--serif); color: var(--ink-2); margin: .6rem 0 .2rem; }
 .cite p { padding: .75rem 1rem; background: var(--raised); border: 1px solid var(--hair); border-radius: 6px; font-size: .9375rem; }
 .copy, .more { font: .8125rem var(--sans); color: var(--accent); background: none; border: 1px solid var(--hair); border-radius: 6px; padding: .3rem .8rem; cursor: pointer; }
