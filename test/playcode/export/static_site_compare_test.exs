@@ -234,4 +234,58 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       assert count(page, "[data-tools] input[data-toggle='va']") == 1
     end
   end
+
+  describe "kept current" do
+    alias Playcode.Export.StaticSite
+
+    test "an edited original reaches its translation's comparison" do
+      %{original: original, french: french} = split_speech_editions()
+      dir = generate!([original, french])
+
+      {:ok, act} =
+        Playcode.PlayContent.create_division(%{
+          play_id: original.id,
+          type: "act",
+          number: 2,
+          title: "ACT II",
+          position: 9
+        })
+
+      {:ok, _} =
+        Playcode.PlayContent.create_element(%{
+          play_id: original.id,
+          division_id: act.id,
+          type: "stage_direction",
+          content: "Enter a messenger, late.",
+          position: 1
+        })
+
+      {:ok, _} = StaticSite.apply_changes([{:add, original.id}], output_dir: dir)
+
+      assert read!(dir, "plays/#{french.code}/compare.html") =~ "Enter a messenger, late."
+    end
+
+    test "a translation taken off the site leaves no link to it" do
+      %{original: original, french: french} = split_speech_editions()
+
+      spanish =
+        play_fixture(%{
+          "title" => "Antonio y Cleopatra",
+          "title_sort" => "Antonio y Cleopatra",
+          "parent_play_id" => original.id,
+          "relationship_type" => "traduccion",
+          "is_complete" => true
+        })
+
+      dir = generate!([original, french, spanish])
+      {:ok, _} = Catalogue.update_play(spanish, %{is_complete: false})
+      {:ok, _} = StaticSite.apply_changes([{:remove, spanish.code}], output_dir: dir)
+
+      refute read!(dir, "plays/#{french.code}/compare.html") =~ spanish.code
+
+      assert attribute(html!(dir, "index.html"), "a.compare", "href") == [
+               "plays/#{french.code}/compare.html"
+             ]
+    end
+  end
 end

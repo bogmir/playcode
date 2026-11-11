@@ -418,17 +418,19 @@ defmodule Playcode.Export.StaticSite do
     |> Enum.map(fn {:ok, result} -> result end)
   end
 
-  # A title page links the play's published original and translations, so theirs change
-  # when the play is added or removed. Each is re-exported in full: its title page is
-  # rendered from the database, so its pages and search lines must be too, or its
-  # contents could link a division it was last exported without. Plays in `fresh` were
-  # just written knowing the final site, and are left alone.
+  # A title page links the play's published original and translations, and a comparison
+  # page holds its original and lists its siblings, so theirs change when the play is
+  # added or removed. Each is re-exported in full: its title page is rendered from the
+  # database, so its pages and search lines must be too, or its contents could link a
+  # division it was last exported without. Plays in `fresh` were just written knowing the
+  # final site, and are left alone.
   defp relatives(plays, published, fresh) do
     ids = MapSet.new(plays, & &1.id)
-    parents = MapSet.new(plays, & &1.parent_play_id)
+    parents = plays |> Enum.map(& &1.parent_play_id) |> Enum.reject(&is_nil/1) |> MapSet.new()
 
     Enum.filter(Catalogue.list_plays(), fn member ->
-      (MapSet.member?(parents, member.id) or MapSet.member?(ids, member.parent_play_id)) and
+      (MapSet.member?(parents, member.id) or MapSet.member?(ids, member.parent_play_id) or
+         MapSet.member?(parents, member.parent_play_id)) and
         MapSet.member?(published, member.code) and not MapSet.member?(fresh, member.code)
     end)
   end
