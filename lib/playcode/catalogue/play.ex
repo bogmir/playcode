@@ -166,25 +166,31 @@ defmodule Playcode.Catalogue.Play do
   @doc """
   The play's form as every page names it: the curator's choice when set, else the one
   worked out from the text (`auto_form/2`), which every import and content edit
-  recomputes. Only a curator says "mixed" (question 23).
+  recomputes.
   """
   def form(%__MODULE__{form: form}) when is_binary(form), do: form
   def form(%__MODULE__{auto_form: auto_form}), do: auto_form
 
-  # ponytail: question 23 still asks where verse and prose ends (proposed nine tenths);
-  # until it is answered, over a tenth is verse and "mixed" only a curator's choice.
+  # Question 23 still asks where verse and prose ends; nine tenths is Playcode's proposal,
+  # applied until the project answers.
   @occasional_share 0.1
+  @verse_share 0.9
 
   @doc """
   The form a text's verse and prose give, by the length of each (question 23): no verse
-  is prose, under a tenth of the text in verse prose with occasional verse, more verse.
+  is prose, under a tenth of the text in verse prose with occasional verse, from a tenth
+  to under nine tenths verse and prose, more verse.
   """
   def auto_form(0, _prose_length), do: "prose"
 
   def auto_form(verse_length, prose_length) do
-    if verse_length < @occasional_share * (verse_length + prose_length),
-      do: "occasional_verse",
-      else: "verse"
+    share = verse_length / (verse_length + prose_length)
+
+    cond do
+      share < @occasional_share -> "occasional_verse"
+      share < @verse_share -> "mixed"
+      true -> "verse"
+    end
   end
 
   @file_labels %{

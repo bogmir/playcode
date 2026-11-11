@@ -2,8 +2,8 @@ defmodule Playcode.PlayFormTest do
   @moduledoc """
   A play's form, verse, prose or both (questions 22 and 23). Worked out from the share of
   its text in verse, by length, every verse line counted whether numbered or not: none is
-  prose, under a tenth prose with occasional verse, more is verse. "Verse and prose" is
-  only ever a researcher's choice, in the play's form, which wins over the rule.
+  prose, under a tenth prose with occasional verse, from a tenth to under nine tenths verse
+  and prose, more verse. A researcher's choice, in the play's form, wins over the rule.
 
   The file labels the form on `extent`, as the EMOTHE files do (`ana="verso"`); a form a
   researcher chose carries `resp="#equipo"` there and comes back from the file. The old
@@ -50,8 +50,12 @@ defmodule Playcode.PlayFormTest do
       assert import_play(paragraphs(20) <> verses(2)) |> form() == "occasional_verse"
     end
 
-    test "more is verse, its verse lines counted whether numbered or not" do
-      assert import_play(paragraphs(2) <> verses(30)) |> form() == "verse"
+    test "from a tenth to under nine tenths of the text in verse is verse and prose" do
+      assert import_play(paragraphs(2) <> verses(30)) |> form() == "mixed"
+    end
+
+    test "nine tenths or more is verse, its verse lines counted whether numbered or not" do
+      assert import_play(verses(30)) |> form() == "verse"
       assert import_play(verses(30, numbered: false)) |> form() == "verse"
     end
 
