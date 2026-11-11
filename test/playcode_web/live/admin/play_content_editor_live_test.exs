@@ -2503,6 +2503,46 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       assert correction(french, "antoine") == {nil, false}
     end
 
+    defp pair(lv, play, xml_id) do
+      entry =
+        play.id
+        |> PlayContent.list_cast_lists()
+        |> Enum.flat_map(& &1.entries)
+        |> Enum.find(&(&1.character && &1.character.xml_id == xml_id))
+
+      if has_element?(lv, "#pair-#{entry.id}"),
+        do:
+          lv
+          |> element("#pair-#{entry.id}")
+          |> render()
+          |> LazyHTML.from_fragment()
+          |> LazyHTML.text()
+          |> String.split()
+          |> Enum.join(" ")
+    end
+
+    test "the list names each character's original, and says which are corrected or unpaired",
+         %{conn: conn, french: french} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/content")
+      assert pair(lv, french, "antoine") == "#{t("Original:")} ANTONY"
+      assert pair(lv, french, "cleopatre") == "#{t("Original:")} CLEOPATRA"
+
+      {lv, _} = open_entry(conn, french, "antoine")
+      choose(lv, "CLEO")
+
+      assert pair(lv, french, "antoine") == "#{t("Original:")} CLEOPATRA #{t("corrected")}"
+      assert pair(lv, french, "cleopatre") == t("No original found")
+
+      {lv, _} = open_entry(conn, french, "cleopatre")
+      choose(lv, "-")
+      assert pair(lv, french, "cleopatre") == "#{t("No original")} #{t("corrected")}"
+    end
+
+    test "an original's list names no pairs", %{conn: conn, original: original} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{original.id}/content")
+      assert pair(lv, original, "ANT") == nil
+    end
+
     test "the rule's pick keeps the other characters' corrections", %{conn: conn, french: french} do
       antoine = Enum.find(PlayContent.list_characters(french.id), &(&1.xml_id == "antoine"))
       {:ok, _} = PlayContent.update_character(antoine, %{original_xml_id: "CLEO"})

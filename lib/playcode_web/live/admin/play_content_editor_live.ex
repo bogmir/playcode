@@ -65,6 +65,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
        paratexts: paratexts,
        characters: characters,
        cast_lists: PlayContent.list_cast_lists(play.id),
+       original_pairs: if(connected?(socket), do: original_pairs(play)),
        modal_list_id: nil,
        character_form: nil,
        entry_character: nil,
@@ -1088,6 +1089,21 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp original_choice(_play, nil), do: nil
 
+  # The original character each speaking character goes with (nil: none), as the
+  # comparison pairs them, for the list; nil for a play not paired with an original.
+  defp original_pairs(play) do
+    if play.parent_play_id && Alignment.paired?(play) do
+      translation = PlayContent.load_play_content(play.id)
+
+      pairs =
+        PlayContent.load_play_content(play.parent_play_id)
+        |> Alignment.character_pairs(translation)
+
+      originals = Map.new(PlayContent.list_characters(play.parent_play_id), &{&1.id, &1})
+      Map.new(Alignment.speakers(translation), &{&1, originals[pairs[&1]]})
+    end
+  end
+
   defp automatic_label(nil), do: gettext("Automatic (none found)")
 
   defp automatic_label(pick),
@@ -1252,7 +1268,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     assign(socket,
       characters: PlayContent.list_characters(play_id),
-      cast_lists: PlayContent.list_cast_lists(play_id)
+      cast_lists: PlayContent.list_cast_lists(play_id),
+      original_pairs: original_pairs(socket.assigns.play)
     )
   end
 
@@ -1714,6 +1731,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   >
                     {gettext("hidden")}
                   </span>
+                  <.original_pair
+                    :if={entry.character && Map.has_key?(@original_pairs || %{}, entry.character.id)}
+                    id={"pair-#{entry.id}"}
+                    character={entry.character}
+                    original={@original_pairs[entry.character.id]}
+                  />
                 </div>
                 <p :if={entry.description} class="text-xs text-base-content/70 truncate">
                   {entry.description}
@@ -3064,6 +3087,30 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   defp element_type_label("prose"), do: gettext("Prose")
   defp element_type_label("line_group"), do: gettext("Line Group")
   defp element_type_label(type), do: type
+
+  attr :id, :string, required: true
+  attr :character, Character, required: true
+  attr :original, Character, default: nil
+
+  defp original_pair(assigns) do
+    ~H"""
+    <span id={@id} class="text-xs text-base-content/70">
+      <%= cond do %>
+        <% @original -> %>
+          {gettext("Original:")}
+          <span class="font-medium text-base-content">{InlineMarkup.plain(@original.name)}</span>
+          <span :if={@original.xml_id == @character.original_xml_id} class="badge badge-info badge-xs">
+            {gettext("corrected")}
+          </span>
+        <% @character.no_original -> %>
+          {gettext("No original")}
+          <span class="badge badge-info badge-xs">{gettext("corrected")}</span>
+        <% true -> %>
+          <span class="badge badge-warning badge-xs">{gettext("No original found")}</span>
+      <% end %>
+    </span>
+    """
+  end
 
   # --- Modal content ---
 
