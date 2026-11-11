@@ -7,6 +7,7 @@ defmodule Playcode.Export.StaticSiteCompareTest do
   use Playcode.DataCase, async: true
 
   import Playcode.ImportHelpers
+  import Playcode.TestFixtures
   import Playcode.StaticSiteHelpers
 
   alias Playcode.Catalogue
@@ -106,6 +107,93 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       assert count(page, "[data-panel='#{panel}'] .sp.fo[data-sync-act]") == 0
       assert count(page, "[data-panel='#{panel}'] .sp.fo[data-pair]") == 0
       assert count(page, "[data-panel='#{panel}'] .sp[data-sync-act][data-pair]") == 2
+    end
+  end
+
+  describe "the way in" do
+    # Another translation of the split-speech original: published unless told, first in
+    # the catalogue's order ("Antonio…" before the French's "Test Play").
+    defp spanish(original, attrs \\ %{}) do
+      play_fixture(
+        Map.merge(
+          %{
+            "title" => "Antonio y Cleopatra",
+            "title_sort" => "Antonio y Cleopatra",
+            "parent_play_id" => original.id,
+            "relationship_type" => "traduccion",
+            "is_complete" => true
+          },
+          attrs
+        )
+      )
+    end
+
+    defp compare_links(page),
+      do: attribute(page, "a.compare", "href")
+
+    test "the original's catalogue line links its first translation's comparison" do
+      %{original: original, french: french} = split_speech_editions()
+      spanish = spanish(original)
+      lonely = play_fixture(%{"is_complete" => true})
+      catalogue = [original, french, spanish, lonely] |> generate!() |> html!("index.html")
+
+      assert compare_links(catalogue) == ["plays/#{spanish.code}/compare.html"]
+      assert texts(catalogue, "a.compare") == ["Compare"]
+    end
+
+    # A chain: a translation of the Spanish, first in the catalogue's order under the
+    # original. Its page is beside the Spanish, so the original's link is not to it.
+    test "the original's link skips a translation of a translation" do
+      %{original: original, french: french} = split_speech_editions()
+      spanish = spanish(original)
+
+      catalan =
+        play_fixture(%{
+          "title" => "Antoni i Cleòpatra",
+          "title_sort" => "Antoni i Cleopatra",
+          "parent_play_id" => spanish.id,
+          "relationship_type" => "traduccion",
+          "is_complete" => true
+        })
+
+      dir = generate!([original, french, spanish, catalan])
+
+      assert compare_links(html!(dir, "index.html")) == ["plays/#{spanish.code}/compare.html"]
+      assert File.exists?(Path.join(dir, "plays/#{catalan.code}/compare.html"))
+    end
+
+    test "a draft translation is never linked" do
+      %{original: original, french: french} = split_speech_editions()
+      spanish = spanish(original, %{"is_complete" => false})
+      dir = generate!([original, french, spanish])
+
+      assert compare_links(html!(dir, "index.html")) == ["plays/#{french.code}/compare.html"]
+
+      assert attribute(
+               html!(dir, "plays/#{french.code}/compare.html"),
+               "[data-compare-menu] option",
+               "value"
+             ) ==
+               ["../#{french.code}/compare.html"]
+    end
+
+    test "the menu lists the original's published translations, the shown one selected" do
+      %{original: original, french: french} = split_speech_editions()
+      spanish = spanish(original)
+
+      page =
+        [original, french, spanish] |> generate!() |> html!("plays/#{french.code}/compare.html")
+
+      links = ["../#{spanish.code}/compare.html", "../#{french.code}/compare.html"]
+
+      assert attribute(page, "[data-compare-menu] option", "value") == links
+
+      assert attribute(page, "[data-compare-menu] option[selected]", "value") == [
+               Enum.at(links, 1)
+             ]
+
+      # Without a script the menu cannot open a page: the same links, as links.
+      assert page |> LazyHTML.query("noscript") |> LazyHTML.text() =~ "Antonio y Cleopatra"
     end
   end
 end

@@ -1290,6 +1290,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :play, :map, required: true
   attr :lead, :boolean, default: false
+  attr :compare, :string, default: nil, doc: "the code of the play the Compare link opens"
 
   def catalogue_entry(assigns) do
     ~H"""
@@ -1313,6 +1314,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <span class="code">{@play.code}</span>
       <span :if={kind(@play) != "original"} class="tag">{kind(@play)}</span>
       <span class="meta">{entry_meta(@play)}</span>
+      <a :if={@compare} class="compare" href={"plays/#{@compare}/compare.html"}>Compare</a>
       <span :if={@lead} class="author">{@play.author_name}</span>
     </div>
     """

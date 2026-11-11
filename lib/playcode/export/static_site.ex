@@ -538,8 +538,18 @@ defmodule Playcode.Export.StaticSite do
     if parent && MapSet.member?(site.published, parent.code) do
       {original, translation} = Comparison.prepare(Edition.load(parent.id), edition)
 
+      siblings =
+        original.play.derived_plays
+        |> Enum.filter(&MapSet.member?(site.published, &1.code))
+        |> translation_order()
+
       html =
-        Pages.render(:compare, %{original: original, translation: translation, site: site})
+        Pages.render(:compare, %{
+          original: original,
+          translation: translation,
+          siblings: siblings,
+          site: site
+        })
 
       File.write!(Path.join(play_dir, "compare.html"), html)
     end
@@ -585,6 +595,10 @@ defmodule Playcode.Export.StaticSite do
     Search.write_index(dir, plays, Map.merge(postings, missing))
   end
 
+  @doc "Plays in the catalogue's order of a work's translations: by title, normalised."
+  def translation_order(plays),
+    do: Enum.sort_by(plays, &Search.normalise(&1.title_sort || &1.title))
+
   # One entry per work: each published play under the published play at the root of
   # its translation chain.
   defp works(plays) do
@@ -595,12 +609,13 @@ defmodule Playcode.Export.StaticSite do
     |> Enum.map(fn {root, members} ->
       lead = by_id[root]
 
+      translations = members |> Enum.reject(&(&1.id == root)) |> translation_order()
+
       %{
         play: lead,
-        translations:
-          members
-          |> Enum.reject(&(&1.id == root))
-          |> Enum.sort_by(&Search.normalise(&1.title_sort || &1.title)),
+        translations: translations,
+        # The comparison the lead's Compare link opens: its first own derived play's.
+        compare: Enum.find_value(translations, &(&1.parent_play_id == root && &1.code)),
         sort_author: Search.normalise(lead.author_sort || lead.author_name),
         sort_title: Search.normalise(lead.title_sort || lead.title),
         date: lead.composition_date_from

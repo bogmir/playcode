@@ -56,9 +56,25 @@ defmodule Playcode.Export.StaticSite.Comparison do
 
   defp keyed(divisions), do: Enum.zip(divisions, Division.sync_keys(divisions))
 
-  @doc "The page's script: the scroll sync, started on the panels once the page is read."
-  def script do
-    @sync_scroll <>
-      ~s|\ndocument.addEventListener("DOMContentLoaded", () => syncPanels(document.getElementById("sync-scroll")))\n|
-  end
+  # Starts the sync. A fragment `#s<n>` opens the original's panel at its speech `n`, the
+  # other following; the translation menu opens the page it names at the original's
+  # speech now at the top, so switching translation keeps the place.
+  @start ~S"""
+  document.addEventListener("DOMContentLoaded", () => {
+    const original = document.querySelector('[data-panel="panel-0"]')
+    const place = location.hash.match(/^#s(\d+)$/)
+    const speech = place && original.querySelector(`[data-pair="${place[1]}"]`)
+    if (speech) original.scrollTop += speech.getBoundingClientRect().top - original.getBoundingClientRect().top
+    syncPanels(document.getElementById("sync-scroll"))
+
+    const menu = document.querySelector("[data-compare-menu]")
+    if (menu) menu.addEventListener("change", () => {
+      const top = topAnchor(original, "[data-pair]")
+      location.href = menu.value + (top ? "#s" + top.dataset.pair : "")
+    })
+  })
+  """
+
+  @doc "The page's script: the scroll sync and the translation menu."
+  def script, do: @sync_scroll <> "\n" <> @start
 end

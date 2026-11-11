@@ -6,6 +6,25 @@
 >
   <div class="compare-bar">
     <a href={"../#{@original.play.code}/index.html"}>Back to {@original.play.title}</a>
+    <label>
+      Translation
+      <select data-compare-menu>
+        <option
+          :for={play <- @siblings}
+          value={"../#{play.code}/compare.html"}
+          selected={play.id == @translation.play.id}
+        >
+          {play.title} ({play.language})
+        </option>
+      </select>
+    </label>
+    <noscript>
+      <ul class="compare-links">
+        <li :for={play <- @siblings}>
+          <a href={"../#{play.code}/compare.html"}>{play.title} ({play.language})</a>
+        </li>
+      </ul>
+    </noscript>
   </div>
   <div class="compare" id="sync-scroll">
     <section
