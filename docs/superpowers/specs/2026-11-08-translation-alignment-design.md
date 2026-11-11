@@ -213,7 +213,9 @@ changes only if someone notices. Generate: at most about 8 s more for a full reb
    and the re-import of the original. **Parked 2026-11-11 at low priority** by the owner:
    little gain for its cost (`docs/backlog.md`, *Low Priority*); back when step 5's report
    shows a pair a character correction cannot fix.
-5. **The coder's report** as a download, with the length warning.
+5. **The coder's report** as a download, with the length warning. **Revised 2026-11-11:** a
+   tab of the admin comparison, *Revisión de pares*, and the comparison's HTML download goes
+   (`docs/superpowers/specs/2026-11-11-pair-review-design.md`).
 
 ## Proof of concept (2026-11-09, branch `poc/translation-alignment`)
 
