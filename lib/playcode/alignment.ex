@@ -11,7 +11,7 @@ defmodule Playcode.Alignment do
      repeated after a stage direction is an insertion beside a speech of the same speaker,
      and points at it; a cut is a deletion, and is paired with nothing.
 
-  A text is `%{characters: [%{id, name}], speeches: [%{id, act, scene, speakers}]}`,
+  A text is `%{characters: [%{id, name, xml_id, original_xml_id, no_original}], speeches: [%{id, act, scene, speakers}]}`,
   speeches in reading order, `speakers` a list of character ids.
   """
 
@@ -116,22 +116,24 @@ defmodule Playcode.Alignment do
   @doc """
   Each character of a translation, by id, with the original character it goes with, as
   `PlayContent.load_play_content/2` gives both texts: the researcher's corrections laid
-  over the rule, or, with `corrections: false`, the rule's own pick.
+  over the rule. With `automatic_for: id`, that character's own correction is set aside,
+  so it gets the rule's pick among the originals the other corrections leave.
   """
   def character_pairs(original_divisions, translation_divisions, opts \\ []) do
+    automatic_for = opts[:automatic_for]
     translation = text(translation_divisions)
 
-    translation =
-      if Keyword.get(opts, :corrections, true),
-        do: translation,
-        else: %{
-          translation
-          | characters:
-              Enum.map(translation.characters, &Map.drop(&1, [:original_xml_id, :no_original]))
-        }
+    characters =
+      Enum.map(translation.characters, fn
+        %{id: ^automatic_for} = c -> Map.drop(c, [:original_xml_id, :no_original])
+        c -> c
+      end)
 
-    pair_characters(text(original_divisions), translation)
+    pair_characters(text(original_divisions), %{translation | characters: characters})
   end
+
+  @doc "The ids of the characters who speak in `divisions`, the only ones paired."
+  def speakers(divisions), do: MapSet.new(text(divisions).characters, & &1.id)
 
   def align(original, translation) do
     characters = pair_characters(original, translation)

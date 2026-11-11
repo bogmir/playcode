@@ -2494,12 +2494,32 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
       assert correction(french, "antoine") == {"CLEO", false}
 
       {lv, _} = open_entry(conn, french, "antoine")
+      assert hd(options(lv)) == t("Automatic (%{name})", name: "ANTONY")
       choose(lv, "-")
       assert correction(french, "antoine") == {nil, true}
 
       {lv, _} = open_entry(conn, french, "antoine")
       choose(lv, "")
       assert correction(french, "antoine") == {nil, false}
+    end
+
+    test "the rule's pick keeps the other characters' corrections", %{conn: conn, french: french} do
+      antoine = Enum.find(PlayContent.list_characters(french.id), &(&1.xml_id == "antoine"))
+      {:ok, _} = PlayContent.update_character(antoine, %{original_xml_id: "CLEO"})
+      {lv, _} = open_entry(conn, french, "cleopatre")
+
+      # Antoine holds CLEOPATRA; ANTONY, all the rule is left, is no match for Cléopâtre.
+      assert hd(options(lv)) == t("Automatic (none found)")
+    end
+
+    test "offers only the original's characters who speak, the ones a comparison pairs",
+         %{conn: conn, original: original, french: french} do
+      {:ok, _} =
+        PlayContent.create_character(%{play_id: original.id, xml_id: "MUTE", name: "A MUTE"})
+
+      {lv, _} = open_entry(conn, french, "antoine")
+
+      refute "A MUTE" in options(lv)
     end
 
     test "refuses a character the original does not have", %{conn: conn, french: french} do

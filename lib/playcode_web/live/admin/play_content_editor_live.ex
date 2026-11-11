@@ -1048,17 +1048,24 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     do: PlayContent.update_character(character, params)
 
   # Problem 5, step 3: which original character a translation's character goes with, for
-  # the entry form's select: the rule's pick (`Alignment`), each character of the original,
-  # none, and a stored pointer the original no longer has, shown as missing. Only for a
+  # the entry form's select: the rule's pick (`Alignment`), each character of the original
+  # who speaks (a silent one is never paired), none, and a stored pointer the original no longer has, shown as missing. Only for a
   # translation or version with an original.
   defp original_choice(play, %Character{} = character) do
     if play.parent_play_id && Alignment.paired?(play) do
-      originals = PlayContent.list_characters(play.parent_play_id)
+      original = PlayContent.load_play_content(play.parent_play_id)
+      speakers = Alignment.speakers(original)
+
+      originals =
+        Enum.filter(PlayContent.list_characters(play.parent_play_id), &(&1.id in speakers))
+
       known = MapSet.new(originals, & &1.xml_id)
 
       automatic =
-        PlayContent.load_play_content(play.parent_play_id)
-        |> Alignment.character_pairs(PlayContent.load_play_content(play.id), corrections: false)
+        original
+        |> Alignment.character_pairs(PlayContent.load_play_content(play.id),
+          automatic_for: character.id
+        )
         |> Map.get(character.id)
 
       pick = automatic && Enum.find(originals, &(&1.id == automatic))
