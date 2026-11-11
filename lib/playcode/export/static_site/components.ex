@@ -629,6 +629,7 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   attr :edition, :map, required: true
+  attr :notes_label, :string, default: "Notes"
 
   @doc "A play's whole text, as `text.html` shows it: its contents, then its endnotes."
   def full_text(assigns) do
@@ -641,9 +642,12 @@ defmodule Playcode.Export.StaticSite.Components do
           <.outline_item edition={@edition} item={item} head="act-head" />
       <% end %>
     <% end %>
-    <.endnotes notes={
-      @edition.pages |> Enum.reject(& &1.scene) |> Enum.map(& &1.division) |> Note.reading_order()
-    } />
+    <.endnotes
+      label={@notes_label}
+      notes={
+        @edition.pages |> Enum.reject(& &1.scene) |> Enum.map(& &1.division) |> Note.reading_order()
+      }
+    />
     """
   end
 
@@ -947,6 +951,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   attr :notes, :list, required: true
+  attr :label, :string, default: "Notes"
 
   @doc """
   A page's notes. Each is a popover its marker opens (`part/1`); in print, and in a
@@ -957,7 +962,7 @@ defmodule Playcode.Export.StaticSite.Components do
     assigns = assign(assigns, notes: notes, variants: variants)
 
     ~H"""
-    <section :if={@notes != []} class="notes" role="doc-endnotes" aria-label="Notes">
+    <section :if={@notes != []} class="notes" role="doc-endnotes" aria-label={@label}>
       <ol>
         <li :for={note <- @notes} id={"note-#{note.number}"} popover value={note.number}>
           <button

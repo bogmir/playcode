@@ -8,9 +8,12 @@ defmodule Playcode.Export.StaticSite.Comparison do
   (`data-pair`); headings their own key (`data-sync-div`), as on Playcode's comparison.
   """
 
+  use Phoenix.Component
+
   alias Playcode.Alignment
+  alias Playcode.Export.StaticSite.Components
   alias Playcode.Export.StaticSite.Edition
-  alias Playcode.PlayContent.{Division, Element}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup}
 
   @sync_scroll_path Path.expand("../../../../assets/js/sync_scroll.mjs", __DIR__)
   @external_resource @sync_scroll_path
@@ -55,6 +58,37 @@ defmodule Playcode.Export.StaticSite.Comparison do
   end
 
   defp keyed(divisions), do: Enum.zip(divisions, Division.sync_keys(divisions))
+
+  attr :edition, :map, required: true
+  attr :prefix, :string, default: nil
+
+  @doc """
+  A panel's text. Both plays number their ids alike (`act-1`, `l1`, `note-1`), so the
+  translation's carry a `prefix`: its note buttons open its own notes, its line links
+  scroll its own panel. Text is escaped, so ` id="` is only ever markup.
+  """
+  def text(assigns) do
+    assigns = assign(assigns, :label, "Notes: " <> InlineMarkup.plain(assigns.edition.play.title))
+
+    html =
+      ~H"""
+      <Components.full_text edition={@edition} notes_label={@label} />
+      """
+      |> Phoenix.HTML.Safe.to_iodata()
+      |> IO.iodata_to_binary()
+
+    assigns = assign(assigns, :html, Phoenix.HTML.raw(own_ids(html, assigns.prefix)))
+    ~H"{@html}"
+  end
+
+  defp own_ids(html, nil), do: html
+
+  defp own_ids(html, prefix) do
+    String.replace(html, ~r/ (id|popovertarget)="|href="#/, fn
+      ~s(href="#) -> ~s(href="#) <> prefix
+      attribute -> attribute <> prefix
+    end)
+  end
 
   # Starts the sync. A fragment `#s<n>` opens the original's panel at its speech `n`, the
   # other following; the translation menu opens the page it names at the original's

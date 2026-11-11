@@ -52,7 +52,7 @@
         aria-label={edition.play.title}
         lang={edition.play.language}
       >
-        <Components.full_text edition={edition} />
+        <Comparison.text edition={edition} prefix={if n == 1, do: "t-"} />
       </div>
     </section>
   </div>

@@ -110,6 +110,43 @@ defmodule Playcode.Export.StaticSiteCompareTest do
     end
   end
 
+  # Both texts number their ids per play: the translation's are its own, so a note's
+  # button opens its own play's note and a line's link scrolls its own panel.
+  test "each panel's ids are its own" do
+    line = fn word ->
+      ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">#{word}<note n="1" type="editor"><p>Nota de #{word}.</p></note></l></sp></div1>)
+    end
+
+    original = [body: line.("uno"), title: "Uno"] |> tei() |> import_tei!()
+    translation = [body: line.("one"), title: "One"] |> tei() |> import_tei!()
+    {:ok, original} = Catalogue.update_play(original, %{is_complete: true})
+
+    {:ok, translation} =
+      Catalogue.update_play(translation, %{
+        is_complete: true,
+        parent_play_id: original.id,
+        relationship_type: "traduccion"
+      })
+
+    page =
+      [original, translation] |> generate!() |> html!("plays/#{translation.code}/compare.html")
+
+    ids = attribute(page, "[id]", "id")
+    assert ids -- Enum.uniq(ids) == []
+
+    for panel <- ["panel-0", "panel-1"] do
+      [target] = attribute(page, "[data-panel='#{panel}'] .nref", "popovertarget")
+      assert count(page, "[data-panel='#{panel}'] li[id='#{target}']") == 1
+      [href] = attribute(page, "[data-panel='#{panel}'] .l a.n", "href")
+      assert count(page, "[data-panel='#{panel}'] #{href}") == 1
+    end
+
+    assert page |> LazyHTML.query("[data-panel='panel-1'] li[popover]") |> LazyHTML.text() =~
+             "Nota de one."
+
+    assert attribute(page, "[role='doc-endnotes']", "aria-label") |> Enum.uniq() |> length() == 2
+  end
+
   describe "the way in" do
     # Another translation of the split-speech original: published unless told, first in
     # the catalogue's order ("Antonio…" before the French's "Test Play").
