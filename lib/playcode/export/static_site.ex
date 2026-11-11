@@ -24,7 +24,7 @@ defmodule Playcode.Export.StaticSite do
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue.Play
-  alias Playcode.Export.StaticSite.{Components, Edition, Fingerprint, Pages, Search}
+  alias Playcode.Export.StaticSite.{Comparison, Components, Edition, Fingerprint, Pages, Search}
 
   @type progress_info :: %{
           step: :assets | :catalogue | :play,
@@ -509,6 +509,7 @@ defmodule Playcode.Export.StaticSite do
       |> Enum.max(fn -> 0 end)
 
     File.write!(Path.join(play_dir, "text.html"), Pages.render(:text, assigns))
+    write_comparison(edition, play_dir, site)
     File.write!(Path.join(play_dir, "statistics.html"), Pages.render(:statistics, assigns))
 
     if edition.notes != [],
@@ -525,6 +526,23 @@ defmodule Playcode.Export.StaticSite do
     )
 
     %{largest_page_gzip: largest}
+  end
+
+  # A play whose original is published is compared with it, in its own folder: a
+  # change to the original re-exports it (`relatives/3`), so the page follows both.
+  # ponytail: loads the original's whole Edition once per translation; share one per
+  # build if Generate's time grows.
+  defp write_comparison(%Edition{play: play} = edition, play_dir, site) do
+    parent = play.parent_play
+
+    if parent && MapSet.member?(site.published, parent.code) do
+      {original, translation} = Comparison.prepare(Edition.load(parent.id), edition)
+
+      html =
+        Pages.render(:compare, %{original: original, translation: translation, site: site})
+
+      File.write!(Path.join(play_dir, "compare.html"), html)
+    end
   end
 
   # The catalogue, about and search pages.

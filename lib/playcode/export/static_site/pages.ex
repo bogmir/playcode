@@ -7,7 +7,7 @@ defmodule Playcode.Export.StaticSite.Pages do
   use Phoenix.Component
 
   alias Playcode.Catalogue.Play
-  alias Playcode.Export.StaticSite.{Components, Edition}
+  alias Playcode.Export.StaticSite.{Comparison, Components, Edition}
   alias Playcode.PlayContent.{Element, Note}
   alias PlaycodeWeb.PlayLabels
 

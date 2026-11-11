@@ -24,6 +24,9 @@ defmodule Playcode.Alignment do
   # correlation 0.04), so it keeps the comparison's proportion.
   @paired ~w(traduccion version)
 
+  @doc "Whether `play` is paired with its original by speaker: a translation or a version."
+  def paired?(play), do: play.relationship_type in @paired
+
   @doc """
   Marks each speech of `editions`, `{play, divisions}` as `PlayContent.load_play_content/2`
   gives them, with `pair`: in a translation or version shown beside its original, the place
@@ -35,22 +38,35 @@ defmodule Playcode.Alignment do
 
     pairs =
       Enum.reduce(editions, %{}, fn {play, divisions}, acc ->
-        original = play.relationship_type in @paired && shown[play.parent_play_id]
-        if original, do: Map.merge(acc, places(original, divisions)), else: acc
+        original = paired?(play) && shown[play.parent_play_id]
+
+        if original,
+          do:
+            acc |> Map.merge(own_places(original)) |> Map.merge(pair_places(original, divisions)),
+          else: acc
       end)
 
     Enum.map(editions, fn {play, divisions} -> {play, Enum.map(divisions, &mark(&1, pairs))} end)
   end
 
-  defp places(original_divisions, translation_divisions) do
+  @doc "Each speech of `divisions` by id, with its place among them in reading order."
+  def own_places(divisions), do: divisions |> text() |> places()
+
+  @doc """
+  Each speech of `translation_divisions` by id, with the place among `original_divisions`'
+  speeches of the one it goes with; a speech the alignment gives no original is left out.
+  """
+  def pair_places(original_divisions, translation_divisions) do
     original = text(original_divisions)
-    own = original.speeches |> Enum.with_index() |> Map.new(fn {s, i} -> {s.id, i} end)
+    own = places(original)
 
     for %{id: id, original: o} <- align(original, text(translation_divisions)).speeches,
         o != nil,
-        into: own,
+        into: %{},
         do: {id, own[o]}
   end
+
+  defp places(text), do: text.speeches |> Enum.with_index() |> Map.new(fn {s, i} -> {s.id, i} end)
 
   # A play's speeches in reading order, each with its act's and scene's comparison keys
   # (`Division.sync_keys/1`), and the characters who speak them.

@@ -1,0 +1,35 @@
+<Components.shell
+  root="../../"
+  title={"#{@original.play.title} and #{@translation.play.title} — EMOTHE"}
+  site={@site}
+  play={@translation.play}
+>
+  <div class="compare-bar">
+    <a href={"../#{@original.play.code}/index.html"}>Back to {@original.play.title}</a>
+  </div>
+  <div class="compare" id="sync-scroll">
+    <section
+      :for={{edition, n} <- Enum.with_index([@original, @translation])}
+      class="panel"
+      aria-label={edition.play.title}
+    >
+      <header class="panel-head">
+        <p class="panel-title">{edition.play.title}</p>
+        <p class="meta">{edition.play.author_name} — {edition.play.code}</p>
+      </header>
+      <div
+        class="text"
+        data-panel={"panel-#{n}"}
+        tabindex="0"
+        role="region"
+        aria-label={edition.play.title}
+        lang={edition.play.language}
+      >
+        <Components.full_text edition={edition} />
+      </div>
+    </section>
+  </div>
+  <script>
+    <%= Phoenix.HTML.raw(Comparison.script()) %>
+  </script>
+</Components.shell>

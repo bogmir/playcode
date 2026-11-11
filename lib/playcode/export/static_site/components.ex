@@ -606,6 +606,30 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   attr :edition, :map, required: true
+
+  @doc "A play's whole text, as `text.html` shows it: its contents, then its endnotes."
+  def full_text(assigns) do
+    ~H"""
+    <%= for entry <- @edition.contents do %>
+      <%= case entry do %>
+        <% {:page, page} -> %>
+          <.division_text edition={@edition} division={page.division} />
+        <% {:item, item} -> %>
+          <.outline_item edition={@edition} item={item} head="act-head" />
+      <% end %>
+    <% end %>
+    <.endnotes notes={
+      @edition.pages |> Enum.reject(& &1.scene) |> Enum.map(& &1.division) |> Note.reading_order()
+    } />
+    """
+  end
+
+  # A comparison key of the speech or heading `id` (`StaticSite.Comparison`), nil on every
+  # page but the comparison's.
+  defp sync(%{sync: %{} = sync}, kind, id), do: sync[kind][id]
+  defp sync(_edition, _kind, _id), do: nil
+
+  attr :edition, :map, required: true
   attr :division, :map, required: true
 
   def division_text(assigns) do
@@ -614,7 +638,11 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <section class="division" id={@edition.anchors[@division.id]}>
-      <h2 :if={@division.title} class="act-head">
+      <h2
+        :if={@division.title}
+        class="act-head"
+        data-sync-div={sync(@edition, :div, @division.id)}
+      >
         <.inline text={@division.title} notes={@division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
@@ -624,7 +652,11 @@ defmodule Playcode.Export.StaticSite.Components do
           <.outline_item edition={@edition} item={child} />
         <% else %>
           <section id={@edition.anchors[child.id]}>
-            <h3 :if={child.title} class="scene-head">
+            <h3
+              :if={child.title}
+              class="scene-head"
+              data-sync-div={sync(@edition, :div, child.id)}
+            >
               <.inline text={child.title} notes={child.notes} />
             </h3>
             <.el :for={el <- child.loaded_elements} el={el} edition={@edition} />
@@ -705,7 +737,12 @@ defmodule Playcode.Export.StaticSite.Components do
     assigns = assign(assigns, :who, who(assigns.el))
 
     ~H"""
-    <div class={["sp", Element.folio_only?(@el) && "fo"]} data-who={@who}>
+    <div
+      class={["sp", Element.folio_only?(@el) && "fo"]}
+      data-who={@who}
+      data-sync-act={sync(@edition, :act, @el.id)}
+      data-pair={sync(@edition, :pair, @el.id)}
+    >
       <p :if={@el.speaker_label} class={["spk", InlineMarkup.whole_folio?(@el.speaker_label) && "fo"]}>
         <.inline text={@el.speaker_label} notes={@el.notes} />
       </p>
