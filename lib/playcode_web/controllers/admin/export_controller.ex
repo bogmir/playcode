@@ -1,7 +1,6 @@
 defmodule PlaycodeWeb.Admin.ExportController do
   @moduledoc """
-  Staff downloads: a play's TEI, HTML, PDF and EPUB, a side-by-side comparison as one HTML
-  page, and the generated static site, as a .zip or browsed in place under
+  Staff downloads: a play's TEI, HTML, PDF and EPUB, and the generated static site, as a .zip or browsed in place under
   /admin/export/preview. Each download is logged.
   """
 
@@ -11,18 +10,6 @@ defmodule PlaycodeWeb.Admin.ExportController do
   alias Playcode.Export
   alias Playcode.Export.PdfCache
   alias Playcode.ActivityLog
-
-  def compare_html(conn, %{"plays" => play_ids_str}) do
-    play_ids = String.split(play_ids_str, ",", trim: true)
-    plays = Enum.map(play_ids, &Catalogue.get_play_with_all!/1)
-    html = Export.CompareHtml.generate(plays)
-    codes = Enum.map_join(plays, "_vs_", & &1.code)
-
-    conn
-    |> put_resp_content_type("text/html")
-    |> put_resp_header("content-disposition", ~s(attachment; filename="compare_#{codes}.html"))
-    |> send_resp(200, html)
-  end
 
   def tei(conn, %{"id" => id}) do
     play = Catalogue.get_play_with_all!(id)

@@ -245,7 +245,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
   # A quarter of the corpus's stage directions bring their own parentheses, "(Vase.)";
   # the outputs that add them printed those as "((Vase.))".
-  test "the downloads and the comparison put parentheses only around a stage direction without them",
+  test "the downloads put parentheses only around a stage direction without them",
        %{conn: conn} do
     play =
       import_tei!(
@@ -261,13 +261,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
     html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
     {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
 
-    compare =
-      conn
-      |> log_in_user(Playcode.TestFixtures.user_fixture(role: :researcher))
-      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{play.id}"]}")
-      |> response(200)
-
-    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}, {compare, "comparison"}] do
+    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}] do
       assert body =~ ~s{<div class="stage-direction">(Vase.)</div>}, where
       assert body =~ ~s{<div class="stage-direction">(Sale Ana.)</div>}, where
     end
@@ -275,7 +269,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
   # A verse's number is the file's text since 2026-11-08 ("3-4"), no longer an integer, so
   # the downloads and the comparison escape it like any other text.
-  test "the downloads and the comparison escape a verse's number", %{conn: conn} do
+  test "the downloads escape a verse's number", %{conn: conn} do
     play =
       import_tei!(
         tei(
@@ -290,20 +284,14 @@ defmodule PlaycodeWeb.ExportControllerTest do
     html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
     {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
 
-    compare =
-      conn
-      |> log_in_user(Playcode.TestFixtures.user_fixture(role: :researcher))
-      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{play.id}"]}")
-      |> response(200)
-
-    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}, {compare, "comparison"}] do
+    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}] do
       assert body =~ ~s{<span class="line-number">3&amp;4</span>}, where
     end
   end
 
   # A text not parted into acts is one `play` division (21 plays); the play page heads it
   # as an act, and the downloads headed a titled one as a scene, with no page break.
-  test "the downloads and the comparison head a play division as an act", %{conn: conn} do
+  test "the downloads head a play division as an act", %{conn: conn} do
     play =
       import_tei!(
         tei(
@@ -318,13 +306,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
     html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
     {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
 
-    compare =
-      conn
-      |> log_in_user(Playcode.TestFixtures.user_fixture(role: :researcher))
-      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{play.id}"]}")
-      |> response(200)
-
-    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}, {compare, "comparison"}] do
+    for {body, where} <- [{html, "HTML"}, {epub_text(files), "EPUB"}] do
       assert body =~ ~r{<h2 class="act-heading"[^>]*>La farsa entera</h2>}, where
     end
   end

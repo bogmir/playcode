@@ -153,7 +153,6 @@ lib/
 - `GET /admin/plays/:id/bibliography` - A play's bibliography: new, edit (with a warning on a shared entry), add an existing entry, remove, filter (`:manage_bibliography`)
 - `GET /admin/plays/:id/witnesses` - A play's witnesses: add, edit, reorder, delete, previewed as printed (`:view_admin`)
 - `GET /admin/plays/:id/performances` - A play's performances: add, edit, delete; the cast; a company or actor renamed for every performance; the source picked, entered or corrected for every play (`:view_admin`)
-- `GET /admin/plays/compare/export/html` - Comparison HTML export
 - `GET /admin/plays/:id/export/tei` - Download TEI-XML
 - `GET /admin/plays/:id/export/html` - Download HTML
 - `GET /admin/plays/:id/export/pdf` - Download PDF

@@ -115,19 +115,8 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
           /> {gettext("Verse type")}
         </label>
 
-        <%!-- Export & Add play --%>
-        <div class="ml-auto flex items-center gap-2">
-          <a
-            href={
-              ~p"/admin/plays/compare/export/html?plays=#{Enum.map_join(@panels, ",", & &1.play.id)}"
-            }
-            class="btn btn-xs btn-outline gap-1"
-          >
-            <.icon name="hero-arrow-down-tray-mini" class="size-3.5" />
-            {gettext("Export HTML")}
-          </a>
-        </div>
-        <div :if={@available != [] && length(@panels) < 4} class="flex items-center gap-2">
+        <%!-- Add play --%>
+        <div :if={@available != [] && length(@panels) < 4} class="ml-auto flex items-center gap-2">
           <form phx-change="add_play" class="inline">
             <select
               name="id"

@@ -175,7 +175,6 @@ defmodule PlaycodeWeb.Router do
     end
 
     # Export endpoints
-    get "/plays/compare/export/html", ExportController, :compare_html
     get "/plays/:id/export/tei", ExportController, :tei
     get "/plays/:id/export/html", ExportController, :html
     get "/plays/:id/export/pdf", ExportController, :pdf
