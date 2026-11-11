@@ -226,8 +226,8 @@ defmodule Playcode.CompleteCopyTest do
     [ana, blas, _criado] =
       cast!(play, [
         %{xml_id: "ANA", name: "Ana", description: "dama <<joven>>"},
-        %{xml_id: "BLAS", name: "Blas"},
-        %{xml_id: "CRIADO", name: "Criado", is_hidden: true, is_group: true}
+        %{xml_id: "BLAS", name: "Blas", original_xml_id: "BLASILLO"},
+        %{xml_id: "CRIADO", name: "Criado", is_hidden: true, is_group: true, no_original: true}
       ])
 
     {act, scene} = act_and_scene!(play, 3)

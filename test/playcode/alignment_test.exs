@@ -38,6 +38,29 @@ defmodule Playcode.AlignmentTest do
            }
   end
 
+  # Step 3: a researcher's corrections, by the original character's xml:id, come before
+  # the rule; "no original" takes a character out; a pointer to no one counts as none.
+  test "a correction wins over the rule, and one naming no one is no correction" do
+    original = %{
+      @original
+      | characters: Enum.map(@original.characters, &Map.put(&1, :xml_id, String.upcase(&1.id)))
+    }
+
+    french = %{
+      characters: [
+        %{id: "f-antoine", name: "Antoine", original_xml_id: "CLEO"},
+        %{id: "f-cleo", name: "Cléopâtre", no_original: true},
+        %{id: "f-philon", name: "Philon", original_xml_id: "GONE"}
+      ],
+      speeches: []
+    }
+
+    assert Alignment.align(original, french).characters == %{
+             "f-antoine" => "cleo",
+             "f-philon" => "philo"
+           }
+  end
+
   # 0038/0084's last scene: neither name matches, both speak only there, so how much each
   # speaks is what tells them apart.
   test "two renamed roles in one scene pair by how much they speak" do

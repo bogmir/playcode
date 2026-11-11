@@ -17,6 +17,11 @@ defmodule Playcode.Export.StaticSiteCompareTest do
 
   defp count(page, selector), do: page |> LazyHTML.query(selector) |> Enum.count()
 
+  defp correct!(play, xml_id, to) do
+    character = Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == xml_id))
+    {:ok, _} = Playcode.PlayContent.update_character(character, %{original_xml_id: to})
+  end
+
   test "a published translation beside its published original gets a comparison page" do
     %{original: original, french: french} = split_speech_editions()
     dir = generate!([original, french])
@@ -29,6 +34,35 @@ defmodule Playcode.Export.StaticSiteCompareTest do
 
     assert texts(page, "[data-panel='panel-0'] .spk") == ["ANTONY", "CLEOPATRA", "ANTONY"]
     refute File.exists?(Path.join(dir, "plays/#{original.code}/compare.html"))
+  end
+
+  # Step 3: Antoine corrected to Cleopatra and Cléopâtre to Antony; read through the
+  # corrections the French speakers run CLEO, ANT, ANT, CLEO against ANT, CLEO, ANT, so
+  # Antoine's first speech goes with Cleopatra's (the rule alone gave 0, 1, 1, 2).
+  test "a corrected character pairs its speeches with its correction's" do
+    %{original: original, french: french} = split_speech_editions()
+
+    correct!(french, "antoine", "CLEO")
+    correct!(french, "cleopatre", "ANT")
+
+    page = [original, french] |> generate!() |> html!("plays/#{french.code}/compare.html")
+
+    assert [first | _] = attribute(page, "[data-panel='panel-1'] [data-pair]", "data-pair")
+    assert first == "1"
+  end
+
+  # Re-importing the original recreates its characters, with new rows: a correction names
+  # the original character by its xml:id, so it still holds.
+  test "the original re-imported keeps its translations' corrections" do
+    %{original: original, french: french} = split_speech_editions()
+    correct!(french, "antoine", "CLEO")
+    correct!(french, "cleopatre", "ANT")
+    original = original |> export_tei() |> import_tei!()
+
+    page = [original, french] |> generate!() |> html!("plays/#{french.code}/compare.html")
+
+    assert [first | _] = attribute(page, "[data-panel='panel-1'] [data-pair]", "data-pair")
+    assert first == "1"
   end
 
   test "no page when the original is a draft" do
