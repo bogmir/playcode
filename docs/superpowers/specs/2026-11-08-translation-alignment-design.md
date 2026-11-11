@@ -210,7 +210,9 @@ changes only if someone notices. Generate: at most about 8 s more for a full reb
    stored (`characters.original_xml_id`, `no_original`), the rule pairs the rest at every
    comparison; the select is in the cast entry's form on the characters tab.
 4. **Speech corrections**: the column, fixed points in the pairing, `sp corresp`, the import
-   and the re-import of the original.
+   and the re-import of the original. **Parked 2026-11-11 at low priority** by the owner:
+   little gain for its cost (`docs/backlog.md`, *Low Priority*); back when step 5's report
+   shows a pair a character correction cannot fix.
 5. **The coder's report** as a download, with the length warning.
 
 ## Proof of concept (2026-11-09, branch `poc/translation-alignment`)
