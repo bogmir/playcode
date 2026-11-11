@@ -70,7 +70,6 @@ lib/
 │       ├── pdf_cache.ex              # Each play's PDF rendered once per version, kept on the volume
 │       ├── epub.ex                   # EPUB 3 generation via BUPE: package, CSS and chapters around Download
 │       ├── note_markup.ex            # Italics and note references for the HTML/PDF and EPUB downloads
-│       ├── compare_html.ex           # Standalone comparison HTML with sync scroll
 │       ├── site_builder.ex           # The one process that writes and ships the admin's site
 │       ├── play_change_listener.ex   # Relays Postgres's play_changed notifications to the export page and the play's topic
 │       └── static_site.ex            # Static site orchestrator
@@ -101,7 +100,7 @@ lib/
     │       ├── import_live.ex        # Admin: /admin/plays/import - TEI file import
     │       ├── activity_log_live.ex  # Admin: /admin/activity-log - activity audit log
     │       ├── export_site_live.ex   # Admin: /admin/export - static site generation UI
-    │       ├── play_compare_live.ex  # Admin: /admin/plays/:id/compare - side-by-side comparison
+    │       ├── play_compare_live.ex  # Admin: /admin/plays/:id/compare - side-by-side comparison; ?view=pairs the pair review
     │       ├── play_bibliography_live.ex # Admin: /admin/plays/:id/bibliography - a play's bibliography
     │       ├── notes_component.ex        # The note editor inside the content editor's modals
     │       ├── play_notes_live.ex        # Admin: /admin/plays/:id/notes - a play's notes, edited in place

@@ -21,9 +21,10 @@ defmodule Playcode.Alignment do
   # ponytail: one-to-one greedy character pairing; merged or split roles stay unpaired.
   @buckets 20
   @threshold 0.6
-  # ponytail: a first guess at a doubtful length, to tune against the corpus.
-  @long_ratio 4
-  @long_floor 20
+  # Tuned on dev (2026-11-11): marks 0084's rows 89 and 91 (5 words against 19, 18 against
+  # 3) and 1,182 (1.15%) of the 102,351 same-speaker rows of 145 translations.
+  @long_ratio 3.5
+  @long_floor 15
   # An adaptation's speakers do not follow its original's (proof of concept: median length
   # correlation 0.04), so it keeps the comparison's proportion.
   @paired ~w(traduccion version)
