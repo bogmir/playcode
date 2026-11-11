@@ -56,8 +56,9 @@ export function topAnchor(panel, selector = "[data-sync-act], [data-sync-div]") 
 }
 
 // Keeps the [data-panel] elements inside `container` at the same place in the play. The
-// panel under the pointer leads, so the panels it moves do not move it back. Returns a
-// function that removes the listeners.
+// panel last pointed at, focused or turned by the wheel leads, so the panels it moves do
+// not move it back. Leaving does not end the lead: a touch pan fires pointerleave as soon
+// as the browser takes the scroll over. Returns a function that removes the listeners.
 export function syncPanels(container) {
   const panels = Array.from(container.querySelectorAll("[data-panel]"))
   if (panels.length < 2) return () => {}
@@ -89,9 +90,10 @@ export function syncPanels(container) {
   let leader = null
   let frame = null
 
+  const leads = ["pointerenter", "focusin", "wheel"]
+
   const listeners = panels.map((panel, i) => {
     const enter = () => { leader = i }
-    const leave = () => { if (leader === i) leader = null }
     const scroll = () => {
       if (leader !== i || frame) return
       frame = requestAnimationFrame(() => {
@@ -99,19 +101,17 @@ export function syncPanels(container) {
         panels.forEach((other, j) => { if (j !== i) align(panel, other) })
       })
     }
-    panel.addEventListener("pointerenter", enter)
-    panel.addEventListener("pointerleave", leave)
+    leads.forEach((type) => panel.addEventListener(type, enter, { passive: true }))
     panel.addEventListener("scroll", scroll, { passive: true })
-    return { panel, enter, leave, scroll }
+    return { panel, enter, scroll }
   })
 
   requestAnimationFrame(() => panels.slice(1).forEach((other) => align(panels[0], other)))
 
   return () => {
     if (frame) cancelAnimationFrame(frame)
-    listeners.forEach(({ panel, enter, leave, scroll }) => {
-      panel.removeEventListener("pointerenter", enter)
-      panel.removeEventListener("pointerleave", leave)
+    listeners.forEach(({ panel, enter, scroll }) => {
+      leads.forEach((type) => panel.removeEventListener(type, enter))
       panel.removeEventListener("scroll", scroll)
     })
   }

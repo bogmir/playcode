@@ -3,7 +3,7 @@
 // the one at the top of the panel being scrolled.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { counterpart, matchPair, matchSpeech } from '../../assets/js/sync_scroll.mjs';
+import { counterpart, matchPair, matchSpeech, syncPanels } from '../../assets/js/sync_scroll.mjs';
 
 test('a speech pairs with the one the same way through the same act', () => {
   const source = ['act-0', 'act-0', 'act-0', 'act-1'];
@@ -47,3 +47,55 @@ test('a speech scrolls to the speech with its pair, a cut one to the next', () =
   assert.equal(matchPair(french, 9), 3); // past the end: the last
   assert.equal(matchPair([], 0), null);
 });
+
+// Two panels of five speeches, 100px apart; requestAnimationFrame runs on flush().
+function panels() {
+  const queue = []
+  globalThis.requestAnimationFrame = (cb) => queue.push(cb)
+  const flush = () => { while (queue.length) queue.shift()() }
+  const panel = () => {
+    const p = new EventTarget()
+    p.scrollTop = 0
+    p.getBoundingClientRect = () => ({ top: 0 })
+    const speeches = [0, 1, 2, 3, 4].map((i) => ({
+      dataset: { syncAct: 'act-0', pair: String(i) },
+      hasAttribute: (name) => name !== 'data-sync-div',
+      getBoundingClientRect: () => ({ top: i * 100 - p.scrollTop }),
+    }))
+    p.querySelectorAll = () => speeches
+    return p
+  }
+  const [a, b] = [panel(), panel()]
+  syncPanels({ querySelectorAll: () => [a, b] })
+  flush()
+  const scroll = (p, top) => { p.scrollTop = top; p.dispatchEvent(new Event('scroll')); flush() }
+  return { a, b, scroll }
+}
+
+// A touch pan fires pointercancel and pointerleave as soon as the browser takes the
+// scroll over, and the panel still leads the scroll that follows.
+test('a panel panned by touch still leads', () => {
+  const { a, b, scroll } = panels()
+  b.dispatchEvent(new Event('pointerenter'))
+  b.dispatchEvent(new Event('pointercancel'))
+  b.dispatchEvent(new Event('pointerleave'))
+  scroll(b, 200)
+  assert.equal(a.scrollTop, 200)
+})
+
+test('a panel scrolled from the keyboard leads', () => {
+  const { a, b, scroll } = panels()
+  b.dispatchEvent(new Event('focusin'))
+  scroll(b, 300)
+  assert.equal(a.scrollTop, 300)
+})
+
+// The pointer rests over a panel while the other has the focus: the wheel turns it back.
+test('a panel turned by the wheel leads', () => {
+  const { a, b, scroll } = panels()
+  a.dispatchEvent(new Event('pointerenter'))
+  b.dispatchEvent(new Event('focusin'))
+  a.dispatchEvent(new Event('wheel'))
+  scroll(a, 100)
+  assert.equal(b.scrollTop, 100)
+})
