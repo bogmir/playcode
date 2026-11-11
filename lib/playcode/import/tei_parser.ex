@@ -1512,6 +1512,18 @@ defmodule Playcode.Import.TeiParser do
     })
   end
 
+  # A translation's character, corrected to an original one (problem 5, step 3):
+  # `castItem corresp="orig:CLEO"`, its prefix or a path to the original's file
+  # (`…EMOTHE0038.xml#CLEO`) dropped, the character's xml:id kept.
+  defp original_pointer(nil), do: nil
+
+  defp original_pointer(ref) do
+    case ref |> String.trim() |> String.replace(~r/^(orig:|.*#)/, "") do
+      "" -> nil
+      xml_id -> xml_id
+    end
+  end
+
   defp cast_items({"castItem", attrs, children}), do: cast_item(attrs, children, nil)
 
   defp cast_items({"castGroup", _attrs, children}) do
@@ -1559,6 +1571,8 @@ defmodule Playcode.Import.TeiParser do
               actor: safe_text(find_child(children, "actor")),
               is_hidden: "oculto" in marks,
               is_group: "grupo" in marks,
+              original_xml_id: original_pointer(attr_value(attrs, "corresp")),
+              no_original: "sin-original" in marks,
               position: 0
             }
 

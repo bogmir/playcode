@@ -72,7 +72,7 @@ defmodule Playcode.Export.TeiXml do
         :TEI,
         %{"xml:lang" => play.language || "es", "xmlns" => "http://www.tei-c.org/ns/1.0"},
         [
-          build_header(play, performances, gazetteer),
+          build_header(play, performances, gazetteer, divisions),
           build_text(play, divisions, performances, gazetteer)
         ]
       )
@@ -91,12 +91,12 @@ defmodule Playcode.Export.TeiXml do
 
   # --- Header ---
 
-  defp build_header(play, performances, gazetteer) do
+  defp build_header(play, performances, gazetteer, divisions) do
     element(
       :teiHeader,
       [
         build_file_desc(play),
-        build_encoding_desc(play),
+        build_encoding_desc(play, divisions),
         build_profile_desc(play, performances, gazetteer)
       ] ++ build_revision_desc(play)
     )
@@ -423,7 +423,7 @@ defmodule Playcode.Export.TeiXml do
         do: inline_element(:p, %{}, build_inline_content(paragraph))
   end
 
-  defp build_encoding_desc(play) do
+  defp build_encoding_desc(play, divisions) do
     children = []
 
     children =
@@ -436,7 +436,8 @@ defmodule Playcode.Export.TeiXml do
         do: children ++ [element(:editorialDecl, paragraphs(play.editorial_declaration))],
         else: children
 
-    children = children ++ build_class_decl(play) ++ [build_refs_decl(play)]
+    children =
+      children ++ build_class_decl(play) ++ [build_refs_decl(play)] ++ prefix(play, divisions)
 
     element(:encodingDesc, if(children == [], do: [element(:p, "")], else: children))
   end
@@ -450,6 +451,40 @@ defmodule Playcode.Export.TeiXml do
     "VL" => {"printed-line", [".//l[@n]", ".//p[@n]", ".//lb[@n]"], "@n"},
     "S" => {"speech", [".//sp[(.//l | .//p)[1][@n]]"], "(.//l | .//p)[1]/@n"}
   }
+
+  # Where a corrected character's `orig:` pointer leads: the original's file, beside this one
+  # on the static site (`plays/<CODE>/<CODE>.xml`). Only a play that corrects one has it.
+  defp prefix(play, divisions) do
+    corrected? =
+      divisions
+      |> cast_lists()
+      |> Enum.flat_map(& &1.entries)
+      |> Enum.any?(&original?(&1.character))
+
+    case corrected? && original_file_code(play) do
+      code when is_binary(code) ->
+        [
+          element(:listPrefixDef, [
+            element(:prefixDef, %{
+              ident: "orig",
+              matchPattern: "(.+)",
+              replacementPattern: "../#{code}/#{code}.xml#$1"
+            })
+          ])
+        ]
+
+      _ ->
+        []
+    end
+  end
+
+  defp original?(%{original_xml_id: id}), do: is_binary(id)
+  defp original?(_), do: false
+
+  # The site names a play's folder by its whole code; an original not in Playcode yet, or
+  # hidden from this reader, by the short code the file names.
+  defp original_file_code(%{parent_play: %Play{code: code}}), do: code
+  defp original_file_code(play), do: Catalogue.original_code(play)
 
   defp build_refs_decl(play) do
     {unit, paths, use} = Map.fetch!(@numbered, play.numbering_type)
@@ -998,13 +1033,25 @@ defmodule Playcode.Export.TeiXml do
         else: []
 
     actor = if declares? and character.actor, do: [element(:actor, character.actor)], else: []
-    marks = if character, do: [character.is_group && "grupo", character.is_hidden && "oculto"]
+
+    marks =
+      if character,
+        do: [
+          character.is_group && "grupo",
+          character.is_hidden && "oculto",
+          declares? && character.no_original && "sin-original"
+        ]
 
     item_attrs =
       case Enum.filter(List.wrap(marks), & &1) do
         [] -> %{}
         marks -> %{ana: Enum.join(marks, " ")}
       end
+
+    item_attrs =
+      if declares? and original?(character),
+        do: Map.put(item_attrs, :corresp, "orig:" <> character.original_xml_id),
+        else: item_attrs
 
     element(
       :castItem,

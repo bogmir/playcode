@@ -974,6 +974,53 @@ defmodule Playcode.TeiRoundtripTest do
   end
 
   describe "the cast list" do
+    # Problem 5, step 3: a researcher's corrections of a translation's characters, on the
+    # castItem that declares each, through a prefix to the original's file.
+    test "keeps a translation's corrected characters, with the prefix to its original" do
+      xml =
+        roundtrip(
+          tei(
+            file_desc:
+              ~s(<notesStmt><relatedItem type="original" target="EMOTHE0038"/></notesStmt>),
+            front: """
+            <div type="elenco"><castList>
+              <castItem corresp="orig:CLEO"><role xml:id="antoine">ANTOINE</role></castItem>
+              <castItem ana="sin-original"><role xml:id="messager">MESSAGER</role></castItem>
+              <castItem><role xml:id="cleopatre">CLÉOPÂTRE</role></castItem>
+            </castList></div>
+            """
+          )
+        )
+
+      assert xml |> xml_elements("castItem") |> Enum.map(&elem(&1, 0)) == [
+               %{"corresp" => "orig:CLEO"},
+               %{"ana" => "sin-original"},
+               %{}
+             ]
+
+      assert [{attrs, _}] = xml_elements(xml, "prefixDef")
+
+      assert attrs == %{
+               "ident" => "orig",
+               "matchPattern" => "(.+)",
+               "replacementPattern" => "../EMOTHE0038/EMOTHE0038.xml#$1"
+             }
+    end
+
+    test "writes no prefix where no character is corrected" do
+      xml =
+        roundtrip(
+          tei(
+            file_desc:
+              ~s(<notesStmt><relatedItem type="original" target="EMOTHE0038"/></notesStmt>),
+            front:
+              ~s(<div type="elenco"><castList><castItem><role xml:id="A">A</role></castItem></castList></div>)
+          )
+        )
+
+      assert xml_elements(xml, "prefixDef") == []
+    end
+
     test "keeps ids, names, descriptions and hidden characters, in order" do
       xml =
         roundtrip(

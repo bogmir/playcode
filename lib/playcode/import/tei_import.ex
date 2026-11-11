@@ -299,6 +299,7 @@ defmodule Playcode.Import.TeiImport do
 
   # As write/1, with the numbering rule settled (`Numbering.settle/2`) and its report.
   defp write_with_numbering(tei) do
+    kept = kept_corrections(tei.play.code)
     play = write_play(tei.play)
 
     Enum.each(tei.editors, &Catalogue.create_play_editor(tei_row(&1, play)))
@@ -308,7 +309,7 @@ defmodule Playcode.Import.TeiImport do
     write_settings(tei.settings, play)
 
     tei = take_free_positions(tei, play)
-    cast = write_characters(tei.characters, play)
+    cast = tei.characters |> Enum.map(&keep_correction(&1, kept)) |> write_characters(play)
 
     Enum.each(tei.paratexts, &Catalogue.create_paratext(tei_row(&1, play)))
     write_performances(tei.performances, play)
@@ -343,6 +344,25 @@ defmodule Playcode.Import.TeiImport do
     move = &%{&1 | position: elem(free, &1.position)}
     %{tei | paratexts: Enum.map(tei.paratexts, move), divisions: Enum.map(tei.divisions, move)}
   end
+
+  # A researcher's corrections of which original character each goes with (problem 5,
+  # step 3), by xml_id, from before a re-import replaces the characters: the corpus's files
+  # carry none, and a character the file corrects nothing for keeps its own.
+  defp kept_corrections(code) do
+    Repo.all(
+      from c in Character,
+        join: p in Play,
+        on: p.id == c.play_id,
+        where: p.code == ^code and (not is_nil(c.original_xml_id) or c.no_original),
+        select: {c.xml_id, %{original_xml_id: c.original_xml_id, no_original: c.no_original}}
+    )
+    |> Map.new()
+  end
+
+  defp keep_correction(%{original_xml_id: nil, no_original: false} = character, kept),
+    do: Map.merge(character, Map.get(kept, character.xml_id, %{}))
+
+  defp keep_correction(character, _kept), do: character
 
   # The file's characters as rows; returns their ids by xml_id.
   defp write_characters(characters, play) do

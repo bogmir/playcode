@@ -186,4 +186,32 @@ defmodule Playcode.Import.TeiReimportTest do
     assert Enum.map(front, & &1.content) == ["A mano, corregido.", "Ded.", "Arg."]
     assert Enum.map(back, & &1.content) == ["Fin."]
   end
+
+  # The corpus's files carry no corrections: re-importing one keeps those a researcher made
+  # for the characters it still has, by xml:id.
+  test "a file without corrections keeps the play's" do
+    cast = fn ->
+      tei(
+        code: "EMOTHE9377",
+        front: """
+        <div type="elenco"><castList>
+          <castItem><role xml:id="A">A</role></castItem>
+          <castItem><role xml:id="B">B</role></castItem>
+        </castList></div>
+        """
+      )
+    end
+
+    play = import_tei!(cast.())
+    [a, b] = PlayContent.list_characters(play.id)
+    {:ok, _} = PlayContent.update_character(a, %{original_xml_id: "ANT"})
+    {:ok, _} = PlayContent.update_character(b, %{no_original: true})
+
+    import_tei!(cast.())
+
+    assert play.id
+           |> PlayContent.list_characters()
+           |> Enum.map(&{&1.xml_id, &1.original_xml_id, &1.no_original}) ==
+             [{"A", "ANT", false}, {"B", nil, true}]
+  end
 end
