@@ -16,10 +16,14 @@ defmodule Playcode.Alignment do
   """
 
   alias Playcode.PlayContent.{Division, Element}
+  alias Playcode.Statistics.Metrics
 
   # ponytail: one-to-one greedy character pairing; merged or split roles stay unpaired.
   @buckets 20
   @threshold 0.6
+  # ponytail: a first guess at a doubtful length, to tune against the corpus.
+  @long_ratio 4
+  @long_floor 20
   # An adaptation's speakers do not follow its original's (proof of concept: median length
   # correlation 0.04), so it keeps the comparison's proportion.
   @paired ~w(traduccion version)
@@ -140,7 +144,10 @@ defmodule Playcode.Alignment do
   a person to check, in the original's reading order: each original speech followed by the
   translation speeches that go with it, a cut as a row with no translation, an addition
   before the first original speech at the start. Each row has its `kind`, the original
-  speech's act and scene (`place`), both speech elements and `long`.
+  speech's act and scene (`place`), both speech elements and `long`: one speaker on both
+  sides, but one speech over #{@long_ratio} times the other's words and over #{@long_floor}
+  words, which is how a stretch paired one speech off shows (the researcher's rows 89 and
+  91 of 0084).
   """
   def review(original_divisions, translation_divisions) do
     original = text(original_divisions)
@@ -163,8 +170,15 @@ defmodule Playcode.Alignment do
   defp review_row(kind, original, translation) do
     {o, place} = original || {nil, []}
     {t, _} = translation || {nil, []}
-    %{kind: kind, place: place, original: o, translation: t, long: false}
+    %{kind: kind, place: place, original: o, translation: t, long: kind == :same and long?(o, t)}
   end
+
+  defp long?(o, t) do
+    [short, long] = Enum.sort([words(o), words(t)])
+    long > @long_floor and long > @long_ratio * short
+  end
+
+  defp words(speech), do: speech |> spoken_text() |> Metrics.words()
 
   # Each speech by id, with the act and scene it stands in.
   defp speech_places(divisions) do

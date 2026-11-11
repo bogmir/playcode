@@ -11,7 +11,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   import PlaycodeWeb.Components.PlayText
 
   alias Playcode.{Alignment, Catalogue, PlayContent}
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{Element, InlineMarkup}
   alias PlaycodeWeb.PlayComparison
 
   @impl true
@@ -44,12 +44,33 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
           PlayContent.load_play_content(chosen.id)
         )
 
-    {:noreply, assign(socket, view: :pairs, candidates: candidates, chosen: chosen, rows: rows)}
+    {:noreply,
+     assign(socket,
+       view: :pairs,
+       candidates: candidates,
+       chosen: chosen,
+       rows: rows,
+       entries: chosen && first_entries(chosen.id),
+       doubtful: false
+     )}
   end
 
   def handle_params(_params, _uri, socket), do: {:noreply, assign(socket, view: :side)}
 
+  # Each character's first line on the Elenco tab, where its original is corrected.
+  defp first_entries(play_id) do
+    for list <- PlayContent.list_cast_lists(play_id),
+        entry <- list.entries,
+        entry.character_id,
+        reduce: %{} do
+      acc -> Map.put_new(acc, entry.character_id, entry.id)
+    end
+  end
+
   @impl true
+  def handle_event("toggle_doubtful", _params, socket),
+    do: {:noreply, update(socket, :doubtful, &(!&1))}
+
   def handle_event("pick_translation", %{"translation" => id}, socket) do
     {:noreply,
      push_patch(socket,
@@ -122,6 +143,8 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
         candidates={@candidates}
         chosen={@chosen}
         rows={@rows}
+        entries={@entries}
+        doubtful={@doubtful}
       />
 
       <div :if={@view == :side}>
@@ -247,9 +270,18 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   attr :candidates, :list, required: true
   attr :chosen, :any, required: true
   attr :rows, :list, required: true
+  attr :entries, :map, required: true
+  attr :doubtful, :boolean, required: true
 
   defp pair_review(assigns) do
-    assigns = assign(assigns, :counts, Enum.frequencies_by(assigns.rows || [], & &1.kind))
+    rows = assigns.rows || []
+
+    assigns =
+      assign(assigns,
+        counts: Enum.frequencies_by(rows, & &1.kind),
+        long: Enum.count(rows, & &1.long),
+        shown: shown_rows(rows, assigns.doubtful)
+      )
 
     ~H"""
     <section aria-label={gettext("Pair review")}>
@@ -276,7 +308,20 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
           >
             {kind_label(kind)}: {Map.get(@counts, kind, 0)}
           </li>
+          <li id="pair-count-long" class="rounded px-2 py-1 bg-warning/20">
+            {gettext("Very different length")}: {@long}
+          </li>
         </ul>
+        <label class="mb-3 flex items-center gap-2 text-sm cursor-pointer">
+          <input
+            type="checkbox"
+            name="doubtful"
+            checked={@doubtful}
+            phx-click="toggle_doubtful"
+            class="checkbox checkbox-sm"
+          />
+          {gettext("Only the doubtful rows, with one row either side")}
+        </label>
         <div class="overflow-x-auto" tabindex="0" role="region" aria-label={gettext("Pairs")}>
           <table class="table table-xs">
             <thead>
@@ -290,15 +335,25 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
             </thead>
             <tbody>
               <tr
-                :for={{row, n} <- Enum.with_index(@rows, 1)}
+                :for={{row, n} <- @shown}
                 id={"pair-row-#{n}"}
                 class={kind_class(row.kind)}
               >
                 <td class="text-base-content/70">{n}</td>
                 <td class="whitespace-nowrap">{Enum.map_join(row.place, ", ", &place_label/1)}</td>
                 <td><.speech_cell speech={row.original} /></td>
-                <td class="whitespace-nowrap">{kind_label(row.kind)}</td>
-                <td><.speech_cell speech={row.translation} /></td>
+                <td class="whitespace-nowrap">
+                  {kind_label(row.kind)}
+                  <span :if={row.long} class="badge badge-warning badge-xs">
+                    {gettext("Very different length")}
+                  </span>
+                </td>
+                <td>
+                  <.speech_cell
+                    speech={row.translation}
+                    href={elenco_link(row.translation, @chosen, @entries)}
+                  />
+                </td>
               </tr>
             </tbody>
           </table>
@@ -308,7 +363,30 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
     """
   end
 
+  # The rows with their numbers; with `doubtful`, only those beside a doubtful one.
+  defp shown_rows(rows, false), do: Enum.with_index(rows, 1)
+
+  defp shown_rows(rows, true) do
+    doubtful = Enum.map(rows, &(&1.kind != :same or &1.long))
+    near = Enum.zip([[false | doubtful], doubtful, tl(doubtful ++ [false])])
+
+    rows
+    |> Enum.with_index(1)
+    |> Enum.zip(near)
+    |> Enum.filter(fn {_, flags} -> true in Tuple.to_list(flags) end)
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp elenco_link(nil, _play, _entries), do: nil
+
+  defp elenco_link(speech, play, entries) do
+    with %{id: id} <- speech |> Element.characters() |> List.first(),
+         entry when entry != nil <- entries[id],
+         do: ~p"/admin/plays/#{play.id}/content#entry-#{entry}"
+  end
+
   attr :speech, :any, required: true
+  attr :href, :string, default: nil
 
   defp speech_cell(%{speech: nil} = assigns), do: ~H""
 
@@ -326,7 +404,10 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
     ~H"""
     <span title={@text}>
       <span :if={@n} class="text-base-content/70">{@n}</span>
-      <b>{InlineMarkup.plain(@speech.speaker_label || "")}</b>
+      <.link :if={@href} href={@href} class="link font-bold">
+        {InlineMarkup.plain(@speech.speaker_label || "")}
+      </.link>
+      <b :if={!@href}>{InlineMarkup.plain(@speech.speaker_label || "")}</b>
       {@opening}
     </span>
     """

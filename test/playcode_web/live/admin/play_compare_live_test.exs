@@ -161,3 +161,120 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
     assert Enum.map(rows(lv), &Regex.run(~r/One|Two|Three/, &1)) == [["One"], ["Two"], ["Three"]]
   end
 end
+
+defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
+  @moduledoc "The pair review's doubtful rows and its links to the Elenco."
+  use PlaycodeWeb.ConnCase, async: true
+
+  import Phoenix.LiveViewTest
+  import Playcode.TestFixtures
+  import Playcode.ImportHelpers
+
+  alias Playcode.{Catalogue, PlayContent}
+
+  setup %{conn: conn}, do: %{conn: log_in_user(conn, user_fixture(role: :researcher))}
+
+  # An original and its French translation, from their speeches' TEI.
+  defp editions(original_sps, french_sps) do
+    play = fn cast, sps ->
+      import_tei!(
+        tei(
+          front: ~s(<div type="elenco"><castList>#{cast}</castList></div>),
+          body: ~s(<div1 type="act" n="1"><head>I</head>#{sps}</div1>)
+        )
+      )
+    end
+
+    original =
+      play.(
+        ~s(<castItem><role xml:id="ANT">ANTONY</role></castItem><castItem><role xml:id="CLEO">CLEOPATRA</role></castItem>),
+        original_sps
+      )
+
+    french =
+      play.(
+        ~s(<castItem><role xml:id="antoine">ANTOINE</role></castItem><castItem><role xml:id="cleopatre">CLÉOPÂTRE</role></castItem>),
+        french_sps
+      )
+
+    {:ok, french} =
+      Catalogue.update_play(french, %{
+        parent_play_id: original.id,
+        relationship_type: "traduccion"
+      })
+
+    french
+  end
+
+  defp sp(who, words), do: ~s(<sp who="##{who}"><speaker>#{who}</speaker><p>#{words}</p></sp>)
+
+  defp rows(lv) do
+    lv
+    |> render()
+    |> LazyHTML.from_document()
+    |> LazyHTML.query("[id^='pair-row-']")
+    |> Enum.map(&(&1 |> LazyHTML.attribute("id") |> hd()))
+  end
+
+  defp review(conn, french) do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
+    lv
+  end
+
+  test "a same-speaker pair of very different length is doubtful, two short ones are not",
+       %{conn: conn} do
+    long = String.duplicate("word ", 40)
+
+    french =
+      editions(
+        sp("ANT", long) <> sp("CLEO", "Yes."),
+        sp("antoine", "Oui.") <> sp("cleopatre", "Oui, oui, monseigneur, très volontiers.")
+      )
+
+    lv = review(conn, french)
+
+    assert lv |> element("#pair-row-1") |> render() =~ t("Very different length")
+    refute lv |> element("#pair-row-2") |> render() =~ t("Very different length")
+  end
+
+  test "only the doubtful rows, with one row either side", %{conn: conn} do
+    original =
+      Enum.map_join(1..6, &sp(if(rem(&1, 2) == 1, do: "ANT", else: "CLEO"), "Line #{&1}."))
+
+    french =
+      Enum.map_join(
+        1..5,
+        &sp(if(rem(&1, 2) == 1, do: "antoine", else: "cleopatre"), "Ligne #{&1}.")
+      ) <>
+        ~s(<stage>Il sort.</stage>) <>
+        sp("antoine", "Encore.") <> sp("cleopatre", "Six.")
+
+    lv = review(conn, editions(original, french))
+    assert length(rows(lv)) == 7
+
+    lv |> element("input[name='doubtful']") |> render_click()
+
+    # Row 6 is the split; rows 5 and 7 stand beside it.
+    assert rows(lv) == ~w(pair-row-5 pair-row-6 pair-row-7)
+  end
+
+  test "a speaker links to its line on the translation's Elenco, a speech naming no role does not",
+       %{conn: conn} do
+    french =
+      editions(
+        sp("ANT", "One.") <> sp("CLEO", "Two."),
+        sp("antoine", "Un.") <> sp("nadie", "Deux.")
+      )
+
+    entry = french.id |> PlayContent.list_cast_lists() |> hd() |> Map.get(:entries) |> hd()
+    lv = review(conn, french)
+
+    assert has_element?(
+             lv,
+             "#pair-row-1 a[href='/admin/plays/#{french.id}/content#entry-#{entry.id}']",
+             "antoine"
+           )
+
+    refute has_element?(lv, "#pair-row-2 a")
+  end
+end
