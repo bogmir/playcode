@@ -111,13 +111,23 @@ import, and a `corresp` on every `<sp>` that goes stale when the original change
   The browser computes nothing, so the static site still works from disk. Same text, same
   pairs; an improved rule changes them everywhere at the next Generate (the module is in the
   export's fingerprint).
-- **Characters are paired automatically and can be corrected** (no confirmation step): one
-  nullable column on the translation's character, its original character, filled by the
-  automatic pass when the translation is imported or linked to its original and the column
-  is empty; corrected with a dropdown on the translation's characters tab, or in the XML. One
-  original per character: a merged role ("PISTOLA, NYM, BARDOLFO") stays unpaired and its
-  speeches pair by position. Because speech pairs are computed, a corrected character takes
-  effect at once.
+- **Characters are paired automatically and can be corrected** (no confirmation step). Only
+  the corrections are stored (decided by the owner 2026-11-11, replacing "filled by the
+  automatic pass on import or linking"): every comparison pairs the characters by rule, as
+  step 1 does, then lays the corrections on top, the same pattern as the speech corrections.
+  Nothing to run on the existing plays, no hook on each way a play is linked, and an
+  improved rule reaches every uncorrected character at the next Generate. A correction is
+  either another original character or "no original". Corrected on the translation's
+  characters tab, or in the XML. One original per character: a merged role ("PISTOLA, NYM,
+  BARDOLFO") stays unpaired and its speeches pair by position. A correction takes effect at
+  once.
+  - *Builder's calls (step 3):* the correction is held as the original character's
+    `xml:id` (`characters.original_xml_id`), not a row id, so re-importing the original,
+    which recreates its characters, keeps it, and a translation imported before its
+    original keeps its pointer until the original arrives. "No original" is
+    `characters.no_original`. A pointer naming no character of the original counts as no
+    correction. Re-importing the translation from a file without pointers (the corpus's
+    files) keeps the corrections of the characters whose `xml:id` it still has.
 - **Speech corrections are the only speech pairs stored:** one nullable column on a
   translation speech, the original speech it goes with, expected a few per play. A correction
   is a fixed point: the pairing runs between corrections, so one fix also mends its
@@ -134,6 +144,7 @@ import, and a `corresp` on every `<sp>` that goes stale when the original change
   </listPrefixDef>
   …
   <castItem corresp="orig:CLEO">
+  <castItem ana="sin-original">
   <sp who="#cleopatre" corresp="orig:em0038-en-sp-1150">
   ```
 
