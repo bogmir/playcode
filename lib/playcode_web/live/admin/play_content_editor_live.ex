@@ -13,6 +13,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Paratext
   alias Playcode.Outline
+  alias Playcode.Alignment
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Character, Division, Element, InlineMarkup}
   alias PlaycodeWeb.Admin.LiveHelpers
@@ -67,6 +68,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
        modal_list_id: nil,
        character_form: nil,
        entry_character: nil,
+       original_choice: nil,
        existing_options: [],
        divisions: divisions,
        removals: removals(divisions),
@@ -269,6 +271,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         modal: :entry,
         editing: entry,
         entry_character: character,
+        original_choice: original_choice(socket.assigns.play, character),
         form: to_form(PlayContent.change_entry(entry), as: :entry),
         character_form:
           character && to_form(PlayContent.change_character(character), as: :character)
@@ -999,7 +1002,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   defp save_entry(socket, params) do
     %{editing: entry, entry_character: character, play: play} = socket.assigns
 
-    with {:ok, _character} <- update_entry_character(character, form_params(params, "character")),
+    with {:ok, _character} <-
+           update_entry_character(
+             character,
+             form_params(params, "character"),
+             socket.assigns.original_choice
+           ),
          {:ok, saved} <- PlayContent.update_entry(entry, form_params(params, "entry")) do
       PlayContent.refresh_derived(play.id)
       LiveHelpers.log_activity(socket, "update", "cast_list_entry", saved.id, %{name: saved.name})
@@ -1018,10 +1026,74 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
   end
 
-  defp update_entry_character(nil, _params), do: {:ok, nil}
+  defp update_entry_character(nil, _params, _choice), do: {:ok, nil}
 
-  defp update_entry_character(character, params),
+  # The choice the form was opened with bounds what the select may send.
+  defp update_entry_character(character, %{"original" => value} = params, choice) do
+    case choice && correction(value, choice) do
+      nil ->
+        changeset =
+          character
+          |> PlayContent.change_character(params)
+          |> Ecto.Changeset.add_error(:original, gettext("is no character of the original"))
+
+        {:error, %{changeset | action: :update}}
+
+      fields ->
+        PlayContent.update_character(character, Map.merge(Map.delete(params, "original"), fields))
+    end
+  end
+
+  defp update_entry_character(character, params, _choice),
     do: PlayContent.update_character(character, params)
+
+  # Problem 5, step 3: which original character a translation's character goes with, for
+  # the entry form's select: the rule's pick (`Alignment`), each character of the original,
+  # none, and a stored pointer the original no longer has, shown as missing. Only for a
+  # translation or version with an original.
+  defp original_choice(play, %Character{} = character) do
+    if play.parent_play_id && Alignment.paired?(play) do
+      originals = PlayContent.list_characters(play.parent_play_id)
+      known = MapSet.new(originals, & &1.xml_id)
+
+      automatic =
+        PlayContent.load_play_content(play.parent_play_id)
+        |> Alignment.character_pairs(PlayContent.load_play_content(play.id), corrections: false)
+        |> Map.get(character.id)
+
+      pick = automatic && Enum.find(originals, &(&1.id == automatic))
+      stored = character.original_xml_id
+
+      %{
+        selected: if(character.no_original, do: "-", else: stored || ""),
+        valid: MapSet.union(known, MapSet.new(["", "-", stored || ""])),
+        options:
+          [{automatic_label(pick), ""}] ++
+            Enum.map(originals, &{InlineMarkup.plain(&1.name), &1.xml_id}) ++
+            [{gettext("No original"), "-"}] ++
+            if(stored && stored not in known,
+              do: [{gettext("Missing: %{id}", id: stored), stored}],
+              else: []
+            )
+      }
+    end
+  end
+
+  defp original_choice(_play, nil), do: nil
+
+  defp automatic_label(nil), do: gettext("Automatic (none found)")
+
+  defp automatic_label(pick),
+    do: gettext("Automatic (%{name})", name: InlineMarkup.plain(pick.name))
+
+  defp correction(value, %{valid: valid}) do
+    cond do
+      not MapSet.member?(valid, value) -> nil
+      value == "" -> %{"original_xml_id" => nil, "no_original" => false}
+      value == "-" -> %{"original_xml_id" => nil, "no_original" => true}
+      true -> %{"original_xml_id" => value, "no_original" => false}
+    end
+  end
 
   defp save_existing_entry(socket, params) do
     play_id = socket.assigns.play.id
@@ -2151,6 +2223,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           user={@current_user}
           subdivision={if @editing, do: Map.get(@editing, :parent_id), else: @modal_parent_id}
           character_form={@character_form}
+          original_choice={@original_choice}
           existing_options={@existing_options}
         />
       </.modal>
@@ -2997,6 +3070,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   attr :user, :any, default: nil
   attr :subdivision, :any, default: nil, doc: "a new or edited division's parent, if any"
   attr :character_form, :any, default: nil, doc: "the character an edited entry names"
+
+  attr :original_choice, :map,
+    default: nil,
+    doc: "its original character's choices, in a translation"
+
   attr :existing_options, :list, default: []
 
   attr :manual_numbers, :boolean,
@@ -3179,6 +3257,15 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             field={@character_form[:actor]}
             type="text"
             placeholder={gettext("e.g. Mr. Betterton")}
+          />
+        </div>
+        <div :if={@original_choice}>
+          <.input
+            field={@character_form[:original]}
+            type="select"
+            label={gettext("Original character")}
+            options={@original_choice.options}
+            value={@character_form[:original].value || @original_choice.selected}
           />
         </div>
         <div>

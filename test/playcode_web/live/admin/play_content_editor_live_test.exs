@@ -2441,4 +2441,99 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     |> then(&walk.(walk, &1))
     |> Enum.find(fun)
   end
+
+  # Problem 5, step 3: which original character a translation's character goes with, the
+  # rule's pick unless a researcher corrects it, on its cast entry.
+  describe "a translation's original characters" do
+    setup do
+      split_speech_editions()
+    end
+
+    defp open_entry(conn, play, xml_id) do
+      entry =
+        play.id
+        |> PlayContent.list_cast_lists()
+        |> Enum.flat_map(& &1.entries)
+        |> Enum.find(&(&1.character && &1.character.xml_id == xml_id))
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+      lv |> element("#entry-#{entry.id} button[aria-label='#{t("Edit")}']") |> render_click()
+      {lv, entry}
+    end
+
+    defp choose(lv, value),
+      do: lv |> form("#entry-form", %{"character" => %{"original" => value}}) |> render_submit()
+
+    defp correction(play, xml_id) do
+      character = Enum.find(PlayContent.list_characters(play.id), &(&1.xml_id == xml_id))
+      {character.original_xml_id, character.no_original}
+    end
+
+    defp options(lv),
+      do:
+        lv
+        |> element("#entry-form select[name='character[original]']")
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("option")
+        |> Enum.map(&LazyHTML.text/1)
+        |> Enum.map(&String.trim/1)
+
+    test "offers the rule's pick, the original's characters and none, and stores the choice",
+         %{conn: conn, french: french} do
+      {lv, _} = open_entry(conn, french, "antoine")
+
+      assert options(lv) == [
+               t("Automatic (%{name})", name: "ANTONY"),
+               "ANTONY",
+               "CLEOPATRA",
+               t("No original")
+             ]
+
+      choose(lv, "CLEO")
+      assert correction(french, "antoine") == {"CLEO", false}
+
+      {lv, _} = open_entry(conn, french, "antoine")
+      choose(lv, "-")
+      assert correction(french, "antoine") == {nil, true}
+
+      {lv, _} = open_entry(conn, french, "antoine")
+      choose(lv, "")
+      assert correction(french, "antoine") == {nil, false}
+    end
+
+    test "refuses a character the original does not have", %{conn: conn, french: french} do
+      {lv, _} = open_entry(conn, french, "antoine")
+
+      # Posted by hand: the select offers no such value.
+      html =
+        render_submit(lv, "save_form", %{
+          "entry" => %{"name" => "ANTOINE"},
+          "character" => %{"original" => "GONE"}
+        })
+
+      assert html =~ t("is no character of the original")
+      assert correction(french, "antoine") == {nil, false}
+    end
+
+    test "shows a pointer the original no longer has as missing", %{conn: conn, french: french} do
+      character = Enum.find(PlayContent.list_characters(french.id), &(&1.xml_id == "antoine"))
+      {:ok, _} = PlayContent.update_character(character, %{original_xml_id: "GONE"})
+      {lv, _} = open_entry(conn, french, "antoine")
+
+      assert lv
+             |> element("#entry-form select[name='character[original]'] option[selected]")
+             |> render() =~ t("Missing: %{id}", id: "GONE")
+    end
+
+    test "an original and an adaptation have no such choice",
+         %{conn: conn, original: original} do
+      %{french: adaptation} = split_speech_editions("adaptacion")
+
+      for {play, xml_id} <- [{original, "ANT"}, {adaptation, "antoine"}] do
+        {lv, _} = open_entry(conn, play, xml_id)
+        refute has_element?(lv, "#entry-form select[name='character[original]']")
+      end
+    end
+  end
 end

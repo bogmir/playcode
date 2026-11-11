@@ -113,6 +113,26 @@ defmodule Playcode.Alignment do
     end
   end
 
+  @doc """
+  Each character of a translation, by id, with the original character it goes with, as
+  `PlayContent.load_play_content/2` gives both texts: the researcher's corrections laid
+  over the rule, or, with `corrections: false`, the rule's own pick.
+  """
+  def character_pairs(original_divisions, translation_divisions, opts \\ []) do
+    translation = text(translation_divisions)
+
+    translation =
+      if Keyword.get(opts, :corrections, true),
+        do: translation,
+        else: %{
+          translation
+          | characters:
+              Enum.map(translation.characters, &Map.drop(&1, [:original_xml_id, :no_original]))
+        }
+
+    pair_characters(text(original_divisions), translation)
+  end
+
   def align(original, translation) do
     characters = pair_characters(original, translation)
     paired = pair_speeches(original.speeches, translation.speeches, characters)
