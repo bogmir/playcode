@@ -1,14 +1,17 @@
 defmodule PlaycodeWeb.Admin.PlayCompareLive do
   @moduledoc """
   /admin/plays/:id/compare: the public comparison inside the play's admin tabs, drafts
-  included.
+  included (*Lectura paralela*), and, with `?view=pairs`, the pair review: how
+  `Playcode.Alignment` pairs a translation's or version's speeches with its original's,
+  row by row (*Revisión de pares*, problem 5 step 5).
   """
 
   use PlaycodeWeb, :live_view
 
   import PlaycodeWeb.Components.PlayText
 
-  alias Playcode.Catalogue
+  alias Playcode.{Alignment, Catalogue, PlayContent}
+  alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayComparison
 
   @impl true
@@ -28,6 +31,32 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   end
 
   @impl true
+  def handle_params(%{"view" => "pairs"} = params, _uri, socket) do
+    %{play: play, family: family} = socket.assigns
+    # The page's own play first, so it is the default when it is a translation or version.
+    candidates = Enum.filter([play | family], &(&1.parent_play_id && Alignment.paired?(&1)))
+    chosen = Enum.find(candidates, &(&1.id == params["translation"])) || List.first(candidates)
+
+    rows =
+      chosen &&
+        Alignment.review(
+          PlayContent.load_play_content(chosen.parent_play_id),
+          PlayContent.load_play_content(chosen.id)
+        )
+
+    {:noreply, assign(socket, view: :pairs, candidates: candidates, chosen: chosen, rows: rows)}
+  end
+
+  def handle_params(_params, _uri, socket), do: {:noreply, assign(socket, view: :side)}
+
+  @impl true
+  def handle_event("pick_translation", %{"translation" => id}, socket) do
+    {:noreply,
+     push_patch(socket,
+       to: ~p"/admin/plays/#{socket.assigns.play.id}/compare?#{[view: "pairs", translation: id]}"
+     )}
+  end
+
   def handle_event("add_play", %{"id" => ""}, socket), do: {:noreply, socket}
 
   def handle_event("add_play", %{"id" => play_id}, socket) do
@@ -71,121 +100,278 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
 
     ~H"""
     <div class="mx-auto max-w-full px-4 py-4">
-      <%!-- Toolbar --%>
-      <div class="mb-4 flex flex-wrap items-center gap-4 rounded-box border border-base-300 bg-base-100 px-4 py-2 shadow-sm">
-        <span class="text-xs font-semibold text-base-content/70">{gettext("Display")}</span>
-        <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-          <input
-            type="checkbox"
-            checked={@show_line_numbers}
-            phx-click="toggle_line_numbers"
-            class="checkbox checkbox-xs checkbox-primary"
-          /> {gettext("Line numbers")}
-        </label>
-        <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-          <input
-            type="checkbox"
-            checked={@show_stage_directions}
-            phx-click="toggle_stage_directions"
-            class="checkbox checkbox-xs checkbox-primary"
-          /> {gettext("Stage directions")}
-        </label>
-        <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-          <input
-            type="checkbox"
-            checked={@show_asides}
-            phx-click="toggle_asides"
-            class="checkbox checkbox-xs checkbox-primary"
-          /> {gettext("Asides")}
-        </label>
-        <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-          <input
-            type="checkbox"
-            checked={@show_split_verses}
-            phx-click="toggle_split_verses"
-            class="checkbox checkbox-xs checkbox-primary"
-          /> {gettext("Split verses")}
-        </label>
-        <label class="flex items-center gap-1.5 text-xs cursor-pointer">
-          <input
-            type="checkbox"
-            checked={@show_verse_type}
-            phx-click="toggle_verse_type"
-            class="checkbox checkbox-xs checkbox-primary"
-          /> {gettext("Verse type")}
-        </label>
-
-        <%!-- Add play --%>
-        <div :if={@available != [] && length(@panels) < 4} class="ml-auto flex items-center gap-2">
-          <form phx-change="add_play" class="inline">
-            <select
-              name="id"
-              class="select select-xs select-bordered w-64"
-              aria-label={gettext("Add play to compare...")}
-            >
-              <option value="">{gettext("Add play to compare...")}</option>
-              <option :for={p <- @available} value={p.id}>
-                {p.title} ({p.code})
-              </option>
-            </select>
-          </form>
-        </div>
-      </div>
-
-      <%!-- N-panel comparison --%>
-      <div
-        id="sync-scroll"
-        phx-hook="SyncScroll"
-        class={"grid #{PlayComparison.grid_class(length(@panels))} gap-4"}
-      >
-        <div
-          :for={{panel, idx} <- Enum.with_index(@panels)}
-          class="flex flex-col rounded-box border border-base-300 bg-base-100 shadow-sm"
+      <nav class="tabs tabs-border mb-4" aria-label={gettext("Comparison views")}>
+        <.link
+          patch={~p"/admin/plays/#{@play.id}/compare"}
+          class={["tab", @view == :side && "tab-active"]}
+          aria-current={@view == :side && "page"}
         >
-          <div class="sticky top-0 z-10 border-b border-base-300 bg-base-100/95 backdrop-blur-sm px-4 py-2">
-            <div class="flex items-center gap-2">
-              <span class={[
-                "badge badge-sm",
-                if(idx == 0, do: "badge-ghost", else: "badge-primary")
-              ]}>
-                {idx + 1}
-              </span>
-              <span class="text-sm font-semibold truncate flex-1">{panel.play.title}</span>
-              <button
-                :if={length(@panels) > 1}
-                phx-click="remove_panel"
-                phx-value-index={idx}
-                class="btn btn-ghost btn-xs btn-circle text-base-content/70 hover:text-error"
-                title={gettext("Remove")}
+          {gettext("Side by side")}
+        </.link>
+        <.link
+          patch={~p"/admin/plays/#{@play.id}/compare?view=pairs"}
+          class={["tab", @view == :pairs && "tab-active"]}
+          aria-current={@view == :pairs && "page"}
+        >
+          {gettext("Pair review")}
+        </.link>
+      </nav>
+
+      <.pair_review
+        :if={@view == :pairs}
+        candidates={@candidates}
+        chosen={@chosen}
+        rows={@rows}
+      />
+
+      <div :if={@view == :side}>
+        <%!-- Toolbar --%>
+        <div class="mb-4 flex flex-wrap items-center gap-4 rounded-box border border-base-300 bg-base-100 px-4 py-2 shadow-sm">
+          <span class="text-xs font-semibold text-base-content/70">{gettext("Display")}</span>
+          <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={@show_line_numbers}
+              phx-click="toggle_line_numbers"
+              class="checkbox checkbox-xs checkbox-primary"
+            /> {gettext("Line numbers")}
+          </label>
+          <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={@show_stage_directions}
+              phx-click="toggle_stage_directions"
+              class="checkbox checkbox-xs checkbox-primary"
+            /> {gettext("Stage directions")}
+          </label>
+          <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={@show_asides}
+              phx-click="toggle_asides"
+              class="checkbox checkbox-xs checkbox-primary"
+            /> {gettext("Asides")}
+          </label>
+          <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={@show_split_verses}
+              phx-click="toggle_split_verses"
+              class="checkbox checkbox-xs checkbox-primary"
+            /> {gettext("Split verses")}
+          </label>
+          <label class="flex items-center gap-1.5 text-xs cursor-pointer">
+            <input
+              type="checkbox"
+              checked={@show_verse_type}
+              phx-click="toggle_verse_type"
+              class="checkbox checkbox-xs checkbox-primary"
+            /> {gettext("Verse type")}
+          </label>
+
+          <%!-- Add play --%>
+          <div :if={@available != [] && length(@panels) < 4} class="ml-auto flex items-center gap-2">
+            <form phx-change="add_play" class="inline">
+              <select
+                name="id"
+                class="select select-xs select-bordered w-64"
+                aria-label={gettext("Add play to compare...")}
               >
-                <.icon name="hero-x-mark-micro" class="size-3.5" />
-              </button>
-            </div>
-            <p class="text-xs text-base-content/70 truncate">
-              {panel.play.author_name} — {panel.play.code}
-            </p>
+                <option value="">{gettext("Add play to compare...")}</option>
+                <option :for={p <- @available} value={p.id}>
+                  {p.title} ({p.code})
+                </option>
+              </select>
+            </form>
           </div>
+        </div>
+
+        <%!-- N-panel comparison --%>
+        <div
+          id="sync-scroll"
+          phx-hook="SyncScroll"
+          class={"grid #{PlayComparison.grid_class(length(@panels))} gap-4"}
+        >
           <div
-            class="overflow-y-auto px-4 py-4 compare-panel"
-            tabindex="0"
-            role="region"
-            aria-label={panel.play.title}
-            data-panel={"panel-#{idx}"}
-            style={PlayComparison.panel_height(length(@panels))}
+            :for={{panel, idx} <- Enum.with_index(@panels)}
+            class="flex flex-col rounded-box border border-base-300 bg-base-100 shadow-sm"
           >
-            <.play_body
-              divisions={panel.divisions}
-              show_line_numbers={@show_line_numbers}
-              show_stage_directions={@show_stage_directions}
-              show_asides={@show_asides}
-              show_split_verses={@show_split_verses}
-              show_verse_type={@show_verse_type}
-              sync_keys={true}
-            />
+            <div class="sticky top-0 z-10 border-b border-base-300 bg-base-100/95 backdrop-blur-sm px-4 py-2">
+              <div class="flex items-center gap-2">
+                <span class={[
+                  "badge badge-sm",
+                  if(idx == 0, do: "badge-ghost", else: "badge-primary")
+                ]}>
+                  {idx + 1}
+                </span>
+                <span class="text-sm font-semibold truncate flex-1">{panel.play.title}</span>
+                <button
+                  :if={length(@panels) > 1}
+                  phx-click="remove_panel"
+                  phx-value-index={idx}
+                  class="btn btn-ghost btn-xs btn-circle text-base-content/70 hover:text-error"
+                  title={gettext("Remove")}
+                >
+                  <.icon name="hero-x-mark-micro" class="size-3.5" />
+                </button>
+              </div>
+              <p class="text-xs text-base-content/70 truncate">
+                {panel.play.author_name} — {panel.play.code}
+              </p>
+            </div>
+            <div
+              class="overflow-y-auto px-4 py-4 compare-panel"
+              tabindex="0"
+              role="region"
+              aria-label={panel.play.title}
+              data-panel={"panel-#{idx}"}
+              style={PlayComparison.panel_height(length(@panels))}
+            >
+              <.play_body
+                divisions={panel.divisions}
+                show_line_numbers={@show_line_numbers}
+                show_stage_directions={@show_stage_directions}
+                show_asides={@show_asides}
+                show_split_verses={@show_split_verses}
+                show_verse_type={@show_verse_type}
+                sync_keys={true}
+              />
+            </div>
           </div>
         </div>
       </div>
     </div>
     """
   end
+
+  attr :candidates, :list, required: true
+  attr :chosen, :any, required: true
+  attr :rows, :list, required: true
+
+  defp pair_review(assigns) do
+    assigns = assign(assigns, :counts, Enum.frequencies_by(assigns.rows || [], & &1.kind))
+
+    ~H"""
+    <section aria-label={gettext("Pair review")}>
+      <p :if={!@chosen} class="text-sm text-base-content/70">
+        {gettext("No translation or version of this play to review.")}
+      </p>
+      <div :if={@chosen}>
+        <form phx-change="pick_translation" class="mb-3">
+          <label for="pair-translation" class="text-sm font-medium mr-2">
+            {gettext("Translation or version")}
+          </label>
+          <select id="pair-translation" name="translation" class="select select-sm select-bordered">
+            <option :for={p <- @candidates} value={p.id} selected={p.id == @chosen.id}>
+              {InlineMarkup.plain(p.title)} ({p.code})
+            </option>
+          </select>
+        </form>
+        <ul class="mb-3 flex flex-wrap gap-2 text-xs">
+          <li
+            :for={kind <- [:same, :split, :other, :added, :cut]}
+            id={"pair-count-#{kind}"}
+            class={["rounded px-2 py-1", kind_class(kind)]}
+            title={kind_meaning(kind)}
+          >
+            {kind_label(kind)}: {Map.get(@counts, kind, 0)}
+          </li>
+        </ul>
+        <div class="overflow-x-auto" tabindex="0" role="region" aria-label={gettext("Pairs")}>
+          <table class="table table-xs">
+            <thead>
+              <tr>
+                <th>{gettext("Row")}</th>
+                <th>{gettext("Where")}</th>
+                <th>{gettext("Original")}</th>
+                <th>{gettext("Pairing")}</th>
+                <th>{gettext("Translation")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                :for={{row, n} <- Enum.with_index(@rows, 1)}
+                id={"pair-row-#{n}"}
+                class={kind_class(row.kind)}
+              >
+                <td class="text-base-content/70">{n}</td>
+                <td class="whitespace-nowrap">{Enum.map_join(row.place, ", ", &place_label/1)}</td>
+                <td><.speech_cell speech={row.original} /></td>
+                <td class="whitespace-nowrap">{kind_label(row.kind)}</td>
+                <td><.speech_cell speech={row.translation} /></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+    """
+  end
+
+  attr :speech, :any, required: true
+
+  defp speech_cell(%{speech: nil} = assigns), do: ~H""
+
+  defp speech_cell(assigns) do
+    text = assigns.speech |> Alignment.spoken_text() |> InlineMarkup.plain()
+    line = Alignment.first_line(assigns.speech)
+
+    assigns =
+      assign(assigns,
+        text: text,
+        opening: text |> String.split() |> Enum.take(8) |> Enum.join(" "),
+        n: line && line.line_number
+      )
+
+    ~H"""
+    <span title={@text}>
+      <span :if={@n} class="text-base-content/70">{@n}</span>
+      <b>{InlineMarkup.plain(@speech.speaker_label || "")}</b>
+      {@opening}
+    </span>
+    """
+  end
+
+  defp place_label(division),
+    do:
+      InlineMarkup.plain(
+        division.title ||
+          String.capitalize("#{division.type}#{division.number && " #{division.number}"}")
+      )
+
+  defp kind_label(:same), do: gettext("Same speaker")
+  defp kind_label(:split), do: gettext("Split")
+  defp kind_label(:other), do: gettext("Other speaker")
+  defp kind_label(:added), do: gettext("Added")
+  defp kind_label(:cut), do: gettext("Cut")
+
+  defp kind_meaning(:same),
+    do: gettext("The same character on both sides, matched in order. Almost always right.")
+
+  defp kind_meaning(:split),
+    do:
+      gettext(
+        "An extra speech of the translation by the same character as the original speech it goes with: a speaker repeated after a stage direction."
+      )
+
+  defp kind_meaning(:other),
+    do:
+      gettext(
+        "Different characters, where the texts disagree on who speaks; paired by position. A renamed role, or a mistake."
+      )
+
+  defp kind_meaning(:added),
+    do: gettext("A speech of the translation with nothing in the original.")
+
+  defp kind_meaning(:cut),
+    do:
+      gettext(
+        "A speech of the original no speech of the translation goes with. Beside another speaker, often a moved line rather than a cut."
+      )
+
+  defp kind_class(:same), do: nil
+  defp kind_class(:split), do: "bg-info/10"
+  defp kind_class(:other), do: "bg-warning/20"
+  defp kind_class(:added), do: "bg-error/10"
+  defp kind_class(:cut), do: "bg-base-200 text-base-content/70"
 end

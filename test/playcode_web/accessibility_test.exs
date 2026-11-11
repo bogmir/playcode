@@ -132,6 +132,14 @@ defmodule PlaycodeWeb.AccessibilityTest do
     end
   end
 
+  test "the pair review has no barrier", %{conn: conn} do
+    %{french: french} = Playcode.ImportHelpers.split_speech_editions()
+    html = conn |> get(~p"/admin/plays/#{french.id}/compare?view=pairs") |> html_response(200)
+
+    assert html =~ ~s(id="pair-row-1")
+    assert barriers(html) == []
+  end
+
   test "the log-in and password pages have no barrier" do
     for path <- ~w(/users/log-in /users/reset-password) do
       assert {path, build_conn() |> get(path) |> html_response(200) |> barriers()} == {path, []}

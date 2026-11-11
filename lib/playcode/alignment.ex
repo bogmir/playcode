@@ -135,6 +135,61 @@ defmodule Playcode.Alignment do
   @doc "The ids of the characters who speak in `divisions`, the only ones paired."
   def speakers(divisions), do: MapSet.new(text(divisions).characters, & &1.id)
 
+  @doc """
+  The pairing of `translation_divisions`' speeches with `original_divisions`', as rows for
+  a person to check, in the original's reading order: each original speech followed by the
+  translation speeches that go with it, a cut as a row with no translation, an addition
+  before the first original speech at the start. Each row has its `kind`, the original
+  speech's act and scene (`place`), both speech elements and `long`.
+  """
+  def review(original_divisions, translation_divisions) do
+    original = text(original_divisions)
+    speeches = Map.merge(speech_places(original_divisions), speech_places(translation_divisions))
+
+    by_original =
+      Enum.group_by(align(original, text(translation_divisions)).speeches, & &1.original)
+
+    row = fn kind, o, t -> review_row(kind, speeches[o], speeches[t]) end
+
+    Enum.map(Map.get(by_original, nil, []), &row.(&1.kind, nil, &1.id)) ++
+      Enum.flat_map(original.speeches, fn os ->
+        case by_original[os.id] do
+          nil -> [row.(:cut, os.id, nil)]
+          pairs -> Enum.map(pairs, &row.(&1.kind, os.id, &1.id))
+        end
+      end)
+  end
+
+  defp review_row(kind, original, translation) do
+    {o, place} = original || {nil, []}
+    {t, _} = translation || {nil, []}
+    %{kind: kind, place: place, original: o, translation: t, long: false}
+  end
+
+  # Each speech by id, with the act and scene it stands in.
+  defp speech_places(divisions) do
+    for top <- divisions,
+        {division, place} <- [
+          {top, [top]} | Enum.map(Map.get(top, :children, []), &{&1, [top, &1]})
+        ],
+        %{type: "speech"} = el <- Map.get(division, :loaded_elements, []),
+        into: %{},
+        do: {el.id, {el, place}}
+  end
+
+  @doc "A speech's spoken text: its verse lines and paragraphs, not its stage directions."
+  def spoken_text(speech), do: speech |> spoken_lines() |> Enum.map_join(" ", & &1.content)
+
+  @doc "The speech's first verse line or paragraph, or nil."
+  def first_line(speech), do: speech |> spoken_lines() |> List.first()
+
+  defp spoken_lines(%{type: type} = el) when type in ~w(verse_line prose), do: [el]
+
+  defp spoken_lines(%{children: children}) when is_list(children),
+    do: Enum.flat_map(children, &spoken_lines/1)
+
+  defp spoken_lines(_), do: []
+
   def align(original, translation) do
     characters = pair_characters(original, translation)
     paired = pair_speeches(original.speeches, translation.speeches, characters)
