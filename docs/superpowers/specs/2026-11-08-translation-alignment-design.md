@@ -205,7 +205,10 @@ changes only if someone notices. Generate: at most about 8 s more for a full reb
    each published derived play's folder, beside its published original; a Compare link on
    the original's catalogue line and a menu of its translations on the page.
 3. **Character pairs**: the column, the automatic pass on import, the dropdown, `castItem
-   corresp`.
+   corresp`. **Built 2026-11-11** (`feature/character-pair-corrections`, plan
+   `docs/superpowers/plans/2026-11-11-character-pair-corrections.md`): only corrections are
+   stored (`characters.original_xml_id`, `no_original`), the rule pairs the rest at every
+   comparison; the select is in the cast entry's form on the characters tab.
 4. **Speech corrections**: the column, fixed points in the pairing, `sp corresp`, the import
    and the re-import of the original.
 5. **The coder's report** as a download, with the length warning.
