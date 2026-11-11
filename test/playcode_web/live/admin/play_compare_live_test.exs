@@ -258,6 +258,32 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
     assert rows(lv) == ~w(pair-row-5 pair-row-6 pair-row-7)
   end
 
+  test "a row repeating the original speech above it says so, not prints it again",
+       %{conn: conn} do
+    french =
+      editions(
+        sp("ANT", "One.") <> sp("CLEO", "Two."),
+        sp("antoine", "Un.") <> sp("nadie", "Ajouté.") <> sp("cleopatre", "Deux.")
+      )
+
+    lv = review(conn, french)
+    added = lv |> element("#pair-row-2") |> render()
+
+    assert added =~ t("Same speech as above")
+    refute added =~ "One."
+  end
+
+  test "an archived original is not reviewed, as the side view does not show it",
+       %{conn: conn} do
+    french = editions(sp("ANT", "One."), sp("antoine", "Un."))
+    {:ok, _} = french.parent_play_id |> Catalogue.get_play!() |> Catalogue.delete_play()
+
+    lv = review(conn, french)
+
+    assert rows(lv) == []
+    assert render(lv) =~ t("No translation or version of this play to review.")
+  end
+
   test "a speaker links to its line on the translation's Elenco, a speech naming no role does not",
        %{conn: conn} do
     french =

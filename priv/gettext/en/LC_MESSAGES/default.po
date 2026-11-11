@@ -80,7 +80,7 @@ msgid "Aside Verses"
 msgstr ""
 
 #: lib/playcode_web/components/statistics_panel.ex:72
-#: lib/playcode_web/live/admin/play_compare_live.ex:176
+#: lib/playcode_web/live/admin/play_compare_live.ex:180
 #: lib/playcode_web/live/play_compare_live.ex:112
 #: lib/playcode_web/live/play_show_live.ex:270
 #, elixir-autogen, elixir-format
@@ -534,7 +534,7 @@ msgstr ""
 msgid "Line Number"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:160
+#: lib/playcode_web/live/admin/play_compare_live.ex:164
 #: lib/playcode_web/live/play_compare_live.ex:96
 #: lib/playcode_web/live/play_show_live.ex:254
 #, elixir-autogen, elixir-format
@@ -790,7 +790,7 @@ msgstr ""
 #: lib/playcode_web/live/admin/notes_component.ex:336
 #: lib/playcode_web/live/admin/place_form_component.ex:281
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:544
-#: lib/playcode_web/live/admin/play_compare_live.ex:236
+#: lib/playcode_web/live/admin/play_compare_live.ex:240
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1766
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1767
 #: lib/playcode_web/live/admin/play_form_live.ex:937
@@ -947,7 +947,7 @@ msgstr ""
 msgid "Stage direction text..."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:168
+#: lib/playcode_web/live/admin/play_compare_live.ex:172
 #: lib/playcode_web/live/play_compare_live.ex:104
 #: lib/playcode_web/live/play_show_live.ex:262
 #: lib/playcode_web/live/play_show_live.ex:369
@@ -1444,7 +1444,7 @@ msgstr ""
 msgid "Sources"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:184
+#: lib/playcode_web/live/admin/play_compare_live.ex:188
 #: lib/playcode_web/live/play_compare_live.ex:120
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Split verses"
@@ -1480,7 +1480,7 @@ msgstr ""
 msgid "Usage terms and citation info"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:192
+#: lib/playcode_web/live/admin/play_compare_live.ex:196
 #: lib/playcode_web/live/play_compare_live.ex:128
 #: lib/playcode_web/live/play_show_live.ex:278
 #, elixir-autogen, elixir-format, fuzzy
@@ -1775,7 +1775,7 @@ msgstr ""
 msgid "Title (sort)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:333
+#: lib/playcode_web/live/admin/play_compare_live.ex:340
 #: lib/playcode_web/play_labels.ex:276
 #: lib/playcode_web/play_labels.ex:320
 #, elixir-autogen, elixir-format
@@ -1888,7 +1888,7 @@ msgstr ""
 msgid "and %{count} more"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:25
+#: lib/playcode_web/live/admin/play_compare_live.ex:26
 #: lib/playcode_web/live/play_compare_live.ex:24
 #, elixir-autogen, elixir-format
 msgid "Compare: %{title}"
@@ -1900,7 +1900,7 @@ msgstr ""
 msgid "Comparison"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:153
+#: lib/playcode_web/live/admin/play_compare_live.ex:157
 #: lib/playcode_web/live/play_compare_live.ex:89
 #, elixir-autogen, elixir-format
 msgid "Display"
@@ -1979,8 +1979,8 @@ msgstr ""
 msgid "you"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:201
-#: lib/playcode_web/live/admin/play_compare_live.ex:203
+#: lib/playcode_web/live/admin/play_compare_live.ex:205
+#: lib/playcode_web/live/admin/play_compare_live.ex:207
 #: lib/playcode_web/live/play_compare_live.ex:137
 #: lib/playcode_web/live/play_compare_live.ex:139
 #, elixir-autogen, elixir-format
@@ -2002,7 +2002,7 @@ msgstr ""
 msgid "Editorial methodology and approach"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:96
+#: lib/playcode_web/live/admin/play_compare_live.ex:100
 #: lib/playcode_web/live/play_compare_live.ex:52
 #, elixir-autogen, elixir-format
 msgid "Maximum %{max} plays allowed."
@@ -5505,114 +5505,119 @@ msgstr ""
 msgid "corrected"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:449
+#: lib/playcode_web/live/admin/play_compare_live.ex:464
 #, elixir-autogen, elixir-format
 msgid "A speech of the original no speech of the translation goes with. Beside another speaker, often a moved line rather than a cut."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:445
+#: lib/playcode_web/live/admin/play_compare_live.ex:460
 #, elixir-autogen, elixir-format
 msgid "A speech of the translation with nothing in the original."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:426
+#: lib/playcode_web/live/admin/play_compare_live.ex:441
 #, elixir-autogen, elixir-format
 msgid "Added"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:434
+#: lib/playcode_web/live/admin/play_compare_live.ex:449
 #, elixir-autogen, elixir-format
 msgid "An extra speech of the translation by the same character as the original speech it goes with: a speaker repeated after a stage direction."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:124
+#: lib/playcode_web/live/admin/play_compare_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "Comparison views"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:427
+#: lib/playcode_web/live/admin/play_compare_live.ex:442
 #, elixir-autogen, elixir-format
 msgid "Cut"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:440
+#: lib/playcode_web/live/admin/play_compare_live.ex:455
 #, elixir-autogen, elixir-format
 msgid "Different characters, where the texts disagree on who speaks; paired by position. A renamed role, or a mistake."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:289
+#: lib/playcode_web/live/admin/play_compare_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "No translation or version of this play to review."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:331
+#: lib/playcode_web/live/admin/play_compare_live.ex:338
 #, elixir-autogen, elixir-format
 msgid "Original"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:425
+#: lib/playcode_web/live/admin/play_compare_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "Other speaker"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:137
-#: lib/playcode_web/live/admin/play_compare_live.ex:287
+#: lib/playcode_web/live/admin/play_compare_live.ex:141
+#: lib/playcode_web/live/admin/play_compare_live.ex:294
 #, elixir-autogen, elixir-format
 msgid "Pair review"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:332
+#: lib/playcode_web/live/admin/play_compare_live.ex:339
 #, elixir-autogen, elixir-format
 msgid "Pairing"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:325
+#: lib/playcode_web/live/admin/play_compare_live.ex:332
 #, elixir-autogen, elixir-format
 msgid "Pairs"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:329
+#: lib/playcode_web/live/admin/play_compare_live.ex:336
 #, elixir-autogen, elixir-format
 msgid "Row"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:423
+#: lib/playcode_web/live/admin/play_compare_live.ex:438
 #, elixir-autogen, elixir-format
 msgid "Same speaker"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:130
+#: lib/playcode_web/live/admin/play_compare_live.ex:134
 #, elixir-autogen, elixir-format
 msgid "Side by side"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:424
+#: lib/playcode_web/live/admin/play_compare_live.ex:439
 #, elixir-autogen, elixir-format
 msgid "Split"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:430
+#: lib/playcode_web/live/admin/play_compare_live.ex:445
 #, elixir-autogen, elixir-format
 msgid "The same character on both sides, matched in order. Almost always right."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:294
+#: lib/playcode_web/live/admin/play_compare_live.ex:301
 #, elixir-autogen, elixir-format
 msgid "Translation or version"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:330
+#: lib/playcode_web/live/admin/play_compare_live.ex:337
 #, elixir-autogen, elixir-format
 msgid "Where"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:323
+#: lib/playcode_web/live/admin/play_compare_live.ex:330
 #, elixir-autogen, elixir-format
 msgid "Only the doubtful rows, with one row either side"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:312
-#: lib/playcode_web/live/admin/play_compare_live.ex:348
+#: lib/playcode_web/live/admin/play_compare_live.ex:319
+#: lib/playcode_web/live/admin/play_compare_live.ex:360
 #, elixir-autogen, elixir-format
 msgid "Very different length"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:353
+#, elixir-autogen, elixir-format
+msgid "Same speech as above"
 msgstr ""

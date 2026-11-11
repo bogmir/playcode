@@ -1,7 +1,7 @@
 defmodule PlaycodeWeb.Admin.ExportController do
   @moduledoc """
-  Staff downloads: a play's TEI, HTML, PDF and EPUB, and the generated static site, as a .zip or browsed in place under
-  /admin/export/preview. Each download is logged.
+  Staff downloads: a play's TEI, HTML, PDF and EPUB, and the generated static site, as a
+  .zip or browsed in place under /admin/export/preview. Each download is logged.
   """
 
   use PlaycodeWeb, :controller

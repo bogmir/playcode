@@ -16,15 +16,10 @@ defmodule Playcode.Alignment do
   """
 
   alias Playcode.PlayContent.{Division, Element}
-  alias Playcode.Statistics.Metrics
 
   # ponytail: one-to-one greedy character pairing; merged or split roles stay unpaired.
   @buckets 20
   @threshold 0.6
-  # Tuned on dev (2026-11-11): marks 0084's rows 89 and 91 (5 words against 19, 18 against
-  # 3) and 1,182 (1.15%) of the 102,351 same-speaker rows of 145 translations.
-  @long_ratio 3.5
-  @long_floor 15
   # An adaptation's speakers do not follow its original's (proof of concept: median length
   # correlation 0.04), so it keeps the comparison's proportion.
   @paired ~w(traduccion version)
@@ -141,69 +136,13 @@ defmodule Playcode.Alignment do
   def speakers(divisions), do: MapSet.new(text(divisions).characters, & &1.id)
 
   @doc """
-  The pairing of `translation_divisions`' speeches with `original_divisions`', as rows for
-  a person to check, in the original's reading order: each original speech followed by the
-  translation speeches that go with it, a cut as a row with no translation, an addition
-  before the first original speech at the start. Each row has its `kind`, the original
-  speech's act and scene (`place`), both speech elements and `long`: one speaker on both
-  sides, but one speech over #{@long_ratio} times the other's words and over #{@long_floor}
-  words, which is how a stretch paired one speech off shows (the researcher's rows 89 and
-  91 of 0084).
+  The original's speech ids in reading order, and `align/2`'s pair for each translation
+  speech, from both texts' divisions as `PlayContent.load_play_content/2` gives them.
   """
-  def review(original_divisions, translation_divisions) do
+  def speech_pairs(original_divisions, translation_divisions) do
     original = text(original_divisions)
-    speeches = Map.merge(speech_places(original_divisions), speech_places(translation_divisions))
-
-    by_original =
-      Enum.group_by(align(original, text(translation_divisions)).speeches, & &1.original)
-
-    row = fn kind, o, t -> review_row(kind, speeches[o], speeches[t]) end
-
-    Enum.map(Map.get(by_original, nil, []), &row.(&1.kind, nil, &1.id)) ++
-      Enum.flat_map(original.speeches, fn os ->
-        case by_original[os.id] do
-          nil -> [row.(:cut, os.id, nil)]
-          pairs -> Enum.map(pairs, &row.(&1.kind, os.id, &1.id))
-        end
-      end)
+    {Enum.map(original.speeches, & &1.id), align(original, text(translation_divisions)).speeches}
   end
-
-  defp review_row(kind, original, translation) do
-    {o, place} = original || {nil, []}
-    {t, _} = translation || {nil, []}
-    %{kind: kind, place: place, original: o, translation: t, long: kind == :same and long?(o, t)}
-  end
-
-  defp long?(o, t) do
-    [short, long] = Enum.sort([words(o), words(t)])
-    long > @long_floor and long > @long_ratio * short
-  end
-
-  defp words(speech), do: speech |> spoken_text() |> Metrics.words()
-
-  # Each speech by id, with the act and scene it stands in.
-  defp speech_places(divisions) do
-    for top <- divisions,
-        {division, place} <- [
-          {top, [top]} | Enum.map(Map.get(top, :children, []), &{&1, [top, &1]})
-        ],
-        %{type: "speech"} = el <- Map.get(division, :loaded_elements, []),
-        into: %{},
-        do: {el.id, {el, place}}
-  end
-
-  @doc "A speech's spoken text: its verse lines and paragraphs, not its stage directions."
-  def spoken_text(speech), do: speech |> spoken_lines() |> Enum.map_join(" ", & &1.content)
-
-  @doc "The speech's first verse line or paragraph, or nil."
-  def first_line(speech), do: speech |> spoken_lines() |> List.first()
-
-  defp spoken_lines(%{type: type} = el) when type in ~w(verse_line prose), do: [el]
-
-  defp spoken_lines(%{children: children}) when is_list(children),
-    do: Enum.flat_map(children, &spoken_lines/1)
-
-  defp spoken_lines(_), do: []
 
   def align(original, translation) do
     characters = pair_characters(original, translation)

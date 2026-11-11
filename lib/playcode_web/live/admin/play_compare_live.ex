@@ -11,6 +11,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   import PlaycodeWeb.Components.PlayText
 
   alias Playcode.{Alignment, Catalogue, PlayContent}
+  alias Playcode.Alignment.Review
   alias Playcode.PlayContent.{Element, InlineMarkup}
   alias PlaycodeWeb.PlayComparison
 
@@ -33,13 +34,16 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   @impl true
   def handle_params(%{"view" => "pairs"} = params, _uri, socket) do
     %{play: play, family: family} = socket.assigns
-    # The page's own play first, so it is the default when it is a translation or version.
-    candidates = Enum.filter([play | family], &(&1.parent_play_id && Alignment.paired?(&1)))
+    # The page's own play first, so it is the default when it is a translation or version;
+    # only plays whose original the family holds, so an archived original is not reviewed.
+    shown = [play | family]
+    ids = MapSet.new(shown, & &1.id)
+    candidates = Enum.filter(shown, &(&1.parent_play_id in ids && Alignment.paired?(&1)))
     chosen = Enum.find(candidates, &(&1.id == params["translation"])) || List.first(candidates)
 
     rows =
       chosen &&
-        Alignment.review(
+        Review.rows(
           PlayContent.load_play_content(chosen.parent_play_id),
           PlayContent.load_play_content(chosen.id)
         )
@@ -274,7 +278,10 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   attr :doubtful, :boolean, required: true
 
   defp pair_review(assigns) do
-    rows = assigns.rows || []
+    rows =
+      Enum.zip_with(assigns.rows || [], [nil | assigns.rows || []], fn row, above ->
+        Map.put(row, :repeat, repeat?(row, above))
+      end)
 
     assigns =
       assign(assigns,
@@ -341,7 +348,12 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
               >
                 <td class="text-base-content/70">{n}</td>
                 <td class="whitespace-nowrap">{Enum.map_join(row.place, ", ", &place_label/1)}</td>
-                <td><.speech_cell speech={row.original} /></td>
+                <td>
+                  <span :if={row.repeat} class="text-base-content/70 italic">
+                    ↑ {gettext("Same speech as above")}
+                  </span>
+                  <.speech_cell :if={!row.repeat} speech={row.original} />
+                </td>
                 <td class="whitespace-nowrap">
                   {kind_label(row.kind)}
                   <span :if={row.long} class="badge badge-warning badge-xs">
@@ -377,6 +389,9 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
     |> Enum.map(&elem(&1, 0))
   end
 
+  defp repeat?(%{original: %{id: id}}, %{original: %{id: id}}), do: true
+  defp repeat?(_row, _above), do: false
+
   defp elenco_link(nil, _play, _entries), do: nil
 
   defp elenco_link(speech, play, entries) do
@@ -391,8 +406,8 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   defp speech_cell(%{speech: nil} = assigns), do: ~H""
 
   defp speech_cell(assigns) do
-    text = assigns.speech |> Alignment.spoken_text() |> InlineMarkup.plain()
-    line = Alignment.first_line(assigns.speech)
+    text = assigns.speech |> Review.spoken_text() |> InlineMarkup.plain()
+    line = Review.first_line(assigns.speech)
 
     assigns =
       assign(assigns,
