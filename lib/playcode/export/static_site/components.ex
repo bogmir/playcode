@@ -22,7 +22,11 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :title, :string, required: true
   attr :site, :map, required: true
   attr :current, :atom, default: nil
-  attr :play, :map, default: nil, doc: "the play shown, whose licence the footer states"
+
+  attr :play, :any,
+    default: nil,
+    doc: "the play shown, or the plays, whose licences the footer states"
+
   attr :rail_label, :string, default: "Contents & tools"
   slot :rail
   slot :inner_block, required: true
@@ -66,8 +70,8 @@ defmodule Playcode.Export.StaticSite.Components do
           <main id="main">{render_slot(@inner_block)}</main>
         </div>
         <footer class="foot">
-          <p :if={@play && licence?(@play)}>
-            <.licence play={@play} />
+          <p :for={play <- licensed(@play)}>
+            <.licence play={play} />
           </p>
           <p>EMOTHE · version {@site.version} · built {@site.build_date}</p>
           <p>
@@ -107,6 +111,14 @@ defmodule Playcode.Export.StaticSite.Components do
       <button type="button" data-step="1" aria-label={"Next " <> @name}>›</button>
     </div>
     """
+  end
+
+  # A comparison shows two plays, often under one licence: each licence once.
+  defp licensed(plays) do
+    plays
+    |> List.wrap()
+    |> Enum.filter(&licence?/1)
+    |> Enum.uniq_by(&{&1.licence_text, &1.licence_url})
   end
 
   def licence?(play), do: play.licence_text not in [nil, ""] or play.licence_url not in [nil, ""]

@@ -2,7 +2,7 @@
   root="../../"
   title={"#{@original.play.title} and #{@translation.play.title} — EMOTHE"}
   site={@site}
-  play={@translation.play}
+  play={[@original.play, @translation.play]}
 >
   <div class="compare-bar">
     <a href={"../#{@original.play.code}/index.html"}>Back to {@original.play.title}</a>
@@ -10,11 +10,11 @@
       Translation
       <select data-compare-menu>
         <option
-          :for={play <- @siblings}
+          :for={{play, label} <- @menu}
           value={"../#{play.code}/compare.html"}
           selected={play.id == @translation.play.id}
         >
-          {play.title} ({play.language})
+          {label}
         </option>
       </select>
     </label>
@@ -29,8 +29,8 @@
     />
     <noscript>
       <ul class="compare-links">
-        <li :for={play <- @siblings}>
-          <a href={"../#{play.code}/compare.html"}>{play.title} ({play.language})</a>
+        <li :for={{play, label} <- @menu}>
+          <a href={"../#{play.code}/compare.html"}>{label}</a>
         </li>
       </ul>
     </noscript>
@@ -49,10 +49,14 @@
         data-panel={"panel-#{n}"}
         tabindex="0"
         role="region"
-        aria-label={edition.play.title}
+        aria-label={Comparison.panel_name(edition.play, n)}
         lang={edition.play.language}
       >
-        <Comparison.text edition={edition} prefix={if n == 1, do: "t-"} />
+        <Comparison.text
+          edition={edition}
+          name={Comparison.panel_name(edition.play, n)}
+          prefix={if n == 1, do: "t-"}
+        />
       </div>
     </section>
   </div>

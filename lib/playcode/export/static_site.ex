@@ -95,6 +95,7 @@ defmodule Playcode.Export.StaticSite do
 
         versions = Map.new(results, &{&1.code, &1.version})
         largest = results |> Enum.map(& &1.largest_page_gzip) |> Enum.max(fn -> 0 end)
+        compare = results |> Enum.map(& &1.compare_gzip) |> Enum.max(fn -> 0 end)
         write_catalogue(plays, dir, opts)
         # results is not used past here, so the index can let go of postings as it goes:
         # 58 MB less at the peak of a 371-play build.
@@ -107,7 +108,8 @@ defmodule Playcode.Export.StaticSite do
            plays: total,
            size: dir_size(site_dir),
            output_dir: site_dir,
-           largest_page_gzip: largest
+           largest_page_gzip: largest,
+           largest_compare_gzip: compare
          })}
       end
     end)
@@ -424,6 +426,10 @@ defmodule Playcode.Export.StaticSite do
   # database, so its pages and search lines must be too, or its contents could link a
   # division it was last exported without. Plays in `fresh` were just written knowing the
   # final site, and are left alone.
+  # ponytail: a sibling is re-exported in full when only its comparison's menu changed, so
+  # editing one of an original's n translations writes n + 1 plays; a menu file of the
+  # original's, read by each comparison, if originals with many translations make
+  # Generate slow.
   defp relatives(plays, published, fresh) do
     ids = MapSet.new(plays, & &1.id)
     parents = plays |> Enum.map(& &1.parent_play_id) |> Enum.reject(&is_nil/1) |> MapSet.new()
@@ -511,7 +517,7 @@ defmodule Playcode.Export.StaticSite do
       |> Enum.max(fn -> 0 end)
 
     File.write!(Path.join(play_dir, "text.html"), Pages.render(:text, assigns))
-    write_comparison(edition, play_dir, site)
+    compare = write_comparison(edition, play_dir, site)
     File.write!(Path.join(play_dir, "statistics.html"), Pages.render(:statistics, assigns))
 
     if edition.notes != [],
@@ -527,7 +533,7 @@ defmodule Playcode.Export.StaticSite do
       Pages.render(:redirect, %{code: code, title: play.title})
     )
 
-    %{largest_page_gzip: largest}
+    %{largest_page_gzip: largest, compare_gzip: compare}
   end
 
   # A play whose original is published is compared with it, in its own folder: a
@@ -540,20 +546,24 @@ defmodule Playcode.Export.StaticSite do
     if parent && parent.is_complete && MapSet.member?(site.published, parent.code) do
       {original, translation} = Comparison.prepare(Edition.load(parent.id), edition)
 
-      siblings =
+      menu =
         original.play.derived_plays
         |> Enum.filter(&MapSet.member?(site.published, &1.code))
         |> translation_order()
+        |> Comparison.menu()
 
       html =
         Pages.render(:compare, %{
           original: original,
           translation: translation,
-          siblings: siblings,
+          menu: menu,
           site: site
         })
 
       File.write!(Path.join(play_dir, "compare.html"), html)
+      byte_size(:zlib.gzip(html))
+    else
+      0
     end
   end
 
