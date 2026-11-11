@@ -18,6 +18,15 @@
         </option>
       </select>
     </label>
+    <Components.play_tools
+      variants={@original.variants or @translation.variants}
+      folio={@original.folio or @translation.folio}
+      tagged={@original.tagged or @translation.tagged}
+      cast={[]}
+      shared={Element.shared_lines?(@original.divisions ++ @translation.divisions)}
+      stage={Element.stage_directions?(@original.divisions ++ @translation.divisions)}
+      steppers={false}
+    />
     <noscript>
       <ul class="compare-links">
         <li :for={play <- @siblings}>
@@ -30,7 +39,6 @@
     <section
       :for={{edition, n} <- Enum.with_index([@original, @translation])}
       class="panel"
-      aria-label={edition.play.title}
     >
       <header class="panel-head">
         <p class="panel-title">{edition.play.title}</p>

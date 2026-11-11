@@ -136,7 +136,30 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2>Contents</h2>
       <.play_contents edition={@edition} current={@current} />
     </nav>
-    <div :if={@tools} class="tools" data-tools hidden>
+    <.play_tools
+      :if={@tools}
+      variants={@edition.variants}
+      folio={@edition.folio}
+      tagged={@edition.tagged}
+      cast={@cast}
+      shared={@shared}
+      stage={@stage}
+    />
+    """
+  end
+
+  attr :variants, :boolean, required: true
+  attr :folio, :boolean, required: true
+  attr :tagged, :boolean, required: true
+  attr :cast, :list, required: true, doc: "the characters the Highlight select offers"
+  attr :shared, :boolean, required: true
+  attr :stage, :boolean, required: true
+  attr :steppers, :boolean, default: true, doc: "the arrows, which walk one column"
+
+  @doc "The reading tools: line numbers, the Show switches and the Highlight group."
+  def play_tools(assigns) do
+    ~H"""
+    <div class="tools" data-tools hidden>
       <h2>Line numbers</h2>
       <div class="seg" role="group" aria-label="Line numbers">
         <button type="button" data-ln-set="all">All</button>
@@ -146,13 +169,13 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2>Show</h2>
       <label><input type="checkbox" data-toggle="sd" checked /> Stage directions</label>
       <label><input type="checkbox" data-toggle="vf" checked /> Verse forms</label>
-      <label :if={@edition.variants}>
+      <label :if={@variants}>
         <input type="checkbox" data-toggle="va" checked /> Variants
       </label>
-      <label :if={@edition.folio}>
+      <label :if={@folio}>
         <input type="checkbox" data-toggle="fo" /> Folio interpolations
       </label>
-      <label :if={@edition.tagged}>
+      <label :if={@tagged}>
         <input type="checkbox" data-toggle="rs" /> Tagged names
       </label>
       <%= if @cast != [] or @shared or @stage do %>
@@ -165,7 +188,7 @@ defmodule Playcode.Export.StaticSite.Components do
         </select>
         <%= if @shared do %>
           <label><input type="checkbox" data-toggle="sh" /> Shared lines</label>
-          <.stepper for="sh" targets=".text .l[data-part=I]" name="shared line" />
+          <.stepper :if={@steppers} for="sh" targets=".text .l[data-part=I]" name="shared line" />
           <ul class="shared-legend">
             <li :for={
               {part, label} <- [{"I", "First part"}, {"M", "Middle part"}, {"F", "Last part"}]
@@ -179,7 +202,7 @@ defmodule Playcode.Export.StaticSite.Components do
             <input type="checkbox" data-toggle="sdm" aria-label="Highlight stage directions" />
             Stage directions
           </label>
-          <.stepper for="sdm" targets=".text .sd, .text .sdi" name="stage direction" />
+          <.stepper :if={@steppers} for="sdm" targets=".text .sd, .text .sdi" name="stage direction" />
         <% end %>
       <% end %>
     </div>

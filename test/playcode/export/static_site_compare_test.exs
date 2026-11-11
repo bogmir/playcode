@@ -196,4 +196,42 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       assert page |> LazyHTML.query("noscript") |> LazyHTML.text() =~ "Antonio y Cleopatra"
     end
   end
+
+  describe "the switches" do
+    test "the comparison offers the site's switches, not the single-column ones" do
+      %{original: original, french: french} = split_speech_editions()
+      page = [original, french] |> generate!() |> html!("plays/#{french.code}/compare.html")
+
+      assert count(page, "[data-tools] input[data-toggle='sd']") == 1
+      assert count(page, "[data-tools] input[data-toggle='vf']") == 1
+      assert count(page, "[data-tools] [data-ln-set]") == 3
+      # The character select names one cast, and the arrows walk one column.
+      assert count(page, "select[data-highlight]") == 0
+      assert count(page, "[data-stepper]") == 0
+    end
+
+    test "a switch shows when either play has what it switches" do
+      plain =
+        ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno dos tres</l></sp></div1>)
+
+      varied =
+        ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno<app n="1"><rdg wit="#B">dos</rdg></app> tres</l></sp></div1>)
+
+      original = [body: plain] |> tei() |> import_tei!()
+      translation = [body: varied] |> tei() |> import_tei!()
+      {:ok, original} = Catalogue.update_play(original, %{is_complete: true})
+
+      {:ok, translation} =
+        Catalogue.update_play(translation, %{
+          is_complete: true,
+          parent_play_id: original.id,
+          relationship_type: "traduccion"
+        })
+
+      page =
+        [original, translation] |> generate!() |> html!("plays/#{translation.code}/compare.html")
+
+      assert count(page, "[data-tools] input[data-toggle='va']") == 1
+    end
+  end
 end
