@@ -175,7 +175,10 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       catalogue = [original, french, spanish, lonely] |> generate!() |> html!("index.html")
 
       assert compare_links(catalogue) == ["plays/#{spanish.code}/compare.html"]
-      assert texts(catalogue, "a.compare") == ["Compare"]
+      # Playcode's catalogue icon: named for a screen reader, its title the tooltip.
+      assert attribute(catalogue, "a.compare", "aria-label") == ["Compare"]
+      assert attribute(catalogue, "a.compare", "title") == ["Compare"]
+      assert count(catalogue, "a.compare svg[aria-hidden='true']") == 1
     end
 
     # A chain: a translation of the Spanish, first in the catalogue's order under the

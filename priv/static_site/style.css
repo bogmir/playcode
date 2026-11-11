@@ -89,7 +89,9 @@ main { padding: 1.75rem clamp(1rem, 4vw, 2.75rem) 3rem; min-width: 0; }
 .seg button { font: inherit; border: 0; background: var(--raised); color: var(--ink-2); padding: .25rem .7rem; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--paper); }
 .tools select { font: inherit; width: 100%; padding: .25rem; border: 1px solid var(--hair); border-radius: 6px; background: var(--raised); color: var(--ink); }
-.entry .compare { font: 600 .75rem var(--sans); color: var(--accent); }
+.entry .compare { display: inline-flex; align-self: center; color: var(--muted); }
+.entry .compare:hover, .entry .compare:focus-visible { color: var(--accent); }
+.entry .compare svg { width: .875rem; height: .875rem; }
 /* The comparison (plays/<CODE>/compare.html): two panels at every width, each its own scroll box. */
 .compare-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; margin-bottom: 1rem; font: .8125rem/1.5 var(--sans); color: var(--ink-2); }
 .compare-bar select { font: inherit; padding: .2rem; border: 1px solid var(--hair); border-radius: 6px; background: var(--raised); color: var(--ink); }
