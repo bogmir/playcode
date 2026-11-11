@@ -302,6 +302,17 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       assert read!(dir, "plays/#{french.code}/compare.html") =~ "Enter a messenger, late."
     end
 
+    # The original turned draft, its old pages not yet taken off: a translation written
+    # meanwhile must not print the draft, which is the database's text, not the site's.
+    test "a draft original's text never reaches the comparison" do
+      %{original: original, french: french} = split_speech_editions()
+      dir = generate!([original, french])
+      {:ok, _} = Catalogue.update_play(original, %{is_complete: false})
+      {:ok, _} = StaticSite.apply_changes([{:add, french.id}], output_dir: dir)
+
+      refute File.exists?(Path.join(dir, "plays/#{french.code}/compare.html"))
+    end
+
     test "a translation taken off the site leaves no link to it" do
       %{original: original, french: french} = split_speech_editions()
 

@@ -537,7 +537,7 @@ defmodule Playcode.Export.StaticSite do
   defp write_comparison(%Edition{play: play} = edition, play_dir, site) do
     parent = play.parent_play
 
-    if parent && MapSet.member?(site.published, parent.code) do
+    if parent && parent.is_complete && MapSet.member?(site.published, parent.code) do
       {original, translation} = Comparison.prepare(Edition.load(parent.id), edition)
 
       siblings =
