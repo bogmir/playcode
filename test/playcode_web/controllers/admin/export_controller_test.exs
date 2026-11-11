@@ -217,6 +217,26 @@ defmodule PlaycodeWeb.Admin.ExportControllerTest do
     assert String.trim(out) == "1"
   end
 
+  # Problem 5: the download pairs speeches as the live page does, from the speakers.
+  test "a downloaded comparison pairs a translation's speeches with its original's",
+       %{conn: conn} do
+    %{original: original, french: french} = split_speech_editions()
+
+    page =
+      conn
+      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{original.id},#{french.id}"]}")
+      |> response(200)
+      |> LazyHTML.from_document()
+
+    pairs = fn panel ->
+      page
+      |> LazyHTML.query("[data-panel='#{panel}'] [data-pair]")
+      |> LazyHTML.attribute("data-pair")
+    end
+
+    assert {pairs.("panel-0"), pairs.("panel-1")} == {["0", "1", "2"], ["0", "1", "1", "2"]}
+  end
+
   # The download has no switch either: a passage that opens at a speaker label prints in
   # grey between its F's, the label's italics as italics (question 38).
   test "the comparison page prints a Folio passage from a speaker label in grey",

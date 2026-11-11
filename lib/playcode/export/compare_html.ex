@@ -5,6 +5,7 @@ defmodule Playcode.Export.CompareHtml do
   scrolling between panels. No external dependencies.
   """
 
+  alias Playcode.Alignment
   alias Playcode.Export.{Download, NoteMarkup}
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{CastListEntry, Division}
@@ -21,6 +22,7 @@ defmodule Playcode.Export.CompareHtml do
         play = Playcode.Repo.preload(play, [:editors, :sources])
         {play, PlayContent.load_play_content(play.id)}
       end)
+      |> Alignment.mark_pairs()
 
     """
     <!DOCTYPE html>
@@ -412,7 +414,7 @@ defmodule Playcode.Export.CompareHtml do
 
   defp render_element(%{type: "speech"} = el, act_key) do
     aside_class = if el.is_aside, do: " aside", else: ""
-    key_attr = " data-sync-act=\"#{act_key}\""
+    key_attr = " data-sync-act=\"#{act_key}\"#{if el.pair, do: " data-pair=\"#{el.pair}\""}"
 
     speaker =
       if el.speaker_label,

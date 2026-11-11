@@ -60,6 +60,9 @@ defmodule Playcode.PlayContent.Element do
     field :aside_continues, :boolean, default: false
     # Each aside piece's TEI attributes (xml:id, next), set by the TEI export alone.
     field :aside_links, {:array, :map}, virtual: true, default: []
+    # A speech's place among its original's speeches, set by the comparison alone
+    # (`Playcode.Alignment.mark_pairs/1`).
+    field :pair, :integer, virtual: true
     field :rend, :string
     field :stage_type, :string
     field :position, :integer, default: 0

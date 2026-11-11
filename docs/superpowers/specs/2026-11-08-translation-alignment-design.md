@@ -3,7 +3,7 @@
 Problem 5 of the six on numbering, identifiers and alignment; 1–4 and 6 are built (the
 2026-11-08 specs beside this one). Grilled 2026-11-08, Q26 decided 2026-11-09, proof of
 concept 2026-11-09, **design revised by the owner on 2026-11-11** after the researcher's
-answers: the pairs are computed, not stored (see *Design*). Step 1 is being built on
+answers: the pairs are computed, not stored (see *Design*). Step 1 built 2026-11-11 on
 `feature/computed-speech-pairs`.
 
 ## What it is for
@@ -182,7 +182,12 @@ changes only if someone notices. Generate: at most about 8 s more for a full reb
 ## Order of work
 
 1. **Computed speech pairs in today's comparison** (page and download): `Playcode.Alignment`,
-   `data-pair`, `sync_scroll.mjs` follows it. Code only: no column, no TEI change.
+   `data-pair`, `sync_scroll.mjs` follows it. Code only: no column, no TEI change. **Built
+   2026-11-11** (`feature/computed-speech-pairs`): the pairs are computed when a panel is
+   added or removed, for each translation or version whose original is shown; adaptations
+   and translations without their original keep the proportion. On the dev database every
+   speech of 0038/0084 and of Coriolanus with two translations gets a pair; building the
+   panels, loading included, takes 283–348 ms.
 2. **The comparison on the static site**, with the same pairs.
 3. **Character pairs**: the column, the automatic pass on import, the dropdown, `castItem
    corresp`.

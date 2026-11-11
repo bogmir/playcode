@@ -195,6 +195,66 @@ defmodule Playcode.ImportHelpers do
     %{original: original, translation: translation}
   end
 
+  @doc """
+  An original and a French translation that repeats Cléopâtre's name after a stage direction
+  in mid-speech, so the French has four speeches against the original's three, the second
+  and third both the original's second (problem 5). Characters are named in each language.
+  Both complete; the French is `relationship_type` (a translation unless given) of the
+  original. Returns `%{original: play, french: play}`.
+  """
+  def split_speech_editions(relationship_type \\ "traduccion") do
+    original =
+      import_tei!(
+        tei(
+          front: """
+          <div type="elenco"><castList>
+            <castItem><role xml:id="ANT">ANTONY</role></castItem>
+            <castItem><role xml:id="CLEO">CLEOPATRA</role></castItem>
+          </castList></div>
+          """,
+          body: """
+          <div1 type="act" n="1"><head>ACT I</head>
+            <sp who="#ANT"><speaker>ANTONY</speaker><l n="1">One.</l></sp>
+            <sp who="#CLEO"><speaker>CLEOPATRA</speaker><l n="2">Two.</l></sp>
+            <sp who="#ANT"><speaker>ANTONY</speaker><l n="3">Three.</l></sp>
+          </div1>
+          """
+        )
+      )
+
+    french =
+      import_tei!(
+        tei(
+          front: """
+          <div type="elenco"><castList>
+            <castItem><role xml:id="antoine">ANTOINE</role></castItem>
+            <castItem><role xml:id="cleopatre">CLÉOPÂTRE</role></castItem>
+          </castList></div>
+          """,
+          body: """
+          <div1 type="act" n="1"><head>ACTE I</head>
+            <sp who="#antoine"><speaker>ANTOINE</speaker><p>Un.</p></sp>
+            <sp who="#cleopatre"><speaker>CLÉOPÂTRE</speaker><p>Deux.</p></sp>
+            <stage>Elle se lève.</stage>
+            <sp who="#cleopatre"><speaker>CLÉOPÂTRE</speaker><p>Deux, suite.</p></sp>
+            <sp who="#antoine"><speaker>ANTOINE</speaker><p>Trois.</p></sp>
+          </div1>
+          """
+        )
+      )
+
+    {:ok, original} = Catalogue.update_play(original, %{is_complete: true})
+
+    {:ok, french} =
+      Catalogue.update_play(french, %{
+        is_complete: true,
+        parent_play_id: original.id,
+        relationship_type: relationship_type
+      })
+
+    %{original: original, french: french}
+  end
+
   @doc "The TEI the platform exports for a play."
   def export_tei(play), do: TeiXml.generate(Catalogue.get_play_with_all!(play.id))
 

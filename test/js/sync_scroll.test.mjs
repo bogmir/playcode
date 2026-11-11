@@ -3,7 +3,7 @@
 // the one at the top of the panel being scrolled.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { counterpart, matchSpeech } from '../../assets/js/sync_scroll.mjs';
+import { counterpart, matchPair, matchSpeech } from '../../assets/js/sync_scroll.mjs';
 
 test('a speech pairs with the one the same way through the same act', () => {
   const source = ['act-0', 'act-0', 'act-0', 'act-1'];
@@ -32,4 +32,18 @@ test('the first and last speeches pair with the first and last', () => {
 test('a lone speech pairs with the first, and an empty panel with nothing', () => {
   assert.equal(counterpart(0, 1, 5), 0);
   assert.equal(matchSpeech(['act-0'], [], 0), null);
+});
+
+// Problem 5: each speech carries the place of the original speech it goes with
+// (data-pair), computed on the server; the other panel scrolls to the speech with the same
+// pair, or to the next one when its edition cut that speech.
+test('a speech scrolls to the speech with its pair, a cut one to the next', () => {
+  const original = [0, 1, 2, 3];
+  const french = [0, 1, 1, 3]; // splits speech 1, cuts speech 2
+
+  assert.equal(matchPair(french, 1), 1); // the first half of the split
+  assert.equal(matchPair(original, 1), 1);
+  assert.equal(matchPair(french, 2), 3); // cut: the speech after it
+  assert.equal(matchPair(french, 9), 3); // past the end: the last
+  assert.equal(matchPair([], 0), null);
 });
