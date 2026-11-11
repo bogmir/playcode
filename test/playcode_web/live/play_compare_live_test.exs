@@ -209,6 +209,52 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
     end
   end
 
+  describe "speech pairs" do
+    # Problem 5: each speech carries the place of the original speech it goes with
+    # (data-pair), from the speakers' sequence, so sync_scroll.mjs follows a translation
+    # that splits, cuts or adds speeches instead of drifting by proportion.
+    test "both halves of a repeated speaker point at the one original speech", %{conn: conn} do
+      %{french: french} = split_speech_editions()
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{french.code}/compare")
+      page = view |> render() |> LazyHTML.from_fragment()
+
+      assert sync_keys(page, "panel-0", "data-pair") == ["0", "1", "2"]
+      assert sync_keys(page, "panel-1", "data-pair") == ["0", "1", "1", "2"]
+    end
+
+    test "a translation is paired once its original is shown beside it, and not after",
+         %{conn: conn} do
+      %{original: original, french: french} = split_speech_editions()
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{original.code}/compare")
+      refute has_element?(view, "[data-pair]")
+
+      view
+      |> element("form[phx-change='add_play']")
+      |> render_change(%{"id" => french.id})
+
+      assert has_element?(view, "[data-panel='panel-1'] [data-pair='1']")
+
+      # Removing the original leaves the translation with nothing to pair with.
+      view
+      |> element("button[phx-click='remove_panel'][phx-value-index='0']")
+      |> render_click()
+
+      refute has_element?(view, "[data-pair]")
+    end
+
+    # The proof of concept: an adaptation's speakers do not follow its original's (median
+    # length correlation 0.04), so it keeps the proportion.
+    test "an adaptation is not paired", %{conn: conn} do
+      %{french: french} = split_speech_editions("adaptacion")
+
+      {:ok, view, _html} = live(conn, ~p"/plays/#{french.code}/compare")
+
+      refute has_element?(view, "[data-pair]")
+    end
+  end
+
   describe "drafts" do
     test "a draft's comparison page is for staff only", %{conn: conn} do
       draft = TestFixtures.play_fixture(%{"title" => "Borrador comparado"})

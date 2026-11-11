@@ -1,10 +1,10 @@
-# Aligning a translation with its original (problem 5, parked)
+# Aligning a translation with its original (problem 5)
 
-**Parked by the owner on 2026-11-09**; Q26 decided the same day (see *Design*), nothing built. This is problem 5 of the six on
-numbering, identifiers and alignment. Problems 1–4 and 6 are built: see the 2026-11-08 specs
-beside this one. This file is the handoff written during the grilling (2026-11-08), kept
-here so the analysis survives. Start with a grilling or brainstorming session on the open
-questions at the end, before writing a plan.
+Problem 5 of the six on numbering, identifiers and alignment; 1–4 and 6 are built (the
+2026-11-08 specs beside this one). Grilled 2026-11-08, Q26 decided 2026-11-09, proof of
+concept 2026-11-09, **design revised by the owner on 2026-11-11** after the researcher's
+answers: the pairs are computed, not stored (see *Design*). Step 1 built 2026-11-11 on
+`feature/computed-speech-pairs`.
 
 ## What it is for
 
@@ -77,77 +77,167 @@ original has sp1–sp5 (Philo, Cleopatra, Antony, Cleopatra, Antony):
 - **Remaining gap:** a file downloaded before the original changed keeps old pointers.
 - **Standard:** it is standard TEI, and self-describing.
 
-## Design (Q26, decided by the owner on 2026-11-09)
+## The researcher's answers (2026-11-10)
 
-The four parts of Q26 and their answers:
-- **A. Storage: links between rows,** not the `corresp` text as written. Identifiers are
-  recounted at every export (problem 2), so a stored pointer would silently name the wrong
-  speech once the original gains one.
-- **B. Characters are paired too, and stored,** so a wrong character pair can be corrected
-  and the correction lasts.
-- **C. The first pass is automatic (speaker sequence), but only after a proof of concept**
-  shows it works on the test plays (0038 against 0084, 0052 and 0139; 0010 against 0050;
-  0012 against 0090; 0013 against 0120). The POC reads only: no tables, no TEI change.
-- **D. Correction both ways:** on the comparison page, and by editing `corresp` and
-  re-importing.
+Asked how the parallel view is used, after seeing the proof of concept:
+- **It belongs on the static site:** "los paralelos son también parte de la Biblioteca". The
+  site export builds no comparison page today; readers get it only in Playcode
+  (`/plays/:code/compare`) or as a download from the admin.
+- **Readers use it** to read an original beside its translations. Not a tool for the team.
+- **Nobody corrects a translation while comparing:** it is final before it is encoded. So no
+  live comparison.
+- **The report helps a coder** find the differences; a Playcode tool to correct them would be
+  welcome, but the project prefers to save and keep Playcode a coding platform and database.
+- **Rows 89 and 91 of the report do not correspond and are not marked:** the French gives the
+  messengers' lines to other people, so the speakers line up and the words are one speech off.
+  "Same" in the report means the same speaker, not the same content.
 
-- **Storage:**
-  - speech pairs: a relation from a translation speech to one or more original speeches;
-  - character pairs: a relation from a translation character to one or more original
-    characters.
-  - **Re-importing the original** replaces its speech rows, which would delete every
-    translation's links to it. Before the replace, each link is written down as the
-    original's current speech identifier and resolved again afterwards; a speech the new
-    file no longer has loses its pair, and the import preview says how many.
-- **First pass (automatic, after the POC):**
-  1. Map characters, starting from names and the order in which they first speak; the coder
-     confirms.
-  2. Align speeches by the sequence of speakers, as a diff does. The French repeated speaker
-     falls out by itself: the same character speaks twice in a row in the translation and
-     once in the original.
-- **Correction:** on the comparison page, click to re-pair a speech. A coder working in XML
-  can edit one `corresp` and re-import.
-- **Export:**
-  - speeches get `corresp="{original}.xml#{original speech identifier}"`, using problem 2's
-    identifiers at export time;
-  - characters get `role corresp`. Note: the import already reads `role corresp` *within* a
-    file (`tei_parser.ex` around line 1434: a cast-list role refers to a character), so a
-    pointer into another file is new.
-- **Import:** resolve `corresp` to the original's rows. Open: what happens when the
-  translation is imported before its original.
-- **Comparison page:** use the pairs where they exist; fall back to the proportion elsewhere.
+## Design (revised by the owner on 2026-11-11)
 
-## Step by step
+Replaces the Q26 decision of 2026-11-09 (stored links for every speech, a click to re-pair on
+the comparison page): it cost a table of some 1,200 rows per translation, rebuilt at every
+import, and a `corresp` on every `<sp>` that goes stale when the original changes.
 
-1. The researcher opens 0038 against 0084. Playcode has proposed pairs: French Antoine ↔
-   Antony, Cléopâtre ↔ Cleopatra, …
-2. The speeches are aligned by speaker sequence. Both French Antoine speeches at the repeated
-   speaker pair with original sp3.
-3. The researcher spots one wrong pair at a cut and re-pairs it with a click. Only that speech
-   changes.
-4. Export 0084: `<sp who="#antoine" corresp="EMOTHE0038.xml#em0038-en-sp-3">`, twice.
-5. Later 0038 gains a speech at the start. At the next export of 0084 the pointers read
-   `…-sp-4` by themselves.
+- **Speech pairs are computed when a parallel view is built**, never stored: the comparison
+  page when it opens, the comparison download, and the static site at Generate.
+  1. Load both texts (the page already does).
+  2. Read each translation character's original character.
+  3. Pair the speeches by the sequence of speakers, read through the character pairs, per
+     scene when both texts have the same scenes, else per act, else the whole play
+     (`Playcode.Alignment`, from the proof of concept).
+  4. Write the pair into the HTML on each translation speech (`data-pair`, the original
+     speech's place); `sync_scroll.mjs` scrolls to it, and keeps the proportion for a speech
+     with none (a cut, an added speech, a text whose speakers are not paired).
+  The browser computes nothing, so the static site still works from disk. Same text, same
+  pairs; an improved rule changes them everywhere at the next Generate (the module is in the
+  export's fingerprint).
+- **Characters are paired automatically and can be corrected** (no confirmation step): one
+  nullable column on the translation's character, its original character, filled by the
+  automatic pass when the translation is imported or linked to its original and the column
+  is empty; corrected with a dropdown on the translation's characters tab, or in the XML. One
+  original per character: a merged role ("PISTOLA, NYM, BARDOLFO") stays unpaired and its
+  speeches pair by position. Because speech pairs are computed, a corrected character takes
+  effect at once.
+- **Speech corrections are the only speech pairs stored:** one nullable column on a
+  translation speech, the original speech it goes with, expected a few per play. A correction
+  is a fixed point: the pairing runs between corrections, so one fix also mends its
+  neighbours (rows 89/91). An original speech deleted empties the column and the speech falls
+  back to the computed pair.
+- **TEI** (complete copy: what is stored is written): character pairs on
+  `castItem corresp`, speech corrections on `sp corresp`, through a prefix declared once in
+  the header, so a pointer stays short and the path to the original is written in one place:
+
+  ```xml
+  <listPrefixDef>
+    <prefixDef ident="orig" matchPattern="(.+)"
+               replacementPattern="../EMOTHE0038/EMOTHE0038.xml#$1"/>
+  </listPrefixDef>
+  …
+  <castItem corresp="orig:CLEO">
+  <sp who="#cleopatre" corresp="orig:em0038-en-sp-1150">
+  ```
+
+  - `castItem`, not `role`: the export already gives `role corresp` a meaning (a later cast
+    list naming a character declared earlier, `tei_parser.ex` around line 1536).
+  - The path is relative to the static site's layout (`plays/<CODE>/<CODE>.xml`); a bare
+    `EMOTHE0038.xml#…` would point beside the translation's own file.
+  - Character identifiers are kept, so `orig:CLEO` does not go stale. Speech identifiers are
+    counted at each export; within one site build both files agree, and a downloaded file
+    goes stale only if the original's speeches change later (the texts are final).
+  - Import resolves `orig:X` against the play the file names as its original, without the
+    path. Until that play is in Playcode the pointer has nothing to resolve to (open: keep it
+    as text, or drop it with a warning).
+  - Re-importing the original: characters resolve again by their kept `xml:id`; the few
+    speech corrections are written down as identifiers before the replace and resolved after,
+    and the import preview says how many were lost.
+- **The report** (proof of concept) can become a read-only download for a coder, with a "same
+  speaker, very different length" warning that would mark rows 89/91. Not a correction screen.
+- **Left out:** live updates of the comparison, a click to re-pair on the comparison page, a
+  HIERONIMO-style "pupitre virtual".
+
+## Performance (measured 2026-11-11, dev laptop, median of 3 per pair, two runs)
+
+`Alignment.align/2` over all 154 translation/original pairs:
+
+| | run 1 | run 2 |
+|---|---|---|
+| median | 15 ms | 13 ms |
+| 95th percentile | 193 ms | 167 ms |
+| slowest (0236/0237) | 682 ms | 587 ms |
+| all 154 | 9.1 s | 7.4 s |
+
+Slowest beside 0236/0237: Coriolanus 0676 against 0677 and 0689, 0012/0090, 0013/0120; not
+profiled (likely texts whose scenes differ, so the diff runs over the whole play). The page
+waits at worst about 0.8 s more (Coriolanus with two translations); cache until either play
+changes only if someone notices. Generate: at most about 8 s more for a full rebuild.
+
+## Reverting
+
+- The work is a branch merged as one commit: `git revert -m 1` removes it, and the
+  proportion (kept in `sync_scroll.mjs` as the fallback) takes over again.
+- The two columns go with a migration; only the hand corrections are lost.
+- TEI files exported meanwhile import cleanly into the reverted Playcode: it reads no
+  `corresp` on `sp` or `castItem` and no `listPrefixDef` today.
+
+## Order of work
+
+1. **Computed speech pairs in today's comparison** (page and download): `Playcode.Alignment`,
+   `data-pair`, `sync_scroll.mjs` follows it. Code only: no column, no TEI change. **Built
+   2026-11-11** (`feature/computed-speech-pairs`): the pairs are computed when a panel is
+   added or removed, for each translation or version whose original is shown; adaptations
+   and translations without their original keep the proportion. On the dev database every
+   speech of 0038/0084 and of Coriolanus with two translations gets a pair; building the
+   panels, loading included, takes 283–348 ms.
+2. **The comparison on the static site**, with the same pairs.
+3. **Character pairs**: the column, the automatic pass on import, the dropdown, `castItem
+   corresp`.
+4. **Speech corrections**: the column, fixed points in the pairing, `sp corresp`, the import
+   and the re-import of the original.
+5. **The coder's report** as a download, with the length warning.
+
+## Proof of concept (2026-11-09, branch `poc/translation-alignment`)
+
+`Playcode.Alignment` (pure, stores nothing) and `poc/align.exs`, which reads the dev database:
+`mix run poc/align.exs` sweeps every translation against its original (154 pairs, 37 s);
+`mix run poc/align.exs 0038 0084` writes one pair side by side as HTML for a person to check.
+
+- **Characters:** Jaro similarity of the names without accents, or, for a weak name match,
+  its mean with where in the play the character speaks (20 slices) and, at half weight, how
+  much; one-to-one, greedy. Without the "how much", 0084's Paysan and Garde (8 and 2
+  speeches, both only in the last scene) swapped with the Countryman and the Guardsman, and
+  the whole scene paired one speech off.
+- **Speeches:** `List.myers_difference/2` over the speaker sequence, per scene when both
+  texts have the same scenes, else per act, else the whole play.
+- **The check that does not depend on speakers:** the correlation of the paired speeches'
+  lengths (log word counts). A right pairing translates long speeches long.
+
+| | pairs | median length r, aligned | median length r, proportion today | aligned r ≥ 0.85 |
+|---|---|---|---|---|
+| translations | 142 | 0.96 | 0.71 | 128 |
+| adaptations | 11 | 0.04 | 0.05 | 2 (0121, 0317) |
+
+- **0038/0084**, the drift the researcher saw: 0.93 against −0.03. Both French Antoine halves
+  point at the one Antony speech; Messenger/Serviteur pairs although the names differ.
+- **The weakest translations** are free ones, not failures: 0230 (r 0.30) rewrites the text,
+  0775 (0.49), 0674 (0.59), the 0106 family (0.53–0.78, 200+ speeches cut).
+- **Characters:** 0226 (Italian *Henry V*) lists groups as one character ("PISTOLA, NYM,
+  BARDOLFO") and a cast-list heading as a character ("Scena: Inghilterra, poi Francia");
+  one-to-one pairing then pairs "Coro" with Nym.
+- **Adaptations do not align** (Dom Juan, Saint Genest, Le Menteur, Il bugiardo).
+- **The report** marks a row by its pairing kind; rows 89/91 show that a same-speaker row can
+  still be wrong.
 
 ## How it interacts with the others
 
-- **Needs 2 (built):** speech identifiers in the export, counted afresh each time, with no leading zeros (`em0038-en-sp-3`).
+- **Needs 2 (built):** speech identifiers in the export, counted afresh each time, with no
+  leading zeros (`em0038-en-sp-3`), for the speech corrections' pointers.
 - **No numbering involved:** none of 1, 3 or 4. Pairing by speech means `@n` (verse or speech
   numbers) never has to match across plays: Hamlet numbers verses and Amleto has none.
 
 ## Open
 
-- **Q26:** decided 2026-11-09, see *Design* above. Next: the proof of concept.
 - **Statistics:** should a speech repeated after a stage direction (same `@who`) count once?
   The researcher says it inflates speech counts.
-- **Adaptations** (Dom Juan, Le Menteur, Saint Genest): align them, or leave them out of the
-  comparison?
-- **Import order** when the original is missing.
-- **The researcher has been answered** (2026-11-08): the four flaws of anchors, and how
-  `corresp` would be filled. The text is in the grilling transcript,
-  `~/.claude/projects/-home-bogdan-Projects-playcode/3617a47a-728e-4ef6-a9ad-7b94b0f59fa9.jsonl`.
-
-## Suggested skills
-
-- `superpowers:brainstorming`, or `mattpocock-skills:grilling`, before any design is fixed.
-- `mattpocock-skills:prototype` for the comparison page's re-pairing interaction.
+- **Adaptations:** the pairing does not work for them (median r 0.04); leave them on the
+  proportion, which is what step 1 does for a text whose speakers do not pair.
+- **Import order:** a translation's pointers when its original is not in Playcode yet.

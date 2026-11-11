@@ -52,6 +52,7 @@ lib/
 │   │   ├── user_token.ex             # Session and email tokens (session, invite, reset, change)
 │   │   ├── admin_bootstrap.ex        # Reconciles ADMIN_EMAILS at boot
 │   │   └── user_notifier.ex          # Email notification templates
+│   ├── alignment.ex                  # Pairs a translation's speeches with its original's, for the comparison; stores nothing
 │   ├── authz.ex                      # The only place that answers "may this user do that?"
 │   ├── import/
 │   │   ├── tei_parser.ex             # Reads a TEI-XML file into plain data, no database (handles UTF-16 files)

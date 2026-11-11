@@ -275,6 +275,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         Element.folio_only?(@element) && "folio"
       ]}
       data-sync-act={@act_key}
+      data-pair={@act_key && @element.pair}
     >
       <div
         :if={@element.speaker_label}

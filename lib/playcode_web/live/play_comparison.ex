@@ -13,7 +13,7 @@ defmodule PlaycodeWeb.PlayComparison do
 
   import Phoenix.Component, only: [assign: 2]
 
-  alias Playcode.Catalogue
+  alias Playcode.{Alignment, Catalogue}
   alias Playcode.PlayContent
 
   @max_panels 4
@@ -42,7 +42,7 @@ defmodule PlaycodeWeb.PlayComparison do
     if play.relationship_type && play.parent_play_id do
       case Enum.find(family, &(&1.id == play.parent_play_id)) do
         nil -> panels
-        parent -> [build_panel(Catalogue.get_play_with_all!(parent.id)) | panels]
+        parent -> mark_pairs([build_panel(Catalogue.get_play_with_all!(parent.id)) | panels])
       end
     else
       panels
@@ -84,15 +84,29 @@ defmodule PlaycodeWeb.PlayComparison do
     offered = Enum.find(available_plays(family, panels), &(&1.id == play_id))
 
     cond do
-      length(panels) >= @max_panels -> {:error, :max_reached}
-      offered -> {:ok, panels ++ [build_panel(Catalogue.get_play_with_all!(offered.id))]}
-      true -> {:error, :not_offered}
+      length(panels) >= @max_panels ->
+        {:error, :max_reached}
+
+      offered ->
+        {:ok, mark_pairs(panels ++ [build_panel(Catalogue.get_play_with_all!(offered.id))])}
+
+      true ->
+        {:error, :not_offered}
     end
   end
 
   @doc "Removes the panel at `index`, keeping at least one panel."
   def remove_panel(panels, index) when is_integer(index) do
-    if length(panels) <= 1, do: panels, else: List.delete_at(panels, index)
+    if length(panels) <= 1, do: panels, else: panels |> List.delete_at(index) |> mark_pairs()
+  end
+
+  # Each speech's pair with its original's, for the panels shown together (a translation
+  # loses its pairs when its original's panel is removed).
+  defp mark_pairs(panels) do
+    panels
+    |> Enum.map(&{&1.play, &1.divisions})
+    |> Alignment.mark_pairs()
+    |> Enum.zip_with(panels, fn {_play, divisions}, panel -> %{panel | divisions: divisions} end)
   end
 
   @doc "Tailwind grid column class for a given panel count."

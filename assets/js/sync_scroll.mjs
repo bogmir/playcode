@@ -3,9 +3,10 @@
 // with the `export` keywords removed, so both pages behave the same.
 //
 // Every speech carries data-sync-act, the key of the act it belongs to, and every
-// heading data-sync-div (see Division.sync_keys/1). Speeches are paired by proportion,
-// not by count: translators merge and split speeches, so speech 40 of one edition's
-// act is rarely speech 40 of the other's, but it is about as far through the act.
+// heading data-sync-div (see Division.sync_keys/1). A translation shown beside its
+// original also carries data-pair on each speech (matchPair). Elsewhere speeches are paired
+// by proportion, not by count: translators merge and split speeches, so speech 40 of one
+// edition's act is rarely speech 40 of the other's, but it is about as far through the act.
 
 // The index, among `m` speeches, as far through them as speech `i` of `n`.
 export function counterpart(i, n, m) {
@@ -26,6 +27,16 @@ export function matchSpeech(sourceActs, targetActs, s) {
 
   if (to.length > 0) return to[counterpart(from.indexOf(s), from.length, to.length)]
   return counterpart(s, sourceActs.length, targetActs.length)
+}
+
+// `pairs` lists a panel's data-pair values in reading order: the place of the original
+// speech each speech goes with, which the server computes from the speakers
+// (Playcode.Alignment). Returns the index of the first speech with pair `p`, or after it
+// when this edition cut that speech; the last speech past the end; null for no speeches.
+export function matchPair(pairs, p) {
+  if (pairs.length === 0) return null
+  const j = pairs.findIndex((q) => q >= p)
+  return j === -1 ? pairs.length - 1 : j
 }
 
 // Keeps the [data-panel] elements inside `container` at the same place in the play. The
@@ -54,6 +65,12 @@ export function syncPanels(container) {
   const counterpartIn = (target, anchor, source) => {
     if (anchor.hasAttribute("data-sync-div")) {
       return target.querySelector(`[data-sync-div="${anchor.dataset.syncDiv}"]`)
+    }
+    // A speech whose pair the server knows goes to the speech with the same pair; one
+    // without, or a panel with none, falls back to the proportion.
+    const paired = Array.from(target.querySelectorAll("[data-pair]"))
+    if (anchor.hasAttribute("data-pair") && paired.length > 0) {
+      return paired[matchPair(paired.map((el) => Number(el.dataset.pair)), Number(anchor.dataset.pair))]
     }
     const from = Array.from(source.querySelectorAll("[data-sync-act]"))
     const to = Array.from(target.querySelectorAll("[data-sync-act]"))
