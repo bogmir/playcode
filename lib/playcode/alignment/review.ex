@@ -7,6 +7,7 @@ defmodule Playcode.Alignment.Review do
   """
 
   alias Playcode.Alignment
+  alias Playcode.PlayContent.{Element, InlineMarkup}
   alias Playcode.Statistics.Metrics
 
   # Tuned on dev (2026-11-11): marks 0084's rows 89 and 91 (5 words against 19, 18 against
@@ -38,10 +39,42 @@ defmodule Playcode.Alignment.Review do
       end)
   end
 
+  # Plain data only: the rows are sent from a background task to the page, and a message
+  # copies each term in full, so a division here would copy its whole act once per row.
   defp row(kind, original, translation) do
     {o, place} = original || {nil, []}
     {t, _} = translation || {nil, []}
-    %{kind: kind, place: place, original: o, translation: t, long: kind == :same and long?(o, t)}
+
+    %{
+      kind: kind,
+      place: Enum.map_join(place, ", ", &place_label/1),
+      original: o && speech(o),
+      translation: t && speech(t),
+      long: kind == :same and long?(o, t)
+    }
+  end
+
+  defp place_label(division),
+    do:
+      InlineMarkup.plain(
+        division.title ||
+          String.capitalize("#{division.type}#{division.number && " #{division.number}"}")
+      )
+
+  # What the page prints of a speech: its speaker, its first line's number, its opening
+  # words, its first 120 characters on hover, and the character it links to.
+  defp speech(el) do
+    text = el |> spoken_text() |> InlineMarkup.plain()
+    line = el |> spoken_lines() |> List.first()
+
+    %{
+      id: el.id,
+      speaker: InlineMarkup.plain(el.speaker_label || ""),
+      n: line && line.line_number,
+      opening: text |> String.split() |> Enum.take(8) |> Enum.join(" "),
+      hover: if(String.length(text) > 120, do: String.slice(text, 0, 120) <> "…", else: text),
+      character_id: el |> Element.characters() |> Enum.map(& &1.id) |> List.first()
+    }
   end
 
   defp long?(o, t) do
@@ -62,11 +95,8 @@ defmodule Playcode.Alignment.Review do
         do: {el.id, {el, place}}
   end
 
-  @doc "A speech's spoken text: its verse lines and paragraphs, not its stage directions."
-  def spoken_text(speech), do: speech |> spoken_lines() |> Enum.map_join(" ", & &1.content)
-
-  @doc "The speech's first verse line or paragraph, or nil."
-  def first_line(speech), do: speech |> spoken_lines() |> List.first()
+  # A speech's spoken text: its verse lines and paragraphs, not its stage directions.
+  defp spoken_text(speech), do: speech |> spoken_lines() |> Enum.map_join(" ", & &1.content)
 
   defp spoken_lines(%{type: type} = el) when type in ~w(verse_line prose), do: [el]
 

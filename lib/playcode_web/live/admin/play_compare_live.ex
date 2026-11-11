@@ -12,7 +12,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
 
   alias Playcode.{Alignment, Catalogue, PlayContent}
   alias Playcode.Alignment.Review
-  alias Playcode.PlayContent.{Element, InlineMarkup}
+  alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayComparison
 
   @impl true
@@ -370,7 +370,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
                 class={kind_class(row.kind)}
               >
                 <td class="text-base-content/70">{n}</td>
-                <td class="whitespace-nowrap">{Enum.map_join(row.place, ", ", &place_label/1)}</td>
+                <td class="whitespace-nowrap">{row.place}</td>
                 <td>
                   <span :if={row.repeat} class="text-base-content/70 italic">
                     ↑ {gettext("Same speech as above")}
@@ -417,10 +417,8 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
 
   defp elenco_link(nil, _play, _entries), do: nil
 
-  defp elenco_link(speech, play, entries) do
-    with %{id: id} <- speech |> Element.characters() |> List.first(),
-         entry when entry != nil <- entries[id],
-         do: ~p"/admin/plays/#{play.id}/content#entry-#{entry}"
+  defp elenco_link(%{character_id: id}, play, entries) do
+    if entry = entries[id], do: ~p"/admin/plays/#{play.id}/content#entry-#{entry}"
   end
 
   attr :speech, :any, required: true
@@ -429,35 +427,15 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   defp speech_cell(%{speech: nil} = assigns), do: ~H""
 
   defp speech_cell(assigns) do
-    text = assigns.speech |> Review.spoken_text() |> InlineMarkup.plain()
-    hover = if String.length(text) > 120, do: String.slice(text, 0, 120) <> "…", else: text
-    line = Review.first_line(assigns.speech)
-
-    assigns =
-      assign(assigns,
-        hover: hover,
-        opening: text |> String.split() |> Enum.take(8) |> Enum.join(" "),
-        n: line && line.line_number
-      )
-
     ~H"""
-    <span title={@hover}>
-      <span :if={@n} class="text-base-content/70">{@n}</span>
-      <.link :if={@href} href={@href} class="link font-bold">
-        {InlineMarkup.plain(@speech.speaker_label || "")}
-      </.link>
-      <b :if={!@href}>{InlineMarkup.plain(@speech.speaker_label || "")}</b>
-      {@opening}
+    <span title={@speech.hover}>
+      <span :if={@speech.n} class="text-base-content/70">{@speech.n}</span>
+      <.link :if={@href} href={@href} class="link font-bold">{@speech.speaker}</.link>
+      <b :if={!@href}>{@speech.speaker}</b>
+      {@speech.opening}
     </span>
     """
   end
-
-  defp place_label(division),
-    do:
-      InlineMarkup.plain(
-        division.title ||
-          String.capitalize("#{division.type}#{division.number && " #{division.number}"}")
-      )
 
   defp kind_label(:same), do: gettext("Same speaker")
   defp kind_label(:split), do: gettext("Split")
