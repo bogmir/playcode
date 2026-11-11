@@ -30,6 +30,10 @@ defmodule Playcode.PlayContent.Character do
     field :actor, :string
     field :is_hidden, :boolean, default: false
     field :is_group, :boolean, default: false
+    # A researcher's correction in a translation: its original character's xml_id, or no
+    # original at all; neither, and the comparison pairs it by rule (`Playcode.Alignment`).
+    field :original_xml_id, :string
+    field :no_original, :boolean, default: false
     field :position, :integer, default: 0
 
     belongs_to :play, Playcode.Catalogue.Play
@@ -51,14 +55,26 @@ defmodule Playcode.PlayContent.Character do
       :actor,
       :is_hidden,
       :is_group,
+      :original_xml_id,
+      :no_original,
       :position,
       :play_id
     ])
     |> update_change(:actor, &Text.squeeze/1)
+    |> one_correction()
     |> validate_required([:xml_id, :name])
     |> unique_constraint([:play_id, :xml_id],
       error_key: :xml_id,
       message: "is already in use for this play"
     )
+  end
+
+  # "No original" and a pointer are two corrections; the last one set is the one.
+  defp one_correction(changeset) do
+    cond do
+      get_change(changeset, :no_original) == true -> put_change(changeset, :original_xml_id, nil)
+      get_change(changeset, :original_xml_id) -> put_change(changeset, :no_original, false)
+      true -> changeset
+    end
   end
 end

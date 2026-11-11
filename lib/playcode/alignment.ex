@@ -82,7 +82,7 @@ defmodule Playcode.Alignment do
         speeches
         |> Enum.flat_map(fn {el, _, _} -> Element.characters(el) end)
         |> Enum.uniq_by(& &1.id)
-        |> Enum.map(&Map.take(&1, [:id, :name])),
+        |> Enum.map(&Map.take(&1, [:id, :name, :xml_id, :original_xml_id, :no_original])),
       speeches:
         for {el, act, scene} <- speeches do
           %{
@@ -127,7 +127,30 @@ defmodule Playcode.Alignment do
 
   ## Characters
 
+  # A researcher's corrections first: a character with no original is out, one whose
+  # pointer names an original character goes with it. The rule pairs the rest; a pointer
+  # naming no one is no correction.
   defp pair_characters(original, translation) do
+    by_xml_id = for o <- original.characters, o[:xml_id], into: %{}, do: {o.xml_id, o.id}
+
+    fixed =
+      for t <- translation.characters,
+          o = by_xml_id[t[:original_xml_id]],
+          o && !t[:no_original],
+          into: %{},
+          do: {t.id, o}
+
+    rest = %{
+      translation
+      | characters: Enum.reject(translation.characters, &(&1[:no_original] || fixed[&1.id]))
+    }
+
+    taken = MapSet.new(Map.values(fixed))
+    others = %{original | characters: Enum.reject(original.characters, &(&1.id in taken))}
+    Map.merge(by_rule(others, rest), fixed)
+  end
+
+  defp by_rule(original, translation) do
     o_profiles = profiles(original.speeches)
     t_profiles = profiles(translation.speeches)
 

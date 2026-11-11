@@ -31,6 +31,25 @@ defmodule Playcode.Export.StaticSiteCompareTest do
     refute File.exists?(Path.join(dir, "plays/#{original.code}/compare.html"))
   end
 
+  # Step 3: Antoine corrected to Cleopatra and Cléopâtre to Antony; read through the
+  # corrections the French speakers run CLEO, ANT, ANT, CLEO against ANT, CLEO, ANT, so
+  # Antoine's first speech goes with Cleopatra's (the rule alone gave 0, 1, 1, 2).
+  test "a corrected character pairs its speeches with its correction's" do
+    %{original: original, french: french} = split_speech_editions()
+
+    for {xml_id, to} <- [{"antoine", "CLEO"}, {"cleopatre", "ANT"}] do
+      character =
+        Enum.find(Playcode.PlayContent.list_characters(french.id), &(&1.xml_id == xml_id))
+
+      {:ok, _} = Playcode.PlayContent.update_character(character, %{original_xml_id: to})
+    end
+
+    page = [original, french] |> generate!() |> html!("plays/#{french.code}/compare.html")
+
+    assert [first | _] = attribute(page, "[data-panel='panel-1'] [data-pair]", "data-pair")
+    assert first == "1"
+  end
+
   test "no page when the original is a draft" do
     %{original: original, french: french} = split_speech_editions()
     {:ok, _} = Catalogue.update_play(original, %{is_complete: false})
