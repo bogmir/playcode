@@ -19,13 +19,14 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   def mount(%{"id" => id}, _session, socket) do
     play = Catalogue.get_play_with_all!(id)
     family = PlayComparison.build_family(play)
-    panels = PlayComparison.build_initial_panels(play, family)
 
+    # Both views load whole plays, so they are built once, for the live connection: the
+    # first HTML is the page's frame.
     {:ok,
      socket
      |> assign(:page_title, gettext("Compare: %{title}", title: play.title))
      |> assign(:play, play)
-     |> assign(:panels, panels)
+     |> assign(:panels, [])
      |> assign(:family, family)
      |> PlayComparison.assign_display_defaults()
      |> assign(:play_context, %{play: play, active_tab: :compare})}
@@ -41,25 +42,42 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
     candidates = Enum.filter(shown, &(&1.parent_play_id in ids && Alignment.paired?(&1)))
     chosen = Enum.find(candidates, &(&1.id == params["translation"])) || List.first(candidates)
 
-    rows =
-      chosen &&
+    {:noreply,
+     socket
+     |> assign(view: :pairs, candidates: candidates)
+     |> review(chosen)}
+  end
+
+  def handle_params(_params, _uri, socket) do
+    %{play: play, family: family, panels: panels} = socket.assigns
+
+    panels =
+      if panels == [] and connected?(socket),
+        do: PlayComparison.build_initial_panels(play, family),
+        else: panels
+
+    {:noreply, assign(socket, view: :side, panels: panels)}
+  end
+
+  # The review of `chosen`, worked out once it changes, after the page appears; it opens
+  # on the doubtful rows.
+  defp review(%{assigns: %{chosen: same}} = socket, same) when same != nil, do: socket
+
+  defp review(socket, nil), do: assign(socket, chosen: nil, review: nil)
+
+  defp review(socket, chosen) do
+    socket
+    |> assign(chosen: chosen, doubtful: true)
+    |> assign_async(:review, fn ->
+      rows =
         Review.rows(
           PlayContent.load_play_content(chosen.parent_play_id),
           PlayContent.load_play_content(chosen.id)
         )
 
-    {:noreply,
-     assign(socket,
-       view: :pairs,
-       candidates: candidates,
-       chosen: chosen,
-       rows: rows,
-       entries: chosen && first_entries(chosen.id),
-       doubtful: false
-     )}
+      {:ok, %{review: %{rows: rows, entries: first_entries(chosen.id)}}}
+    end)
   end
-
-  def handle_params(_params, _uri, socket), do: {:noreply, assign(socket, view: :side)}
 
   # Each character's first line on the Elenco tab, where its original is corrected.
   defp first_entries(play_id) do
@@ -142,14 +160,21 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
         </.link>
       </nav>
 
-      <.pair_review
-        :if={@view == :pairs}
-        candidates={@candidates}
-        chosen={@chosen}
-        rows={@rows}
-        entries={@entries}
-        doubtful={@doubtful}
-      />
+      <p :if={@view == :pairs && !@chosen} class="text-sm text-base-content/70">
+        {gettext("No translation or version of this play to review.")}
+      </p>
+      <.async_result :let={review} :if={@view == :pairs && @chosen} assign={@review}>
+        <:loading>
+          <p class="text-sm text-base-content/70">{gettext("Loading…")}</p>
+        </:loading>
+        <.pair_review
+          candidates={@candidates}
+          chosen={@chosen}
+          rows={review.rows}
+          entries={review.entries}
+          doubtful={@doubtful}
+        />
+      </.async_result>
 
       <div :if={@view == :side}>
         <%!-- Toolbar --%>
@@ -213,6 +238,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
           </div>
         </div>
 
+        <p :if={@panels == []} class="text-sm text-base-content/70">{gettext("Loading…")}</p>
         <%!-- N-panel comparison --%>
         <div
           id="sync-scroll"
@@ -292,10 +318,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
 
     ~H"""
     <section aria-label={gettext("Pair review")}>
-      <p :if={!@chosen} class="text-sm text-base-content/70">
-        {gettext("No translation or version of this play to review.")}
-      </p>
-      <div :if={@chosen}>
+      <div>
         <form phx-change="pick_translation" class="mb-3">
           <label for="pair-translation" class="text-sm font-medium mr-2">
             {gettext("Translation or version")}
@@ -407,17 +430,18 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
 
   defp speech_cell(assigns) do
     text = assigns.speech |> Review.spoken_text() |> InlineMarkup.plain()
+    hover = if String.length(text) > 120, do: String.slice(text, 0, 120) <> "…", else: text
     line = Review.first_line(assigns.speech)
 
     assigns =
       assign(assigns,
-        text: text,
+        hover: hover,
         opening: text |> String.split() |> Enum.take(8) |> Enum.join(" "),
         n: line && line.line_number
       )
 
     ~H"""
-    <span title={@text}>
+    <span title={@hover}>
       <span :if={@n} class="text-base-content/70">{@n}</span>
       <.link :if={@href} href={@href} class="link font-bold">
         {InlineMarkup.plain(@speech.speaker_label || "")}

@@ -132,11 +132,17 @@ defmodule PlaycodeWeb.AccessibilityTest do
     end
   end
 
-  test "the pair review has no barrier", %{conn: conn} do
+  # Both views of the admin comparison fill in once the live connection opens.
+  test "the admin comparison's panels and pair review have no barrier", %{conn: conn} do
     %{french: french} = Playcode.ImportHelpers.split_speech_editions()
-    html = conn |> get(~p"/admin/plays/#{french.id}/compare?view=pairs") |> html_response(200)
 
-    assert html =~ ~s(id="pair-row-1")
+    {:ok, _lv, html} = live(conn, ~p"/admin/plays/#{french.id}/compare")
+    assert html =~ ~s(data-panel="panel-1")
+    assert barriers(html) == []
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
+    html = render_async(lv)
+    assert html =~ ~s(id="pair-row-)
     assert barriers(html) == []
   end
 

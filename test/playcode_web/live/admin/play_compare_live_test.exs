@@ -13,6 +13,24 @@ defmodule PlaycodeWeb.Admin.PlayCompareLiveTest do
     Map.put(split_speech_editions(), :conn, log_in_user(conn, user_fixture(role: :researcher)))
   end
 
+  test "the first HTML is the page's frame; the panels come with the live connection",
+       %{conn: conn, french: french} do
+    html = conn |> get(~p"/admin/plays/#{french.id}/compare") |> html_response(200)
+    refute html =~ "data-panel="
+    assert html =~ t("Loading…")
+
+    {:ok, _lv, html} = live(conn, ~p"/admin/plays/#{french.id}/compare")
+    assert html =~ ~s(data-panel="panel-1")
+  end
+
+  test "the pair review is worked out once, after the page appears",
+       %{conn: conn, french: french} do
+    html = conn |> get(~p"/admin/plays/#{french.id}/compare?view=pairs") |> html_response(200)
+    refute html =~ "pair-row-"
+    refute html =~ "data-panel="
+    assert html =~ t("Loading…")
+  end
+
   test "offers no HTML download: the site publishes the comparison", %{conn: conn, french: french} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare")
 
@@ -50,7 +68,7 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
 
   defp rows(lv) do
     lv
-    |> render()
+    |> render_async()
     |> LazyHTML.from_document()
     |> LazyHTML.query("[id^='pair-row-']")
     |> Enum.map(&(&1 |> LazyHTML.text() |> String.split() |> Enum.join(" ")))
@@ -65,9 +83,17 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
     assert has_element?(lv, "a[aria-current='page']", t("Pair review"))
   end
 
+  # The review opens on the doubtful rows; these tests want them all.
+  defp all_rows(conn, path) do
+    {:ok, lv, _html} = live(conn, path)
+    render_async(lv)
+    lv |> element("input[name='doubtful']") |> render_click()
+    lv
+  end
+
   test "one row per speech in the original's order, with the kind of pairing",
        %{conn: conn, french: french} do
-    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
+    lv = all_rows(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
 
     kinds = Enum.map(rows(lv), fn row -> Enum.find(~w(same split), &(row =~ t(label(&1)))) end)
     assert kinds == ~w(same same split same)
@@ -82,7 +108,7 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
 
   test "opened on the original, it reviews its translation",
        %{conn: conn, original: original, french: french} do
-    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{original.id}/compare?view=pairs")
+    lv = all_rows(conn, ~p"/admin/plays/#{original.id}/compare?view=pairs")
 
     assert has_element?(lv, "select[name='translation'] option[selected][value='#{french.id}']")
     assert length(rows(lv)) == 4
@@ -93,8 +119,8 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
     stranger = play_fixture(%{"title" => "Otra obra"})
 
     for id <- [stranger.id, "garbage"] do
-      {:ok, lv, _html} =
-        live(conn, ~p"/admin/plays/#{french.id}/compare?#{[view: "pairs", translation: id]}")
+      lv =
+        all_rows(conn, ~p"/admin/plays/#{french.id}/compare?#{[view: "pairs", translation: id]}")
 
       assert length(rows(lv)) == 4
     end
@@ -157,6 +183,8 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
       })
 
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
+    render_async(lv)
+    lv |> element("input[name='doubtful']") |> render_click()
 
     assert Enum.map(rows(lv), &Regex.run(~r/One|Two|Three/, &1)) == [["One"], ["Two"], ["Three"]]
   end
@@ -210,7 +238,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
 
   defp rows(lv) do
     lv
-    |> render()
+    |> render_async()
     |> LazyHTML.from_document()
     |> LazyHTML.query("[id^='pair-row-']")
     |> Enum.map(&(&1 |> LazyHTML.attribute("id") |> hd()))
@@ -218,6 +246,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
 
   defp review(conn, french) do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
+    render_async(lv)
     lv
   end
 
@@ -234,10 +263,20 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
     lv = review(conn, french)
 
     assert lv |> element("#pair-row-1") |> render() =~ t("Very different length")
+
+    [title] =
+      lv
+      |> element("#pair-row-1 td:nth-child(3) span[title]")
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.attribute("title")
+
+    assert String.length(title) <= 121
     refute lv |> element("#pair-row-2") |> render() =~ t("Very different length")
   end
 
-  test "only the doubtful rows, with one row either side", %{conn: conn} do
+  test "opens on the doubtful rows, with one row either side; the switch shows them all",
+       %{conn: conn} do
     original =
       Enum.map_join(1..6, &sp(if(rem(&1, 2) == 1, do: "ANT", else: "CLEO"), "Line #{&1}."))
 
@@ -250,12 +289,12 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
         sp("antoine", "Encore.") <> sp("cleopatre", "Six.")
 
     lv = review(conn, editions(original, french))
-    assert length(rows(lv)) == 7
+
+    # Row 6 is the split; rows 5 and 7 stand beside it. The review opens on these.
+    assert rows(lv) == ~w(pair-row-5 pair-row-6 pair-row-7)
 
     lv |> element("input[name='doubtful']") |> render_click()
-
-    # Row 6 is the split; rows 5 and 7 stand beside it.
-    assert rows(lv) == ~w(pair-row-5 pair-row-6 pair-row-7)
+    assert length(rows(lv)) == 7
   end
 
   test "a row repeating the original speech above it says so, not prints it again",
