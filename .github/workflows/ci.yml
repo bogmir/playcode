@@ -33,11 +33,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install system packages
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libxml2-utils
-
       - uses: erlef/setup-beam@v1
         with:
           version-type: strict
