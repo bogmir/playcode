@@ -136,7 +136,30 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2>Contents</h2>
       <.play_contents edition={@edition} current={@current} />
     </nav>
-    <div :if={@tools} class="tools" data-tools hidden>
+    <.play_tools
+      :if={@tools}
+      variants={@edition.variants}
+      folio={@edition.folio}
+      tagged={@edition.tagged}
+      cast={@cast}
+      shared={@shared}
+      stage={@stage}
+    />
+    """
+  end
+
+  attr :variants, :boolean, required: true
+  attr :folio, :boolean, required: true
+  attr :tagged, :boolean, required: true
+  attr :cast, :list, required: true, doc: "the characters the Highlight select offers"
+  attr :shared, :boolean, required: true
+  attr :stage, :boolean, required: true
+  attr :steppers, :boolean, default: true, doc: "the arrows, which walk one column"
+
+  @doc "The reading tools: line numbers, the Show switches and the Highlight group."
+  def play_tools(assigns) do
+    ~H"""
+    <div class="tools" data-tools hidden>
       <h2>Line numbers</h2>
       <div class="seg" role="group" aria-label="Line numbers">
         <button type="button" data-ln-set="all">All</button>
@@ -146,13 +169,13 @@ defmodule Playcode.Export.StaticSite.Components do
       <h2>Show</h2>
       <label><input type="checkbox" data-toggle="sd" checked /> Stage directions</label>
       <label><input type="checkbox" data-toggle="vf" checked /> Verse forms</label>
-      <label :if={@edition.variants}>
+      <label :if={@variants}>
         <input type="checkbox" data-toggle="va" checked /> Variants
       </label>
-      <label :if={@edition.folio}>
+      <label :if={@folio}>
         <input type="checkbox" data-toggle="fo" /> Folio interpolations
       </label>
-      <label :if={@edition.tagged}>
+      <label :if={@tagged}>
         <input type="checkbox" data-toggle="rs" /> Tagged names
       </label>
       <%= if @cast != [] or @shared or @stage do %>
@@ -165,7 +188,7 @@ defmodule Playcode.Export.StaticSite.Components do
         </select>
         <%= if @shared do %>
           <label><input type="checkbox" data-toggle="sh" /> Shared lines</label>
-          <.stepper for="sh" targets=".text .l[data-part=I]" name="shared line" />
+          <.stepper :if={@steppers} for="sh" targets=".text .l[data-part=I]" name="shared line" />
           <ul class="shared-legend">
             <li :for={
               {part, label} <- [{"I", "First part"}, {"M", "Middle part"}, {"F", "Last part"}]
@@ -179,7 +202,7 @@ defmodule Playcode.Export.StaticSite.Components do
             <input type="checkbox" data-toggle="sdm" aria-label="Highlight stage directions" />
             Stage directions
           </label>
-          <.stepper for="sdm" targets=".text .sd, .text .sdi" name="stage direction" />
+          <.stepper :if={@steppers} for="sdm" targets=".text .sd, .text .sdi" name="stage direction" />
         <% end %>
       <% end %>
     </div>
@@ -606,6 +629,34 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   attr :edition, :map, required: true
+  attr :notes_label, :string, default: "Notes"
+
+  @doc "A play's whole text, as `text.html` shows it: its contents, then its endnotes."
+  def full_text(assigns) do
+    ~H"""
+    <%= for entry <- @edition.contents do %>
+      <%= case entry do %>
+        <% {:page, page} -> %>
+          <.division_text edition={@edition} division={page.division} />
+        <% {:item, item} -> %>
+          <.outline_item edition={@edition} item={item} head="act-head" />
+      <% end %>
+    <% end %>
+    <.endnotes
+      label={@notes_label}
+      notes={
+        @edition.pages |> Enum.reject(& &1.scene) |> Enum.map(& &1.division) |> Note.reading_order()
+      }
+    />
+    """
+  end
+
+  # A comparison key of the speech or heading `id` (`StaticSite.Comparison`), nil on every
+  # page but the comparison's.
+  defp sync(%{sync: %{} = sync}, kind, id), do: sync[kind][id]
+  defp sync(_edition, _kind, _id), do: nil
+
+  attr :edition, :map, required: true
   attr :division, :map, required: true
 
   def division_text(assigns) do
@@ -614,7 +665,11 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <section class="division" id={@edition.anchors[@division.id]}>
-      <h2 :if={@division.title} class="act-head">
+      <h2
+        :if={@division.title}
+        class="act-head"
+        data-sync-div={sync(@edition, :div, @division.id)}
+      >
         <.inline text={@division.title} notes={@division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
@@ -624,7 +679,11 @@ defmodule Playcode.Export.StaticSite.Components do
           <.outline_item edition={@edition} item={child} />
         <% else %>
           <section id={@edition.anchors[child.id]}>
-            <h3 :if={child.title} class="scene-head">
+            <h3
+              :if={child.title}
+              class="scene-head"
+              data-sync-div={sync(@edition, :div, child.id)}
+            >
               <.inline text={child.title} notes={child.notes} />
             </h3>
             <.el :for={el <- child.loaded_elements} el={el} edition={@edition} />
@@ -705,7 +764,12 @@ defmodule Playcode.Export.StaticSite.Components do
     assigns = assign(assigns, :who, who(assigns.el))
 
     ~H"""
-    <div class={["sp", Element.folio_only?(@el) && "fo"]} data-who={@who}>
+    <div
+      class={["sp", Element.folio_only?(@el) && "fo"]}
+      data-who={@who}
+      data-sync-act={sync(@edition, :act, @el.id)}
+      data-pair={sync(@edition, :pair, @el.id)}
+    >
       <p :if={@el.speaker_label} class={["spk", InlineMarkup.whole_folio?(@el.speaker_label) && "fo"]}>
         <.inline text={@el.speaker_label} notes={@el.notes} />
       </p>
@@ -887,6 +951,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   attr :notes, :list, required: true
+  attr :label, :string, default: "Notes"
 
   @doc """
   A page's notes. Each is a popover its marker opens (`part/1`); in print, and in a
@@ -897,7 +962,7 @@ defmodule Playcode.Export.StaticSite.Components do
     assigns = assign(assigns, notes: notes, variants: variants)
 
     ~H"""
-    <section :if={@notes != []} class="notes" role="doc-endnotes" aria-label="Notes">
+    <section :if={@notes != []} class="notes" role="doc-endnotes" aria-label={@label}>
       <ol>
         <li :for={note <- @notes} id={"note-#{note.number}"} popover value={note.number}>
           <button
@@ -1253,6 +1318,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :play, :map, required: true
   attr :lead, :boolean, default: false
+  attr :compare, :string, default: nil, doc: "the code of the play the Compare link opens"
 
   def catalogue_entry(assigns) do
     ~H"""
@@ -1274,6 +1340,21 @@ defmodule Playcode.Export.StaticSite.Components do
         {@play.title}
       </a>
       <span class="code">{@play.code}</span>
+      <a
+        :if={@compare}
+        class="compare"
+        href={"plays/#{@compare}/compare.html"}
+        aria-label="Compare"
+        title="Compare"
+      >
+        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path
+            fill-rule="evenodd"
+            d="M13.2 2.24a.75.75 0 0 0 .04 1.06l2.1 1.95H6.75a.75.75 0 0 0 0 1.5h8.59l-2.1 1.95a.75.75 0 1 0 1.02 1.1l3.5-3.25a.75.75 0 0 0 0-1.1l-3.5-3.25a.75.75 0 0 0-1.06.04Zm-6.4 8a.75.75 0 0 0-1.06-.04l-3.5 3.25a.75.75 0 0 0 0 1.1l3.5 3.25a.75.75 0 1 0 1.02-1.1l-2.1-1.95h8.59a.75.75 0 0 0 0-1.5H4.66l2.1-1.95a.75.75 0 0 0 .04-1.06Z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </a>
       <span :if={kind(@play) != "original"} class="tag">{kind(@play)}</span>
       <span class="meta">{entry_meta(@play)}</span>
       <span :if={@lead} class="author">{@play.author_name}</span>

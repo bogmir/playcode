@@ -51,7 +51,7 @@
       data-title={work.sort_title}
       data-date={work.date}
     >
-      <Components.catalogue_entry play={work.play} lead />
+      <Components.catalogue_entry play={work.play} lead compare={work.compare} />
       <ul :if={work.translations != []} class="translations">
         <li :for={translation <- work.translations}>
           <Components.catalogue_entry play={translation} />

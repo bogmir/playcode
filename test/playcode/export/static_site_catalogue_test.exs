@@ -18,7 +18,9 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
 
     assert [work] = works(html!(generate!([original, translation]), "index.html"))
 
-    assert work |> LazyHTML.query("a") |> LazyHTML.attribute("href") ==
+    # Since problem 5's step 2 the original's line also links the comparison with its
+    # translation (`static_site_compare_test.exs`), so the entries' title links are read.
+    assert work |> LazyHTML.query("a.entry-title") |> LazyHTML.attribute("href") ==
              ["plays/#{original.code}/index.html", "plays/#{translation.code}/index.html"]
   end
 

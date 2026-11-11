@@ -36,7 +36,10 @@ defmodule Playcode.Export.StaticSite.Edition do
     :stage_directions,
     :variants,
     :folio,
-    :tagged
+    :tagged,
+    # The comparison page's keys (`StaticSite.Comparison.prepare/2`), nil on every
+    # other page.
+    sync: nil
   ]
 
   @doc "Loads play `id` and everything the site derives from it."
