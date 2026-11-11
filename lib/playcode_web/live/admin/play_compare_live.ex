@@ -71,8 +71,8 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
     |> assign_async(:review, fn ->
       rows =
         Review.rows(
-          PlayContent.load_play_content(chosen.parent_play_id),
-          PlayContent.load_play_content(chosen.id)
+          PlayContent.load_speeches(chosen.parent_play_id),
+          PlayContent.load_speeches(chosen.id)
         )
 
       {:ok, %{review: %{rows: rows, entries: first_entries(chosen.id)}}}

@@ -16,8 +16,8 @@ defmodule Playcode.Alignment.ReviewTest do
 
     rows =
       Review.rows(
-        PlayContent.load_play_content(original.id),
-        PlayContent.load_play_content(french.id)
+        PlayContent.load_speeches(original.id),
+        PlayContent.load_speeches(french.id)
       )
 
     assert [%{place: "ACT I", original: %{speaker: "ANTONY", opening: "One."}} | _] = rows

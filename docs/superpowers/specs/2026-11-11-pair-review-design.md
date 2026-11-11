@@ -62,9 +62,11 @@ page's own "Export HTML" (the play's download) stays.
   how many rows it marks across the dev corpus's translations, and keep the rule simple (a
   ratio of word counts above a floor of words, so two short lines never warn). **Set
   2026-11-11:** the longer speech over 3.5 times the shorter and over 15 words. Rows 89
-  (5 words against 19) and 91 (18 against 3) are marked; 1,182 of the 102,351
-  same-speaker rows of the 145 translations on dev (1.15%), in 100 plays, at most 130 in
-  one. The first guess, 4 times and 20 words, missed both rows.
+  (5 words against 19) and 91 (18 against 3) are marked; 1,172 of the 102,351
+  same-speaker rows of the 145 translations on dev (1.15%), in 97 plays, at most 129 in
+  one. The first guess, 4 times and 20 words, missed both rows. A word is what lies
+  between spaces (2026-11-12, for speed: the statistics' word count cost a third of the
+  review's time); with the statistics' count it was 1,182 rows in 100 plays.
 - **Where the rows come from:** `Alignment` already computes them for `align/2`; the review
   reads them through one public function. The proof of concept is the reference for the
   kinds, not code to copy.

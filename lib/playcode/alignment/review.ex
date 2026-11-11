@@ -8,10 +8,10 @@ defmodule Playcode.Alignment.Review do
 
   alias Playcode.Alignment
   alias Playcode.PlayContent.{Element, InlineMarkup}
-  alias Playcode.Statistics.Metrics
 
   # Tuned on dev (2026-11-11): marks 0084's rows 89 and 91 (5 words against 19, 18 against
-  # 3) and 1,182 (1.15%) of the 102,351 same-speaker rows of 145 translations.
+  # 3) and 1,172 (1.15%) of the 102,351 same-speaker rows of 145 translations. A word is
+  # what lies between spaces, so "N’est-ce" is one and a lone dash is one.
   @long_ratio 3.5
   @long_floor 15
 
@@ -26,7 +26,7 @@ defmodule Playcode.Alignment.Review do
   """
   def rows(original_divisions, translation_divisions) do
     {original_ids, pairs} = Alignment.speech_pairs(original_divisions, translation_divisions)
-    speeches = Map.merge(speech_places(original_divisions), speech_places(translation_divisions))
+    speeches = Map.merge(speeches(original_divisions), speeches(translation_divisions))
     by_original = Enum.group_by(pairs, & &1.original)
     row = fn kind, o, t -> row(kind, speeches[o], speeches[t]) end
 
@@ -39,20 +39,33 @@ defmodule Playcode.Alignment.Review do
       end)
   end
 
-  # Plain data only: the rows are sent from a background task to the page, and a message
-  # copies each term in full, so a division here would copy its whole act once per row.
   defp row(kind, original, translation) do
-    {o, place} = original || {nil, []}
-    {t, _} = translation || {nil, []}
-
     %{
       kind: kind,
-      place: Enum.map_join(place, ", ", &place_label/1),
-      original: o && speech(o),
-      translation: t && speech(t),
-      long: kind == :same and long?(o, t)
+      place: if(original, do: original.place, else: ""),
+      original: original && original.view,
+      translation: translation && translation.view,
+      long: kind == :same and long?(original.words, translation.words)
     }
   end
+
+  defp long?(a, b) do
+    [short, long] = Enum.sort([a, b])
+    long > @long_floor and long > @long_ratio * short
+  end
+
+  # Each speech by id, with its act and scene, prepared once however many rows it is in.
+  defp speeches(divisions) do
+    for top <- divisions,
+        {division, place} <- [
+          {top, place([top])} | Enum.map(Map.get(top, :children, []), &{&1, place([top, &1])})
+        ],
+        %{type: "speech"} = el <- Map.get(division, :loaded_elements, []),
+        into: %{},
+        do: {el.id, Map.put(speech(el), :place, place)}
+  end
+
+  defp place(divisions), do: Enum.map_join(divisions, ", ", &place_label/1)
 
   defp place_label(division),
     do:
@@ -61,43 +74,30 @@ defmodule Playcode.Alignment.Review do
           String.capitalize("#{division.type}#{division.number && " #{division.number}"}")
       )
 
-  # What the page prints of a speech: its speaker, its first line's number, its opening
-  # words, its first 120 characters on hover, and the character it links to.
+  # Plain data only: the rows are sent from a background task to the page, and a message
+  # copies each term in full, so an element here would copy its whole speech once per row.
+  # The view is what the page prints: the speaker, the first line's number, the opening
+  # words, the first 120 characters on hover, and the character the speaker links to.
   defp speech(el) do
-    text = el |> spoken_text() |> InlineMarkup.plain()
-    line = el |> spoken_lines() |> List.first()
+    lines = spoken_lines(el)
+    text = lines |> Enum.map_join(" ", & &1.content) |> InlineMarkup.plain()
+    words = String.split(text)
+    first = List.first(lines)
 
     %{
-      id: el.id,
-      speaker: InlineMarkup.plain(el.speaker_label || ""),
-      n: line && line.line_number,
-      opening: text |> String.split() |> Enum.take(8) |> Enum.join(" "),
-      hover: if(String.length(text) > 120, do: String.slice(text, 0, 120) <> "…", else: text),
-      character_id: el |> Element.characters() |> Enum.map(& &1.id) |> List.first()
+      words: length(words),
+      view: %{
+        id: el.id,
+        speaker: InlineMarkup.plain(el.speaker_label || ""),
+        n: first && first.line_number,
+        opening: words |> Enum.take(8) |> Enum.join(" "),
+        hover: if(String.length(text) > 120, do: String.slice(text, 0, 120) <> "…", else: text),
+        character_id: el |> Element.characters() |> Enum.map(& &1.id) |> List.first()
+      }
     }
   end
 
-  defp long?(o, t) do
-    [short, long] = Enum.sort([words(o), words(t)])
-    long > @long_floor and long > @long_ratio * short
-  end
-
-  defp words(speech), do: speech |> spoken_text() |> Metrics.words()
-
-  # Each speech by id, with the act and scene it stands in.
-  defp speech_places(divisions) do
-    for top <- divisions,
-        {division, place} <- [
-          {top, [top]} | Enum.map(Map.get(top, :children, []), &{&1, [top, &1]})
-        ],
-        %{type: "speech"} = el <- Map.get(division, :loaded_elements, []),
-        into: %{},
-        do: {el.id, {el, place}}
-  end
-
-  # A speech's spoken text: its verse lines and paragraphs, not its stage directions.
-  defp spoken_text(speech), do: speech |> spoken_lines() |> Enum.map_join(" ", & &1.content)
-
+  # A speech's verse lines and paragraphs, not its stage directions.
   defp spoken_lines(%{type: type} = el) when type in ~w(verse_line prose), do: [el]
 
   defp spoken_lines(%{children: children}) when is_list(children),

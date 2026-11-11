@@ -250,6 +250,17 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
     lv
   end
 
+  test "a speech's verse in line groups is read: its opening words and its length",
+       %{conn: conn} do
+    verse = Enum.map_join(1..8, &~s(<l n="#{&1}">verso #{&1} de cinco palabras</l>))
+    lg = ~s(<sp who="#ANT"><speaker>ANT</speaker><lg>#{verse}</lg></sp>)
+
+    row = conn |> review(editions(lg, sp("antoine", "Oui."))) |> element("#pair-row-1")
+
+    assert render(row) =~ "verso 1 de cinco palabras verso 2 de"
+    assert render(row) =~ t("Very different length")
+  end
+
   test "a same-speaker pair of very different length is doubtful, two short ones are not",
        %{conn: conn} do
     long = String.duplicate("word ", 40)
