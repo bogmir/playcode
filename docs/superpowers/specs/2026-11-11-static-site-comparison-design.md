@@ -78,7 +78,9 @@ comparison where the Biblioteca's readers are.
   call.
 - **Generate needs nothing new**: checked 2026-11-11, `StaticSite.outdated/1` turns each
   changed play into `{:add, id}`, and `apply_changes/2` re-exports the published relatives of
-  every play it adds.
+  every play it adds. Wrong for siblings, found while building: `relatives/3` re-exported a play's
+  parent and children only, and a page's menu lists the siblings, so `relatives/3` now takes
+  them too.
 - **The look is the site's own** (its `style.css`: colours, fonts, light and dark), not
   Playcode's admin look. My call.
 - **Switches: the site's own set** (decided by the owner, 2026-11-11), not Playcode's five:
@@ -87,9 +89,10 @@ comparison where the Biblioteca's readers are.
   one of the two plays has what it switches, through `site.js`'s existing `data-toggle`
   handling and its remembered choices (`reader.*` in `localStorage`). A switch acts on both
   panels.
-- **The scroll sync**: `sync_scroll.mjs` reaches the site as an asset, its `export` keywords
-  stripped as `Export.CompareHtml` does, loaded only by the comparison page (so `site.js`'s
-  budget is untouched), stamped `?v=` like the others.
+- **The scroll sync**: `sync_scroll.mjs`, its `export` keywords stripped as `Export.CompareHtml`
+  does, inlined in each comparison page (so `site.js`'s budget is untouched). Changed while
+  planning from an asset stamped `?v=`: the fingerprint already tracks the code that builds
+  pages, so a change to the script rebuilds the comparison pages with no stamp of its own.
 - **Switching translation keeps the place**: the menu's links carry the original panel's top
   speech (its place among the original's speeches) in the URL's fragment, and the new page
   scrolls its original panel there on load, the other panel following. My call; on a page

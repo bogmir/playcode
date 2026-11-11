@@ -37,6 +37,7 @@ _site/
         ├── index.html         title page
         ├── act-1.html …       one per act (act-1-s3.html … per scene for a very long act); prologue.html etc.
         ├── text.html          full text
+        ├── compare.html       beside its original; only for a derived play whose original is published
         ├── statistics.html
         ├── notes.html         every note, filterable by type; only for a play with notes
         ├── stage-directions.html  every stage direction, filterable by kind; only for a play with one
@@ -46,6 +47,8 @@ _site/
 `node --test test/js/*.test.mjs` runs the browser halves of search and of the comparison's scroll sync; CI runs it after `mix test`.
 
 **Comparison scroll sync.** `assets/js/sync_scroll.mjs` is the one implementation: the compare pages' `SyncScroll` hook imports it and `Export.CompareHtml` inlines it at compile time with its `export` keywords stripped (the downloaded page opens from disk). Speeches carry `data-sync-act`, their act's key from `Division.sync_keys/1` (kind and place among siblings, so `acto n="1"` and `act` with no `n` pair up); a speech pairs with the one as far through the same act in the other panel, or through the whole play when the other edition has no such act. Keys from each file's own `type`/`number` left 40 of the 152 original/translation pairs with no speech in common. A translation or version shown beside its original goes further (problem 5): `Playcode.Alignment.mark_pairs/1` pairs its speeches with the original's by the sequence of speakers, when the comparison is built, and each speech of both carries `data-pair`, the place of the original speech it goes with; `matchPair` scrolls to the speech with the same pair, or the next one when that speech was cut, and a speech without one (an adaptation, two translations without their original) keeps the proportion. Nothing is stored.
+
+**The site's comparison** (problem 5, step 2; design `docs/superpowers/specs/2026-11-11-static-site-comparison-design.md`). Every published play whose original is published gets `plays/<CODE>/compare.html`: the original's full text beside its own, drawn by `text.html`'s components (`Components.full_text/1`), each in a box that scrolls on its own, kept together by `sync_scroll.mjs` with the same pairs. `Export.StaticSite.Comparison` sets the keys and inlines the script, so the page needs no other file and a change to the script reaches it through the fingerprint. A chain is paired with its own parent. The original's line in the catalogue links its first published translation's page (`translation_order/1`, the catalogue's order; a chain is reached from its parent's menu only); the page's menu lists the original's published derived plays, and switching keeps the place (`#s<n>`, the original's top speech). The switches are the play pages' Show and Highlight groups, each where either play has what it switches, without the character highlight and the arrows. A page is about 1 MB of HTML; no budget is asserted. `relatives/3` re-exports a changed play's parent, children and siblings, so each page and menu stays current.
 
 ## Publishing on emothe.uv.es
 

@@ -75,6 +75,7 @@ lib/
 │       ├── play_change_listener.ex   # Relays Postgres's play_changed notifications to the export page and the play's topic
 │       └── static_site.ex            # Static site orchestrator
 │           ├── edition.ex            # One play prepared: pages, anchors, refs, split-verse ghosts
+│           ├── comparison.ex         # A derived play beside its original: sync keys, pairs, the inlined script
 │           ├── pages.ex              # embed_templates "pages/*" → HTML strings
 │           ├── components.ex         # Shell, rail, play text, charts, catalogue entry
 │           ├── search.ex             # Normaliser + full-text index writer

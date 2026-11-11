@@ -188,7 +188,11 @@ changes only if someone notices. Generate: at most about 8 s more for a full reb
    and translations without their original keep the proportion. On the dev database every
    speech of 0038/0084 and of Coriolanus with two translations gets a pair; building the
    panels, loading included, takes 283–348 ms.
-2. **The comparison on the static site**, with the same pairs.
+2. **The comparison on the static site**, with the same pairs. **Built 2026-11-11**
+   (`feature/static-site-comparison`, design
+   `docs/superpowers/specs/2026-11-11-static-site-comparison-design.md`): `compare.html` in
+   each published derived play's folder, beside its published original; a Compare link on
+   the original's catalogue line and a menu of its translations on the page.
 3. **Character pairs**: the column, the automatic pass on import, the dropdown, `castItem
    corresp`.
 4. **Speech corrections**: the column, fixed points in the pairing, `sp corresp`, the import
