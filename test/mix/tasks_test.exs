@@ -355,7 +355,9 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       run("playcode.export.site", ["-o", dir, "--all"])
       assert page.(draft)
 
-      assert run("playcode.export.site", ["-o", dir, "--all"]) =~ "largest act page"
+      output = run("playcode.export.site", ["-o", dir, "--all"])
+      assert output =~ "largest act page"
+      assert output =~ "largest comparison page"
     end
   end
 

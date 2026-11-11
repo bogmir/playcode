@@ -339,4 +339,99 @@ defmodule Playcode.Export.StaticSiteCompareTest do
              ]
     end
   end
+
+  describe "names and footers" do
+    alias Playcode.Export.StaticSite
+
+    # A version often keeps its original's title, and two translations into one language
+    # can share theirs: each panel is named by its part, each option by its language, and
+    # by its code too where two would read alike.
+    test "plays with one title are told apart" do
+      %{original: original, french: french} = split_speech_editions()
+
+      twin = fn ->
+        play_fixture(%{
+          "title" => "Antonio y Cleopatra",
+          "title_sort" => "Antonio y Cleopatra",
+          "language" => "es",
+          "parent_play_id" => original.id,
+          "relationship_type" => "traduccion",
+          "is_complete" => true
+        })
+      end
+
+      [a, b] = [twin.(), twin.()]
+
+      untold =
+        play_fixture(%{
+          "title" => "Sin lengua",
+          "title_sort" => "Sin lengua",
+          "language" => nil,
+          "parent_play_id" => original.id,
+          "relationship_type" => "version",
+          "is_complete" => true
+        })
+
+      page =
+        [original, french, a, b, untold]
+        |> generate!()
+        |> html!("plays/#{french.code}/compare.html")
+
+      assert attribute(page, "[data-panel]", "aria-label") ==
+               ["Original: Test Play", "Translation: Test Play"]
+
+      assert page |> texts("[data-compare-menu] option") |> Enum.sort() ==
+               Enum.sort([
+                 "Antonio y Cleopatra (Español) — #{a.code}",
+                 "Antonio y Cleopatra (Español) — #{b.code}",
+                 "Sin lengua",
+                 "Test Play (Español)"
+               ])
+    end
+
+    test "an original taken off the site takes its comparisons with it" do
+      %{original: original, french: french} = split_speech_editions()
+      dir = generate!([original, french])
+      {:ok, _} = Catalogue.update_play(original, %{is_complete: false})
+      {:ok, _} = StaticSite.apply_changes([{:remove, original.code}], output_dir: dir)
+
+      assert File.exists?(Path.join(dir, "plays/#{french.code}/index.html"))
+      refute File.exists?(Path.join(dir, "plays/#{french.code}/compare.html"))
+      assert attribute(html!(dir, "index.html"), "a.compare", "href") == []
+    end
+
+    test "the build reports its largest comparison page" do
+      %{original: original, french: french} = split_speech_editions()
+      dir = site_dir!()
+      codes = [original.code, french.code]
+
+      assert {:ok, %{largest_compare_gzip: size}} =
+               StaticSite.generate(output_dir: dir, play_codes: codes)
+
+      assert size > 0
+
+      assert {:ok, %{largest_compare_gzip: 0}} =
+               StaticSite.generate(output_dir: site_dir!(), play_codes: [original.code])
+    end
+
+    # Both texts are on the page, so both licences are: once when they are one.
+    test "the footer states both plays' licences" do
+      %{original: original, french: french} = split_speech_editions()
+
+      {:ok, original} =
+        Catalogue.update_play(original, %{licence_text: "Licence of the original"})
+
+      {:ok, french} = Catalogue.update_play(french, %{licence_text: "Licence of the translation"})
+      dir = generate!([original, french])
+      footer = fn -> dir |> html!("plays/#{french.code}/compare.html") |> texts("footer p") end
+
+      assert "Licence of the original" in footer.()
+      assert "Licence of the translation" in footer.()
+
+      {:ok, french} = Catalogue.update_play(french, %{licence_text: "Licence of the original"})
+      {:ok, _} = StaticSite.apply_changes([{:add, french.id}], output_dir: dir)
+
+      assert Enum.count(footer.(), &(&1 == "Licence of the original")) == 1
+    end
+  end
 end

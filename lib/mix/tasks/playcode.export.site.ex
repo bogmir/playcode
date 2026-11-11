@@ -65,7 +65,8 @@ defmodule Mix.Tasks.Playcode.Export.Site do
         )
 
         Mix.shell().info(
-          "  largest act page #{format_size(report.largest_page_gzip)} gzipped (budget 80 KB); " <>
+          "  largest act page #{format_size(report.largest_page_gzip)} gzipped (budget 80 KB), " <>
+            "largest comparison page #{format_size(report.largest_compare_gzip)}; " <>
             "search index #{format_size(report.index_bytes)}, largest shard #{format_size(report.largest_shard_bytes)}"
         )
 
