@@ -55,7 +55,7 @@ defmodule PlaycodeWeb.Layouts do
   end
 
   @doc """
-  Renders breadcrumb navigation. Public pages only — the admin shell uses the
+  Renders breadcrumb navigation. The preview pages only — the admin shell uses the
   sidebar and the play context bar instead.
 
   Each item is a map with `:label` and optional `:to` (path for link).
@@ -63,7 +63,7 @@ defmodule PlaycodeWeb.Layouts do
 
   ## Examples
 
-      <.breadcrumbs items={[%{label: "Catalogue", to: "/plays"}, %{label: "La Virginie"}]} />
+      <.breadcrumbs items={[%{label: "La Virginie", to: "/plays/EMOTHE0001"}, %{label: "Comparison"}]} />
   """
   attr :items, :list, required: true, doc: "list of %{label, to} maps"
 
@@ -198,9 +198,8 @@ defmodule PlaycodeWeb.Layouts do
           </.section_link>
         </div>
 
-        <div class="border-t border-base-300 pt-3">
-          <%!-- The published site once its address is set; until then Playcode's own pages. --%>
-          <.section_link to={Playcode.Export.StaticSite.public_url() || ~p"/plays"}>
+        <div :if={Playcode.Export.StaticSite.public_url()} class="border-t border-base-300 pt-3">
+          <.section_link to={Playcode.Export.StaticSite.public_url()}>
             <.icon name="hero-globe-alt-micro" class="size-4" />
             {gettext("View public site")}
           </.section_link>
@@ -242,8 +241,8 @@ defmodule PlaycodeWeb.Layouts do
   end
 
   # The play's sections as the mockup groups them: {tab, label, path, count key}. Every one
-  # is behind :view_admin but the preview, Playcode's public page, which shows a draft to
-  # :view_drafts only; the play is passed for the per-play scoping `Authz` plans.
+  # is behind :view_admin but the preview, behind :preview_plays; the play is passed for the
+  # per-play scoping `Authz` plans.
   defp play_sections(play, user, deployed) do
     related? =
       play.parent_play_id || (Ecto.assoc_loaded?(play.derived_plays) and play.derived_plays != [])
@@ -293,7 +292,7 @@ defmodule PlaycodeWeb.Layouts do
       do: {:public, gettext("Public page"), url, nil}
   end
 
-  defp section_action({:preview, _label, _to, _count}), do: :view_drafts
+  defp section_action({:preview, _label, _to, _count}), do: :preview_plays
   defp section_action(_section), do: :view_admin
 
   defp sidebar_groups(user) do

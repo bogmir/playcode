@@ -98,8 +98,6 @@ defmodule PlaycodeWeb.AccessibilityTest do
   end
 
   @pages ~w(
-    /
-    /plays
     /plays/:code
     /plays/:code/compare
     /users/settings

@@ -88,9 +88,9 @@ defmodule RenameGuardTest do
 
       assert po =~ ~s(msgstr "ID EMOTHE"), "the EMOTHE ID label names the corpus identifier"
 
-      assert po =~
-               ~s(msgstr "La plataforma editorial de las bibliotecas digitales EMOTHE y ARTELOPE"),
-             "the home page tagline names the EMOTHE library"
+      # The home page's tagline checked here left with the home page (2026-11-12).
+      assert po =~ ~s(msgstr "Portal de EMOTHE"),
+             "the static site's portal link names the library"
     end
 
     test "emothe.uv.es is untouched" do

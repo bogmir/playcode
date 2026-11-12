@@ -16,6 +16,12 @@ defmodule PlaycodeWeb.AuthorizationTest do
   # `:active` = any active researcher or admin; `:admin` = admins only.
   @routes [
     {"/users/settings", :active},
+    {"/plays/:code", :active},
+    {"/plays/:code/compare", :active},
+    {"/export/:id/tei", :active},
+    {"/export/:id/html", :active},
+    {"/export/:id/epub", :active},
+    {"/export/:id/pdf", :active},
     {"/admin/plays", :active},
     {"/admin/plays/new", :active},
     {"/admin/plays/import", :active},
@@ -63,7 +69,7 @@ defmodule PlaycodeWeb.AuthorizationTest do
 
     test "#{path} is open to #{if who == :admin, do: "admins only", else: "active accounts"}",
          %{play: play, personas: personas} do
-      path = String.replace(@path, ":id", play.id)
+      path = @path |> String.replace(":id", play.id) |> String.replace(":code", play.code)
 
       expected = %{
         anonymous: :login,
@@ -110,6 +116,20 @@ defmodule PlaycodeWeb.AuthorizationTest do
 
         assert {:error, {:redirect, %{to: "/"}}} = live_redirect(lv, to: path),
                "expected #{path} to refuse a researcher"
+      end
+    end
+  end
+
+  describe "the front door" do
+    test "/ sends a signed-in user to the admin's list and anyone else to log in",
+         %{personas: personas} do
+      assert redirected_to(get(build_conn(), ~p"/")) == ~p"/users/log-in"
+      assert redirected_to(get(conn_for(personas.researcher), ~p"/")) == ~p"/admin/plays"
+    end
+
+    test "there is no public catalogue and no API", %{personas: personas} do
+      for path <- ["/plays", "/api/v1/plays"], user <- [nil, personas.admin] do
+        assert get(conn_for(user), path).status == 404, path
       end
     end
   end

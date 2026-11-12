@@ -24,9 +24,9 @@ defmodule Playcode.Authz do
   alias Playcode.Accounts
   alias Playcode.Accounts.User
 
-  # `view_drafts` lets staff open an incomplete play on the public pages, which the
-  # admin pages link to as a preview; everyone else gets a 404 there.
-  @researcher_actions ~w(view_admin view_drafts manage_plays edit_content manage_editors
+  # `preview_plays` opens /plays/:code, its comparison and /export/:id/*: a play as the
+  # published site will show it, draft or complete, which the admin links to as a preview.
+  @researcher_actions ~w(view_admin preview_plays manage_plays edit_content manage_editors
                          manage_sources manage_places manage_bibliography import_tei download_export
                          archive_play)a
 

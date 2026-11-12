@@ -17,14 +17,14 @@ defmodule PlaycodeWeb.Router do
     plug PlaycodeWeb.Plugs.StoreLastPath
   end
 
-  pipeline :api do
-    plug :accepts, ["json"]
-  end
-
   # pipe_through cannot pass options to a plug, so each named permission gets
   # its own pipeline. Every one of them asks Playcode.Authz.can?/3.
   pipeline :require_admin_area do
     plug :require_permission, :view_admin
+  end
+
+  pipeline :require_preview do
+    plug :require_permission, :preview_plays
   end
 
   pipeline :require_deploy do
@@ -45,35 +45,25 @@ defmodule PlaycodeWeb.Router do
     plug :require_permission, :view_dashboard
   end
 
-  # Public API
-  scope "/api/v1", PlaycodeWeb.API do
-    pipe_through :api
-
-    get "/plays", PlayController, :index
-    get "/plays/:code", PlayController, :show
-    get "/plays/:code/characters", PlayController, :characters
-    get "/plays/:code/text", PlayController, :text
-    get "/plays/:code/statistics", PlayController, :statistics
-  end
-
-  # Public routes
   scope "/", PlaycodeWeb do
     pipe_through :browser
 
     get "/", PageController, :home
     post "/locale", LocaleController, :update
+  end
 
-    # Public export endpoints
+  # A play as readers will see it, before it is on the published site, and its downloads.
+  scope "/", PlaycodeWeb do
+    pipe_through [:browser, :require_authenticated_user, :require_preview]
+
     get "/export/:id/tei", ExportController, :tei
     get "/export/:id/html", ExportController, :html
     get "/export/:id/pdf", ExportController, :pdf
     get "/export/:id/epub", ExportController, :epub
 
-    # Public play catalogue and presentation
-    live_session :public,
+    live_session :preview,
       layout: {PlaycodeWeb.Layouts, :app},
-      on_mount: [PlaycodeWeb.SetLocaleHook, {PlaycodeWeb.UserAuth, :mount_current_user}] do
-      live "/plays", PlayCatalogueLive, :index
+      on_mount: [PlaycodeWeb.SetLocaleHook, {PlaycodeWeb.UserAuth, {:ensure_can, :preview_plays}}] do
       live "/plays/:code", PlayShowLive, :show
       live "/plays/:code/compare", PlayCompareLive, :compare
     end

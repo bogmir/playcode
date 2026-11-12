@@ -10,31 +10,18 @@ defmodule PlaycodeWeb.BrandingTest do
   import Phoenix.LiveViewTest
   import Playcode.TestFixtures
 
-  test "the home page names the platform and the libraries it serves", %{conn: conn} do
-    html = conn |> get(~p"/") |> html_response(200)
-    page = LazyHTML.from_document(html)
-
-    assert page |> LazyHTML.query("title") |> LazyHTML.text() =~ "Playcode"
-    assert html =~ "La plataforma editorial de las bibliotecas digitales EMOTHE y ARTELOPE"
-    # The navbar wordmark and the heading used to read EMOTHE.
-    refute html =~ ~r/>\s*EMOTHE\s*</
-    # The old subtitle expanded EMOTHE wrongly; it stands for "Early Modern
-    # European Theatre: Heritage and Databases".
-    refute html =~ "European Modernities"
-  end
-
-  test "the catalogue covers both collections", %{conn: conn} do
-    {:ok, view, html} = live(conn, ~p"/plays")
-
-    assert has_element?(view, "h1", "Catálogo de obras")
-    assert html =~ "de las colecciones EMOTHE y ARTELOPE"
-    refute html =~ "Biblioteca Digital EMOTHE"
-  end
-
+  # The home page and the catalogue that said this are gone (2026-11-12): the published site
+  # is the catalogue, and the log-in page is the first a visitor sees.
   test "the login page names the platform", %{conn: conn} do
-    {:ok, _view, html} = live(conn, ~p"/users/log-in")
+    html = conn |> get(~p"/users/log-in") |> html_response(200)
 
     assert html =~ "Iniciar sesión en Playcode"
+
+    assert html |> LazyHTML.from_document() |> LazyHTML.query("title") |> LazyHTML.text() =~
+             "Playcode"
+
+    # The navbar wordmark used to read EMOTHE.
+    refute html =~ ~r/>\s*EMOTHE\s*</
   end
 
   test "the accept-invite page welcomes the user to the platform", %{conn: conn} do
@@ -46,7 +33,7 @@ defmodule PlaycodeWeb.BrandingTest do
   end
 
   test "pages carry the Playcode icon, not Phoenix's", %{conn: conn} do
-    page = conn |> get(~p"/") |> html_response(200) |> LazyHTML.from_document()
+    page = conn |> get(~p"/users/log-in") |> html_response(200) |> LazyHTML.from_document()
 
     assert page |> LazyHTML.query(~s(link[rel="icon"][href^="/images/logo.svg"])) |> Enum.count() ==
              1

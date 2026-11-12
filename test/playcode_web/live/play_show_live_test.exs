@@ -11,6 +11,9 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   @italics ~w(Aminta Damone Egle Spela Fabia criados) ++
              ["The courtiers", "La Scena è in Atene.", "Dramatis Personae", "Actus Primus"]
 
+  # The preview is for staff; a visitor is sent to log in (authorization_test.exs).
+  setup %{conn: conn}, do: %{conn: log_in_user(conn, Playcode.TestFixtures.user_fixture())}
+
   test "the header's theme toggle and the breadcrumb are named in Spanish", %{conn: conn} do
     play = import_tei!(tei(body: "<div1 type=\"acto\" n=\"1\"><head>A</head></div1>"))
     TestFixtures.mark_complete!(play)
@@ -1277,9 +1280,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   end
 
   describe "related plays" do
-    test "a draft translation is not linked from its original, except for staff", %{
-      conn: conn
-    } do
+    # These used to refuse a visitor the link; the preview is staff's only now.
+    test "a draft translation is linked from its original", %{conn: conn} do
       original =
         TestFixtures.play_fixture(%{"title" => "Original publicado", "is_complete" => true})
 
@@ -1291,14 +1293,10 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         })
 
       {:ok, view, _html} = live(conn, ~p"/plays/#{original.code}")
-      refute has_element?(view, ~s(a[href="/plays/#{draft.code}"]))
-
-      staff = log_in_user(conn, TestFixtures.user_fixture())
-      {:ok, view, _html} = live(staff, ~p"/plays/#{original.code}")
       assert has_element?(view, ~s(a[href="/plays/#{draft.code}"]), draft.title)
     end
 
-    test "a draft original is not linked from its translation, except for staff", %{conn: conn} do
+    test "a draft original is linked from its translation", %{conn: conn} do
       draft = TestFixtures.play_fixture(%{"title" => "Original en curso"})
 
       translation =
@@ -1310,10 +1308,6 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
         })
 
       {:ok, view, _html} = live(conn, ~p"/plays/#{translation.code}")
-      refute has_element?(view, ~s(a[href="/plays/#{draft.code}"]))
-
-      staff = log_in_user(conn, TestFixtures.user_fixture())
-      {:ok, view, _html} = live(staff, ~p"/plays/#{translation.code}")
       assert has_element?(view, ~s(a[href="/plays/#{draft.code}"]), draft.title)
     end
   end

@@ -6,20 +6,11 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
 
   alias Playcode.TestFixtures
 
-  describe "catalogue compare icon" do
-    test "shows the compare icon only for plays with linked plays", %{conn: conn} do
-      %{original: original} = TestFixtures.translation_family_fixture()
-      standalone = TestFixtures.play_fixture(%{"title" => "Lonely Play"})
-
-      {:ok, view, _html} = live(conn, ~p"/plays")
-
-      assert has_element?(view, "a[href='/plays/#{original.code}/compare']")
-      refute has_element?(view, "a[href='/plays/#{standalone.code}/compare']")
-    end
-  end
+  # The preview is for staff; a visitor is sent to log in (authorization_test.exs).
+  setup %{conn: conn}, do: %{conn: log_in_user(conn, Playcode.TestFixtures.user_fixture())}
 
   describe "public comparison page" do
-    test "requires no authentication and renders the family panels", %{conn: conn} do
+    test "renders the family panels", %{conn: conn} do
       %{original: original, translation: translation} = TestFixtures.translation_family_fixture()
 
       {:ok, _view, html} = live(conn, ~p"/plays/#{original.code}/compare")
@@ -256,17 +247,15 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
   end
 
   describe "drafts" do
-    test "a draft's comparison page is for staff only", %{conn: conn} do
+    # These used to refuse a visitor; the preview is staff's only now.
+    test "a draft's comparison page opens", %{conn: conn} do
       draft = TestFixtures.play_fixture(%{"title" => "Borrador comparado"})
 
-      assert_error_sent 404, fn -> get(conn, ~p"/plays/#{draft.code}/compare") end
-
-      staff = log_in_user(conn, TestFixtures.user_fixture())
-      {:ok, _view, html} = live(staff, ~p"/plays/#{draft.code}/compare")
+      {:ok, _view, html} = live(conn, ~p"/plays/#{draft.code}/compare")
       assert html =~ draft.title
     end
 
-    test "a draft relative is offered to staff only", %{conn: conn} do
+    test "a draft relative is offered", %{conn: conn} do
       original =
         TestFixtures.play_fixture(%{"title" => "Original publicado", "is_complete" => true})
 
@@ -278,10 +267,6 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
         })
 
       {:ok, _view, html} = live(conn, ~p"/plays/#{original.code}/compare")
-      refute html =~ draft.title
-
-      staff = log_in_user(conn, TestFixtures.user_fixture())
-      {:ok, _view, html} = live(staff, ~p"/plays/#{original.code}/compare")
       assert html =~ draft.title
     end
 
@@ -289,20 +274,20 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
       original =
         TestFixtures.play_fixture(%{"title" => "Original publicado", "is_complete" => true})
 
-      draft =
-        TestFixtures.play_fixture(%{
-          "title" => "Traducción en curso",
-          "parent_play_id" => original.id,
-          "relationship_type" => "traduccion"
-        })
+      TestFixtures.play_fixture(%{
+        "title" => "Traducción",
+        "parent_play_id" => original.id,
+        "relationship_type" => "traduccion"
+      })
 
+      stranger = TestFixtures.play_fixture(%{"title" => "Obra ajena"})
       {:ok, view, _html} = live(conn, ~p"/plays/#{original.code}/compare")
 
-      # A hand-made event: the form never offers the draft to a visitor.
-      html = render_change(view, "add_play", %{"id" => draft.id})
+      # A hand-made event: the form offers only the family.
+      html = render_change(view, "add_play", %{"id" => stranger.id})
 
       refute has_element?(view, "[data-panel='panel-1']")
-      refute html =~ draft.title
+      refute html =~ stranger.title
     end
   end
 

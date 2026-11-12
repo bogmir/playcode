@@ -1,17 +1,17 @@
 defmodule PlaycodeWeb.ExportController do
   @moduledoc """
-  The public downloads under /export/:id: a play's TEI, HTML, PDF and EPUB. A draft is a
-  404 except for staff. The PDF renders through headless Chrome on every request.
+  The downloads under /export/:id that staff's preview offers: a play's TEI, HTML, PDF and
+  EPUB, draft or complete. The PDF renders through headless Chrome on every request.
   """
 
   use PlaycodeWeb, :controller
 
-  alias Playcode.{Authz, Catalogue}
+  alias Playcode.Catalogue
   alias Playcode.Export
   alias Playcode.Export.PdfCache
 
   def tei(conn, %{"id" => id}) do
-    play = visible_play!(conn, id)
+    play = Catalogue.get_play_with_all!(id)
     xml = Export.TeiXml.generate(play)
 
     conn
@@ -21,7 +21,7 @@ defmodule PlaycodeWeb.ExportController do
   end
 
   def html(conn, %{"id" => id}) do
-    play = visible_play!(conn, id)
+    play = Catalogue.get_play_with_all!(id)
     html = Export.Html.generate(play)
 
     conn
@@ -31,7 +31,7 @@ defmodule PlaycodeWeb.ExportController do
   end
 
   def pdf(conn, %{"id" => id}) do
-    play = visible_play!(conn, id)
+    play = Catalogue.get_play_with_all!(id)
 
     case PdfCache.fetch(play) do
       {:ok, path} ->
@@ -56,7 +56,7 @@ defmodule PlaycodeWeb.ExportController do
   def pdf_unavailable(_reason), do: gettext("The PDF could not be made. Try again later.")
 
   def epub(conn, %{"id" => id}) do
-    play = visible_play!(conn, id)
+    play = Catalogue.get_play_with_all!(id)
 
     case Export.Epub.generate(play) do
       {:ok, epub_binary} ->
@@ -70,12 +70,5 @@ defmodule PlaycodeWeb.ExportController do
         |> put_resp_content_type("text/plain")
         |> send_resp(500, "EPUB generation failed")
     end
-  end
-
-  # A draft is for staff only; anyone else gets the 404 an unknown id gets.
-  defp visible_play!(conn, id) do
-    Catalogue.get_play_with_all!(id,
-      complete: not Authz.can?(conn.assigns.current_user, :view_drafts)
-    )
   end
 end

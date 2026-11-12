@@ -52,15 +52,11 @@ defmodule PlaycodeWeb.PlayComparison do
   @doc """
   Builds a flat list of all plays in the same translation family as `play`
   (root original + its derived plays), excluding `play` itself.
-
-  `opts` are the `Catalogue` read options `play` was loaded with, so the family
-  holds only plays its reader may open. The root is the preloaded `parent_play`,
-  which is nil when the reader may not see it.
   """
-  def build_family(play, opts \\ []) do
+  def build_family(play) do
     root =
       if play.parent_play do
-        Catalogue.get_play_with_all!(play.parent_play.id, opts)
+        Catalogue.get_play_with_all!(play.parent_play.id)
       else
         play
       end
