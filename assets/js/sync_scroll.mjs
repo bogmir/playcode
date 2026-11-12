@@ -1,6 +1,6 @@
 // Scroll sync for the side-by-side comparison: the live page's SyncScroll hook imports
-// this module, and the downloadable comparison (Playcode.Export.CompareHtml) inlines it
-// with the `export` keywords removed, so both pages behave the same.
+// this module, and the static site's comparison (Playcode.Export.StaticSite.Comparison)
+// inlines it with the `export` keywords removed, so both pages behave the same.
 //
 // Every speech carries data-sync-act, the key of the act it belongs to, and every
 // heading data-sync-div (see Division.sync_keys/1). A translation shown beside its

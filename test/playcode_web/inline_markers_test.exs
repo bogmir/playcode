@@ -84,6 +84,14 @@ defmodule PlaycodeWeb.InlineMarkersTest do
     end
   end
 
+  test "the comparison page", %{conn: conn, play: play} do
+    {:ok, _lv, html} = live(conn, ~p"/admin/plays/#{play.id}/compare")
+
+    refute_leak(html, "the comparison")
+    assert html =~ "<em>siguientes</em>"
+    assert html =~ "<em>criados</em>"
+  end
+
   test "the HTML, EPUB and TEI downloads", %{conn: conn, play: play} do
     conn |> get(~p"/export/#{play.id}/html") |> response(200) |> refute_leak("the HTML")
     conn |> get(~p"/export/#{play.id}/tei") |> response(200) |> refute_leak("the TEI")
@@ -93,19 +101,6 @@ defmodule PlaycodeWeb.InlineMarkersTest do
     for {name, content} <- files, Path.extname(to_string(name)) in ~w(.xhtml .opf .ncx) do
       refute_leak(content, "the EPUB's #{name}")
     end
-  end
-
-  test "the comparison download", %{conn: conn, play: play} do
-    other = italics_everywhere()
-
-    html =
-      conn
-      |> get(~p"/admin/plays/compare/export/html?#{[plays: "#{play.id},#{other.id}"]}")
-      |> response(200)
-
-    refute_leak(html, "the comparison")
-    assert html =~ "<em>siguientes</em>"
-    assert html =~ "<em>criados</em>"
   end
 
   test "the static site's pages", %{play: play} do

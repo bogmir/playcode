@@ -49,7 +49,8 @@ print the brackets. The redesign fixes the static site only.
 ## 3. Move the downloads and `CompareHtml` onto HEEx and the shared helpers
 
 Half done (2026-11-04): `Html` and `Epub` share one render pass, `Export.Download`
-(`docs/history.md`, *Found by the architecture review*). `CompareHtml` keeps its own.
+(`docs/history.md`, *Found by the architecture review*). `CompareHtml` is gone (2026-11-11),
+with the comparison's download: the static site's `compare.html` replaced it.
 
 **Problem**: `Download` and `CompareHtml` each have their own element clauses and build HTML
 by string interpolation. A fix in one copy misses the other (item 2 is the proof), and any

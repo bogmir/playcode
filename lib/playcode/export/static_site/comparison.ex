@@ -1,11 +1,11 @@
 defmodule Playcode.Export.StaticSite.Comparison do
   @moduledoc """
   The site's comparison page (`plays/<CODE>/compare.html`): a play beside its original,
-  scrolling together through `assets/js/sync_scroll.mjs`, inlined here as
-  `Export.CompareHtml` inlines it, so the page needs no other file and a change to the
-  script moves the site's fingerprint. Speeches carry their act's key (`data-sync-act`)
-  and, from `Playcode.Alignment`, the place of the original speech they go with
-  (`data-pair`); headings their own key (`data-sync-div`), as on Playcode's comparison.
+  scrolling together through `assets/js/sync_scroll.mjs`, inlined here, so the page needs
+  no other file and a change to the script moves the site's fingerprint. Speeches carry
+  their act's key (`data-sync-act`) and, from `Playcode.Alignment`, the place of the
+  original speech they go with (`data-pair`); headings their own key (`data-sync-div`),
+  as on Playcode's comparison.
   """
 
   use Phoenix.Component

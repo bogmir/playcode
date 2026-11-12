@@ -135,6 +135,15 @@ defmodule Playcode.Alignment do
   @doc "The ids of the characters who speak in `divisions`, the only ones paired."
   def speakers(divisions), do: MapSet.new(text(divisions).characters, & &1.id)
 
+  @doc """
+  The original's speech ids in reading order, and `align/2`'s pair for each translation
+  speech, from both texts' divisions as `PlayContent.load_play_content/2` gives them.
+  """
+  def speech_pairs(original_divisions, translation_divisions) do
+    original = text(original_divisions)
+    {Enum.map(original.speeches, & &1.id), align(original, text(translation_divisions)).speeches}
+  end
+
   def align(original, translation) do
     characters = pair_characters(original, translation)
     paired = pair_speeches(original.speeches, translation.speeches, characters)

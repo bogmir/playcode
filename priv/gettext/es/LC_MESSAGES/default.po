@@ -80,7 +80,7 @@ msgid "Aside Verses"
 msgstr "Versos en aparte"
 
 #: lib/playcode_web/components/statistics_panel.ex:72
-#: lib/playcode_web/live/admin/play_compare_live.ex:99
+#: lib/playcode_web/live/admin/play_compare_live.ex:205
 #: lib/playcode_web/live/play_compare_live.ex:112
 #: lib/playcode_web/live/play_show_live.ex:270
 #, elixir-autogen, elixir-format
@@ -383,7 +383,6 @@ msgstr "Error"
 msgid "Export"
 msgstr "Exportar"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:127
 #: lib/playcode_web/live/admin/play_detail_live.ex:172
 #: lib/playcode_web/live/admin/play_detail_live.ex:173
 #, elixir-autogen, elixir-format
@@ -535,7 +534,7 @@ msgstr "Grupo de versos"
 msgid "Line Number"
 msgstr "Número de verso"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:83
+#: lib/playcode_web/live/admin/play_compare_live.ex:189
 #: lib/playcode_web/live/play_compare_live.ex:96
 #: lib/playcode_web/live/play_show_live.ex:254
 #, elixir-autogen, elixir-format
@@ -791,7 +790,7 @@ msgstr "Recalcular"
 #: lib/playcode_web/live/admin/notes_component.ex:336
 #: lib/playcode_web/live/admin/place_form_component.ex:281
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:544
-#: lib/playcode_web/live/admin/play_compare_live.ex:170
+#: lib/playcode_web/live/admin/play_compare_live.ex:266
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1766
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1767
 #: lib/playcode_web/live/admin/play_form_live.ex:937
@@ -948,7 +947,7 @@ msgstr "Acotaciones"
 msgid "Stage direction text..."
 msgstr "Texto de la acotación..."
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:91
+#: lib/playcode_web/live/admin/play_compare_live.ex:197
 #: lib/playcode_web/live/play_compare_live.ex:104
 #: lib/playcode_web/live/play_show_live.ex:262
 #: lib/playcode_web/live/play_show_live.ex:369
@@ -1445,7 +1444,7 @@ msgstr "Fuente actualizada."
 msgid "Sources"
 msgstr "Fuentes"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:107
+#: lib/playcode_web/live/admin/play_compare_live.ex:213
 #: lib/playcode_web/live/play_compare_live.ex:120
 #, elixir-autogen, elixir-format
 msgid "Split verses"
@@ -1481,7 +1480,7 @@ msgstr "Traductor"
 msgid "Usage terms and citation info"
 msgstr "Condiciones de uso e información de cita"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:115
+#: lib/playcode_web/live/admin/play_compare_live.ex:221
 #: lib/playcode_web/live/play_compare_live.ex:128
 #: lib/playcode_web/live/play_show_live.ex:278
 #, elixir-autogen, elixir-format
@@ -1776,6 +1775,7 @@ msgstr "Terceto"
 msgid "Title (sort)"
 msgstr "Título (ordenación)"
 
+#: lib/playcode_web/live/admin/play_compare_live.ex:363
 #: lib/playcode_web/play_labels.ex:276
 #: lib/playcode_web/play_labels.ex:320
 #, elixir-autogen, elixir-format
@@ -1888,7 +1888,7 @@ msgstr "Válido"
 msgid "and %{count} more"
 msgstr "y %{count} más"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:22
+#: lib/playcode_web/live/admin/play_compare_live.ex:27
 #: lib/playcode_web/live/play_compare_live.ex:24
 #, elixir-autogen, elixir-format
 msgid "Compare: %{title}"
@@ -1900,7 +1900,7 @@ msgstr "Comparar: %{title}"
 msgid "Comparison"
 msgstr "Comparación"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:76
+#: lib/playcode_web/live/admin/play_compare_live.ex:182
 #: lib/playcode_web/live/play_compare_live.ex:89
 #, elixir-autogen, elixir-format
 msgid "Display"
@@ -1979,8 +1979,8 @@ msgstr "No puedes cambiar tu propio rol."
 msgid "you"
 msgstr "tú"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:135
-#: lib/playcode_web/live/admin/play_compare_live.ex:137
+#: lib/playcode_web/live/admin/play_compare_live.ex:230
+#: lib/playcode_web/live/admin/play_compare_live.ex:232
 #: lib/playcode_web/live/play_compare_live.ex:137
 #: lib/playcode_web/live/play_compare_live.ex:139
 #, elixir-autogen, elixir-format
@@ -2002,7 +2002,7 @@ msgstr "Declaración editorial"
 msgid "Editorial methodology and approach"
 msgstr "Metodología y criterios editoriales"
 
-#: lib/playcode_web/live/admin/play_compare_live.ex:46
+#: lib/playcode_web/live/admin/play_compare_live.ex:118
 #: lib/playcode_web/live/play_compare_live.ex:52
 #, elixir-autogen, elixir-format
 msgid "Maximum %{max} plays allowed."
@@ -2528,7 +2528,7 @@ msgstr "Descargar .zip"
 msgid "Draft"
 msgstr "Borrador"
 
-#: lib/playcode_web/controllers/admin/export_controller.ex:88
+#: lib/playcode_web/controllers/admin/export_controller.ex:75
 #, elixir-autogen, elixir-format
 msgid "EPUB generation failed: %{reason}"
 msgstr "Error al generar EPUB: %{reason}"
@@ -2610,7 +2610,7 @@ msgstr "Marcada como borrador."
 msgid "No plays marked as complete."
 msgstr "No hay obras marcadas como completas."
 
-#: lib/playcode_web/controllers/admin/export_controller.ex:104
+#: lib/playcode_web/controllers/admin/export_controller.ex:91
 #, elixir-autogen, elixir-format
 msgid "No zip file found. Generate the static site first."
 msgstr "No se encontró el archivo .zip. Genera primero el sitio estático."
@@ -3498,7 +3498,7 @@ msgstr "Volver a las obras"
 msgid "Built site"
 msgstr "Sitio generado"
 
-#: lib/playcode_web/controllers/admin/export_controller.ex:120
+#: lib/playcode_web/controllers/admin/export_controller.ex:107
 #, elixir-autogen, elixir-format
 msgid "No site built yet. Generate the static site first."
 msgstr "Todavía no hay un sitio generado. Genera primero el sitio estático."
@@ -5480,7 +5480,7 @@ msgid "Missing: %{id}"
 msgstr "Falta: %{id}"
 
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1081
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3119
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3106
 #, elixir-autogen, elixir-format
 msgid "No original"
 msgstr "Sin original"
@@ -5495,18 +5495,141 @@ msgstr "Personaje del original"
 msgid "is no character of the original"
 msgstr "no es un personaje del original"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3122
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3109
 #, elixir-autogen, elixir-format
 msgid "No original found"
 msgstr "Sin pareja"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3113
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3100
 #, elixir-autogen, elixir-format
 msgid "Original:"
 msgstr "Original:"
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3116
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3120
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3103
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:3107
 #, elixir-autogen, elixir-format
 msgid "corrected"
 msgstr "corregido"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:488
+#, elixir-autogen, elixir-format
+msgid "A speech of the original no speech of the translation goes with. Beside another speaker, often a moved line rather than a cut."
+msgstr "Un parlamento del original con el que no va ningún parlamento de la traducción. Junto a otro personaje, suele ser un verso movido más que suprimido."
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:484
+#, elixir-autogen, elixir-format
+msgid "A speech of the translation with nothing in the original."
+msgstr "Un parlamento de la traducción sin nada en el original."
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:465
+#, elixir-autogen, elixir-format
+msgid "Added"
+msgstr "Añadido"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:473
+#, elixir-autogen, elixir-format
+msgid "An extra speech of the translation by the same character as the original speech it goes with: a speaker repeated after a stage direction."
+msgstr "Un parlamento más de la traducción, del mismo personaje que el parlamento original con el que va: un personaje repetido tras una acotación."
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:146
+#, elixir-autogen, elixir-format
+msgid "Comparison views"
+msgstr "Vistas de la comparación"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:466
+#, elixir-autogen, elixir-format
+msgid "Cut"
+msgstr "Suprimido"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:479
+#, elixir-autogen, elixir-format
+msgid "Different characters, where the texts disagree on who speaks; paired by position. A renamed role, or a mistake."
+msgstr "Personajes distintos, donde los textos no coinciden en quién habla; emparejados por posición. Un papel con otro nombre, o un error."
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:164
+#, elixir-autogen, elixir-format
+msgid "No translation or version of this play to review."
+msgstr "Esta obra no tiene traducción ni versión que revisar."
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:361
+#, elixir-autogen, elixir-format
+msgid "Original"
+msgstr "Original"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:464
+#, elixir-autogen, elixir-format
+msgid "Other speaker"
+msgstr "Otro personaje"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:159
+#: lib/playcode_web/live/admin/play_compare_live.ex:320
+#, elixir-autogen, elixir-format
+msgid "Pair review"
+msgstr "Revisión de pares"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:362
+#, elixir-autogen, elixir-format
+msgid "Pairing"
+msgstr "Emparejamiento"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:355
+#, elixir-autogen, elixir-format
+msgid "Pairs"
+msgstr "Pares"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:359
+#, elixir-autogen, elixir-format
+msgid "Row"
+msgstr "Fila"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:462
+#, elixir-autogen, elixir-format
+msgid "Same speaker"
+msgstr "Mismo personaje"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:152
+#, elixir-autogen, elixir-format
+msgid "Side by side"
+msgstr "Lectura paralela"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:463
+#, elixir-autogen, elixir-format
+msgid "Split"
+msgstr "Partido"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:469
+#, elixir-autogen, elixir-format
+msgid "The same character on both sides, matched in order. Almost always right."
+msgstr "El mismo personaje a ambos lados, en el mismo orden. Casi siempre correcto."
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:324
+#, elixir-autogen, elixir-format
+msgid "Translation or version"
+msgstr "Traducción o versión"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:360
+#, elixir-autogen, elixir-format
+msgid "Where"
+msgstr "Dónde"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:353
+#, elixir-autogen, elixir-format
+msgid "Only the doubtful rows, with one row either side"
+msgstr "Solo las filas dudosas, con una fila a cada lado"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:342
+#: lib/playcode_web/live/admin/play_compare_live.ex:383
+#, elixir-autogen, elixir-format
+msgid "Very different length"
+msgstr "Longitud muy distinta"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:376
+#, elixir-autogen, elixir-format
+msgid "Same speech as above"
+msgstr "El mismo parlamento de arriba"
+
+#: lib/playcode_web/live/admin/play_compare_live.ex:168
+#: lib/playcode_web/live/admin/play_compare_live.ex:241
+#, elixir-autogen, elixir-format
+msgid "Loading…"
+msgstr "Cargando…"

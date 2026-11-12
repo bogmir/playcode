@@ -35,7 +35,6 @@ defmodule PlaycodeWeb.AuthorizationTest do
     {"/admin/plays/:id/export/html", :active},
     {"/admin/plays/:id/export/epub", :active},
     {"/admin/plays/:id/export/pdf", :active},
-    {"/admin/plays/compare/export/html?plays=:id", :active},
     {"/admin/users", :admin},
     {"/admin/activity-log", :admin},
     {"/admin/export", :admin},

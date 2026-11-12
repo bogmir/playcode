@@ -1015,6 +1015,37 @@ defmodule Playcode.PlayContent do
     |> name_witnesses(play_id)
   end
 
+  @doc """
+  A play's divisions as `load_play_content/2` gives them, but holding only the speeches,
+  each with its lines and its characters: what `Playcode.Alignment` reads, at a third of
+  the cost (no notes, cast lists or stage directions).
+  """
+  def load_speeches(play_id) do
+    divisions =
+      Division
+      |> where(play_id: ^play_id)
+      |> where([d], is_nil(d.parent_id))
+      |> order_by(:position)
+      |> Repo.all()
+      |> Repo.preload(children: from(d in Division, order_by: d.position))
+
+    lines = from(e in Element, order_by: e.position)
+
+    speeches =
+      Element
+      |> where([e], e.division_id in ^collect_division_ids(divisions))
+      |> where([e], is_nil(e.parent_id) and e.type == "speech")
+      |> order_by(:position)
+      |> Repo.all()
+      |> Repo.preload(
+        element_characters:
+          from(ec in ElementCharacter, order_by: ec.position, preload: :character),
+        children: {lines, children: lines}
+      )
+
+    attach_elements(divisions, Enum.group_by(speeches, & &1.division_id))
+  end
+
   # A play whose readers do not see its variants (Play.show_variants).
   defp without_variants(divisions, true), do: divisions
 
