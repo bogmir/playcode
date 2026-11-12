@@ -199,8 +199,9 @@ defmodule PlaycodeWeb.Layouts do
         </div>
 
         <div class="border-t border-base-300 pt-3">
-          <.section_link to={~p"/plays"}>
-            <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />
+          <%!-- The published site once its address is set; until then Playcode's own pages. --%>
+          <.section_link to={Playcode.Export.StaticSite.public_url() || ~p"/plays"}>
+            <.icon name="hero-globe-alt-micro" class="size-4" />
             {gettext("View public site")}
           </.section_link>
         </div>
