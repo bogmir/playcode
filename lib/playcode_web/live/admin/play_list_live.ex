@@ -52,7 +52,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
     {:noreply,
      socket
-     |> assign(:plays, plays)
+     |> assign_plays(plays)
      |> assign(:search, search)
      |> assign(:status, status)
      |> assign(:page, page)
@@ -98,12 +98,14 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     page = min(socket.assigns.page, total_pages)
     plays = Catalogue.list_plays(opts ++ [page: page, per_page: @per_page])
 
-    assign(socket,
-      plays: plays,
-      page: page,
-      total_pages: total_pages
-    )
+    socket
+    |> assign_plays(plays)
+    |> assign(page: page, total_pages: total_pages)
     |> assign_counts()
+  end
+
+  defp assign_plays(socket, plays) do
+    assign(socket, plays: plays, without_text: Catalogue.without_text(Enum.map(plays, & &1.id)))
   end
 
   # The filter's counts follow the search; the heading's is the whole corpus.
@@ -113,13 +115,19 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
     assign(socket,
       plays_total: Catalogue.count_plays(),
-      status_counts: %{all: count.(nil), draft: count.(:draft), complete: count.(:complete)},
+      status_counts: %{
+        all: count.(nil),
+        draft: count.(:draft),
+        complete: count.(:complete),
+        no_text: count.(:no_text)
+      },
       archived_count: Catalogue.count_plays(archived: true)
     )
   end
 
   defp parse_status("draft"), do: :draft
   defp parse_status("complete"), do: :complete
+  defp parse_status("no_text"), do: :no_text
   defp parse_status(_), do: nil
 
   defp list_params(search, status, page \\ nil) do
@@ -158,7 +166,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     [
       {nil, gettext("All"), counts.all},
       {:draft, gettext("Drafts"), counts.draft},
-      {:complete, gettext("Complete plays"), counts.complete}
+      {:complete, gettext("Complete plays"), counts.complete},
+      {:no_text, gettext("No text"), counts.no_text}
     ]
   end
 
@@ -171,6 +180,14 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp status_badge(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: "badge-outline"
   defp status_badge(%{is_complete: true}), do: "badge-success badge-soft"
   defp status_badge(_play), do: "badge-ghost"
+
+  defp verses(play, without_text) do
+    cond do
+      play.id in without_text -> "—"
+      Playcode.Catalogue.Play.form(play) == "prose" -> gettext("prose")
+      true -> play.verse_count
+    end
+  end
 
   @impl true
   def render(assigns) do
@@ -308,9 +325,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <span class={["badge badge-sm", status_badge(play)]}>
                   {status_label(play)}
                 </span>
+                <span :if={play.id in @without_text} class="badge badge-sm badge-warning mt-1">
+                  {gettext("No text")}
+                </span>
               </td>
               <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
-                {play.verse_count || "—"}
+                {verses(play, @without_text)}
               </td>
               <td :if={@archived}>
                 <div class="flex items-center justify-end gap-1">
