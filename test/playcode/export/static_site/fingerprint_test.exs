@@ -33,9 +33,10 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
              Fingerprint.current(version: "1.0", assets_dir: b)
   end
 
-  # The site is in English, so only an English translation can change a page. The Spanish
-  # ones are the admin's; editing one made the whole site look changed.
-  test "an English translation changes the fingerprint; a Spanish one does not" do
+  # The site prints its interface in Spanish and English, so a translation of a message its
+  # code asks for changes a page, in either language. The admin's own messages do not:
+  # editing one made the whole site look changed.
+  test "a translation the site prints changes the fingerprint; the admin's alone does not" do
     dir = Path.join(System.tmp_dir!(), "fingerprint-#{System.unique_integer([:positive])}")
     File.cp_r!(Application.app_dir(:playcode, "priv/gettext"), dir)
     on_exit(fn -> File.rm_rf!(dir) end)
@@ -44,10 +45,15 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     before = current.()
 
     translate(dir, "es", "Deploy", "Publicar", "Publicar ya")
+    translate(dir, "en", "Deploy", "", "Ship")
     assert current.() == before
 
-    translate(dir, "en", "Deploy", "", "Ship")
-    assert current.() != before
+    translate(dir, "es", "Skip to content", "Saltar al contenido", "Ir al contenido")
+    spanish = current.()
+    assert spanish != before
+
+    translate(dir, "en", "Skip to content", "", "Skip to the text")
+    assert current.() != spanish
   end
 
   defp translate(dir, locale, msgid, from, to) do

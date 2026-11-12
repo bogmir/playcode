@@ -349,7 +349,7 @@ defmodule Playcode.Export.StaticSite.Edition do
   # Each stage direction in reading order, a line's own among them, as the Stage directions
   # page lists them: its kind (nil where the file gives none), its words, the page and
   # anchor of its place, and where it is: a line's citation; for one between lines, the
-  # verse before it in its scene ("I, after 2"), else its division.
+  # verse before it in its scene (`follows`: "I, after 2"), else its division.
   defp stage_directions(items, anchors, page_of, refs) do
     {entries, _last} =
       Enum.flat_map_reduce(items, nil, fn %{element: el} = item, last ->
@@ -358,18 +358,25 @@ defmodule Playcode.Export.StaticSite.Edition do
 
         case item.kind do
           :stage ->
-            ref =
+            follows =
               case last do
-                {^here, n} -> "#{refs[el.id]}, after #{n}"
-                _ -> refs[el.id]
+                {^here, n} -> n
+                _ -> nil
               end
 
-            {[Map.merge(at, %{type: el.stage_type, text: el.content, ref: ref})], last}
+            {[
+               Map.merge(at, %{
+                 type: el.stage_type,
+                 text: el.content,
+                 ref: refs[el.id],
+                 follows: follows
+               })
+             ], last}
 
           _ ->
             inline =
               for stage <- InlineMarkup.stages(el.content),
-                  do: Map.merge(at, Map.put(stage, :ref, refs[el.id]))
+                  do: Map.merge(at, Map.merge(stage, %{ref: refs[el.id], follows: nil}))
 
             {inline, if(item.number, do: {here, item.number}, else: last)}
         end

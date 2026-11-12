@@ -354,7 +354,7 @@ defmodule Playcode.Export.StaticSite.Search do
       "title" => play.title,
       "author" => play.author_name,
       "language" => play.language,
-      "language_name" => Components.language(play.language),
+      "language_name" => Tuple.to_list(Components.language(play.language)),
       "kind" => Components.kind(play)
     }
   end

@@ -40,7 +40,23 @@ defmodule Playcode.StaticSiteHelpers do
   end
 
   def read!(dir, path), do: File.read!(Path.join(dir, path))
-  def html!(dir, path), do: dir |> read!(path) |> LazyHTML.from_document()
+
+  @doc """
+  A page as a reader of the `ui` interface sees it, English unless asked: the other
+  language's texts (`<x-es>`, `<x-en>`) dropped and, in English, each attribute's English
+  (`data-en-*`) in place of its Spanish, as site.js swaps it.
+  """
+  def html!(dir, path, ui \\ "en"),
+    do: dir |> read!(path) |> read_in(ui) |> LazyHTML.from_document()
+
+  defp read_in(html, "es"), do: String.replace(html, ~r{<x-en[^>]*>.*?</x-en>}s, "")
+
+  defp read_in(html, "en") do
+    html
+    |> String.replace(~r{<x-es[^>]*>.*?</x-es>}s, "")
+    |> String.replace(~r/ ([a-z-]+)="[^"]*" data-en-\1="([^"]*)"/, ~S( \1="\2"))
+    |> String.replace(~r/ data-en-text="([^"]*)"([^>]*)>[^<]*</, ~S(\2>\1<))
+  end
 
   @doc "The text of every node matching `selector`, whitespace collapsed."
   def texts(html, selector),

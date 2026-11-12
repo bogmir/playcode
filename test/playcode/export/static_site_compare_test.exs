@@ -416,7 +416,8 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       assert attribute(page, "[data-panel]", "aria-label") ==
                ["Original: Test Play", "Translation: Test Play"]
 
-      assert page |> texts("[data-compare-menu] option") |> Enum.sort() ==
+      # Each option is named by its label, which site.js swaps for the English.
+      assert page |> attribute("[data-compare-menu] option", "label") |> Enum.sort() ==
                Enum.sort([
                  "Antonio y Cleopatra (Spanish) — #{a.code}",
                  "Antonio y Cleopatra (Spanish) — #{b.code}",

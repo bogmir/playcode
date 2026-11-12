@@ -1,20 +1,27 @@
 <Components.shell
   root="../../"
-  title={"#{@original.play.title} and #{@translation.play.title} — EMOTHE"}
+  title={
+    tp("%{original} and %{translation} — EMOTHE",
+      original: @original.play.title,
+      translation: @translation.play.title
+    )
+  }
   site={@site}
   play={[@original.play, @translation.play]}
 >
   <div class="compare-bar">
-    <a href={"../#{@original.play.code}/index.html"}>Back to {@original.play.title}</a>
+    <a href={"../#{@original.play.code}/index.html"}>
+      {t("Back to %{title}", title: @original.play.title)}
+    </a>
     <label>
-      Translation
+      {t("Translation")}
       <select data-compare-menu>
         <option
           :for={{play, label} <- @menu}
           value={"../#{play.code}/compare.html"}
           selected={play.id == @translation.play.id}
+          {attrs(label, "label")}
         >
-          {label}
         </option>
       </select>
     </label>
@@ -30,7 +37,7 @@
     <noscript>
       <ul class="compare-links">
         <li :for={{play, label} <- @menu}>
-          <a href={"../#{play.code}/compare.html"}>{label}</a>
+          <a href={"../#{play.code}/compare.html"}>{html(label)}</a>
         </li>
       </ul>
     </noscript>
@@ -49,7 +56,7 @@
         data-panel={"panel-#{n}"}
         tabindex="0"
         role="region"
-        aria-label={Comparison.panel_name(edition.play, n)}
+        {attrs(Comparison.panel_name(edition.play, n), "aria-label")}
         lang={edition.play.language}
       >
         <Comparison.text

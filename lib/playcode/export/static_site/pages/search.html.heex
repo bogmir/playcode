@@ -1,32 +1,35 @@
 <Components.shell
   root=""
-  title="Search — EMOTHE"
+  title={tp("Search — EMOTHE")}
   current={:search}
   site={@site}
-  rail_label="Filters"
+  rail_label={t("Filters")}
 >
   <:rail>
     <div data-search-facets></div>
   </:rail>
-  <h1>Search</h1>
+  <h1>{t("Search")}</h1>
   <noscript>
-    <p>Search needs JavaScript. <a href="index.html">Browse the catalogue</a> instead.</p>
+    <p>
+      {t("Search needs JavaScript.")}
+      <a href="index.html">{t("Browse the catalogue instead.")}</a>
+    </p>
   </noscript>
   <form data-search-form role="search" hidden>
-    <label for="q" class="sr-only">Search the texts</label>
+    <label for="q" class="sr-only">{t("Search the texts")}</label>
     <input
       id="q"
       name="q"
       type="search"
       autocomplete="off"
-      placeholder="Search every line of every play"
+      {ta("placeholder", "Search every line of every play")}
     />
     <fieldset class="mode">
-      <legend class="sr-only">Match</legend>
-      <label><input type="radio" name="mode" value="word" /> Whole word</label>
-      <label><input type="radio" name="mode" value="prefix" checked /> Starts with</label>
+      <legend class="sr-only">{t("Match")}</legend>
+      <label><input type="radio" name="mode" value="word" /> {t("Whole word")}</label>
+      <label><input type="radio" name="mode" value="prefix" checked /> {t("Starts with")}</label>
     </fieldset>
-    <button type="submit">Search</button>
+    <button type="submit">{t("Search")}</button>
   </form>
   <p class="lede" data-search-count aria-live="polite"></p>
   <div data-search-results></div>
