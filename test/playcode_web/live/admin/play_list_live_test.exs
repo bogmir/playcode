@@ -10,8 +10,13 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     %{conn: log_in_user(conn, user_fixture(role: :researcher))}
   end
 
-  defp click(view, play, label),
-    do: view |> element("#play-#{play.id} button[aria-label='#{t(label)}']") |> render_click()
+  defp restore(view, play),
+    do: view |> element("#play-#{play.id} button[aria-label='#{t("Restore")}']") |> render_click()
+
+  defp archive(conn, play) do
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+    view |> element("button", t("Archive play")) |> render_click()
+  end
 
   test "searching narrows the list", %{conn: conn} do
     alpha = play_fixture(%{"title" => "Alpha Tragedy"})
@@ -83,16 +88,16 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
   test "an archived play leaves the list, waits under the archived filter, and can be restored",
        %{conn: conn} do
     play = play_fixture(%{"title" => "Archive Me"})
-    {:ok, view, _html} = live(conn, ~p"/admin/plays")
 
-    click(view, play, "Archive")
+    archive(conn, play)
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
     refute render(view) =~ "Archive Me"
     assert Catalogue.get_play!(play.id, include_deleted: true).deleted_at
 
     {:ok, archived, html} = live(conn, ~p"/admin/plays?archived=1")
     assert html =~ "Archive Me"
 
-    click(archived, play, "Restore")
+    restore(archived, play)
     refute render(archived) =~ "Archive Me"
 
     {:ok, _view, html} = live(conn, ~p"/admin/plays")
@@ -117,5 +122,81 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     end
 
     assert has_element?(view, "#play-#{play.id} button[aria-label='#{t("Restore")}']")
+  end
+
+  test "the heading names what the page holds and how many, archived plays not counted",
+       %{conn: conn} do
+    play_fixture()
+    play_fixture()
+    {:ok, _} = Catalogue.delete_play(play_fixture())
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+    assert has_element?(view, "h1", "#{t("Plays")} · 2")
+  end
+
+  test "a row opens its play by the title and carries no other link", %{conn: conn} do
+    play = play_fixture(%{"title" => "Open Me"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+    assert has_element?(view, "#play-#{play.id} a[href='/admin/plays/#{play.id}']", "Open Me")
+    refute has_element?(view, "#play-#{play.id} a[href='/admin/plays/#{play.id}/edit']")
+    refute has_element?(view, "#play-#{play.id} a[href='/plays/#{play.code}']")
+    refute has_element?(view, "#play-#{play.id} button[aria-label='#{t("Archive")}']")
+  end
+
+  describe "the status filter" do
+    setup %{conn: conn} do
+      draft = play_fixture(%{"title" => "A Draft Play"})
+      done = play_fixture(%{"title" => "A Done Play"})
+      {:ok, _} = Catalogue.update_play_from_form(done, %{"is_complete" => "true"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+      %{view: view, draft: draft, done: done}
+    end
+
+    test "each choice carries its count", %{view: view} do
+      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("All")} · 2")
+      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("Drafts")} · 1")
+
+      assert has_element?(
+               view,
+               "nav[aria-label='#{t("Status")}'] a",
+               "#{t("Complete plays")} · 1"
+             )
+    end
+
+    test "choosing one narrows the list and the address keeps it", %{
+      view: view,
+      draft: draft,
+      done: done
+    } do
+      view |> element("nav[aria-label='#{t("Status")}'] a", t("Drafts")) |> render_click()
+      assert_patch(view, ~p"/admin/plays?status=draft")
+      assert has_element?(view, "#play-#{draft.id}")
+      refute has_element?(view, "#play-#{done.id}")
+
+      view |> element("nav[aria-label='#{t("Status")}'] a", t("Complete plays")) |> render_click()
+      assert_patch(view, ~p"/admin/plays?status=complete")
+      assert has_element?(view, "#play-#{done.id}")
+      refute has_element?(view, "#play-#{draft.id}")
+    end
+
+    test "the search keeps the filter, and the filter keeps the search", %{
+      conn: conn,
+      draft: draft,
+      done: done
+    } do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays?status=draft")
+      view |> element("form[phx-change=search]") |> render_change(%{"search" => "Play"})
+      assert_patch(view, ~p"/admin/plays?#{[search: "Play", status: "draft"]}")
+      assert has_element?(view, "#play-#{draft.id}")
+      refute has_element?(view, "#play-#{done.id}")
+    end
+  end
+
+  test "the sidebar's checkbox is not restored by the browser", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+    assert has_element?(view, "#admin-sidebar[autocomplete=off]")
   end
 end

@@ -207,4 +207,15 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
 
     assert has_element?(lv, "details", "CC BY-NC 4.0")
   end
+
+  test "archiving is the last thing on the overview, and sends the user to the list",
+       %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "main button[data-confirm]", t("Archive play"))
+
+    lv |> element("button", t("Archive play")) |> render_click()
+    assert_redirect(lv, ~p"/admin/plays")
+    assert Playcode.Catalogue.get_play!(play.id, include_deleted: true).deleted_at
+  end
 end

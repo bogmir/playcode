@@ -14,6 +14,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   alias Playcode.PlayContent
   alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Statistics
+  alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -88,6 +89,20 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
       _ ->
         {:noreply, assign(socket, import_result: {:error, gettext("No file uploaded.")})}
     end
+  end
+
+  def handle_event("archive", _, socket) do
+    play = socket.assigns.play
+
+    LiveHelpers.log_activity(socket, "delete", "play", play.id, %{
+      title: play.title,
+      code: play.code,
+      archived: true
+    })
+
+    {:ok, _} = Catalogue.delete_play(play)
+
+    {:noreply, push_navigate(socket, to: ~p"/admin/plays")}
   end
 
   def handle_event("set_status", %{"status" => status}, socket)
@@ -462,6 +477,23 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           </.card>
         </div>
       </div>
+
+      <.card title={gettext("Archive")} dashed>
+        <p class="mb-3 text-sm text-base-content/80">
+          {gettext("An archived play is hidden from the site. It can be restored.")}
+        </p>
+        <button
+          phx-click="archive"
+          data-confirm={
+            gettext("Archive «%{title}»? It is hidden from the site and can be restored.",
+              title: @play.title
+            )
+          }
+          class="btn btn-outline btn-error btn-sm"
+        >
+          {gettext("Archive play")}
+        </button>
+      </.card>
     </.page>
     """
   end

@@ -19,6 +19,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
      |> assign(:page_title, gettext("Admin - Plays"))
      |> assign(:plays, [])
      |> assign(:search, "")
+     |> assign(:status, nil)
      |> assign(:page, 1)
      |> assign(:total_pages, 1)
      |> assign(:listening, MapSet.new())}
@@ -29,8 +30,9 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     search = params["search"] || ""
     page = parse_page(params["page"])
     archived = params["archived"] == "1"
+    status = if archived, do: nil, else: parse_status(params["status"])
 
-    total = Catalogue.count_plays(search: search, archived: archived)
+    total = Catalogue.count_plays(search: search, archived: archived, status: status)
     total_pages = max(1, ceil(total / @per_page))
     page = min(page, total_pages)
 
@@ -39,7 +41,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         search: search,
         page: page,
         per_page: @per_page,
-        archived: archived
+        archived: archived,
+        status: status
       )
 
     socket = if connected?(socket), do: listen_to(socket, plays), else: socket
@@ -48,30 +51,17 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
      socket
      |> assign(:plays, plays)
      |> assign(:search, search)
+     |> assign(:status, status)
      |> assign(:page, page)
      |> assign(:total_pages, total_pages)
      |> assign(:archived, archived)
-     |> assign(:archived_count, Catalogue.count_plays(archived: true))}
+     |> assign_counts()}
   end
 
   @impl true
   def handle_event("search", %{"search" => search}, socket) do
-    params = if search == "", do: [], else: [search: search]
-    {:noreply, push_patch(socket, to: ~p"/admin/plays?#{params}")}
-  end
-
-  def handle_event("delete", %{"id" => id}, socket) do
-    play = Catalogue.get_play!(id)
-
-    LiveHelpers.log_activity(socket, "delete", "play", play.id, %{
-      title: play.title,
-      code: play.code,
-      archived: true
-    })
-
-    {:ok, _} = Catalogue.delete_play(play)
-
-    {:noreply, reload(socket)}
+    {:noreply,
+     push_patch(socket, to: ~p"/admin/plays?#{list_params(search, socket.assigns.status)}")}
   end
 
   def handle_event("restore", %{"id" => id}, socket) do
@@ -89,7 +79,11 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   end
 
   defp reload(socket) do
-    opts = [search: socket.assigns.search, archived: socket.assigns.archived]
+    opts = [
+      search: socket.assigns.search,
+      archived: socket.assigns.archived,
+      status: socket.assigns.status
+    ]
 
     total = Catalogue.count_plays(opts)
     total_pages = max(1, ceil(total / @per_page))
@@ -99,9 +93,30 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     assign(socket,
       plays: plays,
       page: page,
-      total_pages: total_pages,
+      total_pages: total_pages
+    )
+    |> assign_counts()
+  end
+
+  # The filter's counts follow the search; the heading's is the whole corpus.
+  defp assign_counts(socket) do
+    search = socket.assigns.search
+    count = &Catalogue.count_plays(search: search, status: &1)
+
+    assign(socket,
+      plays_total: Catalogue.count_plays(),
+      status_counts: %{all: count.(nil), draft: count.(:draft), complete: count.(:complete)},
       archived_count: Catalogue.count_plays(archived: true)
     )
+  end
+
+  defp parse_status("draft"), do: :draft
+  defp parse_status("complete"), do: :complete
+  defp parse_status(_), do: nil
+
+  defp list_params(search, status, page \\ nil) do
+    [search: search, status: status, page: page]
+    |> Enum.reject(fn {_key, value} -> value in [nil, "", 1] end)
   end
 
   @impl true
@@ -131,6 +146,14 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     end
   end
 
+  defp status_choices(counts) do
+    [
+      {nil, gettext("All"), counts.all},
+      {:draft, gettext("Drafts"), counts.draft},
+      {:complete, gettext("Complete plays"), counts.complete}
+    ]
+  end
+
   defp status_label(%{deleted_at: deleted_at}) when not is_nil(deleted_at),
     do: gettext("Archived")
 
@@ -141,18 +164,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp status_badge(%{is_complete: true}), do: "badge-success badge-soft"
   defp status_badge(_play), do: "badge-ghost"
 
-  defp page_params("", page), do: [page: page]
-  defp page_params(search, page), do: [search: search, page: page]
-
   @impl true
   def render(assigns) do
     ~H"""
     <.page>
       <.page_header>
-        {gettext("Play Management")}
-        <:subtitle>
-          {gettext("Browse, edit, and curate imported plays.")}
-        </:subtitle>
+        {gettext("Plays")} · {@plays_total}
         <:actions>
           <div class="flex gap-2">
             <.link
@@ -183,6 +200,21 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           />
         </form>
 
+        <nav
+          :if={!@archived}
+          aria-label={gettext("Status")}
+          class="join"
+        >
+          <.link
+            :for={{value, label, count} <- status_choices(@status_counts)}
+            patch={~p"/admin/plays?#{list_params(@search, value)}"}
+            class={["btn btn-sm join-item", @status == value && "btn-active"]}
+            aria-current={@status == value && "page"}
+          >
+            {label} · {count}
+          </.link>
+        </nav>
+
         <.link
           :if={@archived_count > 0 or @archived}
           patch={if @archived, do: ~p"/admin/plays", else: ~p"/admin/plays?archived=1"}
@@ -207,7 +239,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
               <th>{gettext("Title")}</th>
               <th class="w-24">{gettext("Status")}</th>
               <th class="w-20 text-right max-sm:hidden">{gettext("Verses")}</th>
-              <th class="w-32 text-right">{gettext("Actions")}</th>
+              <th :if={@archived} class="w-32 text-right">{gettext("Actions")}</th>
             </tr>
           </thead>
           <tbody>
@@ -219,7 +251,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <.link
                   :if={is_nil(play.deleted_at)}
                   navigate={~p"/admin/plays/#{play.id}"}
-                  class="font-medium text-base-content hover:text-primary"
+                  class="link link-hover font-medium text-primary"
                 >
                   {play.title}
                 </.link>
@@ -242,27 +274,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
               <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
                 {play.verse_count || "—"}
               </td>
-              <td>
+              <td :if={@archived}>
                 <div class="flex items-center justify-end gap-1">
-                  <.link
-                    :if={is_nil(play.deleted_at)}
-                    navigate={~p"/admin/plays/#{play.id}/edit"}
-                    class="btn btn-ghost btn-xs tooltip tooltip-left"
-                    aria-label={gettext("Edit metadata")}
-                    data-tip={gettext("Edit metadata")}
-                  >
-                    <.icon name="hero-pencil-square-mini" class="size-4" />
-                  </.link>
-                  <.link
-                    :if={is_nil(play.deleted_at)}
-                    href={~p"/plays/#{play.code}"}
-                    target="_blank"
-                    class="btn btn-ghost btn-xs tooltip tooltip-left"
-                    aria-label={gettext("View public page")}
-                    data-tip={gettext("View public page")}
-                  >
-                    <.icon name="hero-arrow-top-right-on-square-mini" class="size-4" />
-                  </.link>
                   <button
                     :if={play.deleted_at}
                     phx-click="restore"
@@ -272,21 +285,6 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                     data-tip={gettext("Restore")}
                   >
                     <.icon name="hero-arrow-uturn-left-mini" class="size-4" />
-                  </button>
-                  <button
-                    :if={is_nil(play.deleted_at)}
-                    phx-click="delete"
-                    phx-value-id={play.id}
-                    data-confirm={
-                      gettext("Archive «%{title}»? It is hidden from the site and can be restored.",
-                        title: play.title
-                      )
-                    }
-                    class="btn btn-ghost btn-xs text-error tooltip tooltip-left"
-                    aria-label={gettext("Archive")}
-                    data-tip={gettext("Archive")}
-                  >
-                    <.icon name="hero-archive-box-mini" class="size-4" />
                   </button>
                 </div>
               </td>
@@ -306,7 +304,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
       <div :if={@total_pages > 1} class="mt-6 flex items-center justify-center gap-4">
         <.link
           :if={@page > 1}
-          patch={~p"/admin/plays?#{page_params(@search, @page - 1)}"}
+          patch={~p"/admin/plays?#{list_params(@search, @status, @page - 1)}"}
           class="btn btn-sm btn-ghost"
         >
           <.icon name="hero-chevron-left-mini" class="size-4" />{gettext("Previous")}
@@ -316,7 +314,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         </span>
         <.link
           :if={@page < @total_pages}
-          patch={~p"/admin/plays?#{page_params(@search, @page + 1)}"}
+          patch={~p"/admin/plays?#{list_params(@search, @status, @page + 1)}"}
           class="btn btn-sm btn-ghost"
         >
           {gettext("Next")}<.icon name="hero-chevron-right-mini" class="size-4" />
