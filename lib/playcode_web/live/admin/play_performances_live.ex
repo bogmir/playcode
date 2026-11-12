@@ -677,10 +677,10 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
         </:actions>
       </.page_header>
 
-      <div :if={@form} class="mb-6 rounded-box border border-primary/30 bg-base-100 p-5 shadow-md">
-        <h2 class="mb-4 text-sm font-semibold text-primary">
-          {if @editing == :new, do: gettext("New performance"), else: gettext("Edit performance")}
-        </h2>
+      <.card
+        :if={@form}
+        title={if @editing == :new, do: gettext("New performance"), else: gettext("Edit performance")}
+      >
         <%!-- The picker is a form of its own, so it sits above this one. --%>
         <div class="mb-4">
           <label class="label" for="place-search-term">
@@ -969,64 +969,61 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
             <button type="submit" class="btn btn-primary btn-sm">{gettext("Save")}</button>
           </div>
         </.form>
-      </div>
+      </.card>
 
-      <div :if={@lines == [] && @form == nil} class="py-12 text-center text-base-content/70">
-        <.icon name="hero-ticket" class="mx-auto mb-3 size-12 opacity-30" />
-        <p class="text-sm">{gettext("No performances yet.")}</p>
-      </div>
+      <.empty_state :if={@lines == [] && @form == nil} icon="hero-ticket">
+        {gettext("No performances yet.")}
+      </.empty_state>
 
-      <ul class="space-y-3">
-        <li
-          :for={line <- @lines}
-          id={"performance-#{line.id}"}
-          class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm"
+      <.card :if={@lines != []} title={gettext("Performances")} count={length(@lines)}>
+        <ul class="-mx-4 divide-y divide-base-300">
+          <li :for={line <- @lines} id={"performance-#{line.id}"} class="px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 text-sm">
+                <span :if={line.date} class="font-semibold">
+                  <PlayText.inline_content text={line.date} />
+                </span>
+                <PlayText.inline_content :if={line.parts != []} text={Enum.join(line.parts, " · ")} />
+                <span :if={line.reference} class="whitespace-nowrap text-xs text-base-content/70">
+                  {line.reference}
+                </span>
+                <p :if={line.cast != []} class="text-xs">
+                  {gettext("Cast")}: <PlayText.inline_content text={Enum.join(line.cast, "; ")} />
+                </p>
+                <p :if={line.note} class="text-xs"><PlayText.inline_content text={line.note} /></p>
+              </div>
+              <div class="flex shrink-0 gap-1">
+                <button
+                  phx-click="edit"
+                  phx-value-id={line.id}
+                  class="btn btn-ghost btn-xs"
+                  aria-label={gettext("Edit %{performance}", performance: label(line))}
+                >
+                  <.icon name="hero-pencil-square-micro" class="size-3.5" />
+                </button>
+                <button
+                  phx-click="delete"
+                  phx-value-id={line.id}
+                  data-confirm={gettext("Delete this performance?")}
+                  class="btn btn-ghost btn-xs text-error"
+                  aria-label={gettext("Delete %{performance}", performance: label(line))}
+                >
+                  <.icon name="hero-trash-micro" class="size-3.5" />
+                </button>
+              </div>
+            </div>
+          </li>
+        </ul>
+        <ul
+          :if={@sources != []}
+          id="performance-sources"
+          class="mt-1 space-y-1 border-t border-base-300 pt-3 font-serif text-sm"
         >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 text-sm">
-              <span :if={line.date} class="font-semibold">
-                <PlayText.inline_content text={line.date} />
-              </span>
-              <PlayText.inline_content :if={line.parts != []} text={Enum.join(line.parts, " · ")} />
-              <span :if={line.reference} class="whitespace-nowrap text-xs text-base-content/70">
-                {line.reference}
-              </span>
-              <p :if={line.cast != []} class="text-xs">
-                {gettext("Cast")}: <PlayText.inline_content text={Enum.join(line.cast, "; ")} />
-              </p>
-              <p :if={line.note} class="text-xs"><PlayText.inline_content text={line.note} /></p>
-            </div>
-            <div class="flex shrink-0 gap-1">
-              <button
-                phx-click="edit"
-                phx-value-id={line.id}
-                class="btn btn-ghost btn-xs"
-                aria-label={gettext("Edit %{performance}", performance: label(line))}
-              >
-                <.icon name="hero-pencil-square-micro" class="size-3.5" />
-              </button>
-              <button
-                phx-click="delete"
-                phx-value-id={line.id}
-                data-confirm={gettext("Delete this performance?")}
-                class="btn btn-ghost btn-xs text-error"
-                aria-label={gettext("Delete %{performance}", performance: label(line))}
-              >
-                <.icon name="hero-trash-micro" class="size-3.5" />
-              </button>
-            </div>
-          </div>
-        </li>
-      </ul>
-      <ul
-        :if={@sources != []}
-        id="performance-sources"
-        class="mt-4 space-y-1 border-t border-base-300 pt-3 font-serif text-sm"
-      >
-        <li :for={{number, entry} <- @sources} class="pl-6 -indent-6 [&_a]:link [&_a]:break-all">
-          [{number}] {Citation.html(entry)}
-        </li>
-      </ul>
+          <li :for={{number, entry} <- @sources} class="pl-6 -indent-6 [&_a]:link [&_a]:break-all">
+            [{number}] {Citation.html(entry)}
+          </li>
+        </ul>
+      </.card>
     </.page>
     """
   end

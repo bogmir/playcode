@@ -141,10 +141,10 @@ defmodule PlaycodeWeb.Admin.PlayWitnessesLive do
         </:actions>
       </.page_header>
 
-      <div :if={@form} class="mb-6 rounded-box border border-primary/30 bg-base-100 p-5 shadow-md">
-        <h2 class="mb-4 text-sm font-semibold text-primary">
-          {if @editing == :new, do: gettext("New witness"), else: gettext("Edit witness")}
-        </h2>
+      <.card
+        :if={@form}
+        title={if @editing == :new, do: gettext("New witness"), else: gettext("Edit witness")}
+      >
         <.form for={@form} id="witness-form" phx-change="validate_witness" phx-submit="save_witness">
           <div class="grid grid-cols-1 gap-x-4 md:grid-cols-2">
             <.input field={@form[:siglum]} type="text" label={gettext("Siglum")} />
@@ -176,70 +176,69 @@ defmodule PlaycodeWeb.Admin.PlayWitnessesLive do
             <button type="submit" class="btn btn-primary btn-sm">{gettext("Save")}</button>
           </div>
         </.form>
-      </div>
+      </.card>
 
-      <div :if={@witnesses == [] && @form == nil} class="py-12 text-center text-base-content/70">
-        <.icon name="hero-book-open" class="mx-auto mb-3 size-12 opacity-30" />
-        <p class="text-sm">{gettext("No witnesses yet.")}</p>
-        <button phx-click="new_witness" class="btn btn-ghost btn-sm mt-3">
-          {gettext("Add the first witness")}
-        </button>
-      </div>
+      <.empty_state :if={@witnesses == [] && @form == nil} icon="hero-book-open">
+        {gettext("No witnesses yet.")}
+        <:action>
+          <button phx-click="new_witness" class="btn btn-outline btn-sm">
+            {gettext("Add the first witness")}
+          </button>
+        </:action>
+      </.empty_state>
 
-      <ol class="space-y-3">
-        <li
-          :for={witness <- @witnesses}
-          id={"witness-#{witness.id}"}
-          class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm"
-        >
-          <div class="flex items-start justify-between gap-3">
-            <div class="min-w-0 text-sm">
-              <span :if={witness.siglum} class="badge badge-ghost badge-sm mr-1 font-mono">
-                {witness.siglum}
-              </span>
-              <span :if={witness.witness_type} class="text-xs text-base-content/70">
-                {PlayLabels.witness_type_label(witness.witness_type)}
-              </span>
-              <p class="mt-1 font-serif">{Witnesses.html(witness)}</p>
+      <.card :if={@witnesses != []} title={gettext("Witnesses")} count={length(@witnesses)}>
+        <ol class="-mx-4 -mb-4 divide-y divide-base-300">
+          <li :for={witness <- @witnesses} id={"witness-#{witness.id}"} class="px-4 py-3">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0 text-sm">
+                <span :if={witness.siglum} class="badge badge-ghost badge-sm mr-1 font-mono">
+                  {witness.siglum}
+                </span>
+                <span :if={witness.witness_type} class="text-xs text-base-content/70">
+                  {PlayLabels.witness_type_label(witness.witness_type)}
+                </span>
+                <p class="mt-1 font-serif">{Witnesses.html(witness)}</p>
+              </div>
+              <div class="flex shrink-0 gap-1">
+                <button
+                  phx-click="move_up"
+                  phx-value-id={witness.id}
+                  class="btn btn-ghost btn-xs"
+                  aria-label={gettext("Move up")}
+                >
+                  <.icon name="hero-arrow-up-micro" class="size-3.5" />
+                </button>
+                <button
+                  phx-click="move_down"
+                  phx-value-id={witness.id}
+                  class="btn btn-ghost btn-xs"
+                  aria-label={gettext("Move down")}
+                >
+                  <.icon name="hero-arrow-down-micro" class="size-3.5" />
+                </button>
+                <button
+                  phx-click="edit_witness"
+                  phx-value-id={witness.id}
+                  class="btn btn-ghost btn-xs"
+                  aria-label={gettext("Edit")}
+                >
+                  <.icon name="hero-pencil-square-micro" class="size-3.5" />
+                </button>
+                <button
+                  phx-click="delete_witness"
+                  phx-value-id={witness.id}
+                  data-confirm={gettext("Delete this witness?")}
+                  class="btn btn-ghost btn-xs text-error"
+                  aria-label={gettext("Delete")}
+                >
+                  <.icon name="hero-trash-micro" class="size-3.5" />
+                </button>
+              </div>
             </div>
-            <div class="flex shrink-0 gap-1">
-              <button
-                phx-click="move_up"
-                phx-value-id={witness.id}
-                class="btn btn-ghost btn-xs"
-                aria-label={gettext("Move up")}
-              >
-                <.icon name="hero-arrow-up-micro" class="size-3.5" />
-              </button>
-              <button
-                phx-click="move_down"
-                phx-value-id={witness.id}
-                class="btn btn-ghost btn-xs"
-                aria-label={gettext("Move down")}
-              >
-                <.icon name="hero-arrow-down-micro" class="size-3.5" />
-              </button>
-              <button
-                phx-click="edit_witness"
-                phx-value-id={witness.id}
-                class="btn btn-ghost btn-xs"
-                aria-label={gettext("Edit")}
-              >
-                <.icon name="hero-pencil-square-micro" class="size-3.5" />
-              </button>
-              <button
-                phx-click="delete_witness"
-                phx-value-id={witness.id}
-                data-confirm={gettext("Delete this witness?")}
-                class="btn btn-ghost btn-xs text-error"
-                aria-label={gettext("Delete")}
-              >
-                <.icon name="hero-trash-micro" class="size-3.5" />
-              </button>
-            </div>
-          </div>
-        </li>
-      </ol>
+          </li>
+        </ol>
+      </.card>
     </.page>
     """
   end

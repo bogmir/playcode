@@ -2,8 +2,8 @@ defmodule PlaycodeWeb.AdminComponents do
   @moduledoc """
   The admin's parts, drawn after the mockup the owner approved on 2026-11-12
   (`docs/superpowers/specs/2026-11-12-admin-design-mock.html`): a page at one of two widths
-  and its heading, a card, a label and value list, a count tile, a play's state band, and a
-  zone to drop files on.
+  and its heading, a card, a label and value list, a count tile, a play's state band, a
+  zone to drop files on, and an empty tab's notice.
   The download group is in `PlaycodeWeb.CoreComponents`, the public catalogue's too.
   """
   use Phoenix.Component
@@ -57,6 +57,7 @@ defmodule PlaycodeWeb.AdminComponents do
   attr :count, :integer, default: nil
   attr :id, :string, default: nil
   attr :dashed, :boolean, default: false
+  attr :class, :string, default: nil
   slot :action
   slot :inner_block, required: true
 
@@ -66,7 +67,8 @@ defmodule PlaycodeWeb.AdminComponents do
       id={@id}
       class={[
         "mb-5 rounded-box border border-base-300 bg-base-100 px-4 py-4",
-        @dashed && "border-dashed"
+        @dashed && "border-dashed",
+        @class
       ]}
     >
       <header class="mb-2.5 flex items-baseline justify-between gap-4">
@@ -217,6 +219,24 @@ defmodule PlaycodeWeb.AdminComponents do
       <span :if={@hint} class="text-sm text-base-content/70">{@hint}</span>
       <.live_file_input upload={@upload} class="sr-only" disabled={@disabled} />
     </label>
+    """
+  end
+
+  @doc "What an empty tab lacks, with the one way to add it."
+  attr :icon, :string, required: true
+  slot :inner_block, required: true
+  slot :action
+
+  def empty_state(assigns) do
+    ~H"""
+    <div
+      id="empty-state"
+      class="mb-5 rounded-box border border-dashed border-base-300 bg-base-100 py-12 text-center text-base-content/70"
+    >
+      <.icon name={@icon} class="mx-auto mb-3 size-10 opacity-40" />
+      <p class="text-sm">{render_slot(@inner_block)}</p>
+      <div :if={@action != []} class="mt-3">{render_slot(@action)}</div>
+    </div>
     """
   end
 end
