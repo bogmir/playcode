@@ -585,8 +585,12 @@ defmodule Playcode.Catalogue do
         true -> where(query, [p], is_nil(p.deleted_at))
       end
 
-    apply_complete(query, opts[:complete])
+    query |> apply_complete(opts[:complete]) |> apply_status(opts[:status])
   end
+
+  defp apply_status(query, :draft), do: where(query, [p], not p.is_complete)
+  defp apply_status(query, :complete), do: where(query, [p], p.is_complete)
+  defp apply_status(query, _), do: query
 
   defp apply_complete(query, true), do: where(query, [p], p.is_complete == true)
   defp apply_complete(query, _), do: query

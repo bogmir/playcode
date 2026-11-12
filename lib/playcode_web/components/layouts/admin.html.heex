@@ -17,6 +17,7 @@
       <input
         id="admin-sidebar"
         type="checkbox"
+        autocomplete="off"
         class="sr-only"
         checked={
           match?(%{active_tab: tab} when tab in [:content, :compare], assigns[:play_context])
