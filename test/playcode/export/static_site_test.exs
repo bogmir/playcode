@@ -560,7 +560,9 @@ defmodule Playcode.Export.StaticSiteTest do
     assert texts(about, "h1") == ["About this edition"]
     assert LazyHTML.text(about) =~ "2 plays"
     assert LazyHTML.text(about) =~ "version 2.1"
-    assert squish(LazyHTML.text(about)) =~ "The band's links to the EMOTHE portal"
+
+    assert squish(LazyHTML.text(about)) =~
+             "The band's links to the EMOTHE portal (Portal, Database)"
   end
 
   test "the shared assets stay inside the size budget and nothing loads from another host" do
@@ -659,6 +661,12 @@ defmodule Playcode.Export.StaticSiteTest do
 
       assert {path, LazyHTML.attribute(portal, "href")} ==
                {path, ["https://emothe.uv.es/", "https://emothe.uv.es/basededatos/"]}
+
+      # The interface is English until the site has its Spanish (S3).
+      assert {path, texts(page, "header nav[aria-label='EMOTHE portal'] a")} ==
+               {path, ["Portal", "Database"]}
+
+      assert {path, texts(page, ".wordmark small")} == {path, ["Digital library"]}
     end
   end
 

@@ -59,7 +59,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <body data-ln="5" data-fo="off" data-rs="off" data-sh="off" data-sdm="off">
         <header class="bar">
           <a class="skip" href="#main">Skip to content</a>
-          <a class="wordmark" href={@root <> "index.html"}>EMOTHE<small>Biblioteca digital</small></a>
+          <a class="wordmark" href={@root <> "index.html"}>EMOTHE<small>Digital library</small></a>
           <nav aria-label="Site">
             <a href={@root <> "index.html"} aria-current={@current == :catalogue && "page"}>
               catalogue
@@ -68,9 +68,9 @@ defmodule Playcode.Export.StaticSite.Components do
             <a href={@root <> "about.html"} aria-current={@current == :about && "page"}>about</a>
           </nav>
           <%!-- The portal the site belongs to: the one place a page leaves the archive. --%>
-          <nav aria-label="EMOTHE portal" class="portal" lang="es">
-            <a href="https://emothe.uv.es/">Inicio</a>
-            <a href="https://emothe.uv.es/basededatos/">Base de datos</a>
+          <nav aria-label="EMOTHE portal" class="portal">
+            <a href="https://emothe.uv.es/">Portal</a>
+            <a href="https://emothe.uv.es/basededatos/">Database</a>
           </nav>
           <button type="button" class="theme" data-theme-toggle aria-label="Dark mode" hidden>
             ◐
@@ -455,7 +455,9 @@ defmodule Playcode.Export.StaticSite.Components do
       <%= for {kind, subgroups} <- @groups do %>
         <h3>{PlayLabels.bibliography_kind_label(kind)}</h3>
         <%= for {language, links} <- subgroups do %>
-          <h4 :if={kind == "translation"}>{PlayLabels.bibliography_language_label(language)}</h4>
+          <h4 :if={kind == "translation"}>
+            {if language, do: language(language), else: PlayLabels.bibliography_language_label(nil)}
+          </h4>
           <ul>
             <li :for={link <- links}>{Citation.html(link.entry, link)}</li>
           </ul>
@@ -1326,6 +1328,19 @@ defmodule Playcode.Export.StaticSite.Components do
     "version" => "version"
   }
 
+  @languages %{
+    "es" => "Spanish",
+    "en" => "English",
+    "it" => "Italian",
+    "ca" => "Catalan",
+    "fr" => "French",
+    "pt" => "Portuguese",
+    "de" => "German"
+  }
+
+  @doc "A language's name in the site's language, English, as the rest of its interface."
+  def language(code), do: Map.get(@languages, code, code)
+
   @doc "The site's word for a play's kind: original, translation, adaptation or version."
   def kind(%{relationship_type: nil}), do: "original"
   def kind(%{relationship_type: type}), do: Map.fetch!(@kinds, type)
@@ -1334,8 +1349,8 @@ defmodule Playcode.Export.StaticSite.Components do
   # adaptation". FileMaker linked a few plays with no kind.
   defp family_role(play) do
     case kind(play) do
-      "original" -> Play.language_name(play.language)
-      kind -> "#{Play.language_name(play.language)}, #{kind}"
+      "original" -> language(play.language)
+      kind -> "#{language(play.language)}, #{kind}"
     end
   end
 

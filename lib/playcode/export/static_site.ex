@@ -685,7 +685,7 @@ defmodule Playcode.Export.StaticSite do
        plays
        |> Enum.frequencies_by(& &1.language)
        |> Enum.sort_by(&(-elem(&1, 1)))
-       |> Enum.map(fn {code, n} -> {code, Play.language_name(code), n} end)},
+       |> Enum.map(fn {code, n} -> {code, Components.language(code), n} end)},
       {"form", "Form",
        options(plays, &Play.form/1, %{
          "verse" => "Verse",

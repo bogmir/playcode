@@ -11,7 +11,6 @@ defmodule Playcode.Export.StaticSite.Comparison do
   use Phoenix.Component
 
   alias Playcode.Alignment
-  alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.Components
   alias Playcode.Export.StaticSite.Edition
   alias Playcode.PlayContent.{Division, Element, InlineMarkup}
@@ -85,7 +84,7 @@ defmodule Playcode.Export.StaticSite.Comparison do
     do: InlineMarkup.plain(play.title)
 
   defp menu_label(play),
-    do: "#{InlineMarkup.plain(play.title)} (#{Play.language_name(play.language)})"
+    do: "#{InlineMarkup.plain(play.title)} (#{Components.language(play.language)})"
 
   attr :edition, :map, required: true
   attr :name, :string, required: true, doc: "the panel's name (`panel_name/2`)"

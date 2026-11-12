@@ -418,10 +418,10 @@ defmodule Playcode.Export.StaticSiteCompareTest do
 
       assert page |> texts("[data-compare-menu] option") |> Enum.sort() ==
                Enum.sort([
-                 "Antonio y Cleopatra (Español) — #{a.code}",
-                 "Antonio y Cleopatra (Español) — #{b.code}",
+                 "Antonio y Cleopatra (Spanish) — #{a.code}",
+                 "Antonio y Cleopatra (Spanish) — #{b.code}",
                  "Sin lengua",
-                 "Test Play (Español)"
+                 "Test Play (Spanish)"
                ])
     end
 

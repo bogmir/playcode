@@ -63,8 +63,8 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
 
     labels = texts(html!(generate!([es, fr, al]), "index.html"), "[data-facets] label")
 
-    assert "Español 2" in labels
-    assert "Français 1" in labels
+    assert "Spanish 2" in labels
+    assert "French 1" in labels
     assert "Prose 1" in labels
     assert "Originals 3" in labels
     assert "ARTELOPE 1" in labels

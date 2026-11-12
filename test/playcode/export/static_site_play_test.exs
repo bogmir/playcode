@@ -1230,7 +1230,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
     title = page(dir, play, "index.html")
 
     assert texts(title, "#bibliography h3") == ["Modern editions", "Translations"]
-    assert texts(title, "#bibliography h4") == ["Français"]
+    assert texts(title, "#bibliography h4") == ["French"]
     assert LazyHTML.text(title) =~ "Thompson, Ann, ed. Hamlet."
     refute LazyHTML.text(title) =~ "Revisar"
     refute LazyHTML.text(title) =~ "Préstamo"

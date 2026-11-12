@@ -20,7 +20,7 @@ defmodule Playcode.Export.StaticSite.Search do
   `site.js`; `test/fixtures/search_normalisation.json` runs against both.
   """
 
-  alias Playcode.Catalogue.Play
+  alias Playcode.Export.StaticSite.Components
   alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.{Components, Edition}
   alias Playcode.PlayContent.{InlineMarkup, Note}
@@ -354,7 +354,7 @@ defmodule Playcode.Export.StaticSite.Search do
       "title" => play.title,
       "author" => play.author_name,
       "language" => play.language,
-      "language_name" => Play.language_name(play.language),
+      "language_name" => Components.language(play.language),
       "kind" => Components.kind(play)
     }
   end

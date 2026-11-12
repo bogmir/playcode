@@ -118,7 +118,7 @@ defmodule Playcode.Export.StaticSiteSearchTest do
 
     test "the play list is in index order, with what the facets need", %{play: play, dir: dir} do
       assert {"plays", "all",
-              [%{"code" => code, "kind" => "original", "language_name" => "Español"}]} =
+              [%{"code" => code, "kind" => "original", "language_name" => "Spanish"}]} =
                load_js!(dir, "search/plays.js")
 
       assert code == play.code
