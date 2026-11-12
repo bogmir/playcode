@@ -13,6 +13,14 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert "1 play · 1 author" in texts(html!(generate!([play]), "index.html"), ".lede")
   end
 
+  # S6, the portal's sentence on what the library holds.
+  test "the catalogue says under its title what the library holds" do
+    play = play_fixture(%{"is_complete" => true})
+
+    assert html!(generate!([play]), "index.html") |> texts("main > p") |> hd() =~
+             "five basic traditions of early modern European theatre"
+  end
+
   test "a translation is listed under its original, one entry per work" do
     %{original: original, translation: translation} = translation_family_fixture()
 

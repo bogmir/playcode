@@ -53,13 +53,19 @@ defmodule Playcode.Export.StaticSite.Components do
       </head>
       <body data-ln="5" data-fo="off" data-rs="off" data-sh="off" data-sdm="off">
         <header class="bar">
-          <a class="wordmark" href={@root <> "index.html"}>EMOTHE</a>
+          <a class="skip" href="#main">Skip to content</a>
+          <a class="wordmark" href={@root <> "index.html"}>EMOTHE<small>Biblioteca digital</small></a>
           <nav aria-label="Site">
             <a href={@root <> "index.html"} aria-current={@current == :catalogue && "page"}>
               catalogue
             </a>
             <a href={@root <> "search.html"} aria-current={@current == :search && "page"}>search</a>
             <a href={@root <> "about.html"} aria-current={@current == :about && "page"}>about</a>
+          </nav>
+          <%!-- The portal the site belongs to: the one place a page leaves the archive. --%>
+          <nav aria-label="EMOTHE portal" class="portal" lang="es">
+            <a href="https://emothe.uv.es/">Inicio</a>
+            <a href="https://emothe.uv.es/basededatos/">Base de datos</a>
           </nav>
         </header>
         <div class={["frame", @rail != [] && "with-rail"]}>
