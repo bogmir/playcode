@@ -400,3 +400,14 @@ input:-webkit-autofill:focus {
     scroll-behavior: auto !important;
   }
 }
+
+/* daisyUI prints a label at 60% of the text's colour; the admin's labels are as dark as the
+   values they name. */
+.admin-shell .label {
+  color: var(--color-base-content);
+}
+
+/* daisyUI's extra-small button prints at 11 px; no text goes under 12 (B4). */
+.btn-xs {
+  font-size: 0.75rem;
+}
