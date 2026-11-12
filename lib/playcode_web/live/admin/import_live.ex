@@ -425,8 +425,8 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                       href={~p"/plays/#{code}"}
                       target="_blank"
                       class="btn btn-ghost btn-xs tooltip"
-                      aria-label={gettext("View public page")}
-                      data-tip={gettext("View public page")}
+                      aria-label={gettext("Preview")}
+                      data-tip={gettext("Preview")}
                     >
                       <.icon name="hero-arrow-top-right-on-square-mini" class="size-4" />
                     </.link>

@@ -5,7 +5,7 @@ defmodule Playcode.Catalogue do
 
   Every play read takes the same options. Archived plays are hidden unless the caller
   passes `archived: true` (only them) or `include_deleted: true` (both), and
-  `complete: true` hides drafts too, for a reader who may not see them. The `*_with_all!`
+  `complete: true` hides drafts too; only the static site's builder passes it, since every page of Playcode is staff's and shows drafts. The `*_with_all!`
   reads also preload what a play's pages show, each list in a fixed order, with the
   parent and derived plays under the same options.
   """
@@ -499,7 +499,7 @@ defmodule Playcode.Catalogue do
 
   # Archived plays are invisible everywhere unless a caller explicitly asks for them:
   # `archived: true` for the archive listing, `include_deleted: true` for both at once.
-  # `complete: true` hides drafts too, for readers who may not see them.
+  # `complete: true` hides drafts too; only the static site's builder passes it.
   defp scope(query, opts) do
     query =
       cond do

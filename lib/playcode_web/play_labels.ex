@@ -4,7 +4,7 @@ defmodule PlaycodeWeb.PlayLabels do
 
   Lives here rather than in `Playcode.Catalogue.Play` because the labels are gettext
   strings and the schema has no business knowing about the web layer's locale, and
-  rather than in a LiveView because the admin form and the public page need the same
+  rather than in a LiveView because the admin form and the play page need the same
   list. Later S2 fields — place of action, collection — add their vocabularies here.
   """
 
