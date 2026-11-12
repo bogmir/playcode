@@ -47,6 +47,7 @@ npm-debug.log
 # swap died before deleting (StaticSite.generate/1).
 /_site.new/
 /_site.old/
+/_site.deployed.json
 # The live settings of the emothe.uv.es deploy script; copied to the server, not committed
 deploy/playcode-deploy.config.php
 

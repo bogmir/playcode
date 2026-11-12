@@ -26,6 +26,8 @@ defmodule Playcode.Export.StaticSite do
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Comparison, Components, Edition, Fingerprint, Pages, Search}
 
+  @build "build.json"
+
   @type progress_info :: %{
           step: :assets | :catalogue | :play,
           current: non_neg_integer(),
@@ -315,6 +317,31 @@ defmodule Playcode.Export.StaticSite do
     adds ++ removes
   end
 
+  @doc """
+  The plays the last successful deploy of the site at `dir` published, each code with the
+  `content_version` it went out with. Empty until one is recorded (`record_deploy/1`).
+  """
+  def deployed_plays(dir), do: dir |> deploy_record() |> read_build_file() |> Map.fetch!(:plays)
+
+  @doc """
+  Records that the site at `dir` was just published: a copy of its `build.json`, kept
+  beside the directory, not in it, so it is not itself published.
+  """
+  def record_deploy(dir), do: File.cp!(Path.join(dir, @build), deploy_record(dir))
+
+  defp deploy_record(dir), do: Path.expand(dir) <> ".deployed.json"
+
+  @doc """
+  The address of the play's page on the published site, or nil when the site's public
+  address (`STATIC_SITE_PUBLIC_URL`) is not set.
+  """
+  def public_page_url(code) do
+    case Application.get_env(:playcode, :static_site_public_url) do
+      base when base in [nil, ""] -> nil
+      base -> String.trim_trailing(base, "/") <> "/plays/" <> safe_code!(code) <> "/"
+    end
+  end
+
   # Play codes become folder names that are deleted and rewritten; Play does not
   # validate them, so anything but a plain name ("..", "", "a/b") is refused here.
   @doc false
@@ -459,14 +486,14 @@ defmodule Playcode.Export.StaticSite do
         do: play
   end
 
-  @build "build.json"
-
   # What build.json records: the fingerprint the site was built with and the version
   # it was computed with (each nil if unknown), and each play's content_version. No
   # file, or one that cannot be read, records nothing, so the site and every play in it
   # count as changed.
-  defp read_build(dir) do
-    with {:ok, json} <- File.read(Path.join(dir, @build)),
+  defp read_build(dir), do: read_build_file(Path.join(dir, @build))
+
+  defp read_build_file(path) do
+    with {:ok, json} <- File.read(path),
          {:ok, %{"plays" => %{} = plays} = build} <- Jason.decode(json) do
       %{site: build["site"], version: build["version"], assets: build["assets"], plays: plays}
     else

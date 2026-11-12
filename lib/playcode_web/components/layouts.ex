@@ -141,6 +141,7 @@ defmodule PlaycodeWeb.Layouts do
   attr :current_path, :string, default: ""
   attr :play_context, :map, default: nil
   attr :play_counts, :map, default: nil
+  attr :play_deployed, :integer, default: nil, doc: "the version the last deploy published"
 
   def admin_sidebar(%{play_context: %{play: _}} = assigns) do
     assigns =
@@ -160,7 +161,7 @@ defmodule PlaycodeWeb.Layouts do
         <.section_link to={~p"/admin/plays/#{@play.id}"} current={@active == :overview}>
           {gettext("Overview")}
         </.section_link>
-        <%= for {group, items} <- play_sections(@play, @current_user) do %>
+        <%= for {group, items} <- play_sections(@play, @current_user, @play_deployed) do %>
           <h2 class="mx-2 mt-4 mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/70">
             {group}
           </h2>
@@ -213,10 +214,16 @@ defmodule PlaycodeWeb.Layouts do
   attr :count, :integer, default: nil
   slot :inner_block, required: true
 
+  # A link out of Playcode (the published site's page) opens in a tab of its own.
   defp section_link(assigns) do
+    assigns = assign(assigns, :external, String.starts_with?(assigns.to, "http"))
+
     ~H"""
     <.link
-      navigate={@to}
+      navigate={!@external && @to}
+      href={@external && @to}
+      target={@external && "_blank"}
+      rel={@external && "noopener"}
       aria-current={@current && "page"}
       class={[
         "flex items-center justify-between gap-2 rounded-field px-2 py-1.5",
@@ -227,6 +234,7 @@ defmodule PlaycodeWeb.Layouts do
       ]}
     >
       <span class="flex min-w-0 items-center gap-2">{render_slot(@inner_block)}</span>
+      <.icon :if={@external} name="hero-arrow-top-right-on-square-micro" class="size-4" />
       <span :if={@count} class="tabular-nums text-base-content/70">{@count}</span>
     </.link>
     """
@@ -235,7 +243,7 @@ defmodule PlaycodeWeb.Layouts do
   # The play's sections as the mockup groups them: {tab, label, path, count key}. Every one
   # is behind :view_admin but the preview, Playcode's public page, which shows a draft to
   # :view_drafts only; the play is passed for the per-play scoping `Authz` plans.
-  defp play_sections(play, user) do
+  defp play_sections(play, user, deployed) do
     related? =
       play.parent_play_id || (Ecto.assoc_loaded?(play.derived_plays) and play.derived_plays != [])
 
@@ -265,7 +273,8 @@ defmodule PlaycodeWeb.Layouts do
          [
            related? &&
              {:compare, gettext("Comparison"), ~p"/admin/plays/#{play.id}/compare", nil},
-           {:preview, gettext("Preview"), ~p"/plays/#{play.code}", nil}
+           {:preview, gettext("Preview"), ~p"/plays/#{play.code}", nil},
+           deployed && public_page(play)
          ],
          &(!&1)
        )}
@@ -274,6 +283,12 @@ defmodule PlaycodeWeb.Layouts do
       {group, Enum.filter(items, &Playcode.Authz.can?(user, section_action(&1), play))}
     end)
     |> Enum.reject(fn {_group, items} -> items == [] end)
+  end
+
+  # The play's page on the published site, when the site's public address is set.
+  defp public_page(play) do
+    if url = Playcode.Export.StaticSite.public_page_url(play.code),
+      do: {:public, gettext("Public page"), url, nil}
   end
 
   defp section_action({:preview, _label, _to, _count}), do: :view_drafts
