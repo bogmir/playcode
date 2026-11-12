@@ -211,17 +211,13 @@ defmodule PlaycodeWeb.Admin.UserListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-5xl px-4 py-8">
-      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 class="text-3xl font-semibold tracking-tight text-base-content">
-            {gettext("User Management")}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {gettext("Manage user roles and email confirmations.")}
-          </p>
-        </div>
-      </div>
+    <.page>
+      <.page_header>
+        {gettext("User Management")}
+        <:subtitle>
+          {gettext("Manage user roles and email confirmations.")}
+        </:subtitle>
+      </.page_header>
 
       <.form
         for={@invite_form}
@@ -404,7 +400,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
           {gettext("Next")}<.icon name="hero-chevron-right-mini" class="size-4" />
         </.link>
       </div>
-    </div>
+    </.page>
     """
   end
 end

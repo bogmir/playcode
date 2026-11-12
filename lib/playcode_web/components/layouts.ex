@@ -89,132 +89,6 @@ defmodule PlaycodeWeb.Layouts do
   end
 
   @doc """
-  Renders a play context bar for admin play pages.
-
-  Shows the play title, code, author and quick-nav tabs to jump between
-  different views of the same play.
-
-  ## Examples
-
-      <.play_context_bar play={@play} active_tab={:content} />
-  """
-  attr :play, :map, required: true, doc: "the play struct"
-
-  attr :active_tab, :atom,
-    default: nil,
-    doc:
-      "which tab is active (:overview, :metadata, :editors, :sources, :witnesses, :performances, :bibliography, :places, :content, :notes, :public)"
-
-  def play_context_bar(assigns) do
-    ~H"""
-    <div class="border-b border-base-300 bg-base-100/80 backdrop-blur-sm">
-      <div class="mx-auto max-w-7xl px-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
-        <.link
-          navigate={~p"/admin/plays"}
-          class="btn btn-ghost btn-sm btn-square flex-shrink-0 text-base-content/70 hover:text-base-content"
-          aria-label={gettext("Back to plays")}
-          title={gettext("Back to plays")}
-        >
-          <.icon name="hero-arrow-left-mini" class="size-5" />
-        </.link>
-        <div class="min-w-0 flex-1">
-          <h2 class="text-sm font-semibold text-base-content truncate">{@play.title}</h2>
-          <p class="text-xs text-base-content/70 truncate">
-            {if @play.author_name, do: "#{@play.author_name} — "}{@play.code}
-          </p>
-        </div>
-        <nav class="flex max-w-full gap-1 overflow-x-auto">
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}"}
-            class={ctx_tab_class(@active_tab == :overview)}
-          >
-            {gettext("Overview")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/edit"}
-            class={ctx_tab_class(@active_tab == :metadata)}
-          >
-            {gettext("Metadata")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/editors"}
-            class={ctx_tab_class(@active_tab == :editors)}
-          >
-            {gettext("Editors")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/sources"}
-            class={ctx_tab_class(@active_tab == :sources)}
-          >
-            {gettext("Sources")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/witnesses"}
-            class={ctx_tab_class(@active_tab == :witnesses)}
-          >
-            {gettext("Witnesses")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/performances"}
-            class={ctx_tab_class(@active_tab == :performances)}
-          >
-            {gettext("Performances")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/bibliography"}
-            class={ctx_tab_class(@active_tab == :bibliography)}
-          >
-            {gettext("Bibliography")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/places"}
-            class={ctx_tab_class(@active_tab == :places)}
-          >
-            {gettext("Places")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/content"}
-            class={ctx_tab_class(@active_tab == :content)}
-          >
-            {gettext("Content")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/#{@play.id}/notes"}
-            class={ctx_tab_class(@active_tab == :notes)}
-          >
-            {gettext("Notes")}
-          </.link>
-          <.link
-            :if={
-              @play.parent_play_id ||
-                (Ecto.assoc_loaded?(@play.derived_plays) and @play.derived_plays != [])
-            }
-            navigate={~p"/admin/plays/#{@play.id}/compare"}
-            class={ctx_tab_class(@active_tab == :compare)}
-          >
-            <.icon name="hero-arrows-right-left-micro" class="size-3.5" /> {gettext("Comparison")}
-          </.link>
-          <.link
-            navigate={~p"/plays/#{@play.code}"}
-            class={ctx_tab_class(@active_tab == :public)}
-          >
-            <.icon name="hero-eye-micro" class="size-3.5" /> {gettext("Public")}
-          </.link>
-        </nav>
-      </div>
-    </div>
-    """
-  end
-
-  defp ctx_tab_class(true) do
-    "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium bg-primary/10 text-primary"
-  end
-
-  defp ctx_tab_class(false) do
-    "inline-flex items-center gap-1 rounded-md px-2.5 py-1.5 text-xs font-medium text-base-content/70 hover:bg-base-200 hover:text-base-content transition-colors"
-  end
-
-  @doc """
   Identity dropdown, locale toggle and theme toggle.
 
   Shared by both layouts — this markup existed twice and drifted apart.
@@ -235,7 +109,7 @@ defmodule PlaycodeWeb.Layouts do
         </label>
         <ul
           tabindex="0"
-          class="dropdown-content z-[1] menu p-1 shadow-lg bg-base-100 rounded-box w-48 border border-base-300"
+          class="dropdown-content z-[1] menu p-1 shadow-lg bg-base-100 text-base-content rounded-box w-48 border border-base-300"
         >
           <li><.link navigate={~p"/users/settings"}>{gettext("Settings")}</.link></li>
           <li><.link href={~p"/users/log-out"} method="delete">{gettext("Log out")}</.link></li>
@@ -249,52 +123,144 @@ defmodule PlaycodeWeb.Layouts do
   end
 
   @doc """
-  Admin sidebar.
+  Admin sidebar: the admin's sections, or on a play's pages (`play_context`) the play's own,
+  grouped as the mockup groups them, each with its count from `play_counts`.
 
-  Entries are filtered through `Playcode.Authz.can?/3`, the same predicate that
-  guards the routes — so the menu cannot offer a page the user will be bounced
-  from, and cannot hide one they are entitled to.
+  The admin's entries are filtered through `Playcode.Authz.can?/3`, the same predicate that
+  guards the routes, so the menu cannot offer a page the user will be bounced from, and
+  cannot hide one they are entitled to.
   """
   attr :current_user, :map, default: nil
   attr :current_path, :string, default: ""
+  attr :play_context, :map, default: nil
+  attr :play_counts, :map, default: nil
+
+  def admin_sidebar(%{play_context: %{play: _}} = assigns) do
+    assigns =
+      assigns
+      |> assign(:play, assigns.play_context.play)
+      |> assign(:active, assigns.play_context.active_tab)
+      |> assign(:counts, assigns.play_counts || %{})
+
+    ~H"""
+    <aside class="w-56 shrink-0 border-r border-base-300 bg-base-200 min-h-full">
+      <nav aria-label={gettext("Play sections")} class="p-3 text-sm">
+        <.link navigate={~p"/admin/plays"} class="mb-3 block px-2 text-primary hover:underline">
+          ← {gettext("All plays")}
+        </.link>
+        <p class="px-2 font-serif font-semibold leading-snug text-base-content">{@play.title}</p>
+        <p class="mb-3 px-2 font-mono text-xs text-base-content/70 break-all">{@play.code}</p>
+        <.section_link to={~p"/admin/plays/#{@play.id}"} current={@active == :overview}>
+          {gettext("Overview")}
+        </.section_link>
+        <%= for {group, items} <- play_sections(@play) do %>
+          <h2 class="mx-2 mt-4 mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/70">
+            {group}
+          </h2>
+          <.section_link
+            :for={{tab, label, to, count_key} <- items}
+            to={to}
+            current={@active == tab}
+            count={count_key && Map.get(@counts, count_key)}
+          >
+            {label}
+          </.section_link>
+        <% end %>
+      </nav>
+    </aside>
+    """
+  end
 
   def admin_sidebar(assigns) do
     assigns = assign(assigns, :groups, sidebar_groups(assigns.current_user))
 
     ~H"""
     <aside class="w-56 shrink-0 border-r border-base-300 bg-base-200 min-h-full">
-      <nav class="p-3 space-y-4">
-        <div :for={{label, items} <- @groups}>
-          <p class="px-2 pb-1 text-[0.65rem] font-semibold uppercase tracking-wider text-base-content/70">
+      <nav aria-label={gettext("Administration")} class="p-3 text-sm">
+        <div :for={{label, items} <- @groups} class="mb-4">
+          <h2 class="mx-2 mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/70">
             {label}
-          </p>
-          <ul class="menu menu-sm gap-0.5 p-0">
-            <li :for={item <- items}>
-              <.link
-                navigate={item.to}
-                class={if sidebar_active?(@current_path, item.to, @groups), do: "active", else: ""}
-                aria-current={if sidebar_active?(@current_path, item.to, @groups), do: "page"}
-              >
-                <.icon name={item.icon} class="size-4" />
-                {item.label}
-              </.link>
-            </li>
-          </ul>
+          </h2>
+          <.section_link
+            :for={item <- items}
+            to={item.to}
+            current={sidebar_active?(@current_path, item.to, @groups)}
+          >
+            <.icon name={item.icon} class="size-4" /> {item.label}
+          </.section_link>
         </div>
 
         <div class="border-t border-base-300 pt-3">
-          <ul class="menu menu-sm p-0">
-            <li>
-              <.link navigate={~p"/plays"}>
-                <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />
-                {gettext("View public site")}
-              </.link>
-            </li>
-          </ul>
+          <.section_link to={~p"/plays"}>
+            <.icon name="hero-arrow-top-right-on-square-micro" class="size-4" />
+            {gettext("View public site")}
+          </.section_link>
         </div>
       </nav>
     </aside>
     """
+  end
+
+  attr :to, :string, required: true
+  attr :current, :boolean, default: false
+  attr :count, :integer, default: nil
+  slot :inner_block, required: true
+
+  defp section_link(assigns) do
+    ~H"""
+    <.link
+      navigate={@to}
+      aria-current={@current && "page"}
+      class={[
+        "flex items-center justify-between gap-2 rounded-field px-2 py-1.5",
+        if(@current,
+          do: "bg-primary/10 font-semibold text-primary",
+          else: "text-base-content/80 hover:bg-base-300/50 hover:text-base-content"
+        )
+      ]}
+    >
+      <span class="flex min-w-0 items-center gap-2">{render_slot(@inner_block)}</span>
+      <span :if={@count} class="tabular-nums text-base-content/70">{@count}</span>
+    </.link>
+    """
+  end
+
+  # The play's sections as the mockup groups them: {tab, label, path, count key}.
+  defp play_sections(play) do
+    related? =
+      play.parent_play_id || (Ecto.assoc_loaded?(play.derived_plays) and play.derived_plays != [])
+
+    [
+      {gettext("Record"),
+       [
+         {:metadata, gettext("Metadata"), ~p"/admin/plays/#{play.id}/edit", nil},
+         {:editors, gettext("Editors"), ~p"/admin/plays/#{play.id}/editors", :editors},
+         {:sources, gettext("Sources"), ~p"/admin/plays/#{play.id}/sources", :sources}
+       ]},
+      {gettext("Tradition"),
+       [
+         {:witnesses, gettext("Witnesses"), ~p"/admin/plays/#{play.id}/witnesses", :witnesses},
+         {:performances, gettext("Performances"), ~p"/admin/plays/#{play.id}/performances",
+          :performances},
+         {:bibliography, gettext("Bibliography"), ~p"/admin/plays/#{play.id}/bibliography",
+          :bibliography},
+         {:places, gettext("Places"), ~p"/admin/plays/#{play.id}/places", :places}
+       ]},
+      {gettext("Text"),
+       [
+         {:content, gettext("Content"), ~p"/admin/plays/#{play.id}/content", nil},
+         {:notes, gettext("Notes"), ~p"/admin/plays/#{play.id}/notes", :notes}
+       ]},
+      {gettext("View"),
+       Enum.reject(
+         [
+           related? &&
+             {:compare, gettext("Comparison"), ~p"/admin/plays/#{play.id}/compare", nil},
+           {:public, gettext("Public page"), ~p"/plays/#{play.code}", nil}
+         ],
+         &(!&1)
+       )}
+    ]
   end
 
   defp sidebar_groups(user) do

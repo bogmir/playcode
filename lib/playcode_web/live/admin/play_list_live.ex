@@ -141,31 +141,29 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-7xl px-4 py-8">
-      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 class="text-3xl font-semibold tracking-tight text-base-content">
-            {gettext("Play Management")}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {gettext("Browse, edit, and curate imported plays.")}
-          </p>
-        </div>
-        <div class="flex gap-2">
-          <.link
-            navigate={~p"/admin/plays/import"}
-            class="btn btn-sm btn-success"
-          >
-            {gettext("Import TEI-XML")}
-          </.link>
-          <.link
-            navigate={~p"/admin/plays/new"}
-            class="btn btn-sm btn-primary"
-          >
-            {gettext("New Play")}
-          </.link>
-        </div>
-      </div>
+    <.page>
+      <.page_header>
+        {gettext("Play Management")}
+        <:subtitle>
+          {gettext("Browse, edit, and curate imported plays.")}
+        </:subtitle>
+        <:actions>
+          <div class="flex gap-2">
+            <.link
+              navigate={~p"/admin/plays/import"}
+              class="btn btn-sm btn-outline btn-primary"
+            >
+              {gettext("Import TEI-XML")}
+            </.link>
+            <.link
+              navigate={~p"/admin/plays/new"}
+              class="btn btn-sm btn-primary"
+            >
+              {gettext("New Play")}
+            </.link>
+          </div>
+        </:actions>
+      </.page_header>
 
       <div class="mb-5 flex flex-wrap items-center gap-3">
         <form phx-change="search" phx-submit="search" class="flex-1 md:max-w-md">
@@ -323,7 +321,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           {gettext("Next")}<.icon name="hero-chevron-right-mini" class="size-4" />
         </.link>
       </div>
-    </div>
+    </.page>
     """
   end
 end

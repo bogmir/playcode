@@ -296,32 +296,30 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
     assigns = assign(assigns, :shown, visible(assigns.groups, assigns.q))
 
     ~H"""
-    <div class="mx-auto max-w-5xl px-4 py-8">
-      <header class="mb-6 flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight text-base-content">
-            {gettext("Bibliography")}
-          </h1>
-          <p class="mt-1 max-w-2xl text-sm text-base-content/70">
-            {gettext(
-              "Modern editions, criticism, translations and adaptations of this play. An entry shared with other plays is edited once for all of them."
-            )}
-          </p>
-        </div>
-        <div :if={is_nil(@editing) and not @adding} class="flex gap-2">
-          <button
-            id="add-existing-button"
-            type="button"
-            phx-click="open_add"
-            class="btn btn-ghost btn-sm gap-1"
-          >
-            <.icon name="hero-link-mini" class="size-4" /> {gettext("Add existing")}
-          </button>
-          <button id="new-entry" type="button" phx-click="new" class="btn btn-primary btn-sm gap-1">
-            <.icon name="hero-plus-mini" class="size-4" /> {gettext("New entry")}
-          </button>
-        </div>
-      </header>
+    <.page>
+      <.page_header>
+        {gettext("Bibliography")}
+        <:subtitle>
+          {gettext(
+            "Modern editions, criticism, translations and adaptations of this play. An entry shared with other plays is edited once for all of them."
+          )}
+        </:subtitle>
+        <:actions>
+          <div :if={is_nil(@editing) and not @adding} class="flex gap-2">
+            <button
+              id="add-existing-button"
+              type="button"
+              phx-click="open_add"
+              class="btn btn-ghost btn-sm gap-1"
+            >
+              <.icon name="hero-link-mini" class="size-4" /> {gettext("Add existing")}
+            </button>
+            <button id="new-entry" type="button" phx-click="new" class="btn btn-primary btn-sm gap-1">
+              <.icon name="hero-plus-mini" class="size-4" /> {gettext("New entry")}
+            </button>
+          </div>
+        </:actions>
+      </.page_header>
 
       <nav
         :if={@groups != []}
@@ -550,7 +548,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
           </ol>
         </div>
       </section>
-    </div>
+    </.page>
     """
   end
 end

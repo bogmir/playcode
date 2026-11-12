@@ -176,15 +176,13 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-5xl px-4 py-8">
-      <div class="mb-6">
-        <h1 class="text-3xl font-semibold tracking-tight text-base-content">
-          {gettext("Import TEI-XML Files")}
-        </h1>
-        <p class="mt-1 text-sm text-base-content/70">
+    <.page>
+      <.page_header>
+        {gettext("Import TEI-XML Files")}
+        <:subtitle>
           {gettext("Import one or many TEI files and review successful ingestions.")}
-        </p>
-      </div>
+        </:subtitle>
+      </.page_header>
 
       <%!-- Upload files from browser --%>
       <div class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
@@ -439,7 +437,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
           </div>
         </div>
       </div>
-    </div>
+    </.page>
     """
   end
 

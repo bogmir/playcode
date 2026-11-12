@@ -185,15 +185,15 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
     assigns = assign(assigns, :shown, shown(assigns.entries, assigns.filter))
 
     ~H"""
-    <div class="mx-auto max-w-5xl px-4 py-8">
-      <header class="mb-6">
-        <h1 class="text-2xl font-semibold tracking-tight text-base-content">{gettext("Notes")}</h1>
-        <p class="mt-1 max-w-2xl text-sm text-base-content/60">
+    <.page>
+      <.page_header>
+        {gettext("Notes")}
+        <:subtitle>
           {gettext(
             "Every note in the play's text, in reading order. Edit a note where it is listed; add notes to a line in Content."
           )}
-        </p>
-      </header>
+        </:subtitle>
+      </.page_header>
 
       <div
         :if={@entries == []}
@@ -386,7 +386,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
           </div>
         </li>
       </ol>
-    </div>
+    </.page>
     """
   end
 

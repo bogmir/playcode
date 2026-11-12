@@ -23,24 +23,25 @@
   on Elixir colors. Build your own at: https://daisyui.com/theme-generator/ */
 @plugin "../vendor/daisyui-theme" {
   name: "dark";
-  /* The colours are lighter than generated, so text in them reaches 4.5:1 on the dark
-     page, and their -content is dark to stay readable on them. Regenerating the theme
-     undoes this. */
+  /* The portal's palette in the dark, as the static site's: violet-tinted paper (#16131c),
+     raised (#1d1925), ink (#ebe7f0) and a light violet accent (#bfa9ee: 8.31:1 on raised,
+     the paper on it 8.85:1). The semantic colours are lighter than generated, so text in
+     them reaches 4.5:1, with a dark -content. Regenerating the theme undoes this. */
   default: false;
   prefersdark: true;
   color-scheme: "dark";
-  --color-base-100: oklch(30.33% 0.016 252.42);
-  --color-base-200: oklch(25.26% 0.014 253.1);
-  --color-base-300: oklch(20.15% 0.012 254.09);
-  --color-base-content: oklch(97.807% 0.029 256.847);
-  --color-primary: oklch(73% 0.141 277.117);
-  --color-primary-content: oklch(20% 0.03 277.117);
-  --color-secondary: oklch(73% 0.141 277.117);
-  --color-secondary-content: oklch(20% 0.03 277.117);
+  --color-base-100: oklch(22.4% 0.024 299.8);
+  --color-base-200: oklch(19.5% 0.018 300);
+  --color-base-300: oklch(33.6% 0.034 301.4);
+  --color-base-content: oklch(93.4% 0.013 306);
+  --color-primary: oklch(77.8% 0.099 298.7);
+  --color-primary-content: oklch(19.5% 0.018 300);
+  --color-secondary: oklch(77.8% 0.099 298.7);
+  --color-secondary-content: oklch(19.5% 0.018 300);
   --color-accent: oklch(73.5% 0.15 292.717);
   --color-accent-content: oklch(20% 0.03 292.717);
-  --color-neutral: oklch(37% 0.044 257.287);
-  --color-neutral-content: oklch(98% 0.003 247.858);
+  --color-neutral: oklch(33.6% 0.034 301.4);
+  --color-neutral-content: oklch(93.4% 0.013 306);
   --color-info: oklch(72% 0.158 241.966);
   --color-info-content: oklch(20% 0.03 241.966);
   --color-success: oklch(70.5% 0.118 184.704);
@@ -61,17 +62,18 @@
 
 @plugin "../vendor/daisyui-theme" {
   name: "light";
-  /* The colours are darker than generated: text in them, and white text on them,
-     must reach 4.5:1. Regenerating the theme undoes this. */
+  /* The EMOTHE portal's palette: violet (#4c2c82) on warm ivory (#f7f4ea), as the static
+     site. Text in the colours, and white text on them, must reach 4.5:1: the violet makes
+     9.6:1 on the page, base-content/70 about 5.7:1. Regenerating the theme undoes this. */
   default: true;
   prefersdark: false;
   color-scheme: "light";
-  --color-base-100: oklch(98% 0 0);
-  --color-base-200: oklch(96% 0.001 286.375);
-  --color-base-300: oklch(92% 0.004 286.32);
-  --color-base-content: oklch(21% 0.006 285.885);
-  --color-primary: oklch(53% 0.166 40);
-  --color-primary-content: oklch(98% 0.016 73.684);
+  --color-base-100: oklch(99.4% 0.008 91.5);
+  --color-base-200: oklch(96.7% 0.014 93);
+  --color-base-300: oklch(87.6% 0.028 90.9);
+  --color-base-content: oklch(24.2% 0.035 299.1);
+  --color-primary: oklch(38.2% 0.138 296.4);
+  --color-primary-content: oklch(99% 0.005 296.4);
   --color-secondary: oklch(51.5% 0.027 264.364);
   --color-secondary-content: oklch(98% 0.002 247.839);
   --color-accent: oklch(0% 0 0);

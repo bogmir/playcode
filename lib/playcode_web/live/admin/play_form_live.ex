@@ -385,13 +385,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-4xl px-4 py-8">
-      <div class="mb-6">
-        <h1 class="text-3xl font-semibold tracking-tight text-base-content">{@page_title}</h1>
-        <p class="mt-1 text-sm text-base-content/70">
+    <.page width={:form}>
+      <.page_header>
+        {if @play_context, do: gettext("Metadata"), else: @page_title}
+        <:subtitle>
           {gettext("Update bibliographic and editorial metadata for this play.")}
-        </p>
-      </div>
+        </:subtitle>
+      </.page_header>
 
       <script :type={Phoenix.LiveView.ColocatedHook} name=".DirtyForm">
         export default {
@@ -1005,7 +1005,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           </.link>
         </div>
       </.form>
-    </div>
+    </.page>
     """
   end
 

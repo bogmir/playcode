@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Resumen · Abrir el ojo (maqueta)</title>
+<style>
+:root{--violet:#4c2c82;--violet-2:#ece6f6;--gold:#d8c888;--paper:#f7f4ea;--raised:#fffdf7;--ink:#221c2e;--ink-2:#4a4458;--muted:#645d70;--hair:#ddd6c2;--ok:#1d6b52;--warn:#8a5a00;--warn-bg:#fbf1d3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+a{color:var(--violet)}
+.top{background:var(--violet);border-bottom:3px solid var(--gold);color:#fff;padding:.6rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.top b{letter-spacing:.14em}.top small{color:var(--gold);margin-left:.6rem;letter-spacing:.08em}
+.shell{display:grid;grid-template-columns:14rem minmax(0,1fr);min-height:100vh}
+nav.play{border-right:1px solid var(--hair);padding:1rem .75rem;font-size:.875rem}
+nav.play .back{display:block;margin-bottom:1rem;text-decoration:none}
+nav.play h2{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.1rem .5rem .3rem}
+nav.play a.i{display:flex;justify-content:space-between;padding:.3rem .5rem;border-radius:.3rem;color:var(--ink-2);text-decoration:none}
+nav.play a.i[aria-current]{background:var(--violet-2);color:var(--violet);font-weight:600}
+nav.play .n{color:var(--muted);font-variant-numeric:tabular-nums}
+main{padding:1.75rem 2rem 3rem;max-width:68rem}
+.head{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:flex-start}
+h1{font:600 1.9rem/1.2 "Source Serif 4",Georgia,serif;margin:0}
+.sub{color:var(--ink-2);margin:.25rem 0 0}
+.code{font:0.8125rem ui-monospace,monospace;background:var(--raised);border:1px solid var(--hair);border-radius:.25rem;padding:.05rem .35rem}
+.actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.btn{font:600 .8125rem Inter,system-ui,sans-serif;padding:.45rem .8rem;border-radius:.3rem;border:1px solid var(--violet);background:transparent;color:var(--violet);text-decoration:none;cursor:pointer}
+.btn.p{background:var(--violet);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--hair);border-radius:.3rem;overflow:hidden;background:var(--raised)}
+.seg span{padding:.45rem .6rem;font-size:.8125rem;color:var(--muted)}
+.seg a{padding:.45rem .7rem;font:600 .8125rem Inter,sans-serif;text-decoration:none;border-left:1px solid var(--hair)}
+.state{margin:1.25rem 0;padding:.75rem 1rem;border:1px solid #e4cf8f;background:var(--warn-bg);border-radius:.4rem;display:flex;flex-wrap:wrap;gap:.75rem;justify-content:space-between;align-items:center}
+.badge{font:600 .75rem Inter,sans-serif;padding:.15rem .5rem;border-radius:1rem;background:#f0dfa8;color:var(--warn);margin-right:.5rem}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.75rem;margin:1.25rem 0 2rem}
+.tile{background:var(--raised);border:1px solid var(--hair);border-radius:.4rem;padding:.7rem .9rem;text-decoration:none;color:inherit;display:block}
+.tile b{display:block;font:600 1.5rem/1.2 "Source Serif 4",Georgia,serif;font-variant-numeric:tabular-nums}
+.tile span{font-size:.8125rem;color:var(--muted)}
+.tile.todo b{color:var(--muted)}.tile.todo span{color:var(--violet);font-weight:600}
+.cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:1.5rem}
+@media(max-width:800px){.shell,.cols{grid-template-columns:1fr}nav.play{border-right:0;border-bottom:1px solid var(--hair)}main{padding:1.25rem 1rem}}
+section.card{background:var(--raised);border:1px solid var(--hair);border-radius:.4rem;padding:1rem 1.1rem;margin-bottom:1.25rem}
+section.card>header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.6rem}
+h2.t{font:600 1.05rem Inter,sans-serif;margin:0}
+dl{display:grid;grid-template-columns:9.5rem minmax(0,1fr);gap:.4rem 1rem;margin:0}
+dt{color:var(--muted);font-size:.8125rem;padding-top:.1rem}dd{margin:0}
+details{margin-top:.8rem;border-top:1px solid var(--hair);padding-top:.6rem}
+summary{cursor:pointer;font-weight:600;font-size:.875rem;color:var(--violet)}
+ul.plain{list-style:none;margin:0;padding:0}ul.plain li{padding:.35rem 0;border-top:1px solid var(--hair);display:flex;justify-content:space-between;gap:1rem}
+ul.plain li:first-child{border-top:0}.role{color:var(--muted);font-size:.8125rem;text-align:right}
+ol.out{margin:0;padding-left:1.1rem}ol.out li{padding:.15rem 0}ol.out span{color:var(--muted);font-size:.8125rem}
+.danger{border-style:dashed}.danger p{margin:.3rem 0 .6rem;color:var(--ink-2);font-size:.875rem}
+</style>
+<div class="top"><div><b>PLAYCODE</b><small>ADMINISTRACIÓN</small></div><div style="font-size:.8125rem">ES · EN &nbsp; usuario@uv.es</div></div>
+<div class="shell">
+<nav class="play" aria-label="Secciones de la obra">
+  <a class="back" href="#">← Todas las obras</a>
+  <a class="i" aria-current="page" href="#">Resumen</a>
+  <h2>Ficha</h2>
+  <a class="i" href="#">Metadatos</a><a class="i" href="#">Editores <span class="n">2</span></a><a class="i" href="#">Fuentes <span class="n">1</span></a>
+  <h2>Tradición</h2>
+  <a class="i" href="#">Testimonios <span class="n">0</span></a><a class="i" href="#">Representaciones <span class="n">6</span></a><a class="i" href="#">Bibliografía <span class="n">4</span></a><a class="i" href="#">Lugares <span class="n">1</span></a>
+  <h2>Texto</h2>
+  <a class="i" href="#">Contenido</a><a class="i" href="#">Notas <span class="n">0</span></a>
+  <h2>Ver</h2>
+  <a class="i" href="#">Página pública ↗</a>
+</nav>
+<main>
+  <div class="head">
+    <div>
+      <h1>Abrir el ojo</h1>
+      <p class="sub">Francisco de Rojas Zorrilla · <span class="code">EMOTHE0379_AbrirElOjo</span> · Español · Verso</p>
+    </div>
+    <div class="actions">
+      <div class="seg" role="group" aria-label="Descargar"><span>Descargar</span><a href="#">TEI</a><a href="#">HTML</a><a href="#">PDF</a><a href="#">EPUB</a></div>
+      <button class="btn">Validar TEI</button>
+      <a class="btn p" href="#">Editar metadatos</a>
+    </div>
+  </div>
+
+  <div class="state">
+    <div><span class="badge">Borrador</span>Solo la ve el equipo. No está en el sitio publicado.</div>
+    <button class="btn">Marcar como completa</button>
+  </div>
+
+  <div class="tiles">
+    <a class="tile" href="#"><b>2.749</b><span>versos</span></a>
+    <a class="tile" href="#"><b>3</b><span>jornadas</span></a>
+    <a class="tile" href="#"><b>19</b><span>personajes</span></a>
+    <a class="tile" href="#"><b>6</b><span>representaciones</span></a>
+    <a class="tile" href="#"><b>4</b><span>entradas de bibliografía</span></a>
+    <a class="tile todo" href="#"><b>0</b><span>notas · añadir</span></a>
+    <a class="tile todo" href="#"><b>0</b><span>testimonios · añadir</span></a>
+  </div>
+
+  <div class="cols">
+    <div>
+      <section class="card">
+        <header><h2 class="t">Ficha</h2><a href="#">Editar</a></header>
+        <dl>
+          <dt>Idioma</dt><dd>Español</dd>
+          <dt>Atribución</dt><dd>Fiable</dd>
+          <dt>Datación</dt><dd>1639–1640</dd>
+          <dt>Tiempo histórico</dt><dd>Siglo XVII · Reinado de Felipe IV</dd>
+          <dt>Publicación</dt><dd>Valencia, 2012</dd>
+          <dt>Editorial</dt><dd>Proyecto ARTELOPE. Base de datos, argumentos y textos del teatro clásico español</dd>
+          <dt>Dirección pública</dt><dd><a href="#">/plays/EMOTHE0379_AbrirElOjo</a></dd>
+        </dl>
+        <details><summary>Proyecto, financiación y disponibilidad</summary>
+          <dl style="margin-top:.6rem">
+            <dt>Autoridad</dt><dd>Universitat de València – Estudi General</dd>
+            <dt>Patrocinador</dt><dd>Plan Nacional de Investigación Científica, Desarrollo e Innovación Tecnológica</dd>
+            <dt>Financiador</dt><dd>Dirección General de Investigación y Gestión del Plan Nacional de I+D+I</dd>
+            <dt>Disponibilidad</dt><dd>La Colección de Teatro Clásico Europeo (CTCE) pertenece al proyecto Artelope y ofrece en la web textos completos sin ánimo de lucro…</dd>
+          </dl>
+        </details>
+      </section>
+      <section class="card">
+        <header><h2 class="t">Estructura</h2><a href="#">Abrir Contenido</a></header>
+        <ol class="out">
+          <li>Elenco <span>· 19 personajes</span></li>
+          <li>Jornada primera <span>· 968 versos</span></li>
+          <li>Jornada segunda <span>· 905 versos</span></li>
+          <li>Jornada tercera <span>· 876 versos</span></li>
+        </ol>
+      </section>
+    </div>
+    <div>
+      <section class="card">
+        <header><h2 class="t">Edición</h2><a href="#">Editar</a></header>
+        <ul class="plain">
+          <li>Joan Oleza Simó <span class="role">Investigador principal</span></li>
+          <li>José Martínez Rubio <span class="role">Editor digital · Artelope</span></li>
+        </ul>
+      </section>
+      <section class="card">
+        <header><h2 class="t">Revisiones</h2></header>
+        <ul class="plain"><li>Revisión de la obra en formato TEI-XML <span class="role">2016 · Carlos Muñoz Pons</span></li></ul>
+      </section>
+      <section class="card">
+        <header><h2 class="t">Estadísticas</h2><a href="#">Ver todas</a></header>
+        <dl><dt>Parlamentos</dt><dd>1.204</dd><dt>Acotaciones</dt><dd>212</dd><dt>Calculadas</dt><dd>11 nov 2026</dd></dl>
+      </section>
+      <section class="card danger">
+        <header><h2 class="t">Sustituir el texto desde Word</h2></header>
+        <p>Sube un .docx premarcado. <strong>Reemplaza todo el contenido actual.</strong> Solo en borradores.</p>
+        <button class="btn">Elegir archivo…</button>
+      </section>
+    </div>
+  </div>
+</main>
+</div>
+</html>

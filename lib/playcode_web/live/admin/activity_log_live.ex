@@ -202,15 +202,13 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-6xl px-4 py-8">
-      <div class="mb-6">
-        <h1 class="text-3xl font-semibold tracking-tight text-base-content">
-          {gettext("Activity Log")}
-        </h1>
-        <p class="mt-1 text-sm text-base-content/70">
+    <.page>
+      <.page_header>
+        {gettext("Activity Log")}
+        <:subtitle>
           {gettext("Track who imported, edited, or exported plays.")}
-        </p>
-      </div>
+        </:subtitle>
+      </.page_header>
 
       <form id="activity-filters" phx-change="filter" phx-submit="filter" class="mb-5">
         <div class="flex flex-wrap gap-3 items-end">
@@ -365,7 +363,7 @@ defmodule PlaycodeWeb.Admin.ActivityLogLive do
           {gettext("Next")}
         </.link>
       </div>
-    </div>
+    </.page>
     """
   end
 end

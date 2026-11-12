@@ -215,20 +215,18 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-4xl px-4 py-8">
-      <div class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight text-base-content">
-            {gettext("Places")}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {gettext("Where this play is set, and the places it names.")}
-          </p>
-        </div>
-        <button :if={is_nil(@editing)} phx-click="new" class="btn btn-ghost btn-sm gap-1">
-          <.icon name="hero-plus-mini" class="size-4" /> {gettext("New place")}
-        </button>
-      </div>
+    <.page>
+      <.page_header>
+        {gettext("Places")}
+        <:subtitle>
+          {gettext("Where this play is set, and the places it names.")}
+        </:subtitle>
+        <:actions>
+          <button :if={is_nil(@editing)} phx-click="new" class="btn btn-ghost btn-sm gap-1">
+            <.icon name="hero-plus-mini" class="size-4" /> {gettext("New place")}
+          </button>
+        </:actions>
+      </.page_header>
 
       <.live_component
         :if={@editing}
@@ -389,7 +387,7 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
           </form>
         </div>
       </div>
-    </div>
+    </.page>
     """
   end
 end

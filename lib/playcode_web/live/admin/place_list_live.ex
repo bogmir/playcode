@@ -99,20 +99,18 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-5xl px-4 py-8">
-      <div class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight text-base-content">
-            {gettext("Places")}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {gettext("One record per place, shared by every play that references it.")}
-          </p>
-        </div>
-        <button :if={is_nil(@editing)} phx-click="new" class="btn btn-primary btn-sm gap-1">
-          <.icon name="hero-plus-mini" class="size-4" /> {gettext("New place")}
-        </button>
-      </div>
+    <.page>
+      <.page_header>
+        {gettext("Places")}
+        <:subtitle>
+          {gettext("One record per place, shared by every play that references it.")}
+        </:subtitle>
+        <:actions>
+          <button :if={is_nil(@editing)} phx-click="new" class="btn btn-primary btn-sm gap-1">
+            <.icon name="hero-plus-mini" class="size-4" /> {gettext("New place")}
+          </button>
+        </:actions>
+      </.page_header>
 
       <.live_component
         :if={@editing}
@@ -194,7 +192,7 @@ defmodule PlaycodeWeb.Admin.PlaceListLive do
           </tr>
         </tbody>
       </table>
-    </div>
+    </.page>
     """
   end
 

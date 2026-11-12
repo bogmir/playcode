@@ -502,6 +502,37 @@ defmodule PlaycodeWeb.CoreComponents do
   end
 
   @doc """
+  A play's downloads named in words, "Descargar TEI · HTML · PDF · EPUB": `base` is the path
+  each format's name is appended to.
+  """
+  attr :base, :string, required: true
+  attr :class, :string, default: nil
+  attr :rest, :global, include: ~w(download target rel)
+
+  def download_group(assigns) do
+    ~H"""
+    <div
+      role="group"
+      aria-label={gettext("Download")}
+      class={[
+        "inline-flex items-stretch overflow-hidden rounded-field border border-base-300 bg-base-100 text-sm",
+        @class
+      ]}
+    >
+      <span class="px-2.5 py-1.5 text-base-content/70">{gettext("Download")}</span>
+      <a
+        :for={format <- ~w(tei html pdf epub)}
+        href={"#{@base}/#{format}"}
+        class="border-l border-base-300 px-2.5 py-1.5 font-semibold text-primary hover:bg-base-200"
+        {@rest}
+      >
+        {String.upcase(format)}
+      </a>
+    </div>
+    """
+  end
+
+  @doc """
   Renders a [Heroicon](https://heroicons.com).
 
   Heroicons come in three styles – outline, solid, and mini.

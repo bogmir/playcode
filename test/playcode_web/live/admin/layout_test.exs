@@ -31,14 +31,81 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
       refute has_element?(lv, "aside a[href='/admin/plays'][aria-current=page]")
     end
 
-    test "starts collapsed on a play's pages and open elsewhere", %{conn: conn} do
+    # It used to start collapsed on a play's pages, to give the text the width the context
+    # bar's tabs did not take; the play's sections now live in it, so it starts open.
+    test "starts open everywhere", %{conn: conn} do
       conn = log_in_user(conn, admin_fixture())
 
       {:ok, play_page, _html} = live(conn, ~p"/admin/plays/#{play_fixture().id}")
-      assert has_element?(play_page, "#admin-sidebar[checked]")
+      refute has_element?(play_page, "#admin-sidebar[checked]")
 
       {:ok, list_page, _html} = live(conn, ~p"/admin/plays")
       refute has_element?(list_page, "#admin-sidebar[checked]")
+    end
+  end
+
+  describe "a play's sections" do
+    setup %{conn: conn} do
+      %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: play_fixture()}
+    end
+
+    defp section(play, path), do: "nav[aria-label='#{t("Play sections")}'] a[href='#{path}']"
+
+    test "are in the sidebar, grouped, each with its count", %{conn: conn, play: play} do
+      performance_fixture(play)
+      performance_fixture(play, %{"date_text" => "1611"})
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/performances")
+
+      for group <- [t("Record"), t("Tradition"), t("Text"), t("View")],
+          do: assert(has_element?(lv, "nav[aria-label='#{t("Play sections")}'] h2", group))
+
+      assert has_element?(lv, section(play, ~p"/admin/plays/#{play.id}/performances"), "2")
+      assert has_element?(lv, section(play, ~p"/admin/plays/#{play.id}/editors"), "0")
+
+      assert has_element?(
+               lv,
+               section(play, ~p"/admin/plays/#{play.id}/performances") <> "[aria-current=page]"
+             )
+
+      refute has_element?(lv, "aside a[href='/admin/places']")
+    end
+
+    test "count what a tab adds without a reload", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/editors")
+
+      lv |> element("button", t("Add editor")) |> render_click()
+
+      lv
+      |> form("#editor-form", play_editor: %{"person_name" => "Oleza, Joan", "role" => "editor"})
+      |> render_submit()
+
+      assert has_element?(lv, section(play, ~p"/admin/plays/#{play.id}/editors"), "1")
+    end
+
+    test "lead back to the list of plays", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/sources")
+
+      lv
+      |> element("nav[aria-label='#{t("Play sections")}'] a", t("All plays"))
+      |> render_click()
+      |> follow_redirect(conn, ~p"/admin/plays")
+    end
+
+    # The play's title is in the sidebar, once; a tab's heading names the tab.
+    test "each tab's heading names the section, not the play", %{conn: conn, play: play} do
+      for {path, heading} <- [
+            {"/edit", t("Metadata")},
+            {"/editors", t("Editors")},
+            {"/content", t("Content")},
+            {"/notes", t("Notes")}
+          ] do
+        {:ok, lv, _html} = live(conn, "/admin/plays/#{play.id}#{path}")
+
+        assert has_element?(lv, "h1", heading)
+        refute has_element?(lv, "main", play.title)
+        assert has_element?(lv, "nav[aria-label='#{t("Play sections")}']", play.title)
+      end
     end
   end
 end
