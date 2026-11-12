@@ -20,6 +20,51 @@ defmodule PlaycodeWeb.PlayCatalogueLiveTest do
     assert length(Regex.scan(~r{href="/plays/#{translation.code}"}, html)) == 1
   end
 
+  describe "the filters" do
+    setup do
+      family = translation_family_fixture()
+
+      italian =
+        complete(%{"title" => "La Mandragola", "language" => "it", "auto_form" => "prose"})
+
+      Map.put(family, :italian, italian)
+    end
+
+    test "count the plays by language, form and kind, and the list says how many it shows",
+         %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/plays")
+
+      for label <- [
+            "#{Playcode.Catalogue.Play.language_name("es")} 2",
+            "#{Playcode.Catalogue.Play.language_name("it")} 1",
+            "#{t("Prose")} 1",
+            "#{t("Verse")} 2",
+            "#{t("Originals")} 2",
+            "#{t("Translations")} 1"
+          ] do
+        assert {label, has_element?(lv, "#catalogue-filters label", label)} == {label, true}
+      end
+
+      assert has_element?(lv, "#catalogue-count", n("%{count} play", "%{count} plays", 3))
+    end
+
+    test "narrow the list and keep the choice in the address",
+         %{conn: conn, original: original, translation: translation, italian: italian} do
+      {:ok, lv, _html} = live(conn, ~p"/plays")
+
+      lv |> form("#catalogue-filters", %{"language" => "it"}) |> render_change()
+      assert_patch(lv, ~p"/plays?language=it")
+      assert has_element?(lv, "a[href='/plays/#{italian.code}']")
+      refute has_element?(lv, "a[href='/plays/#{original.code}']")
+      assert has_element?(lv, "#catalogue-count", n("%{count} play", "%{count} plays", 1))
+
+      # A translation is found under its original.
+      {:ok, lv, _html} = live(conn, ~p"/plays?kind=traduccion")
+      assert has_element?(lv, "a[href='/plays/#{translation.code}']")
+      refute has_element?(lv, "a[href='/plays/#{italian.code}']")
+    end
+  end
+
   test "searching narrows the list and keeps the search in the address", %{conn: conn} do
     complete(%{"title" => "La vida es sueño", "author_name" => "Calderón"})
     complete(%{"title" => "Fuenteovejuna", "author_name" => "Lope de Vega"})
