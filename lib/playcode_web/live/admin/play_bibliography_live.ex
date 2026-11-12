@@ -1,6 +1,6 @@
 defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
   @moduledoc """
-  A play's bibliography: its links to the corpus-wide entries, grouped as the public page
+  A play's bibliography: its links to the corpus-wide entries, grouped as the play page
   shows them. An entry shared with other plays is edited once for all of them, and the
   form says so before anyone saves. Spec: "Admin" in
   docs/superpowers/specs/2026-10-07-s4-bibliography-design.md.

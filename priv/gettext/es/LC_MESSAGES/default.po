@@ -960,12 +960,6 @@ msgstr "Versos"
 msgid "View all plays"
 msgstr "Ver todas las obras"
 
-#: lib/playcode_web/live/admin/import_live.ex:428
-#: lib/playcode_web/live/admin/import_live.ex:429
-#, elixir-autogen, elixir-format
-msgid "View public page"
-msgstr "Ver página pública"
-
 #: lib/playcode_web/components/layouts.ex:33
 #, elixir-autogen, elixir-format
 msgid "We can't find the internet"
@@ -5503,6 +5497,8 @@ msgid "Breadcrumb"
 msgstr "Ruta de navegación"
 
 #: lib/playcode_web/components/layouts.ex:277
+#: lib/playcode_web/live/admin/import_live.ex:428
+#: lib/playcode_web/live/admin/import_live.ex:429
 #: lib/playcode_web/live/admin/play_content_editor_live.ex:1566
 #: lib/playcode_web/live/play_show_live.ex:78
 #, elixir-autogen, elixir-format

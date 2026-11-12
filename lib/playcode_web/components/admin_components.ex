@@ -4,7 +4,7 @@ defmodule PlaycodeWeb.AdminComponents do
   (`docs/superpowers/specs/2026-11-12-admin-design-mock.html`): a page at one of two widths
   and its heading, a card, a label and value list, a count tile, a play's state band, a
   zone to drop files on, and an empty tab's notice.
-  The download group is in `PlaycodeWeb.CoreComponents`, the public catalogue's too.
+  The download group is in `PlaycodeWeb.CoreComponents`.
   """
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext

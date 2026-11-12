@@ -1,7 +1,7 @@
 defmodule PlaycodeWeb.Admin.PlayWitnessesLive do
   @moduledoc """
   /admin/plays/:id/witnesses: the manuscripts and early printings the play's text survives
-  in (S3), in order, each previewed as the public pages print it. Spec:
+  in (S3), in order, each previewed as the play page prints it. Spec:
   docs/superpowers/specs/2026-10-10-s3-witnesses-design.md.
   """
 

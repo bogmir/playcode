@@ -254,6 +254,37 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     end
   end
 
+  describe "the first visit's card" do
+    setup do
+      %{user: user_fixture(role: :researcher)}
+    end
+
+    defp card, do: "section[aria-label='#{t("Getting started")}']"
+
+    test "says how a play gets from here to the site", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/admin/plays")
+
+      assert has_element?(view, card(), t("Find a play in the list, or import one."))
+      assert has_element?(view, card(), t("Edit its record and its text."))
+
+      assert has_element?(
+               view,
+               card(),
+               t("Mark it complete, and it reaches the site at the next Generate.")
+             )
+    end
+
+    test "once closed, it stays closed, on this computer and on another",
+         %{conn: conn, user: user} do
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/admin/plays")
+      view |> element("#{card()} button", t("Got it")) |> render_click()
+      refute has_element?(view, card())
+
+      {:ok, view, _html} = live(log_in_user(build_conn(), user), ~p"/admin/plays")
+      refute has_element?(view, card())
+    end
+  end
+
   test "the sidebar's checkbox is not restored by the browser", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/admin/plays")
 

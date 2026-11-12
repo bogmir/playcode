@@ -55,7 +55,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
            )
   end
 
-  test "an uploaded corpus file becomes a play, readable on its public page", %{conn: conn} do
+  test "an uploaded corpus file becomes a play, readable on its preview", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
 
     # The slow corpus sweep (roundtrip_test.exs) imports this file at the same time. Under

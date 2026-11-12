@@ -1,6 +1,6 @@
 defmodule PlaycodeWeb.Admin.PlayCompareLive do
   @moduledoc """
-  /admin/plays/:id/compare: the public comparison inside the play's admin tabs, drafts
+  /admin/plays/:id/compare: the comparison inside the play's admin tabs, drafts
   included (*Lectura paralela*), and, with `?view=pairs`, the pair review: how
   `Playcode.Alignment` pairs a translation's or version's speeches with its original's,
   row by row (*Revisión de pares*, problem 5 step 5).
