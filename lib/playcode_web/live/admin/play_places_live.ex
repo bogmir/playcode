@@ -290,103 +290,100 @@ defmodule PlaycodeWeb.Admin.PlayPlacesLive do
         </div>
       </div>
 
-      <div :if={@links == []} class="py-12 text-center text-base-content/70">
-        <.icon name="hero-map-pin" class="mx-auto mb-3 size-12 opacity-30" />
-        <p class="text-sm">{gettext("No places recorded for this play.")}</p>
-      </div>
+      <.empty_state :if={@links == []} icon="hero-map-pin">
+        {gettext("No places recorded for this play.")}
+      </.empty_state>
 
-      <div class="space-y-3">
-        <div
-          :for={link <- @links}
-          id={"link-#{link.id}"}
-          class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm"
-        >
-          <div class="mb-2 flex items-start justify-between gap-3">
-            <div>
-              <span class="font-medium">{Places.display_name(link.place, "es")}</span>
-              <span class="block text-xs text-base-content/70">
-                {Places.place_line(link, @gazetteer, "es")}
-              </span>
+      <.card :if={@links != []} title={gettext("Places")} count={length(@links)}>
+        <ul class="-mx-4 -mb-4 divide-y divide-base-300">
+          <li :for={link <- @links} id={"link-#{link.id}"} class="px-4 py-3">
+            <div class="mb-2 flex items-start justify-between gap-3">
+              <div>
+                <span class="font-medium">{Places.display_name(link.place, "es")}</span>
+                <span class="block text-xs text-base-content/70">
+                  {Places.place_line(link, @gazetteer, "es")}
+                </span>
+              </div>
+              <div class="flex gap-1">
+                <button
+                  phx-click="move_up"
+                  phx-value-id={link.id}
+                  class="btn btn-ghost btn-xs"
+                  aria-label={gettext("Move up")}
+                >
+                  <.icon name="hero-arrow-up-micro" class="size-3.5" />
+                </button>
+                <button
+                  phx-click="move_down"
+                  phx-value-id={link.id}
+                  class="btn btn-ghost btn-xs"
+                  aria-label={gettext("Move down")}
+                >
+                  <.icon name="hero-arrow-down-micro" class="size-3.5" />
+                </button>
+                <button
+                  phx-click="unlink"
+                  phx-value-id={link.id}
+                  data-confirm={gettext("Remove this place from the play?")}
+                  class="btn btn-ghost btn-xs text-error"
+                >
+                  {gettext("Remove")}
+                </button>
+              </div>
             </div>
-            <div class="flex gap-1">
-              <button
-                phx-click="move_up"
-                phx-value-id={link.id}
-                class="btn btn-ghost btn-xs"
-                aria-label={gettext("Move up")}
-              >
-                <.icon name="hero-arrow-up-micro" class="size-3.5" />
-              </button>
-              <button
-                phx-click="move_down"
-                phx-value-id={link.id}
-                class="btn btn-ghost btn-xs"
-                aria-label={gettext("Move down")}
-              >
-                <.icon name="hero-arrow-down-micro" class="size-3.5" />
-              </button>
-              <button
-                phx-click="unlink"
-                phx-value-id={link.id}
-                data-confirm={gettext("Remove this place from the play?")}
-                class="btn btn-ghost btn-xs text-error"
-              >
-                {gettext("Remove")}
-              </button>
-            </div>
-          </div>
 
-          <form
-            phx-submit="update_link"
-            id={"link-form-#{link.id}"}
-            class="flex flex-wrap items-end gap-2"
-          >
-            <input type="hidden" name="link_id" value={link.id} />
-            <div class="w-40">
-              <select
-                name="play_place[role]"
-                class="select select-bordered select-sm w-full"
-                aria-label={gettext("Role")}
-              >
-                <option
-                  :for={{label, value} <- PlayLabels.place_role_options()}
-                  value={value}
-                  selected={link.role == value}
+            <form
+              phx-submit="update_link"
+              id={"link-form-#{link.id}"}
+              class="flex flex-wrap items-end gap-2"
+            >
+              <input type="hidden" name="link_id" value={link.id} />
+              <div class="w-40">
+                <select
+                  name="play_place[role]"
+                  class="select select-bordered select-sm w-full"
+                  aria-label={gettext("Role")}
                 >
-                  {label}
-                </option>
-              </select>
-            </div>
-            <div class="w-48">
-              <select
-                name="play_place[historical_state_id]"
-                class="select select-bordered select-sm w-full"
-                aria-label={gettext("Historical state")}
-              >
-                <option value="">{gettext("Historical state")}</option>
-                <option
-                  :for={state <- @states}
-                  :if={state.id != link.place_id}
-                  value={state.id}
-                  selected={link.historical_state_id == state.id}
+                  <option
+                    :for={{label, value} <- PlayLabels.place_role_options()}
+                    value={value}
+                    selected={link.role == value}
+                  >
+                    {label}
+                  </option>
+                </select>
+              </div>
+              <div class="w-48">
+                <select
+                  name="play_place[historical_state_id]"
+                  class="select select-bordered select-sm w-full"
+                  aria-label={gettext("Historical state")}
                 >
-                  {Places.display_name(state, "es")}
-                </option>
-              </select>
-            </div>
-            <div class="grow">
-              <input
-                type="text"
-                name="play_place[note]"
-                value={link.note}
-                placeholder={gettext("Note, e.g. Act III only")}
-                class="input input-bordered input-sm w-full"
-              />
-            </div>
-            <button type="submit" class="btn btn-ghost btn-sm">{gettext("Save")}</button>
-          </form>
-        </div>
-      </div>
+                  <option value="">{gettext("Historical state")}</option>
+                  <option
+                    :for={state <- @states}
+                    :if={state.id != link.place_id}
+                    value={state.id}
+                    selected={link.historical_state_id == state.id}
+                  >
+                    {Places.display_name(state, "es")}
+                  </option>
+                </select>
+              </div>
+              <div class="grow">
+                <input
+                  type="text"
+                  name="play_place[note]"
+                  value={link.note}
+                  placeholder={gettext("Note, e.g. Act III only")}
+                  class="input input-bordered input-sm w-full"
+                />
+              </div>
+              <button type="submit" class="btn btn-ghost btn-sm">{gettext("Save")}</button>
+            </form>
+          </li>
+        </ul>
+      </.card>
     </.page>
     """
   end

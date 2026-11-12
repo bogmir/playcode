@@ -355,15 +355,8 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
         </form>
       </nav>
 
-      <section
-        :if={@adding}
-        id="add-existing"
-        class="mb-6 rounded-box border border-primary/30 bg-base-100 p-5 shadow-md"
-      >
-        <div class="mb-3 flex items-center justify-between">
-          <h2 class="text-sm font-semibold text-primary">
-            {gettext("Add an entry another play already has")}
-          </h2>
+      <.card :if={@adding} id="add-existing" title={gettext("Add an entry another play already has")}>
+        <:action>
           <button
             type="button"
             phx-click="close_add"
@@ -372,7 +365,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
           >
             <.icon name="hero-x-mark-mini" class="size-4" />
           </button>
-        </div>
+        </:action>
         <form id="entry-search" phx-change="search" phx-submit="search">
           <input
             type="search"
@@ -404,12 +397,12 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
             {gettext("Nothing matches.")}
           </li>
         </ul>
-      </section>
+      </.card>
 
       <section
         :if={@editing}
         id="entry-editor"
-        class="mb-8 overflow-hidden rounded-box border border-primary/30 bg-base-100 shadow-md"
+        class="mb-5 overflow-hidden rounded-box border border-base-300 bg-base-100"
       >
         <.shared_warning plays={@shared_with} />
         <.form
@@ -465,25 +458,21 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
         </.form>
       </section>
 
-      <div
-        :if={@groups == [] and is_nil(@editing)}
-        class="rounded-box border border-dashed border-base-300 py-14 text-center text-base-content/70"
-      >
-        <.icon name="hero-book-open" class="mx-auto mb-3 size-12 opacity-30" />
-        <p class="text-sm">{gettext("No bibliography for this play yet.")}</p>
-      </div>
+      <.empty_state :if={@groups == [] and is_nil(@editing)} icon="hero-book-open">
+        {gettext("No bibliography for this play yet.")}
+      </.empty_state>
 
       <p :if={@groups != [] and @shown == []} class="py-10 text-center text-sm text-base-content/70">
         {gettext("Nothing matches the filter.")}
       </p>
 
-      <section :for={{kind, subgroups} <- @shown} id={"kind-#{kind}"} class="mb-10 scroll-mt-24">
-        <h2 class="mb-3 flex items-baseline gap-2 border-b border-base-300 pb-2 text-lg font-semibold">
-          {PlayLabels.bibliography_kind_label(kind)}
-          <span class="text-sm font-normal tabular-nums text-base-content/70">
-            {count(subgroups)}
-          </span>
-        </h2>
+      <.card
+        :for={{kind, subgroups} <- @shown}
+        id={"kind-#{kind}"}
+        title={PlayLabels.bibliography_kind_label(kind)}
+        count={count(subgroups)}
+        class="scroll-mt-24"
+      >
         <div :for={{language, links} <- subgroups} class="mb-4">
           <h3
             :if={kind == "translation"}
@@ -547,7 +536,7 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
             </li>
           </ol>
         </div>
-      </section>
+      </.card>
     </.page>
     """
   end

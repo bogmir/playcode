@@ -195,16 +195,14 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
         </:subtitle>
       </.page_header>
 
-      <div
-        :if={@entries == []}
-        class="rounded-box border border-dashed border-base-300 py-14 text-center text-base-content/60"
-      >
-        <.icon name="hero-chat-bubble-bottom-center-text" class="mx-auto mb-3 size-12 opacity-30" />
-        <p class="text-sm">{gettext("No notes yet. Add them to a line in Content.")}</p>
-        <.link navigate={~p"/admin/plays/#{@play.id}/content"} class="btn btn-ghost btn-sm mt-3">
-          {gettext("Open Content")}
-        </.link>
-      </div>
+      <.empty_state :if={@entries == []} icon="hero-chat-bubble-bottom-center-text">
+        {gettext("No notes yet. Add them to a line in Content.")}
+        <:action>
+          <.link navigate={~p"/admin/plays/#{@play.id}/content"} class="btn btn-outline btn-sm">
+            {gettext("Open Content")}
+          </.link>
+        </:action>
+      </.empty_state>
 
       <form
         :if={@entries != []}
@@ -250,7 +248,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
           />
           {gettext("Without a term")}
         </label>
-        <span id="notes-count" class="ml-auto text-sm tabular-nums text-base-content/60">
+        <span id="notes-count" class="ml-auto text-sm tabular-nums text-base-content/70">
           {if length(@shown) == length(@entries),
             do: ngettext("1 note", "%{count} notes", length(@entries)),
             else:
@@ -258,7 +256,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
         </span>
       </form>
 
-      <p :if={@entries != [] and @shown == []} class="py-10 text-center text-sm text-base-content/60">
+      <p :if={@entries != [] and @shown == []} class="py-10 text-center text-sm text-base-content/70">
         {gettext("Nothing matches the filter.")}
       </p>
 
@@ -289,7 +287,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
             </div>
             <% {before, after_note} = context(entry) %>
             <p
-              class="note-context mt-1.5 border-l-2 border-base-300 pl-3 font-serif text-sm text-base-content/60"
+              class="note-context mt-1.5 border-l-2 border-base-300 pl-3 font-serif text-sm text-base-content/70"
               phx-no-format
             >{before}<sup class="px-0.5 font-sans font-semibold text-primary">{marker(entry.note)}</sup>{after_note}</p>
 
@@ -333,7 +331,7 @@ defmodule PlaycodeWeb.Admin.PlayNotesLive do
                     else: gettext("Text")
                 }
               />
-              <p class="text-xs text-base-content/50">
+              <p class="text-xs text-base-content/70">
                 {gettext("A blank line starts a new paragraph; <<…>> marks italics.")}
               </p>
               <div class="flex justify-end gap-2">

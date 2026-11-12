@@ -178,14 +178,10 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
         </:actions>
       </.page_header>
 
-      <%!-- Editor form (inline, shown when editing or adding) --%>
-      <div
+      <.card
         :if={@editor_form}
-        class="mb-6 rounded-box border border-primary/30 bg-base-100 p-5 shadow-md"
+        title={if @editing_editor == :new, do: gettext("New editor"), else: gettext("Edit editor")}
       >
-        <h3 class="mb-4 text-sm font-semibold text-primary">
-          {if @editing_editor == :new, do: gettext("New editor"), else: gettext("Edit editor")}
-        </h3>
         <.form
           for={@editor_form}
           id="editor-form"
@@ -240,28 +236,24 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
             </button>
           </div>
         </.form>
-      </div>
+      </.card>
 
-      <%!-- Empty state --%>
-      <div
-        :if={@editors == [] && @editor_form == nil}
-        class="text-center py-12 text-base-content/70"
-      >
-        <.icon name="hero-users" class="size-12 mx-auto mb-3 opacity-30" />
-        <p class="text-sm">{gettext("No editors listed yet.")}</p>
-        <button phx-click="new_editor" class="btn btn-ghost btn-sm mt-3">
-          {gettext("Add the first editor")}
-        </button>
-      </div>
+      <.empty_state :if={@editors == [] && @editor_form == nil} icon="hero-users">
+        {gettext("No editors listed yet.")}
+        <:action>
+          <button phx-click="new_editor" class="btn btn-outline btn-sm">
+            {gettext("Add the first editor")}
+          </button>
+        </:action>
+      </.empty_state>
 
-      <%!-- Editor cards --%>
-      <div class="space-y-3">
-        <div
-          :for={editor <- @editors}
-          id={"editor-#{editor.id}"}
-          class="rounded-box border border-base-300 bg-base-100 shadow-sm"
-        >
-          <div class="flex items-center gap-4 p-4">
+      <.card :if={@editors != []} title={gettext("Editors")} count={length(@editors)}>
+        <ul class="-mx-4 -mb-4 divide-y divide-base-300">
+          <li
+            :for={editor <- @editors}
+            id={"editor-#{editor.id}"}
+            class="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3"
+          >
             <div class="flex-1 min-w-0">
               <p class="font-medium text-base-content truncate">{editor.person_name}</p>
               <p class="text-sm text-base-content/70">
@@ -272,26 +264,26 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
               </p>
             </div>
             <span class="text-xs text-base-content/70 shrink-0">#{editor.position}</span>
-          </div>
-          <div class="flex justify-end gap-1 border-t border-base-300 px-3 py-2">
-            <button
-              phx-click="edit_editor"
-              phx-value-id={editor.id}
-              class="btn btn-ghost btn-xs gap-1"
-            >
-              <.icon name="hero-pencil-square-micro" class="size-3.5" /> {gettext("Edit")}
-            </button>
-            <button
-              phx-click="delete_editor"
-              phx-value-id={editor.id}
-              data-confirm={gettext("Delete this editor?")}
-              class="btn btn-ghost btn-xs text-error gap-1"
-            >
-              <.icon name="hero-trash-micro" class="size-3.5" /> {gettext("Delete")}
-            </button>
-          </div>
-        </div>
-      </div>
+            <div class="flex shrink-0 gap-1">
+              <button
+                phx-click="edit_editor"
+                phx-value-id={editor.id}
+                class="btn btn-ghost btn-xs gap-1"
+              >
+                <.icon name="hero-pencil-square-micro" class="size-3.5" /> {gettext("Edit")}
+              </button>
+              <button
+                phx-click="delete_editor"
+                phx-value-id={editor.id}
+                data-confirm={gettext("Delete this editor?")}
+                class="btn btn-ghost btn-xs text-error gap-1"
+              >
+                <.icon name="hero-trash-micro" class="size-3.5" /> {gettext("Delete")}
+              </button>
+            </div>
+          </li>
+        </ul>
+      </.card>
     </.page>
     """
   end

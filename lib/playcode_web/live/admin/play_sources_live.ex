@@ -170,14 +170,10 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
         </:actions>
       </.page_header>
 
-      <%!-- Source form (inline, shown when editing or adding) --%>
-      <div
+      <.card
         :if={@source_form}
-        class="mb-6 rounded-box border border-primary/30 bg-base-100 p-5 shadow-md"
+        title={if @editing_source == :new, do: gettext("New source"), else: gettext("Edit source")}
       >
-        <h3 class="mb-4 text-sm font-semibold text-primary">
-          {if @editing_source == :new, do: gettext("New source"), else: gettext("Edit source")}
-        </h3>
         <.form
           for={@source_form}
           id="source-form"
@@ -263,81 +259,24 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
             </button>
           </div>
         </.form>
-      </div>
+      </.card>
 
-      <%!-- Empty state --%>
-      <div
-        :if={@sources == [] && @source_form == nil}
-        class="text-center py-12 text-base-content/70"
+      <.empty_state :if={@sources == [] && @source_form == nil} icon="hero-book-open">
+        {gettext("No bibliographic sources yet.")}
+        <:action>
+          <button phx-click="new_source" class="btn btn-outline btn-sm">
+            {gettext("Add the first source")}
+          </button>
+        </:action>
+      </.empty_state>
+
+      <.card
+        :for={source <- @sources}
+        id={"source-#{source.id}"}
+        title={source.title || gettext("Source")}
       >
-        <.icon name="hero-book-open" class="size-12 mx-auto mb-3 opacity-30" />
-        <p class="text-sm">{gettext("No bibliographic sources yet.")}</p>
-        <button phx-click="new_source" class="btn btn-ghost btn-sm mt-3">
-          {gettext("Add the first source")}
-        </button>
-      </div>
-
-      <%!-- Source cards --%>
-      <div class="space-y-4">
-        <div
-          :for={source <- @sources}
-          id={"source-#{source.id}"}
-          class="rounded-box border border-base-300 bg-base-100 shadow-sm"
-        >
-          <div class="p-4">
-            <div class="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-              <span :if={source.title} class="font-medium text-base-content/70 text-right">
-                {gettext("Title")}
-              </span>
-              <span :if={source.title}>{source.title}</span>
-
-              <span :if={source.author} class="font-medium text-base-content/70 text-right">
-                {gettext("Author")}
-              </span>
-              <span :if={source.author}>{source.author}</span>
-
-              <span :if={source.editor} class="font-medium text-base-content/70 text-right">
-                {gettext("Editor")}
-              </span>
-              <span :if={source.editor}>
-                {source.editor}
-                <span :if={source.editor_role} class="text-xs text-base-content/70">
-                  ({source.editor_role})
-                </span>
-              </span>
-
-              <span :if={source.publisher} class="font-medium text-base-content/70 text-right">
-                {gettext("Publisher")}
-              </span>
-              <span :if={source.publisher}>{source.publisher}</span>
-
-              <span :if={source.pub_place} class="font-medium text-base-content/70 text-right">
-                {gettext("Place")}
-              </span>
-              <span :if={source.pub_place}>{source.pub_place}</span>
-
-              <span :if={source.pub_date} class="font-medium text-base-content/70 text-right">
-                {gettext("Date")}
-              </span>
-              <span :if={source.pub_date}>{source.pub_date}</span>
-
-              <span :if={source.language} class="font-medium text-base-content/70 text-right">
-                {gettext("Language")}
-              </span>
-              <span :if={source.language}>{source.language}</span>
-
-              <span :if={source.note} class="font-medium text-base-content/70 text-right">
-                {gettext("Reference")}
-              </span>
-              <span :if={source.note} class="text-xs text-base-content/80">{source.note}</span>
-
-              <span :if={source.distributor} class="font-medium text-base-content/70 text-right">
-                {gettext("Provenance")}
-              </span>
-              <span :if={source.distributor}>{source.distributor}</span>
-            </div>
-          </div>
-          <div class="flex justify-end gap-1 border-t border-base-300 px-3 py-2">
+        <:action>
+          <div class="flex gap-1">
             <button
               phx-click="edit_source"
               phx-value-id={source.id}
@@ -354,8 +293,25 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
               <.icon name="hero-trash-micro" class="size-3.5" /> {gettext("Delete")}
             </button>
           </div>
-        </div>
-      </div>
+        </:action>
+        <.field_list class="text-sm">
+          <:item :if={source.author} label={gettext("Author")}>{source.author}</:item>
+          <:item :if={source.editor} label={gettext("Editor")}>
+            {source.editor}
+            <span :if={source.editor_role} class="text-xs text-base-content/70">
+              ({source.editor_role})
+            </span>
+          </:item>
+          <:item :if={source.publisher} label={gettext("Publisher")}>{source.publisher}</:item>
+          <:item :if={source.pub_place} label={gettext("Place")}>{source.pub_place}</:item>
+          <:item :if={source.pub_date} label={gettext("Date")}>{source.pub_date}</:item>
+          <:item :if={source.language} label={gettext("Language")}>{source.language}</:item>
+          <:item :if={source.note} label={gettext("Reference")}>{source.note}</:item>
+          <:item :if={source.distributor} label={gettext("Provenance")}>
+            {source.distributor}
+          </:item>
+        </.field_list>
+      </.card>
     </.page>
     """
   end
