@@ -1523,7 +1523,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
       <%!-- Tab Bar --%>
       <div class="border-b border-base-300 mb-6">
-        <nav class="-mb-px flex gap-1" aria-label="Editor tabs">
+        <nav class="-mb-px flex gap-1 overflow-x-auto" aria-label="Editor tabs">
           <.tab_button
             tab={:paratexts}
             label={gettext("Paratexts")}
@@ -2817,7 +2817,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       phx-click="switch_tab"
       phx-value-tab={@tab}
       class={[
-        "flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
+        "flex shrink-0 items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-medium border-b-2 transition-colors",
         if(@active == @tab,
           do: "border-primary text-primary",
           else:

@@ -197,9 +197,9 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         <table class="table table-zebra">
           <thead>
             <tr class="text-xs uppercase tracking-wide text-base-content/70">
-              <th class="w-28">{gettext("Code")}</th>
+              <th class="w-28 max-sm:hidden">{gettext("Code")}</th>
               <th>{gettext("Title")}</th>
-              <th class="w-20 text-right">{gettext("Verses")}</th>
+              <th class="w-20 text-right max-sm:hidden">{gettext("Verses")}</th>
               <th class="w-32 text-right">{gettext("Actions")}</th>
             </tr>
           </thead>
@@ -209,7 +209,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
               <td
                 title={status_label(play)}
                 class={[
-                  "font-mono text-xs text-base-content/70 border-l-4",
+                  "font-mono text-xs text-base-content/70 border-l-4 max-sm:hidden",
                   is_nil(play.deleted_at) && play.is_complete && "border-success",
                   is_nil(play.deleted_at) && !play.is_complete && "border-base-300",
                   play.deleted_at && "border-transparent"
@@ -237,8 +237,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <p :if={play.author_name} class="text-xs text-base-content/70 mt-0.5">
                   {play.author_name}
                 </p>
+                <%!-- On a phone the code's column is left out; the code goes under the title. --%>
+                <p class="sm:hidden font-mono text-xs text-base-content/70 break-all">
+                  {play.code}
+                </p>
               </td>
-              <td class="text-sm text-right tabular-nums text-base-content/70">
+              <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
                 {play.verse_count || "—"}
               </td>
               <td>

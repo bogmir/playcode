@@ -58,7 +58,7 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
       %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: play_fixture()}
     end
 
-    defp section(play, path), do: "nav[aria-label='#{t("Play sections")}'] a[href='#{path}']"
+    defp section(_play, path), do: "nav[aria-label='#{t("Play sections")}'] a[href='#{path}']"
 
     test "are in the sidebar, grouped, each with its count", %{conn: conn, play: play} do
       performance_fixture(play)
