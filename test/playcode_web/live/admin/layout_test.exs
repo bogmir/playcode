@@ -72,6 +72,16 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
 
     defp section(_play, path), do: "nav[aria-label='#{t("Play sections")}'] a[href='#{path}']"
 
+    # Below lg the sidebar is folded behind the header's bare icon; a phone user saw only the
+    # overview's "Edit metadata" and took the other sections for missing.
+    test "a narrow screen opens them from a button named after them", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+      assert has_element?(lv, "main label[for='admin-sidebar']", t("Play sections"))
+
+      {:ok, list_page, _html} = live(conn, ~p"/admin/plays")
+      refute has_element?(list_page, "main label[for='admin-sidebar']")
+    end
+
     test "are in the sidebar, grouped, each with its count", %{conn: conn, play: play} do
       performance_fixture(play)
       performance_fixture(play, %{"date_text" => "1611"})

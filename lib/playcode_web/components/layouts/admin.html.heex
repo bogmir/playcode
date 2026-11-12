@@ -56,6 +56,14 @@
   </div>
 
   <main id="main" class="min-w-0 lg:col-start-2 lg:row-start-2">
+    <%!-- Below lg the header's bare icon alone hid a play's sections from phone users. --%>
+    <label
+      :if={assigns[:play_context]}
+      for="admin-sidebar"
+      class="btn btn-sm btn-outline mx-4 mt-4 lg:hidden"
+    >
+      <.icon name="hero-bars-3" class="size-4" /> {gettext("Play sections")}
+    </label>
     {@inner_content}
   </main>
 </div>
