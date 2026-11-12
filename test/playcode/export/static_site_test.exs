@@ -560,6 +560,9 @@ defmodule Playcode.Export.StaticSiteTest do
     assert texts(about, "h1") == ["About this edition"]
     assert LazyHTML.text(about) =~ "2 plays"
     assert LazyHTML.text(about) =~ "version 2.1"
+
+    assert squish(LazyHTML.text(about)) =~
+             "The band's links to the EMOTHE portal (Portal, Database)"
   end
 
   test "the shared assets stay inside the size budget and nothing loads from another host" do
@@ -614,6 +617,79 @@ defmodule Playcode.Export.StaticSiteTest do
         assert contrast(muted, colour) >= 4.5, "##{muted} on --#{background} ##{colour}"
       end
     end
+  end
+
+  # The faint grey prints play codes, line numbers and counts (S1); the verse forms'
+  # colours are bars whose colour is the meaning, so they need 3:1 against the page.
+  test "the faint grey reads as text and the verse forms' colours as graphics, in both themes" do
+    dir = generate!([complete_play()])
+    css = File.read!(Path.join([dir, "assets", "style.css"]))
+    tokens = fn name -> for [_, hex] <- Regex.scan(~r/--#{name}: #(\w{6})/, css), do: hex end
+
+    for {token, ratio} <- [
+          {"faint", 4.5},
+          {"f-romance", 3},
+          {"f-redondilla", 3},
+          {"f-quintilla", 3},
+          {"f-other", 3}
+        ],
+        background <- ~w(paper raised) do
+      themes = Enum.zip(tokens.(token), tokens.(background))
+      assert length(themes) == 2
+
+      for {colour, behind} <- themes do
+        assert contrast(colour, behind) >= ratio,
+               "--#{token} ##{colour} on --#{background} ##{behind}"
+      end
+    end
+  end
+
+  # S2 and S5: the keyboard skips the band in one press, and the band leads back to the
+  # portal the site belongs to, the one place a page links out of the archive.
+  test "every page opens with a link to its text, and the band links the portal" do
+    play = complete_play()
+    dir = generate!([play], all: true)
+
+    for path <- ["index.html", "about.html", "search.html", "plays/#{play.code}/index.html"] do
+      page = html!(dir, path)
+      first = page |> LazyHTML.query("body a, body button, body input, body select") |> Enum.at(0)
+
+      assert {path, LazyHTML.attribute(first, "href"), squish(LazyHTML.text(first))} ==
+               {path, ["#main"], "Skip to content"}
+
+      portal = LazyHTML.query(page, "header nav[aria-label='EMOTHE portal'] a")
+
+      assert {path, LazyHTML.attribute(portal, "href")} ==
+               {path, ["https://emothe.uv.es/", "https://emothe.uv.es/basededatos/"]}
+
+      # The interface is English until the site has its Spanish (S3).
+      assert {path, texts(page, "header nav[aria-label='EMOTHE portal'] a")} ==
+               {path, ["Portal", "Database"]}
+
+      assert {path, texts(page, ".wordmark small")} == {path, ["Digital library"]}
+    end
+  end
+
+  # The band's switch sets light or dark and site.js remembers it; a line in the head
+  # applies the choice, or the system's, before the stylesheet paints anything.
+  test "every page has a light and dark switch, and starts in the reader's last choice" do
+    play = complete_play()
+    dir = generate!([play], all: true)
+
+    for path <- ["index.html", "about.html", "plays/#{play.code}/index.html"] do
+      page = html!(dir, path)
+
+      assert {path,
+              page |> LazyHTML.query("header button[aria-label='Dark mode']") |> Enum.count()} ==
+               {path, 1}
+
+      head = dir |> Path.join(path) |> File.read!() |> String.split("</head>") |> hd()
+      [before_style, _] = String.split(head, ~s(rel="stylesheet"), parts: 2)
+      assert before_style =~ "reader.theme"
+    end
+
+    css = File.read!(Path.join([dir, "assets", "style.css"]))
+    assert css =~ ~r/\[data-theme="?dark"?\] \{[^}]*--paper: #16131c/
   end
 
   # WCAG 2's contrast ratio of two sRGB colours, as six hex digits.
