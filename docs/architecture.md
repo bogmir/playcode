@@ -85,8 +85,8 @@ lib/
     ├── user_auth.ex                  # Auth plugs & LiveView on_mount hooks (delegates to Authz)
     ├── play_labels.ex                # Translated play metadata vocabularies (historical_time, …)
     ├── live/
-    │   ├── play_catalogue_live.ex    # Public: /plays - searchable catalogue
-    │   ├── play_show_live.ex         # Public: /plays/:code - play text, stats, notes
+    │   ├── play_show_live.ex         # Preview: /plays/:code - play text, stats, notes
+    │   ├── play_compare_live.ex      # Preview: /plays/:code/compare - a play beside its family
     │   ├── current_path_hook.ex      # Assigns :current_path for sidebar highlighting
     │   ├── play_sections_hook.ex     # Assigns :play_counts for the play's sections in the sidebar
     │   ├── user_accept_invite_live.ex # /users/accept-invite/:token
@@ -123,10 +123,14 @@ lib/
 
 ## Routes
 
-### Public
-- `GET /` - Home page
-- `GET /plays` - Public play catalogue with search
-- `GET /plays/:code` - Public play presentation (text, statistics and, for a play with notes, notes views); a draft is a 404 except for staff
+Playcode has no public pages: the published static site is the catalogue (decided 2026-11-12).
+
+- `GET /` - Redirects a signed-in user to `/admin/plays`, anyone else to the log-in page
+
+### Preview (requires `:preview_plays`, i.e. any active researcher or admin)
+- `GET /plays/:code` - A play as the published site will show it (text, statistics and, for a play with notes, notes views), draft or complete: the admin's "Vista previa"
+- `GET /plays/:code/compare` - The play beside its translations and original
+- `GET /export/:id/tei|html|pdf|epub` - The play's downloads
 
 ### Authentication
 - `GET /users/accept-invite/:token` - Set a password on an invited account, then log in

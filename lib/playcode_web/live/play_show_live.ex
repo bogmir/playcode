@@ -1,7 +1,7 @@
 defmodule PlaycodeWeb.PlayShowLive do
   @moduledoc """
   /plays/:code: a play's text, statistics and notes, with its metadata, places and
-  bibliography. A draft is a 404 except for staff, who reach it from the admin pages.
+  bibliography, as the published site will show it: staff's preview, draft or complete.
   """
 
   use PlaycodeWeb, :live_view
@@ -9,7 +9,6 @@ defmodule PlaycodeWeb.PlayShowLive do
   import PlaycodeWeb.Components.PlayText
   import PlaycodeWeb.Components.StatisticsPanel
 
-  alias Playcode.Authz
   alias Playcode.Bibliography
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue
@@ -27,9 +26,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   @impl true
   def mount(%{"code" => code}, _session, socket) do
     play =
-      Catalogue.get_play_by_code_with_all!(code,
-        complete: not Authz.can?(socket.assigns.current_user, :view_drafts)
-      )
+      Catalogue.get_play_by_code_with_all!(code)
 
     divisions = PlayContent.load_play_content(play.id, variants: play.show_variants)
     characters = PlayContent.list_characters(play.id)
@@ -77,8 +74,8 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:has_stage_directions, Element.stage_directions?(divisions))
      |> assign(:active_tab, :text)
      |> assign(:breadcrumbs, [
-       %{label: gettext("Catalogue"), to: ~p"/plays"},
-       %{label: play.title}
+       %{label: play.title, to: ~p"/admin/plays/#{play.id}"},
+       %{label: gettext("Preview")}
      ])}
   end
 
@@ -372,16 +369,8 @@ defmodule PlaycodeWeb.PlayShowLive do
 
           <%!-- Navigation quick links --%>
           <.link
-            navigate={~p"/plays"}
-            class="mt-2 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/70 hover:text-primary hover:border-primary/30 transition-colors"
-          >
-            <.icon name="hero-arrow-left-micro" class="size-3.5" />
-            {gettext("Back to Catalogue")}
-          </.link>
-          <.link
-            :if={assigns[:current_user]}
             navigate={~p"/admin/plays/#{@play.id}"}
-            class="mt-1 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/70 hover:text-primary hover:border-primary/30 transition-colors"
+            class="mt-2 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/70 hover:text-primary hover:border-primary/30 transition-colors"
           >
             <.icon name="hero-pencil-square-micro" class="size-3.5" />
             {gettext("Edit in Admin")}

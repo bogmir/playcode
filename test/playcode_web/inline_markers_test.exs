@@ -72,10 +72,7 @@ defmodule PlaycodeWeb.InlineMarkersTest do
     %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: italics_everywhere()}
   end
 
-  test "the catalogue and every tab of the play's page", %{conn: conn, play: play} do
-    {:ok, _lv, html} = live(conn, ~p"/plays")
-    refute_leak(html, "the catalogue")
-
+  test "every tab of the play's page", %{conn: conn, play: play} do
     {:ok, lv, html} = live(conn, ~p"/plays/#{play.code}")
     refute_leak(html, "the play's text")
 

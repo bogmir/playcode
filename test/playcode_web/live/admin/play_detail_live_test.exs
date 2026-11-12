@@ -75,11 +75,9 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
 
   # The status used to be a Draft/Complete pair of pressed buttons; the overview now says who
   # sees the play, with the one button that changes it.
-  test "marking a play complete publishes it in the catalogue, and back to draft withdraws it",
-       %{conn: conn, play: play} do
-    {:ok, catalogue, _html} = live(conn, ~p"/plays")
-    refute render(catalogue) =~ play.title
-
+  # It used to check Playcode's own catalogue too; the published site is the catalogue now,
+  # and which plays it takes is static_site_catalogue_test.exs's.
+  test "marking a play complete, and back to draft", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     assert has_element?(lv, "#play-state", t("Draft"))
 
@@ -94,14 +92,10 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
 
     assert has_element?(lv, "#play-state", t("Complete"))
 
-    {:ok, _catalogue, html} = live(conn, ~p"/plays")
-    assert html =~ play.title
-
     assert lv |> element("#play-state button", t("Back to draft")) |> render_click() =~
              t("Marked as draft.")
 
-    {:ok, _catalogue, html} = live(conn, ~p"/plays")
-    refute html =~ play.title
+    assert has_element?(lv, "#play-state", t("Draft"))
   end
 
   test "names the play once, its downloads and actions in words", %{conn: conn, play: play} do

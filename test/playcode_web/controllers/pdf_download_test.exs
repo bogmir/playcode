@@ -1,6 +1,6 @@
 defmodule PlaycodeWeb.PdfDownloadTest do
   @moduledoc """
-  The PDF downloads, public and staff, with Chrome replaced by
+  The PDF downloads, the preview's and the admin's, with Chrome replaced by
   `Playcode.PdfRendererStub`. Not async: every render goes through the one
   `Playcode.Export.PdfCache`, and the stub reads the application environment.
   """
@@ -12,7 +12,7 @@ defmodule PlaycodeWeb.PdfDownloadTest do
   alias Playcode.Catalogue
   alias Playcode.Export.PdfCache
 
-  setup do
+  setup %{conn: conn} do
     File.rm_rf!(PdfCache.dir())
     stub(mode: :ok)
 
@@ -32,7 +32,7 @@ defmodule PlaycodeWeb.PdfDownloadTest do
       Application.put_env(:playcode, :pdf_wait, wait)
     end)
 
-    %{play: play_fixture(%{"is_complete" => true})}
+    %{conn: log_in_user(conn, user_fixture()), play: play_fixture(%{"is_complete" => true})}
   end
 
   defp stub(opts),
@@ -124,7 +124,6 @@ defmodule PlaycodeWeb.PdfDownloadTest do
 
   test "staff get the same PDF from their tab, and a flash while it is prepared",
        %{conn: conn} do
-    conn = log_in_user(conn, user_fixture())
     draft = play_fixture()
 
     assert response(get(conn, ~p"/admin/plays/#{draft.id}/export/pdf"), 200) =~ "%PDF"

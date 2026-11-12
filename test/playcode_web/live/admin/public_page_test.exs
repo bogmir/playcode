@@ -109,16 +109,14 @@ defmodule PlaycodeWeb.Admin.PublicPageTest do
     refute has_element?(lv, public_link(play))
   end
 
-  # The sidebar's "View public site" is the published site once its address is set;
-  # before, Playcode's own public pages.
-  test "the sidebar's public site is the published one when its address is set",
-       %{conn: conn} do
+  # Before its address is set there is no public site: Playcode has no public pages.
+  test "the sidebar links the published site only when its address is set", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays")
     assert lv |> element("nav a", t("View public site")) |> render() =~ ~s(href="#{@public}/")
 
     Application.put_env(:playcode, :static_site_public_url, nil)
     {:ok, lv, _html} = live(conn, ~p"/admin/plays")
-    assert lv |> element("nav a", t("View public site")) |> render() =~ ~s(href="/plays")
+    refute has_element?(lv, "nav a", t("View public site"))
   end
 
   test "a failed deploy publishes nothing", %{conn: conn, play: play} do

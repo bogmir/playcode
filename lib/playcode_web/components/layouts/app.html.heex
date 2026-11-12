@@ -13,37 +13,11 @@
       <img src={~p"/images/logo.svg"} width="28" height="28" alt="" />
       <span class="text-sm font-bold tracking-tight">Playcode</span>
     </a>
-    <%!-- Mobile hamburger menu --%>
-    <div class="dropdown sm:hidden">
-      <label
-        tabindex="0"
-        role="button"
-        class="btn btn-ghost btn-xs btn-square"
-        aria-label={gettext("Menu")}
-      >
-        <.icon name="hero-bars-3-micro" class="size-4" />
-      </label>
-      <ul
-        tabindex="0"
-        class="dropdown-content z-[1] menu p-1 shadow-lg bg-base-100 rounded-box w-44 border border-base-300"
-      >
-        <li><.link navigate={~p"/plays"}>{gettext("Catalogue")}</.link></li>
-        <li :if={Playcode.Authz.can?(assigns[:current_user], :view_admin)}>
-          <.link navigate={~p"/admin/plays"}>{gettext("Admin")}</.link>
-        </li>
-      </ul>
-    </div>
-    <%!-- Desktop navigation --%>
-    <span class="text-base-content/70 hidden sm:inline">|</span>
-    <nav class="hidden sm:flex items-center gap-1">
-      <.link navigate={~p"/plays"} class="btn btn-ghost btn-xs">{gettext("Catalogue")}</.link>
-      <.link
-        :if={Playcode.Authz.can?(assigns[:current_user], :view_admin)}
-        navigate={~p"/admin/plays"}
-        class="btn btn-ghost btn-xs"
-      >
-        {gettext("Admin")}
-      </.link>
+    <nav
+      :if={Playcode.Authz.can?(assigns[:current_user], :view_admin)}
+      aria-label={gettext("Menu")}
+    >
+      <.link navigate={~p"/admin/plays"} class="btn btn-ghost btn-xs">{gettext("Admin")}</.link>
     </nav>
   </div>
   <.user_menu current_user={assigns[:current_user]} locale={assigns[:locale] || "es"} />

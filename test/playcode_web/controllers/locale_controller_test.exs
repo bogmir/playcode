@@ -12,10 +12,10 @@ defmodule PlaycodeWeb.LocaleControllerTest do
 
   test "switching locale sends you back to the page you were on, now in that language",
        %{conn: conn} do
-    conn = post(conn, ~p"/locale", %{locale: "en", return_to: "/plays?search=hamlet"})
+    conn = post(conn, ~p"/locale", %{locale: "en", return_to: "/users/log-in?return=1"})
 
-    assert redirected_to(conn) == "/plays?search=hamlet"
-    assert page_lang(recycle(conn), "/plays") == "en"
+    assert redirected_to(conn) == "/users/log-in?return=1"
+    assert page_lang(recycle(conn), "/users/log-in") == "en"
   end
 
   test "without a return path it sends you home", %{conn: conn} do
@@ -31,9 +31,9 @@ defmodule PlaycodeWeb.LocaleControllerTest do
   end
 
   test "an unknown locale leaves the language alone", %{conn: conn} do
-    conn = post(conn, ~p"/locale", %{locale: "xx", return_to: "/plays"})
+    conn = post(conn, ~p"/locale", %{locale: "xx", return_to: "/users/log-in"})
 
-    assert redirected_to(conn) == "/plays"
-    assert page_lang(recycle(conn), "/plays") == "es"
+    assert redirected_to(conn) == "/users/log-in"
+    assert page_lang(recycle(conn), "/users/log-in") == "es"
   end
 end

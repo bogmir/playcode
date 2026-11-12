@@ -466,7 +466,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     save(view, %{"show_variants" => "false"})
 
     hidden? = fn ->
-      {:ok, page, _html} = live(build_conn(), ~p"/plays/#{play.code}")
+      {:ok, page, _html} = live(conn, ~p"/plays/#{play.code}")
 
       not has_element?(page, ~s(button[aria-label^="#{t("Textual variant")}"])) and
         not has_element?(page, "label", t("Variants"))
@@ -575,10 +575,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
       for path <- [~p"/export/#{play.id}/tei", ~p"/export/#{play.id}/html"] do
         refute get(conn, path).resp_body =~ "Recordatorio", path
-      end
-
-      for path <- ["/api/v1/plays/#{play.code}", "/api/v1/plays/#{play.code}/text"] do
-        refute get(build_conn(), path).resp_body =~ "Recordatorio", path
       end
 
       dir = Playcode.StaticSiteHelpers.generate!([play], all: true)

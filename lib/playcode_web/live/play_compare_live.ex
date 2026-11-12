@@ -1,7 +1,7 @@
 defmodule PlaycodeWeb.PlayCompareLive do
   @moduledoc """
   /plays/:code/compare: a play beside the other plays of its family, scrolling together
-  (`assets/js/sync_scroll.mjs`). A visitor sees published plays only. The logic is shared
+  (`assets/js/sync_scroll.mjs`), staff's preview of it. The logic is shared
   with the admin page through `PlaycodeWeb.PlayComparison`.
   """
 
@@ -9,14 +9,13 @@ defmodule PlaycodeWeb.PlayCompareLive do
 
   import PlaycodeWeb.Components.PlayText
 
-  alias Playcode.{Authz, Catalogue}
+  alias Playcode.Catalogue
   alias PlaycodeWeb.PlayComparison
 
   @impl true
   def mount(%{"code" => code}, _session, socket) do
-    opts = [complete: not Authz.can?(socket.assigns.current_user, :view_drafts)]
-    play = Catalogue.get_play_by_code_with_all!(code, opts)
-    family = PlayComparison.build_family(play, opts)
+    play = Catalogue.get_play_by_code_with_all!(code)
+    family = PlayComparison.build_family(play)
     panels = PlayComparison.build_initial_panels(play, family)
 
     {:ok,
@@ -27,7 +26,6 @@ defmodule PlaycodeWeb.PlayCompareLive do
      |> assign(:family, family)
      |> PlayComparison.assign_display_defaults()
      |> assign(:breadcrumbs, [
-       %{label: gettext("Catalogue"), to: ~p"/plays"},
        %{label: play.title, to: ~p"/plays/#{play.code}"},
        %{label: gettext("Comparison")}
      ])}

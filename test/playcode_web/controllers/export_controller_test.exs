@@ -1,10 +1,10 @@
 defmodule PlaycodeWeb.ExportControllerTest do
-  @moduledoc "The public downloads at /export/:id/*, open to anyone."
+  @moduledoc "The downloads at /export/:id/* that staff's preview offers, draft or complete."
   use PlaycodeWeb.ConnCase, async: true
 
   import Playcode.ImportHelpers
 
-  setup do
+  setup %{conn: conn} do
     play =
       import_tei!(
         tei(
@@ -14,8 +14,8 @@ defmodule PlaycodeWeb.ExportControllerTest do
         )
       )
 
-    # An import is a draft, and a visitor may download only a complete play.
-    %{play: Playcode.TestFixtures.mark_complete!(play)}
+    # An import is a draft, and a draft downloads as a complete play does.
+    %{conn: log_in_user(conn, Playcode.TestFixtures.user_fixture()), play: play}
   end
 
   defp attachment(conn), do: conn |> get_resp_header("content-disposition") |> List.first()
@@ -744,17 +744,9 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert_error_sent 404, fn -> get(conn, ~p"/export/#{play.id}/tei") end
   end
 
-  test "a draft is for staff only", %{conn: conn, play: play} do
-    {:ok, draft} = Playcode.Catalogue.update_play(play, %{is_complete: false})
-
+  test "a draft downloads in every format", %{conn: conn, play: draft} do
     for format <- ~w(tei html epub pdf) do
-      assert_error_sent 404, fn -> get(conn, "/export/#{draft.id}/#{format}") end
-    end
-
-    staff = log_in_user(conn, Playcode.TestFixtures.user_fixture())
-
-    for format <- ~w(tei html epub pdf) do
-      assert response(get(staff, "/export/#{draft.id}/#{format}"), 200), format
+      assert response(get(conn, "/export/#{draft.id}/#{format}"), 200), format
     end
   end
 
@@ -776,7 +768,8 @@ defmodule PlaycodeWeb.ExportControllerTest do
       refute response(get(conn, ~p"/export/#{translation.id}/html"), 200) =~ ~s(class="original")
     end
 
-    test "a visitor's download names no draft original", %{conn: conn} do
+    # A download is the edition as the site publishes it, so it names no draft original.
+    test "a download names no draft original", %{conn: conn} do
       %{original: original, translation: translation} =
         Playcode.TestFixtures.translation_family_fixture()
 
@@ -784,20 +777,8 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
       refute response(get(conn, ~p"/export/#{translation.id}/html"), 200) =~ "Original Play"
       refute epub_text(conn, translation) =~ "Original Play"
-    end
 
-    # A PDF is rendered once per version and served to whoever asks next (PdfCache), so
-    # what staff download must be what a visitor may read.
-    test "staff's download names no draft original either", %{conn: conn} do
-      %{original: original, translation: translation} =
-        Playcode.TestFixtures.translation_family_fixture()
-
-      {:ok, _} = Playcode.Catalogue.update_play(original, %{is_complete: false})
-      staff = log_in_user(conn, Playcode.TestFixtures.user_fixture())
-
-      refute response(get(staff, ~p"/export/#{translation.id}/html"), 200) =~ "Original Play"
-
-      refute response(get(staff, ~p"/admin/plays/#{translation.id}/export/html"), 200) =~
+      refute response(get(conn, ~p"/admin/plays/#{translation.id}/export/html"), 200) =~
                "Original Play"
     end
 
