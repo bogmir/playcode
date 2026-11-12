@@ -1533,6 +1533,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           />
           <.tab_button
             tab={:structure}
+            label={gettext("Structure")}
             active={@editor_tab}
             icon="hero-bars-3-bottom-left-mini"
             count={Enum.count(@divisions, &(&1.type != "elenco"))}
@@ -1552,6 +1553,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           />
           <.tab_button
             tab={:content}
+            label={gettext("Content")}
             active={@editor_tab}
             icon="hero-document-text-mini"
             badge={
@@ -1559,7 +1561,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 do: selected_division_short_label(@divisions, @selected_division_id)
             }
           />
-          <.tab_button tab={:preview} active={@editor_tab} icon="hero-eye-mini" />
+          <.tab_button
+            tab={:preview}
+            label={gettext("Preview")}
+            active={@editor_tab}
+            icon="hero-eye-mini"
+          />
         </nav>
       </div>
 
@@ -2800,7 +2807,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   attr :tab, :atom, required: true
   attr :active, :atom, required: true
   attr :icon, :string, required: true
-  attr :label, :string, default: nil
+  attr :label, :string, required: true
   attr :count, :integer, default: nil
   attr :badge, :string, default: nil
 
@@ -2819,7 +2826,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       ]}
     >
       <.icon name={@icon} class="size-4" />
-      <span class={unless @label, do: "capitalize"}>{@label || @tab}</span>
+      <span>{@label}</span>
       <span :if={@count} class="badge badge-sm badge-ghost">{@count}</span>
       <span :if={@badge} class="badge badge-sm badge-primary">{@badge}</span>
     </button>

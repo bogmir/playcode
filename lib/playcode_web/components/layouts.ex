@@ -69,7 +69,7 @@ defmodule PlaycodeWeb.Layouts do
 
   def breadcrumbs(assigns) do
     ~H"""
-    <nav :if={@items != []} aria-label="Breadcrumb" class="text-sm breadcrumbs py-0">
+    <nav :if={@items != []} aria-label={gettext("Breadcrumb")} class="text-sm breadcrumbs py-0">
       <ul>
         <li :for={{item, idx} <- Enum.with_index(@items)}>
           <.link
@@ -346,7 +346,7 @@ defmodule PlaycodeWeb.Layouts do
     <button
       class="btn btn-ghost btn-circle btn-sm swap swap-rotate"
       phx-click={JS.dispatch("phx:toggle-theme")}
-      aria-label="Toggle theme"
+      aria-label={gettext("Toggle theme")}
     >
       <.icon name="hero-sun-micro" class="size-5 [[data-theme=dark]_&]:hidden" />
       <.icon name="hero-moon-micro" class="size-5 hidden [[data-theme=dark]_&]:block" />

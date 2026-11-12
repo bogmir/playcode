@@ -39,9 +39,18 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: play}
   end
 
+  test "the editor's tabs are named in Spanish", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
+
+    for name <- [t("Structure"), t("Content"), t("Preview")],
+        do: assert(has_element?(lv, "nav[aria-label='Editor tabs'] button", name))
+
+    refute has_element?(lv, "nav[aria-label='Editor tabs'] button", "structure")
+  end
+
   defp open_structure(conn, play) do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
-    lv |> element("nav[aria-label='Editor tabs'] button", "structure") |> render_click()
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Structure")) |> render_click()
     lv
   end
 
@@ -1808,7 +1817,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert render(lv) =~ t("Scene of the action")
 
     # It stands last, after the act, until it is dragged before the text: a <set> there.
-    lv |> element("nav[aria-label='Editor tabs'] button", "structure") |> render_click()
+    lv |> element("nav[aria-label='Editor tabs'] button", t("Structure")) |> render_click()
     [scene | rest] = play.id |> outline_items() |> Enum.reverse()
 
     lv

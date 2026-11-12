@@ -11,6 +11,15 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   @italics ~w(Aminta Damone Egle Spela Fabia criados) ++
              ["The courtiers", "La Scena è in Atene.", "Dramatis Personae", "Actus Primus"]
 
+  test "the header's theme toggle and the breadcrumb are named in Spanish", %{conn: conn} do
+    play = import_tei!(tei(body: "<div1 type=\"acto\" n=\"1\"><head>A</head></div1>"))
+    TestFixtures.mark_complete!(play)
+    {:ok, lv, _html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert has_element?(lv, "button[aria-label='#{t("Toggle theme")}']")
+    assert has_element?(lv, "nav[aria-label='#{t("Breadcrumb")}']")
+  end
+
   test "italics in the text render as emphasis, without the storage markers", %{conn: conn} do
     play =
       import_tei!(
