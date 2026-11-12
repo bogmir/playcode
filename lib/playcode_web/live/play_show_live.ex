@@ -76,7 +76,6 @@ defmodule PlaycodeWeb.PlayShowLive do
      |> assign(:shade_stage, false)
      |> assign(:has_stage_directions, Element.stage_directions?(divisions))
      |> assign(:active_tab, :text)
-     |> assign(:sidebar_open, true)
      |> assign(:breadcrumbs, [
        %{label: gettext("Catalogue"), to: ~p"/plays"},
        %{label: play.title}
@@ -140,10 +139,6 @@ defmodule PlaycodeWeb.PlayShowLive do
     end
   end
 
-  def handle_event("toggle_sidebar", _, socket) do
-    {:noreply, assign(socket, :sidebar_open, !socket.assigns.sidebar_open)}
-  end
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -154,29 +149,27 @@ defmodule PlaycodeWeb.PlayShowLive do
           id="play-sections-panel"
           class="mb-4 lg:mb-0 lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto"
         >
-          <div class="rounded-box border border-base-300 bg-base-100/90 lg:backdrop-blur-sm shadow-sm">
+          <%!-- Folded on a phone, open on a wide screen (F1). --%>
+          <div
+            id="play-contents"
+            class="fold rounded-box border border-base-300 bg-base-100/90 lg:backdrop-blur-sm shadow-sm"
+          >
             <div class="flex items-center justify-between px-3 py-2.5">
               <button
-                phx-click="toggle_sidebar"
+                type="button"
+                phx-click={JS.toggle_class("flipped", to: "#play-contents")}
+                aria-controls="scroll-spy-nav"
                 class="flex items-center gap-2 text-sm font-semibold text-primary cursor-pointer"
               >
                 <.icon name="hero-list-bullet-micro" class="size-4" /> {gettext("Contents")}
-                <.icon
-                  name={
-                    if @sidebar_open,
-                      do: "hero-chevron-up-micro",
-                      else: "hero-chevron-down-micro"
-                  }
-                  class="size-4 text-base-content/70"
-                />
+                <.icon name="hero-chevron-up-down-micro" class="size-4 text-base-content/70" />
               </button>
             </div>
 
             <div
-              :if={@sidebar_open}
               id="scroll-spy-nav"
               phx-hook="ScrollSpy"
-              class="border-t border-base-300 max-h-[65vh] overflow-y-auto px-2 py-2 space-y-3"
+              class="fold-body border-t border-base-300 max-h-[65vh] overflow-y-auto px-2 py-2 space-y-3"
             >
               <%!-- View switcher --%>
               <section>
@@ -239,8 +232,8 @@ defmodule PlaycodeWeb.PlayShowLive do
 
             <%!-- Visual markers (text view only) --%>
             <div
-              :if={@sidebar_open && @active_tab == :text}
-              class="border-t border-base-300 px-3 py-2.5 space-y-2"
+              :if={@active_tab == :text}
+              class="fold-body border-t border-base-300 px-3 py-2.5 space-y-2"
             >
               <h3 class="text-xs font-semibold uppercase tracking-widest text-base-content/70">
                 {gettext("Visual markers")}
@@ -314,11 +307,8 @@ defmodule PlaycodeWeb.PlayShowLive do
 
             <%!-- Highlight and step through (questions 45, 52) --%>
             <div
-              :if={
-                @sidebar_open && @active_tab == :text &&
-                  (@has_shared_lines || @has_stage_directions)
-              }
-              class="border-t border-base-300 px-3 py-2.5 space-y-2"
+              :if={@active_tab == :text && (@has_shared_lines || @has_stage_directions)}
+              class="fold-body border-t border-base-300 px-3 py-2.5 space-y-2"
             >
               <h3 class="text-xs font-semibold uppercase tracking-widest text-base-content/70">
                 {gettext("Highlight")}
@@ -404,7 +394,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             id="meta-overview"
             class="play-header mb-8 border-b border-base-300/40 pb-6 scroll-mt-20 text-center"
           >
-            <h2 class="play-author">{@play.author_name}</h2>
+            <p :if={@play.author_name} class="play-author">{@play.author_name}</p>
             <h1 class="play-title font-bold">{@play.title}</h1>
             <p :if={@play.original_title} class="mt-1 text-sm italic text-base-content/70">
               {@play.original_title}
@@ -480,9 +470,6 @@ defmodule PlaycodeWeb.PlayShowLive do
               <% else %>
                 {@play.licence_text}
               <% end %>
-            </p>
-            <p class="mt-1 text-xs text-base-content/70">
-              {PlaycodeWeb.Endpoint.url() <> ~p"/plays/#{@play.code}"}
             </p>
           </header>
 

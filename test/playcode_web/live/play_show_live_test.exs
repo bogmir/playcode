@@ -20,6 +20,17 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert has_element?(lv, "nav[aria-label='#{t("Breadcrumb")}']")
   end
 
+  # F3: the head names the play as the static site does; the page's own address is the
+  # browser's to show, not the head's.
+  test "the head names the play and its author, and prints no address", %{conn: conn} do
+    play = TestFixtures.play_fixture(%{"is_complete" => true, "author_name" => "Lope de Vega"})
+    {:ok, lv, html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert has_element?(lv, "#meta-overview h1", play.title)
+    assert has_element?(lv, "#meta-overview", "Lope de Vega")
+    refute html =~ PlaycodeWeb.Endpoint.url() <> "/plays/#{play.code}"
+  end
+
   test "italics in the text render as emphasis, without the storage markers", %{conn: conn} do
     play =
       import_tei!(
