@@ -35,9 +35,12 @@ defmodule Playcode.Export.StaticSite.Components do
   slot :inner_block, required: true
 
   def shell(assigns) do
+    {title, english} = with title when is_binary(title) <- assigns.title, do: same(title)
+
     assigns =
       assign(assigns,
-        title: title_parts(assigns.title),
+        title: title,
+        english_title: if(english != title, do: english),
         rail_label: assigns.rail_label || t("Contents & tools")
       )
 
@@ -47,10 +50,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title :if={match?([_], @title)}>{hd(@title)}</title>
-        <title :if={match?([_, _], @title)} data-tr data-en-text={List.last(@title)}>
-          {hd(@title)}
-        </title>
+        <title data-tr={@english_title && true} data-en-text={@english_title}>{@title}</title>
         <%!-- Not stamped like the links below: it must match style.css's url(), or the font is fetched twice. --%>
         <link
           rel="preload"
@@ -127,11 +127,6 @@ defmodule Playcode.Export.StaticSite.Components do
     </html>
     """
   end
-
-  # A page's title in the two languages, once when they read alike.
-  defp title_parts({same, same}), do: [same]
-  defp title_parts({es, en}), do: [es, en]
-  defp title_parts(title), do: [title]
 
   attr :play, :map, required: true
 
@@ -505,15 +500,13 @@ defmodule Playcode.Export.StaticSite.Components do
   # Its venue types are in both languages, so each line's parts are `{spanish, english}`.
   defp performance_listing(%{performances: performances, characters: characters}) do
     gazetteer = if Enum.any?(performances, & &1.place), do: Playcode.Places.gazetteer(), else: %{}
-    spanish = Performances.listing(performances, characters, gazetteer, "es", "es")
-    english = Performances.listing(performances, characters, gazetteer, "en", "es")
+    listing = Performances.listing(performances, characters, gazetteer, {"es", "en"}, "es")
 
     lines =
-      Enum.zip_with(spanish.lines, english.lines, fn es, en ->
-        %{en | parts: {Enum.join(es.parts, " · "), Enum.join(en.parts, " · ")}}
-      end)
+      for %{parts: {es, en}} = line <- listing.lines,
+          do: %{line | parts: {Enum.join(es, " · "), Enum.join(en, " · ")}}
 
-    %{english | lines: lines}
+    %{listing | lines: lines}
   end
 
   attr :groups, :list, required: true
@@ -1010,7 +1003,7 @@ defmodule Playcode.Export.StaticSite.Components do
     attr =
       case pair(fn -> PlayLabels.tag_type_label(rs.type) end) do
         {nil, _} -> []
-        title -> attr_html(title, "title")
+        title -> attrs_html(title, "title")
       end
 
     [~s(<span class="rs"), attr, ">", part(Map.delete(part, :rs)), "</span>"]
@@ -1042,7 +1035,7 @@ defmodule Playcode.Export.StaticSite.Components do
       ~s(" class="nref" popovertarget="note-),
       number,
       ~s("),
-      attr_html(ref_label(note, number), "aria-label"),
+      attrs_html(ref_label(note, number), "aria-label"),
       ">",
       number,
       "</button>"
@@ -1056,19 +1049,13 @@ defmodule Playcode.Export.StaticSite.Components do
       ~s(<button type="button" class="vref" popovertarget="var-),
       number,
       ~s("),
-      attr_html(ref_label(note, number), "aria-label"),
+      attrs_html(ref_label(note, number), "aria-label"),
       ~s(>*</button>)
     ]
   end
 
   defp ref_label(note, number),
     do: pair(fn -> "#{PlayLabels.note_type_label(note.type)} #{number}" end)
-
-  # `Bilingual.attrs/2` as markup, for the parts built as iodata.
-  defp attr_html({same, same}, name), do: [" ", name, ~s(="), escape(same), ~s(")]
-
-  defp attr_html({es, en}, name),
-    do: [attr_html({es, es}, name), " data-en-", name, ~s(="), escape(en), ~s(" data-tr)]
 
   defp breaks(text), do: text |> escape() |> String.replace("\n", "<br>")
 
@@ -1450,8 +1437,6 @@ defmodule Playcode.Export.StaticSite.Components do
     {"#{name} · #{es} · #{lines_es}", "#{name} · #{en} · #{lines_en}"}
   end
 
-  defp same(text), do: {text, text}
-
   defp act_start(columns, i),
     do:
       if(i > 0 and Enum.at(columns, i - 1)["act"] != Enum.at(columns, i)["act"], do: "act-start")
@@ -1472,6 +1457,12 @@ defmodule Playcode.Export.StaticSite.Components do
   def language("pt"), do: tp("Portuguese")
   def language("de"), do: tp("German")
   def language(code), do: {code, code}
+
+  @doc "A kind's name in the catalogue's and the search's facets, `{spanish, english}`."
+  def kind_label("original"), do: tp("Originals")
+  def kind_label("translation"), do: tp("Translations")
+  def kind_label("adaptation"), do: tp("Adaptations")
+  def kind_label("version"), do: tp("Versions")
 
   @doc "The site's key for a play's kind: original, translation, adaptation or version."
   def kind(%{relationship_type: nil}), do: "original"
@@ -1536,8 +1527,7 @@ defmodule Playcode.Export.StaticSite.Components do
         :if={@compare}
         class="compare"
         href={"plays/#{@compare}/compare.html"}
-        {ta("aria-label", "Compare")}
-        {ta("title", "Compare")}
+        {ta(["aria-label", "title"], "Compare")}
       >
         <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path

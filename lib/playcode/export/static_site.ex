@@ -28,6 +28,7 @@ defmodule Playcode.Export.StaticSite do
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Comparison, Components, Edition, Fingerprint, Pages, Search}
+  alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
 
   @build "build.json"
@@ -561,7 +562,7 @@ defmodule Playcode.Export.StaticSite do
 
     File.write!(
       Path.join([dir, "plays", "#{code}.html"]),
-      Pages.render(:redirect, %{code: code, title: play.title})
+      Pages.render(:redirect, %{code: code, title: InlineMarkup.plain(play.title)})
     )
 
     %{largest_page_gzip: largest, compare_gzip: compare}
@@ -688,17 +689,12 @@ defmodule Playcode.Export.StaticSite do
     [
       {"lang", t("Language"), options(plays, & &1.language, &html(Components.language(&1)))},
       {"form", t("Form"), options(plays, &Play.form/1, &form_label/1)},
-      {"kind", t("Kind"), options(plays, &Components.kind/1, &kind_label/1)},
+      {"kind", t("Kind"), options(plays, &Components.kind/1, &html(Components.kind_label(&1)))},
       {"coll", t("Collection"), options(plays, &Components.collection/1, & &1)}
     ]
   end
 
   defp form_label(form), do: both(fn -> PlayLabels.form_label(form) end)
-
-  defp kind_label("original"), do: t("Originals")
-  defp kind_label("translation"), do: t("Translations")
-  defp kind_label("adaptation"), do: t("Adaptations")
-  defp kind_label("version"), do: t("Versions")
 
   defp options(plays, value_of, label) do
     plays

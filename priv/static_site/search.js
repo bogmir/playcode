@@ -96,31 +96,23 @@
     return out;
   };
 
-  // The Kind facet's names, Spanish and English, by the kind the index gives a play
-  // (StaticSite.Components.kind/1).
-  var KINDS = {
-    original: ['Originales', 'Originals'], translation: ['Traducciones', 'Translations'],
-    adaptation: ['Adaptaciones', 'Adaptations'], version: ['Versiones', 'Versions']
-  };
-  S.kindLabel = function (kind, ui) { return KINDS[kind] ? KINDS[kind][ui === 'en' ? 1 : 0] : kind; };
-
   if (!root.document) return;
 
-  // A [Spanish, English] pair in the interface's language (site.js's EMOTHE.say).
+  // The page's words, each [Spanish, English] from the site's translations (the search
+  // form's data-words, StaticSite.Pages), said in the interface's language.
+  var W;
   function say(pair) { return root.EMOTHE.say(pair[0], pair[1]); }
 
   var FIRST_PLAYS = 10, FIRST_LINES = 5;
-  var TYPES = { spoken: ['Diálogo', 'Spoken'], stage: ['Acotaciones', 'Stage directions'], note: ['Notas', 'Notes'] };
-  var WORDS = { translation: ['traducción', 'translation'], adaptation: ['adaptación', 'adaptation'], version: ['versión', 'version'] };
   var form, results, count, facetsEl, state = null, renders = 0, runs = 0;
-  // Each facet: its name, its legend, a hit's value, and the value's name.
+  // Each facet: its name, a hit's value, and the value's name.
   var FACETS = [
-    ['language', ['Idioma', 'Language'], function (play) { return play.language; }, function (play) { return say(play.language_name); }],
-    ['author', ['Autor', 'Author'], function (play) { return play.author || '—'; }],
-    ['kind', ['Tipo', 'Kind'], function (play) { return play.kind; }, function (play) { return S.kindLabel(play.kind, document.documentElement.dataset.ui); }],
-    ['type', ['Texto', 'Text'], function (play, kind) { return kind; }, function (play, kind) { return say(TYPES[kind]); }]
+    ['language', function (play) { return play.language; }, function (play) { return say(play.language_name); }],
+    ['author', function (play) { return play.author || '—'; }],
+    ['kind', function (play) { return play.kind; }, function (play) { return say(W.kinds[play.kind]); }],
+    ['type', function (play, kind) { return kind; }, function (play, kind) { return say(W.types[kind]); }]
   ];
-  function lines(n) { return n + say(n === 1 ? [' línea', ' line'] : [' líneas', ' lines']); }
+  function counted(n, one, many) { return n + ' ' + say(n === 1 ? W[one] : W[many]); }
 
   function el(tag, cls, text) {
     var node = document.createElement(tag);
@@ -189,7 +181,7 @@
     var parsed = S.parse(query);
     if (!parsed.words.length) { state = null; render(); return; }
     var keys = parsed.words.map(S.shardKey).filter(function (k, i, a) { return a.indexOf(k) === i; });
-    count.textContent = say(['Buscando…', 'Searching…']);
+    count.textContent = say(W.searching);
     need('plays', 'all', 'search/plays.js')
       .then(function () {
         return Promise.all(keys.map(function (k) { return need('index', k, 'search/index/' + S.shardFile(k) + '.js'); }));
@@ -210,7 +202,7 @@
   function passes(play, kind, skip) {
     return FACETS.every(function (f) {
       var want = state.filters[f[0]];
-      return f === skip || !want || f[2](play, kind) === want;
+      return f === skip || !want || f[1](play, kind) === want;
     });
   }
 
@@ -229,7 +221,7 @@
       return groups[b].length - groups[a].length || store.plays[a].title.localeCompare(store.plays[b].title);
     });
     var total = order.reduce(function (n, p) { return n + groups[p].length; }, 0);
-    count.textContent = lines(total) + say([' en ', ' in ']) + order.length + say(order.length === 1 ? [' obra', ' play'] : [' obras', ' plays']);
+    count.textContent = counted(total, 'line', 'lines') + ' ' + say(W.in) + ' ' + counted(order.length, 'play', 'plays');
     renderFacets();
 
     var shown = state.allPlays ? order : order.slice(0, FIRST_PLAYS);
@@ -243,7 +235,7 @@
       if (token !== renders) return;
       shown.forEach(function (p) { results.appendChild(group(p, groups[p].length, visible[p])); });
       if (order.length > shown.length) {
-        results.appendChild(button(say(['Mostrar las ', 'Show all ']) + order.length + say([' obras', ' plays']), function () { state.allPlays = true; render(); }));
+        results.appendChild(button(say(W.show_all) + ' ' + counted(order.length, 'play', 'plays'), function () { state.allPlays = true; render(); }));
       }
     });
   }
@@ -254,15 +246,15 @@
       Object.keys(state.hits).forEach(function (k) {
         var p = Number(k.split(':')[0]), kind = state.hits[k], play = store.plays[p];
         if (passes(play, kind, f)) {
-          var v = f[2](play, kind);
+          var v = f[1](play, kind);
           counts[v] = (counts[v] || 0) + 1;
-          names[v] = (f[3] || f[2])(play, kind);
+          names[v] = (f[2] || f[1])(play, kind);
         }
       });
       var values = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
       if (values.length < 2 && !state.filters[f[0]]) return;
       var fieldset = el('fieldset', 'facet');
-      fieldset.appendChild(el('legend', null, say(f[1])));
+      fieldset.appendChild(el('legend', null, say(W.legends[f[0]])));
       [''].concat(values).forEach(function (v) {
         var label = el('label'), input = el('input');
         input.type = 'radio';
@@ -271,7 +263,7 @@
         input.checked = (state.filters[f[0]] || '') === v;
         input.addEventListener('change', function () { state.filters[f[0]] = v; state.open = {}; render(); });
         label.appendChild(input);
-        label.appendChild(el('span', null, v ? names[v] : say(['Todos', 'All'])));
+        label.appendChild(el('span', null, v ? names[v] : say(W.all)));
         label.appendChild(el('span', 'count', v ? String(counts[v]) : ''));
         fieldset.appendChild(label);
       });
@@ -285,8 +277,8 @@
     link.href = 'plays/' + play.code + '/index.html';
     heading.appendChild(link);
     section.appendChild(heading);
-    var kind = WORDS[play.kind] ? say(WORDS[play.kind]) : null;
-    var meta = [play.author, kind, lines(total)];
+    var kind = play.kind === 'original' ? null : say(W.kind_words[play.kind]);
+    var meta = [play.author, kind, counted(total, 'line', 'lines')];
     section.appendChild(el('p', 'group-meta', meta.filter(Boolean).join(' · ')));
     var list = el('ol', 'hits');
     shown.forEach(function (l) {
@@ -294,7 +286,7 @@
       if (line) list.appendChild(hit(play, line));
     });
     section.appendChild(list);
-    if (total > shown.length) section.appendChild(button(say(['Mostrar las ', 'Show all ']) + total, function () { state.open[p] = true; render(); }));
+    if (total > shown.length) section.appendChild(button(say(W.show_all) + ' ' + counted(total, 'line', 'lines'), function () { state.open[p] = true; render(); }));
     return section;
   }
 
@@ -324,6 +316,7 @@
   document.addEventListener('DOMContentLoaded', function () {
     form = document.querySelector('[data-search-form]');
     if (!form) return;
+    W = JSON.parse(form.dataset.words);
     results = document.querySelector('[data-search-results]');
     count = document.querySelector('[data-search-count]');
     facetsEl = document.querySelector('[data-search-facets]');
@@ -332,7 +325,8 @@
     form.elements.q.value = params.get('q') || '';
     if (params.get('mode') === 'word') form.elements.mode.value = 'word';
     form.addEventListener('submit', function (event) { event.preventDefault(); run(); });
-    document.addEventListener('emothe:ui', render);
+    // Only results are said again: a search still loading keeps its "Searching…".
+    document.addEventListener('emothe:ui', function () { if (state) render(); });
     if (form.elements.q.value) run();
   });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -12,6 +12,9 @@ defmodule Playcode.MixProject do
       deps: deps(),
       compilers: [:phoenix_live_view] ++ Mix.compilers(),
       listeners: [Phoenix.CodeReloader],
+      # The static site's fingerprint reads each module's source file from the beam's
+      # CInf chunk, which a release strips by default (StaticSite.Fingerprint).
+      releases: [playcode: [strip_beams: [keep: ["CInf"]]]],
       # The fixtures' regenerate.exs scripts are run with `mix run`, not tests.
       test_ignore_filters: [&String.starts_with?(&1, "test/fixtures/")]
     ]

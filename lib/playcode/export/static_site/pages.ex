@@ -10,7 +10,7 @@ defmodule Playcode.Export.StaticSite.Pages do
 
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Comparison, Components, Edition}
-  alias Playcode.PlayContent.{Element, Note}
+  alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels
 
   embed_templates "pages/*"
@@ -39,6 +39,40 @@ defmodule Playcode.Export.StaticSite.Pages do
       do: both(fn -> PlayLabels.stage_type_label(type) end),
       else: type
   end
+
+  # What search.js says, `{spanish, english}` as JSON pairs: its facets' legends and values
+  # (each kind by its own name, question 15), its counts and its buttons.
+  defp search_words do
+    words = %{
+      legends: %{
+        language: tp("Language"),
+        author: tp("Author"),
+        kind: tp("Kind"),
+        type: tp("Text")
+      },
+      kinds:
+        Map.new(~w(original translation adaptation version), &{&1, Components.kind_label(&1)}),
+      kind_words: %{
+        translation: tp("translation"),
+        adaptation: tp("adaptation"),
+        version: tp("version")
+      },
+      types: %{spoken: tp("Spoken"), stage: tp("Stage directions"), note: tp("Notes")},
+      all: tp("All"),
+      searching: tp("Searching…"),
+      line: tp("line"),
+      lines: tp("lines"),
+      play: tp("play"),
+      plays: tp("plays"),
+      in: tp("in"),
+      show_all: tp("Show all")
+    }
+
+    Jason.encode!(lists(words))
+  end
+
+  defp lists(%{} = map), do: Map.new(map, fn {key, value} -> {key, lists(value)} end)
+  defp lists({es, en}), do: [es, en]
 
   @doc "Renders page template `name` (`:title`, `:division`, …) with `assigns` to HTML."
   def render(name, assigns) do
