@@ -27,6 +27,12 @@ defmodule PlaycodeWeb.UserAcceptInviteLive do
         <:subtitle>{gettext("Choose a password for %{email}", email: @user.email)}</:subtitle>
       </.header>
 
+      <p class="mt-4 text-center text-sm text-base-content/70">
+        {gettext(
+          "Playcode is where the EMOTHE and ARTELOPE teams catalogue and edit the plays the public site is generated from."
+        )}
+      </p>
+
       <div
         :if={@current_user && @current_user.id != @user.id}
         class="alert alert-warning mt-4 text-sm"

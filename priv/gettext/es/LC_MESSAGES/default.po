@@ -600,7 +600,7 @@ msgstr "Resumen"
 msgid "Part (split line)"
 msgstr "Parte (verso partido)"
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:55
+#: lib/playcode_web/live/user_accept_invite_live.ex:61
 #: lib/playcode_web/live/user_login_live.ex:18
 #: lib/playcode_web/live/user_settings_live.ex:40
 #, elixir-autogen, elixir-format
@@ -2637,12 +2637,12 @@ msgstr "Pida a un administrador que le envíe una nueva."
 msgid "Choose a password for %{email}"
 msgstr "Elija una contraseña para %{email}"
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:60
+#: lib/playcode_web/live/user_accept_invite_live.ex:66
 #, elixir-autogen, elixir-format
 msgid "Saving..."
 msgstr "Guardando..."
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:61
+#: lib/playcode_web/live/user_accept_invite_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "Set password and sign in"
 msgstr "Establecer contraseña e iniciar sesión"
@@ -2878,7 +2878,7 @@ msgstr "Gestione su contraseña y los dispositivos donde tiene la sesión inicia
 msgid "Your address is set by the administrator who invited you."
 msgstr "Su dirección la establece el administrador que le invitó."
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:36
+#: lib/playcode_web/live/user_accept_invite_live.ex:42
 #, elixir-autogen, elixir-format
 msgid "You are signed in as %{email}. Continuing will sign you out of that account."
 msgstr ""
@@ -6384,3 +6384,8 @@ msgstr "Entendido"
 #, elixir-autogen, elixir-format
 msgid "Mark it complete, and it reaches the site at the next Generate."
 msgstr "Márcala como completa y llegará al sitio la próxima vez que se genere."
+
+#: lib/playcode_web/live/user_accept_invite_live.ex:31
+#, elixir-autogen, elixir-format
+msgid "Playcode is where the EMOTHE and ARTELOPE teams catalogue and edit the plays the public site is generated from."
+msgstr "Playcode es donde los equipos de EMOTHE y ARTELOPE catalogan y editan las obras con las que se genera el sitio público."

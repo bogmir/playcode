@@ -600,7 +600,7 @@ msgstr ""
 msgid "Part (split line)"
 msgstr ""
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:55
+#: lib/playcode_web/live/user_accept_invite_live.ex:61
 #: lib/playcode_web/live/user_login_live.ex:18
 #: lib/playcode_web/live/user_settings_live.ex:40
 #, elixir-autogen, elixir-format
@@ -2635,12 +2635,12 @@ msgstr ""
 msgid "Choose a password for %{email}"
 msgstr ""
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:60
+#: lib/playcode_web/live/user_accept_invite_live.ex:66
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Saving..."
 msgstr ""
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:61
+#: lib/playcode_web/live/user_accept_invite_live.ex:67
 #, elixir-autogen, elixir-format
 msgid "Set password and sign in"
 msgstr ""
@@ -2874,7 +2874,7 @@ msgstr ""
 msgid "Your address is set by the administrator who invited you."
 msgstr ""
 
-#: lib/playcode_web/live/user_accept_invite_live.ex:36
+#: lib/playcode_web/live/user_accept_invite_live.ex:42
 #, elixir-autogen, elixir-format
 msgid "You are signed in as %{email}. Continuing will sign you out of that account."
 msgstr ""
@@ -6377,4 +6377,9 @@ msgstr ""
 #: lib/playcode_web/live/admin/play_list_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Mark it complete, and it reaches the site at the next Generate."
+msgstr ""
+
+#: lib/playcode_web/live/user_accept_invite_live.ex:31
+#, elixir-autogen, elixir-format
+msgid "Playcode is where the EMOTHE and ARTELOPE teams catalogue and edit the plays the public site is generated from."
 msgstr ""

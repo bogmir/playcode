@@ -6,7 +6,8 @@ defmodule PlaycodeWeb.UserAcceptInviteLiveTest do
 
   alias Playcode.Accounts
 
-  test "given a valid token then setting a password logs the user in", %{conn: conn} do
+  test "given a valid token then setting a password signs the user in, on the play list, welcomed",
+       %{conn: conn} do
     {user, token} = invited_user_fixture()
 
     {:ok, lv, _html} = live(conn, ~p"/users/accept-invite/#{token}")
@@ -25,6 +26,20 @@ defmodule PlaycodeWeb.UserAcceptInviteLiveTest do
     # sends them to the admin play list rather than the public home page.
     assert redirected_to(conn) == ~p"/admin/plays"
     assert Accounts.active?(Playcode.Repo.reload!(user))
+
+    {:ok, _list, html} = live(recycle(conn), ~p"/admin/plays")
+    assert html =~ t("Welcome to Playcode!")
+  end
+
+  test "the page says what Playcode is", %{conn: conn} do
+    {_user, token} = invited_user_fixture()
+
+    {:ok, _lv, html} = live(conn, ~p"/users/accept-invite/#{token}")
+
+    assert html =~
+             t(
+               "Playcode is where the EMOTHE and ARTELOPE teams catalogue and edit the plays the public site is generated from."
+             )
   end
 
   # Regression: the route sat behind redirect_if_user_is_authenticated, so an
