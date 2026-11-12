@@ -165,6 +165,20 @@
     } catch (e) { return null; }
   }
 
+  function initTheme() {
+    var button = document.querySelector('[data-theme-toggle]');
+    if (!button) return;
+    var html = document.documentElement;
+    var show = function () { button.setAttribute('aria-pressed', String(html.dataset.theme === 'dark')); };
+    button.hidden = false;
+    show();
+    button.addEventListener('click', function () {
+      html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
+      remembered('theme', html.dataset.theme);
+      show();
+    });
+  }
+
   function initTools() {
     var tools = document.querySelector('[data-tools]');
     if (!tools) return;
@@ -249,6 +263,7 @@
     }
     initCatalogue();
     initNotes();
+    initTheme();
     initTools();
     initLinks();
     realign();

@@ -47,6 +47,11 @@ defmodule Playcode.Export.StaticSite.Components do
           type="font/woff2"
           crossorigin
         />
+        <%!-- The reader's light or dark, else the system's, before anything paints; without
+              JavaScript the page is light. --%>
+        <script>
+          (function(){var t;try{t=localStorage.getItem("reader.theme")}catch(e){}document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")})()
+        </script>
         <link rel="stylesheet" href={@root <> "assets/style.css?v=" <> @site.assets} />
         <script src={@root <> "assets/site.js?v=" <> @site.assets} defer>
         </script>
@@ -67,6 +72,9 @@ defmodule Playcode.Export.StaticSite.Components do
             <a href="https://emothe.uv.es/">Inicio</a>
             <a href="https://emothe.uv.es/basededatos/">Base de datos</a>
           </nav>
+          <button type="button" class="theme" data-theme-toggle aria-label="Dark mode" hidden>
+            ◐
+          </button>
         </header>
         <div class={["frame", @rail != [] && "with-rail"]}>
           <details :if={@rail != []} class="rail" open>

@@ -662,6 +662,28 @@ defmodule Playcode.Export.StaticSiteTest do
     end
   end
 
+  # The band's switch sets light or dark and site.js remembers it; a line in the head
+  # applies the choice, or the system's, before the stylesheet paints anything.
+  test "every page has a light and dark switch, and starts in the reader's last choice" do
+    play = complete_play()
+    dir = generate!([play], all: true)
+
+    for path <- ["index.html", "about.html", "plays/#{play.code}/index.html"] do
+      page = html!(dir, path)
+
+      assert {path,
+              page |> LazyHTML.query("header button[aria-label='Dark mode']") |> Enum.count()} ==
+               {path, 1}
+
+      head = dir |> Path.join(path) |> File.read!() |> String.split("</head>") |> hd()
+      [before_style, _] = String.split(head, ~s(rel="stylesheet"), parts: 2)
+      assert before_style =~ "reader.theme"
+    end
+
+    css = File.read!(Path.join([dir, "assets", "style.css"]))
+    assert css =~ ~r/\[data-theme="?dark"?\] \{[^}]*--paper: #16131c/
+  end
+
   # WCAG 2's contrast ratio of two sRGB colours, as six hex digits.
   defp contrast(a, b) do
     [light, dark] = Enum.sort([luminance(a), luminance(b)], :desc)

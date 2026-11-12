@@ -100,7 +100,9 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       System.cmd("node", [
         "--input-type=commonjs",
         "-e",
-        "globalThis.document = {addEventListener() {}};\n" <>
+        # The head's line picks light or dark from the page's root and the system.
+        "globalThis.document = {addEventListener() {}, documentElement: {dataset: {}}};\n" <>
+          "globalThis.matchMedia = () => ({matches: false});\n" <>
           script <> "\nconsole.log(matchPair([0, 1, 1, 3], 2), typeof syncPanels)"
       ])
 
