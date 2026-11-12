@@ -119,7 +119,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
                 {derived.author_name}
               </span>
             </.link>
-            <span :if={derived.relationship_type} class="badge badge-ghost badge-xs">
+            <span :if={derived.relationship_type} class="badge badge-ghost badge-sm">
               {derived.relationship_type
               |> PlaycodeWeb.PlayLabels.relationship_type_label()
               |> String.downcase()}

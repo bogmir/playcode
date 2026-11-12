@@ -1062,7 +1062,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
       class="btn btn-ghost btn-xs mb-2 gap-1"
       aria-label={gettext("Rename %{name}", name: plain_name(@record))}
     >
-      <.icon name="hero-pencil-micro" class="size-3.5" /> {gettext("Rename")}
+      <.icon name="hero-pencil-square-micro" class="size-3.5" /> {gettext("Rename")}
     </button>
     """
   end

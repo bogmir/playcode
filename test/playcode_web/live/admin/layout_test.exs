@@ -8,6 +8,18 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
 
   defp sidebar_links?(lv, paths), do: Enum.map(paths, &has_element?(lv, "aside a[href='#{&1}']"))
 
+  # The keyboard reaches the page past the header and the sidebar's links in one press.
+  test "the admin and the public pages open with a link that skips to the content",
+       %{conn: conn} do
+    conn = log_in_user(conn, admin_fixture())
+
+    for path <- ~w(/admin/plays /plays) do
+      {:ok, lv, _html} = live(conn, path)
+      assert {path, has_element?(lv, "a[href='#main']", t("Skip to content"))} == {path, true}
+      assert {path, has_element?(lv, "main#main")} == {path, true}
+    end
+  end
+
   describe "admin sidebar" do
     test "an admin is offered every section", %{conn: conn} do
       {:ok, lv, _html} = live(log_in_user(conn, admin_fixture()), ~p"/admin/plays")

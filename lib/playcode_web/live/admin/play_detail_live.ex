@@ -445,12 +445,12 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
               {gettext("Drafts only.")}
             </p>
             <form id="docx-upload-form" phx-submit="import_docx" phx-change="validate_upload">
-              <label class="sr-only" for={@uploads.docx.ref}>{gettext("Word file")}</label>
-              <.live_file_input
+              <.drop_zone
                 upload={@uploads.docx}
-                class="file-input file-input-bordered file-input-sm w-full"
+                label={gettext("Drop the Word file here, or choose it")}
               />
               <div :for={entry <- @uploads.docx.entries} class="mt-1">
+                <span class="font-mono text-sm">{entry.client_name}</span>
                 <div :for={err <- upload_errors(@uploads.docx, entry)} class="text-error text-xs">
                   {error_to_string(err)}
                 </div>

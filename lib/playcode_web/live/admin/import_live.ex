@@ -192,12 +192,13 @@ defmodule PlaycodeWeb.Admin.ImportLive do
             {gettext("Choose one or more TEI-XML files from your computer.")}
           </p>
           <form id="upload-form" phx-submit="import" phx-change="validate">
-            <.live_file_input
-              upload={@uploads.tei_files}
-              class="file-input file-input-bordered w-full mb-4"
-              aria-label={gettext("Select Files")}
-              disabled={@importing}
-            />
+            <div class="mb-4">
+              <.drop_zone
+                upload={@uploads.tei_files}
+                label={gettext("Drop TEI-XML files here, or choose them")}
+                disabled={@importing}
+              />
+            </div>
 
             <div
               :for={entry <- @uploads.tei_files.entries}
@@ -226,14 +227,18 @@ defmodule PlaycodeWeb.Admin.ImportLive do
               class="btn btn-primary mt-2"
               disabled={@uploads.tei_files.entries == [] || @importing}
             >
-              {gettext("Import %{count} file(s)", count: length(@uploads.tei_files.entries))}
+              {import_label(length(@uploads.tei_files.entries))}
             </button>
           </form>
         </div>
       </div>
 
       <%!-- Replacement confirmation --%>
-      <div :if={@previews != []} class="card mb-6 border border-warning bg-base-100 shadow-sm">
+      <div
+        :if={@previews != []}
+        id="import-confirmation"
+        class="card mb-6 border border-warning bg-base-100 shadow-sm"
+      >
         <div class="card-body">
           <h2 class="card-title text-warning">
             <.icon name="hero-exclamation-triangle" class="size-5" />
@@ -320,7 +325,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
           </ul>
 
           <div class="card-actions mt-4">
-            <button phx-click="confirm_import" class="btn btn-warning btn-sm">
+            <button phx-click="confirm_import" class="btn btn-primary btn-sm">
               {if existing_count(@previews) > 0,
                 do: gettext("Replace and import"),
                 else: gettext("Import")}
@@ -463,4 +468,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   defp upload_error_to_string(:not_accepted), do: gettext("Only .xml files are accepted")
   defp upload_error_to_string(:too_many_files), do: gettext("Too many files (max 20)")
   defp upload_error_to_string(err), do: "#{gettext("Error")}: #{inspect(err)}"
+
+  defp import_label(0), do: gettext("Import")
+  defp import_label(n), do: ngettext("Import %{count} file", "Import %{count} files", n)
 end

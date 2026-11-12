@@ -314,7 +314,7 @@ defmodule PlaycodeWeb.Components.PlayText do
         class="flex items-baseline gap-2 ml-1 sm:ml-4 -mb-0.5"
       >
         <span class="flex-1" />
-        <span class="w-8 sm:w-16 text-left text-[9px] italic text-base-content/70 shrink-0 leading-tight">
+        <span class="w-8 sm:w-16 text-left text-xs italic text-base-content/70 shrink-0 leading-tight">
           {@element.verse_type}
         </span>
       </div>

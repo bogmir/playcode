@@ -1717,18 +1717,18 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="font-medium text-sm">{entry.name}</span>
-                  <span :if={entry.character} class="text-[10px] text-base-content/70 font-mono">
+                  <span :if={entry.character} class="text-xs text-base-content/70 font-mono">
                     {entry.character.xml_id}
                   </span>
-                  <span :if={!entry.character} class="badge badge-ghost badge-xs">
+                  <span :if={!entry.character} class="badge badge-ghost badge-sm">
                     {gettext("Names no character")}
                   </span>
-                  <span :if={entry.group_heading} class="badge badge-outline badge-xs">
+                  <span :if={entry.group_heading} class="badge badge-outline badge-sm">
                     {entry.group_heading}
                   </span>
                   <span
                     :if={entry.character && entry.character.is_hidden}
-                    class="badge badge-ghost badge-xs"
+                    class="badge badge-ghost badge-sm"
                   >
                     {gettext("hidden")}
                   </span>
@@ -1757,7 +1757,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                   aria-label={gettext("Edit")}
                   data-tip={gettext("Edit")}
                 >
-                  <.icon name="hero-pencil-mini" class="size-3.5" />
+                  <.icon name="hero-pencil-square-mini" class="size-3.5" />
                 </button>
                 <button
                   phx-click="delete_entry"
@@ -2030,7 +2030,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
               phx-value-parent-id={result.parent_id || ""}
             >
               <div class="flex items-center gap-2">
-                <span class="badge badge-xs badge-outline">
+                <span class="badge badge-sm badge-outline">
                   {element_type_label(result.type)}
                 </span>
                 <span :if={result.speaker_label} class="text-xs font-medium">
@@ -2325,7 +2325,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           class="size-4 text-base-content/70"
         />
         <span class="truncate font-semibold">{division_label(@item)}</span>
-        <span class="badge badge-ghost badge-xs">
+        <span class="badge badge-ghost badge-sm">
           {@item.type}{if @item.number, do: " #{@item.number}"}
         </span>
       </div>
@@ -2383,7 +2383,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           >
             <.icon name="hero-document-mini" class="size-3.5" />
             {division_label(child)}
-            <span :if={@selected_division_id == child.id} class="badge badge-primary badge-xs ml-1">
+            <span :if={@selected_division_id == child.id} class="badge badge-primary badge-sm ml-1">
               {gettext("editing")}
             </span>
           </button>
@@ -2706,7 +2706,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
                 placeholder={gettext("Leave empty to clear")}
                 class="input input-bordered input-xs w-40"
               />
-              <button type="submit" class="btn btn-secondary btn-xs">
+              <button type="submit" class="btn btn-outline btn-xs">
                 {gettext("Set Label")}
               </button>
               <button
@@ -2919,7 +2919,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           <span :if={@element.line_number} class="text-xs text-base-content/70 ml-1">
             L{@element.line_number}
           </span>
-          <span :if={@element.is_aside} class="badge badge-ghost badge-xs ml-1">
+          <span :if={@element.is_aside} class="badge badge-ghost badge-sm ml-1">
             {gettext("aside")}
           </span>
         </div>
@@ -2991,7 +2991,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
             aria-label={gettext("Edit")}
             data-tip={gettext("Edit")}
           >
-            <.icon name="hero-pencil-mini" class="size-4" />
+            <.icon name="hero-pencil-square-mini" class="size-4" />
           </button>
           <button
             phx-click="delete_element"
@@ -3100,14 +3100,14 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         <% @original -> %>
           {gettext("Original:")}
           <span class="font-medium text-base-content">{InlineMarkup.plain(@original.name)}</span>
-          <span :if={@original.xml_id == @character.original_xml_id} class="badge badge-info badge-xs">
+          <span :if={@original.xml_id == @character.original_xml_id} class="badge badge-info badge-sm">
             {gettext("corrected")}
           </span>
         <% @character.no_original -> %>
           {gettext("No original")}
-          <span class="badge badge-info badge-xs">{gettext("corrected")}</span>
+          <span class="badge badge-info badge-sm">{gettext("corrected")}</span>
         <% true -> %>
-          <span class="badge badge-warning badge-xs">{gettext("No original found")}</span>
+          <span class="badge badge-warning badge-sm">{gettext("No original found")}</span>
       <% end %>
     </span>
     """
@@ -3138,7 +3138,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp modal_content(%{modal: :paratext} = assigns) do
     ~H"""
-    <h3 class="text-lg font-bold mb-4">
+    <h3 id="content-modal-title" class="text-lg font-bold mb-4">
       {editing_label(@editing)} {gettext("Paratext")}
     </h3>
     <.form
@@ -3215,7 +3215,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp modal_content(%{modal: :character} = assigns) do
     ~H"""
-    <h3 class="text-lg font-bold mb-4">{editing_label(@editing)} {gettext("Character")}</h3>
+    <h3 id="content-modal-title" class="text-lg font-bold mb-4">
+      {editing_label(@editing)} {gettext("Character")}
+    </h3>
     <.form
       id="character-form"
       for={@form}
@@ -3266,7 +3268,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp modal_content(%{modal: :entry} = assigns) do
     ~H"""
-    <h3 class="text-lg font-bold mb-4">{gettext("Edit")} {gettext("Character")}</h3>
+    <h3 id="content-modal-title" class="text-lg font-bold mb-4">
+      {gettext("Edit")} {gettext("Character")}
+    </h3>
     <.form
       id="entry-form"
       for={@form}
@@ -3350,7 +3354,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp modal_content(%{modal: :existing_entry} = assigns) do
     ~H"""
-    <h3 class="text-lg font-bold mb-4">{gettext("Add an existing character")}</h3>
+    <h3 id="content-modal-title" class="text-lg font-bold mb-4">
+      {gettext("Add an existing character")}
+    </h3>
     <p :if={@existing_options == []} class="text-sm text-base-content/70">
       {gettext("Every character is in this list already.")}
     </p>
@@ -3381,7 +3387,9 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp modal_content(%{modal: :division} = assigns) do
     ~H"""
-    <h3 class="text-lg font-bold mb-4">{editing_label(@editing)} {gettext("Division")}</h3>
+    <h3 id="content-modal-title" class="text-lg font-bold mb-4">
+      {editing_label(@editing)} {gettext("Division")}
+    </h3>
     <.form
       id="division-form"
       for={@form}
@@ -3448,7 +3456,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   defp modal_content(%{modal: :element} = assigns) do
     ~H"""
-    <h3 class="text-lg font-bold mb-4">
+    <h3 id="content-modal-title" class="text-lg font-bold mb-4">
       {editing_label(@editing)} {element_type_label(@modal_element_type)}
     </h3>
     <.form

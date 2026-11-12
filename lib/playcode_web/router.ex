@@ -17,16 +17,6 @@ defmodule PlaycodeWeb.Router do
     plug PlaycodeWeb.Plugs.StoreLastPath
   end
 
-  pipeline :demo_browser do
-    plug :accepts, ["html"]
-    plug :fetch_session
-    plug :fetch_live_flash
-    plug :put_root_layout, html: {PlaycodeWeb.Layouts, :demo_root}
-    plug :protect_from_forgery
-    plug :put_secure_browser_headers
-    plug :fetch_current_user
-  end
-
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -210,17 +200,6 @@ defmodule PlaycodeWeb.Router do
       pipe_through :browser
 
       forward "/mailbox", Plug.Swoosh.MailboxPreview
-    end
-
-    scope "/demo/ui", PlaycodeWeb do
-      pipe_through :demo_browser
-
-      get "/", DemoUIController, :index
-      get "/public/catalogue", DemoUIController, :public_catalogue
-      get "/public/play", DemoUIController, :public_play
-      get "/admin/plays", DemoUIController, :admin_plays
-      get "/admin/play", DemoUIController, :admin_play
-      get "/admin/import", DemoUIController, :admin_import
     end
   end
 end
