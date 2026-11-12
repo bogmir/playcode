@@ -31,6 +31,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
   defp save(view, fields), do: view |> form("#play-form", play: fields) |> render_submit()
 
+  test "the attribution options carry no English gloss", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+    assert has_element?(view, "option", "Fiable")
+    refute render(view) =~ "(reliable)"
+  end
+
   test "a new play is saved and opens on its detail page", %{conn: conn} do
     code = "FORM#{System.unique_integer([:positive])}"
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
