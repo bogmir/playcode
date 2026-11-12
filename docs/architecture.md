@@ -104,6 +104,7 @@ lib/
     │       ├── play_compare_live.ex  # Admin: /admin/plays/:id/compare - side-by-side comparison; ?view=pairs the pair review
     │       ├── play_bibliography_live.ex # Admin: /admin/plays/:id/bibliography - a play's bibliography
     │       ├── notes_component.ex        # The note editor inside the content editor's modals
+    │       ├── play_statistics_live.ex   # Admin: /admin/plays/:id/statistics - the statistics panel and Recompute
     │       ├── play_notes_live.ex        # Admin: /admin/plays/:id/notes - a play's notes, edited in place
     │       ├── play_witnesses_live.ex    # Admin: /admin/plays/:id/witnesses - a play's witnesses
     │       ├── play_performances_live.ex # Admin: /admin/plays/:id/performances - a play's performances, cast, renames, source
@@ -150,6 +151,7 @@ lib/
 - `GET /admin/dashboard` - LiveDashboard (`:view_dashboard`)
 - `GET /admin/places` - Corpus-global gazetteer: places, their names, hierarchy and authority links (`:manage_places`)
 - `GET /admin/plays/:id/places` - The play's place index: role, order, notes (`:manage_places`)
+- `GET /admin/plays/:id/statistics` - The play's statistics as the site draws them (figures, metrical synopsis, characters, who shares the stage), with the computed date and Recompute
 - `GET /admin/plays/:id/notes` - A play's in-text notes in reading order: filter by type, words or no term; edit type, word, term and text in place; delete; open the line in Content (`?element=`/`?division=` opens its modal), where notes are added (`:edit_content`)
 - `GET /admin/plays/:id/bibliography` - A play's bibliography: new, edit (with a warning on a shared entry), add an existing entry, remove, filter (`:manage_bibliography`)
 - `GET /admin/plays/:id/witnesses` - A play's witnesses: add, edit, reorder, delete, previewed as printed (`:view_admin`)

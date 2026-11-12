@@ -1,198 +1,395 @@
 defmodule PlaycodeWeb.Components.StatisticsPanel do
   @moduledoc """
-  Modern visualization components for play statistics.
+  A play's statistics as the static site draws them (`StaticSite.Components`): the figures
+  in a row, the metrical synopsis, the characters and who shares the stage. Ported rather
+  than reused, since the site prints both languages at once; the msgids are the site's.
   """
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext
+
+  alias Playcode.Catalogue.Play
+  alias Playcode.Export.StaticSite.{Components, Edition}
   alias Playcode.PlayContent.InlineMarkup
-  alias PlaycodeWeb.PlayLabels
   alias PlaycodeWeb.Components.PlayText
+  alias PlaycodeWeb.PlayLabels
 
   attr :statistic, :map, required: true
   attr :play, :map, required: true
 
   def stats_panel(assigns) do
     data = if assigns.statistic, do: assigns.statistic.data, else: %{}
-    raw_label = data["act_label"] || "act"
-    assigns = assign(assigns, data: data, raw_label: raw_label)
+    words? = Play.form(assigns.play) != "verse" or (data["verses"] || 0) == 0
+    range = Play.number_label(assigns.play, :range)
+
+    assigns =
+      assign(assigns,
+        data: data,
+        range: range,
+        unit: if(words?, do: "words", else: "lines"),
+        total: if(words?, do: data["words"] || 0, else: data["verses"])
+      )
 
     ~H"""
-    <div :if={@data != %{}} class="space-y-6">
-      <%!-- Summary cards --%>
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <.stat_card
-          label={PlayLabels.act_label_plural(@raw_label)}
-          value={@data["num_acts"]}
-          icon="📜"
-        />
-        <.stat_card label={gettext("Scenes")} value={get_in(@data, ["scenes", "total"])} icon="🎭" />
-        <.stat_card label={gettext("Verses")} value={@data["total_verses"]} icon="✍️" />
-        <.stat_card
-          label={gettext("Stage Directions")}
-          value={@data["total_stage_directions"]}
-          icon="🎬"
-        />
-      </div>
-
-      <%!-- Scenes per act --%>
-      <.bar_chart
-        :if={(get_in(@data, ["scenes", "total"]) || 0) > 0}
-        title={"#{gettext("Scenes per")} #{PlayLabels.act_label(@raw_label)}"}
-        items={get_in(@data, ["scenes", "per_act"]) || []}
-        label_key="act"
-        value_key="count"
-        label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
-        color="bg-amber-700"
+    <div :if={@data != %{}} class="space-y-5">
+      <.tiles data={@data} />
+      <.synopsis
+        :if={(@data["metrical_passages"] || []) != []}
+        passages={@data["metrical_passages"]}
+        range={@range}
       />
-
-      <%!-- Verse distribution --%>
-      <.bar_chart
-        title={gettext("Verse Distribution")}
-        items={@data["verse_distribution"] || []}
-        label_key="act"
-        value_key="count"
-        label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
-        color="bg-indigo-600"
-      />
-
-      <%!-- Prose fragments --%>
-      <.bar_chart
-        :if={(@data["total_prose_fragments"] || 0) > 0}
-        title={gettext("Prose Fragments")}
-        items={@data["prose_fragments"] || []}
-        label_key="act"
-        value_key="count"
-        label_prefix={"#{PlayLabels.act_label(@raw_label)} "}
-        color="bg-emerald-700"
-      />
-
-      <%!-- Additional stats --%>
-      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <.stat_card label={gettext("Shared lines")} value={@data["split_verses"]} icon="↔️" />
-        <.stat_card label={gettext("Asides")} value={@data["total_asides"]} icon="🤫" />
-        <.stat_card label={gettext("Aside Verses")} value={@data["aside_verses"]} icon="💬" />
-      </div>
-
-      <%!-- Verse type distribution --%>
-      <div
-        :if={@data["verse_type_distribution"] && @data["verse_type_distribution"] != []}
-        class="bg-base-100 border border-base-300 rounded-xl p-5"
-      >
-        <h3 class="text-lg font-semibold text-base-content mb-4">
-          {gettext("Verse Type Distribution")}
-        </h3>
-        <div class="space-y-3">
-          <div :for={vt <- @data["verse_type_distribution"]} class="flex items-center gap-3">
-            <span
-              class="w-36 text-sm text-base-content/70 truncate shrink-0"
-              title={PlayLabels.verse_form_label(vt["verse_type"])}
-            >
-              {PlayLabels.verse_form_label(vt["verse_type"])}
-            </span>
-            <div class="flex-1 bg-base-200 rounded-full h-6 overflow-hidden">
-              <div
-                class="bg-violet-600 h-full rounded-full transition-all flex items-center justify-end pr-2"
-                style={"width: #{bar_percent(vt["count"], max_verse_type(@data["verse_type_distribution"]))}%"}
-              >
-                <span class="text-xs text-white font-medium">{vt["count"]}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <%!-- Character appearances --%>
-      <div
-        :if={@data["character_appearances"] && @data["character_appearances"] != []}
-        class="bg-base-100 border border-base-300 rounded-xl p-5"
-      >
-        <h3 class="text-lg font-semibold text-base-content mb-4">{gettext("Character Speeches")}</h3>
-        <div class="space-y-2">
-          <div :for={char <- @data["character_appearances"]} class="flex items-center gap-3">
-            <span
-              class="w-28 text-sm font-medium text-base-content/80 truncate shrink-0"
-              title={InlineMarkup.plain(char["name"])}
-            >
-              <PlayText.inline_content text={char["name"]} />
-            </span>
-            <div class="flex-1 bg-base-200 rounded-full h-6 overflow-hidden">
-              <div
-                class="bg-amber-700 h-full rounded-full transition-all flex items-center justify-end pr-2"
-                style={"width: #{bar_percent(char["speeches"], max_speeches(@data["character_appearances"]))}%"}
-              >
-                <span class="text-xs text-white font-medium">{char["speeches"]}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      <.characters characters={@data["characters"] || []} unit={@unit} total={@total} />
+      <.presence data={@data} range={@range} />
     </div>
     """
   end
 
-  attr :label, :string, required: true
-  attr :value, :any, required: true
-  attr :icon, :string, default: ""
-
-  defp stat_card(assigns) do
+  defp panel(assigns) do
     ~H"""
-    <div class="bg-base-100 border border-base-300 rounded-xl p-4 text-center">
-      <div class="text-2xl mb-1">{@icon}</div>
-      <div class="text-2xl font-bold text-base-content">{@value || 0}</div>
-      <div class="text-sm text-base-content/70">{@label}</div>
-    </div>
+    <section id={@id} class="rounded-box border border-base-300 bg-base-100 px-4 py-4">
+      <h2 class="text-base font-semibold text-base-content">{@title}</h2>
+      <p :if={assigns[:lede]} class="mb-3 mt-1 text-sm text-base-content/70">{@lede}</p>
+      {render_slot(@inner_block)}
+    </section>
     """
   end
 
-  attr :title, :string, required: true
-  attr :items, :list, required: true
-  attr :label_key, :string, required: true
-  attr :value_key, :string, required: true
-  attr :label_prefix, :string, default: ""
-  attr :color, :string, default: "bg-blue-600"
+  defp tiles(assigns) do
+    s = assigns.data
 
-  defp bar_chart(assigns) do
-    max = assigns.items |> Enum.map(&(&1[assigns.value_key] || 0)) |> Enum.max(fn -> 1 end)
-    assigns = assign(assigns, :max, max)
+    tiles =
+      Enum.reject(
+        [
+          {s["num_acts"], gettext("acts")},
+          {s["verses"], gettext("verses")},
+          {length(s["metrical_passages"] || []), gettext("metrical passages")},
+          {s["speeches"], gettext("speeches")},
+          {length(s["characters"] || []), gettext("speaking characters")},
+          {s["total_stage_directions"], gettext("stage directions")},
+          {s["aside_verses"], gettext("verses in asides")}
+        ],
+        fn {value, _label} -> value in [nil, 0] end
+      )
+
+    assigns = assign(assigns, :tiles, tiles)
 
     ~H"""
-    <div class="bg-base-100 border border-base-300 rounded-xl p-5">
-      <h3 class="text-lg font-semibold text-base-content mb-4">{@title}</h3>
-      <div class="space-y-3">
-        <div :for={item <- @items} class="flex items-center gap-3">
-          <span class="text-sm text-base-content/70 text-right shrink-0 whitespace-nowrap">
-            {@label_prefix}{item[@label_key]}
+    <dl id="tiles" class="flex flex-wrap border-y border-base-300 py-1">
+      <div :for={{value, label} <- @tiles} class="flex flex-col-reverse py-2 pr-8">
+        <dt class="text-xs text-base-content/70">{label}</dt>
+        <dd class="font-serif text-2xl font-semibold tabular-nums">{Components.number(value)}</dd>
+      </div>
+    </dl>
+    """
+  end
+
+  # The corpus's three commonest forms keep a colour each, every other form is grey.
+  @coloured_forms %{
+    "redondilla" => "f-redondilla",
+    "romance" => "f-romance",
+    "romance_tirada" => "f-romance",
+    "quintilla" => "f-quintilla"
+  }
+
+  defp form_colour(form), do: Map.get(@coloured_forms, form, "f-other")
+
+  defp synopsis(assigns) do
+    passages = assigns.passages
+    total = passages |> Enum.map(& &1["verses"]) |> Enum.sum() |> max(1)
+
+    # By label, so romance and romance_tirada, both "Romance", are one form.
+    forms =
+      passages
+      |> Enum.group_by(&PlayLabels.verse_form_label(&1["form"]))
+      |> Enum.map(fn {label, [first | _] = group} ->
+        {label, form_colour(first["form"]), group |> Enum.map(& &1["verses"]) |> Enum.sum()}
+      end)
+      |> Enum.sort_by(&(-elem(&1, 2)))
+
+    segments =
+      passages
+      |> Enum.with_index()
+      |> Enum.map(fn {passage, i} ->
+        %{
+          sep: i > 0 and Enum.at(passages, i - 1)["act"] != passage["act"],
+          colour: form_colour(passage["form"]),
+          verses: passage["verses"],
+          title:
+            "#{PlayLabels.verse_form_label(passage["form"])}#{verses_range(passage, assigns.range)} · " <>
+              ngettext("%{count} verse", "%{count} verses", passage["verses"]),
+          label:
+            if(passage["verses"] / total > 0.06, do: PlayLabels.verse_form_label(passage["form"]))
+        }
+      end)
+
+    assigns = assign(assigns, segments: segments, forms: forms, total: total)
+
+    ~H"""
+    <.panel
+      id="synopsis"
+      title={gettext("Metrical synopsis")}
+      lede={
+        gettext("The verse forms in order, each passage drawn to scale. Dashed lines mark the acts.")
+      }
+    >
+      <div
+        class="stat-band"
+        role="img"
+        aria-label={gettext("Metrical synopsis drawn to scale; the table below lists every passage.")}
+      >
+        <%= for segment <- @segments do %>
+          <span :if={segment.sep} class="sep"></span>
+          <span
+            class={["pass", segment.colour]}
+            style={"flex-grow: #{segment.verses}"}
+            title={segment.title}
+          >
+            <span :if={segment.label}>{segment.label}</span>
           </span>
-          <div class="flex-1 bg-base-200 rounded-full h-6 overflow-hidden">
-            <div
-              class={"#{@color} h-full rounded-full transition-all flex items-center justify-end pr-2"}
-              style={"width: #{bar_percent(item[@value_key], @max)}%"}
-            >
-              <span class="text-xs text-white font-medium">
-                {item[@value_key]}
-              </span>
-            </div>
-          </div>
-        </div>
+        <% end %>
       </div>
-    </div>
+      <ul class="my-3 flex flex-wrap gap-x-5 gap-y-1 text-sm text-base-content/80">
+        <li :for={{label, colour, verses} <- @forms}>
+          <i class={["mr-1.5 inline-block size-2.5 rounded-sm align-baseline", colour]}></i>
+          <b class="font-semibold text-base-content">{label}</b>
+          {Components.number(verses)} vv. · {percent(verses, @total)}
+        </li>
+      </ul>
+      <details class="border-t border-base-300 pt-2">
+        <summary class="cursor-pointer text-sm font-semibold text-primary">
+          {gettext("The %{count} passages, one by one", count: length(@passages))}
+        </summary>
+        <table class="table table-sm mt-2">
+          <thead>
+            <tr>
+              <th>{gettext("Act")}</th>
+              <th>{gettext("Form")}</th>
+              <th>vv.</th>
+              <th class="text-right">{gettext("Verses")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={passage <- @passages}>
+              <td>{passage["act"] && Edition.roman(passage["act"])}</td>
+              <td>
+                <i class={["mr-1.5 inline-block size-2.5 rounded-sm", form_colour(passage["form"])]}></i>{PlayLabels.verse_form_label(
+                  passage["form"]
+                )}
+              </td>
+              <td>{range(passage)}</td>
+              <td class="text-right tabular-nums">{Components.number(passage["verses"])}</td>
+            </tr>
+          </tbody>
+        </table>
+      </details>
+      <p class="mt-3 text-sm text-base-content/70">
+        {gettext(
+          "Rhyme is not encoded, so two consecutive romances with different assonance show as one passage."
+        )}
+      </p>
+    </.panel>
     """
   end
 
-  defp max_verse_type([]), do: 1
-  defp max_verse_type(items), do: items |> Enum.map(&(&1["count"] || 0)) |> Enum.max(fn -> 1 end)
+  defp characters(assigns) do
+    characters =
+      assigns.characters
+      |> Enum.sort_by(&(-&1[assigns.unit]))
+      |> Enum.map(&Map.put(&1, "main_forms", main_forms(&1["forms"])))
 
-  defp bar_percent(nil, _max), do: 0
-  defp bar_percent(0, _max), do: 0
-  defp bar_percent(_value, 0), do: 0
+    max = characters |> Enum.map(& &1[assigns.unit]) |> Enum.max(fn -> 1 end) |> max(1)
+    forms? = Enum.any?(characters, &(&1["main_forms"] != ""))
+    assigns = assign(assigns, characters: characters, max: max, forms?: forms?)
 
-  defp bar_percent(value, max) do
-    min(round(value / max * 100), 100) |> max(5)
+    ~H"""
+    <.panel
+      :if={@characters != []}
+      id="characters"
+      title={gettext("Characters")}
+      lede={characters_lede(@unit, length(@characters))}
+    >
+      <div class="overflow-x-auto" tabindex="0" role="region" aria-label={gettext("Characters")}>
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>{gettext("Character")}</th>
+              <th class="text-right">{gettext("Speeches")}</th>
+              <th class="text-right">{gettext("Lines")}</th>
+              <th class="text-right">{gettext("Words")}</th>
+              <th>{gettext("Share of the play")}</th>
+              <th>{gettext("First speaks")}</th>
+              <th :if={@forms?}>{gettext("Main forms")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={character <- @characters}>
+              <th scope="row" class="font-serif text-left font-semibold">
+                <PlayText.inline_content text={character["name"]} />
+              </th>
+              <td class="text-right tabular-nums">{Components.number(character["speeches"])}</td>
+              <td class="text-right tabular-nums">{Components.number(character["lines"])}</td>
+              <td class="text-right tabular-nums">{Components.number(character["words"])}</td>
+              <td
+                class="min-w-36 whitespace-nowrap"
+                title={share_title(character[@unit], @total, @unit)}
+              >
+                <span class="mr-1.5 inline-block h-2 w-[calc(100%-3rem)] rounded-sm bg-base-300 align-middle">
+                  <span
+                    class="block h-full rounded-sm bg-primary"
+                    style={"width: #{round(character[@unit] / @max * 100)}%"}
+                  ></span>
+                </span>{percent(character[@unit], @total)}
+              </td>
+              <td>{first_speaks(character["first"])}</td>
+              <td :if={@forms?}>{character["main_forms"]}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </.panel>
+    """
   end
 
-  defp max_speeches([]), do: 1
+  defp characters_lede("lines", n),
+    do:
+      gettext(
+        "The %{n} speaking characters, those with the most lines first. A shared verse counts for each speaker.",
+        n: n
+      )
 
-  defp max_speeches(characters) do
-    characters |> Enum.map(&(&1["speeches"] || 0)) |> Enum.max(fn -> 1 end)
+  defp characters_lede("words", n),
+    do:
+      gettext(
+        "The %{n} speaking characters, those with the most words first. A shared verse counts for each speaker.",
+        n: n
+      )
+
+  defp share_title(n, total, "lines"), do: gettext("%{n} of %{total} lines", n: n, total: total)
+  defp share_title(n, total, "words"), do: gettext("%{n} of %{total} words", n: n, total: total)
+
+  # "I.2, 144": the act, its scene when it has scenes, and the line when it has a number.
+  defp first_speaks(%{"act" => act} = first) when is_integer(act) do
+    place = Enum.join([Edition.roman(act) | List.wrap(first["scene"])], ".")
+    Enum.join([place | List.wrap(first["line"])], ", ")
   end
+
+  defp first_speaks(_first), do: "—"
+
+  defp main_forms(forms) do
+    forms
+    |> Map.delete("unmarked")
+    |> Enum.sort_by(&(-elem(&1, 1)))
+    |> Enum.take(2)
+    |> Enum.map_join(" · ", &PlayLabels.verse_form_label(elem(&1, 0)))
+  end
+
+  defp presence(assigns) do
+    presence = assigns.data["presence"] || %{}
+
+    rows =
+      Enum.map(assigns.data["characters"] || [], fn c ->
+        {c["name"], Map.new(c["columns"], fn [i, n] -> {i, n} end)}
+      end)
+
+    columns = presence["columns"] || []
+
+    assigns =
+      assign(assigns, basis: presence["basis"], columns: columns, rows: rows)
+
+    ~H"""
+    <.panel
+      :if={@columns != [] and @rows != []}
+      id="presence"
+      title={gettext("Who shares the stage")}
+      lede={basis_note(@basis, length(@columns))}
+    >
+      <div
+        class="overflow-x-auto"
+        tabindex="0"
+        role="region"
+        aria-label={gettext("Who shares the stage")}
+      >
+        <table class="stat-matrix border-separate border-spacing-0">
+          <thead>
+            <tr>
+              <th><span class="sr-only">{gettext("Character")}</span></th>
+              <th
+                :for={{column, i} <- Enum.with_index(@columns)}
+                scope="col"
+                title={column_title(column, @range)}
+                class={["p-0.5", act_start(@columns, i)]}
+              >
+                <i
+                  :if={column["form"]}
+                  class={["mx-auto block h-1 w-[1.1rem] rounded-sm", form_colour(column["form"])]}
+                >
+                </i>
+                <span class="sr-only">{column_title(column, @range)}</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={{name, cells} <- @rows}>
+              <th
+                scope="row"
+                class="whitespace-nowrap pr-3 text-left font-serif text-sm font-semibold"
+              >
+                <PlayText.inline_content text={name} />
+              </th>
+              <td
+                :for={{column, i} <- Enum.with_index(@columns)}
+                class={["c p-0.5", cells[i] && "on", act_start(@columns, i)]}
+                title={cells[i] && cell_title(name, column, @range, cells[i])}
+              >
+                <span :if={cells[i]} class="sr-only">
+                  {ngettext("%{count} line", "%{count} lines", cells[i])}
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </.panel>
+    """
+  end
+
+  defp basis_note("scene", _n),
+    do: gettext("A filled cell means the character speaks in that scene.")
+
+  defp basis_note("passage", n),
+    do:
+      gettext(
+        "This play encodes no scenes, so the columns are its %{n} metrical passages. A filled cell means the character speaks in that passage.",
+        n: n
+      )
+
+  defp basis_note(_basis, _n),
+    do: gettext("A filled cell means the character speaks in that division.")
+
+  defp column_title(%{"form" => form} = column, range),
+    do: "#{PlayLabels.verse_form_label(form)}#{verses_range(column, range)}"
+
+  defp column_title(%{"act" => act, "label" => label}, _range) when is_integer(act),
+    do: "#{Edition.roman(act)}: #{InlineMarkup.plain(label)}"
+
+  defp column_title(%{"label" => label}, _range), do: InlineMarkup.plain(label)
+
+  defp cell_title(name, column, range, n),
+    do:
+      "#{InlineMarkup.plain(name)} · #{column_title(column, range)} · " <>
+        ngettext("%{count} line", "%{count} lines", n)
+
+  defp act_start(columns, i),
+    do:
+      if(i > 0 and Enum.at(columns, i - 1)["act"] != Enum.at(columns, i)["act"],
+        do: "pl-2.5"
+      )
+
+  # A passage whose verses carry no number (a song) has no range to name.
+  defp verses_range(%{"from" => nil}, _label), do: ""
+  defp verses_range(passage, label), do: " · #{label} #{range(passage)}"
+
+  defp range(%{"from" => from, "to" => to}) when from == to, do: "#{from}"
+  defp range(%{"from" => from, "to" => to}), do: "#{from}–#{to}"
+
+  defp percent(part, total), do: "#{round(part / max(total, 1) * 100)}%"
 end

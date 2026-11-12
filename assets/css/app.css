@@ -426,3 +426,76 @@ input:-webkit-autofill:focus {
     display: none;
   }
 }
+
+/* The metrical synopsis's verse forms (the statistics panel), as the static site draws
+   them: the three commonest forms a colour each, every other form grey. The light colours
+   carry white labels, the dark ones the dark ink; both pairs are tuned to 4.5:1. */
+:root {
+  --f-romance: #2f66a8;
+  --f-redondilla: #b5521f;
+  --f-quintilla: #167a5a;
+  --f-other: #6b6578;
+  --f-ink: #fff;
+}
+:root[data-theme="dark"] {
+  --f-romance: #5f93dc;
+  --f-redondilla: #d2703f;
+  --f-quintilla: #24a07a;
+  --f-other: #9a93ab;
+  --f-ink: #16131c;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --f-romance: #5f93dc;
+    --f-redondilla: #d2703f;
+    --f-quintilla: #24a07a;
+    --f-other: #9a93ab;
+    --f-ink: #16131c;
+  }
+}
+.f-romance {
+  background: var(--f-romance);
+}
+.f-redondilla {
+  background: var(--f-redondilla);
+}
+.f-quintilla {
+  background: var(--f-quintilla);
+}
+.f-other {
+  background: var(--f-other);
+}
+.stat-band {
+  display: flex;
+  gap: 2px;
+  height: 2.1rem;
+}
+.stat-band .pass {
+  min-width: 2px;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding-left: 0.35rem;
+  overflow: hidden;
+  font: 600 0.75rem var(--font-sans, system-ui);
+  color: var(--f-ink);
+  white-space: nowrap;
+}
+.stat-band .sep {
+  flex: none;
+  width: 0;
+  border-left: 1px dashed var(--color-base-content);
+  opacity: 0.6;
+  margin: 0 3px;
+}
+.stat-matrix td.c::before {
+  content: "";
+  display: block;
+  width: 1.1rem;
+  height: 0.85rem;
+  border-radius: 2px;
+  background: var(--color-base-300);
+}
+.stat-matrix td.c.on::before {
+  background: var(--color-primary);
+}

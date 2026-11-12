@@ -7,8 +7,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
 
   use PlaycodeWeb, :live_view
 
-  import PlaycodeWeb.Components.StatisticsPanel
-
   alias Playcode.Catalogue
   alias Playcode.Export.TeiValidator
   alias Playcode.Export.TeiXml
@@ -113,13 +111,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
       {:error, _} ->
         {:noreply, put_flash(socket, :error, gettext("Failed to update status."))}
     end
-  end
-
-  def handle_event("recompute_stats", _, socket) do
-    statistic = Statistics.recompute(socket.assigns.play.id)
-
-    {:noreply,
-     assign(socket, statistic: statistic) |> put_flash(:info, gettext("Statistics recomputed."))}
   end
 
   defp error_to_string(:too_large), do: gettext("File is too large (max 10 MB).")
@@ -420,9 +411,13 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
 
           <.card title={gettext("Statistics")}>
             <:action>
-              <a :if={@statistic} href="#statistics" class="link link-primary">
+              <.link
+                :if={@statistic}
+                navigate={~p"/admin/plays/#{@play.id}/statistics"}
+                class="link link-primary"
+              >
                 {gettext("See all")}
-              </a>
+              </.link>
             </:action>
             <.field_list :if={@statistic}>
               <:item label={gettext("Speeches")}>{@statistic.data["speeches"]}</:item>
@@ -433,9 +428,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                 {Calendar.strftime(@statistic.computed_at, "%Y-%m-%d %H:%M")}
               </:item>
             </.field_list>
-            <button phx-click="recompute_stats" class="btn btn-sm btn-ghost mt-2 -ml-2">
-              <.icon name="hero-arrow-path-mini" class="size-4" /> {gettext("Recompute")}
-            </button>
           </.card>
 
           <.card :if={!@play.is_complete} title={gettext("Replace the text from Word")} dashed>
@@ -470,11 +462,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           </.card>
         </div>
       </div>
-
-      <section :if={@statistic} id="statistics" class="mt-4">
-        <h2 class="mb-3 text-lg font-semibold text-base-content">{gettext("Statistics")}</h2>
-        <.stats_panel statistic={@statistic} play={@play} />
-      </section>
     </.page>
     """
   end
