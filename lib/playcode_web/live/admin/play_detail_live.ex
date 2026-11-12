@@ -147,6 +147,12 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
 
   defp acts(divisions), do: Enum.reject(divisions, &(&1.type == "elenco"))
 
+  # The top divisions by the play's own name for them: "jornadas", "actos".
+  defp acts_label(%{data: %{"act_label" => label}}) when is_binary(label),
+    do: label |> PlayLabels.act_label_plural() |> String.downcase()
+
+  defp acts_label(_statistic), do: gettext("acts")
+
   @impl true
   def render(assigns) do
     ~H"""
@@ -232,7 +238,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         />
         <.count_tile
           count={length(acts(@divisions))}
-          label={gettext("acts")}
+          label={acts_label(@statistic)}
           navigate={~p"/admin/plays/#{@play.id}/content"}
         />
         <.count_tile
@@ -296,20 +302,12 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                 {@play.edition_title}
               </:item>
               <:item :if={@play.emothe_id} label={gettext("EMOTHE ID")}>{@play.emothe_id}</:item>
-              <:item :if={@play.licence_url || @play.licence_text} label={gettext("Licence")}>
-                <a
-                  :if={@play.licence_url}
-                  href={@play.licence_url}
-                  target="_blank"
-                  class="link link-primary"
-                >
-                  {@play.licence_text || @play.licence_url}
-                </a>
-                <span :if={!@play.licence_url}>{@play.licence_text}</span>
-              </:item>
             </.field_list>
             <details
-              :if={@play.authority || @play.sponsor || @play.funder || @play.availability_note}
+              :if={
+                @play.authority || @play.sponsor || @play.funder || @play.availability_note ||
+                  @play.licence_url || @play.licence_text
+              }
               class="mt-3 border-t border-base-300 pt-2.5"
             >
               <summary class="cursor-pointer text-sm font-semibold text-primary">
@@ -322,44 +320,19 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                 <:item :if={@play.availability_note} label={gettext("Availability")}>
                   {@play.availability_note}
                 </:item>
+                <:item :if={@play.licence_url || @play.licence_text} label={gettext("Licence")}>
+                  <a
+                    :if={@play.licence_url}
+                    href={@play.licence_url}
+                    target="_blank"
+                    class="link link-primary"
+                  >
+                    {@play.licence_text || @play.licence_url}
+                  </a>
+                  <span :if={!@play.licence_url}>{@play.licence_text}</span>
+                </:item>
               </.field_list>
             </details>
-          </.card>
-
-          <.card
-            :if={@play.relationship_type || @play.derived_plays != []}
-            title={gettext("Work Relationship")}
-          >
-            <p :if={@play.relationship_type}>
-              <span class="badge badge-outline badge-sm mr-2">
-                {PlayLabels.relationship_type_label(@play.relationship_type)}
-              </span>
-              <%= if @play.parent_play do %>
-                {gettext("of")}
-                <.link navigate={~p"/admin/plays/#{@play.parent_play.id}"} class="link link-primary">
-                  {@play.parent_play.title}
-                </.link>
-                <span class="text-base-content/70">({@play.parent_play.code})</span>
-              <% else %>
-                <span :if={@play.original_title} class="text-base-content/70">
-                  {gettext("of")} {@play.original_title} ({gettext("not linked")})
-                </span>
-              <% end %>
-            </p>
-            <div :if={@play.derived_plays != []} class="mt-2">
-              <span class="text-sm text-base-content/70">{gettext("Derived works:")}</span>
-              <ul class="mt-1 ml-4 list-disc">
-                <li :for={derived <- @play.derived_plays}>
-                  <.link navigate={~p"/admin/plays/#{derived.id}"} class="link link-primary">
-                    {derived.title}
-                  </.link>
-                  <span class="text-base-content/70">({derived.code})</span>
-                  <span :if={derived.relationship_type} class="badge badge-ghost badge-sm ml-1">
-                    {PlayLabels.relationship_type_label(derived.relationship_type)}
-                  </span>
-                </li>
-              </ul>
-            </div>
           </.card>
 
           <.card :if={@divisions != []} title={gettext("Structure")}>
@@ -401,6 +374,42 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                 </span>
               </li>
             </ul>
+          </.card>
+
+          <.card
+            :if={@play.relationship_type || @play.derived_plays != []}
+            title={gettext("Work Relationship")}
+          >
+            <p :if={@play.relationship_type}>
+              <span class="badge badge-outline badge-sm mr-2">
+                {PlayLabels.relationship_type_label(@play.relationship_type)}
+              </span>
+              <%= if @play.parent_play do %>
+                {gettext("of")}
+                <.link navigate={~p"/admin/plays/#{@play.parent_play.id}"} class="link link-primary">
+                  {@play.parent_play.title}
+                </.link>
+                <span class="text-base-content/70">({@play.parent_play.code})</span>
+              <% else %>
+                <span :if={@play.original_title} class="text-base-content/70">
+                  {gettext("of")} {@play.original_title} ({gettext("not linked")})
+                </span>
+              <% end %>
+            </p>
+            <div :if={@play.derived_plays != []} class="mt-2">
+              <span class="text-sm text-base-content/70">{gettext("Derived works:")}</span>
+              <ul class="mt-1 ml-4 list-disc">
+                <li :for={derived <- @play.derived_plays}>
+                  <.link navigate={~p"/admin/plays/#{derived.id}"} class="link link-primary">
+                    {derived.title}
+                  </.link>
+                  <span class="text-base-content/70">({derived.code})</span>
+                  <span :if={derived.relationship_type} class="badge badge-ghost badge-sm ml-1">
+                    {PlayLabels.relationship_type_label(derived.relationship_type)}
+                  </span>
+                </li>
+              </ul>
+            </div>
           </.card>
 
           <.card :if={@play.revisions != []} title={gettext("Revisions")}>

@@ -68,7 +68,9 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
 
   defp rows(lv) do
     lv
-    |> render_async()
+    # The pair review is built in a task; the default 100 ms wait is too short when the whole
+    # suite runs at once.
+    |> render_async(2_000)
     |> LazyHTML.from_document()
     |> LazyHTML.query("[id^='pair-row-']")
     |> Enum.map(&(&1 |> LazyHTML.text() |> String.split() |> Enum.join(" ")))
@@ -86,7 +88,7 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
   # The review opens on the doubtful rows; these tests want them all.
   defp all_rows(conn, path) do
     {:ok, lv, _html} = live(conn, path)
-    render_async(lv)
+    render_async(lv, 2_000)
     lv |> element("input[name='doubtful']") |> render_click()
     lv
   end
@@ -183,7 +185,7 @@ defmodule PlaycodeWeb.Admin.PlayComparePairsTest do
       })
 
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
-    render_async(lv)
+    render_async(lv, 2_000)
     lv |> element("input[name='doubtful']") |> render_click()
 
     assert Enum.map(rows(lv), &Regex.run(~r/One|Two|Three/, &1)) == [["One"], ["Two"], ["Three"]]
@@ -238,7 +240,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
 
   defp rows(lv) do
     lv
-    |> render_async()
+    |> render_async(2_000)
     |> LazyHTML.from_document()
     |> LazyHTML.query("[id^='pair-row-']")
     |> Enum.map(&(&1 |> LazyHTML.attribute("id") |> hd()))
@@ -246,7 +248,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareDoubtfulTest do
 
   defp review(conn, french) do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{french.id}/compare?view=pairs")
-    render_async(lv)
+    render_async(lv, 2_000)
     lv
   end
 

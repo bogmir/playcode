@@ -31,13 +31,22 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
       refute has_element?(lv, "aside a[href='/admin/plays'][aria-current=page]")
     end
 
-    # It used to start collapsed on a play's pages, to give the text the width the context
-    # bar's tabs did not take; the play's sections now live in it, so it starts open.
-    test "starts open everywhere", %{conn: conn} do
+    # It used to start collapsed on every play page, to give the text the width the context
+    # bar's tabs did not take; the play's sections now live in it, so it starts open, except
+    # on the two pages that need the width.
+    test "starts open, folded only on a play's Content and Comparison", %{conn: conn} do
       conn = log_in_user(conn, admin_fixture())
+      %{original: play} = translation_family_fixture()
 
-      {:ok, play_page, _html} = live(conn, ~p"/admin/plays/#{play_fixture().id}")
-      refute has_element?(play_page, "#admin-sidebar[checked]")
+      for path <- ["", "/editors", "/notes"] do
+        {:ok, lv, _html} = live(conn, "/admin/plays/#{play.id}#{path}")
+        refute has_element?(lv, "#admin-sidebar[checked]"), path
+      end
+
+      for path <- ["/content", "/compare"] do
+        {:ok, lv, _html} = live(conn, "/admin/plays/#{play.id}#{path}")
+        assert has_element?(lv, "#admin-sidebar[checked]"), path
+      end
 
       {:ok, list_page, _html} = live(conn, ~p"/admin/plays")
       refute has_element?(list_page, "#admin-sidebar[checked]")
@@ -49,7 +58,7 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
       %{conn: log_in_user(conn, user_fixture(role: :researcher)), play: play_fixture()}
     end
 
-    defp section(play, path), do: "nav[aria-label='#{t("Play sections")}'] a[href='#{path}']"
+    defp section(_play, path), do: "nav[aria-label='#{t("Play sections")}'] a[href='#{path}']"
 
     test "are in the sidebar, grouped, each with its count", %{conn: conn, play: play} do
       performance_fixture(play)
@@ -81,6 +90,12 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
       |> render_submit()
 
       assert has_element?(lv, section(play, ~p"/admin/plays/#{play.id}/editors"), "1")
+    end
+
+    test "open the play's preview, Playcode's own page", %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+      assert has_element?(lv, section(play, ~p"/plays/#{play.code}"), t("Preview"))
     end
 
     test "lead back to the list of plays", %{conn: conn, play: play} do

@@ -102,9 +102,16 @@ defmodule PlaycodeWeb.Layouts do
       <.locale_toggle locale={@locale} />
       <.theme_toggle />
       <div :if={@current_user} class="dropdown dropdown-end">
-        <label tabindex="0" role="button" class="btn btn-ghost btn-xs gap-1">
+        <label
+          tabindex="0"
+          role="button"
+          aria-label={@current_user.email}
+          class="btn btn-ghost btn-xs gap-1"
+        >
           <.icon name="hero-user-circle-micro" class="size-4" />
-          <span class="max-w-[8rem] truncate text-xs">{@current_user.email}</span>
+          <span class="hidden sm:inline max-w-[8rem] truncate text-xs">
+            {@current_user.email}
+          </span>
           <.icon name="hero-chevron-down-micro" class="size-3" />
         </label>
         <ul
@@ -126,9 +133,9 @@ defmodule PlaycodeWeb.Layouts do
   Admin sidebar: the admin's sections, or on a play's pages (`play_context`) the play's own,
   grouped as the mockup groups them, each with its count from `play_counts`.
 
-  The admin's entries are filtered through `Playcode.Authz.can?/3`, the same predicate that
-  guards the routes, so the menu cannot offer a page the user will be bounced from, and
-  cannot hide one they are entitled to.
+  Both are filtered through `Playcode.Authz.can?/3`, the same predicate that guards the
+  routes, so the menu cannot offer a page the user will be bounced from, and cannot hide one
+  they are entitled to.
   """
   attr :current_user, :map, default: nil
   attr :current_path, :string, default: ""
@@ -143,7 +150,7 @@ defmodule PlaycodeWeb.Layouts do
       |> assign(:counts, assigns.play_counts || %{})
 
     ~H"""
-    <aside class="w-56 shrink-0 border-r border-base-300 bg-base-200 min-h-full">
+    <aside class="w-full border-b border-base-300 bg-base-200 lg:min-h-full lg:w-56 lg:border-r lg:border-b-0">
       <nav aria-label={gettext("Play sections")} class="p-3 text-sm">
         <.link navigate={~p"/admin/plays"} class="mb-3 block px-2 text-primary hover:underline">
           ← {gettext("All plays")}
@@ -153,7 +160,7 @@ defmodule PlaycodeWeb.Layouts do
         <.section_link to={~p"/admin/plays/#{@play.id}"} current={@active == :overview}>
           {gettext("Overview")}
         </.section_link>
-        <%= for {group, items} <- play_sections(@play) do %>
+        <%= for {group, items} <- play_sections(@play, @current_user) do %>
           <h2 class="mx-2 mt-4 mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/70">
             {group}
           </h2>
@@ -175,7 +182,7 @@ defmodule PlaycodeWeb.Layouts do
     assigns = assign(assigns, :groups, sidebar_groups(assigns.current_user))
 
     ~H"""
-    <aside class="w-56 shrink-0 border-r border-base-300 bg-base-200 min-h-full">
+    <aside class="w-full border-b border-base-300 bg-base-200 lg:min-h-full lg:w-56 lg:border-r lg:border-b-0">
       <nav aria-label={gettext("Administration")} class="p-3 text-sm">
         <div :for={{label, items} <- @groups} class="mb-4">
           <h2 class="mx-2 mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/70">
@@ -225,8 +232,10 @@ defmodule PlaycodeWeb.Layouts do
     """
   end
 
-  # The play's sections as the mockup groups them: {tab, label, path, count key}.
-  defp play_sections(play) do
+  # The play's sections as the mockup groups them: {tab, label, path, count key}. Every one
+  # is behind :view_admin but the preview, Playcode's public page, which shows a draft to
+  # :view_drafts only; the play is passed for the per-play scoping `Authz` plans.
+  defp play_sections(play, user) do
     related? =
       play.parent_play_id || (Ecto.assoc_loaded?(play.derived_plays) and play.derived_plays != [])
 
@@ -256,12 +265,19 @@ defmodule PlaycodeWeb.Layouts do
          [
            related? &&
              {:compare, gettext("Comparison"), ~p"/admin/plays/#{play.id}/compare", nil},
-           {:public, gettext("Public page"), ~p"/plays/#{play.code}", nil}
+           {:preview, gettext("Preview"), ~p"/plays/#{play.code}", nil}
          ],
          &(!&1)
        )}
     ]
+    |> Enum.map(fn {group, items} ->
+      {group, Enum.filter(items, &Playcode.Authz.can?(user, section_action(&1), play))}
+    end)
+    |> Enum.reject(fn {_group, items} -> items == [] end)
   end
+
+  defp section_action({:preview, _label, _to, _count}), do: :view_drafts
+  defp section_action(_section), do: :view_admin
 
   defp sidebar_groups(user) do
     [

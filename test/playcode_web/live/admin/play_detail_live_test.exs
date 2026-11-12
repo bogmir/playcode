@@ -164,4 +164,30 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
              "2025 · Con correcciones a cargo de Guillermo Carrascón."
            )
   end
+
+  test "names the top divisions as the play does", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="jornada" n="1"><head>Jornada primera</head>
+            <sp who="#a"><speaker>A</speaker><l n="1">Uno</l></sp></div1>
+          <div1 type="jornada" n="2"><head>Jornada segunda</head>
+            <sp who="#a"><speaker>A</speaker><l n="2">Dos</l></sp></div1>
+          """
+        )
+      )
+
+    Playcode.Statistics.recompute(play.id)
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "#play-counts a", String.downcase(t("Jornadas")))
+  end
+
+  test "folds the licence with the project's texts", %{conn: conn} do
+    play = play_fixture(%{"licence_text" => "CC BY-NC 4.0", "funder" => "Ministerio"})
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "details", "CC BY-NC 4.0")
+  end
 end
