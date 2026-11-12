@@ -151,7 +151,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           <div class="flex gap-2">
             <.link
               navigate={~p"/admin/plays/import"}
-              class="btn btn-sm btn-success"
+              class="btn btn-sm btn-outline btn-primary"
             >
               {gettext("Import TEI-XML")}
             </.link>
