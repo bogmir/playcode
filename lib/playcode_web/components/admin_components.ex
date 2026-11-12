@@ -123,10 +123,12 @@ defmodule PlaycodeWeb.AdminComponents do
   end
 
   @doc """
-  Who sees the play, with the one button that changes it. It sends `set_status` with the
-  status the button gives.
+  Who sees the play, here and on the published site, with the one button that changes it.
+  It sends `set_status` with the status the button gives. `deployed` is the
+  `content_version` the last deploy published the play with, nil when it did not.
   """
   attr :play, :map, required: true
+  attr :deployed, :integer, default: nil
 
   def state_band(assigns) do
     ~H"""
@@ -147,9 +149,7 @@ defmodule PlaycodeWeb.AdminComponents do
         ]}>
           {if @play.is_complete, do: gettext("Complete"), else: gettext("Draft")}
         </span>
-        {if @play.is_complete,
-          do: gettext("Everyone sees it. The next Generate puts it on the published site."),
-          else: gettext("Only the team sees it. It is not on the published site.")}
+        {state_sentence(@play, @deployed)}
       </p>
       <button
         :if={!@play.is_complete}
@@ -170,4 +170,23 @@ defmodule PlaycodeWeb.AdminComponents do
     </div>
     """
   end
+
+  defp state_sentence(%{is_complete: true, content_version: version}, version),
+    do: gettext("Published on the site.")
+
+  defp state_sentence(%{is_complete: true}, nil),
+    do:
+      gettext("Everyone sees it here. The next Generate and Deploy put it on the published site.")
+
+  defp state_sentence(%{is_complete: true}, _older),
+    do: gettext("Published on the site; changed since the last deploy.")
+
+  defp state_sentence(_draft, nil),
+    do: gettext("Only the team sees it. It is not on the published site.")
+
+  defp state_sentence(_draft, _deployed),
+    do:
+      gettext(
+        "Only the team sees it here. The published site keeps it until the next Generate and Deploy."
+      )
 end

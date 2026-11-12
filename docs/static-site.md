@@ -74,6 +74,16 @@ folder (docker and python3; `PHP_IMAGE=wordpress:cli-php7.4 deploy/test.sh` for 
   `STATIC_SITE_PUBLISH_TOKEN` (the key whose hash the server's config holds). In dev, the
   same environment variables apply; without `GITHUB_DEPLOY_TOKEN`, git pushes with your own
   login.
+- **`STATIC_SITE_PUBLIC_URL`**, not a secret: the published site's address for readers
+  (the folder the publish server serves the site from). A play's "Página pública" link in
+  the admin is this plus `plays/<code>/`. Unset, no play has the link. Not
+  `STATIC_SITE_PUBLISH_URL`, the server's fetch hook.
+- **What the last deploy published**: after a deploy succeeds, `SiteBuilder` copies the
+  site's `build.json` to `<site dir>.deployed.json` (`_site.deployed.json` in dev,
+  `/data/site.deployed.json` on Fly), beside the site, not in it, so it is not itself
+  published (`StaticSite.record_deploy/1`, `deployed_plays/1`). A play's link and its
+  overview's state band read it: published, published and changed since, or not yet.
+  Until the first recorded deploy no play has the link.
 
 ## Usage
 

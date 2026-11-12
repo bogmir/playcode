@@ -38,6 +38,11 @@ config :playcode, :static_site_deploy,
   publish_url: System.get_env("STATIC_SITE_PUBLISH_URL"),
   publish_token: System.get_env("STATIC_SITE_PUBLISH_TOKEN")
 
+# The published site's address for readers (https://emothe.uv.es/biblioteca, say): a
+# play's "Página pública" link points under it. Not STATIC_SITE_PUBLISH_URL, the server's
+# fetch hook. Unset, no play has the link.
+config :playcode, :static_site_public_url, System.get_env("STATIC_SITE_PUBLIC_URL")
+
 if config_env() == :prod do
   # Where the static site is built (StaticSite.output_dir/0). On Fly, a folder on the
   # playcode_site volume (fly.toml), so the site and its build.json outlive a stopped
