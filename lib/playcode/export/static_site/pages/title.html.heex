@@ -12,27 +12,27 @@
       {@edition.play.original_title}
     </p>
     <dl class="facts">
-      <dt>Code</dt>
+      <dt>{t("Code")}</dt>
       <dd>{@edition.play.code}</dd>
-      <dt>Language</dt>
-      <dd>{Components.language(@edition.play.language)}</dd>
-      <dt>Form</dt>
+      <dt>{t("Language")}</dt>
+      <dd>{html(Components.language(@edition.play.language))}</dd>
+      <dt>{t("Form")}</dt>
       <dd>{Components.form_summary(@edition.play, @edition.stats)}</dd>
       <Components.study play={@edition.play} />
     </dl>
     <Components.family play={@edition.play} published={@site.published} />
     <Components.places play={@edition.play} />
     <section :if={@edition.play.editors != []}>
-      <h2>Edition</h2>
+      <h2>{t("Edition")}</h2>
       <ul>
         <li :for={editor <- @edition.play.editors}>
           {editor.person_name}
-          <span class="role">{PlayLabels.editor_role_label(editor.role)}</span>
+          <span class="role">{both(fn -> PlayLabels.editor_role_label(editor.role) end)}</span>
         </li>
       </ul>
     </section>
     <section :if={@edition.play.sources != []}>
-      <h2>Sources</h2>
+      <h2>{t("Sources")}</h2>
       <ul>
         <li :for={source <- @edition.play.sources}>
           <Components.inline text={Components.source_text(source)} />
@@ -45,17 +45,19 @@
     <Components.bibliography groups={@edition.bibliography} />
     <Components.outline_item :for={item <- @edition.front} edition={@edition} item={item} />
     <section>
-      <h2>Contents</h2>
+      <h2>{t("Contents")}</h2>
       <Components.play_contents edition={@edition} all_scenes />
     </section>
     <section class="cite">
-      <h2>Cite this edition</h2>
+      <h2>{t("Cite this edition")}</h2>
       <p data-citation>{Components.citation(@edition.play, @site)}</p>
-      <button type="button" class="copy" data-copy-citation hidden>Copy citation</button>
+      <button type="button" class="copy" data-copy-citation hidden>{t("Copy citation")}</button>
     </section>
     <p :if={Components.licence?(@edition.play)} class="lede">
       <Components.licence play={@edition.play} />
     </p>
-    <p><a href={"#{@edition.play.code}.xml"} download>Download the TEI-XML source</a></p>
+    <p>
+      <a href={"#{@edition.play.code}.xml"} download>{t("Download the TEI-XML source")}</a>
+    </p>
   </article>
 </Components.shell>

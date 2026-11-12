@@ -4,8 +4,9 @@ defmodule Playcode.Export.StaticSite do
   and from the unzipped archive opened as `file://`, following the Endings Project
   principles. Design: `docs/superpowers/specs/2026-10-02-static-site-redesign-design.md`.
 
-  Only plays marked complete are published unless `all: true`. The archive is in
-  English whatever locale the admin generating it uses.
+  Only plays marked complete are published unless `all: true`. The archive's interface is
+  in Spanish and English (`StaticSite.Bilingual`) whatever locale the admin generating it
+  uses.
 
   `generate/1` and `apply_changes/2` (and its one-change wrappers `generate_single_play/2`
   and `remove_single_play/2`) must not run concurrently on one directory: each rewrites
@@ -21,10 +22,13 @@ defmodule Playcode.Export.StaticSite do
   what changed since, and `built_version/1` which version the site was built with.
   """
 
+  import Playcode.Export.StaticSite.Bilingual
+
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Comparison, Components, Edition, Fingerprint, Pages, Search}
+  alias PlaycodeWeb.PlayLabels
 
   @build "build.json"
 
@@ -679,36 +683,27 @@ defmodule Playcode.Export.StaticSite do
     end
   end
 
+  # Each facet's legend and each value's name in the interface's two languages.
   defp facets(plays) do
     [
-      {"lang", "Language",
-       plays
-       |> Enum.frequencies_by(& &1.language)
-       |> Enum.sort_by(&(-elem(&1, 1)))
-       |> Enum.map(fn {code, n} -> {code, Components.language(code), n} end)},
-      {"form", "Form",
-       options(plays, &Play.form/1, %{
-         "verse" => "Verse",
-         "occasional_verse" => "Prose with occasional verse",
-         "prose" => "Prose",
-         "mixed" => "Verse and prose"
-       })},
-      {"kind", "Kind",
-       options(plays, &Components.kind/1, %{
-         "original" => "Originals",
-         "translation" => "Translations",
-         "adaptation" => "Adaptations",
-         "version" => "Versions"
-       })},
-      {"coll", "Collection",
-       options(plays, &Components.collection/1, %{"EMOTHE" => "EMOTHE", "ARTELOPE" => "ARTELOPE"})}
+      {"lang", t("Language"), options(plays, & &1.language, &html(Components.language(&1)))},
+      {"form", t("Form"), options(plays, &Play.form/1, &form_label/1)},
+      {"kind", t("Kind"), options(plays, &Components.kind/1, &kind_label/1)},
+      {"coll", t("Collection"), options(plays, &Components.collection/1, & &1)}
     ]
   end
 
-  defp options(plays, value_of, labels) do
+  defp form_label(form), do: both(fn -> PlayLabels.form_label(form) end)
+
+  defp kind_label("original"), do: t("Originals")
+  defp kind_label("translation"), do: t("Translations")
+  defp kind_label("adaptation"), do: t("Adaptations")
+  defp kind_label("version"), do: t("Versions")
+
+  defp options(plays, value_of, label) do
     plays
     |> Enum.frequencies_by(value_of)
     |> Enum.sort_by(&(-elem(&1, 1)))
-    |> Enum.map(fn {value, n} -> {value, labels[value], n} end)
+    |> Enum.map(fn {value, n} -> {value, label.(value), n} end)
   end
 end

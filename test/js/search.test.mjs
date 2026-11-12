@@ -87,8 +87,11 @@ test('a line is looked up in the chunk the build wrote it to', () => {
 
 // Question 15: each kind by its own name; every non-original used to be a translation.
 test('the Kind facet names each kind', () => {
-  assert.equal(S.kindLabel('original'), 'Originals');
-  assert.equal(S.kindLabel('translation'), 'Translations');
-  assert.equal(S.kindLabel('adaptation'), 'Adaptations');
-  assert.equal(S.kindLabel('version'), 'Versions');
+  // The interface is Spanish unless the reader chose English.
+  assert.equal(S.kindLabel('original'), 'Originales');
+  assert.equal(S.kindLabel('translation'), 'Traducciones');
+  assert.equal(S.kindLabel('original', 'en'), 'Originals');
+  assert.equal(S.kindLabel('translation', 'en'), 'Translations');
+  assert.equal(S.kindLabel('adaptation', 'en'), 'Adaptations');
+  assert.equal(S.kindLabel('version', 'en'), 'Versions');
 });

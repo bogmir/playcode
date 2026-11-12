@@ -424,16 +424,18 @@ defmodule Playcode.Export.StaticSiteTest do
     end
   end
 
-  test "a play page carries its places and its historical time, in English whatever the locale" do
+  # The interface is in both languages whatever the locale it was built in; it used to be
+  # English only.
+  test "a play page carries its places and its historical time, whatever the locale" do
     play = complete_play(%{"historical_time" => "siglo_xvii"})
     play_place_fixture(play, place_fixture(%{"name" => "Roma"}))
 
     dir = Gettext.with_locale(PlaycodeWeb.Gettext, "es", fn -> generate!([play]) end)
-    html = read!(dir, "plays/#{play.code}/index.html")
+    page = "plays/#{play.code}/index.html"
 
-    assert html =~ "Roma"
-    assert html =~ "17th century"
-    refute html =~ "Siglo XVII"
+    assert read!(dir, page) =~ "Roma"
+    assert texts(html!(dir, page), ".facts dd") |> Enum.member?("17th century")
+    assert texts(html!(dir, page, "es"), ".facts dd") |> Enum.member?("Siglo XVII")
   end
 
   test "a place's historical state is printed in the names' language, whatever the page's" do
@@ -662,7 +664,7 @@ defmodule Playcode.Export.StaticSiteTest do
       assert {path, LazyHTML.attribute(portal, "href")} ==
                {path, ["https://emothe.uv.es/", "https://emothe.uv.es/basededatos/"]}
 
-      # The interface is English until the site has its Spanish (S3).
+      # Read as an English reader does; the Spanish is the page's default (the test below).
       assert {path, texts(page, "header nav[aria-label='EMOTHE portal'] a")} ==
                {path, ["Portal", "Database"]}
 
@@ -690,6 +692,43 @@ defmodule Playcode.Export.StaticSiteTest do
 
     css = File.read!(Path.join([dir, "assets", "style.css"]))
     assert css =~ ~r/\[data-theme="?dark"?\] \{[^}]*--paper: #16131c/
+  end
+
+  # Spanish is the interface's default, so a page read without JavaScript reads in Spanish.
+  # Each text carries its English beside it, and each attribute its English in data-en-*,
+  # which the band's switch shows; a line in the head applies the reader's last choice.
+  test "every page's interface is in Spanish, with its English beside it for the switch" do
+    play = complete_play()
+    dir = generate!([play], all: true)
+
+    for path <- ["index.html", "about.html", "search.html", "plays/#{play.code}/index.html"] do
+      assert {path, read!(dir, path) =~ ~s(<html lang="es" data-ui="es">)} == {path, true}
+
+      spanish = html!(dir, path, "es")
+      english = html!(dir, path)
+
+      assert {path, texts(spanish, ".skip"), texts(english, ".skip")} ==
+               {path, ["Saltar al contenido"], ["Skip to content"]}
+
+      assert {path, texts(spanish, "header [data-ui-toggle]"),
+              texts(english, "header [data-ui-toggle]")} ==
+               {path, ["English"], ["Español"]}
+
+      assert {path, LazyHTML.attribute(LazyHTML.query(spanish, "header .theme"), "aria-label"),
+              LazyHTML.attribute(LazyHTML.query(english, "header .theme"), "aria-label")} ==
+               {path, ["Modo oscuro"], ["Dark mode"]}
+
+      head = dir |> Path.join(path) |> File.read!() |> String.split("</head>") |> hd()
+      [before_style, _] = String.split(head, ~s(rel="stylesheet"), parts: 2)
+      assert {path, before_style =~ "reader.ui"} == {path, true}
+    end
+
+    title_page = "plays/#{play.code}/index.html"
+    assert texts(html!(dir, title_page, "es"), ".rail nav h2") == ["Índice"]
+    assert texts(html!(dir, title_page), ".rail nav h2") == ["Contents"]
+
+    css = File.read!(Path.join([dir, "assets", "style.css"]))
+    assert css =~ "[data-ui=es] x-en"
   end
 
   # WCAG 2's contrast ratio of two sRGB colours, as six hex digits.

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
   <head>
     <meta charset="utf-8" />
     <meta http-equiv="refresh" content={"0; url=#{@code}/index.html"} />
@@ -7,6 +7,9 @@
     <title>{@title}</title>
   </head>
   <body>
-    <p>This page has moved: <a href={"#{@code}/index.html"}>{@title}</a>.</p>
+    <%!-- No stylesheet here to pick one language: the line in both. --%>
+    <p>
+      Esta página se ha trasladado / <span lang="en">This page has moved</span>: <a href={"#{@code}/index.html"}>{@title}</a>.
+    </p>
   </body>
 </html>

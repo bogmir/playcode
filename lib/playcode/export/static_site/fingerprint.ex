@@ -4,17 +4,19 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   `build.json` records the one a site was built with; when the current one differs, any
   page may be out of date, and Generate rebuilds every play.
 
-  It covers the code (`module_info(:md5)` of `modules/0`), the English translations, the
-  versions of the libraries that render and encode the pages, and the `:version` option.
+  It covers the code (`module_info(:md5)` of `modules/0`), the translations of the
+  messages those modules print, the versions of the libraries that render and encode the
+  pages, and the `:version` option.
   Not the files under `priv/static_site` (styles, scripts, fonts): no page embeds anything
   of them but their links, stamped with the start of their own hash, `assets/1`, so a
   change to them alone is copied and the stamps moved in place, not rebuilt. Not `build_date`: a page's footer says when that page
   was written. The play data is `plays.content_version`'s.
 
-  Not `PlaycodeWeb.Gettext`'s code: it is compiled from every locale's translations, so a
-  Spanish edit in the admin pages changed it, and the site is in English. Its English
-  translations are hashed as data instead; an untranslated message falls back to its
-  msgid, which is in the code of the module that asks for it.
+  Not `PlaycodeWeb.Gettext`'s code: it is compiled from every locale's translations, so an
+  edit in the admin pages changed it. The translations are hashed as data instead, in
+  both of the site's languages, and only those of messages a listed module's file asks for
+  (the `.po` files' references); an untranslated message falls back to its msgid, which is
+  in the code of the module that asks for it.
 
   `test/playcode/export/static_site/fingerprint_test.exs` fails when the export starts
   calling a module of this app that is neither listed here nor data access.
@@ -86,7 +88,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     libraries = Enum.map(@libraries, &{&1, Application.spec(&1, :vsn)})
     gettext_dir = opts[:gettext_dir] || Application.app_dir(:playcode, "priv/gettext")
 
-    hash({code, english(gettext_dir), libraries, opts[:version]})
+    hash({code, translations(gettext_dir), libraries, opts[:version]})
   end
 
   @doc """
@@ -112,38 +114,53 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     |> Base.encode16(case: :lower)
   end
 
-  # The English translations that say something, by message: not the files, whose
-  # source-line references move with every edit of the code. Parsing them takes ~35 ms and
+  # The translations the site prints that say something, by message: not the files, whose
+  # source-line references move with every edit of the code. Parsing them takes ~70 ms and
   # the export page asks on every mount and form change, so the result is kept by the
   # files' contents: an edit is a new key, never a stale answer.
   # ponytail: never evicted, one entry per contents seen; a dev .po edit leaves the old one
   # until restart.
-  defp english(gettext_dir) do
+  defp translations(gettext_dir) do
     files =
       gettext_dir
-      |> Path.join("en/LC_MESSAGES/*.po")
+      |> Path.join("*/LC_MESSAGES/*.po")
       |> Path.wildcard()
       |> Enum.sort()
-      |> Enum.map(&{Path.basename(&1), File.read!(&1)})
+      |> Enum.map(&{Path.relative_to(&1, gettext_dir), File.read!(&1)})
 
-    key = {__MODULE__, :english, hash(files)}
+    sources = Enum.map(modules(), &to_string(&1.module_info(:compile)[:source]))
+    key = {__MODULE__, :translations, hash({files, sources})}
 
     with nil <- :persistent_term.get(key, nil) do
-      english = parse_english(files)
-      :persistent_term.put(key, english)
-      english
+      translations = parse(files, sources)
+      :persistent_term.put(key, translations)
+      translations
     end
   end
 
-  defp parse_english(files) do
+  defp parse(files, sources) do
     files
     |> Enum.flat_map(fn {name, po} ->
       for message <- Expo.PO.parse_string!(po).messages,
+          printed?(message, sources),
           translation = translation(message),
           translation != [],
           do: {name, Expo.Message.key(message), translation}
     end)
     |> Enum.sort()
+  end
+
+  # A message one of the modules' files asks for: the module's own file, or a template in
+  # the folder named after it, as `embed_templates "pages/*"` beside `pages.ex`.
+  defp printed?(message, sources) do
+    for reference <- List.flatten(message.references),
+        file = with({file, _line} <- reference, do: file),
+        source <- sources,
+        reduce: false do
+      found ->
+        found or String.ends_with?(source, "/" <> file) or
+          String.ends_with?(source, "/" <> Path.dirname(file) <> ".ex")
+    end
   end
 
   defp translation(%Expo.Message.Singular{msgstr: msgstr}),

@@ -1345,11 +1345,19 @@ defmodule Playcode.Export.StaticSitePlayTest do
     dir = generate!([play], all: true)
     title = page(dir, play, "index.html")
 
-    # Interface in English, place names in Spanish, as the site's Places section.
+    # The venue's kind in the interface's language, place names in Spanish, as the site's
+    # Places section.
     assert [first, _second] = texts(title, "#performances .performance")
 
     assert first =~
              "1610 Globe · Londres · #{company.name} · commercial theatre [1] vol. 6, p. 83"
+
+    assert [spanish, _second] =
+             dir
+             |> html!("plays/#{play.code}/index.html", "es")
+             |> texts("#performances .performance")
+
+    assert spanish =~ "1610 Globe · Londres · #{company.name} · teatro comercial [1]"
 
     assert first =~ "Hissed."
 

@@ -10,6 +10,8 @@ defmodule Playcode.Export.StaticSite.Comparison do
 
   use Phoenix.Component
 
+  import Playcode.Export.StaticSite.Bilingual
+
   alias Playcode.Alignment
   alias Playcode.Export.StaticSite.Components
   alias Playcode.Export.StaticSite.Edition
@@ -63,31 +65,38 @@ defmodule Playcode.Export.StaticSite.Comparison do
   A panel's name, its part before its title (`Original: …`, `Version: …`): a version often
   keeps its original's title.
   """
-  def panel_name(play, 0), do: "Original: " <> InlineMarkup.plain(play.title)
+  def panel_name(play, 0), do: join([tp("Original"), title(play)], ": ")
 
-  def panel_name(play, _),
-    do: String.capitalize(Components.kind(play)) <> ": " <> InlineMarkup.plain(play.title)
+  def panel_name(play, _) do
+    {es, en} = Components.kind_word(play)
+    join([{String.capitalize(es), String.capitalize(en)}, title(play)], ": ")
+  end
+
+  defp title(play), do: {InlineMarkup.plain(play.title), InlineMarkup.plain(play.title)}
 
   @doc """
-  The translation menu's entries, `{play, label}`: each by its title and language, and by
-  its code too where two would read alike.
+  The translation menu's entries, `{play, label}`, each label `{spanish, english}`: each
+  by its title and language, and by its code too where two would read alike.
   """
   def menu(plays) do
     labelled = Enum.map(plays, &{&1, menu_label(&1)})
     counts = Enum.frequencies_by(labelled, &elem(&1, 1))
 
     for {play, label} <- labelled,
-        do: {play, if(counts[label] > 1, do: "#{label} — #{play.code}", else: label)}
+        do:
+          {play,
+           if(counts[label] > 1, do: join([label, {play.code, play.code}], " — "), else: label)}
   end
 
-  defp menu_label(%{language: language} = play) when language in [nil, ""],
-    do: InlineMarkup.plain(play.title)
+  defp menu_label(%{language: language} = play) when language in [nil, ""], do: title(play)
 
-  defp menu_label(play),
-    do: "#{InlineMarkup.plain(play.title)} (#{Components.language(play.language)})"
+  defp menu_label(play) do
+    {es, en} = Components.language(play.language)
+    join([title(play), {"(#{es})", "(#{en})"}], " ")
+  end
 
   attr :edition, :map, required: true
-  attr :name, :string, required: true, doc: "the panel's name (`panel_name/2`)"
+  attr :name, :any, required: true, doc: "the panel's name (`panel_name/2`)"
   attr :prefix, :string, default: nil
 
   @doc """
@@ -96,7 +105,8 @@ defmodule Playcode.Export.StaticSite.Comparison do
   scroll its own panel. Text is escaped, so ` id="` is only ever markup.
   """
   def text(assigns) do
-    assigns = assign(assigns, :label, "Notes — " <> assigns.name)
+    assigns =
+      assign(assigns, :label, attrs(join([tp("Notes"), assigns.name], " — "), "aria-label"))
 
     html =
       ~H"""

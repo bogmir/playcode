@@ -6,6 +6,8 @@ defmodule Playcode.Export.StaticSite.Pages do
   """
   use Phoenix.Component
 
+  import Playcode.Export.StaticSite.Bilingual
+
   alias Playcode.Catalogue.Play
   alias Playcode.Export.StaticSite.{Comparison, Components, Edition}
   alias Playcode.PlayContent.{Element, Note}
@@ -33,7 +35,9 @@ defmodule Playcode.Export.StaticSite.Pages do
   defp stage_label("none", none), do: none
 
   defp stage_label(type, _none) do
-    if type in Element.stage_types(), do: PlayLabels.stage_type_label(type), else: type
+    if type in Element.stage_types(),
+      do: both(fn -> PlayLabels.stage_type_label(type) end),
+      else: type
   end
 
   @doc "Renders page template `name` (`:title`, `:division`, …) with `assigns` to HTML."

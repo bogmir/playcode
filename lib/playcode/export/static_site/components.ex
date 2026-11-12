@@ -5,6 +5,9 @@ defmodule Playcode.Export.StaticSite.Components do
   `site.js` and `search.js` enhance.
   """
   use Phoenix.Component
+  use Gettext, backend: PlaycodeWeb.Gettext
+
+  import Playcode.Export.StaticSite.Bilingual
 
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue.{Paratext, Play}
@@ -19,7 +22,7 @@ defmodule Playcode.Export.StaticSite.Components do
     required: true,
     doc: ~s(path from the page to the site root: "" or "../../")
 
-  attr :title, :string, required: true
+  attr :title, :any, required: true, doc: "a string, or `{spanish, english}` (`tp/2`)"
   attr :site, :map, required: true
   attr :current, :atom, default: nil
 
@@ -27,18 +30,27 @@ defmodule Playcode.Export.StaticSite.Components do
     default: nil,
     doc: "the play shown, or the plays, whose licences the footer states"
 
-  attr :rail_label, :string, default: "Contents & tools"
+  attr :rail_label, :any, default: nil
   slot :rail
   slot :inner_block, required: true
 
   def shell(assigns) do
+    assigns =
+      assign(assigns,
+        title: title_parts(assigns.title),
+        rail_label: assigns.rail_label || t("Contents & tools")
+      )
+
     ~H"""
     <!DOCTYPE html>
-    <html lang="en">
+    <html lang="es" data-ui="es">
       <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{@title}</title>
+        <title :if={match?([_], @title)}>{hd(@title)}</title>
+        <title :if={match?([_, _], @title)} data-tr data-en-text={List.last(@title)}>
+          {hd(@title)}
+        </title>
         <%!-- Not stamped like the links below: it must match style.css's url(), or the font is fetched twice. --%>
         <link
           rel="preload"
@@ -47,10 +59,10 @@ defmodule Playcode.Export.StaticSite.Components do
           type="font/woff2"
           crossorigin
         />
-        <%!-- The reader's light or dark, else the system's, before anything paints; without
-              JavaScript the page is light. --%>
+        <%!-- The reader's light or dark, else the system's, and their interface language,
+              before anything paints; without JavaScript the page is light and Spanish. --%>
         <script>
-          (function(){var t;try{t=localStorage.getItem("reader.theme")}catch(e){}document.documentElement.dataset.theme=t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light")})()
+          (function(){var d=document.documentElement,t,u;try{t=localStorage.getItem("reader.theme");u=localStorage.getItem("reader.ui")}catch(e){}d.dataset.theme=t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");if(u)d.lang=d.dataset.ui=u})()
         </script>
         <link rel="stylesheet" href={@root <> "assets/style.css?v=" <> @site.assets} />
         <script src={@root <> "assets/site.js?v=" <> @site.assets} defer>
@@ -58,21 +70,32 @@ defmodule Playcode.Export.StaticSite.Components do
       </head>
       <body data-ln="5" data-fo="off" data-rs="off" data-sh="off" data-sdm="off">
         <header class="bar">
-          <a class="skip" href="#main">Skip to content</a>
-          <a class="wordmark" href={@root <> "index.html"}>EMOTHE<small>Digital library</small></a>
-          <nav aria-label="Site">
+          <a class="skip" href="#main">{t("Skip to content")}</a>
+          <a class="wordmark" href={@root <> "index.html"}>
+            EMOTHE<small>{t("Digital library")}</small>
+          </a>
+          <nav {ta("aria-label", "Site")} class="site">
             <a href={@root <> "index.html"} aria-current={@current == :catalogue && "page"}>
-              catalogue
+              {t("Catalogue")}
             </a>
-            <a href={@root <> "search.html"} aria-current={@current == :search && "page"}>search</a>
-            <a href={@root <> "about.html"} aria-current={@current == :about && "page"}>about</a>
+            <a href={@root <> "search.html"} aria-current={@current == :search && "page"}>
+              {t("Search")}
+            </a>
+            <a href={@root <> "about.html"} aria-current={@current == :about && "page"}>
+              {t("About")}
+            </a>
           </nav>
           <%!-- The portal the site belongs to: the one place a page leaves the archive. --%>
-          <nav aria-label="EMOTHE portal" class="portal">
+          <nav {ta("aria-label", "EMOTHE portal")} class="portal">
             <a href="https://emothe.uv.es/">Portal</a>
-            <a href="https://emothe.uv.es/basededatos/">Database</a>
+            <a href="https://emothe.uv.es/basededatos/">{t("Database")}</a>
           </nav>
-          <button type="button" class="theme" data-theme-toggle aria-label="Dark mode" hidden>
+          <%!-- Each language named in itself: the one this button switches to. --%>
+          <button type="button" class="ui" data-ui-toggle hidden>
+            <x-es lang="en">English</x-es>
+            <x-en lang="es">Español</x-en>
+          </button>
+          <button type="button" class="theme" data-theme-toggle {ta("aria-label", "Dark mode")} hidden>
             ◐
           </button>
         </header>
@@ -87,15 +110,28 @@ defmodule Playcode.Export.StaticSite.Components do
           <p :for={play <- licensed(@play)}>
             <.licence play={play} />
           </p>
-          <p>EMOTHE · version {@site.version} · built {@site.build_date}</p>
           <p>
-            A static edition following the <a href="https://endings.uvic.ca/principles.html">Endings principles</a>; every play's TEI-XML source is published beside it.
+            {t("EMOTHE · version %{version} · built %{date}",
+              version: @site.version,
+              date: @site.build_date
+            )}
+          </p>
+          <p>
+            {t("A static edition following the")}
+            <a href="https://endings.uvic.ca/principles.html">{t("Endings principles")}</a>{t(
+              "; every play's TEI-XML source is published beside it."
+            )}
           </p>
         </footer>
       </body>
     </html>
     """
   end
+
+  # A page's title in the two languages, once when they read alike.
+  defp title_parts({same, same}), do: [same]
+  defp title_parts({es, en}), do: [es, en]
+  defp title_parts(title), do: [title]
 
   attr :play, :map, required: true
 
@@ -113,16 +149,17 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :for, :string, required: true, doc: "the toggle that shows it"
   attr :targets, :string, required: true
-  attr :name, :string, required: true
+  attr :previous, :list, required: true, doc: "the back arrow's name, `ta/2`'s attributes"
+  attr :next, :list, required: true
 
   # The arrows and the count site.js's EMOTHE.stepper runs; shown while its toggle is on.
   defp stepper(assigns) do
     ~H"""
     <div class="stepper" data-stepper={@targets} data-for={@for}>
-      <button type="button" data-step="-1" aria-label={"Previous " <> @name}>‹</button>
+      <button type="button" data-step="-1" {@previous}>‹</button>
       <span data-step-count></span>
       <span class="sr-only" data-step-said aria-live="polite"></span>
-      <button type="button" data-step="1" aria-label={"Next " <> @name}>›</button>
+      <button type="button" data-step="1" {@next}>›</button>
     </div>
     """
   end
@@ -158,8 +195,8 @@ defmodule Playcode.Export.StaticSite.Components do
       )
 
     ~H"""
-    <nav aria-label="Contents">
-      <h2>Contents</h2>
+    <nav {ta("aria-label", "Contents")}>
+      <h2>{t("Contents")}</h2>
       <.play_contents edition={@edition} current={@current} />
     </nav>
     <.play_tools
@@ -186,38 +223,48 @@ defmodule Playcode.Export.StaticSite.Components do
   def play_tools(assigns) do
     ~H"""
     <div class="tools" data-tools hidden>
-      <h2>Line numbers</h2>
-      <div class="seg" role="group" aria-label="Line numbers">
-        <button type="button" data-ln-set="all">All</button>
+      <h2>{t("Line numbers")}</h2>
+      <div class="seg" role="group" {ta("aria-label", "Line numbers")}>
+        <button type="button" data-ln-set="all">{t("All")}</button>
         <button type="button" data-ln-set="5">5</button>
-        <button type="button" data-ln-set="off">Off</button>
+        <button type="button" data-ln-set="off">{t("Off")}</button>
       </div>
-      <h2>Show</h2>
-      <label><input type="checkbox" data-toggle="sd" checked /> Stage directions</label>
-      <label><input type="checkbox" data-toggle="vf" checked /> Verse forms</label>
+      <h2>{t("Show")}</h2>
+      <label><input type="checkbox" data-toggle="sd" checked /> {t("Stage directions")}</label>
+      <label><input type="checkbox" data-toggle="vf" checked /> {t("Verse forms")}</label>
       <label :if={@variants}>
-        <input type="checkbox" data-toggle="va" checked /> Variants
+        <input type="checkbox" data-toggle="va" checked /> {t("Variants")}
       </label>
       <label :if={@folio}>
-        <input type="checkbox" data-toggle="fo" /> Folio interpolations
+        <input type="checkbox" data-toggle="fo" /> {t("Folio interpolations")}
       </label>
       <label :if={@tagged}>
-        <input type="checkbox" data-toggle="rs" /> Tagged names
+        <input type="checkbox" data-toggle="rs" /> {t("Tagged names")}
       </label>
       <%= if @cast != [] or @shared or @stage do %>
-        <h2>Highlight</h2>
-        <select :if={@cast != []} data-highlight aria-label="Highlight a character">
-          <option value="">No one</option>
+        <h2>{t("Highlight")}</h2>
+        <select :if={@cast != []} data-highlight {ta("aria-label", "Highlight a character")}>
+          <option value="" {ta("label", "No one")}></option>
           <option :for={character <- @cast} value={character.xml_id}>
             {InlineMarkup.plain(character.name)}
           </option>
         </select>
         <%= if @shared do %>
-          <label><input type="checkbox" data-toggle="sh" /> Shared lines</label>
-          <.stepper :if={@steppers} for="sh" targets=".text .l[data-part=I]" name="shared line" />
+          <label><input type="checkbox" data-toggle="sh" /> {t("Shared lines")}</label>
+          <.stepper
+            :if={@steppers}
+            for="sh"
+            targets=".text .l[data-part=I]"
+            previous={ta("aria-label", "Previous shared line")}
+            next={ta("aria-label", "Next shared line")}
+          />
           <ul class="shared-legend">
             <li :for={
-              {part, label} <- [{"I", "First part"}, {"M", "Middle part"}, {"F", "Last part"}]
+              {part, label} <- [
+                {"I", t("First part")},
+                {"M", t("Middle part")},
+                {"F", t("Last part")}
+              ]
             }>
               <i class="sw" data-part={part}></i>{label}
             </li>
@@ -225,10 +272,16 @@ defmodule Playcode.Export.StaticSite.Components do
         <% end %>
         <%= if @stage do %>
           <label>
-            <input type="checkbox" data-toggle="sdm" aria-label="Highlight stage directions" />
-            Stage directions
+            <input type="checkbox" data-toggle="sdm" {ta("aria-label", "Highlight stage directions")} />
+            {t("Stage directions")}
           </label>
-          <.stepper :if={@steppers} for="sdm" targets=".text .sd, .text .sdi" name="stage direction" />
+          <.stepper
+            :if={@steppers}
+            for="sdm"
+            targets=".text .sd, .text .sdi"
+            previous={ta("aria-label", "Previous stage direction")}
+            next={ta("aria-label", "Next stage direction")}
+          />
         <% end %>
       <% end %>
     </div>
@@ -242,7 +295,7 @@ defmodule Playcode.Export.StaticSite.Components do
   def play_contents(assigns) do
     ~H"""
     <ul>
-      <li><a href="index.html" aria-current={@current == "index" && "page"}>Title page</a></li>
+      <li><a href="index.html" aria-current={@current == "index" && "page"}>{t("Title page")}</a></li>
       <%= for entry <- @edition.contents do %>
         <%= case entry do %>
           <% {:item, item} -> %>
@@ -276,29 +329,31 @@ defmodule Playcode.Export.StaticSite.Components do
             </li>
         <% end %>
       <% end %>
-      <li><a href="text.html" aria-current={@current == "text" && "page"}>Full text</a></li>
+      <li><a href="text.html" aria-current={@current == "text" && "page"}>{t("Full text")}</a></li>
       <li>
-        <a href="statistics.html" aria-current={@current == "statistics" && "page"}>Statistics</a>
+        <a href="statistics.html" aria-current={@current == "statistics" && "page"}>
+          {t("Statistics")}
+        </a>
       </li>
       <li :if={@edition.notes != []}>
-        <a href="notes.html" aria-current={@current == "notes" && "page"}>Notes</a>
+        <a href="notes.html" aria-current={@current == "notes" && "page"}>{t("Notes")}</a>
       </li>
       <li :if={@edition.stage_directions != []}>
         <a href="stage-directions.html" aria-current={@current == "stage-directions" && "page"}>
-          Stage directions
+          {t("Stage directions")}
         </a>
       </li>
       <li :if={@edition.play.edition_notes != []}>
-        <a href="index.html#edition-notes">Notes on the edition</a>
+        <a href="index.html#edition-notes">{t("Notes on the edition")}</a>
       </li>
       <li :if={@edition.play.witnesses != []}>
-        <a href="index.html#witnesses">Witnesses</a>
+        <a href="index.html#witnesses">{t("Witnesses")}</a>
       </li>
       <li :if={@edition.performances != []}>
-        <a href="index.html#performances">Performances</a>
+        <a href="index.html#performances">{t("Performances")}</a>
       </li>
       <li :if={@edition.bibliography != []}>
-        <a href="index.html#bibliography">Bibliography</a>
+        <a href="index.html#bibliography">{t("Bibliography")}</a>
       </li>
     </ul>
     """
@@ -314,7 +369,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp item_href(edition, item),
     do: "#{edition.item_pages[item.id]}.html##{edition.anchors[item.id]}"
 
-  defp item_title(%Paratext{} = paratext), do: PlayLabels.paratext_title(paratext)
+  defp item_title(%Paratext{} = paratext), do: both(fn -> PlayLabels.paratext_title(paratext) end)
   defp item_title(list), do: list_title(list)
 
   defp list_title(%{title: title}) when title not in [nil, ""], do: InlineMarkup.plain(title)
@@ -334,14 +389,14 @@ defmodule Playcode.Export.StaticSite.Components do
   def study(assigns) do
     ~H"""
     <%= if @play.historical_time do %>
-      <dt>Historical time</dt>
+      <dt>{t("Historical time")}</dt>
       <dd>
-        {PlayLabels.historical_time_label(@play.historical_time)}
+        {both(fn -> PlayLabels.historical_time_label(@play.historical_time) end)}
         <span :if={@play.historical_time_note} class="note">{@play.historical_time_note}</span>
       </dd>
     <% end %>
     <%= if @play.composition_date_from || @play.composition_date_note do %>
-      <dt>Composition</dt>
+      <dt>{t("Composition")}</dt>
       <dd>
         {Play.composition_years(@play)}
         <span :if={@play.composition_date_note} class="note">{@play.composition_date_note}</span>
@@ -369,15 +424,15 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <section :if={@original || @derived != []}>
-      <h2>Work family</h2>
+      <h2>{t("Work family")}</h2>
       <p :if={@original}>
-        {String.capitalize(kind(@play))} of
+        {relation(@play)}
         <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
       </p>
       <ul :if={@derived != []}>
         <li :for={play <- @derived}>
           <a href={"../#{play.code}/index.html"}><cite>{play.title}</cite></a>
-          <span class="role">{family_role(play)}</span>
+          <span class="role">{html(family_role(play))}</span>
         </li>
       </ul>
     </section>
@@ -390,7 +445,7 @@ defmodule Playcode.Export.StaticSite.Components do
   def edition_notes(assigns) do
     ~H"""
     <section :if={@play.edition_notes != []} id="edition-notes">
-      <h2>Notes on the edition</h2>
+      <h2>{t("Notes on the edition")}</h2>
       <p :for={note <- @play.edition_notes}><.inline text={note} /></p>
     </section>
     """
@@ -402,7 +457,7 @@ defmodule Playcode.Export.StaticSite.Components do
   def witnesses(assigns) do
     ~H"""
     <section :if={@play.witnesses != []} id="witnesses" class="bibliography">
-      <h2>Witnesses</h2>
+      <h2>{t("Witnesses")}</h2>
       <ul>
         <li :for={witness <- @play.witnesses}>{Witnesses.html(witness)}</li>
       </ul>
@@ -412,23 +467,29 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :edition, :map, required: true
 
-  # Layout B: a line each, the sources they cite once below. The site's interface is in
-  # English and its place names in Spanish, as the Places section's.
+  # Layout B: a line each, the sources they cite once below. Its place names are in
+  # Spanish, as the Places section's.
   def performances(assigns) do
     assigns = assign(assigns, :listing, performance_listing(assigns.edition))
 
     ~H"""
     <section :if={@listing.lines != []} id="performances" class="performances">
-      <h2>Performances</h2>
+      <h2>{t("Performances")}</h2>
       <ul>
         <li :for={line <- @listing.lines} class="performance">
           <b :if={line.date}><.inline text={line.date} /></b>
-          <.inline :if={line.parts != []} text={Enum.join(line.parts, " · ")} />
+          <%= case line.parts do %>
+            <% {same, same} -> %>
+              <.inline text={same} />
+            <% {es, en} -> %>
+              <x-es><.inline text={es} /></x-es>
+              <x-en><.inline text={en} /></x-en>
+          <% end %>
           <span :if={line.reference} class="note">
             {line.reference}
           </span>
           <p :if={line.cast != []} class="note">
-            Cast: <.inline text={Enum.join(line.cast, "; ")} />
+            {t("Cast:")} <.inline text={Enum.join(line.cast, "; ")} />
           </p>
           <p :if={line.note} class="note"><.inline text={line.note} /></p>
         </li>
@@ -441,9 +502,18 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   # The gazetteer is loaded only for a performance that has a place, as `place_links/1` does.
+  # Its venue types are in both languages, so each line's parts are `{spanish, english}`.
   defp performance_listing(%{performances: performances, characters: characters}) do
     gazetteer = if Enum.any?(performances, & &1.place), do: Playcode.Places.gazetteer(), else: %{}
-    Performances.listing(performances, characters, gazetteer, "en", "es")
+    spanish = Performances.listing(performances, characters, gazetteer, "es", "es")
+    english = Performances.listing(performances, characters, gazetteer, "en", "es")
+
+    lines =
+      Enum.zip_with(spanish.lines, english.lines, fn es, en ->
+        %{en | parts: {Enum.join(es.parts, " · "), Enum.join(en.parts, " · ")}}
+      end)
+
+    %{english | lines: lines}
   end
 
   attr :groups, :list, required: true
@@ -451,12 +521,14 @@ defmodule Playcode.Export.StaticSite.Components do
   def bibliography(assigns) do
     ~H"""
     <section :if={@groups != []} id="bibliography" class="bibliography">
-      <h2>Bibliography</h2>
+      <h2>{t("Bibliography")}</h2>
       <%= for {kind, subgroups} <- @groups do %>
-        <h3>{PlayLabels.bibliography_kind_label(kind)}</h3>
+        <h3>{both(fn -> PlayLabels.bibliography_kind_label(kind) end)}</h3>
         <%= for {language, links} <- subgroups do %>
           <h4 :if={kind == "translation"}>
-            {if language, do: language(language), else: PlayLabels.bibliography_language_label(nil)}
+            {if language,
+              do: html(language(language)),
+              else: both(fn -> PlayLabels.bibliography_language_label(nil) end)}
           </h4>
           <ul>
             <li :for={link <- links}>{Citation.html(link.entry, link)}</li>
@@ -474,10 +546,10 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <section :if={@links != []}>
-      <h2>Places</h2>
+      <h2>{t("Places")}</h2>
       <ul>
         <li :for={{name, mentioned?, note} <- @links}>
-          {name}<span :if={mentioned?} class="role"> (mentioned)</span>
+          {name}<span :if={mentioned?} class="role"> ({t("mentioned")})</span>
           <span :if={note}>
             — {note}
           </span>
@@ -516,7 +588,10 @@ defmodule Playcode.Export.StaticSite.Components do
       <%= if Paratext.scene?(@item.kind) do %>
         <h3 :if={@item.heading}><.inline text={@item.heading} /></h3>
       <% else %>
-        <h2 class={@head}><.inline text={@item.heading || PlayLabels.kind_label(@item.kind)} /></h2>
+        <h2 :if={@item.heading} class={@head}><.inline text={@item.heading} /></h2>
+        <h2 :if={!@item.heading} class={@head}>
+          {both(fn -> PlayLabels.kind_label(@item.kind) end)}
+        </h2>
       <% end %>
       <p :for={paragraph <- paragraphs(@item.content)}><.inline text={paragraph} /></p>
       <p :if={@item.trailer} class="tr"><.inline text={@item.trailer} /></p>
@@ -572,20 +647,26 @@ defmodule Playcode.Export.StaticSite.Components do
     verses = stats["verses"] || 0
 
     case {Play.form(play), verses} do
-      {"prose", _} -> "Prose"
-      {"occasional_verse", _} -> "Prose with occasional verse"
-      {"verse", n} when n > 0 -> "Verse · #{number(n)} verses"
-      {"verse", _} -> "Verse"
-      {"mixed", n} when n > 0 -> "Verse and prose · #{number(n)} verses"
-      {"mixed", _} -> "Verse and prose"
+      {"prose", _} -> t("Prose")
+      {"occasional_verse", _} -> t("Prose with occasional verse")
+      {"verse", n} when n > 0 -> t("Verse · %{n} verses", n: number(n))
+      {"verse", _} -> t("Verse")
+      {"mixed", n} when n > 0 -> t("Verse and prose · %{n} verses", n: number(n))
+      {"mixed", _} -> t("Verse and prose")
     end
   end
 
-  @doc "An integer with its thousands separated by commas."
+  @doc """
+  An integer as both languages can read it: from five digits, its thousands apart by a
+  narrow space ("12 345"), not the English comma, which a Spanish reader takes for a
+  decimal point; four digits stay whole, as Spanish writes them ("2345").
+  """
   def number(nil), do: "0"
 
-  def number(n) when is_integer(n),
-    do: n |> Integer.to_string() |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, ",")
+  def number(n) when is_integer(n) and n >= 10_000,
+    do: n |> Integer.to_string() |> String.replace(~r/\B(?=(\d{3})+(?!\d))/, "\u202F")
+
+  def number(n) when is_integer(n), do: Integer.to_string(n)
 
   def source_text(source) do
     [
@@ -615,15 +696,20 @@ defmodule Playcode.Export.StaticSite.Components do
   def citation(play, site) do
     editors = for e <- play.editors, e.role in ~w(editor critical_editor), do: e.person_name
 
-    [
-      play.author_name,
-      play.title,
-      editors != [] && "ed. " <> Enum.join(editors, ", "),
-      "EMOTHE, version #{site.version} (#{String.slice(site.build_date, 0, 4)})"
-    ]
-    |> Enum.filter(&(is_binary(&1) and &1 != ""))
-    |> Enum.join(". ")
-    |> Kernel.<>(".")
+    both(fn ->
+      [
+        play.author_name,
+        play.title,
+        editors != [] && "ed. " <> Enum.join(editors, ", "),
+        gettext("EMOTHE, version %{version} (%{year})",
+          version: site.version,
+          year: String.slice(site.build_date, 0, 4)
+        )
+      ]
+      |> Enum.filter(&(is_binary(&1) and &1 != ""))
+      |> Enum.join(". ")
+      |> Kernel.<>(".")
+    end)
   end
 
   attr :play, :map, required: true
@@ -642,7 +728,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   def pager(assigns) do
     ~H"""
-    <nav :if={@prev || @next} class="pager" aria-label="Acts">
+    <nav :if={@prev || @next} class="pager" {ta("aria-label", "Acts")}>
       <a :if={@prev} href={@prev.slug <> ".html"} rel="prev">← {@prev.title}</a>
       <a :if={@next} href={@next.slug <> ".html"} rel="next">{@next.title} →</a>
     </nav>
@@ -657,7 +743,7 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   attr :edition, :map, required: true
-  attr :notes_label, :string, default: "Notes"
+  attr :notes_label, :any, default: nil
 
   @doc "A play's whole text, as `text.html` shows it: its contents, then its endnotes."
   def full_text(assigns) do
@@ -839,7 +925,7 @@ defmodule Playcode.Export.StaticSite.Components do
       ]}
       data-part={@el.part}
       id={@anchor}
-    ><a :if={@el.line_number} class={["n", fifth?(@el.line_number) && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class={["ghost", @ghost.indent && "indent"]} aria-hidden="true"><.inline text={@ghost.lead} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @aside} class="margin"><span :if={@form} class="vf">{PlayLabels.verse_form_label(@form)}</span><span :if={@aside} class="aparte">aparte</span></span></div>
+    ><a :if={@el.line_number} class={["n", fifth?(@el.line_number) && "m5"]} href={"#" <> @anchor}>{@el.line_number}</a><span class="t"><span :if={@ghost} class={["ghost", @ghost.indent && "indent"]} aria-hidden="true"><.inline text={@ghost.lead} /> </span><.inline text={@el.content} notes={@el.notes} /></span><span :if={@form || @aside} class="margin"><span :if={@form} class="vf">{both(fn -> PlayLabels.verse_form_label(@form) end)}</span><span :if={@aside} class="aparte">aparte</span></span></div>
     """
   end
 
@@ -921,8 +1007,12 @@ defmodule Playcode.Export.StaticSite.Components do
   # is on (style.css). A note at their end stays outside: its button is named already.
   # ponytail: a title shows on hover only, not on a tap.
   defp part(%{rs: %{} = rs, text: _} = part) do
-    title = PlayLabels.tag_type_label(rs.type)
-    attr = if title, do: [~s( title="), escape(title), ~s(")], else: []
+    attr =
+      case pair(fn -> PlayLabels.tag_type_label(rs.type) end) do
+        {nil, _} -> []
+        title -> attr_html(title, "title")
+      end
+
     [~s(<span class="rs"), attr, ">", part(Map.delete(part, :rs)), "</span>"]
   end
 
@@ -945,16 +1035,15 @@ defmodule Playcode.Export.StaticSite.Components do
 
   defp note_ref(note) do
     number = Integer.to_string(note.number)
-    label = escape("#{PlayLabels.note_type_label(note.type)} #{number}")
 
     [
       ~s(<button type="button" id="nref-),
       number,
       ~s(" class="nref" popovertarget="note-),
       number,
-      ~s(" aria-label="),
-      label,
-      ~s(">),
+      ~s("),
+      attr_html(ref_label(note, number), "aria-label"),
+      ">",
       number,
       "</button>"
     ]
@@ -966,11 +1055,20 @@ defmodule Playcode.Export.StaticSite.Components do
     [
       ~s(<button type="button" class="vref" popovertarget="var-),
       number,
-      ~s(" aria-label="),
-      escape("#{PlayLabels.note_type_label(note.type)} #{number}"),
-      ~s(">*</button>)
+      ~s("),
+      attr_html(ref_label(note, number), "aria-label"),
+      ~s(>*</button>)
     ]
   end
+
+  defp ref_label(note, number),
+    do: pair(fn -> "#{PlayLabels.note_type_label(note.type)} #{number}" end)
+
+  # `Bilingual.attrs/2` as markup, for the parts built as iodata.
+  defp attr_html({same, same}, name), do: [" ", name, ~s(="), escape(same), ~s(")]
+
+  defp attr_html({es, en}, name),
+    do: [attr_html({es, es}, name), " data-en-", name, ~s(="), escape(en), ~s(" data-tr)]
 
   defp breaks(text), do: text |> escape() |> String.replace("\n", "<br>")
 
@@ -979,7 +1077,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 
   attr :notes, :list, required: true
-  attr :label, :string, default: "Notes"
+  attr :label, :list, default: nil, doc: "the notes' name, `ta/2`'s attributes"
 
   @doc """
   A page's notes. Each is a popover its marker opens (`part/1`); in print, and in a
@@ -987,38 +1085,44 @@ defmodule Playcode.Export.StaticSite.Components do
   """
   def endnotes(assigns) do
     {variants, notes} = Enum.split_with(assigns.notes, &Note.variant?/1)
-    assigns = assign(assigns, notes: notes, variants: variants)
+
+    assigns =
+      assign(assigns,
+        notes: notes,
+        variants: variants,
+        label: assigns.label || ta("aria-label", "Notes")
+      )
 
     ~H"""
-    <section :if={@notes != []} class="notes" role="doc-endnotes" aria-label={@label}>
+    <section :if={@notes != []} class="notes" role="doc-endnotes" {@label}>
       <ol>
         <li :for={note <- @notes} id={"note-#{note.number}"} popover value={note.number}>
           <button
             type="button"
             popovertarget={"note-#{note.number}"}
             popovertargetaction="hide"
-            aria-label="Close"
+            {ta("aria-label", "Close")}
           >
             ×
           </button>
-          <b>{PlayLabels.note_type_label(note.type)}</b>
+          <b>{both(fn -> PlayLabels.note_type_label(note.type) end)}</b>
           <i :if={note.term}><.inline text={note.term} /></i>
           <p :for={paragraph <- Note.paragraphs(note)}><.inline text={paragraph} /></p>
         </li>
       </ol>
     </section>
-    <section :if={@variants != []} class="notes" aria-label="Textual variants">
+    <section :if={@variants != []} class="notes" {ta("aria-label", "Textual variants")}>
       <ul>
         <li :for={variant <- @variants} id={"var-#{variant.number}"} popover>
           <button
             type="button"
             popovertarget={"var-#{variant.number}"}
             popovertargetaction="hide"
-            aria-label="Close"
+            {ta("aria-label", "Close")}
           >
             ×
           </button>
-          <b>{PlayLabels.note_type_label(variant.type)}</b>
+          <b>{both(fn -> PlayLabels.note_type_label(variant.type) end)}</b>
           {Phoenix.HTML.raw(NoteMarkup.readings(variant, :html))}
         </li>
       </ul>
@@ -1034,13 +1138,13 @@ defmodule Playcode.Export.StaticSite.Components do
     tiles =
       Enum.reject(
         [
-          {s["num_acts"], "acts"},
-          {s["verses"], "verses"},
-          {length(s["metrical_passages"] || []), "metrical passages"},
-          {s["speeches"], "speeches"},
-          {length(s["characters"] || []), "speaking characters"},
-          {s["total_stage_directions"], "stage directions"},
-          {s["aside_verses"], "verses in asides"}
+          {s["num_acts"], t("acts")},
+          {s["verses"], t("verses")},
+          {length(s["metrical_passages"] || []), t("metrical passages")},
+          {s["speeches"], t("speeches")},
+          {length(s["characters"] || []), t("speaking characters")},
+          {s["total_stage_directions"], t("stage directions")},
+          {s["aside_verses"], t("verses in asides")}
         ],
         fn {value, _label} -> value in [nil, 0] end
       )
@@ -1077,9 +1181,10 @@ defmodule Playcode.Export.StaticSite.Components do
     # By label, so romance and romance_tirada, both "Romance", are one form.
     forms =
       assigns.passages
-      |> Enum.group_by(&PlayLabels.verse_form_label(&1["form"]))
+      |> Enum.group_by(&form_label(&1["form"]))
       |> Enum.map(fn {label, [first | _] = passages} ->
-        {label, form_colour(first["form"]), passages |> Enum.map(& &1["verses"]) |> Enum.sum()}
+        {html(label), form_colour(first["form"]),
+         passages |> Enum.map(& &1["verses"]) |> Enum.sum()}
       end)
       |> Enum.sort_by(&(-elem(&1, 2)))
 
@@ -1092,23 +1197,23 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <section id="synopsis">
-      <h2>Metrical synopsis</h2>
+      <h2>{t("Metrical synopsis")}</h2>
       <p class="lede">
-        The verse forms in order, each passage drawn to scale. Dashed lines mark the acts.
+        {t("The verse forms in order, each passage drawn to scale. Dashed lines mark the acts.")}
       </p>
       <div
         class="band"
         role="img"
-        aria-label="Metrical synopsis drawn to scale; the table below lists every passage."
+        {ta("aria-label", "Metrical synopsis drawn to scale; the table below lists every passage.")}
       >
         <%= for segment <- @segments do %>
           <span :if={segment.sep} class="sep"></span>
           <span
             class={["pass", segment.colour]}
             style={"flex-grow: #{segment.verses}"}
-            title={segment.title}
+            {attrs(segment.title, "title")}
           >
-            <span :if={segment.label}>{segment.label}</span>
+            <span :if={segment.label}>{html(segment.label)}</span>
           </span>
         <% end %>
       </div>
@@ -1123,19 +1228,17 @@ defmodule Playcode.Export.StaticSite.Components do
       <table>
         <thead>
           <tr>
-            <th>Act</th>
-            <th>Form</th>
+            <th>{t("Act")}</th>
+            <th>{t("Form")}</th>
             <th>vv.</th>
-            <th class="num">Verses</th>
+            <th class="num">{t("Verses")}</th>
           </tr>
         </thead>
         <tbody>
           <tr :for={passage <- @passages}>
             <td>{passage["act"] && Edition.roman(passage["act"])}</td>
             <td>
-              <i class={["sw", form_colour(passage["form"])]}></i>{PlayLabels.verse_form_label(
-                passage["form"]
-              )}
+              <i class={["sw", form_colour(passage["form"])]}></i>{html(form_label(passage["form"]))}
             </td>
             <td>{range(passage)}</td>
             <td class="num">{number(passage["verses"])}</td>
@@ -1143,7 +1246,9 @@ defmodule Playcode.Export.StaticSite.Components do
         </tbody>
       </table>
       <p class="note">
-        Rhyme is not encoded, so two consecutive romances with different assonance show as one passage.
+        {t(
+          "Rhyme is not encoded, so two consecutive romances with different assonance show as one passage."
+        )}
       </p>
     </section>
     """
@@ -1153,14 +1258,18 @@ defmodule Playcode.Export.StaticSite.Components do
     passages
     |> Enum.with_index()
     |> Enum.map(fn {passage, i} ->
-      label = PlayLabels.verse_form_label(passage["form"])
+      title =
+        pair(fn ->
+          "#{PlayLabels.verse_form_label(passage["form"])}#{verses_range(passage, range_label)} · " <>
+            ngettext("%{count} verse", "%{count} verses", passage["verses"])
+        end)
 
       %{
         sep: i > 0 and Enum.at(passages, i - 1)["act"] != passage["act"],
         colour: form_colour(passage["form"]),
         verses: passage["verses"],
-        title: "#{label}#{verses_range(passage, range_label)} · #{passage["verses"]} verses",
-        label: if(passage["verses"] / total > 0.06, do: label)
+        title: title,
+        label: if(passage["verses"] / total > 0.06, do: form_label(passage["form"]))
       }
     end)
   end
@@ -1171,6 +1280,8 @@ defmodule Playcode.Export.StaticSite.Components do
 
   defp range(%{"from" => from, "to" => to}) when from == to, do: "#{from}"
   defp range(%{"from" => from, "to" => to}), do: "#{from}–#{to}"
+
+  defp form_label(form), do: pair(fn -> PlayLabels.verse_form_label(form) end)
 
   defp percent(part, total), do: "#{round(part / max(total, 1) * 100)}%"
 
@@ -1185,25 +1296,34 @@ defmodule Playcode.Export.StaticSite.Components do
       |> Enum.map(&Map.put(&1, "main_forms", main_forms(&1["forms"])))
 
     max = characters |> Enum.map(& &1[assigns.unit]) |> Enum.max(fn -> 1 end) |> max(1)
-    forms? = Enum.any?(characters, &(&1["main_forms"] != ""))
+    forms? = Enum.any?(characters, &(&1["main_forms"] != {"", ""}))
     assigns = assign(assigns, characters: characters, max: max, forms?: forms?)
 
     ~H"""
     <section :if={@characters != []} id="characters">
-      <h2>Characters</h2>
-      <p class="lede">
-        The {length(@characters)} speaking characters, those with the most {@unit} first. A shared verse counts for each speaker.
+      <h2>{t("Characters")}</h2>
+      <p :if={@unit == "lines"} class="lede">
+        {t(
+          "The %{n} speaking characters, those with the most lines first. A shared verse counts for each speaker.",
+          n: length(@characters)
+        )}
+      </p>
+      <p :if={@unit == "words"} class="lede">
+        {t(
+          "The %{n} speaking characters, those with the most words first. A shared verse counts for each speaker.",
+          n: length(@characters)
+        )}
       </p>
       <table>
         <thead>
           <tr>
-            <th>Character</th>
-            <th class="num">Speeches</th>
-            <th class="num">Lines</th>
-            <th class="num">Words</th>
-            <th>Share of the play</th>
-            <th>First speaks</th>
-            <th :if={@forms?}>Main forms</th>
+            <th>{t("Character")}</th>
+            <th class="num">{t("Speeches")}</th>
+            <th class="num">{t("Lines")}</th>
+            <th class="num">{t("Words")}</th>
+            <th>{t("Share of the play")}</th>
+            <th>{t("First speaks")}</th>
+            <th :if={@forms?}>{t("Main forms")}</th>
           </tr>
         </thead>
         <tbody>
@@ -1212,14 +1332,14 @@ defmodule Playcode.Export.StaticSite.Components do
             <td class="num">{number(character["speeches"])}</td>
             <td class="num">{number(character["lines"])}</td>
             <td class="num">{number(character["words"])}</td>
-            <td class="share" title={"#{character[@unit]} of #{@total} #{@unit}"}>
+            <td class="share" {attrs(share_title(character[@unit], @total, @unit), "title")}>
               <span class="track"><span style={"width: #{round(character[@unit] / @max * 100)}%"}></span></span>{percent(
                 character[@unit],
                 @total
               )}
             </td>
             <td>{first_speaks(character["first"])}</td>
-            <td :if={@forms?}>{character["main_forms"]}</td>
+            <td :if={@forms?}>{html(character["main_forms"])}</td>
           </tr>
         </tbody>
       </table>
@@ -1240,8 +1360,12 @@ defmodule Playcode.Export.StaticSite.Components do
     |> Map.delete("unmarked")
     |> Enum.sort_by(&(-elem(&1, 1)))
     |> Enum.take(2)
-    |> Enum.map_join(" · ", &PlayLabels.verse_form_label(elem(&1, 0)))
+    |> Enum.map(&form_label(elem(&1, 0)))
+    |> join(" · ")
   end
+
+  defp share_title(n, total, "lines"), do: tp("%{n} of %{total} lines", n: n, total: total)
+  defp share_title(n, total, "words"), do: tp("%{n} of %{total} words", n: n, total: total)
 
   attr :stats, :map, required: true
   attr :range_label, :string, default: "vv.", doc: "the word a range of numbers is cited with"
@@ -1258,21 +1382,21 @@ defmodule Playcode.Export.StaticSite.Components do
 
     ~H"""
     <section :if={@columns != [] and @rows != []} id="presence">
-      <h2>Who shares the stage</h2>
+      <h2>{t("Who shares the stage")}</h2>
       <p class="lede">{basis_note(@basis, length(@columns))}</p>
       <div class="scroll">
         <table class="matrix">
           <thead>
             <tr>
-              <th><span class="sr-only">Character</span></th>
+              <th><span class="sr-only">{t("Character")}</span></th>
               <th
                 :for={{column, i} <- Enum.with_index(@columns)}
                 scope="col"
-                title={column_title(column, @range_label)}
+                {attrs(column_title(column, @range_label), "title")}
                 class={act_start(@columns, i)}
               >
                 <i :if={column["form"]} class={["sw", form_colour(column["form"])]}></i>
-                <span class="sr-only">{column_title(column, @range_label)}</span>
+                <span class="sr-only">{html(column_title(column, @range_label))}</span>
               </th>
             </tr>
           </thead>
@@ -1282,13 +1406,10 @@ defmodule Playcode.Export.StaticSite.Components do
               <td
                 :for={{column, i} <- Enum.with_index(@columns)}
                 class={["c", cells[i] && "on", act_start(@columns, i)]}
-                title={
-                  cells[i] &&
-                    "#{InlineMarkup.plain(name)} · #{column_title(column, @range_label)} · #{cells[i]} lines"
-                }
+                {if cells[i], do: attrs(cell_title(name, column, @range_label, cells[i]), "title"), else: []}
               >
                 <span :if={cells[i]} class="sr-only">
-                  {cells[i]} {if cells[i] == 1, do: "line", else: "lines"}
+                  {tn("%{count} line", "%{count} lines", cells[i])}
                 </span>
               </td>
             </tr>
@@ -1299,58 +1420,88 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
-  defp basis_note("scene", _n), do: "A filled cell means the character speaks in that scene."
+  defp basis_note("scene", _n), do: t("A filled cell means the character speaks in that scene.")
 
   defp basis_note("passage", n),
     do:
-      "This play encodes no scenes, so the columns are its #{n} metrical passages. A filled cell means the character speaks in that passage."
+      t(
+        "This play encodes no scenes, so the columns are its %{n} metrical passages. A filled cell means the character speaks in that passage.",
+        n: n
+      )
 
-  defp basis_note(_basis, _n), do: "A filled cell means the character speaks in that division."
+  defp basis_note(_basis, _n),
+    do: t("A filled cell means the character speaks in that division.")
 
+  # Each column's name, `{spanish, english}`: a verse form's in each language.
   defp column_title(%{"form" => form} = column, range_label),
-    do: "#{PlayLabels.verse_form_label(form)}#{verses_range(column, range_label)}"
+    do: pair(fn -> "#{PlayLabels.verse_form_label(form)}#{verses_range(column, range_label)}" end)
 
   # The statistics keep a heading as stored, its italics marked: a title attribute takes
   # plain text.
   defp column_title(%{"act" => act, "label" => label}, _range_label) when is_integer(act),
-    do: "#{Edition.roman(act)}: #{InlineMarkup.plain(label)}"
+    do: same("#{Edition.roman(act)}: #{InlineMarkup.plain(label)}")
 
-  defp column_title(%{"label" => label}, _range_label), do: InlineMarkup.plain(label)
+  defp column_title(%{"label" => label}, _range_label), do: same(InlineMarkup.plain(label))
+
+  defp cell_title(name, column, range_label, n) do
+    {es, en} = column_title(column, range_label)
+    {lines_es, lines_en} = pair(fn -> ngettext("%{count} line", "%{count} lines", n) end)
+    name = InlineMarkup.plain(name)
+    {"#{name} · #{es} · #{lines_es}", "#{name} · #{en} · #{lines_en}"}
+  end
+
+  defp same(text), do: {text, text}
 
   defp act_start(columns, i),
     do:
       if(i > 0 and Enum.at(columns, i - 1)["act"] != Enum.at(columns, i)["act"], do: "act-start")
 
-  # The site's English word for each of Play.relationship_types/0.
+  # The site's key for each of Play.relationship_types/0: its catalogue's filter values.
   @kinds %{
     "traduccion" => "translation",
     "adaptacion" => "adaptation",
     "version" => "version"
   }
 
-  @languages %{
-    "es" => "Spanish",
-    "en" => "English",
-    "it" => "Italian",
-    "ca" => "Catalan",
-    "fr" => "French",
-    "pt" => "Portuguese",
-    "de" => "German"
-  }
+  @doc "A language's name in the interface's two languages, `{spanish, english}`."
+  def language("es"), do: tp("Spanish")
+  def language("en"), do: tp("English")
+  def language("it"), do: tp("Italian")
+  def language("ca"), do: tp("Catalan")
+  def language("fr"), do: tp("French")
+  def language("pt"), do: tp("Portuguese")
+  def language("de"), do: tp("German")
+  def language(code), do: {code, code}
 
-  @doc "A language's name in the site's language, English, as the rest of its interface."
-  def language(code), do: Map.get(@languages, code, code)
-
-  @doc "The site's word for a play's kind: original, translation, adaptation or version."
+  @doc "The site's key for a play's kind: original, translation, adaptation or version."
   def kind(%{relationship_type: nil}), do: "original"
   def kind(%{relationship_type: type}), do: Map.fetch!(@kinds, type)
 
-  # A play's language in its family list, and its kind when it has one: "Français,
+  @doc "A play's kind as a word in both languages, `{spanish, english}`."
+  def kind_word(play) do
+    case kind(play) do
+      "original" -> tp("original")
+      "translation" -> tp("translation")
+      "adaptation" -> tp("adaptation")
+      "version" -> tp("version")
+    end
+  end
+
+  # What a play is of its original, before the original's title.
+  defp relation(play) do
+    case kind(play) do
+      "translation" -> t("Translation of")
+      "adaptation" -> t("Adaptation of")
+      "version" -> t("Version of")
+    end
+  end
+
+  # A play's language in its family list, and its kind when it has one: "French,
   # adaptation". FileMaker linked a few plays with no kind.
   defp family_role(play) do
     case kind(play) do
       "original" -> language(play.language)
-      kind -> "#{language(play.language)}, #{kind}"
+      _kind -> join([language(play.language), kind_word(play)], ", ")
     end
   end
 
@@ -1385,8 +1536,8 @@ defmodule Playcode.Export.StaticSite.Components do
         :if={@compare}
         class="compare"
         href={"plays/#{@compare}/compare.html"}
-        aria-label="Compare"
-        title="Compare"
+        {ta("aria-label", "Compare")}
+        {ta("title", "Compare")}
       >
         <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
           <path
@@ -1396,7 +1547,7 @@ defmodule Playcode.Export.StaticSite.Components do
           />
         </svg>
       </a>
-      <span :if={kind(@play) != "original"} class="tag">{kind(@play)}</span>
+      <span :if={kind(@play) != "original"} class="tag">{html(kind_word(@play))}</span>
       <span class="meta">{entry_meta(@play)}</span>
       <span :if={@lead} class="author">{@play.author_name}</span>
     </div>
@@ -1406,22 +1557,16 @@ defmodule Playcode.Export.StaticSite.Components do
   defp entry_meta(play) do
     form =
       case Play.form(play) do
-        "prose" ->
-          "Prose"
-
-        "occasional_verse" ->
-          "Prose with occasional verse"
-
-        "mixed" ->
-          "Verse and prose"
-
         "verse" when is_integer(play.verse_count) and play.verse_count > 0 ->
-          "#{number(play.verse_count)} vv."
+          same("#{number(play.verse_count)} vv.")
 
-        "verse" ->
-          "Verse"
+        form ->
+          pair(fn -> PlayLabels.form_label(form) end)
       end
 
-    [Play.composition_years(play), form] |> Enum.reject(&is_nil/1) |> Enum.join(" · ")
+    case Play.composition_years(play) do
+      nil -> html(form)
+      years -> html(join([same(years), form], " · "))
+    end
   end
 end

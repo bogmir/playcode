@@ -1,16 +1,16 @@
 <Components.shell
   root=""
-  title="EMOTHE — Catalogue"
+  title={tp("EMOTHE — Catalogue")}
   current={:catalogue}
   site={@site}
-  rail_label="Filters"
+  rail_label={t("Filters")}
 >
   <:rail>
     <form class="facets" data-facets hidden>
       <fieldset :for={{name, legend, options} <- @facets} class="facet">
         <legend>{legend}</legend>
         <label>
-          <input type="radio" name={name} value="" checked /> <span>All</span>
+          <input type="radio" name={name} value="" checked /> <span>{t("All")}</span>
           <span class="count">{@count}</span>
         </label>
         <label :for={{value, label, count} <- options}>
@@ -20,28 +20,32 @@
       </fieldset>
     </form>
   </:rail>
-  <h1>Catalogue</h1>
+  <h1>{t("Catalogue")}</h1>
   <p class="intro">
-    A repertoire of plays from the five basic traditions of early modern European theatre (Italian, English, French, Portuguese and Spanish), with their translations and adaptations.
+    {t(
+      "A repertoire of plays from the five basic traditions of early modern European theatre (Italian, English, French, Portuguese and Spanish), with their translations and adaptations."
+    )}
   </p>
   <p class="lede">
-    {@count} {if @count == 1, do: "play", else: "plays"} · {@authors} {if @authors == 1,
-      do: "author",
-      else: "authors"}
+    {tn("%{count} play", "%{count} plays", @count)} · {tn(
+      "%{count} author",
+      "%{count} authors",
+      @authors
+    )}
   </p>
   <div class="controls" data-catalogue-controls hidden>
     <input
       type="search"
       data-filter
-      placeholder="Filter by title, author or code"
-      aria-label="Filter the catalogue"
+      {ta("placeholder", "Filter by title, author or code")}
+      {ta("aria-label", "Filter the catalogue")}
     />
     <label>
-      Sort
-      <select data-sort aria-label="Sort the catalogue">
-        <option value="author">Author</option>
-        <option value="title">Title</option>
-        <option value="date">Date</option>
+      {t("Sort")}
+      <select data-sort {ta("aria-label", "Sort the catalogue")}>
+        <option value="author" {ta("label", "Author")}></option>
+        <option value="title" {ta("label", "Title")}></option>
+        <option value="date" {ta("label", "Date")}></option>
       </select>
     </label>
   </div>

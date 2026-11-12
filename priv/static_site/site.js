@@ -12,6 +12,23 @@
   };
   E.words = function (s) { return E.normalise(s).match(/[\p{L}\p{N}]+/gu) || []; };
 
+  // The interface's language: Spanish as the build writes it, or English.
+  E.say = function (es, en) { return document.documentElement.dataset.ui === 'en' ? en : es; };
+
+  // Each attribute the build writes in Spanish has its English in data-en-<name> (text, for
+  // a <title>); the Spanish is kept in data-es-<name> to come back to.
+  E.translate = function (ui) {
+    document.querySelectorAll('[data-tr]').forEach(function (el) {
+      Array.prototype.slice.call(el.attributes).forEach(function (a) {
+        var name = a.name.slice(8), es = 'data-es-' + name;
+        if (a.name.indexOf('data-en-') !== 0) return;
+        if (!el.hasAttribute(es)) el.setAttribute(es, name === 'text' ? el.textContent : el.getAttribute(name));
+        var value = ui === 'en' ? a.value : el.getAttribute(es);
+        if (name === 'text') el.textContent = value; else el.setAttribute(name, value);
+      });
+    });
+  };
+
   // The arrows' choice: of the targets' positions in reading order (each one's middle,
   // from the top of the window), the first below the reading line for 1, the last above
   // it for -1; -1 when there is none. The one on the line is the current one. While the
@@ -62,7 +79,7 @@
       if (current && current.isConnected) current.setAttribute('data-current', '');
       var all = targets();
       var at = all.indexOf(current) + 1;
-      count.textContent = (at || '–') + ' ' + (box.dataset.of || 'of') + ' ' + all.length;
+      count.textContent = (at || '–') + ' ' + (box.dataset.of || E.say('de', 'of')) + ' ' + all.length;
     }
 
     box.addEventListener('click', function (event) {
@@ -127,7 +144,7 @@
         work.hidden = !visible;
         if (visible) shown++;
       });
-      count.textContent = shown === works.length ? '' : shown + ' of ' + works.length + ' works';
+      count.textContent = shown === works.length ? '' : shown + E.say(' de ', ' of ') + works.length + E.say(' obras', ' works');
     }
 
     function reorder() {
@@ -142,6 +159,7 @@
     }
 
     filter.addEventListener('input', update);
+    document.addEventListener('emothe:ui', update);
     facets.addEventListener('change', update);
     sort.addEventListener('change', reorder);
   }
@@ -176,6 +194,23 @@
       html.dataset.theme = html.dataset.theme === 'dark' ? 'light' : 'dark';
       remembered('theme', html.dataset.theme);
       show();
+    });
+  }
+
+  // The band's switch between the Spanish interface and the English (style.css hides the
+  // other language's texts); the head applies the reader's last choice before painting.
+  function initUi() {
+    var button = document.querySelector('[data-ui-toggle]');
+    if (!button) return;
+    var html = document.documentElement;
+    button.hidden = false;
+    if (html.dataset.ui === 'en') E.translate('en');
+    button.addEventListener('click', function () {
+      var ui = html.dataset.ui === 'en' ? 'es' : 'en';
+      html.lang = html.dataset.ui = ui;
+      remembered('ui', ui);
+      E.translate(ui);
+      document.dispatchEvent(new Event('emothe:ui'));
     });
   }
 
@@ -228,9 +263,9 @@
   function copy(text, button) {
     if (!root.navigator.clipboard) return;
     root.navigator.clipboard.writeText(text).then(function () {
-      var label = button.textContent;
-      button.textContent = 'Copied';
-      setTimeout(function () { button.textContent = label; }, 1500);
+      var label = button.innerHTML;
+      button.textContent = E.say('Copiado', 'Copied');
+      setTimeout(function () { button.innerHTML = label; }, 1500);
     }, function () {});
   }
 
@@ -250,7 +285,7 @@
     if (button && citation) {
       button.hidden = false;
       button.addEventListener('click', function () {
-        copy(citation.textContent.trim() + ' ' + root.location.href.split('#')[0], button);
+        copy(citation.innerText.trim() + ' ' + root.location.href.split('#')[0], button);
       });
     }
   }
@@ -264,6 +299,7 @@
     initCatalogue();
     initNotes();
     initTheme();
+    initUi();
     initTools();
     initLinks();
     realign();
