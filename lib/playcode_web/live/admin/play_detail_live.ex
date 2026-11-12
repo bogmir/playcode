@@ -21,7 +21,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     play = Catalogue.get_play_with_all!(id)
-    characters = PlayContent.list_characters(play.id)
     divisions = PlayContent.list_top_divisions(play.id)
     statistic = Statistics.get_statistics(play.id)
 
@@ -29,7 +28,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
      socket
      |> assign(:page_title, "Admin: #{play.title}")
      |> assign(:play, play)
-     |> assign(:characters, characters)
      |> assign(:divisions, divisions)
      |> assign(:statistic, statistic)
      |> assign(:play_context, %{play: play, active_tab: :overview})
@@ -75,18 +73,12 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
             File.rm(path)
             # Reload play data
             play = Catalogue.get_play_with_all!(play.id)
-            characters = PlayContent.list_characters(play.id)
             divisions = PlayContent.list_top_divisions(play.id)
             statistic = Statistics.recompute(play.id)
 
             {:noreply,
              socket
-             |> assign(
-               play: play,
-               characters: characters,
-               divisions: divisions,
-               statistic: statistic
-             )
+             |> assign(play: play, divisions: divisions, statistic: statistic)
              |> assign(import_result: {:ok, gettext("Content imported successfully.")})
              |> put_flash(:info, gettext("Content imported successfully."))}
 
@@ -143,70 +135,49 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
     |> InlineMarkup.plain()
   end
 
+  # An act's whole verses, from the statistics' distribution, keyed as it keys them.
+  defp act_verses(nil, _division), do: nil
+
+  defp act_verses(statistic, division) do
+    Enum.find_value(statistic.data["verse_distribution"] || [], fn
+      %{"act" => act, "count" => count} ->
+        if act == (division.number || division.position), do: count
+    end)
+  end
+
+  defp acts(divisions), do: Enum.reject(divisions, &(&1.type == "elenco"))
+
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-7xl px-4 py-8">
-      <div class="mb-6 flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 class="text-3xl font-semibold tracking-tight text-base-content">{@play.title}</h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {@play.author_name} — {@play.code}
-          </p>
-        </div>
-        <div class="flex items-center gap-1">
-          <span class="text-xs text-base-content/70 mr-1">{gettext("Export")}</span>
-          <a
-            href={~p"/admin/plays/#{@play.id}/export/tei"}
-            target="_blank"
-            class="btn btn-ghost btn-xs tooltip"
-            aria-label={gettext("Export TEI-XML")}
-            data-tip={gettext("Export TEI-XML")}
-          >
-            <.icon name="hero-code-bracket-mini" class="size-4" />
-          </a>
-          <a
-            href={~p"/admin/plays/#{@play.id}/export/html"}
-            target="_blank"
-            class="btn btn-ghost btn-xs tooltip"
-            aria-label={gettext("Export HTML")}
-            data-tip={gettext("Export HTML")}
-          >
-            <.icon name="hero-globe-alt-mini" class="size-4" />
-          </a>
-          <a
-            href={~p"/admin/plays/#{@play.id}/export/pdf"}
-            target="_blank"
-            class="btn btn-ghost btn-xs tooltip"
-            aria-label={gettext("Export PDF")}
-            data-tip={gettext("Export PDF")}
-          >
-            <.icon name="hero-document-arrow-down-mini" class="size-4" />
-          </a>
-          <a
-            href={~p"/admin/plays/#{@play.id}/export/epub"}
-            target="_blank"
-            class="btn btn-ghost btn-xs tooltip"
-            aria-label={gettext("Export EPUB")}
-            data-tip={gettext("Export EPUB")}
-          >
-            <.icon name="hero-book-open-mini" class="size-4" />
-          </a>
-          <span class="border-l border-base-300 h-4 mx-1"></span>
+    <.page>
+      <.page_header>
+        {@play.title}
+        <:subtitle>
+          {@play.author_name} ·
+          <code class="rounded border border-base-300 bg-base-100 px-1.5 font-mono text-xs">
+            {@play.code}
+          </code>
+          · {Playcode.Catalogue.Play.language_name(@play.language)} · {PlayLabels.form_label(
+            Playcode.Catalogue.Play.form(@play)
+          )}
+        </:subtitle>
+        <:actions>
+          <.download_group base={"/admin/plays/#{@play.id}/export"} target="_blank" />
           <button
             phx-click="validate_tei"
-            class="btn btn-ghost btn-xs tooltip"
-            aria-label={gettext("Validate TEI-XML")}
-            data-tip={gettext("Validate TEI-XML")}
+            class="btn btn-sm btn-outline btn-primary"
             disabled={@validating}
           >
-            <.icon name="hero-check-badge-mini" class="size-4" />
+            {gettext("Validate TEI-XML")}
           </button>
-        </div>
-      </div>
+          <.link navigate={~p"/admin/plays/#{@play.id}/edit"} class="btn btn-sm btn-primary">
+            {gettext("Edit metadata")}
+          </.link>
+        </:actions>
+      </.page_header>
 
-      <%!-- Validation Result --%>
-      <div :if={@validation_result} class="mb-6">
+      <div :if={@validation_result}>
         <div :if={@validation_result == {:ok, :valid}} role="alert" class="alert alert-success">
           <.icon name="hero-check-circle-mini" class="size-5" />
           <span>{gettext("TEI-XML is valid against TEI P5 schema.")}</span>
@@ -246,51 +217,226 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         <% end %>
       </div>
 
-      <%!-- Status Toggle --%>
-      <section class="mb-8">
-        <div class="flex items-center gap-3">
-          <span class="text-sm font-medium text-base-content/70">{gettext("Status")}</span>
-          <div class="join" role="group" aria-label={gettext("Status")}>
-            <button
-              phx-click="set_status"
-              phx-value-status="draft"
-              aria-pressed={to_string(!@play.is_complete)}
-              class={"btn btn-sm join-item gap-1.5 #{if !@play.is_complete, do: "btn-warning", else: "btn-ghost border-base-300"}"}
-            >
-              <.icon name="hero-pencil-mini" class="size-4" />
-              {gettext("Draft")}
-            </button>
-            <button
-              phx-click="set_status"
-              phx-value-status="complete"
-              aria-pressed={to_string(@play.is_complete)}
-              class={"btn btn-sm join-item gap-1.5 #{if @play.is_complete, do: "btn-success", else: "btn-ghost border-base-300"}"}
-            >
-              <.icon name="hero-check-circle-mini" class="size-4" />
-              {gettext("Complete")}
-            </button>
-          </div>
-        </div>
-      </section>
+      <.state_band play={@play} />
 
-      <%!-- Import Content --%>
-      <section :if={!@play.is_complete} class="mb-8">
-        <h2 class="mb-3 text-lg font-semibold text-base-content">
-          {gettext("Import content")}
-        </h2>
-        <div class="rounded-box border border-base-300 bg-base-100 p-4 shadow-sm">
-          <p class="text-sm text-base-content/70 mb-3">
-            {gettext(
-              "Upload a premarcado .docx file to import play content (divisions, speeches, verses, stage directions). Existing content will be replaced."
-            )}
-          </p>
-          <form
-            id="docx-upload-form"
-            phx-submit="import_docx"
-            phx-change="validate_upload"
-            class="flex items-end gap-3"
+      <div
+        :if={@play_counts}
+        id="play-counts"
+        class="mb-8 grid grid-cols-[repeat(auto-fit,minmax(9rem,1fr))] gap-3"
+      >
+        <.count_tile
+          :if={@play.verse_count}
+          count={@play.verse_count}
+          label={gettext("verses")}
+          navigate={~p"/admin/plays/#{@play.id}/content"}
+        />
+        <.count_tile
+          count={length(acts(@divisions))}
+          label={gettext("acts")}
+          navigate={~p"/admin/plays/#{@play.id}/content"}
+        />
+        <.count_tile
+          count={@play_counts.characters}
+          label={gettext("characters")}
+          navigate={~p"/admin/plays/#{@play.id}/content"}
+        />
+        <.count_tile
+          count={@play_counts.performances}
+          label={gettext("performances")}
+          navigate={~p"/admin/plays/#{@play.id}/performances"}
+        />
+        <.count_tile
+          count={@play_counts.bibliography}
+          label={gettext("bibliography entries")}
+          navigate={~p"/admin/plays/#{@play.id}/bibliography"}
+        />
+        <.count_tile
+          count={@play_counts.notes}
+          label={gettext("notes")}
+          navigate={~p"/admin/plays/#{@play.id}/notes"}
+        />
+        <.count_tile
+          count={@play_counts.witnesses}
+          label={gettext("witnesses")}
+          navigate={~p"/admin/plays/#{@play.id}/witnesses"}
+        />
+      </div>
+
+      <div class="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+        <div>
+          <.card title={gettext("Record")}>
+            <:action>
+              <.link navigate={~p"/admin/plays/#{@play.id}/edit"} class="link link-primary">
+                {gettext("Edit")}
+              </.link>
+            </:action>
+            <.field_list>
+              <:item :if={@play.original_title} label={gettext("Original title")}>
+                {@play.original_title}
+              </:item>
+              <:item label={gettext("Language")}>
+                {Playcode.Catalogue.Play.language_name(@play.language)}
+              </:item>
+              <:item :if={@play.author_attribution} label={gettext("Attribution")}>
+                {@play.author_attribution}
+              </:item>
+              <:item :if={Playcode.Catalogue.Play.composition_years(@play)} label={gettext("Dating")}>
+                {Playcode.Catalogue.Play.composition_years(@play)}
+              </:item>
+              <:item :if={@play.historical_time} label={gettext("Historical time")}>
+                {PlayLabels.historical_time_label(@play.historical_time)}
+              </:item>
+              <:item :if={@play.pub_place || @play.publication_date} label={gettext("Publication")}>
+                {[@play.pub_place, @play.publication_date]
+                |> Enum.reject(&is_nil/1)
+                |> Enum.join(", ")}
+              </:item>
+              <:item :if={@play.publisher} label={gettext("Publisher")}>{@play.publisher}</:item>
+              <:item :if={@play.edition_title} label={gettext("Edition title")}>
+                {@play.edition_title}
+              </:item>
+              <:item :if={@play.emothe_id} label={gettext("EMOTHE ID")}>{@play.emothe_id}</:item>
+              <:item :if={@play.licence_url || @play.licence_text} label={gettext("Licence")}>
+                <a
+                  :if={@play.licence_url}
+                  href={@play.licence_url}
+                  target="_blank"
+                  class="link link-primary"
+                >
+                  {@play.licence_text || @play.licence_url}
+                </a>
+                <span :if={!@play.licence_url}>{@play.licence_text}</span>
+              </:item>
+            </.field_list>
+            <details
+              :if={@play.authority || @play.sponsor || @play.funder || @play.availability_note}
+              class="mt-3 border-t border-base-300 pt-2.5"
+            >
+              <summary class="cursor-pointer text-sm font-semibold text-primary">
+                {gettext("Project, funding and availability")}
+              </summary>
+              <.field_list class="mt-2.5">
+                <:item :if={@play.authority} label={gettext("Authority")}>{@play.authority}</:item>
+                <:item :if={@play.sponsor} label={gettext("Sponsor")}>{@play.sponsor}</:item>
+                <:item :if={@play.funder} label={gettext("Funder")}>{@play.funder}</:item>
+                <:item :if={@play.availability_note} label={gettext("Availability")}>
+                  {@play.availability_note}
+                </:item>
+              </.field_list>
+            </details>
+          </.card>
+
+          <.card
+            :if={@play.relationship_type || @play.derived_plays != []}
+            title={gettext("Work Relationship")}
           >
-            <div class="flex-1">
+            <p :if={@play.relationship_type}>
+              <span class="badge badge-outline badge-sm mr-2">
+                {PlayLabels.relationship_type_label(@play.relationship_type)}
+              </span>
+              <%= if @play.parent_play do %>
+                {gettext("of")}
+                <.link navigate={~p"/admin/plays/#{@play.parent_play.id}"} class="link link-primary">
+                  {@play.parent_play.title}
+                </.link>
+                <span class="text-base-content/70">({@play.parent_play.code})</span>
+              <% else %>
+                <span :if={@play.original_title} class="text-base-content/70">
+                  {gettext("of")} {@play.original_title} ({gettext("not linked")})
+                </span>
+              <% end %>
+            </p>
+            <div :if={@play.derived_plays != []} class="mt-2">
+              <span class="text-sm text-base-content/70">{gettext("Derived works:")}</span>
+              <ul class="mt-1 ml-4 list-disc">
+                <li :for={derived <- @play.derived_plays}>
+                  <.link navigate={~p"/admin/plays/#{derived.id}"} class="link link-primary">
+                    {derived.title}
+                  </.link>
+                  <span class="text-base-content/70">({derived.code})</span>
+                  <span :if={derived.relationship_type} class="badge badge-ghost badge-sm ml-1">
+                    {PlayLabels.relationship_type_label(derived.relationship_type)}
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </.card>
+
+          <.card :if={@divisions != []} title={gettext("Structure")}>
+            <:action>
+              <.link navigate={~p"/admin/plays/#{@play.id}/content"} class="link link-primary">
+                {gettext("Open Content")}
+              </.link>
+            </:action>
+            <ol class="list-decimal pl-5">
+              <li :for={division <- @divisions} class="py-0.5">
+                {division.title || division.type}
+                <span
+                  :if={division.type == "elenco" && @play_counts}
+                  class="text-sm text-base-content/70"
+                >
+                  · {ngettext("%{count} character", "%{count} characters", @play_counts.characters)}
+                </span>
+                <span :if={act_verses(@statistic, division)} class="text-sm text-base-content/70">
+                  · {ngettext("%{count} verse", "%{count} verses", act_verses(@statistic, division))}
+                </span>
+              </li>
+            </ol>
+          </.card>
+        </div>
+
+        <div>
+          <.card :if={@play.editors != []} title={gettext("Edition")}>
+            <:action>
+              <.link navigate={~p"/admin/plays/#{@play.id}/editors"} class="link link-primary">
+                {gettext("Edit")}
+              </.link>
+            </:action>
+            <ul class="divide-y divide-base-300">
+              <li :for={editor <- @play.editors} class="flex justify-between gap-4 py-1.5">
+                <span>{editor.person_name}</span>
+                <span class="text-right text-sm text-base-content/70">
+                  {PlayLabels.editor_role_label(editor.role)}{if editor.organization,
+                    do: " · #{editor.organization}"}
+                </span>
+              </li>
+            </ul>
+          </.card>
+
+          <.card :if={@play.revisions != []} title={gettext("Revisions")}>
+            <ul id="revisions" class="divide-y divide-base-300">
+              <li :for={change <- @play.revisions} class="py-1.5 text-sm">{revision(change)}</li>
+            </ul>
+          </.card>
+
+          <.card title={gettext("Statistics")}>
+            <:action>
+              <a :if={@statistic} href="#statistics" class="link link-primary">
+                {gettext("See all")}
+              </a>
+            </:action>
+            <.field_list :if={@statistic}>
+              <:item label={gettext("Speeches")}>{@statistic.data["speeches"]}</:item>
+              <:item label={gettext("Stage directions")}>
+                {@statistic.data["total_stage_directions"]}
+              </:item>
+              <:item label={gettext("Computed")}>
+                {Calendar.strftime(@statistic.computed_at, "%Y-%m-%d %H:%M")}
+              </:item>
+            </.field_list>
+            <button phx-click="recompute_stats" class="btn btn-sm btn-ghost mt-2 -ml-2">
+              <.icon name="hero-arrow-path-mini" class="size-4" /> {gettext("Recompute")}
+            </button>
+          </.card>
+
+          <.card :if={!@play.is_complete} title={gettext("Replace the text from Word")} dashed>
+            <p class="mb-3 text-sm text-base-content/80">
+              {gettext("Upload a premarcado .docx file.")}
+              <strong>{gettext("It replaces all the current text.")}</strong>
+              {gettext("Drafts only.")}
+            </p>
+            <form id="docx-upload-form" phx-submit="import_docx" phx-change="validate_upload">
+              <label class="sr-only" for={@uploads.docx.ref}>{gettext("Word file")}</label>
               <.live_file_input
                 upload={@uploads.docx}
                 class="file-input file-input-bordered file-input-sm w-full"
@@ -300,221 +446,27 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
                   {error_to_string(err)}
                 </div>
               </div>
+              <button
+                type="submit"
+                class="btn btn-outline btn-primary btn-sm mt-2"
+                disabled={@uploads.docx.entries == []}
+              >
+                {gettext("Replace the text")}
+              </button>
+            </form>
+            <div :if={match?({:error, _}, @import_result)} class="mt-3 alert alert-error text-sm">
+              <.icon name="hero-x-circle-mini" class="size-4" />
+              {elem(@import_result, 1)}
             </div>
-            <button
-              type="submit"
-              class="btn btn-primary btn-sm"
-              disabled={@uploads.docx.entries == []}
-            >
-              <.icon name="hero-arrow-up-tray-mini" class="size-4" />
-              {gettext("Import")}
-            </button>
-          </form>
-          <div :if={match?({:error, _}, @import_result)} class="mt-3 alert alert-error text-sm">
-            <.icon name="hero-x-circle-mini" class="size-4" />
-            {elem(@import_result, 1)}
-          </div>
+          </.card>
         </div>
-      </section>
+      </div>
 
-      <%!-- Metadata --%>
-      <section class="mb-8">
-        <h2 class="mb-3 text-lg font-semibold text-base-content">{gettext("Metadata")}</h2>
-        <div class="grid grid-cols-1 gap-4 rounded-box border border-base-300 bg-base-100 p-4 text-sm shadow-sm md:grid-cols-2">
-          <div :if={@play.original_title}>
-            <span class="font-medium">{gettext("Original title:")}</span>
-            <span class="text-base-content/70">{@play.original_title}</span>
-          </div>
-          <div :if={@play.emothe_id}>
-            <span class="font-medium">{gettext("EMOTHE ID:")}</span>
-            <span class="text-base-content/70">{@play.emothe_id}</span>
-          </div>
-          <div class="md:col-span-2">
-            <span class="font-medium">{gettext("Play URL:")}</span>
-            <a
-              href={~p"/plays/#{@play.code}"}
-              target="_blank"
-              class="link link-primary text-xs break-all"
-            >
-              {PlaycodeWeb.Endpoint.url() <> ~p"/plays/#{@play.code}"}
-            </a>
-          </div>
-          <div>
-            <span class="font-medium">{gettext("Language:")}</span>
-            <span class="text-base-content/70">
-              {Playcode.Catalogue.Play.language_name(@play.language)}
-            </span>
-          </div>
-          <div>
-            <span class="font-medium">{gettext("Verse count:")}</span>
-            <span class="text-base-content/70">{@play.verse_count || gettext("N/A")}</span>
-          </div>
-          <div>
-            <span class="font-medium">{gettext("Attribution:")}</span>
-            <span class="text-base-content/70">{@play.author_attribution || gettext("N/A")}</span>
-          </div>
-          <div>
-            <span class="font-medium">{gettext("Publication:")}</span>
-            <span class="text-base-content/70">{@play.pub_place} ({@play.publication_date})</span>
-          </div>
-          <div :if={@play.publisher}>
-            <span class="font-medium">{gettext("Publisher:")}</span>
-            <span class="text-base-content/70">{@play.publisher}</span>
-          </div>
-          <div :if={@play.authority}>
-            <span class="font-medium">{gettext("Authority:")}</span>
-            <span class="text-base-content/70">{@play.authority}</span>
-          </div>
-          <div :if={@play.availability_note} class="md:col-span-2">
-            <span class="font-medium">{gettext("Availability:")}</span>
-            <span class="text-base-content/70 text-xs">{@play.availability_note}</span>
-          </div>
-          <div :if={@play.sponsor} class="md:col-span-2">
-            <span class="font-medium">{gettext("Sponsor:")}</span>
-            <span class="text-base-content/70">{@play.sponsor}</span>
-          </div>
-          <div :if={@play.funder} class="md:col-span-2">
-            <span class="font-medium">{gettext("Funder:")}</span>
-            <span class="text-base-content/70">{@play.funder}</span>
-          </div>
-          <div :if={@play.edition_title} class="md:col-span-2">
-            <span class="font-medium">{gettext("Edition title:")}</span>
-            <span class="text-base-content/70">{@play.edition_title}</span>
-          </div>
-          <div :if={@play.revisions != []} class="md:col-span-2">
-            <span class="font-medium">{gettext("Revisions:")}</span>
-            <ul id="revisions" class="text-base-content/70">
-              <li :for={change <- @play.revisions}>{revision(change)}</li>
-            </ul>
-          </div>
-          <div :if={@play.licence_url || @play.licence_text} class="md:col-span-2">
-            <span class="font-medium">{gettext("Licence:")}</span>
-            <span class="text-base-content/70">
-              <%= if @play.licence_url do %>
-                <a href={@play.licence_url} target="_blank" class="link link-primary">
-                  {@play.licence_text || @play.licence_url}
-                </a>
-              <% else %>
-                {@play.licence_text}
-              <% end %>
-            </span>
-          </div>
-        </div>
+      <section :if={@statistic} id="statistics" class="mt-4">
+        <h2 class="mb-3 text-lg font-semibold text-base-content">{gettext("Statistics")}</h2>
+        <.stats_panel statistic={@statistic} play={@play} />
       </section>
-
-      <%!-- Work Relationship --%>
-      <section
-        :if={@play.relationship_type || @play.derived_plays != []}
-        class="mb-8"
-      >
-        <h2 class="mb-3 text-lg font-semibold text-base-content">
-          {gettext("Work Relationship")}
-        </h2>
-        <div class="rounded-box border border-base-300 bg-base-100 p-4 text-sm shadow-sm space-y-3">
-          <div :if={@play.relationship_type}>
-            <span class="badge badge-outline badge-sm mr-2">
-              {PlayLabels.relationship_type_label(@play.relationship_type)}
-            </span>
-            <%= if @play.parent_play do %>
-              <span>
-                {gettext("of")}
-                <.link
-                  navigate={~p"/admin/plays/#{@play.parent_play.id}"}
-                  class="link link-primary"
-                >
-                  {@play.parent_play.title}
-                </.link>
-                <span class="text-base-content/70">({@play.parent_play.code})</span>
-              </span>
-            <% else %>
-              <span :if={@play.original_title} class="text-base-content/70">
-                {gettext("of")} {@play.original_title}
-                <span class="text-base-content/70">({gettext("not linked")})</span>
-              </span>
-            <% end %>
-          </div>
-          <div :if={@play.derived_plays != []}>
-            <span class="font-medium">{gettext("Derived works:")}</span>
-            <ul class="mt-1 ml-4 list-disc">
-              <li :for={derived <- @play.derived_plays}>
-                <.link
-                  navigate={~p"/admin/plays/#{derived.id}"}
-                  class="link link-primary"
-                >
-                  {derived.title}
-                </.link>
-                <span class="text-base-content/70">({derived.code})</span>
-                <span :if={derived.relationship_type} class="badge badge-ghost badge-xs ml-1">
-                  {PlayLabels.relationship_type_label(derived.relationship_type)}
-                </span>
-              </li>
-            </ul>
-          </div>
-        </div>
-      </section>
-
-      <%!-- Editors --%>
-      <section :if={@play.editors != []} class="mb-8">
-        <h2 class="mb-3 text-lg font-semibold text-base-content">{gettext("Editors")}</h2>
-        <div class="divide-y rounded-box border border-base-300 bg-base-100 shadow-sm">
-          <div :for={editor <- @play.editors} class="flex items-center justify-between p-3">
-            <span class="font-medium">{editor.person_name}</span>
-            <span class="text-sm text-base-content/70">
-              {PlayLabels.editor_role_label(editor.role)} {if editor.organization,
-                do: "— #{editor.organization}"}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <%!-- Characters --%>
-      <section :if={@characters != []} class="mb-8">
-        <h2 class="mb-3 text-lg font-semibold text-base-content">
-          {gettext("Characters")} ({length(@characters)})
-        </h2>
-        <div class="divide-y rounded-box border border-base-300 bg-base-100 shadow-sm">
-          <div :for={char <- @characters} class="flex items-center gap-3 p-3">
-            <span class="font-medium">{char.name}</span>
-            <span :if={char.description} class="text-sm text-base-content/70">
-              {char.description}
-            </span>
-            <span :if={char.is_hidden} class="badge badge-ghost badge-sm">
-              {gettext("hidden")}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <%!-- Structure --%>
-      <section :if={@divisions != []} class="mb-8">
-        <h2 class="mb-3 text-lg font-semibold text-base-content">{gettext("Structure")}</h2>
-        <div class="divide-y rounded-box border border-base-300 bg-base-100 shadow-sm">
-          <div :for={div <- @divisions} class="p-3">
-            <span class="font-medium">{div.title || div.type}</span>
-            <span class="ml-2 text-sm text-base-content/70">{div.type} {div.number}</span>
-            <div :if={div.children != []} class="ml-6 mt-1">
-              <div :for={child <- div.children} class="text-sm text-base-content/70">
-                {child.title || child.type} {child.number}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <%!-- Statistics --%>
-      <section class="mb-8">
-        <div class="mb-3 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-base-content">{gettext("Statistics")}</h2>
-          <button phx-click="recompute_stats" class="btn btn-xs btn-ghost">
-            <.icon name="hero-arrow-path-mini" class="size-4" /> {gettext("Recompute")}
-          </button>
-        </div>
-        <div :if={@statistic} class="mb-4 text-xs text-base-content/70">
-          {gettext("Last computed:")} {Calendar.strftime(@statistic.computed_at, "%Y-%m-%d %H:%M")}
-        </div>
-        <.stats_panel :if={@statistic} statistic={@statistic} play={@play} />
-      </section>
-    </div>
+    </.page>
     """
   end
 end

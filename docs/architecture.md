@@ -88,6 +88,7 @@ lib/
     │   ├── play_catalogue_live.ex    # Public: /plays - searchable catalogue
     │   ├── play_show_live.ex         # Public: /plays/:code - play text, stats, notes
     │   ├── current_path_hook.ex      # Assigns :current_path for sidebar highlighting
+    │   ├── play_sections_hook.ex     # Assigns :play_counts for the play's sections in the sidebar
     │   ├── user_accept_invite_live.ex # /users/accept-invite/:token
     │   ├── user_login_live.ex        # /users/log-in
     │   ├── user_settings_live.ex     # /users/settings (email, password, active sessions)
@@ -114,6 +115,7 @@ lib/
     │   └── admin/
     │       └── export_controller.ex  # Download endpoints for TEI/HTML/PDF/EPUB
     └── components/
+        ├── admin_components.ex       # The admin's parts: page, page_header, card, field_list, count_tile, state_band
         ├── play_text.ex              # Play text rendering (speeches, verses, stage dirs)
         └── statistics_panel.ex       # Modern stats visualization (cards, bar charts)
 ```

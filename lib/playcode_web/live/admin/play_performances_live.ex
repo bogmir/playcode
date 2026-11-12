@@ -664,20 +664,18 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
       )
 
     ~H"""
-    <div class="mx-auto max-w-4xl px-4 py-8">
-      <div class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight text-base-content">
-            {gettext("Performances")}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {gettext("When, where and by whom the play was staged, and what says so.")}
-          </p>
-        </div>
-        <button :if={@editing == nil} phx-click="new" class="btn btn-primary btn-sm gap-1">
-          <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add performance")}
-        </button>
-      </div>
+    <.page>
+      <.page_header>
+        {gettext("Performances")}
+        <:subtitle>
+          {gettext("When, where and by whom the play was staged, and what says so.")}
+        </:subtitle>
+        <:actions>
+          <button :if={@editing == nil} phx-click="new" class="btn btn-primary btn-sm gap-1">
+            <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add performance")}
+          </button>
+        </:actions>
+      </.page_header>
 
       <div :if={@form} class="mb-6 rounded-box border border-primary/30 bg-base-100 p-5 shadow-md">
         <h2 class="mb-4 text-sm font-semibold text-primary">
@@ -1029,7 +1027,7 @@ defmodule PlaycodeWeb.Admin.PlayPerformancesLive do
           [{number}] {Citation.html(entry)}
         </li>
       </ul>
-    </div>
+    </.page>
     """
   end
 

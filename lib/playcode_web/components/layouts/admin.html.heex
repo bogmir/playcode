@@ -1,56 +1,46 @@
 <%!-- #admin-sidebar checked means collapsed. CSS-only: the checkbox lives in the
       header, so no content sits outside a landmark, and :has() removes the sidebar
-      from the layout entirely rather than dimming it behind an overlay. Play pages
-      start collapsed so the text gets the full width. --%>
+      from the layout entirely rather than dimming it behind an overlay. On a play's
+      pages the sidebar holds the play's sections. --%>
 <div class="group/shell flex min-h-screen">
   <div class="group-has-[#admin-sidebar:checked]/shell:hidden sticky top-0 h-screen overflow-y-auto">
     <.admin_sidebar
       current_user={assigns[:current_user]}
       current_path={assigns[:current_path] || ""}
+      play_context={assigns[:play_context]}
+      play_counts={assigns[:play_counts]}
     />
   </div>
 
   <div class="flex-1 min-w-0 flex flex-col">
-    <header class="navbar bg-base-100 border-b border-base-300 px-3 min-h-0 py-1.5 sticky top-0 z-30">
+    <%!-- The portal's violet in both themes: the gold is readable on it alone. --%>
+    <header class="navbar bg-[#4c2c82] text-white border-b-[3px] border-[#d8c888] px-3 min-h-0 py-1.5 sticky top-0 z-30">
       <div class="flex-1 flex items-center gap-2 min-w-0">
         <%!-- The checkbox is what the keyboard reaches; the label's text names it. --%>
-        <input
-          id="admin-sidebar"
-          type="checkbox"
-          class="sr-only"
-          checked={not is_nil(assigns[:play_context])}
-        />
+        <input id="admin-sidebar" type="checkbox" class="sr-only" />
         <label
           for="admin-sidebar"
-          class="btn btn-ghost btn-sm btn-square text-base-content/70 hover:text-base-content"
+          class="btn btn-ghost btn-sm btn-square text-white hover:bg-white/10"
           title={gettext("Toggle sidebar")}
         >
           <.icon name="hero-bars-3" class="size-5" />
           <span class="sr-only">{gettext("Toggle sidebar")}</span>
         </label>
 
-        <span class="h-6 w-px bg-base-300" aria-hidden="true"></span>
-
         <.link
-          navigate={~p"/"}
-          class="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
-          title={gettext("View public site")}
+          navigate={~p"/admin/plays"}
+          class="flex items-baseline gap-2.5 min-w-0 hover:opacity-90"
         >
-          <img src={~p"/images/logo.svg"} width="24" height="24" class="shrink-0" alt="" />
-          <span class="text-sm font-semibold tracking-wide truncate">Playcode</span>
+          <span class="font-bold tracking-[0.14em]">PLAYCODE</span>
+          <span class="text-xs tracking-[0.08em] text-[#d8c888] uppercase truncate">
+            {gettext("Administration")}
+          </span>
         </.link>
-
-        <span class="badge badge-ghost badge-sm font-medium">{gettext("Admin")}</span>
       </div>
       <.user_menu current_user={assigns[:current_user]} locale={assigns[:locale] || "es"} />
     </header>
 
     <main class="flex-1">
-      <.play_context_bar
-        :if={assigns[:play_context]}
-        play={@play_context.play}
-        active_tab={@play_context.active_tab}
-      />
       {@inner_content}
     </main>
   </div>

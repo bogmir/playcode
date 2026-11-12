@@ -161,24 +161,22 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-4xl px-4 py-8">
-      <div class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight text-base-content">
-            {gettext("Editors & Researchers")}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {gettext("Manage the editorial team for this play.")}
-          </p>
-        </div>
-        <button
-          :if={@editing_editor == nil}
-          phx-click="new_editor"
-          class="btn btn-primary btn-sm gap-1"
-        >
-          <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add editor")}
-        </button>
-      </div>
+    <.page>
+      <.page_header>
+        {gettext("Editors & Researchers")}
+        <:subtitle>
+          {gettext("Manage the editorial team for this play.")}
+        </:subtitle>
+        <:actions>
+          <button
+            :if={@editing_editor == nil}
+            phx-click="new_editor"
+            class="btn btn-primary btn-sm gap-1"
+          >
+            <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add editor")}
+          </button>
+        </:actions>
+      </.page_header>
 
       <%!-- Editor form (inline, shown when editing or adding) --%>
       <div
@@ -294,7 +292,7 @@ defmodule PlaycodeWeb.Admin.PlayEditorsLive do
           </div>
         </div>
       </div>
-    </div>
+    </.page>
     """
   end
 end

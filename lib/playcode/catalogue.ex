@@ -291,6 +291,33 @@ defmodule Playcode.Catalogue do
     "EMOTHE#{String.pad_leading(Integer.to_string(next), 4, "0")}"
   end
 
+  @counted [
+    editors: PlayEditor,
+    sources: PlaySource,
+    witnesses: Witness,
+    performances: Playcode.Performances.Performance,
+    bibliography: Playcode.Bibliography.Link,
+    places: PlayPlace,
+    notes: Playcode.PlayContent.Note,
+    characters: Playcode.PlayContent.Character
+  ]
+
+  @doc """
+  How many rows each of a play's sections holds, in one query: `%{editors: 2, ...}`.
+  """
+  def section_counts(play_id) do
+    query =
+      Enum.reduce(@counted, from(p in Play, as: :play, where: p.id == ^play_id, select: %{}), fn
+        {key, schema}, query ->
+          select_merge(query, %{
+            ^key =>
+              subquery(from r in schema, where: r.play_id == parent_as(:play).id, select: count())
+          })
+      end)
+
+    Repo.one(query) || Map.new(@counted, fn {key, _} -> {key, 0} end)
+  end
+
   # --- Editors ---
 
   @doc """

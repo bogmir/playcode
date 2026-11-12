@@ -86,6 +86,7 @@ defmodule PlaycodeWeb do
       import Phoenix.HTML
       # Core UI components
       import PlaycodeWeb.CoreComponents
+      import PlaycodeWeb.AdminComponents
 
       # Common modules used in templates
       alias Phoenix.LiveView.JS

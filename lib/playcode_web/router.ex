@@ -152,6 +152,7 @@ defmodule PlaycodeWeb.Router do
       on_mount: [
         PlaycodeWeb.SetLocaleHook,
         PlaycodeWeb.CurrentPathHook,
+        PlaycodeWeb.PlaySectionsHook,
         {PlaycodeWeb.UserAuth, {:ensure_can, :view_admin}}
       ] do
       live "/plays", PlayListLive, :index

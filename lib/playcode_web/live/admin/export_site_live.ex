@@ -153,17 +153,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-3xl px-4 py-8">
-      <div class="mb-6">
-        <h1 class="text-3xl font-semibold tracking-tight text-base-content">
-          {gettext("Export Static Site")}
-        </h1>
-        <p class="mt-1 text-sm text-base-content/70">
+    <.page width={:form}>
+      <.page_header>
+        {gettext("Export Static Site")}
+        <:subtitle>
           {gettext(
             "Generate an Endings Project-compliant static website archive of the entire catalogue."
           )}
-        </p>
-      </div>
+        </:subtitle>
+      </.page_header>
 
       <div
         :if={@site_changed and MapSet.size(@exported_codes) > 0}
@@ -457,7 +455,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
           </ul>
         </div>
       </div>
-    </div>
+    </.page>
     """
   end
 

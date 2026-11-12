@@ -56,30 +56,64 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     end
   end
 
+  # The status used to be a Draft/Complete pair of pressed buttons; the overview now says who
+  # sees the play, with the one button that changes it.
   test "marking a play complete publishes it in the catalogue, and back to draft withdraws it",
        %{conn: conn, play: play} do
     {:ok, catalogue, _html} = live(conn, ~p"/plays")
     refute render(catalogue) =~ play.title
 
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
-    # The status is a two-option control, not one button that flips whatever it shows: the
-    # option you click is the status you get, so clicking the active one changes nothing.
-    assert has_element?(lv, "button[aria-pressed=true]", t("Draft"))
-    assert has_element?(lv, "button[aria-pressed=false]", t("Complete"))
+    assert has_element?(lv, "#play-state", t("Draft"))
 
-    assert lv |> element("button", t("Complete")) |> render_click() =~ t("Marked as complete.")
-    assert has_element?(lv, "button[aria-pressed=true]", t("Complete"))
+    assert has_element?(
+             lv,
+             "#play-state",
+             t("Only the team sees it. It is not on the published site.")
+           )
+
+    assert lv |> element("#play-state button", t("Mark as complete")) |> render_click() =~
+             t("Marked as complete.")
+
+    assert has_element?(lv, "#play-state", t("Complete"))
 
     {:ok, _catalogue, html} = live(conn, ~p"/plays")
     assert html =~ play.title
 
-    lv |> element("button", t("Complete")) |> render_click()
-    {:ok, _catalogue, html} = live(conn, ~p"/plays")
-    assert html =~ play.title
+    assert lv |> element("#play-state button", t("Back to draft")) |> render_click() =~
+             t("Marked as draft.")
 
-    assert lv |> element("button", t("Draft")) |> render_click() =~ t("Marked as draft.")
     {:ok, _catalogue, html} = live(conn, ~p"/plays")
     refute html =~ play.title
+  end
+
+  test "names the play once, its downloads and actions in words", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "h1", play.title)
+    assert has_element?(lv, "main p", play.code)
+
+    for format <- ~w(tei html pdf epub),
+        do:
+          assert(
+            has_element?(
+              lv,
+              "[role=group][aria-label='#{t("Download")}'] a[href='/admin/plays/#{play.id}/export/#{format}']",
+              String.upcase(format)
+            )
+          )
+
+    assert has_element?(lv, "button", t("Validate TEI-XML"))
+    assert has_element?(lv, "a[href='/admin/plays/#{play.id}/edit']", t("Edit metadata"))
+    refute has_element?(lv, "main a[href='/plays/#{play.code}']")
+  end
+
+  test "counts the play's parts, each a link to its section", %{conn: conn, play: play} do
+    performance_fixture(play)
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "#play-counts a[href='/admin/plays/#{play.id}/performances']", "1")
+    assert has_element?(lv, "#play-counts a[href='/admin/plays/#{play.id}/witnesses']", t("add"))
   end
 
   test "the status message fades by itself; an error stays until it is dismissed",
@@ -89,7 +123,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     refute has_element?(lv, "#flash-info")
 
-    lv |> element("button", t("Complete")) |> render_click()
+    lv |> element("#play-state button", t("Mark as complete")) |> render_click()
     assert has_element?(lv, "#flash-info[phx-hook=AutoDismiss]", t("Marked as complete."))
 
     error =
@@ -129,14 +163,5 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
              "#revisions li",
              "2025 · Con correcciones a cargo de Guillermo Carrascón."
            )
-  end
-
-  test "every play tab links back to the list of plays", %{conn: conn, play: play} do
-    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/sources")
-
-    lv
-    |> element(~s(a[aria-label="#{t("Back to plays")}"]))
-    |> render_click()
-    |> follow_redirect(conn, ~p"/admin/plays")
   end
 end

@@ -1493,14 +1493,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-7xl px-4 py-8">
-      <%!-- Header --%>
-      <div class="mb-6">
-        <h1 class="text-3xl font-semibold tracking-tight text-base-content">
-          {gettext("Edit Content")}: {@play.title}
-        </h1>
-        <p class="mt-1 text-sm text-base-content/70">{@play.author_name} — {@play.code}</p>
-      </div>
+    <.page>
+      <.page_header>{gettext("Content")}</.page_header>
 
       <div :if={@split_verses != []} class="alert alert-warning mb-6">
         <div>
@@ -2257,7 +2251,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
           existing_options={@existing_options}
         />
       </.modal>
-    </div>
+    </.page>
     """
   end
 

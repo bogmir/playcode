@@ -159,48 +159,7 @@ defmodule PlaycodeWeb.PlayCatalogueLive do
 
   defp export_buttons(assigns) do
     ~H"""
-    <div class="flex items-center border-l border-base-200 pl-2 ml-1 gap-0.5">
-      <a
-        href={~p"/export/#{@play.id}/tei"}
-        rel="nofollow"
-        download
-        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
-        aria-label="TEI-XML"
-        data-tip="TEI-XML"
-      >
-        <.icon name="hero-code-bracket-mini" class="size-3.5" />
-      </a>
-      <a
-        href={~p"/export/#{@play.id}/html"}
-        rel="nofollow"
-        download
-        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
-        aria-label="HTML"
-        data-tip="HTML"
-      >
-        <.icon name="hero-globe-alt-mini" class="size-3.5" />
-      </a>
-      <a
-        href={~p"/export/#{@play.id}/pdf"}
-        rel="nofollow"
-        download
-        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
-        aria-label="PDF"
-        data-tip="PDF"
-      >
-        <.icon name="hero-document-arrow-down-mini" class="size-3.5" />
-      </a>
-      <a
-        href={~p"/export/#{@play.id}/epub"}
-        rel="nofollow"
-        download
-        class="btn btn-xs btn-ghost btn-square text-base-content/70 hover:text-primary tooltip tooltip-bottom"
-        aria-label="EPUB"
-        data-tip="EPUB"
-      >
-        <.icon name="hero-book-open-mini" class="size-3.5" />
-      </a>
-    </div>
+    <.download_group base={"/export/#{@play.id}"} rel="nofollow" download class="ml-1" />
     """
   end
 end

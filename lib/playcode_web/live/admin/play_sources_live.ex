@@ -153,24 +153,22 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="mx-auto max-w-4xl px-4 py-8">
-      <div class="mb-6 flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-semibold tracking-tight text-base-content">
-            {gettext("Bibliographic Sources")}
-          </h1>
-          <p class="mt-1 text-sm text-base-content/70">
-            {gettext("Manage the bibliographic sources for this play.")}
-          </p>
-        </div>
-        <button
-          :if={@editing_source == nil}
-          phx-click="new_source"
-          class="btn btn-primary btn-sm gap-1"
-        >
-          <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add source")}
-        </button>
-      </div>
+    <.page>
+      <.page_header>
+        {gettext("Bibliographic Sources")}
+        <:subtitle>
+          {gettext("Manage the bibliographic sources for this play.")}
+        </:subtitle>
+        <:actions>
+          <button
+            :if={@editing_source == nil}
+            phx-click="new_source"
+            class="btn btn-primary btn-sm gap-1"
+          >
+            <.icon name="hero-plus-mini" class="size-4" /> {gettext("Add source")}
+          </button>
+        </:actions>
+      </.page_header>
 
       <%!-- Source form (inline, shown when editing or adding) --%>
       <div
@@ -358,7 +356,7 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
           </div>
         </div>
       </div>
-    </div>
+    </.page>
     """
   end
 end
