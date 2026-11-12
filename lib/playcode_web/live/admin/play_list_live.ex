@@ -131,9 +131,15 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     end
   end
 
-  defp status_label(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: nil
+  defp status_label(%{deleted_at: deleted_at}) when not is_nil(deleted_at),
+    do: gettext("Archived")
+
   defp status_label(%{is_complete: true}), do: gettext("Complete")
   defp status_label(_play), do: gettext("Draft")
+
+  defp status_badge(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: "badge-outline"
+  defp status_badge(%{is_complete: true}), do: "badge-success badge-soft"
+  defp status_badge(_play), do: "badge-ghost"
 
   defp page_params("", page), do: [page: page]
   defp page_params(search, page), do: [search: search, page: page]
@@ -199,25 +205,14 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
             <tr class="text-xs uppercase tracking-wide text-base-content/70">
               <th class="w-28 max-sm:hidden">{gettext("Code")}</th>
               <th>{gettext("Title")}</th>
+              <th class="w-24">{gettext("Status")}</th>
               <th class="w-20 text-right max-sm:hidden">{gettext("Verses")}</th>
               <th class="w-32 text-right">{gettext("Actions")}</th>
             </tr>
           </thead>
           <tbody>
             <tr :for={play <- @plays} id={"play-#{play.id}"} class="hover">
-              <%!-- The left border is the status bar. Archived plays have no status. --%>
-              <td
-                title={status_label(play)}
-                class={[
-                  "font-mono text-xs text-base-content/70 border-l-4 max-sm:hidden",
-                  is_nil(play.deleted_at) && play.is_complete && "border-success",
-                  is_nil(play.deleted_at) && !play.is_complete && "border-base-300",
-                  play.deleted_at && "border-transparent"
-                ]}
-              >
-                <span :if={status_label(play)} class="sr-only">{status_label(play)}</span>
-                {play.code}
-              </td>
+              <td class="font-mono text-xs text-base-content/70 max-sm:hidden">{play.code}</td>
               <td>
                 <%!-- Archived plays are hidden from every Catalogue reader, so
                       linking to their pages raises. Restore is the only action. --%>
@@ -231,9 +226,6 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <span :if={play.deleted_at} class="font-medium text-base-content/70">
                   {play.title}
                 </span>
-                <span :if={play.deleted_at} class="badge badge-ghost badge-sm ml-2">
-                  {gettext("Archived")}
-                </span>
                 <p :if={play.author_name} class="text-xs text-base-content/70 mt-0.5">
                   {play.author_name}
                 </p>
@@ -241,6 +233,11 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <p class="sm:hidden font-mono text-xs text-base-content/70 break-all">
                   {play.code}
                 </p>
+              </td>
+              <td>
+                <span class={["badge badge-sm", status_badge(play)]}>
+                  {status_label(play)}
+                </span>
               </td>
               <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
                 {play.verse_count || "—"}
@@ -254,7 +251,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                     aria-label={gettext("Edit metadata")}
                     data-tip={gettext("Edit metadata")}
                   >
-                    <.icon name="hero-pencil-mini" class="size-4" />
+                    <.icon name="hero-pencil-square-mini" class="size-4" />
                   </.link>
                   <.link
                     :if={is_nil(play.deleted_at)}

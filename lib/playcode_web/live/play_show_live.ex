@@ -180,7 +180,7 @@ defmodule PlaycodeWeb.PlayShowLive do
             >
               <%!-- View switcher --%>
               <section>
-                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
+                <h3 class="px-2 pt-1 text-xs font-semibold uppercase tracking-widest text-base-content/70">
                   {gettext("View")}
                 </h3>
                 <nav class="mt-1 space-y-px">
@@ -206,7 +206,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               </section>
 
               <section :if={@active_tab == :text && @metadata_sections != []}>
-                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
+                <h3 class="px-2 pt-1 text-xs font-semibold uppercase tracking-widest text-base-content/70">
                   {gettext("Metadata")}
                 </h3>
                 <nav class="mt-1 space-y-px">
@@ -221,7 +221,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               </section>
 
               <section :if={@active_tab == :text && @play_sections != []}>
-                <h3 class="px-2 pt-1 text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
+                <h3 class="px-2 pt-1 text-xs font-semibold uppercase tracking-widest text-base-content/70">
                   {gettext("Sections")}
                 </h3>
                 <nav class="mt-1 space-y-px">
@@ -242,7 +242,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               :if={@sidebar_open && @active_tab == :text}
               class="border-t border-base-300 px-3 py-2.5 space-y-2"
             >
-              <h3 class="text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
+              <h3 class="text-xs font-semibold uppercase tracking-widest text-base-content/70">
                 {gettext("Visual markers")}
               </h3>
               <label class="flex items-center gap-2 text-xs cursor-pointer text-base-content/70">
@@ -320,7 +320,7 @@ defmodule PlaycodeWeb.PlayShowLive do
               }
               class="border-t border-base-300 px-3 py-2.5 space-y-2"
             >
-              <h3 class="text-[10px] font-semibold uppercase tracking-widest text-base-content/70">
+              <h3 class="text-xs font-semibold uppercase tracking-widest text-base-content/70">
                 {gettext("Highlight")}
               </h3>
               <div :if={@has_shared_lines}>
@@ -412,7 +412,7 @@ defmodule PlaycodeWeb.PlayShowLive do
 
             <%!-- Relationship badge --%>
             <div :if={@play.relationship_type} class="mt-2 text-xs text-base-content/70">
-              <span class="badge badge-outline badge-xs">
+              <span class="badge badge-outline badge-sm">
                 {PlayLabels.relationship_type_label(@play.relationship_type)}
               </span>
               <%= if @play.parent_play do %>
@@ -533,7 +533,7 @@ defmodule PlaycodeWeb.PlayShowLive do
                     <span :if={link.role == "mentioned"} class="text-xs text-base-content/70">
                       ({PlayLabels.place_role_label(link.role)})
                     </span>
-                    <span :if={link.place.is_fictional} class="badge badge-outline badge-xs">
+                    <span :if={link.place.is_fictional} class="badge badge-outline badge-sm">
                       {gettext("Fictional")}
                     </span>
                     <a

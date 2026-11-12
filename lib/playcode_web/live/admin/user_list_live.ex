@@ -278,7 +278,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                 {user.email}
                 <span
                   :if={user.id == @current_user.id}
-                  class="ml-1 badge badge-ghost badge-xs"
+                  class="ml-1 badge badge-ghost badge-sm"
                 >
                   {gettext("you")}
                 </span>

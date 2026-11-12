@@ -2,11 +2,14 @@ defmodule PlaycodeWeb.AdminComponents do
   @moduledoc """
   The admin's parts, drawn after the mockup the owner approved on 2026-11-12
   (`docs/superpowers/specs/2026-11-12-admin-design-mock.html`): a page at one of two widths
-  and its heading, a card, a label and value list, a count tile, and a play's state band.
+  and its heading, a card, a label and value list, a count tile, a play's state band, and a
+  zone to drop files on.
   The download group is in `PlaycodeWeb.CoreComponents`, the public catalogue's too.
   """
   use Phoenix.Component
   use Gettext, backend: PlaycodeWeb.Gettext
+
+  import PlaycodeWeb.CoreComponents, only: [icon: 1]
 
   @doc """
   An admin page: `:list` for lists and overviews, `:form` for a form, so the content keeps
@@ -189,4 +192,31 @@ defmodule PlaycodeWeb.AdminComponents do
       gettext(
         "Only the team sees it here. The published site keeps it until the next Generate and Deploy."
       )
+
+  @doc """
+  A file upload as a zone to drop files on or click, named in the page's language rather
+  than by the browser's own button. The input inside it is what the keyboard reaches.
+  """
+  attr :upload, Phoenix.LiveView.UploadConfig, required: true
+  attr :label, :string, required: true
+  attr :hint, :string, default: nil
+  attr :disabled, :boolean, default: false
+
+  def drop_zone(assigns) do
+    ~H"""
+    <label
+      phx-drop-target={@upload.ref}
+      class={[
+        "flex flex-col items-center gap-1 rounded-box border-2 border-dashed border-base-300 bg-base-100 px-4 py-6 text-center",
+        "has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-primary",
+        if(@disabled, do: "opacity-60", else: "cursor-pointer hover:border-primary")
+      ]}
+    >
+      <.icon name="hero-arrow-up-tray" class="size-6 text-primary" />
+      <span class="font-medium">{@label}</span>
+      <span :if={@hint} class="text-sm text-base-content/70">{@hint}</span>
+      <.live_file_input upload={@upload} class="sr-only" disabled={@disabled} />
+    </label>
+    """
+  end
 end

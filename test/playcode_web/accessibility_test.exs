@@ -246,9 +246,25 @@ defmodule PlaycodeWeb.AccessibilityTest do
         "aria-label on a <#{tag}>: #{what}",
       focusable?(tag, a) && not in_landmark?(ancestors) && "control outside a landmark: #{what}",
       scrolls?(a) && is_nil(a["tabindex"]) && not has_focusable?(children) &&
-        "scrolling box the keyboard cannot reach: #{what}"
+        "scrolling box the keyboard cannot reach: #{what}",
+      (a["class"] || "") =~ ~r/\bmodal-box\b/ && a["role"] != "dialog" &&
+        "a modal that is not a dialog: #{what}",
+      tiny_text?(a) && "text under 12 px: #{what}",
+      a["role"] == "dialog" &&
+        (a["aria-modal"] != "true" || blank?(labelled_by(a, ctx) || a["aria-label"])) &&
+        "a dialog without aria-modal or a name: #{what}"
     ]
     |> Enum.filter(&is_binary/1)
+  end
+
+  # daisyUI's extra-small badge prints at 10 px; a pixel size is read off the class.
+  defp tiny_text?(a) do
+    class = a["class"] || ""
+
+    class =~ ~r/\bbadge-xs\b/ or
+      Enum.any?(Regex.scan(~r/\btext-\[(\d+)px\]/, class), fn [_, px] ->
+        String.to_integer(px) < 12
+      end)
   end
 
   defp control?("input", a), do: a["type"] not in ~w(hidden submit button reset image)

@@ -502,17 +502,17 @@ defmodule PlaycodeWeb.Admin.PlayBibliographyLive do
                   {Citation.html(link.entry, link)}
                 </p>
                 <div class="mt-1 flex flex-wrap items-center gap-1.5 text-xs text-base-content/70">
-                  <span :if={link.entry.pub_type} class="badge badge-ghost badge-xs">
+                  <span :if={link.entry.pub_type} class="badge badge-ghost badge-sm">
                     {PlayLabels.pub_type_label(link.entry.pub_type)}
                   </span>
                   <span
                     :if={shared?(@shared, link)}
-                    class="badge badge-outline badge-primary badge-xs gap-1"
+                    class="badge badge-outline badge-primary badge-sm gap-1"
                   >
                     <.icon name="hero-link-micro" class="size-3" />
                     {gettext("Shared · %{count} plays", count: @shared[link.entry_id])}
                   </span>
-                  <span :if={link.entry.siglum} class="badge badge-ghost badge-xs font-mono">
+                  <span :if={link.entry.siglum} class="badge badge-ghost badge-sm font-mono">
                     {link.entry.siglum}
                   </span>
                   <span

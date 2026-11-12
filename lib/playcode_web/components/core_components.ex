@@ -372,12 +372,13 @@ defmodule PlaycodeWeb.CoreComponents do
   end
 
   @doc """
-  Renders a modal dialog.
+  Renders a modal dialog. Its heading carries the id `"\#{id}-title"`, which names it.
+  Focus stays inside while it is open and goes back where it was when it closes.
 
   ## Examples
 
       <.modal id="my-modal" on_cancel={JS.push("close_modal")}>
-        <p>Modal content here</p>
+        <h3 id="my-modal-title">Title</h3>
       </.modal>
   """
   attr :id, :string, required: true
@@ -386,29 +387,35 @@ defmodule PlaycodeWeb.CoreComponents do
 
   def modal(assigns) do
     ~H"""
-    <div id={@id} class="modal modal-open" phx-mounted={show_modal(@id)}>
+    <div
+      id={@id}
+      class="modal modal-open"
+      phx-mounted={JS.push_focus() |> JS.focus_first(to: "##{@id}-box")}
+      phx-remove={JS.pop_focus()}
+    >
       <div class="modal-backdrop" phx-click={@on_cancel}></div>
-      <div
+      <.focus_wrap
+        id={"#{@id}-box"}
         class="modal-box relative"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={"#{@id}-title"}
         phx-click-away={@on_cancel}
         phx-key="escape"
         phx-window-keydown={@on_cancel}
       >
+        {render_slot(@inner_block)}
         <button
           type="button"
           class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2"
           phx-click={@on_cancel}
+          aria-label={gettext("Close")}
         >
-          X
+          <.icon name="hero-x-mark" class="size-5" />
         </button>
-        {render_slot(@inner_block)}
-      </div>
+      </.focus_wrap>
     </div>
     """
-  end
-
-  defp show_modal(id) do
-    JS.show(to: "##{id}")
   end
 
   @doc """

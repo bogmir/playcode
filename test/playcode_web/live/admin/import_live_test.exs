@@ -35,6 +35,26 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
   defp import_tei(lv, name, xml),
     do: lv |> upload([{name, xml}]) |> then(fn _ -> await_import(lv) end)
 
+  test "the files are chosen or dropped on a zone named in the page's language, and the button counts them",
+       %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
+
+    assert has_element?(lv, "#upload-form label", t("Drop TEI-XML files here, or choose them"))
+    assert has_element?(lv, "#upload-form button[type=submit]", ~r/^\s*#{t("Import")}\s*$/)
+
+    entries =
+      for name <- ~w(a.xml b.xml), do: %{name: name, content: "<TEI/>", type: "application/xml"}
+
+    input = file_input(lv, "#upload-form", :tei_files, entries)
+    for %{name: name} <- entries, do: render_upload(input, name)
+
+    assert has_element?(
+             lv,
+             "#upload-form button[type=submit]",
+             n("Import %{count} file", "Import %{count} files", 2)
+           )
+  end
+
   test "an uploaded corpus file becomes a play, readable on its public page", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
 
@@ -81,7 +101,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
     assert html =~ "Libro nuevo"
     assert Catalogue.list_plays(search: code) == []
 
-    lv |> element("button", ~r/^\s*#{t("Import")}\s*$/) |> render_click()
+    lv |> element("#import-confirmation button", ~r/^\s*#{t("Import")}\s*$/) |> render_click()
     await_import(lv)
 
     assert Catalogue.get_play_by_code!(code)

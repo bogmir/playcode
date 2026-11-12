@@ -387,7 +387,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             <button
               :if={@deploy_to}
               phx-click="deploy"
-              class="btn btn-secondary"
+              class="btn btn-primary btn-outline"
               disabled={@deploying}
             >
               <span :if={@deploying} class="loading loading-spinner loading-sm"></span>

@@ -379,7 +379,7 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
                 </td>
                 <td class="whitespace-nowrap">
                   {kind_label(row.kind)}
-                  <span :if={row.long} class="badge badge-warning badge-xs">
+                  <span :if={row.long} class="badge badge-warning badge-sm">
                     {gettext("Very different length")}
                   </span>
                 </td>

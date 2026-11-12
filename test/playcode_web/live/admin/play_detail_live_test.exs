@@ -24,6 +24,23 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
   end
 
   describe "importing a premarcado Word file" do
+    test "the file is chosen or dropped on a zone named in the page's language",
+         %{conn: conn, play: play} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+      assert has_element?(
+               lv,
+               "#docx-upload-form label",
+               t("Drop the Word file here, or choose it")
+             )
+
+      lv
+      |> file_input("#docx-upload-form", :docx, [%{name: "acto.docx", content: "x"}])
+      |> render_upload("acto.docx")
+
+      assert has_element?(lv, "#docx-upload-form", "acto.docx")
+    end
+
     test "replaces the play's text, which the public page then shows with its cast list",
          %{conn: conn, play: play} do
       {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")

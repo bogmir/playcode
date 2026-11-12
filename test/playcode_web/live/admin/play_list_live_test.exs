@@ -59,8 +59,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     play = play_fixture()
     {:ok, view, _html} = live(conn, ~p"/admin/plays")
 
-    # The status is a coloured bar on the row; its text is what a screen reader and the
-    # tooltip say, which is what these assertions read.
+    assert has_element?(view, "th", t("Status"))
     assert has_element?(view, "#play-#{play.id} td", t("Draft"))
     refute has_element?(view, "#play-#{play.id} td", t("Complete"))
 

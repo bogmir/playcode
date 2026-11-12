@@ -388,3 +388,15 @@ input:-webkit-autofill:focus {
   box-shadow: 0 0 0 1000px var(--color-base-100) inset;
   transition: background-color 9999s ease-out 0s;
 }
+
+/* Readers who ask the system for less motion get none: no transitions, no smooth scroll. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
