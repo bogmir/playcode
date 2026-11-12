@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
   use PlaycodeWeb, :live_view
 
+  alias Playcode.ActivityLog
   alias Playcode.Catalogue
   alias Playcode.PlayContent
   alias PlaycodeWeb.Admin.LiveHelpers
@@ -17,6 +18,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     {:ok,
      socket
      |> assign(:page_title, gettext("Admin - Plays"))
+     |> assign(:recent_plays, ActivityLog.recent_plays(socket.assigns.current_user.id))
      |> assign(:plays, [])
      |> assign(:search, "")
      |> assign(:status, nil)
@@ -187,6 +189,23 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           </div>
         </:actions>
       </.page_header>
+
+      <section
+        :if={@recent_plays != []}
+        aria-label={gettext("Pick up where you left off")}
+        class="mb-5"
+      >
+        <h2 class="mb-2 text-sm font-semibold text-base-content/70">
+          {gettext("Pick up where you left off")}
+        </h2>
+        <ul class="flex flex-wrap gap-2">
+          <li :for={play <- @recent_plays}>
+            <.link navigate={~p"/admin/plays/#{play.id}"} class="btn btn-sm btn-ghost">
+              {play.title}
+            </.link>
+          </li>
+        </ul>
+      </section>
 
       <div class="mb-5 flex flex-wrap items-center gap-3">
         <form phx-change="search" phx-submit="search" class="flex-1 md:max-w-md">

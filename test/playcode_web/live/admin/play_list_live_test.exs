@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
   import Phoenix.LiveViewTest
   import Playcode.TestFixtures
 
+  alias Playcode.ActivityLog
   alias Playcode.Catalogue
 
   setup %{conn: conn} do
@@ -191,6 +192,65 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       assert_patch(view, ~p"/admin/plays?#{[search: "Play", status: "draft"]}")
       assert has_element?(view, "#play-#{draft.id}")
       refute has_element?(view, "#play-#{done.id}")
+    end
+  end
+
+  describe "pick up where you left off" do
+    setup %{conn: conn} do
+      user = user_fixture(role: :researcher)
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    defp changed(user, play),
+      do:
+        {:ok, _} =
+          ActivityLog.log(%{
+            user_id: user.id,
+            play_id: play.id,
+            action: "update",
+            resource_type: "play",
+            resource_id: play.id
+          })
+
+    defp recent_titles(view) do
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("section[aria-label='#{t("Pick up where you left off")}'] a")
+      |> Enum.map(&LazyHTML.text/1)
+      |> Enum.map(&String.trim/1)
+    end
+
+    test "lists the last five plays the user changed, newest first, each once, archived ones left out",
+         %{conn: conn, user: user} do
+      plays = for n <- 1..7, do: play_fixture(%{"title" => "Recent #{n}"})
+      [first, second | _] = plays
+
+      for play <- plays, do: changed(user, play)
+      changed(user, first)
+      changed(user_fixture(), second)
+      {:ok, _} = Catalogue.delete_play(Enum.at(plays, 6))
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert recent_titles(view) == ["Recent 1", "Recent 6", "Recent 5", "Recent 4", "Recent 3"]
+    end
+
+    test "a play saved through its form joins them", %{conn: conn} do
+      play = play_fixture(%{"title" => "Edited Here"})
+      {:ok, form, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+      form |> form("#play-form", play: %{"title" => "Edited There"}) |> render_submit()
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert recent_titles(view) == ["Edited There"]
+    end
+
+    test "nothing is shown to a user who changed nothing", %{conn: conn} do
+      play_fixture()
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      refute has_element?(view, "section[aria-label='#{t("Pick up where you left off")}']")
     end
   end
 
