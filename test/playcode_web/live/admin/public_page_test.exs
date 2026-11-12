@@ -13,7 +13,7 @@ defmodule PlaycodeWeb.Admin.PublicPageTest do
 
   alias Playcode.Export.{SiteBuilder, StaticSite}
 
-  @public "https://emothe.example/biblioteca"
+  @public "https://teatro.example/biblioteca"
 
   setup %{conn: conn} do
     dir = StaticSite.output_dir()
