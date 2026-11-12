@@ -17,7 +17,7 @@ defmodule PlaycodeWeb.AdminComponents do
 
   def page(assigns) do
     ~H"""
-    <div class={["mx-auto px-4 py-8", if(@width == :form, do: "max-w-4xl", else: "max-w-6xl")]}>
+    <div class={["mx-auto px-4 py-8", if(@width == :form, do: "max-w-4xl", else: "max-w-7xl")]}>
       {render_slot(@inner_block)}
     </div>
     """
@@ -51,6 +51,7 @@ defmodule PlaycodeWeb.AdminComponents do
   marks one whose action replaces something.
   """
   attr :title, :string, required: true
+  attr :count, :integer, default: nil
   attr :id, :string, default: nil
   attr :dashed, :boolean, default: false
   slot :action
@@ -66,7 +67,12 @@ defmodule PlaycodeWeb.AdminComponents do
       ]}
     >
       <header class="mb-2.5 flex items-baseline justify-between gap-4">
-        <h2 class="text-base font-semibold text-base-content">{@title}</h2>
+        <h2 class="text-base font-semibold text-base-content">
+          {@title}
+          <span :if={@count} class="ml-1 font-normal tabular-nums text-base-content/70">
+            {@count}
+          </span>
+        </h2>
         <div :if={@action != []} class="text-sm">{render_slot(@action)}</div>
       </header>
       {render_slot(@inner_block)}

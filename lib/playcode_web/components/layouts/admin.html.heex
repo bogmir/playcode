@@ -1,9 +1,45 @@
-<%!-- #admin-sidebar checked means collapsed. CSS-only: the checkbox lives in the
-      header, so no content sits outside a landmark, and :has() removes the sidebar
-      from the layout entirely rather than dimming it behind an overlay. On a play's
-      pages the sidebar holds the play's sections. --%>
-<div class="group/shell flex min-h-screen bg-base-200">
-  <div class="group-has-[#admin-sidebar:checked]/shell:hidden sticky top-0 h-screen shrink-0 overflow-x-hidden overflow-y-auto">
+<%!-- From lg the sidebar is a column that #admin-sidebar, checked, folds; below lg it is a
+      block above the page that the same control opens (the .admin-shell rules in app.css).
+      CSS-only: the checkbox lives in the header, so no content sits outside a landmark.
+      On a play's pages the sidebar holds the play's sections, folded on the two pages that
+      need the width. --%>
+<div class="admin-shell grid min-h-screen grid-cols-1 grid-rows-[auto_auto_1fr] bg-base-200 lg:grid-cols-[auto_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
+  <%!-- The portal's violet, deeper in the dark: the gold is readable on it alone. --%>
+  <header class="navbar bg-[#4c2c82] dark:bg-[#3a2166] text-white border-b-[3px] border-[#d8c888] px-3 min-h-0 py-1.5 sticky top-0 z-30 lg:col-start-2 lg:row-start-1">
+    <div class="flex-1 flex items-center gap-2 min-w-0">
+      <%!-- The checkbox is what the keyboard reaches; the label's text names it. --%>
+      <input
+        id="admin-sidebar"
+        type="checkbox"
+        class="sr-only"
+        checked={
+          match?(%{active_tab: tab} when tab in [:content, :compare], assigns[:play_context])
+        }
+      />
+      <label
+        for="admin-sidebar"
+        class="btn btn-ghost btn-sm btn-square text-white hover:bg-white/10"
+        title={gettext("Toggle sidebar")}
+      >
+        <.icon name="hero-bars-3" class="size-5" />
+        <span class="sr-only">{gettext("Toggle sidebar")}</span>
+      </label>
+
+      <.link
+        navigate={~p"/admin/plays"}
+        class="flex items-center gap-2.5 min-w-0 hover:opacity-90"
+      >
+        <img src={~p"/images/logo.svg"} width="24" height="24" class="shrink-0" alt="" />
+        <span class="font-bold tracking-[0.14em]">PLAYCODE</span>
+        <span class="hidden sm:inline text-xs tracking-[0.08em] text-[#d8c888] uppercase truncate">
+          {gettext("Administration")}
+        </span>
+      </.link>
+    </div>
+    <.user_menu current_user={assigns[:current_user]} locale={assigns[:locale] || "es"} />
+  </header>
+
+  <div class="admin-sidebar min-w-0 lg:col-start-1 lg:row-span-2 lg:row-start-1 lg:sticky lg:top-0 lg:h-screen lg:overflow-x-hidden lg:overflow-y-auto">
     <.admin_sidebar
       current_user={assigns[:current_user]}
       current_path={assigns[:current_path] || ""}
@@ -12,39 +48,9 @@
     />
   </div>
 
-  <div class="flex-1 min-w-0 flex flex-col">
-    <%!-- The portal's violet, deeper in the dark: the gold is readable on it alone. --%>
-    <header class="navbar bg-[#4c2c82] dark:bg-[#3a2166] text-white border-b-[3px] border-[#d8c888] px-3 min-h-0 py-1.5 sticky top-0 z-30">
-      <div class="flex-1 flex items-center gap-2 min-w-0">
-        <%!-- The checkbox is what the keyboard reaches; the label's text names it. --%>
-        <input id="admin-sidebar" type="checkbox" class="sr-only" />
-        <label
-          for="admin-sidebar"
-          class="btn btn-ghost btn-sm btn-square text-white hover:bg-white/10"
-          title={gettext("Toggle sidebar")}
-        >
-          <.icon name="hero-bars-3" class="size-5" />
-          <span class="sr-only">{gettext("Toggle sidebar")}</span>
-        </label>
-
-        <.link
-          navigate={~p"/admin/plays"}
-          class="flex items-center gap-2.5 min-w-0 hover:opacity-90"
-        >
-          <img src={~p"/images/logo.svg"} width="24" height="24" class="shrink-0" alt="" />
-          <span class="font-bold tracking-[0.14em]">PLAYCODE</span>
-          <span class="text-xs tracking-[0.08em] text-[#d8c888] uppercase truncate">
-            {gettext("Administration")}
-          </span>
-        </.link>
-      </div>
-      <.user_menu current_user={assigns[:current_user]} locale={assigns[:locale] || "es"} />
-    </header>
-
-    <main class="flex-1">
-      {@inner_content}
-    </main>
-  </div>
+  <main class="min-w-0 lg:col-start-2 lg:row-start-2">
+    {@inner_content}
+  </main>
 </div>
 
 <.flash_group flash={@flash} />
