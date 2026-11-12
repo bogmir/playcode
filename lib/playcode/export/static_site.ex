@@ -341,9 +341,14 @@ defmodule Playcode.Export.StaticSite do
   address (`STATIC_SITE_PUBLIC_URL`) is not set.
   """
   def public_page_url(code) do
+    if base = public_url(), do: base <> "plays/" <> safe_code!(code) <> "/"
+  end
+
+  @doc "The published site's address, ending in `/`, or nil when `STATIC_SITE_PUBLIC_URL` is not set."
+  def public_url do
     case Application.get_env(:playcode, :static_site_public_url) do
       base when base in [nil, ""] -> nil
-      base -> String.trim_trailing(base, "/") <> "/plays/" <> safe_code!(code) <> "/"
+      base -> String.trim_trailing(base, "/") <> "/"
     end
   end
 
