@@ -267,7 +267,8 @@ defmodule PlaycodeWeb.Layouts do
       {gettext("Text"),
        [
          {:content, gettext("Content"), ~p"/admin/plays/#{play.id}/content", nil},
-         {:notes, gettext("Notes"), ~p"/admin/plays/#{play.id}/notes", :notes}
+         {:notes, gettext("Notes"), ~p"/admin/plays/#{play.id}/notes", :notes},
+         {:statistics, gettext("Statistics"), ~p"/admin/plays/#{play.id}/statistics", nil}
        ]},
       {gettext("View"),
        Enum.reject(

@@ -116,6 +116,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
     /admin/plays/:id/places
     /admin/plays/:id/bibliography
     /admin/plays/:id/content
+    /admin/plays/:id/statistics
     /admin/plays/:id/compare
     /admin/places
     /admin/users

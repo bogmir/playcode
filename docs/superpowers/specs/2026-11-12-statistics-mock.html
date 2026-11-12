@@ -1,0 +1,1941 @@
+<!doctype html><html lang="es"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estadísticas · La discreta enamorada (maqueta)</title>
+<style>
+:root{--violet:#4c2c82;--violet-2:#ece6f6;--gold:#d8c888;--paper:#f7f4ea;--raised:#fffdf7;--ink:#221c2e;--ink-2:#4a4458;--muted:#645d70;--hair:#ddd6c2;--ok:#1d6b52;--warn:#8a5a00;--warn-bg:#fbf1d3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif}
+a{color:var(--violet)}
+.top{background:var(--violet);border-bottom:3px solid var(--gold);color:#fff;padding:.6rem 1.25rem;display:flex;justify-content:space-between;align-items:center}
+.top b{letter-spacing:.14em}.top small{color:var(--gold);margin-left:.6rem;letter-spacing:.08em}
+.shell{display:grid;grid-template-columns:14rem minmax(0,1fr);min-height:100vh}
+nav.play{border-right:1px solid var(--hair);padding:1rem .75rem;font-size:.875rem}
+nav.play .back{display:block;margin-bottom:1rem;text-decoration:none}
+nav.play h2{font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin:1.1rem .5rem .3rem}
+nav.play a.i{display:flex;justify-content:space-between;padding:.3rem .5rem;border-radius:.3rem;color:var(--ink-2);text-decoration:none}
+nav.play a.i[aria-current]{background:var(--violet-2);color:var(--violet);font-weight:600}
+nav.play .n{color:var(--muted);font-variant-numeric:tabular-nums}
+main{padding:1.75rem 2rem 3rem;max-width:68rem}
+.head{display:flex;flex-wrap:wrap;gap:1rem;justify-content:space-between;align-items:flex-start}
+h1{font:600 1.9rem/1.2 "Source Serif 4",Georgia,serif;margin:0}
+.sub{color:var(--ink-2);margin:.25rem 0 0}
+.code{font:0.8125rem ui-monospace,monospace;background:var(--raised);border:1px solid var(--hair);border-radius:.25rem;padding:.05rem .35rem}
+.actions{display:flex;flex-wrap:wrap;gap:.5rem;align-items:center}
+.btn{font:600 .8125rem Inter,system-ui,sans-serif;padding:.45rem .8rem;border-radius:.3rem;border:1px solid var(--violet);background:transparent;color:var(--violet);text-decoration:none;cursor:pointer}
+.btn.p{background:var(--violet);color:#fff}
+.seg{display:inline-flex;border:1px solid var(--hair);border-radius:.3rem;overflow:hidden;background:var(--raised)}
+.seg span{padding:.45rem .6rem;font-size:.8125rem;color:var(--muted)}
+.seg a{padding:.45rem .7rem;font:600 .8125rem Inter,sans-serif;text-decoration:none;border-left:1px solid var(--hair)}
+.state{margin:1.25rem 0;padding:.75rem 1rem;border:1px solid #e4cf8f;background:var(--warn-bg);border-radius:.4rem;display:flex;flex-wrap:wrap;gap:.75rem;justify-content:space-between;align-items:center}
+.badge{font:600 .75rem Inter,sans-serif;padding:.15rem .5rem;border-radius:1rem;background:#f0dfa8;color:var(--warn);margin-right:.5rem}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(9rem,1fr));gap:.75rem;margin:1.25rem 0 2rem}
+.tile{background:var(--raised);border:1px solid var(--hair);border-radius:.4rem;padding:.7rem .9rem;text-decoration:none;color:inherit;display:block}
+.tile b{display:block;font:600 1.5rem/1.2 "Source Serif 4",Georgia,serif;font-variant-numeric:tabular-nums}
+.tile span{font-size:.8125rem;color:var(--muted)}
+.tile.todo b{color:var(--muted)}.tile.todo span{color:var(--violet);font-weight:600}
+.cols{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:1.5rem}
+@media(max-width:800px){.shell,.cols{grid-template-columns:1fr}nav.play{border-right:0;border-bottom:1px solid var(--hair)}main{padding:1.25rem 1rem}}
+section.card{background:var(--raised);border:1px solid var(--hair);border-radius:.4rem;padding:1rem 1.1rem;margin-bottom:1.25rem}
+section.card>header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:.6rem}
+h2.t{font:600 1.05rem Inter,sans-serif;margin:0}
+dl{display:grid;grid-template-columns:9.5rem minmax(0,1fr);gap:.4rem 1rem;margin:0}
+dt{color:var(--muted);font-size:.8125rem;padding-top:.1rem}dd{margin:0}
+details{margin-top:.8rem;border-top:1px solid var(--hair);padding-top:.6rem}
+summary{cursor:pointer;font-weight:600;font-size:.875rem;color:var(--violet)}
+ul.plain{list-style:none;margin:0;padding:0}ul.plain li{padding:.35rem 0;border-top:1px solid var(--hair);display:flex;justify-content:space-between;gap:1rem}
+ul.plain li:first-child{border-top:0}.role{color:var(--muted);font-size:.8125rem;text-align:right}
+ol.out{margin:0;padding-left:1.1rem}ol.out li{padding:.15rem 0}ol.out span{color:var(--muted);font-size:.8125rem}
+.danger{border-style:dashed}.danger p{margin:.3rem 0 .6rem;color:var(--ink-2);font-size:.875rem}
+
+x-en{display:none}
+:root{--accent:var(--violet);--hair-2:#ebe5d5;--faint:#6f687b;--f-romance:#2f66a8;--f-redondilla:#cf6a3a;--f-quintilla:#1f9a74;--f-other:#8a8494}
+.crumb{font-size:.8125rem;color:var(--muted);margin:0 0 .2rem}
+.meta{font-size:.8125rem;color:var(--muted)}
+section.card h2{font:600 1.05rem Inter,sans-serif;margin:0 0 .2rem}
+.lede,.note{font-size:.8125rem;line-height:1.5;color:var(--muted);margin:.2rem 0 .8rem}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.tiles{display:flex;flex-wrap:wrap;margin:1.25rem 0 1.5rem;padding:.25rem 0;border-block:1px solid var(--hair);gap:0}
+.tiles>div{display:flex;flex-direction:column-reverse;padding:.6rem 2rem .6rem 0}
+.tiles dt{font-size:.75rem;color:var(--muted);padding:0}
+.tiles dd{margin:0;font:600 1.6rem/1.1 "Source Serif 4",Georgia,serif;font-variant-numeric:lining-nums tabular-nums}
+.band{display:flex;gap:2px;height:2.1rem;margin:.5rem 0 .25rem}
+.band .pass{min-width:2px;border-radius:3px;display:flex;align-items:center;padding-left:.35rem;overflow:hidden}
+.band .pass span{font:600 .625rem Inter,sans-serif;color:#fff;white-space:nowrap}
+.band .sep{flex:none;width:0;border-left:1px dashed var(--faint);margin:0 3px}
+.f-romance{background:var(--f-romance)}.f-redondilla{background:var(--f-redondilla)}.f-quintilla{background:var(--f-quintilla)}.f-other{background:var(--f-other)}
+.legend{display:flex;flex-wrap:wrap;gap:.4rem 1.25rem;list-style:none;padding:0;margin:.75rem 0 .5rem;font-size:.8125rem;color:var(--ink-2)}
+.legend b{color:var(--ink);font-weight:600}
+i.sw{display:inline-block;width:.65rem;height:.65rem;border-radius:2px;margin-right:.4rem;vertical-align:-.05rem}
+main table{border-collapse:collapse;width:100%;font-size:.8125rem;line-height:1.4}
+main thead th{text-align:left;font-weight:600;font-size:.6875rem;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);padding:.35rem .5rem;border-bottom:1px solid var(--hair)}
+main tbody th{text-align:left;font:600 .9rem "Source Serif 4",Georgia,serif;padding:.3rem .5rem;border-bottom:1px solid var(--hair-2)}
+main td{padding:.3rem .5rem;border-bottom:1px solid var(--hair-2)}
+main th.num,.num{text-align:right;font-variant-numeric:tabular-nums}
+.share{min-width:9rem;white-space:nowrap}
+.track{display:inline-block;width:calc(100% - 3rem);height:.5rem;background:var(--hair-2);border-radius:2px;vertical-align:middle;margin-right:.4rem}
+.track>span{display:block;height:100%;background:var(--accent);border-radius:2px}
+.scroll{overflow-x:auto}.matrix{width:auto}
+.matrix thead th,.matrix td.c{padding:2px;border:0}
+.matrix td.c::before{content:"";display:block;width:1.1rem;height:.85rem;border-radius:2px;background:var(--hair-2)}
+.matrix td.c.on::before{background:var(--accent)}
+.matrix .act-start{padding-left:.6rem}
+.matrix thead i.sw{display:block;width:1.1rem;height:.3rem;margin:0 auto}
+section.card details{margin-top:.4rem}
+</style>
+<div class="top"><div><b>PLAYCODE</b><small>ADMINISTRACIÓN</small></div><div style="font-size:.8125rem">ES · EN &nbsp; usuario@uv.es</div></div>
+<div class="shell"><nav class="play" aria-label="Secciones de la obra">
+  <a class="back" href="#">← Todas las obras</a>
+  <a class="i" href="#">Resumen</a>
+  <h2>Ficha</h2>
+  <a class="i" href="#">Metadatos</a><a class="i" href="#">Editores <span class="n">2</span></a><a class="i" href="#">Fuentes <span class="n">1</span></a>
+  <h2>Tradición</h2>
+  <a class="i" href="#">Testimonios <span class="n">0</span></a><a class="i" href="#">Representaciones <span class="n">6</span></a><a class="i" href="#">Bibliografía <span class="n">4</span></a><a class="i" href="#">Lugares <span class="n">1</span></a>
+  <h2>Texto</h2>
+  <a class="i" href="#">Contenido</a><a class="i" href="#">Notas <span class="n">0</span></a><a class="i" aria-current="page" href="#">Estadísticas</a>
+  <h2>Ver</h2>
+  <a class="i" href="#">Vista previa</a><a class="i" href="#">Página pública ↗</a>
+</nav>
+<main>
+<div class="head"><div><p class="crumb">La discreta enamorada · Lope de Vega</p><h1>Estadísticas</h1></div>
+<div class="actions"><span class="meta">Calculadas el 11 nov 2026, 16:27</span><button class="btn">Recalcular</button></div></div>
+<dl id="tiles" class="tiles">
+  <div>
+    <dt><x-es>actos</x-es><x-en>acts</x-en></dt>
+    <dd>3</dd>
+  </div><div>
+    <dt><x-es>versos</x-es><x-en>verses</x-en></dt>
+    <dd>3102</dd>
+  </div><div>
+    <dt><x-es>pasajes métricos</x-es><x-en>metrical passages</x-en></dt>
+    <dd>36</dd>
+  </div><div>
+    <dt><x-es>parlamentos</x-es><x-en>speeches</x-en></dt>
+    <dd>1296</dd>
+  </div><div>
+    <dt><x-es>personajes con texto</x-es><x-en>speaking characters</x-en></dt>
+    <dd>11</dd>
+  </div><div>
+    <dt><x-es>acotaciones</x-es><x-en>stage directions</x-en></dt>
+    <dd>162</dd>
+  </div><div>
+    <dt><x-es>versos en apartes</x-es><x-en>verses in asides</x-en></dt>
+    <dd>289</dd>
+  </div>
+</dl>
+<section class="card" id="synopsis">
+  <h2><x-es>Sinopsis métrica</x-es><x-en>Metrical synopsis</x-en></h2>
+  <p class="lede">
+    <x-es>Las formas métricas en orden, cada pasaje a escala. Las líneas discontinuas marcan los actos.</x-es><x-en>The verse forms in order, each passage drawn to scale. Dashed lines mark the acts.</x-en>
+  </p>
+  <div class="band" role="img" aria-label="Sinopsis métrica a escala; la tabla de abajo enumera cada pasaje." data-en-aria-label="Metrical synopsis drawn to scale; the table below lists every passage." data-tr>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 500" title="Redondilla · vv. 1–500 · 500 versos" data-en-title="Redondilla · vv. 1–500 · 500 verses" data-tr>
+        <span>Redondilla</span>
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 49" title="Terceto · vv. 501–549 · 49 versos" data-en-title="Terceto · vv. 501–549 · 49 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 120" title="Redondilla · vv. 550–669 · 120 versos" data-en-title="Redondilla · vv. 550–669 · 120 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 45" title="Endecasílabos sueltos · vv. 670–714 · 45 versos" data-en-title="Endecasílabos sueltos · vv. 670–714 · 45 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-quintilla" style="flex-grow: 280" title="Quintilla · vv. 715–994 · 280 versos" data-en-title="Quintilla · vv. 715–994 · 280 verses" data-tr>
+        <span>Quintilla</span>
+      </span>
+    
+      
+      <span class="pass f-romance" style="flex-grow: 118" title="Romance · vv. 995–1112 · 118 versos" data-en-title="Romance · vv. 995–1112 · 118 verses" data-tr>
+        
+      </span>
+    
+      <span class="sep"></span>
+      <span class="pass f-redondilla" style="flex-grow: 21" title="Redondilla · vv. 1113–1133 · 21 versos" data-en-title="Redondilla · vv. 1113–1133 · 21 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 11" title="Canción · vv. 1134–1144 · 11 versos" data-en-title="Canción · vv. 1134–1144 · 11 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 64" title="Redondilla · vv. 1145–1208 · 64 versos" data-en-title="Redondilla · vv. 1145–1208 · 64 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 14" title="Soneto · vv. 1209–1222 · 14 versos" data-en-title="Soneto · vv. 1209–1222 · 14 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 204" title="Redondilla · vv. 1223–1426 · 204 versos" data-en-title="Redondilla · vv. 1223–1426 · 204 verses" data-tr>
+        <span>Redondilla</span>
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 12" title="Endecasílabos sueltos · vv. 1427–1438 · 12 versos" data-en-title="Endecasílabos sueltos · vv. 1427–1438 · 12 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 148" title="Redondilla · vv. 1439–1586 · 148 versos" data-en-title="Redondilla · vv. 1439–1586 · 148 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-quintilla" style="flex-grow: 75" title="Quintilla · vv. 1587–1661 · 75 versos" data-en-title="Quintilla · vv. 1587–1661 · 75 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 104" title="Redondilla · vv. 1662–1765 · 104 versos" data-en-title="Redondilla · vv. 1662–1765 · 104 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 23" title="Endecasílabos sueltos · vv. 1766–1788 · 23 versos" data-en-title="Endecasílabos sueltos · vv. 1766–1788 · 23 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 36" title="Redondilla · vv. 1789–1824 · 36 versos" data-en-title="Redondilla · vv. 1789–1824 · 36 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 50" title="Endecasílabos sueltos · vv. 1825–1874 · 50 versos" data-en-title="Endecasílabos sueltos · vv. 1825–1874 · 50 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-quintilla" style="flex-grow: 46" title="Quintilla · vv. 1875–1920 · 46 versos" data-en-title="Quintilla · vv. 1875–1920 · 46 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 15" title="Octava real · vv. 1921–1935 · 15 versos" data-en-title="Octava real · vv. 1921–1935 · 15 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 28" title="Endecasílabos sueltos · vv. 1936–1963 · 28 versos" data-en-title="Endecasílabos sueltos · vv. 1936–1963 · 28 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-romance" style="flex-grow: 69" title="Romance · vv. 1964–2032 · 69 versos" data-en-title="Romance · vv. 1964–2032 · 69 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 48" title="Octava real · vv. 2033–2080 · 48 versos" data-en-title="Octava real · vv. 2033–2080 · 48 verses" data-tr>
+        
+      </span>
+    
+      <span class="sep"></span>
+      <span class="pass f-redondilla" style="flex-grow: 256" title="Redondilla · vv. 2081–2336 · 256 versos" data-en-title="Redondilla · vv. 2081–2336 · 256 verses" data-tr>
+        <span>Redondilla</span>
+      </span>
+    
+      
+      <span class="pass f-quintilla" style="flex-grow: 49" title="Quintilla · vv. 2337–2385 · 49 versos" data-en-title="Quintilla · vv. 2337–2385 · 49 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 64" title="Redondilla · vv. 2386–2449 · 64 versos" data-en-title="Redondilla · vv. 2386–2449 · 64 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 27" title="Endecasílabos sueltos · vv. 2450–2476 · 27 versos" data-en-title="Endecasílabos sueltos · vv. 2450–2476 · 27 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-romance" style="flex-grow: 84" title="Romance · vv. 2477–2560 · 84 versos" data-en-title="Romance · vv. 2477–2560 · 84 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 64" title="Redondilla · vv. 2561–2624 · 64 versos" data-en-title="Redondilla · vv. 2561–2624 · 64 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 14" title="Soneto · vv. 2625–2638 · 14 versos" data-en-title="Soneto · vv. 2625–2638 · 14 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-quintilla" style="flex-grow: 215" title="Quintilla · vv. 2639–2853 · 215 versos" data-en-title="Quintilla · vv. 2639–2853 · 215 verses" data-tr>
+        <span>Quintilla</span>
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 34" title="Endecasílabos sueltos · vv. 2854–2887 · 34 versos" data-en-title="Endecasílabos sueltos · vv. 2854–2887 · 34 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 64" title="Redondilla · vv. 2888–2951 · 64 versos" data-en-title="Redondilla · vv. 2888–2951 · 64 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-other" style="flex-grow: 24" title="Octava real · vv. 2952–2975 · 24 versos" data-en-title="Octava real · vv. 2952–2975 · 24 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-redondilla" style="flex-grow: 87" title="Redondilla · vv. 2976–3062 · 87 versos" data-en-title="Redondilla · vv. 2976–3062 · 87 verses" data-tr>
+        
+      </span>
+    
+      
+      <span class="pass f-romance" style="flex-grow: 40" title="Romance · vv. 3063–3102 · 40 versos" data-en-title="Romance · vv. 3063–3102 · 40 verses" data-tr>
+        
+      </span>
+    
+  </div>
+  <ul class="legend">
+    <li>
+      <i class="sw f-redondilla"></i><b>Redondilla</b> 1732 vv. · 56%
+    </li><li>
+      <i class="sw f-quintilla"></i><b>Quintilla</b> 665 vv. · 21%
+    </li><li>
+      <i class="sw f-romance"></i><b>Romance</b> 311 vv. · 10%
+    </li><li>
+      <i class="sw f-other"></i><b>Endecasílabos sueltos</b> 219 vv. · 7%
+    </li><li>
+      <i class="sw f-other"></i><b>Octava real</b> 87 vv. · 3%
+    </li><li>
+      <i class="sw f-other"></i><b>Terceto</b> 49 vv. · 2%
+    </li><li>
+      <i class="sw f-other"></i><b>Soneto</b> 28 vv. · 1%
+    </li><li>
+      <i class="sw f-other"></i><b>Canción</b> 11 vv. · 0%
+    </li>
+  </ul>
+  <details><summary>Los 36 pasajes, uno a uno</summary><table>
+    <thead>
+      <tr>
+        <th><x-es>Acto</x-es><x-en>Act</x-en></th>
+        <th><x-es>Forma</x-es><x-en>Form</x-en></th>
+        <th>vv.</th>
+        <th class="num"><x-es>Versos</x-es><x-en>Verses</x-en></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>I</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>1–500</td>
+        <td class="num">500</td>
+      </tr><tr>
+        <td>I</td>
+        <td>
+          <i class="sw f-other"></i>Terceto
+        </td>
+        <td>501–549</td>
+        <td class="num">49</td>
+      </tr><tr>
+        <td>I</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>550–669</td>
+        <td class="num">120</td>
+      </tr><tr>
+        <td>I</td>
+        <td>
+          <i class="sw f-other"></i>Endecasílabos sueltos
+        </td>
+        <td>670–714</td>
+        <td class="num">45</td>
+      </tr><tr>
+        <td>I</td>
+        <td>
+          <i class="sw f-quintilla"></i>Quintilla
+        </td>
+        <td>715–994</td>
+        <td class="num">280</td>
+      </tr><tr>
+        <td>I</td>
+        <td>
+          <i class="sw f-romance"></i>Romance
+        </td>
+        <td>995–1112</td>
+        <td class="num">118</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>1113–1133</td>
+        <td class="num">21</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Canción
+        </td>
+        <td>1134–1144</td>
+        <td class="num">11</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>1145–1208</td>
+        <td class="num">64</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Soneto
+        </td>
+        <td>1209–1222</td>
+        <td class="num">14</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>1223–1426</td>
+        <td class="num">204</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Endecasílabos sueltos
+        </td>
+        <td>1427–1438</td>
+        <td class="num">12</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>1439–1586</td>
+        <td class="num">148</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-quintilla"></i>Quintilla
+        </td>
+        <td>1587–1661</td>
+        <td class="num">75</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>1662–1765</td>
+        <td class="num">104</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Endecasílabos sueltos
+        </td>
+        <td>1766–1788</td>
+        <td class="num">23</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>1789–1824</td>
+        <td class="num">36</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Endecasílabos sueltos
+        </td>
+        <td>1825–1874</td>
+        <td class="num">50</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-quintilla"></i>Quintilla
+        </td>
+        <td>1875–1920</td>
+        <td class="num">46</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Octava real
+        </td>
+        <td>1921–1935</td>
+        <td class="num">15</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Endecasílabos sueltos
+        </td>
+        <td>1936–1963</td>
+        <td class="num">28</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-romance"></i>Romance
+        </td>
+        <td>1964–2032</td>
+        <td class="num">69</td>
+      </tr><tr>
+        <td>II</td>
+        <td>
+          <i class="sw f-other"></i>Octava real
+        </td>
+        <td>2033–2080</td>
+        <td class="num">48</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>2081–2336</td>
+        <td class="num">256</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-quintilla"></i>Quintilla
+        </td>
+        <td>2337–2385</td>
+        <td class="num">49</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>2386–2449</td>
+        <td class="num">64</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-other"></i>Endecasílabos sueltos
+        </td>
+        <td>2450–2476</td>
+        <td class="num">27</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-romance"></i>Romance
+        </td>
+        <td>2477–2560</td>
+        <td class="num">84</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>2561–2624</td>
+        <td class="num">64</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-other"></i>Soneto
+        </td>
+        <td>2625–2638</td>
+        <td class="num">14</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-quintilla"></i>Quintilla
+        </td>
+        <td>2639–2853</td>
+        <td class="num">215</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-other"></i>Endecasílabos sueltos
+        </td>
+        <td>2854–2887</td>
+        <td class="num">34</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>2888–2951</td>
+        <td class="num">64</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-other"></i>Octava real
+        </td>
+        <td>2952–2975</td>
+        <td class="num">24</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-redondilla"></i>Redondilla
+        </td>
+        <td>2976–3062</td>
+        <td class="num">87</td>
+      </tr><tr>
+        <td>III</td>
+        <td>
+          <i class="sw f-romance"></i>Romance
+        </td>
+        <td>3063–3102</td>
+        <td class="num">40</td>
+      </tr>
+    </tbody>
+  </table></details>
+  <p class="note">
+    <x-es>La rima no está codificada, así que dos romances seguidos con distinta asonancia figuran como un solo pasaje.</x-es><x-en>Rhyme is not encoded, so two consecutive romances with different assonance show as one passage.</x-en>
+  </p>
+</section>
+<section class="card" id="characters">
+  <h2><x-es>Personajes</x-es><x-en>Characters</x-en></h2>
+  <p class="lede">
+    <x-es>Los 11 personajes con texto, primero los que más versos dicen. Un verso compartido cuenta para cada hablante.</x-es><x-en>The 11 speaking characters, those with the most lines first. A shared verse counts for each speaker.</x-en>
+  </p>
+  
+  <table>
+    <thead>
+      <tr>
+        <th><x-es>Personaje</x-es><x-en>Character</x-en></th>
+        <th class="num"><x-es>Parlamentos</x-es><x-en>Speeches</x-en></th>
+        <th class="num"><x-es>Versos</x-es><x-en>Lines</x-en></th>
+        <th class="num"><x-es>Palabras</x-es><x-en>Words</x-en></th>
+        <th><x-es>Parte de la obra</x-es><x-en>Share of the play</x-en></th>
+        <th><x-es>Primera intervención</x-es><x-en>First speaks</x-en></th>
+        <th><x-es>Formas principales</x-es><x-en>Main forms</x-en></th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">LUCINDO</th>
+        <td class="num">289</td>
+        <td class="num">793</td>
+        <td class="num">3570</td>
+        <td class="share" title="793 de 3102 versos" data-en-title="793 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 100%"></span></span>26%
+        </td>
+        <td>I, 76</td>
+        <td>Redondilla · Quintilla</td>
+      </tr><tr>
+        <th scope="row">FENISA</th>
+        <td class="num">227</td>
+        <td class="num">723</td>
+        <td class="num">3445</td>
+        <td class="share" title="723 de 3102 versos" data-en-title="723 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 91%"></span></span>23%
+        </td>
+        <td>I, 4</td>
+        <td>Redondilla · Quintilla</td>
+      </tr><tr>
+        <th scope="row">HERNANDO</th>
+        <td class="num">201</td>
+        <td class="num">506</td>
+        <td class="num">2134</td>
+        <td class="share" title="506 de 3102 versos" data-en-title="506 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 64%"></span></span>16%
+        </td>
+        <td>I, 124</td>
+        <td>Redondilla · Quintilla</td>
+      </tr><tr>
+        <th scope="row">GERARDA</th>
+        <td class="num">138</td>
+        <td class="num">400</td>
+        <td class="num">1754</td>
+        <td class="share" title="400 de 3102 versos" data-en-title="400 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 50%"></span></span>13%
+        </td>
+        <td>I, 75</td>
+        <td>Redondilla · Quintilla</td>
+      </tr><tr>
+        <th scope="row">El capitán BERNARDO</th>
+        <td class="num">121</td>
+        <td class="num">398</td>
+        <td class="num">2001</td>
+        <td class="share" title="398 de 3102 versos" data-en-title="398 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 50%"></span></span>13%
+        </td>
+        <td>I, 465</td>
+        <td>Redondilla · Endecasílabos sueltos</td>
+      </tr><tr>
+        <th scope="row">BELISA</th>
+        <td class="num">137</td>
+        <td class="num">306</td>
+        <td class="num">1371</td>
+        <td class="share" title="306 de 3102 versos" data-en-title="306 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 39%"></span></span>10%
+        </td>
+        <td>I, 1</td>
+        <td>Redondilla · Endecasílabos sueltos</td>
+      </tr><tr>
+        <th scope="row">DORISTEO</th>
+        <td class="num">114</td>
+        <td class="num">227</td>
+        <td class="num">924</td>
+        <td class="share" title="227 de 3102 versos" data-en-title="227 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 29%"></span></span>7%
+        </td>
+        <td>I, 116</td>
+        <td>Quintilla · Redondilla</td>
+      </tr><tr>
+        <th scope="row">FINARDO</th>
+        <td class="num">51</td>
+        <td class="num">94</td>
+        <td class="num">413</td>
+        <td class="share" title="94 de 3102 versos" data-en-title="94 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 12%"></span></span>3%
+        </td>
+        <td>I, 115</td>
+        <td>Redondilla · Octava real</td>
+      </tr><tr>
+        <th scope="row">FULMINATO</th>
+        <td class="num">8</td>
+        <td class="num">9</td>
+        <td class="num">27</td>
+        <td class="share" title="9 de 3102 versos" data-en-title="9 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 1%"></span></span>0%
+        </td>
+        <td>II, 1674</td>
+        <td>Redondilla</td>
+      </tr><tr>
+        <th scope="row">[LISEO]</th>
+        <td class="num">6</td>
+        <td class="num">6</td>
+        <td class="num">21</td>
+        <td class="share" title="6 de 3102 versos" data-en-title="6 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 1%"></span></span>0%
+        </td>
+        <td>II, 1126</td>
+        <td>Redondilla</td>
+      </tr><tr>
+        <th scope="row">[FABIO]</th>
+        <td class="num">4</td>
+        <td class="num">4</td>
+        <td class="num">9</td>
+        <td class="share" title="4 de 3102 versos" data-en-title="4 of 3102 lines" data-tr>
+          <span class="track"><span style="width: 1%"></span></span>0%
+        </td>
+        <td>II, 1128</td>
+        <td>Redondilla</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+<section class="card" id="presence">
+  <h2><x-es>Quién comparte escena</x-es><x-en>Who shares the stage</x-en></h2>
+  <p class="lede"><x-es>Esta obra no codifica escenas, así que las columnas son sus 36 pasajes métricos. Una casilla llena indica que el personaje habla en ese pasaje.</x-es><x-en>This play encodes no scenes, so the columns are its 36 metrical passages. A filled cell means the character speaks in that passage.</x-en></p>
+  <div class="scroll">
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th><span class="sr-only"><x-es>Personaje</x-es><x-en>Character</x-en></span></th>
+          <th scope="col" title="Redondilla · vv. 1–500" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 1–500</span>
+          </th><th scope="col" title="Terceto · vv. 501–549" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Terceto · vv. 501–549</span>
+          </th><th scope="col" title="Redondilla · vv. 550–669" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 550–669</span>
+          </th><th scope="col" title="Endecasílabos sueltos · vv. 670–714" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Endecasílabos sueltos · vv. 670–714</span>
+          </th><th scope="col" title="Quintilla · vv. 715–994" class="">
+            <i class="sw f-quintilla"></i>
+            <span class="sr-only">Quintilla · vv. 715–994</span>
+          </th><th scope="col" title="Romance · vv. 995–1112" class="">
+            <i class="sw f-romance"></i>
+            <span class="sr-only">Romance · vv. 995–1112</span>
+          </th><th scope="col" title="Redondilla · vv. 1113–1133" class="act-start">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 1113–1133</span>
+          </th><th scope="col" title="Canción · vv. 1134–1144" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Canción · vv. 1134–1144</span>
+          </th><th scope="col" title="Redondilla · vv. 1145–1208" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 1145–1208</span>
+          </th><th scope="col" title="Soneto · vv. 1209–1222" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Soneto · vv. 1209–1222</span>
+          </th><th scope="col" title="Redondilla · vv. 1223–1426" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 1223–1426</span>
+          </th><th scope="col" title="Endecasílabos sueltos · vv. 1427–1438" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Endecasílabos sueltos · vv. 1427–1438</span>
+          </th><th scope="col" title="Redondilla · vv. 1439–1586" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 1439–1586</span>
+          </th><th scope="col" title="Quintilla · vv. 1587–1661" class="">
+            <i class="sw f-quintilla"></i>
+            <span class="sr-only">Quintilla · vv. 1587–1661</span>
+          </th><th scope="col" title="Redondilla · vv. 1662–1765" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 1662–1765</span>
+          </th><th scope="col" title="Endecasílabos sueltos · vv. 1766–1788" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Endecasílabos sueltos · vv. 1766–1788</span>
+          </th><th scope="col" title="Redondilla · vv. 1789–1824" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 1789–1824</span>
+          </th><th scope="col" title="Endecasílabos sueltos · vv. 1825–1874" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Endecasílabos sueltos · vv. 1825–1874</span>
+          </th><th scope="col" title="Quintilla · vv. 1875–1920" class="">
+            <i class="sw f-quintilla"></i>
+            <span class="sr-only">Quintilla · vv. 1875–1920</span>
+          </th><th scope="col" title="Octava real · vv. 1921–1935" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Octava real · vv. 1921–1935</span>
+          </th><th scope="col" title="Endecasílabos sueltos · vv. 1936–1963" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Endecasílabos sueltos · vv. 1936–1963</span>
+          </th><th scope="col" title="Romance · vv. 1964–2032" class="">
+            <i class="sw f-romance"></i>
+            <span class="sr-only">Romance · vv. 1964–2032</span>
+          </th><th scope="col" title="Octava real · vv. 2033–2080" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Octava real · vv. 2033–2080</span>
+          </th><th scope="col" title="Redondilla · vv. 2081–2336" class="act-start">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 2081–2336</span>
+          </th><th scope="col" title="Quintilla · vv. 2337–2385" class="">
+            <i class="sw f-quintilla"></i>
+            <span class="sr-only">Quintilla · vv. 2337–2385</span>
+          </th><th scope="col" title="Redondilla · vv. 2386–2449" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 2386–2449</span>
+          </th><th scope="col" title="Endecasílabos sueltos · vv. 2450–2476" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Endecasílabos sueltos · vv. 2450–2476</span>
+          </th><th scope="col" title="Romance · vv. 2477–2560" class="">
+            <i class="sw f-romance"></i>
+            <span class="sr-only">Romance · vv. 2477–2560</span>
+          </th><th scope="col" title="Redondilla · vv. 2561–2624" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 2561–2624</span>
+          </th><th scope="col" title="Soneto · vv. 2625–2638" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Soneto · vv. 2625–2638</span>
+          </th><th scope="col" title="Quintilla · vv. 2639–2853" class="">
+            <i class="sw f-quintilla"></i>
+            <span class="sr-only">Quintilla · vv. 2639–2853</span>
+          </th><th scope="col" title="Endecasílabos sueltos · vv. 2854–2887" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Endecasílabos sueltos · vv. 2854–2887</span>
+          </th><th scope="col" title="Redondilla · vv. 2888–2951" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 2888–2951</span>
+          </th><th scope="col" title="Octava real · vv. 2952–2975" class="">
+            <i class="sw f-other"></i>
+            <span class="sr-only">Octava real · vv. 2952–2975</span>
+          </th><th scope="col" title="Redondilla · vv. 2976–3062" class="">
+            <i class="sw f-redondilla"></i>
+            <span class="sr-only">Redondilla · vv. 2976–3062</span>
+          </th><th scope="col" title="Romance · vv. 3063–3102" class="">
+            <i class="sw f-romance"></i>
+            <span class="sr-only">Romance · vv. 3063–3102</span>
+          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <th scope="row">LUCINDO</th>
+          <td class="c on" title="LUCINDO · Redondilla · vv. 1–500 · 79 versos" data-en-title="LUCINDO · Redondilla · vv. 1–500 · 79 lines" data-tr>
+            <span class="sr-only">
+              <x-es>79 versos</x-es><x-en>79 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Quintilla · vv. 715–994 · 124 versos" data-en-title="LUCINDO · Quintilla · vv. 715–994 · 124 lines" data-tr>
+            <span class="sr-only">
+              <x-es>124 versos</x-es><x-en>124 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Romance · vv. 995–1112 · 58 versos" data-en-title="LUCINDO · Romance · vv. 995–1112 · 58 lines" data-tr>
+            <span class="sr-only">
+              <x-es>58 versos</x-es><x-en>58 lines</x-en>
+            </span>
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Redondilla · vv. 1145–1208 · 40 versos" data-en-title="LUCINDO · Redondilla · vv. 1145–1208 · 40 lines" data-tr>
+            <span class="sr-only">
+              <x-es>40 versos</x-es><x-en>40 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Soneto · vv. 1209–1222 · 14 versos" data-en-title="LUCINDO · Soneto · vv. 1209–1222 · 14 lines" data-tr>
+            <span class="sr-only">
+              <x-es>14 versos</x-es><x-en>14 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Redondilla · vv. 1223–1426 · 71 versos" data-en-title="LUCINDO · Redondilla · vv. 1223–1426 · 71 lines" data-tr>
+            <span class="sr-only">
+              <x-es>71 versos</x-es><x-en>71 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Endecasílabos sueltos · vv. 1427–1438 · 6 versos" data-en-title="LUCINDO · Endecasílabos sueltos · vv. 1427–1438 · 6 lines" data-tr>
+            <span class="sr-only">
+              <x-es>6 versos</x-es><x-en>6 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Redondilla · vv. 1439–1586 · 69 versos" data-en-title="LUCINDO · Redondilla · vv. 1439–1586 · 69 lines" data-tr>
+            <span class="sr-only">
+              <x-es>69 versos</x-es><x-en>69 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Redondilla · vv. 1662–1765 · 25 versos" data-en-title="LUCINDO · Redondilla · vv. 1662–1765 · 25 lines" data-tr>
+            <span class="sr-only">
+              <x-es>25 versos</x-es><x-en>25 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Redondilla · vv. 1789–1824 · 16 versos" data-en-title="LUCINDO · Redondilla · vv. 1789–1824 · 16 lines" data-tr>
+            <span class="sr-only">
+              <x-es>16 versos</x-es><x-en>16 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Octava real · vv. 1921–1935 · 15 versos" data-en-title="LUCINDO · Octava real · vv. 1921–1935 · 15 lines" data-tr>
+            <span class="sr-only">
+              <x-es>15 versos</x-es><x-en>15 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Endecasílabos sueltos · vv. 1936–1963 · 15 versos" data-en-title="LUCINDO · Endecasílabos sueltos · vv. 1936–1963 · 15 lines" data-tr>
+            <span class="sr-only">
+              <x-es>15 versos</x-es><x-en>15 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Romance · vv. 1964–2032 · 34 versos" data-en-title="LUCINDO · Romance · vv. 1964–2032 · 34 lines" data-tr>
+            <span class="sr-only">
+              <x-es>34 versos</x-es><x-en>34 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="LUCINDO · Redondilla · vv. 2081–2336 · 86 versos" data-en-title="LUCINDO · Redondilla · vv. 2081–2336 · 86 lines" data-tr>
+            <span class="sr-only">
+              <x-es>86 versos</x-es><x-en>86 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Quintilla · vv. 2639–2853 · 86 versos" data-en-title="LUCINDO · Quintilla · vv. 2639–2853 · 86 lines" data-tr>
+            <span class="sr-only">
+              <x-es>86 versos</x-es><x-en>86 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Redondilla · vv. 2888–2951 · 32 versos" data-en-title="LUCINDO · Redondilla · vv. 2888–2951 · 32 lines" data-tr>
+            <span class="sr-only">
+              <x-es>32 versos</x-es><x-en>32 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="LUCINDO · Redondilla · vv. 2976–3062 · 3 versos" data-en-title="LUCINDO · Redondilla · vv. 2976–3062 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c on" title="LUCINDO · Romance · vv. 3063–3102 · 20 versos" data-en-title="LUCINDO · Romance · vv. 3063–3102 · 20 lines" data-tr>
+            <span class="sr-only">
+              <x-es>20 versos</x-es><x-en>20 lines</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">FENISA</th>
+          <td class="c on" title="FENISA · Redondilla · vv. 1–500 · 184 versos" data-en-title="FENISA · Redondilla · vv. 1–500 · 184 lines" data-tr>
+            <span class="sr-only">
+              <x-es>184 versos</x-es><x-en>184 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Terceto · vv. 501–549 · 2 versos" data-en-title="FENISA · Terceto · vv. 501–549 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Redondilla · vv. 550–669 · 61 versos" data-en-title="FENISA · Redondilla · vv. 550–669 · 61 lines" data-tr>
+            <span class="sr-only">
+              <x-es>61 versos</x-es><x-en>61 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Endecasílabos sueltos · vv. 670–714 · 33 versos" data-en-title="FENISA · Endecasílabos sueltos · vv. 670–714 · 33 lines" data-tr>
+            <span class="sr-only">
+              <x-es>33 versos</x-es><x-en>33 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FENISA · Redondilla · vv. 1439–1586 · 71 versos" data-en-title="FENISA · Redondilla · vv. 1439–1586 · 71 lines" data-tr>
+            <span class="sr-only">
+              <x-es>71 versos</x-es><x-en>71 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FENISA · Redondilla · vv. 1662–1765 · 37 versos" data-en-title="FENISA · Redondilla · vv. 1662–1765 · 37 lines" data-tr>
+            <span class="sr-only">
+              <x-es>37 versos</x-es><x-en>37 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Endecasílabos sueltos · vv. 1766–1788 · 21 versos" data-en-title="FENISA · Endecasílabos sueltos · vv. 1766–1788 · 21 lines" data-tr>
+            <span class="sr-only">
+              <x-es>21 versos</x-es><x-en>21 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Redondilla · vv. 1789–1824 · 18 versos" data-en-title="FENISA · Redondilla · vv. 1789–1824 · 18 lines" data-tr>
+            <span class="sr-only">
+              <x-es>18 versos</x-es><x-en>18 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Endecasílabos sueltos · vv. 1825–1874 · 26 versos" data-en-title="FENISA · Endecasílabos sueltos · vv. 1825–1874 · 26 lines" data-tr>
+            <span class="sr-only">
+              <x-es>26 versos</x-es><x-en>26 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Quintilla · vv. 1875–1920 · 31 versos" data-en-title="FENISA · Quintilla · vv. 1875–1920 · 31 lines" data-tr>
+            <span class="sr-only">
+              <x-es>31 versos</x-es><x-en>31 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="FENISA · Redondilla · vv. 2081–2336 · 38 versos" data-en-title="FENISA · Redondilla · vv. 2081–2336 · 38 lines" data-tr>
+            <span class="sr-only">
+              <x-es>38 versos</x-es><x-en>38 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FENISA · Redondilla · vv. 2386–2449 · 14 versos" data-en-title="FENISA · Redondilla · vv. 2386–2449 · 14 lines" data-tr>
+            <span class="sr-only">
+              <x-es>14 versos</x-es><x-en>14 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Endecasílabos sueltos · vv. 2450–2476 · 7 versos" data-en-title="FENISA · Endecasílabos sueltos · vv. 2450–2476 · 7 lines" data-tr>
+            <span class="sr-only">
+              <x-es>7 versos</x-es><x-en>7 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Romance · vv. 2477–2560 · 4 versos" data-en-title="FENISA · Romance · vv. 2477–2560 · 4 lines" data-tr>
+            <span class="sr-only">
+              <x-es>4 versos</x-es><x-en>4 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Redondilla · vv. 2561–2624 · 39 versos" data-en-title="FENISA · Redondilla · vv. 2561–2624 · 39 lines" data-tr>
+            <span class="sr-only">
+              <x-es>39 versos</x-es><x-en>39 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Soneto · vv. 2625–2638 · 14 versos" data-en-title="FENISA · Soneto · vv. 2625–2638 · 14 lines" data-tr>
+            <span class="sr-only">
+              <x-es>14 versos</x-es><x-en>14 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Quintilla · vv. 2639–2853 · 92 versos" data-en-title="FENISA · Quintilla · vv. 2639–2853 · 92 lines" data-tr>
+            <span class="sr-only">
+              <x-es>92 versos</x-es><x-en>92 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Endecasílabos sueltos · vv. 2854–2887 · 27 versos" data-en-title="FENISA · Endecasílabos sueltos · vv. 2854–2887 · 27 lines" data-tr>
+            <span class="sr-only">
+              <x-es>27 versos</x-es><x-en>27 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FENISA · Redondilla · vv. 2976–3062 · 3 versos" data-en-title="FENISA · Redondilla · vv. 2976–3062 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c on" title="FENISA · Romance · vv. 3063–3102 · 1 verso" data-en-title="FENISA · Romance · vv. 3063–3102 · 1 line" data-tr>
+            <span class="sr-only">
+              <x-es>1 verso</x-es><x-en>1 line</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">HERNANDO</th>
+          <td class="c on" title="HERNANDO · Redondilla · vv. 1–500 · 104 versos" data-en-title="HERNANDO · Redondilla · vv. 1–500 · 104 lines" data-tr>
+            <span class="sr-only">
+              <x-es>104 versos</x-es><x-en>104 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="HERNANDO · Quintilla · vv. 715–994 · 72 versos" data-en-title="HERNANDO · Quintilla · vv. 715–994 · 72 lines" data-tr>
+            <span class="sr-only">
+              <x-es>72 versos</x-es><x-en>72 lines</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Romance · vv. 995–1112 · 32 versos" data-en-title="HERNANDO · Romance · vv. 995–1112 · 32 lines" data-tr>
+            <span class="sr-only">
+              <x-es>32 versos</x-es><x-en>32 lines</x-en>
+            </span>
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="HERNANDO · Redondilla · vv. 1145–1208 · 32 versos" data-en-title="HERNANDO · Redondilla · vv. 1145–1208 · 32 lines" data-tr>
+            <span class="sr-only">
+              <x-es>32 versos</x-es><x-en>32 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="HERNANDO · Redondilla · vv. 1223–1426 · 46 versos" data-en-title="HERNANDO · Redondilla · vv. 1223–1426 · 46 lines" data-tr>
+            <span class="sr-only">
+              <x-es>46 versos</x-es><x-en>46 lines</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Endecasílabos sueltos · vv. 1427–1438 · 8 versos" data-en-title="HERNANDO · Endecasílabos sueltos · vv. 1427–1438 · 8 lines" data-tr>
+            <span class="sr-only">
+              <x-es>8 versos</x-es><x-en>8 lines</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Redondilla · vv. 1439–1586 · 20 versos" data-en-title="HERNANDO · Redondilla · vv. 1439–1586 · 20 lines" data-tr>
+            <span class="sr-only">
+              <x-es>20 versos</x-es><x-en>20 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="HERNANDO · Quintilla · vv. 1875–1920 · 1 verso" data-en-title="HERNANDO · Quintilla · vv. 1875–1920 · 1 line" data-tr>
+            <span class="sr-only">
+              <x-es>1 verso</x-es><x-en>1 line</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Octava real · vv. 1921–1935 · 3 versos" data-en-title="HERNANDO · Octava real · vv. 1921–1935 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Endecasílabos sueltos · vv. 1936–1963 · 6 versos" data-en-title="HERNANDO · Endecasílabos sueltos · vv. 1936–1963 · 6 lines" data-tr>
+            <span class="sr-only">
+              <x-es>6 versos</x-es><x-en>6 lines</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Romance · vv. 1964–2032 · 2 versos" data-en-title="HERNANDO · Romance · vv. 1964–2032 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Octava real · vv. 2033–2080 · 7 versos" data-en-title="HERNANDO · Octava real · vv. 2033–2080 · 7 lines" data-tr>
+            <span class="sr-only">
+              <x-es>7 versos</x-es><x-en>7 lines</x-en>
+            </span>
+          </td><td class="c on act-start" title="HERNANDO · Redondilla · vv. 2081–2336 · 121 versos" data-en-title="HERNANDO · Redondilla · vv. 2081–2336 · 121 lines" data-tr>
+            <span class="sr-only">
+              <x-es>121 versos</x-es><x-en>121 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="HERNANDO · Quintilla · vv. 2639–2853 · 27 versos" data-en-title="HERNANDO · Quintilla · vv. 2639–2853 · 27 lines" data-tr>
+            <span class="sr-only">
+              <x-es>27 versos</x-es><x-en>27 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="HERNANDO · Redondilla · vv. 2888–2951 · 20 versos" data-en-title="HERNANDO · Redondilla · vv. 2888–2951 · 20 lines" data-tr>
+            <span class="sr-only">
+              <x-es>20 versos</x-es><x-en>20 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="HERNANDO · Redondilla · vv. 2976–3062 · 2 versos" data-en-title="HERNANDO · Redondilla · vv. 2976–3062 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c on" title="HERNANDO · Romance · vv. 3063–3102 · 3 versos" data-en-title="HERNANDO · Romance · vv. 3063–3102 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">GERARDA</th>
+          <td class="c on" title="GERARDA · Redondilla · vv. 1–500 · 28 versos" data-en-title="GERARDA · Redondilla · vv. 1–500 · 28 lines" data-tr>
+            <span class="sr-only">
+              <x-es>28 versos</x-es><x-en>28 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="GERARDA · Quintilla · vv. 715–994 · 70 versos" data-en-title="GERARDA · Quintilla · vv. 715–994 · 70 lines" data-tr>
+            <span class="sr-only">
+              <x-es>70 versos</x-es><x-en>70 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="GERARDA · Redondilla · vv. 1113–1133 · 5 versos" data-en-title="GERARDA · Redondilla · vv. 1113–1133 · 5 lines" data-tr>
+            <span class="sr-only">
+              <x-es>5 versos</x-es><x-en>5 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="GERARDA · Redondilla · vv. 1145–1208 · 2 versos" data-en-title="GERARDA · Redondilla · vv. 1145–1208 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="GERARDA · Redondilla · vv. 1223–1426 · 72 versos" data-en-title="GERARDA · Redondilla · vv. 1223–1426 · 72 lines" data-tr>
+            <span class="sr-only">
+              <x-es>72 versos</x-es><x-en>72 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="GERARDA · Quintilla · vv. 1587–1661 · 36 versos" data-en-title="GERARDA · Quintilla · vv. 1587–1661 · 36 lines" data-tr>
+            <span class="sr-only">
+              <x-es>36 versos</x-es><x-en>36 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c act-start">
+            
+          </td><td class="c on" title="GERARDA · Quintilla · vv. 2337–2385 · 31 versos" data-en-title="GERARDA · Quintilla · vv. 2337–2385 · 31 lines" data-tr>
+            <span class="sr-only">
+              <x-es>31 versos</x-es><x-en>31 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="GERARDA · Endecasílabos sueltos · vv. 2450–2476 · 7 versos" data-en-title="GERARDA · Endecasílabos sueltos · vv. 2450–2476 · 7 lines" data-tr>
+            <span class="sr-only">
+              <x-es>7 versos</x-es><x-en>7 lines</x-en>
+            </span>
+          </td><td class="c on" title="GERARDA · Romance · vv. 2477–2560 · 81 versos" data-en-title="GERARDA · Romance · vv. 2477–2560 · 81 lines" data-tr>
+            <span class="sr-only">
+              <x-es>81 versos</x-es><x-en>81 lines</x-en>
+            </span>
+          </td><td class="c on" title="GERARDA · Redondilla · vv. 2561–2624 · 33 versos" data-en-title="GERARDA · Redondilla · vv. 2561–2624 · 33 lines" data-tr>
+            <span class="sr-only">
+              <x-es>33 versos</x-es><x-en>33 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="GERARDA · Redondilla · vv. 2976–3062 · 27 versos" data-en-title="GERARDA · Redondilla · vv. 2976–3062 · 27 lines" data-tr>
+            <span class="sr-only">
+              <x-es>27 versos</x-es><x-en>27 lines</x-en>
+            </span>
+          </td><td class="c on" title="GERARDA · Romance · vv. 3063–3102 · 8 versos" data-en-title="GERARDA · Romance · vv. 3063–3102 · 8 lines" data-tr>
+            <span class="sr-only">
+              <x-es>8 versos</x-es><x-en>8 lines</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">El capitán BERNARDO</th>
+          <td class="c on" title="El capitán BERNARDO · Redondilla · vv. 1–500 · 8 versos" data-en-title="El capitán BERNARDO · Redondilla · vv. 1–500 · 8 lines" data-tr>
+            <span class="sr-only">
+              <x-es>8 versos</x-es><x-en>8 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Terceto · vv. 501–549 · 49 versos" data-en-title="El capitán BERNARDO · Terceto · vv. 501–549 · 49 lines" data-tr>
+            <span class="sr-only">
+              <x-es>49 versos</x-es><x-en>49 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Redondilla · vv. 550–669 · 45 versos" data-en-title="El capitán BERNARDO · Redondilla · vv. 550–669 · 45 lines" data-tr>
+            <span class="sr-only">
+              <x-es>45 versos</x-es><x-en>45 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Endecasílabos sueltos · vv. 670–714 · 14 versos" data-en-title="El capitán BERNARDO · Endecasílabos sueltos · vv. 670–714 · 14 lines" data-tr>
+            <span class="sr-only">
+              <x-es>14 versos</x-es><x-en>14 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Quintilla · vv. 715–994 · 29 versos" data-en-title="El capitán BERNARDO · Quintilla · vv. 715–994 · 29 lines" data-tr>
+            <span class="sr-only">
+              <x-es>29 versos</x-es><x-en>29 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Romance · vv. 995–1112 · 40 versos" data-en-title="El capitán BERNARDO · Romance · vv. 995–1112 · 40 lines" data-tr>
+            <span class="sr-only">
+              <x-es>40 versos</x-es><x-en>40 lines</x-en>
+            </span>
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="El capitán BERNARDO · Redondilla · vv. 1662–1765 · 43 versos" data-en-title="El capitán BERNARDO · Redondilla · vv. 1662–1765 · 43 lines" data-tr>
+            <span class="sr-only">
+              <x-es>43 versos</x-es><x-en>43 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="El capitán BERNARDO · Redondilla · vv. 1789–1824 · 6 versos" data-en-title="El capitán BERNARDO · Redondilla · vv. 1789–1824 · 6 lines" data-tr>
+            <span class="sr-only">
+              <x-es>6 versos</x-es><x-en>6 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Endecasílabos sueltos · vv. 1825–1874 · 8 versos" data-en-title="El capitán BERNARDO · Endecasílabos sueltos · vv. 1825–1874 · 8 lines" data-tr>
+            <span class="sr-only">
+              <x-es>8 versos</x-es><x-en>8 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Quintilla · vv. 1875–1920 · 17 versos" data-en-title="El capitán BERNARDO · Quintilla · vv. 1875–1920 · 17 lines" data-tr>
+            <span class="sr-only">
+              <x-es>17 versos</x-es><x-en>17 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="El capitán BERNARDO · Endecasílabos sueltos · vv. 1936–1963 · 16 versos" data-en-title="El capitán BERNARDO · Endecasílabos sueltos · vv. 1936–1963 · 16 lines" data-tr>
+            <span class="sr-only">
+              <x-es>16 versos</x-es><x-en>16 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Romance · vv. 1964–2032 · 4 versos" data-en-title="El capitán BERNARDO · Romance · vv. 1964–2032 · 4 lines" data-tr>
+            <span class="sr-only">
+              <x-es>4 versos</x-es><x-en>4 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Octava real · vv. 2033–2080 · 33 versos" data-en-title="El capitán BERNARDO · Octava real · vv. 2033–2080 · 33 lines" data-tr>
+            <span class="sr-only">
+              <x-es>33 versos</x-es><x-en>33 lines</x-en>
+            </span>
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="El capitán BERNARDO · Redondilla · vv. 2386–2449 · 33 versos" data-en-title="El capitán BERNARDO · Redondilla · vv. 2386–2449 · 33 lines" data-tr>
+            <span class="sr-only">
+              <x-es>33 versos</x-es><x-en>33 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="El capitán BERNARDO · Endecasílabos sueltos · vv. 2854–2887 · 15 versos" data-en-title="El capitán BERNARDO · Endecasílabos sueltos · vv. 2854–2887 · 15 lines" data-tr>
+            <span class="sr-only">
+              <x-es>15 versos</x-es><x-en>15 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Redondilla · vv. 2888–2951 · 23 versos" data-en-title="El capitán BERNARDO · Redondilla · vv. 2888–2951 · 23 lines" data-tr>
+            <span class="sr-only">
+              <x-es>23 versos</x-es><x-en>23 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="El capitán BERNARDO · Redondilla · vv. 2976–3062 · 10 versos" data-en-title="El capitán BERNARDO · Redondilla · vv. 2976–3062 · 10 lines" data-tr>
+            <span class="sr-only">
+              <x-es>10 versos</x-es><x-en>10 lines</x-en>
+            </span>
+          </td><td class="c on" title="El capitán BERNARDO · Romance · vv. 3063–3102 · 5 versos" data-en-title="El capitán BERNARDO · Romance · vv. 3063–3102 · 5 lines" data-tr>
+            <span class="sr-only">
+              <x-es>5 versos</x-es><x-en>5 lines</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">BELISA</th>
+          <td class="c on" title="BELISA · Redondilla · vv. 1–500 · 138 versos" data-en-title="BELISA · Redondilla · vv. 1–500 · 138 lines" data-tr>
+            <span class="sr-only">
+              <x-es>138 versos</x-es><x-en>138 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="BELISA · Redondilla · vv. 550–669 · 17 versos" data-en-title="BELISA · Redondilla · vv. 550–669 · 17 lines" data-tr>
+            <span class="sr-only">
+              <x-es>17 versos</x-es><x-en>17 lines</x-en>
+            </span>
+          </td><td class="c on" title="BELISA · Endecasílabos sueltos · vv. 670–714 · 5 versos" data-en-title="BELISA · Endecasílabos sueltos · vv. 670–714 · 5 lines" data-tr>
+            <span class="sr-only">
+              <x-es>5 versos</x-es><x-en>5 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="BELISA · Redondilla · vv. 1662–1765 · 5 versos" data-en-title="BELISA · Redondilla · vv. 1662–1765 · 5 lines" data-tr>
+            <span class="sr-only">
+              <x-es>5 versos</x-es><x-en>5 lines</x-en>
+            </span>
+          </td><td class="c on" title="BELISA · Endecasílabos sueltos · vv. 1766–1788 · 4 versos" data-en-title="BELISA · Endecasílabos sueltos · vv. 1766–1788 · 4 lines" data-tr>
+            <span class="sr-only">
+              <x-es>4 versos</x-es><x-en>4 lines</x-en>
+            </span>
+          </td><td class="c on" title="BELISA · Redondilla · vv. 1789–1824 · 1 verso" data-en-title="BELISA · Redondilla · vv. 1789–1824 · 1 line" data-tr>
+            <span class="sr-only">
+              <x-es>1 verso</x-es><x-en>1 line</x-en>
+            </span>
+          </td><td class="c on" title="BELISA · Endecasílabos sueltos · vv. 1825–1874 · 28 versos" data-en-title="BELISA · Endecasílabos sueltos · vv. 1825–1874 · 28 lines" data-tr>
+            <span class="sr-only">
+              <x-es>28 versos</x-es><x-en>28 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="BELISA · Redondilla · vv. 2081–2336 · 40 versos" data-en-title="BELISA · Redondilla · vv. 2081–2336 · 40 lines" data-tr>
+            <span class="sr-only">
+              <x-es>40 versos</x-es><x-en>40 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="BELISA · Redondilla · vv. 2386–2449 · 18 versos" data-en-title="BELISA · Redondilla · vv. 2386–2449 · 18 lines" data-tr>
+            <span class="sr-only">
+              <x-es>18 versos</x-es><x-en>18 lines</x-en>
+            </span>
+          </td><td class="c on" title="BELISA · Endecasílabos sueltos · vv. 2450–2476 · 8 versos" data-en-title="BELISA · Endecasílabos sueltos · vv. 2450–2476 · 8 lines" data-tr>
+            <span class="sr-only">
+              <x-es>8 versos</x-es><x-en>8 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="BELISA · Quintilla · vv. 2639–2853 · 32 versos" data-en-title="BELISA · Quintilla · vv. 2639–2853 · 32 lines" data-tr>
+            <span class="sr-only">
+              <x-es>32 versos</x-es><x-en>32 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="BELISA · Redondilla · vv. 2976–3062 · 9 versos" data-en-title="BELISA · Redondilla · vv. 2976–3062 · 9 lines" data-tr>
+            <span class="sr-only">
+              <x-es>9 versos</x-es><x-en>9 lines</x-en>
+            </span>
+          </td><td class="c on" title="BELISA · Romance · vv. 3063–3102 · 1 verso" data-en-title="BELISA · Romance · vv. 3063–3102 · 1 line" data-tr>
+            <span class="sr-only">
+              <x-es>1 verso</x-es><x-en>1 line</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">DORISTEO</th>
+          <td class="c on" title="DORISTEO · Redondilla · vv. 1–500 · 10 versos" data-en-title="DORISTEO · Redondilla · vv. 1–500 · 10 lines" data-tr>
+            <span class="sr-only">
+              <x-es>10 versos</x-es><x-en>10 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="DORISTEO · Quintilla · vv. 715–994 · 11 versos" data-en-title="DORISTEO · Quintilla · vv. 715–994 · 11 lines" data-tr>
+            <span class="sr-only">
+              <x-es>11 versos</x-es><x-en>11 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="DORISTEO · Redondilla · vv. 1113–1133 · 14 versos" data-en-title="DORISTEO · Redondilla · vv. 1113–1133 · 14 lines" data-tr>
+            <span class="sr-only">
+              <x-es>14 versos</x-es><x-en>14 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="DORISTEO · Redondilla · vv. 1145–1208 · 2 versos" data-en-title="DORISTEO · Redondilla · vv. 1145–1208 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="DORISTEO · Redondilla · vv. 1223–1426 · 22 versos" data-en-title="DORISTEO · Redondilla · vv. 1223–1426 · 22 lines" data-tr>
+            <span class="sr-only">
+              <x-es>22 versos</x-es><x-en>22 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="DORISTEO · Quintilla · vv. 1587–1661 · 49 versos" data-en-title="DORISTEO · Quintilla · vv. 1587–1661 · 49 lines" data-tr>
+            <span class="sr-only">
+              <x-es>49 versos</x-es><x-en>49 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="DORISTEO · Romance · vv. 1964–2032 · 29 versos" data-en-title="DORISTEO · Romance · vv. 1964–2032 · 29 lines" data-tr>
+            <span class="sr-only">
+              <x-es>29 versos</x-es><x-en>29 lines</x-en>
+            </span>
+          </td><td class="c on" title="DORISTEO · Octava real · vv. 2033–2080 · 5 versos" data-en-title="DORISTEO · Octava real · vv. 2033–2080 · 5 lines" data-tr>
+            <span class="sr-only">
+              <x-es>5 versos</x-es><x-en>5 lines</x-en>
+            </span>
+          </td><td class="c act-start">
+            
+          </td><td class="c on" title="DORISTEO · Quintilla · vv. 2337–2385 · 28 versos" data-en-title="DORISTEO · Quintilla · vv. 2337–2385 · 28 lines" data-tr>
+            <span class="sr-only">
+              <x-es>28 versos</x-es><x-en>28 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="DORISTEO · Endecasílabos sueltos · vv. 2450–2476 · 9 versos" data-en-title="DORISTEO · Endecasílabos sueltos · vv. 2450–2476 · 9 lines" data-tr>
+            <span class="sr-only">
+              <x-es>9 versos</x-es><x-en>9 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="DORISTEO · Octava real · vv. 2952–2975 · 19 versos" data-en-title="DORISTEO · Octava real · vv. 2952–2975 · 19 lines" data-tr>
+            <span class="sr-only">
+              <x-es>19 versos</x-es><x-en>19 lines</x-en>
+            </span>
+          </td><td class="c on" title="DORISTEO · Redondilla · vv. 2976–3062 · 26 versos" data-en-title="DORISTEO · Redondilla · vv. 2976–3062 · 26 lines" data-tr>
+            <span class="sr-only">
+              <x-es>26 versos</x-es><x-en>26 lines</x-en>
+            </span>
+          </td><td class="c on" title="DORISTEO · Romance · vv. 3063–3102 · 3 versos" data-en-title="DORISTEO · Romance · vv. 3063–3102 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">FINARDO</th>
+          <td class="c on" title="FINARDO · Redondilla · vv. 1–500 · 3 versos" data-en-title="FINARDO · Redondilla · vv. 1–500 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FINARDO · Quintilla · vv. 715–994 · 6 versos" data-en-title="FINARDO · Quintilla · vv. 715–994 · 6 lines" data-tr>
+            <span class="sr-only">
+              <x-es>6 versos</x-es><x-en>6 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="FINARDO · Redondilla · vv. 1113–1133 · 3 versos" data-en-title="FINARDO · Redondilla · vv. 1113–1133 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c on" title="FINARDO · Canción · vv. 1134–1144 · 11 versos" data-en-title="FINARDO · Canción · vv. 1134–1144 · 11 lines" data-tr>
+            <span class="sr-only">
+              <x-es>11 versos</x-es><x-en>11 lines</x-en>
+            </span>
+          </td><td class="c on" title="FINARDO · Redondilla · vv. 1145–1208 · 2 versos" data-en-title="FINARDO · Redondilla · vv. 1145–1208 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FINARDO · Redondilla · vv. 1223–1426 · 19 versos" data-en-title="FINARDO · Redondilla · vv. 1223–1426 · 19 lines" data-tr>
+            <span class="sr-only">
+              <x-es>19 versos</x-es><x-en>19 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FINARDO · Romance · vv. 1964–2032 · 3 versos" data-en-title="FINARDO · Romance · vv. 1964–2032 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c on" title="FINARDO · Octava real · vv. 2033–2080 · 13 versos" data-en-title="FINARDO · Octava real · vv. 2033–2080 · 13 lines" data-tr>
+            <span class="sr-only">
+              <x-es>13 versos</x-es><x-en>13 lines</x-en>
+            </span>
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FINARDO · Octava real · vv. 2952–2975 · 8 versos" data-en-title="FINARDO · Octava real · vv. 2952–2975 · 8 lines" data-tr>
+            <span class="sr-only">
+              <x-es>8 versos</x-es><x-en>8 lines</x-en>
+            </span>
+          </td><td class="c on" title="FINARDO · Redondilla · vv. 2976–3062 · 25 versos" data-en-title="FINARDO · Redondilla · vv. 2976–3062 · 25 lines" data-tr>
+            <span class="sr-only">
+              <x-es>25 versos</x-es><x-en>25 lines</x-en>
+            </span>
+          </td><td class="c on" title="FINARDO · Romance · vv. 3063–3102 · 1 verso" data-en-title="FINARDO · Romance · vv. 3063–3102 · 1 line" data-tr>
+            <span class="sr-only">
+              <x-es>1 verso</x-es><x-en>1 line</x-en>
+            </span>
+          </td>
+        </tr><tr>
+          <th scope="row">FULMINATO</th>
+          <td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FULMINATO · Redondilla · vv. 1662–1765 · 3 versos" data-en-title="FULMINATO · Redondilla · vv. 1662–1765 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="FULMINATO · Redondilla · vv. 2976–3062 · 6 versos" data-en-title="FULMINATO · Redondilla · vv. 2976–3062 · 6 lines" data-tr>
+            <span class="sr-only">
+              <x-es>6 versos</x-es><x-en>6 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td>
+        </tr><tr>
+          <th scope="row">[LISEO]</th>
+          <td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="[LISEO] · Redondilla · vv. 1113–1133 · 2 versos" data-en-title="[LISEO] · Redondilla · vv. 1113–1133 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="[LISEO] · Redondilla · vv. 1145–1208 · 1 verso" data-en-title="[LISEO] · Redondilla · vv. 1145–1208 · 1 line" data-tr>
+            <span class="sr-only">
+              <x-es>1 verso</x-es><x-en>1 line</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c on" title="[LISEO] · Redondilla · vv. 1223–1426 · 3 versos" data-en-title="[LISEO] · Redondilla · vv. 1223–1426 · 3 lines" data-tr>
+            <span class="sr-only">
+              <x-es>3 versos</x-es><x-en>3 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td>
+        </tr><tr>
+          <th scope="row">[FABIO]</th>
+          <td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on act-start" title="[FABIO] · Redondilla · vv. 1113–1133 · 2 versos" data-en-title="[FABIO] · Redondilla · vv. 1113–1133 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c on" title="[FABIO] · Redondilla · vv. 1223–1426 · 2 versos" data-en-title="[FABIO] · Redondilla · vv. 1223–1426 · 2 lines" data-tr>
+            <span class="sr-only">
+              <x-es>2 versos</x-es><x-en>2 lines</x-en>
+            </span>
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c act-start">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td><td class="c ">
+            
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+</main></div></html>

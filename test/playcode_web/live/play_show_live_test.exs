@@ -1544,12 +1544,14 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
       assert has_element?(view, "h3", t("Highlight"))
     end
 
-    test "the statistics call them shared lines", %{conn: conn} do
+    # The statistics tab draws the static site's four parts (2026-11-12), which carry no
+    # shared-lines card; the test now holds that the old name does not come back.
+    test "the statistics never call them split verses", %{conn: conn} do
       {:ok, view, _html} = live(conn, ~p"/plays/#{shown(@shared).code}")
 
       html = render_click(view, "switch_tab", %{"tab" => "statistics"})
 
-      assert html =~ t("Shared lines")
+      assert has_element?(view, "#play-tab-statistics #tiles")
       refute html =~ "Split Verses"
     end
   end

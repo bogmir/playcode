@@ -6428,3 +6428,7 @@ msgstr "líneas"
 #, elixir-autogen, elixir-format
 msgid "plays"
 msgstr "obras"
+
+#, elixir-autogen, elixir-format
+msgid "The %{count} passages, one by one"
+msgstr "Los %{count} pasajes, uno a uno"

@@ -29,6 +29,7 @@ defmodule PlaycodeWeb.AuthorizationTest do
     {"/admin/plays/:id/bibliography", :active},
     {"/admin/plays/:id/content", :active},
     {"/admin/plays/:id/notes", :active},
+    {"/admin/plays/:id/statistics", :active},
     {"/admin/plays/:id/compare", :active},
     {"/admin/places", :active},
     {"/admin/plays/:id/export/tei", :active},
