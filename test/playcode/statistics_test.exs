@@ -43,6 +43,22 @@ defmodule Playcode.StatisticsTest do
     assert Statistics.get_statistics(play.id).data["total_asides"] == 3
   end
 
+  # The static site builds its plays in parallel, and a comparison page reads its original's
+  # statistics while the original's own pages may be reading them: both found no row and
+  # both inserted one, the second against the unique index (CI, 2026-11-12).
+  test "two first reads at once both get the statistics" do
+    %{play: play} = TestFixtures.play_with_structure_fixture()
+
+    results =
+      1..20
+      |> Task.async_stream(fn _ -> Statistics.get_statistics(play.id).data["num_acts"] end,
+        max_concurrency: 20
+      )
+      |> Enum.map(fn {:ok, acts} -> acts end)
+
+    assert Enum.uniq(results) == [1]
+  end
+
   test "get_statistics/1 computes and stores aggregate public metrics" do
     %{play: play, line_group: line_group, scene: scene} =
       TestFixtures.play_with_structure_fixture()

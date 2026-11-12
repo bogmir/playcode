@@ -46,19 +46,14 @@ defmodule Playcode.Statistics do
     data = play_id |> compute() |> Map.put("content_version", content_version)
     now = DateTime.utc_now() |> DateTime.truncate(:second)
 
-    attrs = %{play_id: play_id, data: data, computed_at: now}
-
-    case Repo.get_by(PlayStatistic, play_id: play_id) do
-      nil ->
-        %PlayStatistic{}
-        |> PlayStatistic.changeset(attrs)
-        |> Repo.insert!()
-
-      existing ->
-        existing
-        |> PlayStatistic.changeset(attrs)
-        |> Repo.update!()
-    end
+    # An upsert: the static site's parallel builds read one play's statistics at once.
+    %PlayStatistic{}
+    |> PlayStatistic.changeset(%{play_id: play_id, data: data, computed_at: now})
+    |> Repo.insert!(
+      on_conflict: {:replace, [:data, :computed_at, :updated_at]},
+      conflict_target: :play_id,
+      returning: true
+    )
   end
 
   defp compute(play_id) do
