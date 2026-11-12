@@ -157,7 +157,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
   test "what a click opens has no barrier", %{conn: conn, play: play, structure: s} = context do
     content = "/admin/plays/:id/content"
     tab = &{"nav[aria-label='Editor tabs'] button", &1}
-    scene = [tab.("structure"), {"button", "SCENE I"}]
+    scene = [tab.(t("Structure")), {"button", "SCENE I"}]
     edit = &{"#element-#{&1.id} button[aria-label='#{t("Edit")}']", nil}
 
     edit_performance =
@@ -185,8 +185,8 @@ defmodule PlaycodeWeb.AccessibilityTest do
           {content, [tab.(t("Paratexts")), {"button", t("Add Paratext")}]},
           {content, [tab.(t("Cast list")), {"button", t("Add Character")}]},
           {content, [tab.(t("Character Review")), {"button", t("Select all")}]},
-          {content, [tab.("content")]},
-          {content, [tab.("structure"), {"button", t("Add division")}]},
+          {content, [tab.(t("Content"))]},
+          {content, [tab.(t("Structure")), {"button", t("Add division")}]},
           {content, scene},
           {content, scene ++ [{"span", s.speech.speaker_label}]},
           {content, scene ++ [edit.(s.verse_line)]},

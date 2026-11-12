@@ -49,7 +49,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
       )
 
       {:ok, editor, _html} = live(conn, ~p"/admin/plays/#{play.id}/content")
-      editor |> element("nav[aria-label='Editor tabs'] button", "structure") |> render_click()
+      editor |> element("nav[aria-label='Editor tabs'] button", t("Structure")) |> render_click()
 
       assert editor |> element("button", "Escena 1") |> render_click() =~
                "THE SCENE: SMITHFIELD"

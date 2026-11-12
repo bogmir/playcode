@@ -6,6 +6,8 @@ say what was built. Sections keep the grouping they had in `CLAUDE.md`.
 
 ## What Has Been Implemented
 
+- [x] **UI review A, the bugs (2026-11-12)** - the public header lays out in a row at 1280 px (`flex` on the brand group); the content editor's tabs read "Estructura", "Contenido", "Vista previa" (the tab name was printed raw); the flash toast sits bottom right, off the user menu and the play's tabs; "Toggle theme" and "Breadcrumb" are translated, and the attribution options lose their English gloss in Spanish ("Fiable", not "Fiable (reliable)")
+
 - [x] Phoenix 1.8.3 project scaffold with all dependencies
 - [x] OpenTelemetry configuration (Phoenix, Ecto, Bandit auto-instrumentation)
 - [x] 7 database migrations (plays, editors, sources, notes, characters, divisions, elements, statistics)
