@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
   use PlaycodeWeb, :live_view
 
+  alias Playcode.Accounts
   alias Playcode.ActivityLog
   alias Playcode.Catalogue
   alias Playcode.PlayContent
@@ -64,6 +65,11 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   def handle_event("search", %{"search" => search}, socket) do
     {:noreply,
      push_patch(socket, to: ~p"/admin/plays?#{list_params(search, socket.assigns.status)}")}
+  end
+
+  def handle_event("close_welcome", _params, socket) do
+    {:ok, user} = Accounts.close_welcome(socket.assigns.current_user)
+    {:noreply, assign(socket, :current_user, user)}
   end
 
   def handle_event("restore", %{"id" => id}, socket) do
@@ -189,6 +195,19 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           </div>
         </:actions>
       </.page_header>
+
+      <section
+        :if={is_nil(@current_user.welcome_closed_at)}
+        aria-label={gettext("Getting started")}
+        class="mb-5 flex items-start gap-4 rounded-box border border-primary/30 bg-primary/5 p-4"
+      >
+        <ol class="flex-1 list-inside list-decimal space-y-1 text-sm">
+          <li>{gettext("Find a play in the list, or import one.")}</li>
+          <li>{gettext("Edit its record and its text.")}</li>
+          <li>{gettext("Mark it complete, and it reaches the site at the next Generate.")}</li>
+        </ol>
+        <button phx-click="close_welcome" class="btn btn-sm btn-ghost">{gettext("Got it")}</button>
+      </section>
 
       <section
         :if={@recent_plays != []}
