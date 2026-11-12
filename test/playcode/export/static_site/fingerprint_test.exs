@@ -56,6 +56,13 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     assert current.() != spanish
   end
 
+  # The rule above matches the .po references against each module's source file, which
+  # `mix release` strips from the beams unless told to keep it: without it no translation
+  # reached production's fingerprint.
+  test "a release keeps the source file each fingerprinted module names" do
+    assert Mix.Project.config()[:releases][:playcode][:strip_beams][:keep] == ["CInf"]
+  end
+
   defp translate(dir, locale, msgid, from, to) do
     path = Path.join([dir, locale, "LC_MESSAGES", "default.po"])
     old = ~s(msgid "#{msgid}"\nmsgstr "#{from}"\n)

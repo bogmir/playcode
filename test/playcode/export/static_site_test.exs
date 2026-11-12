@@ -48,6 +48,20 @@ defmodule Playcode.Export.StaticSiteTest do
     assert hrefs(stub) == ["#{play.code}/index.html"]
   end
 
+  # A title holds its italics as <<…>> (CLAUDE.md); a <title> takes no markup, so it gets
+  # the plain words.
+  test "a title with italics reads plain in every page's title" do
+    play = complete_play(%{"title" => "La <<Celestina>>"})
+    dir = generate!([play])
+
+    for path <- ~w(index.html text.html statistics.html) do
+      page = html!(dir, "plays/#{play.code}/#{path}", "es")
+      assert {path, texts(page, "title") |> hd() |> String.contains?("<<")} == {path, false}
+    end
+
+    assert texts(html!(dir, "plays/#{play.code}.html"), "title") == ["La Celestina"]
+  end
+
   test "the stylesheet, script and fonts are published under assets/, with the font licences" do
     dir = generate!([complete_play()])
 

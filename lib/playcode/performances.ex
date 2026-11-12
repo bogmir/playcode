@@ -75,7 +75,8 @@ defmodule Playcode.Performances do
   and `Playcode.PlayContent.InlineMarkup.plain/1` is for where markup cannot go.
 
   `locale` is the page's language, for the venue types; the place names follow `place_locale`
-  when the page's language is not theirs (the static site is in English, its places Spanish).
+  when the page's language is not theirs. A pair of locales, `{"es", "en"}`, gives each
+  line's parts in both, `{spanish, english}`: the static site prints both.
   """
   def listing(performances, characters, gazetteer, locale, place_locale \\ nil) do
     place_locale = place_locale || locale
@@ -117,6 +118,11 @@ defmodule Playcode.Performances do
         number = length(sources) + 1
         {number, sources ++ [{number, entry}]}
     end
+  end
+
+  defp parts(performance, gazetteer, {first, second}, place_locale) do
+    {parts(performance, gazetteer, first, place_locale),
+     parts(performance, gazetteer, second, place_locale)}
   end
 
   defp parts(performance, gazetteer, locale, place_locale) do

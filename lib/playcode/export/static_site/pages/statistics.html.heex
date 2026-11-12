@@ -1,6 +1,6 @@
 <Components.shell
   root="../../"
-  title={tp("Statistics — %{title} — EMOTHE", title: @edition.play.title)}
+  title={tp("Statistics — %{title} — EMOTHE", title: InlineMarkup.plain(@edition.play.title))}
   site={@site}
   play={@edition.play}
 >

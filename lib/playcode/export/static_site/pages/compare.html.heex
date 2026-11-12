@@ -2,8 +2,8 @@
   root="../../"
   title={
     tp("%{original} and %{translation} — EMOTHE",
-      original: @original.play.title,
-      translation: @translation.play.title
+      original: InlineMarkup.plain(@original.play.title),
+      translation: InlineMarkup.plain(@translation.play.title)
     )
   }
   site={@site}
@@ -11,7 +11,7 @@
 >
   <div class="compare-bar">
     <a href={"../#{@original.play.code}/index.html"}>
-      {t("Back to %{title}", title: @original.play.title)}
+      {t("Back to %{title}", title: InlineMarkup.plain(@original.play.title))}
     </a>
     <label>
       {t("Translation")}

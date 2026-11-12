@@ -72,7 +72,7 @@ defmodule Playcode.Export.StaticSite.Comparison do
     join([{String.capitalize(es), String.capitalize(en)}, title(play)], ": ")
   end
 
-  defp title(play), do: {InlineMarkup.plain(play.title), InlineMarkup.plain(play.title)}
+  defp title(play), do: same(InlineMarkup.plain(play.title))
 
   @doc """
   The translation menu's entries, `{play, label}`, each label `{spanish, english}`: each

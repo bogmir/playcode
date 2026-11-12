@@ -38,7 +38,7 @@ defmodule Playcode.Export.StaticSite.Bilingual do
     end
   end
 
-  @doc "A message as the attributes `name` and `data-en-<name>`, for `<tag {ta(...)}>`."
+  @doc "A message as the attributes `name` (or names) and `data-en-<name>`, for `<tag {ta(...)}>`."
   defmacro ta(name, msgid, bindings \\ Macro.escape(%{})) do
     quote do
       unquote(__MODULE__).attrs(
@@ -64,6 +64,9 @@ defmodule Playcode.Export.StaticSite.Bilingual do
   @doc "What `fun` returns in each language, as HTML: `both(fn -> PlayLabels.… end)`."
   def both(fun), do: fun |> pair() |> html()
 
+  @doc "A text alike in both languages, as a pair: a name, a number."
+  def same(text), do: {text, text}
+
   @doc "Pairs joined with `separator`, each language's with its own."
   def join(pairs, separator) do
     {Enum.map_join(pairs, separator, &elem(&1, 0)), Enum.map_join(pairs, separator, &elem(&1, 1))}
@@ -77,9 +80,21 @@ defmodule Playcode.Export.StaticSite.Bilingual do
   def html({es, en}),
     do: Phoenix.HTML.raw(["<x-es>", escape(es), "</x-es><x-en>", escape(en), "</x-en>"])
 
-  @doc "A pair as the attribute `name`, its English in `data-en-<name>` when it differs."
-  def attrs({same, same}, name), do: [{name, same}]
-  def attrs({es, en}, name), do: [{name, es}, {"data-en-" <> name, en}, {"data-tr", true}]
+  @doc """
+  A pair as the attribute `name`, or each of a list of names, its English in
+  `data-en-<name>` when it differs; `data-tr` marks the element for site.js once.
+  """
+  def attrs({same, same}, names), do: for(name <- List.wrap(names), do: {name, same})
+
+  def attrs({es, en}, names) do
+    Enum.flat_map(List.wrap(names), &[{&1, es}, {"data-en-" <> &1, en}]) ++ [{"data-tr", true}]
+  end
+
+  @doc "`attrs/2` as markup, for HTML built as iodata."
+  def attrs_html(pair, names) do
+    {:safe, html} = pair |> attrs(names) |> Phoenix.HTML.attributes_escape()
+    html
+  end
 
   defp escape(text), do: text |> Phoenix.HTML.html_escape() |> Phoenix.HTML.safe_to_string()
 end

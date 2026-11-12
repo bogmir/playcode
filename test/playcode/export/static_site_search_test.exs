@@ -116,6 +116,27 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       assert Map.has_key?(shard, "ñaque")
     end
 
+    # Question 15: each kind by its own name; every non-original used to be a translation.
+    # search.js says the page's words, which come from the site's translations.
+    test "the search page gives search.js its words in both languages", %{dir: dir} do
+      [words] =
+        dir
+        |> html!("search.html")
+        |> LazyHTML.query("[data-search-form]")
+        |> LazyHTML.attribute("data-words")
+
+      words = Jason.decode!(words)
+
+      assert words["kinds"] == %{
+               "original" => ["Originales", "Originals"],
+               "translation" => ["Traducciones", "Translations"],
+               "adaptation" => ["Adaptaciones", "Adaptations"],
+               "version" => ["Versiones", "Versions"]
+             }
+
+      assert words["legends"]["kind"] == ["Tipo", "Kind"]
+    end
+
     test "the play list is in index order, with what the facets need", %{play: play, dir: dir} do
       assert {"plays", "all",
               [%{"code" => code, "kind" => "original", "language_name" => ["Español", "Spanish"]}]} =

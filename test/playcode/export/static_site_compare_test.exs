@@ -208,12 +208,19 @@ defmodule Playcode.Export.StaticSiteCompareTest do
       %{original: original, french: french} = split_speech_editions()
       spanish = spanish(original)
       lonely = play_fixture(%{"is_complete" => true})
-      catalogue = [original, french, spanish, lonely] |> generate!() |> html!("index.html")
+      dir = generate!([original, french, spanish, lonely])
+      catalogue = html!(dir, "index.html")
 
       assert compare_links(catalogue) == ["plays/#{spanish.code}/compare.html"]
       # Playcode's catalogue icon: named for a screen reader, its title the tooltip.
       assert attribute(catalogue, "a.compare", "aria-label") == ["Compare"]
       assert attribute(catalogue, "a.compare", "title") == ["Compare"]
+
+      # Both in Spanish, the element marked once for the switch: an attribute twice is
+      # invalid HTML.
+      [link] = Regex.run(~r/<a class="compare"[^>]*>/, read!(dir, "index.html"))
+      assert link =~ ~s(aria-label="Comparar")
+      assert length(Regex.scan(~r/ data-tr\b/, link)) == 1
       assert count(catalogue, "a.compare svg[aria-hidden='true']") == 1
     end
 

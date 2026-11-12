@@ -15,7 +15,7 @@
       <a href="index.html">{t("Browse the catalogue instead.")}</a>
     </p>
   </noscript>
-  <form data-search-form role="search" hidden>
+  <form data-search-form role="search" data-words={search_words()} hidden>
     <label for="q" class="sr-only">{t("Search the texts")}</label>
     <input
       id="q"

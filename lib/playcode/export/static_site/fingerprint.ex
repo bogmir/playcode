@@ -128,7 +128,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
       |> Enum.sort()
       |> Enum.map(&{Path.relative_to(&1, gettext_dir), File.read!(&1)})
 
-    sources = Enum.map(modules(), &to_string(&1.module_info(:compile)[:source]))
+    sources = Enum.map(modules(), &source!/1)
     key = {__MODULE__, :translations, hash({files, sources})}
 
     with nil <- :persistent_term.get(key, nil) do
@@ -148,6 +148,14 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
           do: {name, Expo.Message.key(message), translation}
     end)
     |> Enum.sort()
+  end
+
+  # A beam stripped of its CInf chunk names no source, and no translation would match.
+  defp source!(module) do
+    case module.module_info(:compile)[:source] do
+      nil -> raise "#{inspect(module)} names no source file: keep the CInf chunk (mix.exs)"
+      source -> to_string(source)
+    end
   end
 
   # A message one of the modules' files asks for: the module's own file, or a template in
