@@ -38,6 +38,48 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     refute render(view) =~ "(reliable)"
   end
 
+  describe "the form's layout" do
+    test "every field sits in a named section, each reached from a row of links at the top",
+         %{conn: conn} do
+      play = play_fixture()
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+      page = view |> render() |> LazyHTML.from_fragment()
+
+      links = LazyHTML.query(page, "nav[aria-label='#{t("Form sections")}'] a")
+      assert Enum.count(links) >= 8
+
+      for {"#" <> id, name} <- Enum.zip(LazyHTML.attribute(links, "href"), texts(links)) do
+        assert {id, has_element?(view, "section##{id} h2", name)} == {id, true}
+      end
+
+      fields = "input:not([type=hidden]), select, textarea"
+      in_sections = page |> LazyHTML.query("#play-form section :is(#{fields})") |> Enum.count()
+      assert page |> LazyHTML.query("#play-form :is(#{fields})") |> Enum.count() == in_sections
+    end
+
+    test "the save bar says when there are unsaved changes, and stops when they are undone",
+         %{conn: conn} do
+      play = play_fixture(%{"title" => "Bar"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+      refute has_element?(view, "#save-bar", t("Unsaved changes"))
+
+      view |> form("#play-form", play: %{"title" => "Barra"}) |> render_change()
+      assert has_element?(view, "#save-bar", t("Unsaved changes"))
+
+      view |> form("#play-form", play: %{"title" => "Bar"}) |> render_change()
+      refute has_element?(view, "#save-bar", t("Unsaved changes"))
+    end
+
+    test "the buttons beside a label say in words what they do", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+      assert has_element?(view, "#play-form button", t("Copy from Title"))
+      assert has_element?(view, "#play-form button", t("Copy from Author Name"))
+    end
+  end
+
+  defp texts(nodes), do: Enum.map(nodes, &(&1 |> LazyHTML.text() |> String.trim()))
+
   test "a new play is saved and opens on its detail page", %{conn: conn} do
     code = "FORM#{System.unique_integer([:positive])}"
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")

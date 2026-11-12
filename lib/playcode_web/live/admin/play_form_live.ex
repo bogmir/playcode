@@ -396,16 +396,15 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       <script :type={Phoenix.LiveView.ColocatedHook} name=".DirtyForm">
         export default {
           mounted() {
-            this.dirty = false
-
-            this.el.addEventListener("input", () => { this.dirty = true })
-            this.el.addEventListener("submit", () => { this.dirty = false })
+            // The server says whether there are unsaved changes; a submit clears them.
+            this.dirty = () => this.el.dataset.dirty === "true" && !this.submitting
+            this.el.addEventListener("submit", () => { this.submitting = true })
 
             this.navHandler = (e) => {
-              if (!this.dirty) return
+              if (!this.dirty()) return
               const link = e.target.closest("a[data-phx-link]")
               if (!link) return
-              if (!window.confirm("You have unsaved changes. Discard them?")) {
+              if (!window.confirm(this.el.dataset.discard)) {
                 e.preventDefault()
                 e.stopPropagation()
               }
@@ -413,10 +412,12 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             document.addEventListener("click", this.navHandler, true)
 
             this.beforeUnload = (e) => {
-              if (this.dirty) { e.preventDefault(); e.returnValue = "" }
+              if (this.dirty()) { e.preventDefault(); e.returnValue = "" }
             }
             window.addEventListener("beforeunload", this.beforeUnload)
           },
+          // A save the server refused leaves the changes unsaved.
+          updated() { this.submitting = false },
           destroyed() {
             document.removeEventListener("click", this.navHandler, true)
             window.removeEventListener("beforeunload", this.beforeUnload)
@@ -424,326 +425,355 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
         }
       </script>
 
+      <nav
+        aria-label={gettext("Form sections")}
+        class="mb-4 flex flex-wrap gap-x-4 gap-y-1 text-sm"
+      >
+        <a
+          :for={{id, name} <- sections(@live_action)}
+          href={"#" <> id}
+          class="link link-hover text-primary"
+        >
+          {name}
+        </a>
+      </nav>
+
       <.form
         for={@form}
         id="play-form"
         phx-change="validate"
         phx-submit="save"
         phx-hook=".DirtyForm"
-        class="space-y-6 rounded-box border border-base-300 bg-base-100 p-5 shadow-sm"
+        data-discard={gettext("You have unsaved changes. Discard them?")}
+        data-dirty={to_string(dirty?(@live_action, @form, @parent_play_id, @play))}
       >
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="label" for={@form[:title].id}>
-              <span class="label-text font-medium">{gettext("Title")} *</span>
-            </label>
-            <.input field={@form[:title]} type="text" required />
-          </div>
-          <div>
-            <label class="label" for={@form[:original_title].id}>
-              <span class="label-text font-medium">
-                {gettext("Original Title")}
-                <button
-                  type="button"
-                  phx-click="copy_field"
-                  phx-value-source="title"
-                  phx-value-target="original_title"
-                  class="btn btn-ghost btn-xs ml-1"
-                  title={gettext("Copy from Title")}
-                >
-                  <.icon name="hero-clipboard-document-mini" class="size-3" />
-                </button>
-              </span>
-            </label>
-            <.input
-              field={@form[:original_title]}
-              type="text"
-              placeholder={gettext("Title in original language")}
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="label" for={@form[:title_sort].id}>
-              <span class="label-text font-medium">
-                {gettext("Title (sort)")}
-                <button
-                  type="button"
-                  phx-click="copy_field"
-                  phx-value-source="title"
-                  phx-value-target="title_sort"
-                  class="btn btn-ghost btn-xs ml-1"
-                  title={gettext("Copy from Title")}
-                >
-                  <.icon name="hero-clipboard-document-mini" class="size-3" />
-                </button>
-              </span>
-            </label>
-            <.input
-              field={@form[:title_sort]}
-              type="text"
-              placeholder={gettext("Alphabetical sorting form")}
-            />
-          </div>
-          <div>
-            <label class="label" for={@form[:edition_title].id}>
-              <span class="label-text font-medium">
-                {gettext("Edition Title")}
-                <button
-                  type="button"
-                  phx-click="copy_field"
-                  phx-value-source="title"
-                  phx-value-target="edition_title"
-                  class="btn btn-ghost btn-xs ml-1"
-                  title={gettext("Copy from Title")}
-                >
-                  <.icon name="hero-clipboard-document-mini" class="size-3" />
-                </button>
-              </span>
-            </label>
-            <.input
-              field={@form[:edition_title]}
-              type="text"
-              placeholder={gettext("Full editorial citation")}
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="label" for={@form[:code].id}>
-              <span class="label-text font-medium">{gettext("Code")} *</span>
-            </label>
-            <.input field={@form[:code]} type="text" required placeholder={gettext("e.g. AL0569")} />
-          </div>
-          <div>
-            <label class="label" for={@form[:emothe_id].id}>
-              <span class="label-text font-medium">{gettext("EMOTHE ID")}</span>
-              <span :if={emothe_id_derived?(@form)} class="text-xs text-base-content/70 ml-1">
-                {gettext("(auto)")}
-              </span>
-            </label>
-            <.input
-              field={@form[:emothe_id]}
-              type="text"
-              placeholder={gettext("e.g. 0703")}
-              readonly={emothe_id_derived?(@form)}
-            />
-          </div>
-        </div>
-
-        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
-            {gettext("Work Relationship")}
-          </h3>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div>
-              <label class="label" for={@form[:relationship_type].id}>
-                <span class="label-text font-medium">{gettext("Relationship Type")}</span>
-              </label>
-              <.input
-                field={@form[:relationship_type]}
-                type="select"
-                options={PlayLabels.relationship_type_options()}
-              />
+        <.card id="form-titles" title={gettext("Titles and code")}>
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="label" for={@form[:title].id}>
+                  <span class="label-text font-medium">{gettext("Title")} *</span>
+                </label>
+                <.input field={@form[:title]} type="text" required />
+              </div>
+              <div>
+                <label class="label" for={@form[:original_title].id}>
+                  <span class="label-text font-medium">
+                    {gettext("Original Title")}
+                    <button
+                      type="button"
+                      phx-click="copy_field"
+                      phx-value-source="title"
+                      phx-value-target="original_title"
+                      class="btn btn-ghost btn-xs ml-1 font-normal"
+                    >
+                      <.icon name="hero-clipboard-document-mini" class="size-3.5" />
+                      {gettext("Copy from Title")}
+                    </button>
+                  </span>
+                </label>
+                <.input
+                  field={@form[:original_title]}
+                  type="text"
+                  placeholder={gettext("Title in original language")}
+                />
+              </div>
             </div>
-            <div>
-              <label class="label">
-                <span class="label-text font-medium">{gettext("Original Work")}</span>
-              </label>
-              <%!-- Autocomplete combobox for parent play --%>
-              <div class="relative">
-                <%!-- Selected state --%>
-                <div
-                  :if={@parent_play_id}
-                  class="input input-bordered flex items-center justify-between gap-2 h-auto min-h-[2.5rem] py-1.5"
-                >
-                  <span class="text-sm truncate">{@parent_play_label}</span>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="label" for={@form[:title_sort].id}>
+                  <span class="label-text font-medium">
+                    {gettext("Title (sort)")}
+                    <button
+                      type="button"
+                      phx-click="copy_field"
+                      phx-value-source="title"
+                      phx-value-target="title_sort"
+                      class="btn btn-ghost btn-xs ml-1 font-normal"
+                    >
+                      <.icon name="hero-clipboard-document-mini" class="size-3.5" />
+                      {gettext("Copy from Title")}
+                    </button>
+                  </span>
+                </label>
+                <.input
+                  field={@form[:title_sort]}
+                  type="text"
+                  placeholder={gettext("Alphabetical sorting form")}
+                />
+              </div>
+              <div>
+                <label class="label" for={@form[:edition_title].id}>
+                  <span class="label-text font-medium">
+                    {gettext("Edition Title")}
+                    <button
+                      type="button"
+                      phx-click="copy_field"
+                      phx-value-source="title"
+                      phx-value-target="edition_title"
+                      class="btn btn-ghost btn-xs ml-1 font-normal"
+                    >
+                      <.icon name="hero-clipboard-document-mini" class="size-3.5" />
+                      {gettext("Copy from Title")}
+                    </button>
+                  </span>
+                </label>
+                <.input
+                  field={@form[:edition_title]}
+                  type="text"
+                  placeholder={gettext("Full editorial citation")}
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="label" for={@form[:code].id}>
+                  <span class="label-text font-medium">{gettext("Code")} *</span>
+                </label>
+                <.input
+                  field={@form[:code]}
+                  type="text"
+                  required
+                  placeholder={gettext("e.g. AL0569")}
+                />
+              </div>
+              <div>
+                <label class="label" for={@form[:emothe_id].id}>
+                  <span class="label-text font-medium">{gettext("EMOTHE ID")}</span>
+                  <span :if={emothe_id_derived?(@form)} class="text-xs text-base-content/70 ml-1">
+                    {gettext("(auto)")}
+                  </span>
+                </label>
+                <.input
+                  field={@form[:emothe_id]}
+                  type="text"
+                  placeholder={gettext("e.g. 0703")}
+                  readonly={emothe_id_derived?(@form)}
+                />
+              </div>
+            </div>
+          </div>
+        </.card>
+
+        <.card id="form-relationship" title={gettext("Work Relationship")}>
+          <div class="space-y-3">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="label" for={@form[:relationship_type].id}>
+                  <span class="label-text font-medium">{gettext("Relationship Type")}</span>
+                </label>
+                <.input
+                  field={@form[:relationship_type]}
+                  type="select"
+                  options={PlayLabels.relationship_type_options()}
+                />
+              </div>
+              <div>
+                <label class="label">
+                  <span class="label-text font-medium">{gettext("Original Work")}</span>
+                </label>
+                <%!-- Autocomplete combobox for parent play --%>
+                <div class="relative">
+                  <%!-- Selected state --%>
+                  <div
+                    :if={@parent_play_id}
+                    class="input input-bordered flex items-center justify-between gap-2 h-auto min-h-[2.5rem] py-1.5"
+                  >
+                    <span class="text-sm truncate">{@parent_play_label}</span>
+                    <button
+                      type="button"
+                      phx-click="clear_parent"
+                      class="btn btn-ghost btn-xs btn-circle shrink-0"
+                      title={gettext("Clear")}
+                    >
+                      <.icon name="hero-x-mark-mini" class="size-3.5" />
+                    </button>
+                  </div>
+                  <%!-- Search state --%>
+                  <div :if={!@parent_play_id}>
+                    <input
+                      type="text"
+                      name="parent_play_search"
+                      value={@parent_play_search}
+                      phx-change="suggest_parent"
+                      phx-debounce="200"
+                      placeholder={gettext("Search by title or code...")}
+                      class="input input-bordered w-full"
+                      autocomplete="off"
+                    />
+                    <%!-- Suggestions dropdown --%>
+                    <ul
+                      :if={@parent_play_suggestions != []}
+                      class="absolute z-20 mt-1 w-full bg-base-100 border border-base-300 rounded-box shadow-lg max-h-64 overflow-y-auto"
+                    >
+                      <li :for={sugg <- @parent_play_suggestions}>
+                        <button
+                          type="button"
+                          phx-click="pick_parent"
+                          phx-value-id={sugg.id}
+                          phx-value-label={sugg.title}
+                          class="w-full text-left px-3 py-2 hover:bg-base-200 transition-colors"
+                        >
+                          <div class="text-sm font-medium text-base-content truncate">
+                            {sugg.title}
+                          </div>
+                          <div class="text-xs text-base-content/70 truncate mt-0.5">
+                            {sugg.code}
+                          </div>
+                        </button>
+                      </li>
+                    </ul>
+                    <p
+                      :if={@parent_play_search == ""}
+                      class="mt-1 text-xs text-base-content/70"
+                    >
+                      {gettext("Type to search for a play")}
+                    </p>
+                    <p
+                      :if={@parent_play_search != "" && @parent_play_suggestions == []}
+                      class="mt-1 text-xs text-base-content/70"
+                    >
+                      {gettext("No plays found")}
+                    </p>
+                  </div>
+                  <%!-- Hidden input carries the value through form submit / validate --%>
+                  <input
+                    type="hidden"
+                    name={@form[:parent_play_id].name}
+                    value={@parent_play_id || ""}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </.card>
+
+        <.card id="form-authorship" title={gettext("Authorship and publication")}>
+          <div class="space-y-4">
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="label" for={@form[:author_name].id}>
+                  <span class="label-text font-medium">{gettext("Author Name")}</span>
+                </label>
+                <.input field={@form[:author_name]} type="text" />
+              </div>
+              <div>
+                <label class="label" for={@form[:author_sort].id}>
+                  <span class="label-text font-medium">
+                    {gettext("Author (sort)")}
+                    <button
+                      type="button"
+                      phx-click="copy_field"
+                      phx-value-source="author_name"
+                      phx-value-target="author_sort"
+                      class="btn btn-ghost btn-xs ml-1 font-normal"
+                    >
+                      <.icon name="hero-clipboard-document-mini" class="size-3.5" />
+                      {gettext("Copy from Author Name")}
+                    </button>
+                  </span>
+                </label>
+                <.input
+                  field={@form[:author_sort]}
+                  type="text"
+                  placeholder={gettext("Surname, Name")}
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="label" for={@form[:language].id}>
+                  <span class="label-text font-medium">{gettext("Language")}</span>
+                </label>
+                <.input field={@form[:language]} type="select" options={language_options()} />
+              </div>
+              <div>
+                <label class="label" for={@form[:author_attribution].id}>
+                  <span class="label-text font-medium">{gettext("Attribution")}</span>
+                </label>
+                <div :if={@attribution_mode == :select}>
+                  <.input
+                    field={@form[:author_attribution]}
+                    type="select"
+                    options={attribution_options()}
+                  />
+                </div>
+                <div :if={@attribution_mode == :custom} class="flex items-center gap-2">
+                  <div class="flex-1">
+                    <.input
+                      field={@form[:author_attribution]}
+                      type="text"
+                      placeholder={gettext("Custom attribution...")}
+                    />
+                  </div>
                   <button
                     type="button"
-                    phx-click="clear_parent"
-                    class="btn btn-ghost btn-xs btn-circle shrink-0"
-                    title={gettext("Clear")}
+                    phx-click="set_attribution_mode"
+                    phx-value-mode="select"
+                    class="btn btn-ghost btn-sm font-normal"
                   >
-                    <.icon name="hero-x-mark-mini" class="size-3.5" />
+                    <.icon name="hero-list-bullet-mini" class="size-4" />
+                    {gettext("Predefined values")}
                   </button>
                 </div>
-                <%!-- Search state --%>
-                <div :if={!@parent_play_id}>
-                  <input
-                    type="text"
-                    name="parent_play_search"
-                    value={@parent_play_search}
-                    phx-change="suggest_parent"
-                    phx-debounce="200"
-                    placeholder={gettext("Search by title or code...")}
-                    class="input input-bordered w-full"
-                    autocomplete="off"
-                  />
-                  <%!-- Suggestions dropdown --%>
-                  <ul
-                    :if={@parent_play_suggestions != []}
-                    class="absolute z-20 mt-1 w-full bg-base-100 border border-base-300 rounded-box shadow-lg max-h-64 overflow-y-auto"
-                  >
-                    <li :for={sugg <- @parent_play_suggestions}>
-                      <button
-                        type="button"
-                        phx-click="pick_parent"
-                        phx-value-id={sugg.id}
-                        phx-value-label={sugg.title}
-                        class="w-full text-left px-3 py-2 hover:bg-base-200 transition-colors"
-                      >
-                        <div class="text-sm font-medium text-base-content truncate">
-                          {sugg.title}
-                        </div>
-                        <div class="text-xs text-base-content/70 truncate mt-0.5">
-                          {sugg.code}
-                        </div>
-                      </button>
-                    </li>
-                  </ul>
-                  <p
-                    :if={@parent_play_search == ""}
-                    class="mt-1 text-xs text-base-content/70"
-                  >
-                    {gettext("Type to search for a play")}
-                  </p>
-                  <p
-                    :if={@parent_play_search != "" && @parent_play_suggestions == []}
-                    class="mt-1 text-xs text-base-content/70"
-                  >
-                    {gettext("No plays found")}
-                  </p>
-                </div>
-                <%!-- Hidden input carries the value through form submit / validate --%>
-                <input
-                  type="hidden"
-                  name={@form[:parent_play_id].name}
-                  value={@parent_play_id || ""}
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <div>
+                <label class="label" for={@form[:pub_place].id}>
+                  <span class="label-text font-medium">{gettext("Publication Place")}</span>
+                </label>
+                <.input field={@form[:pub_place]} type="text" />
+              </div>
+              <div>
+                <label class="label" for={@form[:publication_date].id}>
+                  <span class="label-text font-medium">{gettext("Publication Date")}</span>
+                </label>
+                <.input
+                  field={@form[:publication_date]}
+                  type="text"
+                  placeholder="e.g. 2023 or 01-01-2023"
                 />
               </div>
             </div>
-          </div>
-        </div>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="label" for={@form[:author_name].id}>
-              <span class="label-text font-medium">{gettext("Author Name")}</span>
-            </label>
-            <.input field={@form[:author_name]} type="text" />
-          </div>
-          <div>
-            <label class="label" for={@form[:author_sort].id}>
-              <span class="label-text font-medium">
-                {gettext("Author (sort)")}
-                <button
-                  type="button"
-                  phx-click="copy_field"
-                  phx-value-source="author_name"
-                  phx-value-target="author_sort"
-                  class="btn btn-ghost btn-xs ml-1"
-                  title={gettext("Copy from Author Name")}
-                >
-                  <.icon name="hero-clipboard-document-mini" class="size-3" />
-                </button>
-              </span>
-            </label>
-            <.input field={@form[:author_sort]} type="text" placeholder={gettext("Surname, Name")} />
-          </div>
-        </div>
+            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label class="label" for={@form[:publisher].id}>
+                  <span class="label-text font-medium">{gettext("Publisher")}</span>
+                </label>
+                <.input field={@form[:publisher]} type="text" />
+              </div>
+              <div>
+                <label class="label" for={@form[:authority].id}>
+                  <span class="label-text font-medium">{gettext("Authority")}</span>
+                </label>
+                <.input
+                  field={@form[:authority]}
+                  type="text"
+                  placeholder={gettext("Institutional authority")}
+                />
+              </div>
+            </div>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="label" for={@form[:language].id}>
-              <span class="label-text font-medium">{gettext("Language")}</span>
-            </label>
-            <.input field={@form[:language]} type="select" options={language_options()} />
-          </div>
-          <div>
-            <label class="label" for={@form[:author_attribution].id}>
-              <span class="label-text font-medium">{gettext("Attribution")}</span>
-            </label>
-            <div :if={@attribution_mode == :select}>
+            <div>
+              <label class="label" for={@form[:availability_note].id}>
+                <span class="label-text font-medium">{gettext("Availability Note")}</span>
+              </label>
               <.input
-                field={@form[:author_attribution]}
-                type="select"
-                options={attribution_options()}
+                field={@form[:availability_note]}
+                type="textarea"
+                placeholder={gettext("Usage terms and citation info")}
               />
             </div>
-            <div :if={@attribution_mode == :custom} class="flex items-center gap-2">
-              <div class="flex-1">
-                <.input
-                  field={@form[:author_attribution]}
-                  type="text"
-                  placeholder={gettext("Custom attribution...")}
-                />
-              </div>
-              <button
-                type="button"
-                phx-click="set_attribution_mode"
-                phx-value-mode="select"
-                class="btn btn-ghost btn-sm"
-                title={gettext("Switch to predefined values")}
-              >
-                <.icon name="hero-list-bullet-mini" class="size-4" />
-              </button>
-            </div>
           </div>
-        </div>
+        </.card>
 
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div>
-            <label class="label" for={@form[:pub_place].id}>
-              <span class="label-text font-medium">{gettext("Publication Place")}</span>
-            </label>
-            <.input field={@form[:pub_place]} type="text" />
-          </div>
-          <div>
-            <label class="label" for={@form[:publication_date].id}>
-              <span class="label-text font-medium">{gettext("Publication Date")}</span>
-            </label>
-            <.input
-              field={@form[:publication_date]}
-              type="text"
-              placeholder="e.g. 2023 or 01-01-2023"
-            />
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <label class="label" for={@form[:publisher].id}>
-              <span class="label-text font-medium">{gettext("Publisher")}</span>
-            </label>
-            <.input field={@form[:publisher]} type="text" />
-          </div>
-          <div>
-            <label class="label" for={@form[:authority].id}>
-              <span class="label-text font-medium">{gettext("Authority")}</span>
-            </label>
-            <.input
-              field={@form[:authority]}
-              type="text"
-              placeholder={gettext("Institutional authority")}
-            />
-          </div>
-        </div>
-
-        <div>
-          <label class="label" for={@form[:availability_note].id}>
-            <span class="label-text font-medium">{gettext("Availability Note")}</span>
-          </label>
-          <.input
-            field={@form[:availability_note]}
-            type="textarea"
-            placeholder={gettext("Usage terms and citation info")}
-          />
-        </div>
-
-        <fieldset :if={@live_action == :edit} class="rounded-box bg-base-200 px-3 py-2">
-          <legend class="text-sm font-medium">{gettext("Numbering")}</legend>
+        <.card :if={@live_action == :edit} id="form-numbering" title={gettext("Numbering")}>
           <div class="grid gap-4 sm:grid-cols-3">
             <.input
               field={@form[:numbering_type]}
@@ -771,243 +801,271 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
             )}
             <input type="hidden" name="play[confirm_numbering]" value={@numbering_changes} />
           </div>
-        </fieldset>
+        </.card>
 
-        <div :if={@variant_count > 0}>
-          <.input
-            field={@form[:show_variants]}
-            type="checkbox"
-            label={gettext("Show variant readings")}
-          />
-          <p class="mt-1 text-xs text-base-content/70">
-            {ngettext(
-              "Shows readers the play's one variant; the TEI file always keeps it.",
-              "Shows readers the play's %{count} variants; the TEI file always keeps them.",
-              @variant_count
-            )}
-          </p>
-        </div>
+        <.card id="form-playcode" title={gettext("Only in Playcode")}>
+          <div class="space-y-4">
+            <div :if={@variant_count > 0}>
+              <.input
+                field={@form[:show_variants]}
+                type="checkbox"
+                label={gettext("Show variant readings")}
+              />
+              <p class="mt-1 text-xs text-base-content/70">
+                {ngettext(
+                  "Shows readers the play's one variant; the TEI file always keeps it.",
+                  "Shows readers the play's %{count} variants; the TEI file always keeps them.",
+                  @variant_count
+                )}
+              </p>
+            </div>
 
-        <div>
-          <label class="label" for={@form[:team_note].id}>
-            <span class="label-text font-medium">{gettext("Team note")}</span>
-          </label>
-          <.input field={@form[:team_note]} type="textarea" />
-          <p class="mt-1 text-xs text-base-content/70">
-            {gettext(
-              "Only the team reads it: it is printed nowhere and never written to the TEI file."
-            )}
-          </p>
-        </div>
-
-        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
-            {gettext("Project & Editorial")}
-          </h3>
-          <div>
-            <label class="label" for={@form[:project_description].id}>
-              <span class="label-text font-medium">{gettext("Project Description")}</span>
-            </label>
-            <.input
-              field={@form[:project_description]}
-              type="textarea"
-              placeholder={gettext("Description of the digitization project")}
-            />
+            <div>
+              <label class="label" for={@form[:team_note].id}>
+                <span class="label-text font-medium">{gettext("Team note")}</span>
+              </label>
+              <.input field={@form[:team_note]} type="textarea" />
+              <p class="mt-1 text-xs text-base-content/70">
+                {gettext(
+                  "Only the team reads it: it is printed nowhere and never written to the TEI file."
+                )}
+              </p>
+            </div>
           </div>
-          <div>
-            <label class="label" for={@form[:editorial_declaration].id}>
-              <span class="label-text font-medium">{gettext("Editorial Declaration")}</span>
-            </label>
-            <.input
-              field={@form[:editorial_declaration]}
-              type="textarea"
-              placeholder={gettext("Editorial methodology and approach")}
-            />
-          </div>
-        </div>
+        </.card>
 
-        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
-            {gettext("Research Metadata")}
-          </h3>
-          <div>
-            <label class="label" for={@form[:form].id}>
-              <span class="label-text font-medium">{gettext("Form")}</span>
-            </label>
-            <.input field={@form[:form]} type="select" options={PlayLabels.form_options(@play)} />
-            <p class="mt-1 text-xs text-base-content/70">
-              {gettext("Automatic follows the text: verse when it has any verse lines.")}
+        <.card id="form-project" title={gettext("Project & Editorial")}>
+          <div class="space-y-3">
+            <div>
+              <label class="label" for={@form[:project_description].id}>
+                <span class="label-text font-medium">{gettext("Project Description")}</span>
+              </label>
+              <.input
+                field={@form[:project_description]}
+                type="textarea"
+                placeholder={gettext("Description of the digitization project")}
+              />
+            </div>
+            <div>
+              <label class="label" for={@form[:editorial_declaration].id}>
+                <span class="label-text font-medium">{gettext("Editorial Declaration")}</span>
+              </label>
+              <.input
+                field={@form[:editorial_declaration]}
+                type="textarea"
+                placeholder={gettext("Editorial methodology and approach")}
+              />
+            </div>
+          </div>
+        </.card>
+
+        <.card id="form-research" title={gettext("Research Metadata")}>
+          <div class="space-y-3">
+            <div>
+              <label class="label" for={@form[:form].id}>
+                <span class="label-text font-medium">{gettext("Form")}</span>
+              </label>
+              <.input field={@form[:form]} type="select" options={PlayLabels.form_options(@play)} />
+              <p class="mt-1 text-xs text-base-content/70">
+                {gettext("Automatic follows the text: verse when it has any verse lines.")}
+              </p>
+            </div>
+            <div>
+              <label class="label" for={@form[:historical_time].id}>
+                <span class="label-text font-medium">{gettext("Historical Time")}</span>
+              </label>
+              <.input
+                field={@form[:historical_time]}
+                type="select"
+                options={PlayLabels.historical_time_options()}
+              />
+            </div>
+            <div>
+              <label class="label" for={@form[:historical_time_note].id}>
+                <span class="label-text font-medium">{gettext("Historical Time Note")}</span>
+              </label>
+              <.input
+                field={@form[:historical_time_note]}
+                type="textarea"
+                placeholder={gettext("When the action is set, and the evidence for it")}
+              />
+            </div>
+            <div>
+              <label class="label">
+                <span class="label-text font-medium">{gettext("Composition Date")}</span>
+              </label>
+              <div class="flex items-center gap-2">
+                <.input
+                  field={@form[:composition_date_from]}
+                  type="number"
+                  placeholder={gettext("From")}
+                />
+                <span class="text-base-content/70">–</span>
+                <.input
+                  field={@form[:composition_date_to]}
+                  type="number"
+                  placeholder={gettext("To")}
+                />
+              </div>
+            </div>
+            <div>
+              <label class="label" for={@form[:composition_date_note].id}>
+                <span class="label-text font-medium">{gettext("Composition Date Note")}</span>
+              </label>
+              <.input
+                field={@form[:composition_date_note]}
+                type="textarea"
+                placeholder={gettext("Competing datings, and the evidence for each")}
+              />
+            </div>
+          </div>
+        </.card>
+
+        <.card id="form-notes" title={gettext("Notes on the edition")}>
+          <div class="space-y-3">
+            <p class="text-xs text-base-content/70">
+              {gettext(
+                "Written in the TEI file's header, not shown to readers. Empty a box to remove its note."
+              )}
             </p>
+            <div :for={{note, i} <- Enum.with_index(edition_note_boxes(@form))}>
+              <label class="label" for={"play_edition_notes_#{i}"}>
+                <span class="label-text font-medium">{gettext("Note %{n}", n: i + 1)}</span>
+              </label>
+              <textarea
+                id={"play_edition_notes_#{i}"}
+                name="play[edition_notes][]"
+                rows="3"
+                class="w-full textarea"
+              >{note}</textarea>
+            </div>
           </div>
-          <div>
-            <label class="label" for={@form[:historical_time].id}>
-              <span class="label-text font-medium">{gettext("Historical Time")}</span>
-            </label>
-            <.input
-              field={@form[:historical_time]}
-              type="select"
-              options={PlayLabels.historical_time_options()}
-            />
+        </.card>
+
+        <.card id="form-revisions" title={gettext("Revision history")}>
+          <div class="space-y-3">
+            <p class="text-xs text-base-content/70">
+              {gettext(
+                "Who revised the TEI file and when, written in its header, not shown to readers. Separate several revisers with a semicolon."
+              )}
+            </p>
+            <.inputs_for :let={change} field={@form[:revisions]}>
+              <input type="hidden" name={"#{@form.name}[revisions_order][]"} value={change.index} />
+              <div class="grid grid-cols-1 items-end gap-2 md:grid-cols-[6rem_1fr_1fr_1fr_auto]">
+                <.input field={change[:date]} type="text" label={gettext("Date")} />
+                <.input field={change[:people]} type="text" label={gettext("Revisers")} />
+                <.input field={change[:description]} type="text" label={gettext("What was done")} />
+                <.input field={change[:note]} type="text" label={gettext("Note")} />
+                <button
+                  type="button"
+                  name={"#{@form.name}[revisions_delete][]"}
+                  value={change.index}
+                  phx-click={JS.dispatch("change")}
+                  class="btn btn-ghost btn-xs text-error mb-2"
+                >
+                  {gettext("Remove")}
+                </button>
+              </div>
+            </.inputs_for>
+            <input type="hidden" name={"#{@form.name}[revisions_delete][]"} />
+            <button
+              type="button"
+              name={"#{@form.name}[revisions_order][]"}
+              value="new"
+              phx-click={JS.dispatch("change")}
+              class="btn btn-ghost btn-xs"
+            >
+              {gettext("Add change")}
+            </button>
           </div>
-          <div>
-            <label class="label" for={@form[:historical_time_note].id}>
-              <span class="label-text font-medium">{gettext("Historical Time Note")}</span>
-            </label>
-            <.input
-              field={@form[:historical_time_note]}
-              type="textarea"
-              placeholder={gettext("When the action is set, and the evidence for it")}
-            />
-          </div>
-          <div>
-            <label class="label">
-              <span class="label-text font-medium">{gettext("Composition Date")}</span>
-            </label>
-            <div class="flex items-center gap-2">
+        </.card>
+
+        <.card id="form-funding" title={gettext("Funding & Licence")}>
+          <div class="space-y-3">
+            <div>
+              <label class="label" for={@form[:sponsor].id}>
+                <span class="label-text font-medium">{gettext("Sponsor")}</span>
+              </label>
               <.input
-                field={@form[:composition_date_from]}
-                type="number"
-                placeholder={gettext("From")}
+                field={@form[:sponsor]}
+                type="text"
+                placeholder={gettext("Sponsoring organization")}
               />
-              <span class="text-base-content/70">–</span>
+            </div>
+            <div>
+              <label class="label" for={@form[:funder].id}>
+                <span class="label-text font-medium">{gettext("Funder")}</span>
+              </label>
               <.input
-                field={@form[:composition_date_to]}
-                type="number"
-                placeholder={gettext("To")}
+                field={@form[:funder]}
+                type="textarea"
+                placeholder={gettext("Funding organization(s) and grant references")}
+              />
+            </div>
+            <div>
+              <label class="label" for={@form[:licence_url].id}>
+                <span class="label-text font-medium">{gettext("Licence URL")}</span>
+              </label>
+              <.input
+                field={@form[:licence_url]}
+                type="text"
+                placeholder="https://creativecommons.org/licenses/..."
+              />
+            </div>
+            <div>
+              <label class="label" for={@form[:licence_text].id}>
+                <span class="label-text font-medium">{gettext("Licence Text")}</span>
+              </label>
+              <.input
+                field={@form[:licence_text]}
+                type="text"
+                placeholder={gettext("e.g. CC BY-NC-ND 4.0")}
               />
             </div>
           </div>
-          <div>
-            <label class="label" for={@form[:composition_date_note].id}>
-              <span class="label-text font-medium">{gettext("Composition Date Note")}</span>
-            </label>
-            <.input
-              field={@form[:composition_date_note]}
-              type="textarea"
-              placeholder={gettext("Competing datings, and the evidence for each")}
-            />
-          </div>
-        </div>
+        </.card>
 
-        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
-            {gettext("Notes on the edition")}
-          </h3>
-          <p class="text-xs text-base-content/70">
-            {gettext(
-              "Written in the TEI file's header, not shown to readers. Empty a box to remove its note."
-            )}
-          </p>
-          <div :for={{note, i} <- Enum.with_index(edition_note_boxes(@form))}>
-            <label class="label" for={"play_edition_notes_#{i}"}>
-              <span class="label-text font-medium">{gettext("Note %{n}", n: i + 1)}</span>
-            </label>
-            <textarea
-              id={"play_edition_notes_#{i}"}
-              name="play[edition_notes][]"
-              rows="3"
-              class="w-full textarea"
-            >{note}</textarea>
-          </div>
-        </div>
-
-        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
-            {gettext("Revision history")}
-          </h3>
-          <p class="text-xs text-base-content/70">
-            {gettext(
-              "Who revised the TEI file and when, written in its header, not shown to readers. Separate several revisers with a semicolon."
-            )}
-          </p>
-          <.inputs_for :let={change} field={@form[:revisions]}>
-            <input type="hidden" name={"#{@form.name}[revisions_order][]"} value={change.index} />
-            <div class="grid grid-cols-1 items-end gap-2 md:grid-cols-[6rem_1fr_1fr_1fr_auto]">
-              <.input field={change[:date]} type="text" label={gettext("Date")} />
-              <.input field={change[:people]} type="text" label={gettext("Revisers")} />
-              <.input field={change[:description]} type="text" label={gettext("What was done")} />
-              <.input field={change[:note]} type="text" label={gettext("Note")} />
-              <button
-                type="button"
-                name={"#{@form.name}[revisions_delete][]"}
-                value={change.index}
-                phx-click={JS.dispatch("change")}
-                class="btn btn-ghost btn-xs text-error mb-2"
-              >
-                {gettext("Remove")}
-              </button>
-            </div>
-          </.inputs_for>
-          <input type="hidden" name={"#{@form.name}[revisions_delete][]"} />
-          <button
-            type="button"
-            name={"#{@form.name}[revisions_order][]"}
-            value="new"
-            phx-click={JS.dispatch("change")}
-            class="btn btn-ghost btn-xs"
-          >
-            {gettext("Add change")}
-          </button>
-        </div>
-
-        <div class="space-y-3 rounded-box border border-base-300 bg-base-50 p-4">
-          <h3 class="text-sm font-semibold uppercase tracking-wide text-base-content/70">
-            {gettext("Funding & Licence")}
-          </h3>
-          <div>
-            <label class="label" for={@form[:sponsor].id}>
-              <span class="label-text font-medium">{gettext("Sponsor")}</span>
-            </label>
-            <.input
-              field={@form[:sponsor]}
-              type="text"
-              placeholder={gettext("Sponsoring organization")}
-            />
-          </div>
-          <div>
-            <label class="label" for={@form[:funder].id}>
-              <span class="label-text font-medium">{gettext("Funder")}</span>
-            </label>
-            <.input
-              field={@form[:funder]}
-              type="textarea"
-              placeholder={gettext("Funding organization(s) and grant references")}
-            />
-          </div>
-          <div>
-            <label class="label" for={@form[:licence_url].id}>
-              <span class="label-text font-medium">{gettext("Licence URL")}</span>
-            </label>
-            <.input
-              field={@form[:licence_url]}
-              type="text"
-              placeholder="https://creativecommons.org/licenses/..."
-            />
-          </div>
-          <div>
-            <label class="label" for={@form[:licence_text].id}>
-              <span class="label-text font-medium">{gettext("Licence Text")}</span>
-            </label>
-            <.input
-              field={@form[:licence_text]}
-              type="text"
-              placeholder={gettext("e.g. CC BY-NC-ND 4.0")}
-            />
-          </div>
-        </div>
-
-        <div class="flex flex-wrap gap-2 border-t border-base-300 pt-4">
+        <%!-- Stays at the window's foot while the form scrolls. --%>
+        <div
+          id="save-bar"
+          class="sticky bottom-0 z-20 flex flex-wrap items-center gap-3 rounded-box border border-base-300 bg-base-100 px-4 py-3 shadow-lg"
+        >
           <button type="submit" class="btn btn-primary">
             {gettext("Save Play")}
           </button>
           <.link navigate={~p"/admin/plays"} class="btn btn-ghost">
             {gettext("Cancel")}
           </.link>
+          <span role="status" class="text-sm font-medium text-warning">
+            {if dirty?(@live_action, @form, @parent_play_id, @play), do: gettext("Unsaved changes")}
+          </span>
         </div>
       </.form>
     </.page>
     """
   end
+
+  defp sections(live_action) do
+    [
+      {"form-titles", gettext("Titles and code")},
+      {"form-relationship", gettext("Work Relationship")},
+      {"form-authorship", gettext("Authorship and publication")},
+      live_action == :edit && {"form-numbering", gettext("Numbering")},
+      {"form-playcode", gettext("Only in Playcode")},
+      {"form-project", gettext("Project & Editorial")},
+      {"form-research", gettext("Research Metadata")},
+      {"form-notes", gettext("Notes on the edition")},
+      {"form-revisions", gettext("Revision history")},
+      {"form-funding", gettext("Funding & Licence")}
+    ]
+    |> Enum.filter(& &1)
+  end
+
+  # A new play is all unsaved, so only an edit says so.
+  defp dirty?(:edit, form, parent_play_id, play),
+    do: form.source.changes != %{} or parent_play_id != play.parent_play_id
+
+  defp dirty?(_new, _form, _parent_play_id, _play), do: false
 
   # One box per note and an empty one for a new note. While the form is being edited the
   # boxes are what was typed, blanks included (the changeset drops them), so a box being
