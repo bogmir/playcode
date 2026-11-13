@@ -57,6 +57,22 @@ defmodule Playcode.ActivityLog do
   end
 
   @doc """
+  The last `limit` plays `user_id` changed, the most recently changed first, archived
+  ones left out.
+  """
+  def recent_plays(user_id, limit \\ 5) do
+    from(e in Entry,
+      join: p in assoc(e, :play),
+      where: e.user_id == ^user_id and is_nil(p.deleted_at),
+      group_by: p.id,
+      order_by: [desc: max(e.inserted_at)],
+      limit: ^limit,
+      select: p
+    )
+    |> Repo.all()
+  end
+
+  @doc """
   Returns the count of entries matching the given filters.
   """
   def count_entries(opts \\ []) do

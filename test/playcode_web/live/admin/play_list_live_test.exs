@@ -2,8 +2,10 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
   use PlaycodeWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
+  import Playcode.ImportHelpers
   import Playcode.TestFixtures
 
+  alias Playcode.ActivityLog
   alias Playcode.Catalogue
 
   setup %{conn: conn} do
@@ -191,6 +193,149 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       assert_patch(view, ~p"/admin/plays?#{[search: "Play", status: "draft"]}")
       assert has_element?(view, "#play-#{draft.id}")
       refute has_element?(view, "#play-#{done.id}")
+    end
+  end
+
+  describe "pick up where you left off" do
+    setup %{conn: conn} do
+      user = user_fixture(role: :researcher)
+      %{conn: log_in_user(conn, user), user: user}
+    end
+
+    defp changed(user, play),
+      do:
+        {:ok, _} =
+          ActivityLog.log(%{
+            user_id: user.id,
+            play_id: play.id,
+            action: "update",
+            resource_type: "play",
+            resource_id: play.id
+          })
+
+    defp recent_titles(view) do
+      view
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.query("section[aria-label='#{t("Pick up where you left off")}'] a")
+      |> Enum.map(&LazyHTML.text/1)
+      |> Enum.map(&String.trim/1)
+    end
+
+    test "lists the last five plays the user changed, newest first, each once, archived ones left out",
+         %{conn: conn, user: user} do
+      plays = for n <- 1..7, do: play_fixture(%{"title" => "Recent #{n}"})
+      [first, second | _] = plays
+
+      for play <- plays, do: changed(user, play)
+      changed(user, first)
+      changed(user_fixture(), second)
+      {:ok, _} = Catalogue.delete_play(Enum.at(plays, 6))
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert recent_titles(view) == ["Recent 1", "Recent 6", "Recent 5", "Recent 4", "Recent 3"]
+    end
+
+    test "a play saved through its form joins them", %{conn: conn} do
+      play = play_fixture(%{"title" => "Edited Here"})
+      {:ok, form, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+      form |> form("#play-form", play: %{"title" => "Edited There"}) |> render_submit()
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert recent_titles(view) == ["Edited There"]
+    end
+
+    test "nothing is shown to a user who changed nothing", %{conn: conn} do
+      play_fixture()
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      refute has_element?(view, "section[aria-label='#{t("Pick up where you left off")}']")
+    end
+  end
+
+  describe "a play whose text did not arrive" do
+    setup %{conn: conn} do
+      empty = play_fixture(%{"title" => "Empty Play"})
+
+      prose =
+        import_tei!(
+          tei(
+            title: "Prose Play",
+            body: """
+            <div1 type="acto" n="1"><head>ACTO I</head>
+              <sp><speaker>ANA</speaker><p>Todo en prosa.</p></sp>
+            </div1>
+            """
+          )
+        )
+
+      verse =
+        import_tei!(
+          tei(
+            title: "Verse Play",
+            body: """
+            <div1 type="acto" n="1"><head>ACTO I</head>
+              <sp><speaker>ANA</speaker><l n="1">uno</l><l n="2">dos</l></sp>
+            </div1>
+            """
+          )
+        )
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+      %{view: view, empty: empty, prose: prose, verse: verse}
+    end
+
+    test "is marked; a prose play is not, and says prose where its verses go",
+         %{view: view, empty: empty, prose: prose, verse: verse} do
+      assert has_element?(view, "#play-#{empty.id} td", t("No text"))
+      refute has_element?(view, "#play-#{prose.id} td", t("No text"))
+      refute has_element?(view, "#play-#{verse.id} td", t("No text"))
+
+      assert has_element?(view, "#play-#{prose.id} td", t("prose"))
+      assert has_element?(view, "#play-#{verse.id} td", "2")
+    end
+
+    test "has a filter of its own", %{view: view, empty: empty, prose: prose, verse: verse} do
+      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("No text")} · 1")
+
+      view |> element("nav[aria-label='#{t("Status")}'] a", t("No text")) |> render_click()
+      assert_patch(view, ~p"/admin/plays?status=no_text")
+      assert has_element?(view, "#play-#{empty.id}")
+      refute has_element?(view, "#play-#{prose.id}")
+      refute has_element?(view, "#play-#{verse.id}")
+    end
+  end
+
+  describe "the first visit's card" do
+    setup do
+      %{user: user_fixture(role: :researcher)}
+    end
+
+    defp card, do: "section[aria-label='#{t("Getting started")}']"
+
+    test "says how a play gets from here to the site", %{conn: conn, user: user} do
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/admin/plays")
+
+      assert has_element?(view, card(), t("Find a play in the list, or import one."))
+      assert has_element?(view, card(), t("Edit its record and its text."))
+
+      assert has_element?(
+               view,
+               card(),
+               t("Mark it complete, and it reaches the site at the next Generate.")
+             )
+    end
+
+    test "once closed, it stays closed, on this computer and on another",
+         %{conn: conn, user: user} do
+      {:ok, view, _html} = live(log_in_user(conn, user), ~p"/admin/plays")
+      view |> element("#{card()} button", t("Got it")) |> render_click()
+      refute has_element?(view, card())
+
+      {:ok, view, _html} = live(log_in_user(build_conn(), user), ~p"/admin/plays")
+      refute has_element?(view, card())
     end
   end
 

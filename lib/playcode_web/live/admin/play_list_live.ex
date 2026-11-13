@@ -6,6 +6,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
   use PlaycodeWeb, :live_view
 
+  alias Playcode.Accounts
+  alias Playcode.ActivityLog
   alias Playcode.Catalogue
   alias Playcode.PlayContent
   alias PlaycodeWeb.Admin.LiveHelpers
@@ -17,6 +19,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     {:ok,
      socket
      |> assign(:page_title, gettext("Admin - Plays"))
+     |> assign(:recent_plays, ActivityLog.recent_plays(socket.assigns.current_user.id))
      |> assign(:plays, [])
      |> assign(:search, "")
      |> assign(:status, nil)
@@ -49,7 +52,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
     {:noreply,
      socket
-     |> assign(:plays, plays)
+     |> assign_plays(plays)
      |> assign(:search, search)
      |> assign(:status, status)
      |> assign(:page, page)
@@ -62,6 +65,11 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   def handle_event("search", %{"search" => search}, socket) do
     {:noreply,
      push_patch(socket, to: ~p"/admin/plays?#{list_params(search, socket.assigns.status)}")}
+  end
+
+  def handle_event("close_welcome", _params, socket) do
+    {:ok, user} = Accounts.close_welcome(socket.assigns.current_user)
+    {:noreply, assign(socket, :current_user, user)}
   end
 
   def handle_event("restore", %{"id" => id}, socket) do
@@ -90,12 +98,14 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     page = min(socket.assigns.page, total_pages)
     plays = Catalogue.list_plays(opts ++ [page: page, per_page: @per_page])
 
-    assign(socket,
-      plays: plays,
-      page: page,
-      total_pages: total_pages
-    )
+    socket
+    |> assign_plays(plays)
+    |> assign(page: page, total_pages: total_pages)
     |> assign_counts()
+  end
+
+  defp assign_plays(socket, plays) do
+    assign(socket, plays: plays, without_text: Catalogue.without_text(Enum.map(plays, & &1.id)))
   end
 
   # The filter's counts follow the search; the heading's is the whole corpus.
@@ -105,13 +115,19 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
     assign(socket,
       plays_total: Catalogue.count_plays(),
-      status_counts: %{all: count.(nil), draft: count.(:draft), complete: count.(:complete)},
+      status_counts: %{
+        all: count.(nil),
+        draft: count.(:draft),
+        complete: count.(:complete),
+        no_text: count.(:no_text)
+      },
       archived_count: Catalogue.count_plays(archived: true)
     )
   end
 
   defp parse_status("draft"), do: :draft
   defp parse_status("complete"), do: :complete
+  defp parse_status("no_text"), do: :no_text
   defp parse_status(_), do: nil
 
   defp list_params(search, status, page \\ nil) do
@@ -150,7 +166,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     [
       {nil, gettext("All"), counts.all},
       {:draft, gettext("Drafts"), counts.draft},
-      {:complete, gettext("Complete plays"), counts.complete}
+      {:complete, gettext("Complete plays"), counts.complete},
+      {:no_text, gettext("No text"), counts.no_text}
     ]
   end
 
@@ -163,6 +180,14 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp status_badge(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: "badge-outline"
   defp status_badge(%{is_complete: true}), do: "badge-success badge-soft"
   defp status_badge(_play), do: "badge-ghost"
+
+  defp verses(play, without_text) do
+    cond do
+      play.id in without_text -> "—"
+      Playcode.Catalogue.Play.form(play) == "prose" -> gettext("prose")
+      true -> play.verse_count
+    end
+  end
 
   @impl true
   def render(assigns) do
@@ -187,6 +212,36 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           </div>
         </:actions>
       </.page_header>
+
+      <section
+        :if={is_nil(@current_user.welcome_closed_at)}
+        aria-label={gettext("Getting started")}
+        class="mb-5 flex items-start gap-4 rounded-box border border-primary/30 bg-primary/5 p-4"
+      >
+        <ol class="flex-1 list-inside list-decimal space-y-1 text-sm">
+          <li>{gettext("Find a play in the list, or import one.")}</li>
+          <li>{gettext("Edit its record and its text.")}</li>
+          <li>{gettext("Mark it complete, and it reaches the site at the next Generate.")}</li>
+        </ol>
+        <button phx-click="close_welcome" class="btn btn-sm btn-ghost">{gettext("Got it")}</button>
+      </section>
+
+      <section
+        :if={@recent_plays != []}
+        aria-label={gettext("Pick up where you left off")}
+        class="mb-5"
+      >
+        <h2 class="mb-2 text-sm font-semibold text-base-content/70">
+          {gettext("Pick up where you left off")}
+        </h2>
+        <ul class="flex flex-wrap gap-2">
+          <li :for={play <- @recent_plays}>
+            <.link navigate={~p"/admin/plays/#{play.id}"} class="btn btn-sm btn-ghost">
+              {play.title}
+            </.link>
+          </li>
+        </ul>
+      </section>
 
       <div class="mb-5 flex flex-wrap items-center gap-3">
         <form phx-change="search" phx-submit="search" class="flex-1 md:max-w-md">
@@ -270,9 +325,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <span class={["badge badge-sm", status_badge(play)]}>
                   {status_label(play)}
                 </span>
+                <span :if={play.id in @without_text} class="badge badge-sm badge-warning mt-1">
+                  {gettext("No text")}
+                </span>
               </td>
               <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
-                {play.verse_count || "—"}
+                {verses(play, @without_text)}
               </td>
               <td :if={@archived}>
                 <div class="flex items-center justify-end gap-1">

@@ -243,6 +243,25 @@ defmodule Playcode.Catalogue do
   end
 
   @doc """
+  Which of `play_ids` have no text: not a verse, not a line of prose. A prose play has
+  text; a play whose file brought none, or that was created by hand and never filled,
+  has not.
+  """
+  def without_text(play_ids) do
+    with_text =
+      text_elements()
+      |> where([e], e.play_id in ^play_ids)
+      |> select([e], e.play_id)
+      |> distinct(true)
+      |> Repo.all()
+
+    MapSet.difference(MapSet.new(play_ids), MapSet.new(with_text))
+  end
+
+  defp text_elements,
+    do: where(Playcode.PlayContent.Element, [e], e.type in ["verse_line", "prose"])
+
+  @doc """
   The admin form's changeset (`Play.form_changeset/2`).
   """
   def change_play_form(%Play{} = play, attrs \\ %{}) do
@@ -513,6 +532,11 @@ defmodule Playcode.Catalogue do
 
   defp apply_status(query, :draft), do: where(query, [p], not p.is_complete)
   defp apply_status(query, :complete), do: where(query, [p], p.is_complete)
+
+  defp apply_status(query, :no_text) do
+    where(query, [p], p.id not in subquery(select(text_elements(), [e], e.play_id)))
+  end
+
   defp apply_status(query, _), do: query
 
   defp apply_complete(query, true), do: where(query, [p], p.is_complete == true)

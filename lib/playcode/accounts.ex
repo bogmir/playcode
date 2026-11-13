@@ -374,6 +374,15 @@ defmodule Playcode.Accounts do
   def active?(_), do: false
 
   @doc """
+  Closes the play list's first-visit card for good.
+  """
+  def close_welcome(%User{} = user) do
+    user
+    |> Ecto.Changeset.change(welcome_closed_at: DateTime.utc_now(:second))
+    |> Repo.update()
+  end
+
+  @doc """
   Deactivates a user and destroys every token they hold.
 
   Deactivation rather than deletion, because `activity_logs.user_id`

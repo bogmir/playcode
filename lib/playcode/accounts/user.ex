@@ -21,6 +21,7 @@ defmodule Playcode.Accounts.User do
     field :role, Ecto.Enum, values: [:admin, :researcher], default: :researcher
     field :confirmed_at, :utc_datetime
     field :deactivated_at, :utc_datetime
+    field :welcome_closed_at, :utc_datetime
 
     timestamps(type: :utc_datetime)
   end
