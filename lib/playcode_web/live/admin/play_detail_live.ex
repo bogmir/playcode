@@ -141,15 +141,11 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
     |> InlineMarkup.plain()
   end
 
-  # An act's whole verses, from the statistics' distribution, keyed as it keys them.
+  # A top-level division's whole verses, its scenes' included.
   defp act_verses(nil, _division), do: nil
 
-  defp act_verses(statistic, division) do
-    Enum.find_value(statistic.data["verse_distribution"] || [], fn
-      %{"act" => act, "count" => count} ->
-        if act == (division.number || division.position), do: count
-    end)
-  end
+  defp act_verses(statistic, division),
+    do: Enum.find_value(statistic.data["divisions"], &(&1["id"] == division.id && &1["verses"]))
 
   defp acts(divisions), do: Enum.reject(divisions, &(&1.type == "elenco"))
 

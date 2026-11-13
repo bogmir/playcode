@@ -449,8 +449,8 @@ defmodule Playcode.Import.WordParserTest do
       play
     )
 
-    appearances = Playcode.Statistics.get_statistics(play.id).data["character_appearances"]
+    characters = Playcode.Statistics.get_statistics(play.id).data["characters"]
 
-    assert Map.new(appearances, &{&1["name"], &1["speeches"]}) == %{"FEBO" => 2, "ANA" => 1}
+    assert Map.new(characters, &{&1["name"], &1["speeches"]}) == %{"FEBO" => 2, "ANA" => 1}
   end
 end

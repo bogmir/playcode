@@ -498,6 +498,60 @@ defmodule Playcode.Export.StaticSitePlayTest do
                ["1 line", "1 line", "5 lines"]
     end
 
+    test "a mixed play shows its scenes, shared verses, asides and prose, act by act and scene by scene" do
+      {play, dir} = publish!(mixed_play())
+
+      for {ui, labels} <- [
+            {"en", ["scenes", "shared verses", "asides", "prose passages"]},
+            {"es", ["escenas", "versos compartidos", "apartes", "pasajes en prosa"]}
+          ] do
+        stats = html!(dir, "plays/#{play.code}/statistics.html", ui)
+        tiles = Map.new(Enum.zip(texts(stats, "#tiles dt"), texts(stats, "#tiles dd")))
+        assert labels |> Enum.map(&tiles[&1]) == ["2", "1", "1", "1"], ui
+      end
+
+      stats = page(dir, play, "statistics.html")
+
+      assert texts(stats, "#divisions thead th") ==
+               ["Act or scene", "Verses", "Speeches", "Speaking characters", "Prose passages"]
+
+      assert rows(stats, "#divisions tbody tr") == [
+               ["Acto I", "2", "3", "2", "1"],
+               ["Escena 1", "2", "2", "2", "0"],
+               ["Escena 2", "0", "1", "1", "1"],
+               ["Acto II", "1", "1", "1", "0"]
+             ]
+
+      assert html!(dir, "plays/#{play.code}/statistics.html", "es")
+             |> texts("#divisions h2") == ["Por acto y escena"]
+    end
+
+    test "a verse play with no scenes has a row per act, named if untitled, and no prose column; one act, no table" do
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>
+        <div1 type="acto" n="2">
+          <sp><speaker>B</speaker><l n="2">dos</l><l n="3">tres</l></sp></div1>
+        """)
+
+      stats = page(dir, play, "statistics.html")
+
+      assert texts(stats, "#divisions thead th") ==
+               ["Act or scene", "Verses", "Speeches", "Speaking characters"]
+
+      assert rows(stats, "#divisions tbody tr") == [
+               ["Acto I", "1", "1", "1"],
+               ["Acto 2", "2", "1", "1"]
+             ]
+
+      refute "scenes" in texts(stats, "#tiles dt")
+
+      {play, dir} =
+        publish!(~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>))
+
+      assert dir |> page(play, "statistics.html") |> LazyHTML.query("#divisions") |> Enum.empty?()
+    end
+
     # Regression: both tables stopped at 12; Arden has 18, and a reader counting words needs all.
     test "the characters table and who shares the stage list every speaking character" do
       speeches = for i <- 1..13, do: "<sp><speaker>P#{i}</speaker><p>Hola.</p></sp>"
@@ -573,6 +627,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
 
       assert LazyHTML.text(stats) =~ "most words"
       refute "verses" in texts(stats, "#tiles dt")
+      assert "prose passages" in texts(stats, "#tiles dt")
     end
   end
 

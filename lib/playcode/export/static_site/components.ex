@@ -1126,11 +1126,15 @@ defmodule Playcode.Export.StaticSite.Components do
       Enum.reject(
         [
           {s["num_acts"], t("acts")},
+          {s["scenes"], t("scenes")},
           {s["verses"], t("verses")},
+          {s["split_verses"], t("shared verses")},
           {length(s["metrical_passages"] || []), t("metrical passages")},
+          {s["total_prose_fragments"], t("prose passages")},
           {s["speeches"], t("speeches")},
           {length(s["characters"] || []), t("speaking characters")},
           {s["total_stage_directions"], t("stage directions")},
+          {s["total_asides"], t("asides")},
           {s["aside_verses"], t("verses in asides")}
         ],
         fn {value, _label} -> value in [nil, 0] end
@@ -1145,6 +1149,38 @@ defmodule Playcode.Export.StaticSite.Components do
         <dd>{number(value)}</dd>
       </div>
     </dl>
+    """
+  end
+
+  attr :rows, :list, required: true
+
+  def division_table(assigns) do
+    assigns = assign(assigns, :prose?, Enum.any?(assigns.rows, &(&1["prose"] > 0)))
+
+    ~H"""
+    <section :if={length(@rows) > 1} id="divisions">
+      <h2>{t("By act and scene")}</h2>
+      <table>
+        <thead>
+          <tr>
+            <th>{t("Act or scene")}</th>
+            <th class="num">{t("Verses")}</th>
+            <th class="num">{t("Speeches")}</th>
+            <th class="num">{t("Speaking characters")}</th>
+            <th :if={@prose?} class="num">{t("Prose passages")}</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr :for={row <- @rows} class={row["scene"] && "sc"}>
+            <th scope="row"><.inline text={row["label"]} /></th>
+            <td class="num">{number(row["verses"])}</td>
+            <td class="num">{number(row["speeches"])}</td>
+            <td class="num">{number(row["speakers"])}</td>
+            <td :if={@prose?} class="num">{number(row["prose"])}</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
     """
   end
 

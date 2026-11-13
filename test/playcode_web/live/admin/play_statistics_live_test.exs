@@ -4,6 +4,7 @@ defmodule PlaycodeWeb.Admin.PlayStatisticsLiveTest do
   import Phoenix.LiveViewTest
   import Playcode.ImportHelpers
   import Playcode.TestFixtures
+  import Playcode.StaticSiteHelpers, only: [rows: 2, texts: 2]
 
   setup %{conn: conn} do
     %{conn: log_in_user(conn, user_fixture(role: :researcher))}
@@ -37,6 +38,54 @@ defmodule PlaycodeWeb.Admin.PlayStatisticsLiveTest do
     assert has_element?(lv, "#presence")
     assert has_element?(lv, "[aria-current=page]", t("Statistics"))
     refute html =~ "<x-en"
+  end
+
+  test "a mixed play shows its scenes, shared verses, asides and prose, act by act and scene by scene",
+       %{conn: conn} do
+    play = import_tei!(tei(body: mixed_play()))
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/statistics")
+    page = LazyHTML.from_fragment(render(lv))
+
+    tiles = Map.new(Enum.zip(texts(page, "#tiles dt"), texts(page, "#tiles dd")))
+
+    assert Enum.map(["scenes", "shared verses", "asides", "prose passages"], &tiles[t(&1)]) ==
+             ["2", "1", "1", "1"]
+
+    assert has_element?(lv, "#divisions [role=region][aria-label]")
+
+    assert texts(page, "#divisions thead th") ==
+             [t("Act or scene"), t("Verses"), t("Speeches"), t("Speaking characters")] ++
+               [t("Prose passages")]
+
+    assert rows(page, "#divisions tbody tr") == [
+             ["Acto I", "2", "3", "2", "1"],
+             ["Escena 1", "2", "2", "2", "0"],
+             ["Escena 2", "0", "1", "1", "1"],
+             ["Acto II", "1", "1", "1", "0"]
+           ]
+  end
+
+  test "a verse play has no prose column, and a play of one division no table", %{conn: conn} do
+    play = play_with_forms()
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/statistics")
+    page = LazyHTML.from_fragment(render(lv))
+
+    refute t("Prose passages") in texts(page, "#divisions thead th")
+
+    assert rows(page, "#divisions tbody tr") == [
+             ["Acto I", "3", "2", "2"],
+             ["Escena 1", "3", "2", "2"]
+           ]
+
+    play =
+      import_tei!(
+        tei(
+          body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>)
+        )
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/statistics")
+    refute has_element?(lv, "#divisions")
   end
 
   test "Recalcular recomputes and the page keeps the date", %{conn: conn} do

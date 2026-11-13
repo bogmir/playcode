@@ -8,13 +8,14 @@ defmodule Playcode.Statistics do
   alias Playcode.Catalogue.Play
   alias Playcode.Statistics.PlayStatistic
   alias Playcode.PlayContent
-  alias Playcode.PlayContent.{Division, Element, ElementCharacter, InlineMarkup}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup}
   alias Playcode.Statistics.Metrics
 
   # Bump when compute/1 changes what it stores: a cached row with another version is
   # recomputed on its next read, so no migration or manual recompute is needed.
-  # 10: verse numbers are strings (2026-11-08), so passages' ranges and first lines too.
-  @version 10
+  # 11: a row per division as well as per scene, with prose passages (2026-11-13); the
+  # figures no page reads dropped.
+  @version 11
 
   # A cached row is current only for the play's content_version it was computed at:
   # Postgres moves that version on every edit to the play's text, so no edit has to
@@ -60,9 +61,6 @@ defmodule Playcode.Statistics do
     acts = list_acts(play_id)
     all_elements = list_all_elements(play_id)
 
-    # Map division_id -> act number for elements
-    division_to_act = build_division_to_act_map(play_id, acts)
-
     items = play_id |> PlayContent.load_play_content() |> Metrics.items()
     passages = Metrics.passages(items)
     {basis, columns, column_of} = Metrics.columns(items, passages)
@@ -72,18 +70,13 @@ defmodule Playcode.Statistics do
       "version" => @version,
       "act_label" => act_label(acts),
       "num_acts" => length(acts),
-      "scenes" => compute_scenes(play_id, acts),
-      "total_verses" => length(whole_verses(all_elements)),
-      "verse_distribution" => verse_distribution(all_elements, division_to_act, acts),
+      "scenes" => count_scenes(play_id),
       "split_verses" => count_split_verses(all_elements),
-      "prose_fragments" => count_prose_fragments(all_elements, division_to_act, acts),
       "total_prose_fragments" => count_by_type(all_elements, "prose"),
       "total_stage_directions" =>
         count_by_type(all_elements, "stage_direction") + inline_stages(all_elements),
       "total_asides" => count_asides(all_elements),
       "aside_verses" => count_aside_verses(all_elements),
-      "character_appearances" => character_appearances(all_elements),
-      "verse_type_distribution" => verse_type_distribution(all_elements),
       "metrical_passages" => Enum.map(passages, &passage_data/1),
       "verses" => Enum.count(items, &Metrics.whole_verse?/1),
       "speeches" => count_by_type(all_elements, "speech"),
@@ -119,51 +112,14 @@ defmodule Playcode.Statistics do
   defp act_label([%{type: type} | _]), do: type
   defp act_label([]), do: "act"
 
-  defp list_all_elements(play_id) do
-    ec_preload = from(ec in ElementCharacter, order_by: ec.position, preload: :character)
+  defp list_all_elements(play_id), do: Repo.all(where(Element, play_id: ^play_id))
 
-    Element
-    |> where(play_id: ^play_id)
-    |> preload(element_characters: ^ec_preload)
-    |> Repo.all()
-  end
-
-  defp build_division_to_act_map(play_id, acts) do
-    # For each act, find all child divisions and map them back to the act
-    all_divisions =
-      Division
-      |> where(play_id: ^play_id)
-      |> Repo.all()
-
-    divisions_by_parent = Enum.group_by(all_divisions, & &1.parent_id)
-
-    Enum.reduce(acts, %{}, fn act, acc ->
-      children = Map.get(divisions_by_parent, act.id, [])
-      child_ids = Enum.map(children, & &1.id)
-      all_ids = [act.id | child_ids]
-      Enum.reduce(all_ids, acc, fn id, a -> Map.put(a, id, act.number || act.position) end)
-    end)
-  end
-
-  defp compute_scenes(play_id, acts) do
-    scenes =
-      Division
-      |> where(play_id: ^play_id)
-      |> where([d], d.type in @scene_types)
-      |> Repo.all()
-
-    scenes_by_parent = Enum.group_by(scenes, & &1.parent_id)
-
-    total = length(scenes)
-
-    per_act =
-      Enum.map(acts, fn act ->
-        count = length(Map.get(scenes_by_parent, act.id, []))
-        %{"act" => act.number || act.position, "count" => count}
-      end)
-
-    %{"total" => total, "per_act" => per_act}
-  end
+  defp count_scenes(play_id),
+    do:
+      Repo.aggregate(
+        where(Division, [d], d.play_id == ^play_id and d.type in @scene_types),
+        :count
+      )
 
   defp count_by_type(elements, type) do
     Enum.count(elements, &(&1.type == type))
@@ -172,43 +128,8 @@ defmodule Playcode.Statistics do
   defp inline_stages(elements),
     do: elements |> Enum.map(&InlineMarkup.stage_count(&1.content)) |> Enum.sum()
 
-  defp verse_distribution(elements, division_to_act, acts) do
-    verses = whole_verses(elements)
-
-    by_act =
-      Enum.group_by(verses, fn el ->
-        Map.get(division_to_act, el.division_id)
-      end)
-
-    Enum.map(acts, fn act ->
-      num = act.number || act.position
-      count = length(Map.get(by_act, num, []))
-      %{"act" => num, "count" => count}
-    end)
-  end
-
-  # A split verse counts once, at its first part, as the site's verse total does
-  # (`Metrics.whole_verse?/1`).
-  defp whole_verses(elements),
-    do: Enum.filter(elements, &(&1.type == "verse_line" && &1.part in [nil, "", "I"]))
-
   defp count_split_verses(elements) do
     Enum.count(elements, &(&1.type == "verse_line" && &1.part == "I"))
-  end
-
-  defp count_prose_fragments(elements, division_to_act, acts) do
-    prose = Enum.filter(elements, &(&1.type == "prose"))
-
-    by_act =
-      Enum.group_by(prose, fn el ->
-        Map.get(division_to_act, el.division_id)
-      end)
-
-    Enum.map(acts, fn act ->
-      num = act.number || act.position
-      count = length(Map.get(by_act, num, []))
-      %{"act" => num, "count" => count}
-    end)
   end
 
   defp count_asides(elements) do
@@ -219,38 +140,5 @@ defmodule Playcode.Statistics do
     elements
     |> Enum.filter(&(&1.type == "verse_line" && &1.is_aside))
     |> Enum.count()
-  end
-
-  defp verse_type_distribution(elements) do
-    elements
-    |> Enum.filter(&(&1.type == "line_group" && &1.verse_type not in [nil, ""]))
-    |> Enum.frequencies_by(& &1.verse_type)
-    |> Enum.sort_by(fn {_type, count} -> -count end)
-    |> Enum.map(fn {type, count} -> %{"verse_type" => type, "count" => count} end)
-  end
-
-  defp character_appearances(elements) do
-    speeches = Enum.filter(elements, &(&1.type == "speech"))
-
-    # For multi-character speeches, count once per character
-    char_counts =
-      Enum.flat_map(speeches, fn el ->
-        chars = Element.characters(el)
-
-        case chars do
-          [] ->
-            if el.speaker_label && el.speaker_label != "",
-              do: [{el.speaker_label, 1}],
-              else: []
-
-          list ->
-            Enum.map(list, fn c -> {c.name, 1} end)
-        end
-      end)
-      |> Enum.group_by(fn {name, _} -> name end, fn {_, count} -> count end)
-      |> Enum.map(fn {name, counts} -> %{"name" => name, "speeches" => Enum.sum(counts)} end)
-      |> Enum.sort_by(fn %{"speeches" => count} -> -count end)
-
-    char_counts
   end
 end

@@ -406,14 +406,14 @@ defmodule Playcode.Import.TeiImportTest do
     {:ok, play} =
       TeiImport.import_file(write_tmp!(tei(code: code, body: body.(~s(<l n="1">Uno</l>)))))
 
-    assert Statistics.get_statistics(play.id).data["total_verses"] == 1
+    assert Statistics.get_statistics(play.id).data["verses"] == 1
 
     {:ok, _} =
       TeiImport.import_file(
         write_tmp!(tei(code: code, body: body.(~s(<l n="1">Uno</l><l n="2">Dos</l>))))
       )
 
-    assert Statistics.get_statistics(play.id).data["total_verses"] == 2
+    assert Statistics.get_statistics(play.id).data["verses"] == 2
   end
 
   # The queries `fun` makes from this process, counted through the repo's telemetry.

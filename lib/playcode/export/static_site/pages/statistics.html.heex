@@ -13,6 +13,7 @@
     passages={@edition.stats["metrical_passages"]}
     range_label={Play.number_label(@edition.play, :range)}
   />
+  <Components.division_table rows={@edition.stats["divisions"] || []} />
   <Components.character_table
     characters={@edition.stats["characters"] || []}
     unit={if words_unit?(@edition), do: "words", else: "lines"}

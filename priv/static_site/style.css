@@ -229,6 +229,7 @@ main thead th { text-align: left; font-weight: 600; font-size: .6875rem; text-tr
 main tbody th { text-align: left; font: 600 .9rem var(--serif); color: var(--ink); padding: .3rem .5rem; border-bottom: 1px solid var(--hair-2); }
 main td { padding: .3rem .5rem; border-bottom: 1px solid var(--hair-2); }
 .num { text-align: right; font-variant-numeric: tabular-nums; }
+.sc th { padding-left: 1.5rem; font-weight: 400; }
 .share { min-width: 9rem; white-space: nowrap; }
 .track { display: inline-block; width: calc(100% - 3rem); height: .5rem; background: var(--hair-2); border-radius: 2px; vertical-align: middle; margin-right: .4rem; }
 .track > span { display: block; height: 100%; background: var(--accent); border-radius: 2px; }

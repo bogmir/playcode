@@ -37,9 +37,49 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
         passages={@data["metrical_passages"]}
         range={@range}
       />
+      <.divisions rows={@data["divisions"] || []} />
       <.characters characters={@data["characters"] || []} unit={@unit} total={@total} />
       <.presence data={@data} range={@range} />
     </div>
+    """
+  end
+
+  defp divisions(assigns) do
+    assigns = assign(assigns, :prose?, Enum.any?(assigns.rows, &(&1["prose"] > 0)))
+
+    ~H"""
+    <.panel :if={length(@rows) > 1} id="divisions" title={gettext("By act and scene")}>
+      <div class="overflow-x-auto" tabindex="0" role="region" aria-label={gettext("By act and scene")}>
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>{gettext("Act or scene")}</th>
+              <th class="text-right">{gettext("Verses")}</th>
+              <th class="text-right">{gettext("Speeches")}</th>
+              <th class="text-right">{gettext("Speaking characters")}</th>
+              <th :if={@prose?} class="text-right">{gettext("Prose passages")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr :for={row <- @rows}>
+              <th
+                scope="row"
+                class={[
+                  "text-left font-serif",
+                  if(row["scene"], do: "pl-8 font-normal", else: "font-semibold")
+                ]}
+              >
+                <PlayText.inline_content text={row["label"]} />
+              </th>
+              <td class="text-right tabular-nums">{Components.number(row["verses"])}</td>
+              <td class="text-right tabular-nums">{Components.number(row["speeches"])}</td>
+              <td class="text-right tabular-nums">{Components.number(row["speakers"])}</td>
+              <td :if={@prose?} class="text-right tabular-nums">{Components.number(row["prose"])}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </.panel>
     """
   end
 
@@ -60,11 +100,15 @@ defmodule PlaycodeWeb.Components.StatisticsPanel do
       Enum.reject(
         [
           {s["num_acts"], gettext("acts")},
+          {s["scenes"], gettext("scenes")},
           {s["verses"], gettext("verses")},
+          {s["split_verses"], gettext("shared verses")},
           {length(s["metrical_passages"] || []), gettext("metrical passages")},
+          {s["total_prose_fragments"], gettext("prose passages")},
           {s["speeches"], gettext("speeches")},
           {length(s["characters"] || []), gettext("speaking characters")},
           {s["total_stage_directions"], gettext("stage directions")},
+          {s["total_asides"], gettext("asides")},
           {s["aside_verses"], gettext("verses in asides")}
         ],
         fn {value, _label} -> value in [nil, 0] end
