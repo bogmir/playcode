@@ -62,7 +62,7 @@ defmodule Playcode.Export.StaticSite.Edition do
       performances: Performances.list_for_play(id),
       characters: PlayContent.list_characters(id),
       divisions: divisions,
-      stats: Statistics.get_statistics(id).data,
+      stats: Statistics.get_statistics(id, divisions).data,
       pages: pages,
       front: outline.front,
       before: outline.before,

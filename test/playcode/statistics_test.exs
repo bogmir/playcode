@@ -195,6 +195,41 @@ defmodule Playcode.StatisticsTest do
     assert Statistics.get_statistics(play.id).data["verses"] == 1
   end
 
+  # The static site loads a play's content for its pages; a cold read computes the
+  # statistics from that content instead of loading the play a second time.
+  test "a cold read given the play's content computes the same statistics without loading it again" do
+    alias Playcode.Repo
+    %{play: play} = TestFixtures.play_with_structure_fixture()
+    stat = Statistics.get_statistics(play.id)
+    expected = stat.data
+
+    stat |> Ecto.Changeset.change(data: Map.delete(expected, "version")) |> Repo.update!()
+    content = PlayContent.load_play_content(play.id, variants: false)
+
+    # Telemetry handlers are global and run in the querying process: other tests' queries
+    # must not count.
+    test_pid = self()
+    handler = "stats-reuse-#{System.unique_integer()}"
+
+    :telemetry.attach(
+      handler,
+      [:playcode, :repo, :query],
+      fn _event, _measurements, %{source: source}, _ ->
+        if self() == test_pid, do: send(test_pid, {:read, source})
+      end,
+      nil
+    )
+
+    try do
+      assert Statistics.get_statistics(play.id, content).data == expected
+    after
+      :telemetry.detach(handler)
+    end
+
+    refute_received {:read, "play_divisions"}
+    refute_received {:read, "play_elements"}
+  end
+
   # Rows cached before 2026-11-08 (version 9) hold passages' ranges as integers: a read
   # computes them again as the verses' numbers, strings.
   test "a row cached when verse numbers were integers is recomputed on read" do
