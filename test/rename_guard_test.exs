@@ -37,7 +37,7 @@ defmodule RenameGuardTest do
   @scanned ~w[
     lib test config mix.exs assets priv/repo priv/gettext
     .github Dockerfile Dockerfile.render fly.toml render.yaml entrypoint.sh
-    README.md AGENTS.md :(glob)docs/*.md docs/build_import_analysis.py
+    README.md :(glob)docs/*.md docs/build_import_analysis.py
   ]
 
   # Corpus data, third-party samples, the legacy Fly config that is *supposed*

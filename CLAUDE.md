@@ -6,7 +6,7 @@ Playcode generates the static pages, statistics included, that those sites publi
 ARTELOPE stay the public brands; Playcode is the internal platform they both run on. Reference
 site: https://emothe.uv.es
 
-Elixir 1.19.5 / OTP 28.1 (`.tool-versions`), Phoenix 1.8.3, LiveView 1.1.22, Tailwind 4,
+Elixir 1.19.5 / OTP 28.1 (`.tool-versions`), Phoenix 1.8, LiveView 1.1 (`mix.lock` has the exact versions), Tailwind 4,
 PostgreSQL with UUID primary keys, Saxy to parse TEI and xml_builder to write it, ChromicPDF
 (headless Chrome) for PDFs, deployed on Fly.io.
 
