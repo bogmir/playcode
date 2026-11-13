@@ -31,7 +31,16 @@ defmodule Playcode.Export.StaticSite.Search do
   """
   def normalise(nil), do: ""
 
+  # Plain ASCII has no accent to strip and no ñ: downcasing is the whole job.
   def normalise(text) do
+    if ascii?(text), do: String.downcase(text), else: normalise_unicode(text)
+  end
+
+  defp ascii?(<<byte, rest::binary>>) when byte < 128, do: ascii?(rest)
+  defp ascii?(<<>>), do: true
+  defp ascii?(_), do: false
+
+  defp normalise_unicode(text) do
     text
     |> :unicode.characters_to_nfc_binary()
     |> String.downcase(:greek)
