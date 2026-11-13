@@ -644,8 +644,8 @@ msgid "Play with code %{code} already exists"
 msgstr "Ya existe una obra con el código %{code}"
 
 #: lib/playcode_web/components/layouts.ex:303
-#: lib/playcode_web/live/admin/export_site_live.ex:226
-#: lib/playcode_web/live/admin/export_site_live.ex:360
+#: lib/playcode_web/live/admin/export_site_live.ex:199
+#: lib/playcode_web/live/admin/export_site_live.ex:333
 #: lib/playcode_web/live/admin/place_list_live.ex:145
 #: lib/playcode_web/live/admin/play_list_live.ex:197
 #: lib/playcode_web/live/admin/play_list_live.ex:288
@@ -2292,7 +2292,7 @@ msgstr "Comparar"
 msgid "Back to play"
 msgstr "Volver a la obra"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:210
+#: lib/playcode_web/live/admin/export_site_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "%{complete} of %{total} plays marked as complete"
 msgstr "%{complete} de %{total} obras marcadas como completas"
@@ -2302,7 +2302,7 @@ msgstr "%{complete} de %{total} obras marcadas como completas"
 msgid "%{count} of these plays already exist"
 msgstr "%{count} de estas obras ya existen"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:446
+#: lib/playcode_web/live/admin/export_site_live.ex:417
 #, elixir-autogen, elixir-format
 msgid "About the Static Site"
 msgstr "Sobre el sitio estático"
@@ -2322,7 +2322,7 @@ msgstr "¿Archivar «%{title}»? Se ocultará del sitio y podrá restaurarse."
 msgid "Archived"
 msgstr "Archivada"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:454
+#: lib/playcode_web/live/admin/export_site_live.ex:425
 #, elixir-autogen, elixir-format
 msgid "Can be deployed to GitHub Pages, any web server, or opened locally."
 msgstr "Se puede publicar en GitHub Pages, en cualquier servidor web o abrir en local."
@@ -2333,7 +2333,7 @@ msgstr "Se puede publicar en GitHub Pages, en cualquier servidor web o abrir en 
 msgid "Complete"
 msgstr "Completa"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:182
+#: lib/playcode_web/live/admin/export_site_live.ex:155
 #, elixir-autogen, elixir-format
 msgid "Configuration"
 msgstr "Configuración"
@@ -2343,20 +2343,15 @@ msgstr "Configuración"
 msgid "Deployed to GitHub Pages!"
 msgstr "¡Publicado en GitHub Pages!"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:426
+#: lib/playcode_web/live/admin/export_site_live.ex:397
 #, elixir-autogen, elixir-format
 msgid "Deployed!"
 msgstr "¡Publicado!"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:394
+#: lib/playcode_web/live/admin/export_site_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "Deploying..."
 msgstr "Publicando..."
-
-#: lib/playcode_web/live/admin/export_site_live.ex:403
-#, elixir-autogen, elixir-format
-msgid "Download .zip"
-msgstr "Descargar .zip"
 
 #: lib/playcode_web/components/admin_components.ex:155
 #: lib/playcode_web/live/admin/play_list_live.ex:178
@@ -2369,8 +2364,8 @@ msgstr "Borrador"
 msgid "EPUB generation failed: %{reason}"
 msgstr "Error al generar EPUB: %{reason}"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:20
-#: lib/playcode_web/live/admin/export_site_live.ex:158
+#: lib/playcode_web/live/admin/export_site_live.ex:19
+#: lib/playcode_web/live/admin/export_site_live.ex:131
 #, elixir-autogen, elixir-format
 msgid "Export Static Site"
 msgstr "Exportar sitio estático"
@@ -2380,32 +2375,32 @@ msgstr "Exportar sitio estático"
 msgid "Failed to update status."
 msgstr "No se pudo actualizar el estado."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:449
+#: lib/playcode_web/live/admin/export_site_live.ex:420
 #, elixir-autogen, elixir-format
 msgid "Follows the Endings Project principles for long-term digital preservation."
 msgstr "Sigue los principios del Endings Project para la preservación digital a largo plazo."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:207
+#: lib/playcode_web/live/admin/export_site_live.ex:180
 #, elixir-autogen, elixir-format
 msgid "Generate Static Site"
 msgstr "Generar sitio estático"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:160
+#: lib/playcode_web/live/admin/export_site_live.ex:133
 #, elixir-autogen, elixir-format
 msgid "Generate an Endings Project-compliant static website archive of the entire catalogue."
 msgstr "Genera un archivo web estático del catálogo completo conforme al Endings Project."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:330
+#: lib/playcode_web/live/admin/export_site_live.ex:303
 #, elixir-autogen, elixir-format
 msgid "Generating play %{current} of %{total}: %{detail}"
 msgstr "Generando obra %{current} de %{total}: %{detail}"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:207
+#: lib/playcode_web/live/admin/export_site_live.ex:180
 #, elixir-autogen, elixir-format
 msgid "Generating..."
 msgstr "Generando..."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:354
+#: lib/playcode_web/live/admin/export_site_live.ex:327
 #, elixir-autogen, elixir-format
 msgid "Generation Complete"
 msgstr "Generación completada"
@@ -2435,27 +2430,22 @@ msgstr "Marcada como completa."
 msgid "Marked as draft."
 msgstr "Marcada como borrador."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:229
+#: lib/playcode_web/live/admin/export_site_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "No plays marked as complete."
 msgstr "No hay obras marcadas como completas."
 
-#: lib/playcode_web/controllers/admin/export_controller.ex:91
-#, elixir-autogen, elixir-format
-msgid "No zip file found. Generate the static site first."
-msgstr "No se encontró el archivo .zip. Genera primero el sitio estático."
-
-#: lib/playcode_web/live/admin/export_site_live.ex:438
+#: lib/playcode_web/live/admin/export_site_live.ex:409
 #, elixir-autogen, elixir-format
 msgid "Note: GitHub Pages may take a few minutes to update."
 msgstr "Nota: GitHub Pages puede tardar unos minutos en actualizarse."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:368
+#: lib/playcode_web/live/admin/export_site_live.ex:346
 #, elixir-autogen, elixir-format
 msgid "Output"
 msgstr "Salida"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:451
+#: lib/playcode_web/live/admin/export_site_live.ex:422
 #, elixir-autogen, elixir-format
 msgid "Pure HTML/CSS/JS — no server or database required to view."
 msgstr "HTML/CSS/JS puro: no necesita servidor ni base de datos para verse."
@@ -2476,12 +2466,12 @@ msgstr "Reemplaza %{divisions} división(es), %{elements} elemento(s), %{charact
 msgid "Restore"
 msgstr "Restaurar"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:510
+#: lib/playcode_web/live/admin/export_site_live.ex:477
 #, elixir-autogen, elixir-format
 msgid "Starting deploy..."
 msgstr "Iniciando la publicación..."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:497
+#: lib/playcode_web/live/admin/export_site_live.ex:465
 #, elixir-autogen, elixir-format
 msgid "Starting..."
 msgstr "Iniciando..."
@@ -2491,23 +2481,23 @@ msgstr "Iniciando..."
 msgid "Static site generated: %{count} plays (%{size})"
 msgstr "Sitio estático generado: %{count} obras (%{size})"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:452
+#: lib/playcode_web/live/admin/export_site_live.ex:423
 #, elixir-autogen, elixir-format
 msgid "TEI-XML source files included alongside each play."
 msgstr "Incluye el TEI-XML de origen junto a cada obra."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:364
+#: lib/playcode_web/live/admin/export_site_live.ex:337
 #, elixir-autogen, elixir-format
 msgid "Total Size"
 msgstr "Tamaño total"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:188
+#: lib/playcode_web/live/admin/export_site_live.ex:161
 #: lib/playcode_web/play_labels.ex:278
 #, elixir-autogen, elixir-format
 msgid "Version"
 msgstr "Versión"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:428
+#: lib/playcode_web/live/admin/export_site_live.ex:399
 #, elixir-autogen, elixir-format
 msgid "Your static site is live at:"
 msgstr "Tu sitio estático está publicado en:"
@@ -3297,27 +3287,27 @@ msgstr "Sin marcar"
 msgid "Verso suelto"
 msgstr "Verso suelto"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:453
+#: lib/playcode_web/live/admin/export_site_live.ex:424
 #, elixir-autogen, elixir-format
 msgid "Search needs JavaScript; the catalogue list reads without it."
 msgstr "La búsqueda necesita JavaScript; la lista del catálogo se lee sin él."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:356
+#: lib/playcode_web/live/admin/export_site_live.ex:329
 #, elixir-autogen, elixir-format
 msgid "Built site"
 msgstr "Sitio generado"
 
-#: lib/playcode_web/controllers/admin/export_controller.ex:107
+#: lib/playcode_web/controllers/admin/export_controller.ex:92
 #, elixir-autogen, elixir-format
 msgid "No site built yet. Generate the static site first."
 msgstr "Todavía no hay un sitio generado. Genera primero el sitio estático."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:380
+#: lib/playcode_web/live/admin/export_site_live.ex:358
 #, elixir-autogen, elixir-format
 msgid "Open preview"
 msgstr "Abrir vista previa"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:234
+#: lib/playcode_web/live/admin/export_site_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "%{exported} of %{total} complete plays exported"
 msgstr "%{exported} de %{total} obras completas en el sitio"
@@ -3392,11 +3382,6 @@ msgstr "Error al publicar: %{reason}"
 msgid "Generation failed: %{reason}"
 msgstr "Error al generar el sitio: %{reason}"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:113
-#, elixir-autogen, elixir-format
-msgid "The site is busy with another build. Try again when it finishes."
-msgstr "Hay otra operación en curso en el sitio. Vuelve a intentarlo cuando termine."
-
 #: lib/playcode_web/live/admin/export_site_live.ex:784
 #, elixir-autogen, elixir-format
 msgid "%{count} changes applied to the static site."
@@ -3414,12 +3399,12 @@ msgstr[1] "Se omitieron %{count} obras que ya no existen."
 msgid "Could not apply %{count} changes to the site: %{reason}"
 msgstr "No se pudieron aplicar %{count} cambios al sitio: %{reason}"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:466
+#: lib/playcode_web/live/admin/export_site_live.ex:437
 #, elixir-autogen, elixir-format
 msgid "Queued: it starts when the current build finishes."
 msgstr "En cola: empezará cuando termine la operación en curso."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:384
+#: lib/playcode_web/live/admin/export_site_live.ex:362
 #, elixir-autogen, elixir-format
 msgid "Updating search…"
 msgstr "Actualizando la búsqueda…"
@@ -3448,12 +3433,12 @@ msgid_plural "%{count} published plays have changed. Generate refreshes them."
 msgstr[0] "Una obra publicada ha cambiado; al generar se actualizará."
 msgstr[1] "%{count} obras publicadas han cambiado; al generar se actualizarán."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:272
+#: lib/playcode_web/live/admin/export_site_live.ex:245
 #, elixir-autogen, elixir-format
 msgid "Refresh %{title}"
 msgstr "Actualizar %{title}"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:173
+#: lib/playcode_web/live/admin/export_site_live.ex:146
 #, elixir-autogen, elixir-format
 msgid "The site's design or settings changed since the last build. Generate will rebuild every play."
 msgstr "El diseño o la configuración del sitio han cambiado desde la última generación: al generar se regenerarán todas las obras."
@@ -3465,7 +3450,7 @@ msgid_plural "%{count} plays in the site are no longer published. Generate takes
 msgstr[0] "Una obra del sitio ya no está publicada; al generar se retirará."
 msgstr[1] "%{count} obras del sitio ya no están publicadas; al generar se retirarán."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:271
+#: lib/playcode_web/live/admin/export_site_live.ex:244
 #, elixir-autogen, elixir-format
 msgid "Publish this play's changes"
 msgstr "Publicar los cambios de esta obra"
@@ -3488,22 +3473,22 @@ msgstr "Publicada y al día"
 msgid "No longer published (a draft or archived); Generate takes it out."
 msgstr "Ya no está publicada (borrador o archivada); se retirará al generar."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:394
+#: lib/playcode_web/live/admin/export_site_live.ex:372
 #, elixir-autogen, elixir-format
 msgid "Deploy"
 msgstr "Publicar"
 
-#: lib/playcode_web/live/admin/export_site_live.ex:577
+#: lib/playcode_web/live/admin/export_site_live.ex:561
 #, elixir-autogen, elixir-format
 msgid "Pushes the site to %{repo}, then publishes it on %{host}."
 msgstr "Sube el sitio a %{repo} y luego lo publica en %{host}."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:573
+#: lib/playcode_web/live/admin/export_site_live.ex:558
 #, elixir-autogen, elixir-format
 msgid "Pushes the site to %{repo}."
 msgstr "Sube el sitio a %{repo}."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:570
+#: lib/playcode_web/live/admin/export_site_live.ex:555
 #, elixir-autogen, elixir-format
 msgid "To deploy, set STATIC_SITE_REPO where Playcode runs."
 msgstr "Para publicar, configura STATIC_SITE_REPO donde se ejecuta Playcode."
@@ -4506,7 +4491,7 @@ msgstr "Portada"
 msgid "%{count} row(s) from the file were edited by hand since its import: importing replaces them too."
 msgstr "%{count} fila(s) del archivo se editaron a mano tras su importación: importar las reemplaza también."
 
-#: lib/playcode_web/live/admin/export_site_live.ex:245
+#: lib/playcode_web/live/admin/export_site_live.ex:218
 #, elixir-autogen, elixir-format
 msgid "Add every complete play"
 msgstr "Añadir todas las obras completas"

@@ -78,24 +78,9 @@ defmodule PlaycodeWeb.Admin.ExportController do
     end
   end
 
-  def download_zip(conn, _params) do
-    zip_path = Path.join(System.tmp_dir!(), "emothe-static-site.zip")
-
-    if File.exists?(zip_path) do
-      conn
-      |> put_resp_content_type("application/zip")
-      |> put_resp_header("content-disposition", ~s(attachment; filename="emothe-static-site.zip"))
-      |> send_file(200, zip_path)
-    else
-      conn
-      |> put_flash(:error, gettext("No zip file found. Generate the static site first."))
-      |> redirect(to: ~p"/admin/export")
-    end
-  end
-
   @doc """
   Serves the built static site from its output directory, so it can be checked before it
-  is downloaded or deployed. Its links are relative, so it works under this prefix.
+  is deployed. Its links are relative, so it works under this prefix.
   """
   def preview(conn, %{"path" => path}) do
     root = Playcode.Export.StaticSite.output_dir()
