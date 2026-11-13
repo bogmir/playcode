@@ -72,6 +72,7 @@ Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode
 
 ## Medium Priority
 
+- [ ] **The admin import page writes each file twice** (2026-11-13) - `ImportLive` calls `TeiImport.preview_import/1`, whose `numbering/1` writes the whole file in a transaction it rolls back, then imports: the preview costs as much as the import (4.2 s against 4.1 s on one fixture). The roundtrip sweep skips it with `preview_import(path, numbering: false)`; the page could show the numbering rule after the import, or compute it from the parsed file
 - [ ] **Two split-verse parts in *Giovanni e Annabella*, and a stage direction's place in *The Malcontent*** (2026-10-22) - question 50. `em0284-it-2686` ("O molto", `F`, after prose) and `em0284-it-1459` ("Sei qui, fratello?", `I`, prose after it) are the two parts out of order left of the 27 the corpus had (*Split-verse parts out of order*, `docs/history.md`); emothe.uv.es and the published site move them in by a fixed step. And `em0363-en-st-0115` "(To Aurelia.)" may belong before "Woman of shame,". Correct our copies under `doc/tei_corpus/` and list the change for the team's if the answer says so
 
 ## Translator's desk (2026-11-13), proposed, waiting on a trial
