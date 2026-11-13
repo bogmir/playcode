@@ -121,12 +121,17 @@ defmodule Playcode.Import.TeiImport do
   the platform owns. This is what the admin import page and `--dry-run` print so that
   nobody discovers the replacement afterwards. `:split_verses` lists the file's split-verse
   parts out of order (`%{line_id, part, text, problem}`), which TEI's schema lets through.
+
+  Settling `:numbering` writes the whole file in a transaction it rolls back, as costly as the
+  import itself; `numbering: false` skips that and returns `nil` there, for a caller that
+  needs only the rest.
   """
-  def preview_import(path) do
-    with {:ok, tei} <- TeiParser.parse_file(path), do: {:ok, preview(tei)}
+  def preview_import(path, opts \\ []) do
+    with {:ok, tei} <- TeiParser.parse_file(path),
+         do: {:ok, preview(tei, Keyword.get(opts, :numbering, true))}
   end
 
-  defp preview(%{play: %{code: code, title: title}} = tei) do
+  defp preview(%{play: %{code: code, title: title}} = tei, with_numbering) do
     existing = Repo.get_by(Play, code: code)
 
     %{
@@ -139,7 +144,7 @@ defmodule Playcode.Import.TeiImport do
       preserves: preserved_counts(existing),
       preserves_fields: preserved_fields(existing),
       split_verses: parts_out_of_order(tei.divisions),
-      numbering: numbering(tei)
+      numbering: if(with_numbering, do: numbering(tei))
     }
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
   end

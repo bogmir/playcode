@@ -292,4 +292,25 @@ defmodule Playcode.Import.TeiPreviewTest do
 
     assert_raise Ecto.NoResultsError, fn -> Catalogue.get_play_by_code!(code) end
   end
+
+  test "numbering: false leaves the numbering rule out and the rest of the preview as it is" do
+    path =
+      write_tmp!(
+        tei(
+          code: "T#{System.unique_integer([:positive])}",
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>ANA</speaker><l n="1">a</l><l n="3170">c</l></sp>
+          </div1>
+          """
+        )
+      )
+
+    assert {:ok, full} = TeiImport.preview_import(path)
+    assert {:ok, light} = TeiImport.preview_import(path, numbering: false)
+
+    assert is_binary(full.numbering)
+    assert light.numbering == nil
+    assert Map.delete(light, :numbering) == Map.delete(full, :numbering)
+  end
 end

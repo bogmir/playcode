@@ -659,7 +659,8 @@ defmodule Playcode.RoundtripTest do
 
     # TEI's schema lets a split verse's parts out of order through; the corpus is clean of
     # them since 2026-10-22 but for EMOTHE0284's two, waiting on question 50.
-    assert {:ok, %{split_verses: []}} = Playcode.Import.TeiImport.preview_import(path),
+    assert {:ok, %{split_verses: []}} =
+             Playcode.Import.TeiImport.preview_import(path, numbering: false),
            "#{code} has split-verse parts out of order (mix playcode.import.tei --dry-run)"
 
     assert {:ok, play} = Playcode.Import.TeiImport.import_file(path),
