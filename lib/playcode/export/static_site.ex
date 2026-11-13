@@ -549,7 +549,7 @@ defmodule Playcode.Export.StaticSite do
     play_dir = Path.join([dir, "plays", code])
     File.rm_rf!(play_dir)
     File.mkdir_p!(play_dir)
-    assigns = %{edition: edition, site: site}
+    assigns = %{edition: edition, site: site, texts: Pages.texts(edition)}
 
     File.write!(Path.join(play_dir, "index.html"), Pages.render(:title, assigns))
 

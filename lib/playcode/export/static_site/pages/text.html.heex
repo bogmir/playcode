@@ -13,6 +13,6 @@
     data-cite-verse={Play.number_label(@edition.play, :verse)}
     data-cite-prose={Play.number_label(@edition.play, :prose)}
   >
-    <Components.full_text edition={@edition} />
+    <Components.full_text edition={@edition} texts={@texts} />
   </div>
 </Components.shell>

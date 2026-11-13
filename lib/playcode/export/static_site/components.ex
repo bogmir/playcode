@@ -737,6 +737,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :edition, :map, required: true
   attr :notes_label, :any, default: nil
+  attr :texts, :map, default: %{}, doc: "`Pages.texts/1`, when the play's pages share it"
 
   @doc "A play's whole text, as `text.html` shows it: its contents, then its endnotes."
   def full_text(assigns) do
@@ -744,7 +745,7 @@ defmodule Playcode.Export.StaticSite.Components do
     <%= for entry <- @edition.contents do %>
       <%= case entry do %>
         <% {:page, page} -> %>
-          <.division_text edition={@edition} division={page.division} />
+          <.division_text edition={@edition} division={page.division} texts={@texts} />
         <% {:item, item} -> %>
           <.outline_item edition={@edition} item={item} head="act-head" />
       <% end %>
@@ -765,6 +766,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :edition, :map, required: true
   attr :division, :map, required: true
+  attr :texts, :map, default: %{}
 
   def division_text(assigns) do
     {opening, rest} = Division.split_opening_lists(assigns.division.children)
@@ -780,7 +782,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <.inline text={@division.title} notes={@division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
-      <.el :for={el <- @division.loaded_elements} el={el} edition={@edition} />
+      <.elements of={@division} edition={@edition} texts={@texts} />
       <%= for child <- @rest do %>
         <%= if child.type == "elenco" do %>
           <.outline_item edition={@edition} item={child} />
@@ -793,7 +795,7 @@ defmodule Playcode.Export.StaticSite.Components do
             >
               <.inline text={child.title} notes={child.notes} />
             </h3>
-            <.el :for={el <- child.loaded_elements} el={el} edition={@edition} />
+            <.elements of={child} edition={@edition} texts={@texts} />
           </section>
         <% end %>
       <% end %>
@@ -803,6 +805,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :edition, :map, required: true
   attr :page, :map, required: true
+  attr :texts, :map, default: %{}
 
   @doc """
   What one division page shows: the division whole; or, for a division split by scene,
@@ -810,7 +813,7 @@ defmodule Playcode.Export.StaticSite.Components do
   """
   def page_text(%{page: %{scene: nil, split: false}} = assigns) do
     ~H"""
-    <.division_text edition={@edition} division={@page.division} />
+    <.division_text edition={@edition} division={@page.division} texts={@texts} />
     """
   end
 
@@ -833,7 +836,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <.inline text={@page.division.title} notes={@page.division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
-      <.el :for={el <- @page.division.loaded_elements} el={el} edition={@edition} />
+      <.elements of={@page.division} edition={@edition} texts={@texts} />
       <nav aria-label="Scenes">
         <ul>
           <li :for={scene_page <- @scene_pages}>
@@ -858,10 +861,31 @@ defmodule Playcode.Export.StaticSite.Components do
         <h3 :if={@page.scene.title} class="scene-head">
           <.inline text={@page.scene.title} notes={@page.scene.notes} />
         </h3>
-        <.el :for={el <- @page.scene.loaded_elements} el={el} edition={@edition} />
+        <.elements of={@page.scene} edition={@edition} texts={@texts} />
       </section>
     </section>
     """
+  end
+
+  attr :of, :map, required: true, doc: "a division or a scene"
+  attr :edition, :map, required: true
+  attr :texts, :map, default: %{}
+
+  @doc """
+  A division's or a scene's own elements: as `texts` holds them, rendered once for both
+  its page and text.html (`Pages.texts/1`), or rendered here.
+  """
+  def elements(assigns) do
+    case assigns.texts[assigns.of.id] do
+      nil ->
+        ~H"""
+        <.el :for={el <- @of.loaded_elements} el={el} edition={@edition} />
+        """
+
+      html ->
+        assigns = assign(assigns, :html, html)
+        ~H"{@html}"
+    end
   end
 
   attr :el, :map, required: true
