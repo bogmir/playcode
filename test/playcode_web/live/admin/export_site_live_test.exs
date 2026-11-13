@@ -289,18 +289,37 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert Map.has_key?(files, "assets/style.css")
   end
 
+  # Regression: counting the site's size walks every file, 5 seconds on production's
+  # volume, and the page counted it once to render and twice more to connect.
+  test "the page opens before the site's size is counted, and the size follows",
+       %{conn: conn, a: a} do
+    build_site([a.code])
+
+    static = conn |> get(~p"/admin/export") |> html_response(200)
+
+    assert static |> LazyHTML.from_document() |> LazyHTML.query("#site-size") |> LazyHTML.text() =~
+             "…"
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    render_async(lv)
+    refute lv |> element("#site-size") |> render() =~ "…"
+  end
+
   # Regression: the figures were the last Generate's, so a switch left them stale.
+  # The size is counted after the page connects, so each read waits for it (render_async).
   test "the site's figures are the site on disk, and follow its switches",
        %{conn: conn, a: a, b: b} do
     build_site([a.code])
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
     assert has_element?(lv, "#site-plays", "1")
+    render_async(lv)
     size = lv |> element("#site-size") |> render()
 
     lv |> element(switch(b)) |> render_click()
     wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
 
     assert has_element?(lv, "#site-plays", "2")
+    render_async(lv)
     refute lv |> element("#site-size") |> render() == size
   end
 
@@ -681,12 +700,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       generate(lv)
 
       assert render(lv) =~ t("Pushes the site to %{repo}.", repo: "file://" <> repo)
+      render_async(lv)
       size = lv |> element("#site-size") |> render()
 
       lv |> element("button", t("Deploy")) |> render_click()
       wait_for(fn -> render(lv) =~ t("Deployed!") end)
 
       # The push leaves a .git in the site directory; it is not part of the site.
+      render_async(lv)
       assert lv |> element("#site-size") |> render() == size
 
       assert {page, 0} =

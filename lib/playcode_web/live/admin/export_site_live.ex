@@ -16,7 +16,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     socket =
       socket
       |> load_plays()
-      |> on_disk()
       |> assign(:page_title, gettext("Export Static Site"))
       # The site's own version, so it is current for the form until someone changes it.
       |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
@@ -42,7 +41,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       SiteBuilder.subscribe()
       {:ok, follow(socket, SiteBuilder.status())}
     else
-      {:ok, socket}
+      {:ok, on_disk(socket)}
     end
   end
 
@@ -362,7 +361,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
             </div>
             <div class="stat">
               <div class="stat-title">{gettext("Total Size")}</div>
-              <div id="site-size" class="stat-value text-lg">{format_size(@site_size)}</div>
+              <div id="site-size" class="stat-value text-lg">
+                <.async_result :let={size} assign={@site_size}>
+                  <:loading>…</:loading>
+                  {format_size(size)}
+                </.async_result>
+              </div>
             </div>
             <div class="stat">
               <div class="stat-title">{gettext("Output")}</div>
@@ -544,13 +548,14 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     do: Enum.find_value(socket.assigns.plays, code, &(&1.code == code && &1.id))
 
   # What the site on disk holds: the plays the switches show, and its size.
+  # The size walks every file of the site, seconds on production's volume: counted apart,
+  # once connected, so the page does not wait for it.
   defp on_disk(socket) do
     dir = StaticSite.output_dir()
 
-    assign(socket,
-      exported_codes: MapSet.new(StaticSite.list_exported_codes(dir)),
-      site_size: StaticSite.dir_size(dir)
-    )
+    socket
+    |> assign(:exported_codes, MapSet.new(StaticSite.list_exported_codes(dir)))
+    |> assign_async(:site_size, fn -> {:ok, %{site_size: StaticSite.dir_size(dir)}} end)
   end
 
   # Where Deploy goes, from the server's settings (StaticSite.Deployer): the repository,
