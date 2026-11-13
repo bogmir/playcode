@@ -27,10 +27,6 @@ defmodule PlaycodeWeb.Router do
     plug :require_permission, :preview_plays
   end
 
-  pipeline :require_deploy do
-    plug :require_permission, :deploy_site
-  end
-
   # The built site's files, behind the deploy gate but without the page plugs: each
   # asset is its own request, and none of them is a page to remember. The locale is only for the refusal flash.
   pipeline :site_preview do
@@ -161,13 +157,6 @@ defmodule PlaycodeWeb.Router do
     get "/plays/:id/export/html", ExportController, :html
     get "/plays/:id/export/pdf", ExportController, :pdf
     get "/plays/:id/export/epub", ExportController, :epub
-  end
-
-  # Site deployment download sits behind :deploy_site, not :view_admin
-  scope "/admin", PlaycodeWeb.Admin do
-    pipe_through [:browser, :require_authenticated_user, :require_deploy]
-
-    get "/export/download-zip", ExportController, :download_zip
   end
 
   scope "/admin", PlaycodeWeb.Admin do

@@ -5,7 +5,7 @@ defmodule PlaycodeWeb.AuthorizationTest do
   Each row names a gated route and who may pass its gate. The expectations are
   written out by hand: deriving them from `Authz.can?/3` would only prove the
   policy agrees with itself. A page that passes the gate may still redirect (the
-  zip download without a generated zip, the dashboard's own home page), so
+  preview without a built site, the dashboard's own home page), so
   passing means "not sent to the log-in page or home".
   """
   use PlaycodeWeb.ConnCase, async: true
@@ -45,7 +45,6 @@ defmodule PlaycodeWeb.AuthorizationTest do
     {"/admin/users", :admin},
     {"/admin/activity-log", :admin},
     {"/admin/export", :admin},
-    {"/admin/export/download-zip", :admin},
     {"/admin/export/preview/index.html", :admin},
     {"/admin/dashboard", :admin}
   ]

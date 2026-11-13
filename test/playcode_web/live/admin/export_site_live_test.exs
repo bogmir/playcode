@@ -143,22 +143,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     end)
   end
 
-  test "Download is refused while a build runs", %{conn: conn, a: a, b: b} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-    lv |> element(switch(b)) |> render_click()
-
-    # Not a race: adding a play loads it and writes files, milliseconds, while the click
-    # follows within microseconds, and the builder is busy before the switch returns.
-    # The button is disabled once this page has drawn the build, so the event is pushed
-    # as a page that has not caught up would send it: the server must refuse anyway.
-    assert render_click(lv, "download_zip", %{}) =~
-             t("The site is busy with another build. Try again when it finishes.")
-
-    wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
-  end
-
   test "switches flipped during a build wait their turn and land together",
        %{conn: conn, a: a, b: b} do
     c = play_fixture(%{"is_complete" => true, "title" => "Delta Farce"})
@@ -262,31 +246,13 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert response(preview(conn, "plays/#{b.code}/index.html"), 404)
   end
 
-  test "an existing site can be previewed and downloaded without generating again",
+  test "an existing site can be previewed without generating again",
        %{conn: conn, a: a} do
     build_site([a.code])
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
 
     assert has_element?(lv, "#{switch(a)}[checked]")
     assert has_element?(lv, "a[href='/admin/export/preview/index.html']", t("Open preview"))
-    assert has_element?(lv, "button", t("Download .zip"))
-  end
-
-  # The zip is written file by file from disk (a site of 388 plays would not fit in the
-  # machine's memory at once); what it holds is the site, by the same paths.
-  test "Download .zip hands over the site", %{conn: conn, a: a} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-    assert {:error, {:redirect, %{to: to}}} =
-             lv |> element("button", t("Download .zip")) |> render_click()
-
-    {:ok, files} = conn |> get(to) |> response(200) |> :zip.unzip([:memory])
-    files = Map.new(files, fn {name, body} -> {List.to_string(name), body} end)
-
-    assert files["plays/#{a.code}/index.html"] =~ "Alpha Tragedy"
-    assert files["index.html"] =~ "Alpha Tragedy"
-    assert Map.has_key?(files, "assets/style.css")
   end
 
   # Regression: counting the site's size walks every file, 5 seconds on production's
@@ -730,11 +696,41 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       generate(lv)
 
-      assert render(lv) =~
+      # The repository is a link inside the sentence, so the text is asserted, not the markup.
+      assert has_element?(
+               lv,
+               "#deploy-hint",
                t("Pushes the site to %{repo}, then publishes it on %{host}.",
                  repo: "owner/site",
                  host: "publish.example"
                )
+             )
+    end
+
+    test "links the repository the site is pushed to", %{conn: conn} do
+      deploy_settings(repo: "owner/site")
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      assert has_element?(
+               lv,
+               "#deploy-hint a[href='https://github.com/owner/site']",
+               "owner/site"
+             )
+
+      deploy_settings(repo: "https://github.com/owner/other.git")
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+      assert has_element?(lv, "#deploy-hint a[href='https://github.com/owner/other']")
+    end
+
+    test "a repository with no page to open is named without a link", %{conn: conn} do
+      deploy_settings(repo: "file:///srv/site.git")
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      assert lv |> element("#deploy-hint") |> render() =~ "file:///srv/site.git"
+      refute has_element?(lv, "#deploy-hint a")
     end
 
     test "with no repository configured, offers no Deploy and says what to set",
@@ -746,6 +742,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       refute has_element?(lv, "button", t("Deploy"))
       # It used to say "on the server", which read wrong on a laptop running Playcode.
       assert render(lv) =~ t("To deploy, set STATIC_SITE_REPO where Playcode runs.")
+      refute has_element?(lv, "#deploy-hint a")
     end
   end
 end

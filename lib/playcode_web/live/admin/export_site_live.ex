@@ -24,7 +24,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       |> assign(:changed, MapSet.new())
       |> assign(:site_changed, false)
       |> assign(:assets_changed, false)
-      |> assign(:busy, false)
       |> assign(:indexing, false)
       |> assign(:generating, false)
       |> assign(:deploying, false)
@@ -87,31 +86,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     end
 
     {:noreply, socket}
-  end
-
-  # The zip is read from the directory a job would be rewriting.
-  def handle_event("download_zip", _params, socket) do
-    case SiteBuilder.status() do
-      %{job: nil, queue: []} ->
-        # Create zip in temp dir and redirect to download
-        zip_path = Path.join(System.tmp_dir!(), "emothe-static-site.zip")
-
-        case create_zip(StaticSite.output_dir(), zip_path) do
-          :ok ->
-            {:noreply, redirect(socket, to: ~p"/admin/export/download-zip")}
-
-          {:error, reason} ->
-            {:noreply, put_flash(socket, :error, "Failed to create zip: #{inspect(reason)}")}
-        end
-
-      _busy ->
-        {:noreply,
-         put_flash(
-           socket,
-           :error,
-           gettext("The site is busy with another build. Try again when it finishes.")
-         )}
-    end
   end
 
   # Jobs report back through the builder's broadcasts, which every open page receives,
@@ -397,17 +371,10 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               <span :if={@deploying} class="loading loading-spinner loading-sm"></span>
               {if @deploying, do: gettext("Deploying..."), else: gettext("Deploy")}
             </button>
-
-            <%!-- Download zip --%>
-            <button
-              phx-click="download_zip"
-              class="btn btn-outline"
-              disabled={@busy}
-            >
-              {gettext("Download .zip")}
-            </button>
           </div>
-          <p class="text-xs text-base-content/70 mt-2">{deploy_hint(@deploy_to)}</p>
+          <p id="deploy-hint" class="text-xs text-base-content/70 mt-2">
+            <.deploy_hint target={@deploy_to} />
+          </p>
         </div>
       </div>
 
@@ -482,19 +449,16 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   # A change on its way: its switch shows where the play is going until it lands.
   defp queued(socket, {:add, id}), do: pending(socket, id, :add)
   defp queued(socket, {:remove, code}), do: pending(socket, play_id(socket, code), :remove)
-  defp queued(socket, _generate_or_deploy), do: assign(socket, :busy, true)
+  defp queued(socket, _generate_or_deploy), do: socket
 
   defp pending(socket, id, change) do
-    socket
-    |> update(:pending, &Map.put(&1, id, change))
-    |> assign(:busy, true)
+    update(socket, :pending, &Map.put(&1, id, change))
   end
 
   defp started(socket, nil), do: socket
 
   defp started(socket, :generate) do
     socket
-    |> assign(:busy, true)
     |> assign(:generating, true)
     |> assign(:gen_current, 0)
     |> assign(:gen_total, 0)
@@ -509,7 +473,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   defp started(socket, :deploy) do
     socket
-    |> assign(:busy, true)
     |> assign(:deploying, true)
     |> assign(:deploy_status, gettext("Starting deploy..."))
   end
@@ -530,7 +493,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp direction({:add, _}), do: :add
   defp direction({:remove, _}), do: :remove
 
-  # A job ended. If requests wait, the builder's next :started marks the page busy again.
+  # A job ended.
   defp finished(socket, {:batch, changes}),
     do: socket |> settle(changes) |> idle() |> track_changes()
 
@@ -538,7 +501,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     do: socket |> on_disk() |> idle() |> track_changes()
 
   defp idle(socket),
-    do: assign(socket, generating: false, deploying: false, indexing: false, busy: false)
+    do: assign(socket, generating: false, deploying: false, indexing: false)
 
   defp change_id(_socket, {:add, id}), do: id
   defp change_id(socket, {:remove, code}), do: play_id(socket, code)
@@ -572,14 +535,46 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     end
   end
 
-  defp deploy_hint(nil), do: gettext("To deploy, set STATIC_SITE_REPO where Playcode runs.")
+  attr :target, :map, default: nil
 
-  defp deploy_hint(%{repo: repo, host: nil}),
-    do: gettext("Pushes the site to %{repo}.", repo: repo)
+  defp deploy_hint(assigns) do
+    {text, url} = hint_text(assigns.target)
 
-  defp deploy_hint(%{repo: repo, host: host}),
-    do:
-      gettext("Pushes the site to %{repo}, then publishes it on %{host}.", repo: repo, host: host)
+    assigns =
+      case url && String.split(text, assigns.target.repo, parts: 2) do
+        [before, rest] -> assign(assigns, before: before, rest: rest, url: url)
+        _ -> assign(assigns, before: text, rest: nil, url: nil)
+      end
+
+    ~H"""
+    {@before}<a :if={@url} href={@url} class="link link-primary">{@target.repo}</a>{@rest}
+    """
+  end
+
+  defp hint_text(nil),
+    do: {gettext("To deploy, set STATIC_SITE_REPO where Playcode runs."), nil}
+
+  defp hint_text(%{repo: repo, host: nil}),
+    do: {gettext("Pushes the site to %{repo}.", repo: repo), repo_url(repo)}
+
+  defp hint_text(%{repo: repo, host: host}) do
+    {gettext("Pushes the site to %{repo}, then publishes it on %{host}.", repo: repo, host: host),
+     repo_url(repo)}
+  end
+
+  # The page of a repository, where GitHub offers it as a zip; a local or ssh one has none.
+  defp repo_url(repo) do
+    cond do
+      String.starts_with?(repo, ["https://", "http://"]) ->
+        String.replace_suffix(repo, ".git", "")
+
+      String.starts_with?(repo, ["git@", "file://"]) ->
+        nil
+
+      true ->
+        "https://github.com/#{repo}"
+    end
+  end
 
   # The form values every build takes.
   defp form_opts(socket), do: [version: socket.assigns.version]
@@ -848,20 +843,4 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp format_size(bytes) when bytes < 1024, do: "#{bytes} B"
   defp format_size(bytes) when bytes < 1_048_576, do: "#{Float.round(bytes / 1024, 1)} KB"
   defp format_size(bytes), do: "#{Float.round(bytes / 1_048_576, 1)} MB"
-
-  # Names only, so :zip reads each file from disk as it adds it: the whole site in memory
-  # at once would not fit the machine at a few hundred plays.
-  defp create_zip(source_dir, zip_path) do
-    files =
-      source_dir
-      |> Path.join("**/*")
-      |> Path.wildcard()
-      |> Enum.filter(&File.regular?/1)
-      |> Enum.map(&String.to_charlist(Path.relative_to(&1, source_dir)))
-
-    case :zip.create(String.to_charlist(zip_path), files, cwd: String.to_charlist(source_dir)) do
-      {:ok, _} -> :ok
-      {:error, reason} -> {:error, reason}
-    end
-  end
 end
