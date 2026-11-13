@@ -533,8 +533,12 @@ defmodule Playcode.Catalogue do
   defp apply_status(query, :draft), do: where(query, [p], not p.is_complete)
   defp apply_status(query, :complete), do: where(query, [p], p.is_complete)
 
+  # NOT EXISTS, an anti-join; `NOT IN` over play_elements took 20 seconds in production.
   defp apply_status(query, :no_text) do
-    where(query, [p], p.id not in subquery(select(text_elements(), [e], e.play_id)))
+    from(p in query,
+      as: :play,
+      where: not exists(where(text_elements(), [e], e.play_id == parent_as(:play).id))
+    )
   end
 
   defp apply_status(query, _), do: query

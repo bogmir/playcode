@@ -5,6 +5,33 @@ defmodule Playcode.CatalogueTest do
 
   alias Playcode.Catalogue
 
+  # Regression: `NOT IN (subquery)` over play_elements cannot be hashed in production's
+  # work_mem, so Postgres compared every play against 1.3 million rows and the play list
+  # took 20 seconds to load. Too few rows here to time it; the plan shows it instead.
+  test "counting plays with no text is an anti-join, not a subquery run per play" do
+    test_pid = self()
+    handler = "no-text-plan-#{inspect(test_pid)}"
+
+    :telemetry.attach(
+      handler,
+      [:playcode, :repo, :query],
+      fn _event, _measurements, %{query: sql, params: params}, _ ->
+        if self() == test_pid, do: send(test_pid, {:sql, sql, params})
+      end,
+      nil
+    )
+
+    Catalogue.count_plays(status: :no_text)
+    :telemetry.detach(handler)
+    assert_received {:sql, sql, params}
+
+    plan =
+      Ecto.Adapters.SQL.query!(Playcode.Repo, "EXPLAIN " <> sql, params).rows
+      |> Enum.map_join("\n", &hd/1)
+
+    assert plan =~ "Anti Join"
+  end
+
   describe "a play's verse count" do
     import Playcode.ImportHelpers
 
