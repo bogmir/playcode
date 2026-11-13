@@ -81,14 +81,11 @@ defmodule Playcode.Export.StaticSite do
 
         results =
           plays
-          |> Task.async_stream(&build_play(&1.id, dir, site),
-            max_concurrency: concurrency(),
-            timeout: :infinity
-          )
+          |> build_plays(dir, site)
           # Stream, not Enum: Enum.with_index/2 would build every play before the first
           # was reported, leaving the progress bar still until the end.
           |> Stream.with_index(1)
-          |> Enum.map(fn {{:ok, result}, n} ->
+          |> Enum.map(fn {result, n} ->
             opts[:on_progress].(%{step: :play, current: n, total: total, detail: result.code})
             result
           end)
@@ -188,21 +185,14 @@ defmodule Playcode.Export.StaticSite do
 
       site = site(opts, published)
       Enum.each(removes, &remove_play_files(dir, &1))
-      added = build_plays(Enum.map(adds, & &1.id), dir, site)
-
       removed = Enum.filter(Catalogue.list_plays(include_deleted: true), &(&1.code in removes))
-
-      refreshed =
-        (adds ++ removed)
-        |> relatives(published, MapSet.new(adds, & &1.code))
-        |> Enum.map(& &1.id)
-        |> build_plays(dir, site)
+      refreshed = relatives(adds ++ removed, published, MapSet.new(adds, & &1.code))
+      written = adds |> Enum.concat(refreshed) |> build_plays(dir, site) |> Enum.to_list()
 
       plays = published_plays(dir)
       refresh_assets(dir, built)
       write_catalogue(plays, dir, opts)
       opts[:on_published].()
-      written = added ++ refreshed
       write_search(plays, Map.new(written, &{&1.code, &1.postings}), dir)
 
       # Last, as in generate/1. A batch that began on an empty site wrote every page
@@ -424,20 +414,16 @@ defmodule Playcode.Export.StaticSite do
     end
   end
 
-  # Prepares, writes and indexes one play; generate/1 runs several at once. The locale
-  # lives in the process dictionary, so each worker sets English itself.
-  defp build_play(play_id, dir, site) do
-    in_english(fn ->
-      edition = Edition.load(play_id)
-
-      edition
-      |> write_play(dir, site)
-      |> Map.merge(%{
-        code: edition.play.code,
-        version: edition.play.content_version,
-        postings: Search.write_play(dir, edition)
-      })
-    end)
+  # Prepares, writes and indexes one play, given its original's Edition when the build
+  # loaded it.
+  defp build_play(edition, original, dir, site) do
+    edition
+    |> write_play(original, dir, site)
+    |> Map.merge(%{
+      code: edition.play.code,
+      version: edition.play.content_version,
+      postings: Search.write_play(dir, edition)
+    })
   end
 
   # Plays load in parallel, each worker checking connections out per query: bound the
@@ -447,15 +433,47 @@ defmodule Playcode.Export.StaticSite do
     max(1, min(System.schedulers_online(), pool - 2))
   end
 
-  # Prepares, writes and indexes several plays at once.
-  defp build_plays(ids, dir, site) do
-    ids
-    |> Task.async_stream(&build_play(&1, dir, site),
+  # Prepares, writes and indexes several plays at once, a stream of one result per play.
+  # A play is built by the worker that built its original, after it, and compared with
+  # the original's Edition that worker holds: an original is loaded once however many of
+  # its translations are built, and let go of when they are. The locale lives in the
+  # process dictionary, so each worker sets English itself.
+  defp build_plays(plays, dir, site) do
+    plays
+    |> families()
+    |> Task.async_stream(&in_english(fn -> build_family(&1, nil, dir, site) end),
       max_concurrency: concurrency(),
       timeout: :infinity
     )
-    |> Enum.map(fn {:ok, result} -> result end)
+    |> Stream.flat_map(fn {:ok, results} -> results end)
   end
+
+  defp build_family({play, translations}, original, dir, site) do
+    edition = Edition.load(play.id)
+    result = build_play(edition, original, dir, site)
+    [result | Enum.flat_map(translations, &build_family(&1, edition, dir, site))]
+  end
+
+  # Each play whose original is not among `plays`, with its translations among them,
+  # theirs beneath them, and so on. A play on a cycle of originals (hand-edited data) is
+  # reached from no such play, and stands alone.
+  defp families(plays) do
+    ids = MapSet.new(plays, & &1.id)
+    translations = Enum.group_by(plays, & &1.parent_play_id)
+
+    families =
+      for play <- plays,
+          not MapSet.member?(ids, play.parent_play_id),
+          do: family(play, translations)
+
+    reached = families |> Enum.flat_map(&members/1) |> MapSet.new()
+    families ++ for play <- plays, not MapSet.member?(reached, play.id), do: {play, []}
+  end
+
+  defp family(play, translations),
+    do: {play, for(t <- Map.get(translations, play.id, []), do: family(t, translations))}
+
+  defp members({play, translations}), do: [play.id | Enum.flat_map(translations, &members/1)]
 
   # A title page links the play's published original and translations, and a comparison
   # page holds its original and lists its siblings, so theirs change when the play is
@@ -526,7 +544,7 @@ defmodule Playcode.Export.StaticSite do
   end
 
   # Writes one play's pages and TEI; returns what the index pages need from it.
-  defp write_play(%Edition{play: play} = edition, dir, site) do
+  defp write_play(%Edition{play: play} = edition, original, dir, site) do
     code = safe_code!(play.code)
     play_dir = Path.join([dir, "plays", code])
     File.rm_rf!(play_dir)
@@ -554,7 +572,7 @@ defmodule Playcode.Export.StaticSite do
       |> Enum.max(fn -> 0 end)
 
     File.write!(Path.join(play_dir, "text.html"), Pages.render(:text, assigns))
-    compare = write_comparison(edition, play_dir, site)
+    compare = write_comparison(edition, original, play_dir, site)
     File.write!(Path.join(play_dir, "statistics.html"), Pages.render(:statistics, assigns))
 
     if edition.notes != [],
@@ -575,13 +593,12 @@ defmodule Playcode.Export.StaticSite do
 
   # A play whose original is published is compared with it, in its own folder: a
   # change to the original re-exports it (`relatives/3`), so the page follows both.
-  # ponytail: loads the original's whole Edition once per translation; share one per
-  # build if Generate's time grows.
-  defp write_comparison(%Edition{play: play} = edition, play_dir, site) do
+  # `original` is the original's Edition when the build holds it, nil to load it here.
+  defp write_comparison(%Edition{play: play} = edition, original, play_dir, site) do
     parent = play.parent_play
 
     if parent && parent.is_complete && MapSet.member?(site.published, parent.code) do
-      {original, translation} = Comparison.prepare(Edition.load(parent.id), edition)
+      {original, translation} = Comparison.prepare(original || Edition.load(parent.id), edition)
 
       menu =
         original.play.derived_plays
