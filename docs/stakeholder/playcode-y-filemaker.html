@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Playcode frente a FileMaker</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
+<style>
+  /* Layout: one reading column; the two systems sit side by side wherever they are compared, old on the left, new on the right. */
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --ink: #172033;
+    --muted: #56607a;
+    --line: #c9cfdb;
+    --old: #9f1239;
+    --old-soft: #fbeaee;
+    --new: #0f766e;
+    --new-soft: #e3f3f0;
+    --shop: #1c3557;
+    --shop-ink: #ffffff;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: Inter, "Helvetica Neue", Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151f; --surface: #182030; --ink: #e7ebf3; --muted: #9aa5bd; --line: #364057;
+      --old: #f38ba3; --old-soft: #3a1a25; --new: #5fd0c2; --new-soft: #12332f;
+      --shop: #2a4a78; --shop-ink: #ffffff; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151f; --surface: #182030; --ink: #e7ebf3; --muted: #9aa5bd; --line: #364057;
+    --old: #f38ba3; --old-soft: #3a1a25; --new: #5fd0c2; --new-soft: #12332f;
+    --shop: #2a4a78; --shop-ink: #ffffff; color-scheme: dark;
+  }
+
+  body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 62rem; margin: 0 auto; padding-block: 3rem 4rem;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 3rem;
+  }
+  h1, h2, h3, p, dl, dd, ul, figure { margin: 0; }
+  h1 { font-family: var(--serif); font-size: clamp(1.9rem, 4.5vw, 2.7rem); line-height: 1.12; text-wrap: balance; }
+  h2 { font-family: var(--serif); font-size: 1.45rem; line-height: 1.2; text-wrap: balance; }
+  .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .lede { font-size: 1.1rem; max-width: 40rem; color: var(--ink); }
+  header, section { display: flex; flex-direction: column; gap: 1rem; }
+  .old-word { color: var(--old); font-weight: 600; }
+  .new-word { color: var(--new); font-weight: 600; }
+  code { font-family: var(--mono); font-size: 0.9em; }
+
+  /* glossary */
+  .terms { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr)); gap: 1.25rem 2rem; border-top: 1px solid var(--line); padding-top: 1.25rem; }
+  .terms div { min-width: 0; }
+  .terms dt { font-weight: 600; }
+  .terms dd { color: var(--muted); font-size: 0.93rem; }
+
+  /* diagrams */
+  .pair { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr)); gap: 1.5rem; }
+  .system { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem; min-width: 0; }
+  .system h3 { font-size: 1.05rem; font-weight: 600; }
+  .system h3 span { display: block; font-size: 0.75rem; letter-spacing: 0.12em; text-transform: uppercase; }
+  .system svg { display: block; width: 100%; height: auto; max-width: 30rem; margin: 0 auto; }
+  figcaption { font-size: 0.93rem; color: var(--muted); }
+
+  .dg text { font-family: var(--sans); fill: var(--ink); }
+  .dg .t { font-size: 13px; font-weight: 600; }
+  .dg .t-big { font-size: 15px; font-weight: 600; }
+  .dg .s { font-size: 11px; fill: var(--muted); }
+  .dg .lbl { font-size: 11px; fill: var(--muted); }
+  .dg .lbl-old { font-size: 11px; font-weight: 600; fill: var(--old); }
+  .dg .lbl-new { font-size: 11px; font-weight: 600; fill: var(--new); }
+  .dg .on-shop { fill: var(--shop-ink); }
+  .dg .box { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+  .dg .ghost { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
+  .dg .old-box { fill: var(--old-soft); stroke: var(--old); stroke-width: 1.4; }
+  .dg .new-box { fill: var(--new-soft); stroke: var(--new); stroke-width: 1.4; }
+  .dg .shop { fill: var(--shop); }
+  .dg .flow { stroke: var(--muted); stroke-width: 1.5; fill: none; }
+  .dg .dep { stroke: var(--old); stroke-width: 2; fill: none; }
+  .dg .loop { stroke: var(--new); stroke-width: 2.2; fill: none; stroke-dasharray: 6 4; }
+  .dg .mk { fill: var(--muted); }
+  .dg .mk-old { fill: var(--old); }
+  .dg .mk-new { fill: var(--new); }
+
+  /* comparison */
+  .cmp { display: flex; flex-direction: column; }
+  .row { display: grid; grid-template-columns: 12rem 1fr 1fr; gap: 0.25rem 2rem; padding-block: 0.9rem; border-top: 1px solid var(--line); }
+  .row > * { min-width: 0; }
+  .row.head { border-top: 0; padding-block: 0 0.5rem; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+  .row h3 { font-size: 1rem; font-weight: 600; }
+  .row p { font-size: 0.95rem; }
+  .row p::before { display: none; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 0.1rem; }
+  .row p.was::before { content: "Antes"; color: var(--old); }
+  .row p.now::before { content: "Ahora"; color: var(--new); }
+  .small { font-size: 0.88rem; color: var(--muted); }
+  @media (max-width: 44rem) {
+    .row { grid-template-columns: 1fr; }
+    .row.head { display: none; }
+    .row p::before { display: block; }
+    .row p { margin-top: 0.4rem; }
+  }
+
+  .wide { display: flex; flex-direction: column; gap: 0.75rem; }
+  .scroll { overflow-x: auto; }
+  .scroll svg { display: block; width: 100%; min-width: 44rem; height: auto; }
+  .dg .cap { font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; fill: var(--muted); }
+  .dg .pill { fill: var(--bg); stroke: var(--new); stroke-width: 1.2; }
+
+  .todo { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; max-width: 44rem; }
+  footer { border-top: 1px solid var(--line); padding-top: 1rem; font-size: 0.88rem; color: var(--muted); max-width: 44rem; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">EMOTHE · ARTELOPE</p>
+    <h1>Dónde viven los datos, antes y ahora</h1>
+    <p class="lede">En los dos sistemas hay una base de datos. Lo que cambia es su papel: antes el público dependía de ella en cada visita; ahora es solo el taller del equipo, y lo que se publica son ficheros.</p>
+  </header>
+
+  <section aria-labelledby="h-terms">
+    <h2 id="h-terms">Cuatro palabras</h2>
+    <dl class="terms">
+      <div><dt>Base de datos</dt><dd>Donde se guardan los datos mientras se trabajan. Antes FileMaker, ahora PostgreSQL.</dd></div>
+      <div><dt>Taller</dt><dd>El programa con el que el equipo corrige y cataloga. Ahora es Playcode.</dd></div>
+      <div><dt>Sitio estático</dt><dd>Páginas ya hechas, guardadas como ficheros. Al abrirlas no se consulta nada.</dd></div>
+      <div><dt>TEI-XML</dt><dd>El formato abierto de la edición. Un fichero por obra, con su ficha y su texto: <code>EMOTHE0530.xml</code>.</dd></div>
+    </dl>
+  </section>
+
+  <section aria-labelledby="h-design">
+    <h2 id="h-design">Los dos diseños</h2>
+    <div class="pair">
+      <figure class="system">
+        <h3><span class="old-word">Antes</span>FileMaker y PHP</h3>
+        <svg class="dg" viewBox="0 0 460 450" role="img" aria-label="Antes: el público pide una página a un servidor PHP, que consulta FileMaker en cada visita. Nada sale de FileMaker en un formato abierto.">
+          <defs>
+            <marker id="a-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+            <marker id="a-dep" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mk-old" d="M0 0L10 5L0 10z"/></marker>
+          </defs>
+
+          <rect class="box" x="20" y="16" width="210" height="48" rx="6"/>
+          <text class="t" x="125" y="45" text-anchor="middle">Equipo investigador</text>
+          <line class="flow" x1="125" y1="64" x2="125" y2="116" marker-end="url(#a-flow)"/>
+          <text class="lbl" x="133" y="94">edita las fichas</text>
+
+          <rect class="old-box" x="20" y="120" width="210" height="80" rx="6"/>
+          <text class="t" x="125" y="148" text-anchor="middle">FileMaker</text>
+          <text class="s" x="125" y="167" text-anchor="middle">fichas de las obras</text>
+          <text class="s" x="125" y="184" text-anchor="middle">propietario, con licencia</text>
+
+          <rect class="box" x="270" y="120" width="150" height="80" rx="6"/>
+          <text class="t" x="345" y="156" text-anchor="middle">Ficheros TEI-XML</text>
+          <text class="s" x="345" y="175" text-anchor="middle">los textos</text>
+          <line class="flow" x1="345" y1="200" x2="345" y2="258" marker-end="url(#a-flow)"/>
+          <text class="lbl" x="353" y="234">conversión a mano</text>
+
+          <line class="dep" x1="125" y1="262" x2="125" y2="204" marker-end="url(#a-dep)"/>
+          <text class="lbl-old" x="133" y="236">consulta en cada visita</text>
+
+          <rect class="old-box" x="20" y="262" width="400" height="56" rx="6"/>
+          <text class="t" x="220" y="286" text-anchor="middle">Servidor web con PHP</text>
+          <text class="s" x="220" y="304" text-anchor="middle">monta cada página en el momento de la visita</text>
+
+          <line class="dep" x1="220" y1="384" x2="220" y2="322" marker-end="url(#a-dep)"/>
+          <text class="lbl-old" x="228" y="357">pide la página</text>
+          <rect class="box" x="140" y="384" width="160" height="48" rx="6"/>
+          <text class="t" x="220" y="413" text-anchor="middle">Público</text>
+        </svg>
+        <figcaption>Las flechas rojas son una cadena: el público necesita PHP, y PHP necesita FileMaker. Si falla un eslabón, la consulta no responde. De FileMaker no sale ninguna copia en formato abierto.</figcaption>
+      </figure>
+
+      <figure class="system">
+        <h3><span class="new-word">Ahora</span>Playcode</h3>
+        <svg class="dg" viewBox="0 0 460 450" role="img" aria-label="Ahora: el equipo trabaja en Playcode, que genera el sitio estático, las descargas y un fichero TEI por obra. Los TEI se pueden volver a importar. El público lee ficheros ya hechos.">
+          <defs>
+            <marker id="b-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+            <marker id="b-new" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mk-new" d="M0 0L10 5L0 10z"/></marker>
+          </defs>
+
+          <rect class="ghost" x="20" y="16" width="150" height="48" rx="6"/>
+          <text class="t" x="95" y="37" text-anchor="middle">FileMaker</text>
+          <text class="s" x="95" y="53" text-anchor="middle">una sola importación</text>
+          <path class="flow" d="M95 64V160H146" marker-end="url(#b-flow)"/>
+          <text class="lbl" x="103" y="112">fichas</text>
+
+          <rect class="box" x="230" y="16" width="190" height="48" rx="6"/>
+          <text class="t" x="325" y="45" text-anchor="middle">Equipo investigador</text>
+          <line class="flow" x1="325" y1="64" x2="325" y2="116" marker-end="url(#b-flow)"/>
+          <text class="lbl" x="333" y="94">corrige y añade</text>
+
+          <rect class="shop" x="150" y="120" width="270" height="80" rx="8"/>
+          <text class="t-big on-shop" x="285" y="146" text-anchor="middle">Playcode</text>
+          <text class="s on-shop" x="285" y="165" text-anchor="middle">base de datos PostgreSQL</text>
+          <text class="s on-shop" x="285" y="183" text-anchor="middle">el taller: solo entra el equipo</text>
+
+          <path class="flow" d="M200 200L86 258" marker-end="url(#b-flow)"/>
+          <path class="flow" d="M270 200L222 258" marker-end="url(#b-flow)"/>
+          <path class="flow" d="M357 200V258" marker-end="url(#b-flow)"/>
+          <text class="lbl" x="300" y="236" text-anchor="middle">genera</text>
+
+          <rect class="box" x="20" y="262" width="126" height="56" rx="6"/>
+          <text class="t" x="83" y="286" text-anchor="middle">Sitio estático</text>
+          <text class="s" x="83" y="303" text-anchor="middle">páginas y buscador</text>
+
+          <rect class="box" x="157" y="262" width="126" height="56" rx="6"/>
+          <text class="t" x="220" y="286" text-anchor="middle">Descargas</text>
+          <text class="s" x="220" y="303" text-anchor="middle">PDF · HTML · EPUB</text>
+
+          <rect class="new-box" x="294" y="262" width="126" height="56" rx="6"/>
+          <text class="t" x="357" y="286" text-anchor="middle">Ficheros TEI-XML</text>
+          <text class="s" x="357" y="303" text-anchor="middle">copia de cada obra</text>
+
+          <path class="loop" d="M357 318V350H444V160H424" marker-end="url(#b-new)"/>
+          <text class="lbl-new" x="438" y="368" text-anchor="end">vuelven a importarse</text>
+
+          <line class="flow" x1="83" y1="384" x2="83" y2="322" marker-end="url(#b-flow)"/>
+          <text class="lbl" x="91" y="357">lee ficheros ya hechos</text>
+          <rect class="box" x="20" y="384" width="126" height="48" rx="6"/>
+          <text class="t" x="83" y="413" text-anchor="middle">Público</text>
+        </svg>
+        <figcaption>La flecha verde es la ida y vuelta: lo que Playcode exporta en TEI lo puede volver a leer. El público no toca la base de datos; lee ficheros que ya están hechos.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-cmp">
+    <h2 id="h-cmp">Qué cambia</h2>
+    <div class="cmp">
+      <div class="row head" aria-hidden="true"><span></span><span class="old-word">Antes</span><span class="new-word">Ahora</span></div>
+
+      <div class="row">
+        <h3>Ida y vuelta</h3>
+        <p class="was">Los datos entran en FileMaker y no vuelven a salir solos. Sacarlos exige una exportación a mano.</p>
+        <p class="now">Cada obra publicada sale con su fichero TEI, y ese fichero se puede volver a importar. Una prueba automática repite el viaje en cada cambio del programa.</p>
+      </div>
+      <div class="row">
+        <h3>Formato</h3>
+        <p class="was">Propietario y de pago. Sus ficheros solo los abre FileMaker.</p>
+        <p class="now">Abierto. TEI-XML es el estándar de la edición filológica, y PostgreSQL es software libre.</p>
+      </div>
+      <div class="row">
+        <h3>El taller</h3>
+        <p class="was">Añadir un dato nuevo o cambiar la estructura depende de quien conozca FileMaker. En la práctica ya no se hace.</p>
+        <p class="now">Fichas y textos se corrigen desde el navegador. Un campo nuevo es un cambio pequeño del programa, con sus pruebas.</p>
+      </div>
+      <div class="row">
+        <h3>Lo que ve el público</h3>
+        <p class="was">Páginas PHP que consultan FileMaker en cada visita.</p>
+        <p class="now">Páginas HTML ya generadas. El buscador funciona dentro del navegador, incluso en una copia descargada del sitio.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-fail">
+    <h2 id="h-fail">Por qué resiliente</h2>
+    <p class="lede">Lo que Playcode exporta lo puede volver a leer. Esa ida y vuelta es lo que hace que perder la base de datos no sea perder las obras.</p>
+    <figure class="wide">
+      <div class="scroll" tabindex="0" role="region" aria-label="Esquema de la ida y vuelta">
+        <svg class="dg" viewBox="0 0 920 320" role="img" aria-label="El equipo, FileMaker una sola vez y los ficheros TEI entran en Playcode. Playcode exporta el sitio estático, las descargas y un fichero TEI por obra publicada. Esos TEI se pueden volver a importar.">
+          <defs>
+            <marker id="c-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+            <marker id="c-new" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mk-new" d="M0 0L10 5L0 10z"/></marker>
+          </defs>
+
+          <text class="cap" x="125" y="20" text-anchor="middle">LO QUE ENTRA</text>
+          <text class="cap" x="460" y="20" text-anchor="middle">EL TALLER</text>
+          <text class="cap" x="795" y="20" text-anchor="middle">LO QUE SALE, GENERADO SOLO</text>
+
+          <rect class="box" x="20" y="36" width="210" height="56" rx="6"/>
+          <text class="t" x="125" y="60" text-anchor="middle">Equipo investigador</text>
+          <text class="s" x="125" y="78" text-anchor="middle">corrige y añade a mano</text>
+
+          <rect class="ghost" x="20" y="108" width="210" height="56" rx="6"/>
+          <text class="t" x="125" y="132" text-anchor="middle">FileMaker</text>
+          <text class="s" x="125" y="150" text-anchor="middle">fichas, una sola importación</text>
+
+          <rect class="new-box" x="20" y="180" width="210" height="56" rx="6"/>
+          <text class="t" x="125" y="204" text-anchor="middle">Ficheros TEI-XML</text>
+          <text class="s" x="125" y="222" text-anchor="middle">texto y ficha de cada obra</text>
+
+          <rect class="shop" x="330" y="60" width="260" height="152" rx="8"/>
+          <text class="t-big on-shop" x="460" y="104" text-anchor="middle">Playcode</text>
+          <text class="s on-shop" x="460" y="124" text-anchor="middle">base de datos PostgreSQL</text>
+          <text class="s on-shop" x="460" y="160" text-anchor="middle">aquí se corrige, se cataloga y se añade</text>
+          <text class="s on-shop" x="460" y="178" text-anchor="middle">solo entra el equipo, no el público</text>
+
+          <rect class="box" x="690" y="36" width="210" height="56" rx="6"/>
+          <text class="t" x="795" y="60" text-anchor="middle">Sitio estático</text>
+          <text class="s" x="795" y="78" text-anchor="middle">páginas y buscador</text>
+
+          <rect class="box" x="690" y="108" width="210" height="56" rx="6"/>
+          <text class="t" x="795" y="132" text-anchor="middle">Descargas</text>
+          <text class="s" x="795" y="150" text-anchor="middle">PDF · HTML · EPUB</text>
+
+          <rect class="new-box" x="690" y="180" width="210" height="56" rx="6"/>
+          <text class="t" x="795" y="204" text-anchor="middle">Ficheros TEI-XML</text>
+          <text class="s" x="795" y="222" text-anchor="middle">copia de cada obra publicada</text>
+
+          <path class="flow" d="M230 64L326 110" marker-end="url(#c-flow)"/>
+          <path class="flow" d="M230 136H326" marker-end="url(#c-flow)"/>
+          <path class="flow" d="M230 208L326 162" marker-end="url(#c-flow)"/>
+          <text class="lbl" x="278" y="128" text-anchor="middle">importar</text>
+
+          <path class="flow" d="M590 110L686 64" marker-end="url(#c-flow)"/>
+          <path class="flow" d="M590 136H686" marker-end="url(#c-flow)"/>
+          <path class="flow" d="M590 162L686 208" marker-end="url(#c-flow)"/>
+          <text class="lbl" x="638" y="128" text-anchor="middle">exportar</text>
+
+          <path class="loop" d="M795 236V282Q795 290 787 290H133Q125 290 125 282V241" marker-end="url(#c-new)"/>
+          <rect class="pill" x="290" y="276" width="340" height="28" rx="14"/>
+          <text class="lbl-new" x="460" y="294" text-anchor="middle">los TEI exportados se pueden volver a importar</text>
+        </svg>
+      </div>
+      <figcaption>Lo que sale por la derecha puede volver a entrar por la izquierda. FileMaker entra una sola vez y después ya no hace falta.</figcaption>
+    </figure>
+    <div class="cmp">
+      <div class="row head" aria-hidden="true"><span></span><span class="old-word">Antes</span><span class="new-word">Ahora</span></div>
+
+      <div class="row">
+        <h3>Se cae el servidor de la base de datos</h3>
+        <p class="was">Las búsquedas y las fichas dejan de responder al público.</p>
+        <p class="now">El público no lo nota, porque el sitio no la consulta. Solo el equipo deja de poder editar hasta que vuelve.</p>
+      </div>
+      <div class="row">
+        <h3>La base de datos se pierde o es atacada</h3>
+        <p class="was">Todo depende de la última copia de seguridad de FileMaker, en su propio formato.</p>
+        <p class="now">Las obras publicadas se reimportan desde sus ficheros TEI. Los borradores, que aún no se publican, dependen de las copias de seguridad.</p>
+      </div>
+      <div class="row">
+        <h3>El programa deja de mantenerse</h3>
+        <p class="was">PHP y FileMaker envejecen. Sin actualizaciones, el sitio se vuelve inseguro o deja de funcionar.</p>
+        <p class="now">Quedan los TEI y el sitio estático, que cualquier servidor web puede publicar tal cual.</p>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="h-todo">
+    <h2 id="h-todo">Lo que falta todavía</h2>
+    <ul class="todo">
+      <li>Las fichas de obras sin texto siguen solo en FileMaker: 121 de las 439 de la exportación que tenemos. Playcode ya puede guardar una ficha sin texto, pero falta traerlas y darles una página propia.</li>
+      <li>El buscador estático filtra por lengua, autor y tipo de obra. Faltan los filtros de la base de datos: fechas, género, lugar de acción y representaciones.</li>
+      <li>La base de datos de ARTELOPE seguiría el mismo camino: una sola importación desde FileMaker.</li>
+    </ul>
+  </section>
+
+  <footer>Quedan fuera del TEI a propósito los datos internos de trabajo (si una obra es borrador o está completa, si se muestran sus variantes, la nota del equipo) y las cuentas de usuario.</footer>
+</div>
+</body>
+</html>
