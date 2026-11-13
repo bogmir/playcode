@@ -383,6 +383,105 @@ defmodule Playcode.Export.StaticSiteCompareTest do
     end
   end
 
+  # An original is loaded once per build and handed to each of its translations'
+  # comparisons: loading it again for each was a sixth of a build.
+  describe "an original loaded once" do
+    alias Playcode.Export.StaticSite
+
+    # The times each play's text is read in `fun`: the query for its top divisions.
+    defp text_reads(plays, fun) do
+      test_pid = self()
+      ids = Map.new(plays, &{&1.id, &1.code})
+      handler = "text-reads-#{inspect(test_pid)}"
+
+      :telemetry.attach(
+        handler,
+        [:playcode, :repo, :query],
+        fn _event, _measurements, %{source: source, query: sql, params: params}, _ ->
+          with "play_divisions" <- source,
+               true <- sql =~ ~s("parent_id" IS NULL),
+               [raw] <- params,
+               {:ok, id} <- Ecto.UUID.load(raw),
+               code when is_binary(code) <- ids[id],
+               do: send(test_pid, {:text_read, code})
+        end,
+        nil
+      )
+
+      try do
+        fun.()
+      after
+        :telemetry.detach(handler)
+      end
+
+      reads(Map.new(plays, &{&1.code, 0}))
+    end
+
+    defp reads(acc) do
+      receive do
+        {:text_read, code} -> reads(Map.update!(acc, code, &(&1 + 1)))
+      after
+        0 -> acc
+      end
+    end
+
+    defp family do
+      %{original: original, french: french} = split_speech_editions()
+
+      translation = fn parent ->
+        play_fixture(%{
+          "parent_play_id" => parent.id,
+          "relationship_type" => "traduccion",
+          "is_complete" => true
+        })
+      end
+
+      %{
+        original: original,
+        french: french,
+        spanish: translation.(original),
+        from_french: translation.(french)
+      }
+    end
+
+    test "a build reads each play's text once, its translations' comparisons included" do
+      %{from_french: from_french} = plays = family()
+      family = Map.values(plays)
+      # The first build computes the statistics, which reads each text again.
+      generate!(family)
+      reads = text_reads(family, fn -> send(self(), {:dir, generate!(family)}) end)
+
+      assert reads == Map.new(family, &{&1.code, 1})
+      assert_received {:dir, dir}
+      assert File.exists?(Path.join(dir, "plays/#{from_french.code}/compare.html"))
+    end
+
+    test "a batch reads each play it rewrites once" do
+      %{original: original, french: french, spanish: spanish} = plays = family()
+      family = Map.values(plays)
+      dir = generate!(family)
+
+      reads =
+        text_reads(family, fn ->
+          StaticSite.apply_changes([{:add, french.id}], output_dir: dir)
+        end)
+
+      # French and its relatives: the original, its sibling and its own translation.
+      assert reads == Map.new(family, &{&1.code, 1})
+      assert read!(dir, "plays/#{spanish.code}/compare.html") =~ original.title
+    end
+
+    # Hand-edited data can make two plays each other's original: neither is left out.
+    test "plays that are each other's original are both built" do
+      %{original: original, french: french} = split_speech_editions()
+      {:ok, original} = Catalogue.update_play(original, %{parent_play_id: french.id})
+      dir = generate!([original, french])
+
+      assert File.exists?(Path.join(dir, "plays/#{original.code}/compare.html"))
+      assert File.exists?(Path.join(dir, "plays/#{french.code}/compare.html"))
+    end
+  end
+
   describe "names and footers" do
     alias Playcode.Export.StaticSite
 
