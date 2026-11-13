@@ -1,36 +1,33 @@
-# Playcode daily brief, 2026-11-13 (main @ 47bf3d6)
+# Playcode daily brief, 2026-11-13 (main @ 5843a4a)
 
-Current focus: none.
+Focus: none. 53 questions open.
 
-## Open questions (links: docs/stakeholder/preguntas.html#qN)
-**5 easiest**
-- [q18](docs/stakeholder/preguntas.html#q18) Who edited El diablo blanco / Il diavolo bianco: Eva Soler Sasera or Victoria Soler Sánchez? One name.
-- [q19](docs/stakeholder/preguntas.html#q19) La ocasión perdida editor: Tronch or Durá Celma? Same shape.
-- [q20](docs/stakeholder/preguntas.html#q20) Did Elena Ramírez also edit Every Man In His Humor? Yes/no.
-- [q39](docs/stakeholder/preguntas.html#q39) Hamlet v. 3315: "Oh! and" or "Oh!"? One reading, one editor.
-- [q13](docs/stakeholder/preguntas.html#q13) Who replaces Jodelle on 11 witnesses? One fact, six plays.
+## Easiest questions (preguntas.html)
+- [q7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: yes/no, one play.
+- [q28](docs/stakeholder/preguntas.html#q28) Show the original cast's actors: yes/no.
+- [q13](docs/stakeholder/preguntas.html#q13) Jodelle on 11 witnesses: one fact, a slip of the form.
+- [q54](docs/stakeholder/preguntas.html#q54) English names for relation kinds: a list to correct.
+- [q66](docs/stakeholder/preguntas.html#q66) Confirm the list of 45 prologues on the wrong side: confirm or strike.
 
-**5 most important**
-- [q66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: 45 texts in 33 plays; backlog C1 waits on it.
-- [q69](docs/stakeholder/preguntas.html#q69) Renumber 16 hand-numbered plays: the whole Numbering section waits.
-- [q67](docs/stakeholder/preguntas.html#q67) Does a chorus/TODOS count as a speaker: fixes statistics for ~89 plays (Round trip item).
-- [q14](docs/stakeholder/preguntas.html#q14) Nine plays with a web edition but no TEI: corpus completeness for publishing.
-- [q57](docs/stakeholder/preguntas.html#q57) Source plays without text: unblocks the Relations section (q53-56 follow it).
+## Most important questions
+- [q68](docs/stakeholder/preguntas.html#q68) Word before a cited number: every play's citations.
+- [q69](docs/stakeholder/preguntas.html#q69) Recount 16 hand-numbered plays: unblocks the Numbering backlog.
+- [q66](docs/stakeholder/preguntas.html#q66) Prologues: unblocks corpus check C1, 33 plays.
+- [q67](docs/stakeholder/preguntas.html#q67) Chorus/TODOS in statistics: ~119 roles in 89 plays, a Round trip item.
+- [q15](docs/stakeholder/preguntas.html#q15) Label for 11 adaptations on the public site: three backlog items hang on it (with q53-57).
 
-## Round trip (backlog; ida-y-vuelta cells short of yes)
-- Collective speakers count as one character in statistics (q67).
-- Asides are marked less on the play page and site than in downloads (needs no answer).
-- Verse/prose boundary (q23 follow-up): proposal applied, question still open.
-- Original cast (`characters.actor`) printed nowhere (q28); new FileMaker slices (S8 genre) must go into the TEI.
+## Round trip (short of "yes")
+- Collective speakers (CORO, TODOS) count as one character in statistics; waits on q67.
+- Asides: play page and site mark less than the downloads (ida-y-vuelta note 37); needs no answer.
+- Verse/prose form boundary (q23 follow-up): proposal applied, 61 plays labelled `verso` in the corpus copies.
+- Original cast actors are stored and exported but printed nowhere; waits on q28.
 
 ## Top 3 features
-1. **Package 4: "Download .zip" off the export page** - a 666 MB zip inside the page process looks dead for minutes; independent, ready now.
-2. **Package 5: drop six unread statistics keys** - nothing reads them since `/api/v1` went; less cache and compute per play.
-3. **Asides on the play page and site** - downloads already mark them; needs no answer.
-Skipped: C1, numbering (project), relations (after parity), translation alignment (parked), PHP 7.2 deploy.
+1. **Download .zip off the export page** (package 4): 666 MB zipped in the page process, no feedback, repeats on a second click.
+2. **Statistics no page reads** (package 5): drop six dead cached keys after `/api/v1` went; smaller code, cheaper cache.
+3. **Asides on the play page and site**: the downloads already mark them; no answer needed, closes a Round trip gap.
 
 ## Speed win
-- `lib/playcode/export/static_site/search.ex:34-43` `normalise/1` runs five passes (NFC, downcase, ñ swap, NFD, `\p{Mn}` regex) on every line and note of every play, and `words/1` calls it each time.
-- Change: when the text is pure ASCII (`for <<c <- text>>, c > 127` is empty) return `String.downcase(text)`; most English lines skip four passes.
-- Gain: guess ~2-3x on `write_play` indexing for English plays, not measured; time `Search.write_play/2` over one English play with `:timer.tc` before/after.
-- Risk: low; `search_normalisation.json` runs against both halves and must stay green. Differs from the previous brief (edition.ex statistics).
+- `lib/playcode/export/static_site.ex:314` and `:474`: `outdated/1` loads `list_plays(complete: true)` and `relatives/3` loads `list_plays()` again; `published_plays/1` (`:484`) a third time. Pass the plays already in hand (or load once per Generate) instead of re-querying the whole catalogue.
+- Gain: guess, two to three catalogue queries fewer per Generate (a few hundred ms to a second on 1 GB, not the hours); measure with `:timer.tc` around `Catalogue.list_plays/1` in one `mix playcode.export.site` run.
+- Risk: low; a stale list within one build if a play changes mid-run, which `SiteBuilder` already serialises. Differs from the previous brief (search.ex normalise).
