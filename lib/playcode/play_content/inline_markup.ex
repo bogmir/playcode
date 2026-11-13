@@ -77,8 +77,16 @@ defmodule Playcode.PlayContent.InlineMarkup do
   never share a run.
   """
   def parts(nil), do: []
+  def parts(""), do: []
 
+  # Most lines hold no marker at all; they skip every split below.
   def parts(text) do
+    if :binary.match(text, ["<", "&"]) == :nomatch,
+      do: [%{text: text, italic: false, stage: nil}],
+      else: marked_parts(text)
+  end
+
+  defp marked_parts(text) do
     text =
       text
       |> String.replace("&lt;&lt;", "<<")
@@ -196,6 +204,12 @@ defmodule Playcode.PlayContent.InlineMarkup do
   # A number marker is read whole inside the italics, so its "/>" cannot be taken for the
   # start of their closing ">>" (`<<sic <lb n="5"/>>>`).
   defp plain_italics(text, stage) do
+    if String.contains?(text, "<<"),
+      do: marked_italics(text, stage),
+      else: numbers(text, false, stage)
+  end
+
+  defp marked_italics(text, stage) do
     ~r/<<((?:<lb n="[A-Za-z0-9.\-]+"\/>|.)*?)>>/s
     |> Regex.split(text, include_captures: true)
     |> Enum.flat_map(fn part ->
@@ -516,6 +530,10 @@ defmodule Playcode.PlayContent.InlineMarkup do
   def rs_well_formed?(nil), do: true
 
   def rs_well_formed?(text) do
+    not String.contains?(text, ["<rs", "</rs"]) or rs_sound?(text)
+  end
+
+  defp rs_sound?(text) do
     without_rs = Regex.replace(@rs, text, "")
 
     not (Regex.match?(~r/<\/?rs[\s>]/, without_rs) or
@@ -525,7 +543,11 @@ defmodule Playcode.PlayContent.InlineMarkup do
 
   @doc "True when every `<lb` in `text` is a well-formed number marker."
   def numbers_well_formed?(nil), do: true
-  def numbers_well_formed?(text), do: not Regex.match?(~r/<lb(?! n="[A-Za-z0-9.\-]+"\/>)/, text)
+
+  def numbers_well_formed?(text) do
+    not (String.contains?(text, "<lb") and
+           Regex.match?(~r/<lb(?! n="[A-Za-z0-9.\-]+"\/>)/, text))
+  end
 
   @doc """
   True when every `<stage` and `</stage>` in `text` belongs to a closed, flat marker with
@@ -534,6 +556,10 @@ defmodule Playcode.PlayContent.InlineMarkup do
   def well_formed?(nil), do: true
 
   def well_formed?(text) do
+    not String.contains?(text, ["<stage", "</stage"]) or stages_sound?(text)
+  end
+
+  defp stages_sound?(text) do
     without_stages = Regex.replace(@stage, text, fn _all, _type, inner -> inner end)
 
     not (Regex.match?(~r/<\/?stage/, without_stages) or
