@@ -1,8 +1,10 @@
 defmodule Playcode.Export.TeiValidatorTest do
   use Playcode.DataCase, async: true
 
-  # Each xmllint compiles the TEI RelaxNG schema first, about 11 s of CPU, so the tests
-  # here call it three times in all. Excluded by default, see test_helper.exs.
+  # Each xmllint compiles the TEI RelaxNG schema first, about 11 s of CPU. Tests of one module
+  # run one after the other, so the other two xmllint calls have modules of their own
+  # (`tei_validator_errors_test.exs`, `tei_validator_all_test.exs`) and run beside this one.
+  # Excluded by default, see test_helper.exs.
   @moduletag :slow
 
   # Building nine plays and validating them takes about 35 s alone, and the slow suite runs
@@ -52,48 +54,6 @@ defmodule Playcode.Export.TeiValidatorTest do
             do: {shape, result}
 
       assert invalid == []
-    end
-
-    test "returns errors for malformed XML" do
-      invalid_xml =
-        ~s(<?xml version="1.0"?>\n<TEI xmlns="http://www.tei-c.org/ns/1.0"><bad></TEI>)
-
-      assert {:error, errors} = TeiValidator.validate(invalid_xml)
-      assert is_list(errors)
-      assert length(errors) > 0
-    end
-  end
-
-  describe "validate_all/1" do
-    # One xmllint compiles the schema (11 s) once for every document.
-    test "gives each document its own result, its errors its own" do
-      valid = """
-      <?xml version="1.0"?>
-      <TEI xmlns="http://www.tei-c.org/ns/1.0"><teiHeader><fileDesc>
-        <titleStmt><title>T</title></titleStmt><publicationStmt><p>P</p></publicationStmt>
-        <sourceDesc><p>S</p></sourceDesc>
-      </fileDesc></teiHeader><text><body><p>Texto.</p></body></text></TEI>
-      """
-
-      malformed = ~s(<?xml version="1.0"?>\n<TEI xmlns="http://www.tei-c.org/ns/1.0"><bad></TEI>)
-      invalid = String.replace(valid, "<p>Texto.</p>", "<sp>Texto.</sp><bogus/>")
-
-      assert [
-               {:ok, :valid},
-               {:error, [_ | _] = malformed_errors},
-               {:ok, :valid},
-               {:error, [_ | _] = invalid_errors}
-             ] =
-               TeiValidator.validate_all([valid, malformed, valid, invalid])
-
-      assert Enum.any?(malformed_errors, &(&1 =~ "bad"))
-      refute Enum.any?(malformed_errors, &(&1 =~ "bogus"))
-      assert Enum.any?(invalid_errors, &(&1 =~ "bogus"))
-      refute Enum.any?(invalid_errors, &(&1 =~ "bad"))
-      # A line naming the document names it "TEI-XML", never xmllint's temporary file.
-      assert ["TEI-XML:" <> _ | _] = malformed_errors
-      assert ["TEI-XML:" <> _ | _] = invalid_errors
-      refute Enum.any?(malformed_errors ++ invalid_errors, &(&1 =~ ".xml"))
     end
   end
 
