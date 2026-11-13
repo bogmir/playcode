@@ -22,7 +22,7 @@
       item={item}
       head="act-head"
     />
-    <Components.page_text edition={@edition} page={@page} />
+    <Components.page_text edition={@edition} page={@page} texts={@texts} />
     <Components.outline_item
       :for={item <- if(@next, do: [], else: @edition.back)}
       edition={@edition}

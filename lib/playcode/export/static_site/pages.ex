@@ -74,6 +74,27 @@ defmodule Playcode.Export.StaticSite.Pages do
   defp lists(%{} = map), do: Map.new(map, fn {key, value} -> {key, lists(value)} end)
   defp lists({es, en}), do: [es, en]
 
+  @doc """
+  Each page's division's own elements and each of its scenes', rendered once, by id: what
+  its page and text.html both print (`Components.elements/1`).
+  """
+  def texts(edition) do
+    for page <- edition.pages,
+        is_nil(page.scene),
+        of <- [page.division | page.division.children],
+        of.type != "elenco",
+        into: %{} do
+      html =
+        %{of: of, edition: edition, texts: %{}, __changed__: nil}
+        |> Components.elements()
+        |> Phoenix.HTML.Safe.to_iodata()
+        |> IO.iodata_to_binary()
+        |> strip_annotations()
+
+      {of.id, {:safe, html}}
+    end
+  end
+
   @doc "Renders page template `name` (`:title`, `:division`, …) with `assigns` to HTML."
   def render(name, assigns) do
     __MODULE__
