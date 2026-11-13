@@ -427,10 +427,11 @@ defmodule Playcode.Export.StaticSite do
   end
 
   # Plays load in parallel, each worker checking connections out per query: bound the
-  # workers by the cores and by the pool, minus two so the app is not starved outright.
+  # workers by the cores and by the pool, minus two so the app is not starved outright. Never
+  # fewer than two: on one core a play's database wait overlaps another's rendering.
   defp concurrency do
     pool = Playcode.Repo.config()[:pool_size] || 10
-    max(1, min(System.schedulers_online(), pool - 2))
+    max(2, min(System.schedulers_online(), pool - 2))
   end
 
   # Prepares, writes and indexes several plays at once, a stream of one result per play.
