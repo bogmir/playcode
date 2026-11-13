@@ -20,6 +20,8 @@
     --new-soft: #e3f3f0;
     --shop: #1c3557;
     --shop-ink: #ffffff;
+    --txt-soft: #e8eef7;
+    --txt-line: #1c3557;
     --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
     --sans: Inter, "Helvetica Neue", Arial, sans-serif;
     --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
@@ -28,13 +30,13 @@
     :root:not([data-theme="light"]) {
       --bg: #10151f; --surface: #182030; --ink: #e7ebf3; --muted: #9aa5bd; --line: #364057;
       --old: #f38ba3; --old-soft: #3a1a25; --new: #5fd0c2; --new-soft: #12332f;
-      --shop: #2a4a78; --shop-ink: #ffffff; color-scheme: dark;
+      --shop: #2a4a78; --shop-ink: #ffffff; --txt-soft: #1d2a40; --txt-line: #8fb0e0; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
     --bg: #10151f; --surface: #182030; --ink: #e7ebf3; --muted: #9aa5bd; --line: #364057;
     --old: #f38ba3; --old-soft: #3a1a25; --new: #5fd0c2; --new-soft: #12332f;
-    --shop: #2a4a78; --shop-ink: #ffffff; color-scheme: dark;
+    --shop: #2a4a78; --shop-ink: #ffffff; --txt-soft: #1d2a40; --txt-line: #8fb0e0; color-scheme: dark;
   }
 
   body { background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
@@ -111,6 +113,11 @@
   .scroll svg { display: block; width: 100%; min-width: 44rem; height: auto; }
   .dg .cap { font-size: 10.5px; font-weight: 600; letter-spacing: 0.12em; fill: var(--muted); }
   .dg .pill { fill: var(--bg); stroke: var(--new); stroke-width: 1.2; }
+  .dg .frame { fill: none; stroke: var(--txt-line); stroke-width: 2; }
+  .dg .txt-box { fill: var(--txt-soft); stroke: var(--txt-line); stroke-width: 1.4; }
+  .dg .it { font-size: 12px; }
+  .dg .miss { font-size: 12px; font-style: italic; fill: var(--old); }
+  .dg .pend { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 5 4; }
 
   .todo { padding-left: 1.2rem; display: flex; flex-direction: column; gap: 0.5rem; max-width: 44rem; }
   footer { border-top: 1px solid var(--line); padding-top: 1rem; font-size: 0.88rem; color: var(--muted); max-width: 44rem; }
@@ -230,6 +237,86 @@
     </div>
   </section>
 
+  <section aria-labelledby="h-inside">
+    <h2 id="h-inside">Dentro de Playcode</h2>
+    <p class="lede">Playcode no guarda solo textos. De cada obra guarda dos cosas: su ficha, que es lo que hoy está en la base de datos de FileMaker, y su texto. Las dos salen juntas en el fichero TEI y en el sitio público.</p>
+    <figure class="wide">
+      <div class="scroll" tabindex="0" role="region" aria-label="Esquema de lo que guarda Playcode">
+        <svg class="dg" viewBox="0 0 940 540" role="img" aria-label="La base de datos de Playcode guarda de cada obra su ficha y su texto, y comparte la bibliografía, los lugares, las compañías y los actores entre todas las obras. El fichero TEI lleva la ficha en la cabecera y el texto en el cuerpo. El sitio estático tiene una Biblioteca para leer y, por hacer, unas páginas de fichas con un buscador que corre en el navegador, donde entrarían también las obras sin texto.">
+          <defs>
+            <marker id="d-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path class="mk" d="M0 0L10 5L0 10z"/></marker>
+          </defs>
+
+          <rect class="frame" x="20" y="20" width="600" height="500" rx="12"/>
+          <text class="t-big" x="40" y="48">Playcode</text>
+          <text class="s" x="40" y="66">base de datos PostgreSQL · solo entra el equipo</text>
+
+          <rect class="box" x="40" y="80" width="560" height="254" rx="8"/>
+          <text class="t" x="56" y="104">Una obra con texto</text>
+
+          <rect class="new-box" x="56" y="116" width="260" height="202" rx="6"/>
+          <text class="t" x="72" y="140">La ficha</text>
+          <text class="it" x="72" y="164">título, autor, datación</text>
+          <text class="it" x="72" y="184">versiones: original y traducciones</text>
+          <text class="it" x="72" y="204">testimonios</text>
+          <text class="it" x="72" y="224">representaciones antiguas</text>
+          <text class="it" x="72" y="244">tiempo histórico</text>
+          <text class="it" x="72" y="264">lugares de la acción</text>
+          <text class="it" x="72" y="284">bibliografía selecta</text>
+          <text class="miss" x="72" y="304">género: aún no</text>
+
+          <rect class="txt-box" x="332" y="116" width="252" height="202" rx="6"/>
+          <text class="t" x="348" y="140">El texto</text>
+          <text class="it" x="348" y="164">actos, escenas y elencos</text>
+          <text class="it" x="348" y="184">personajes</text>
+          <text class="it" x="348" y="204">versos, prosa y acotaciones</text>
+          <text class="it" x="348" y="224">numeración de los versos</text>
+          <text class="it" x="348" y="244">notas</text>
+          <text class="it" x="348" y="264">variantes</text>
+
+          <line class="flow" x1="186" y1="318" x2="186" y2="364" marker-end="url(#d-flow)"/>
+          <text class="lbl" x="194" y="346">la ficha los cita</text>
+
+          <rect class="box" x="40" y="368" width="560" height="64" rx="8"/>
+          <text class="t" x="56" y="392">Compartidos por todo el corpus</text>
+          <text class="s" x="56" y="412">bibliografía (2.812 referencias) · lugares · compañías · actores: una corrección llega a todas las obras</text>
+
+          <rect class="ghost" x="40" y="446" width="560" height="58" rx="8"/>
+          <text class="t" x="56" y="470">Una obra sin texto</text>
+          <text class="s" x="56" y="490">solo la ficha · por traer: 121 fichas siguen en FileMaker</text>
+
+          <rect class="box" x="680" y="80" width="240" height="158" rx="8"/>
+          <text class="t" x="800" y="104" text-anchor="middle">Fichero TEI-XML</text>
+          <rect class="new-box" x="696" y="118" width="208" height="46" rx="5"/>
+          <text class="t" x="800" y="138" text-anchor="middle">cabecera</text>
+          <text class="s" x="800" y="155" text-anchor="middle">la ficha</text>
+          <rect class="txt-box" x="696" y="176" width="208" height="46" rx="5"/>
+          <text class="t" x="800" y="196" text-anchor="middle">cuerpo</text>
+          <text class="s" x="800" y="213" text-anchor="middle">el texto</text>
+
+          <rect class="box" x="680" y="270" width="240" height="234" rx="8"/>
+          <text class="t" x="800" y="294" text-anchor="middle">Sitio estático</text>
+          <rect class="txt-box" x="696" y="308" width="208" height="60" rx="5"/>
+          <text class="t" x="800" y="332" text-anchor="middle">Biblioteca</text>
+          <text class="s" x="800" y="350" text-anchor="middle">leer el texto, con su ficha</text>
+          <rect class="ghost" x="696" y="386" width="208" height="60" rx="5"/>
+          <text class="t" x="800" y="410" text-anchor="middle">Fichas</text>
+          <text class="s" x="800" y="428" text-anchor="middle">buscar con filtros · por hacer</text>
+          <text class="s" x="800" y="472" text-anchor="middle">páginas ya hechas: la búsqueda</text>
+          <text class="s" x="800" y="488" text-anchor="middle">corre en el navegador</text>
+
+          <path class="flow" d="M600 170H676" marker-end="url(#d-flow)"/>
+          <text class="lbl" x="650" y="162" text-anchor="middle">exporta</text>
+          <path class="flow" d="M600 300L676 330" marker-end="url(#d-flow)"/>
+          <text class="lbl" x="656" y="304" text-anchor="middle">genera</text>
+          <path class="pend" d="M600 475L692 420" marker-end="url(#d-flow)"/>
+          <text class="lbl" x="650" y="474" text-anchor="middle">solo aquí</text>
+        </svg>
+      </div>
+      <figcaption>Los colores emparejan cada parte con su salida: la ficha (verde) va a la cabecera del TEI y el texto (azul) a su cuerpo. Lo discontinuo está por hacer: traer las obras sin texto y publicar sus fichas con un buscador. Como la Biblioteca, serán páginas ya hechas: el público no consulta ninguna base de datos.</figcaption>
+    </figure>
+  </section>
+
   <section aria-labelledby="h-cmp">
     <h2 id="h-cmp">Qué cambia</h2>
     <div class="cmp">
@@ -346,6 +433,7 @@
     <ul class="todo">
       <li>Las fichas de obras sin texto siguen solo en FileMaker: 121 de las 439 de la exportación que tenemos. Playcode ya puede guardar una ficha sin texto, pero falta traerlas y darles una página propia.</li>
       <li>El buscador estático filtra por lengua, autor y tipo de obra. Faltan los filtros de la base de datos: fechas, género, lugar de acción y representaciones.</li>
+      <li>El género, que FileMaker tiene y Playcode aún no.</li>
       <li>La base de datos de ARTELOPE seguiría el mismo camino: una sola importación desde FileMaker.</li>
     </ul>
   </section>

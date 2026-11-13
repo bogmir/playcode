@@ -291,7 +291,7 @@
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
     <p class="lede">The questions still open come first. The answered ones, with their answers, are in the archive at the end of the page.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 13 November 2026. 69 questions, 50 of them answered (eighteen decided by Playcode), lists of the credits, split verses, spaces and numbers corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 13 November 2026. 72 questions, 51 of them answered (eighteen decided by Playcode), lists of the credits, split verses, spaces and numbers corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -306,13 +306,14 @@
       <li><a href="#t-github">Work only in the GitHub copy</a><span class="nums">48</span></li>
       <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–57</span></li>
       <li><a href="#t-prologues">Prologues on the wrong side</a><span class="nums">66</span></li>
-      <li><a href="#t-speakers">Who counts as a character in the statistics</a><span class="nums">67–68</span></li>
+      <li><a href="#t-speakers">Who counts as a character in the statistics</a><span class="nums">68</span></li>
       <li><a href="#t-numbering">Plays numbered by hand</a><span class="nums">69</span></li>
+      <li><a href="#t-gender">Characters’ gender and RoleCall</a><span class="nums">70–72</span></li>
       <li><a href="#t-spaces-fixed">Spaces corrected</a><span class="nums">—</span></li>
       <li><a href="#t-files-fixed">Files corrected</a><span class="nums">—</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
-      <li><a href="#archive">Archive: the answered questions</a><span class="nums">50</span></li>
+      <li><a href="#archive">Archive: the answered questions</a><span class="nums">51</span></li>
     </ul>
   </nav>
 
@@ -816,30 +817,6 @@
   <section id="t-speakers" aria-labelledby="h-speakers">
     <h2 id="h-speakers">Who counts as a character in the statistics</h2>
 
-    <div class="q" id="q67" data-q="q67" data-n="67">
-      <span class="q-num" aria-hidden="true">67</span>
-      <div class="q-body">
-        <h3>Does a chorus, or “TODOS”, count as a speaking character in the statistics?</h3>
-        <p class="why">The statistics give each character’s speeches and verses, and a total: how many speaking characters the play has.</p>
-        <p class="why">Some speakers are not one person but a group: the CORO of <i>Sofonisba</i> (72 speeches), the CORO DE PASTORES of <i>El pastor fido</i>, TODOS. About 120 roles in about 90 plays, 919 speeches in all. Today each counts like a person: it has its own row in the tables and adds one to the total. A play with nine named speakers and a CORO says ten speaking characters. (A speech shared by named people, <code>who="#horatio #marcellus"</code>, already counts for each of them, 943 speeches; nothing changes there.)</p>
-        <p class="why">The question is whether a group should be one of the speaking characters in that total. If you answer anything but “They all count”, we would mark the groups in the TEI files (<code>ana="grupo"</code>) and the statistics would show them on a line of their own, outside the total: nine speaking characters, and a chorus. We found the groups by their names, so the list may include a role that is a person, or miss a group. Before changing anything we would send you the list, play by play, to check.</p>
-        <fieldset>
-          <legend>Answer</legend>
-          <div class="options">
-            <label for="q67-o1"><input type="radio" id="q67-o1" name="q67-choice" value="They all count, as today">They all count, as today</label>
-            <label for="q67-o2"><input type="radio" id="q67-o2" name="q67-choice" value="A chorus counts; TODOS and the like are listed apart">A chorus counts; TODOS and the like are listed apart</label>
-            <label for="q67-o3"><input type="radio" id="q67-o3" name="q67-choice" value="None counts: all are listed apart">None counts: all are listed apart</label>
-            <label for="q67-o4"><input type="radio" id="q67-o4" name="q67-choice" value="Not sure">Not sure</label>
-          </div>
-        </fieldset>
-        <div>
-          <label class="label" for="q67-text">Notes</label>
-          <textarea id="q67-text"></textarea>
-        </div>
-        <p class="status" aria-live="polite"></p>
-      </div>
-    </div>
-
     <div class="q" id="q68" data-q="q68" data-n="68">
       <span class="q-num" aria-hidden="true">68</span>
       <div class="q-body">
@@ -883,6 +860,76 @@
         <div>
           <label class="label" for="q69-text">Notes: plays to leave as they are, another rule, or a file to correct first</label>
           <textarea id="q69-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+  </section>
+
+  <section id="t-gender" aria-labelledby="h-gender">
+    <h2 id="h-gender">Characters’ gender and RoleCall</h2>
+    <p>Two ideas for later, sent on 13 November. First, to mark each character’s gender. TEI has a place for it in the cast list, <code>&lt;role xml:id="duchess" gender="f"&gt;Duchess of Malfi&lt;/role&gt;</code>, but none of the 385 files uses it, and FileMaker records the sex only of the actors of historical performances, not of characters. So the editors would set it by hand, in the play’s characters, for about 9,000 characters. Second, to link each play to its chart on RoleCall (<a href="https://rolecall.eu/">rolecall.eu</a>), David J. Amelang’s database at the Universidad Autónoma de Madrid. It shows how much each character speaks, and how much the women and the men speak, one PDF per play, as <a href="https://rolecall.eu/wp-content/uploads/GRAPHS/7_Hamlet.pdf"><i>Hamlet</i>’s</a>. Most of its plays are English, with Spanish, French, Italian, Portuguese, Dutch and German ones added. A chart’s address is RoleCall’s own number and title, so Playcode cannot work it out. It would be kept with each play, and Playcode would suggest the matching RoleCall play from RoleCall’s list, by author and title, for an editor to accept.</p>
+
+    <div class="q" id="q70" data-q="q70" data-n="70">
+      <span class="q-num" aria-hidden="true">70</span>
+      <div class="q-body">
+        <h3>Which genders should a character be able to have?</h3>
+        <p class="why">TEI leaves the words to the project. RoleCall uses three: women, men, and “X”. A group (soldiers, servants, “TODOS”) or a character whose gender the play does not settle needs one too.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q70-o1"><input type="radio" id="q70-o1" name="q70-choice" value="Woman, man, and X for a group or when unknown">Woman, man, and X for a group or when unknown</label>
+            <label for="q70-o2"><input type="radio" id="q70-o2" name="q70-choice" value="Other words (in the notes)">Other words (in the notes)</label>
+            <label for="q70-o3"><input type="radio" id="q70-o3" name="q70-choice" value="Not wanted">Not wanted</label>
+            <label for="q70-o4"><input type="radio" id="q70-o4" name="q70-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q70-text">Notes</label>
+          <textarea id="q70-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q71" data-q="q71" data-n="71">
+      <span class="q-num" aria-hidden="true">71</span>
+      <div class="q-body">
+        <h3>Where should readers see a character’s gender?</h3>
+        <p class="why">It goes into the file in any case. The statistics already count how much each character speaks, so they could also give the women’s and the men’s share, as RoleCall does. Its numbers may differ from ours, since it counts from its own copy of the text.</p>
+        <fieldset>
+          <legend>Answer (one or more)</legend>
+          <div class="options">
+            <label for="q71-o1"><input type="checkbox" id="q71-o1" name="q71-choice" value="In the statistics, as each gender’s share of the speech">In the statistics, as each gender’s share of the speech</label>
+            <label for="q71-o2"><input type="checkbox" id="q71-o2" name="q71-choice" value="In the cast list">In the cast list</label>
+            <label for="q71-o3"><input type="checkbox" id="q71-o3" name="q71-choice" value="Nowhere: in the file only">Nowhere: in the file only</label>
+            <label for="q71-o4"><input type="checkbox" id="q71-o4" name="q71-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q71-text">Notes</label>
+          <textarea id="q71-text"></textarea>
+        </div>
+        <p class="status" aria-live="polite"></p>
+      </div>
+    </div>
+
+    <div class="q" id="q72" data-q="q72" data-n="72">
+      <span class="q-num" aria-hidden="true">72</span>
+      <div class="q-body">
+        <h3>Should a translation link to its original’s RoleCall chart?</h3>
+        <p class="why">RoleCall charts the original plays, <i>Hamlet</i> but not its Spanish translations. The link would be on the play page of the public site. A translation could link to its original’s chart, saying whose it is, or have none.</p>
+        <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q72-o1"><input type="radio" id="q72-o1" name="q72-choice" value="Yes, to the original’s chart, saying so">Yes, to the original’s chart, saying so</label>
+            <label for="q72-o2"><input type="radio" id="q72-o2" name="q72-choice" value="No: only the plays RoleCall charts">No: only the plays RoleCall charts</label>
+            <label for="q72-o3"><input type="radio" id="q72-o3" name="q72-choice" value="Not sure">Not sure</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q72-text">Notes</label>
+          <textarea id="q72-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
       </div>
@@ -944,7 +991,7 @@
   </section>
 
   <details class="archive" id="archive">
-    <summary><span class="when-closed">Show the archive: 50 answered questions</span><span class="when-open">Hide the archive</span></summary>
+    <summary><span class="when-closed">Show the archive: 51 answered questions</span><span class="when-open">Hide the archive</span></summary>
     <div class="archive-body">
       <p class="note">The questions answered, or decided by Playcode, each with its answer, under its topic. “Change this answer” still brings a question back.</p>
     <section id="t-variants" aria-labelledby="h-variants">
@@ -2668,6 +2715,37 @@
           <div>
             <label class="label" for="q65-text">Notes</label>
             <textarea id="q65-text"></textarea>
+          </div>
+          <p class="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="t-a-speakers" aria-labelledby="h-a-speakers">
+      <h2 id="h-a-speakers">Who counts as a character in the statistics</h2>
+      <div class="q" id="q67" data-q="q67" data-n="67" data-answered="2026-11-13">
+        <span class="q-num" aria-hidden="true">67</span>
+        <div class="q-body">
+          <h3>Does a chorus, or “TODOS”, count as a speaking character in the statistics?</h3>
+          <p class="why">Some speakers are not one person but a group: the CORO of <i>Sofonisba</i>, the CORO DE PASTORES of <i>El pastor fido</i>, TODOS. About 120 roles in about 90 plays, 919 speeches in all, each counted like a person. A speech shared by named people, <code>who="#horatio #marcellus"</code>, counts for each of them.</p>
+          <div class="answered">
+            <p><strong>Answered on 13 November 2026:</strong> they all count, as today. Whether a TODOS is one character or a grouping is the encoder’s decision, and the corpus will not be consistent. Where the encoder named who speaks (<code>who="#horatio #marcellus"</code>), the grouping does not appear in the statistics: each person’s share counts for that person. Where the encoder could not tell, a TODOS with an identifier of its own is one speaking character; and a play whose TODOS speaks at several moments, with different people each time, under one identifier, counts one TODOS.</p>
+            <p>Nothing changes: this is what the statistics already do.</p>
+            <button type="button" class="reopen" aria-expanded="false" aria-controls="q67-form">Change this answer</button>
+          </div>
+          <div class="answer-form" id="q67-form" hidden>
+          <fieldset>
+            <legend>Answer</legend>
+            <div class="options">
+              <label for="q67-o1"><input type="radio" id="q67-o1" name="q67-choice" value="They all count, as today" checked>They all count, as today</label>
+              <label for="q67-o2"><input type="radio" id="q67-o2" name="q67-choice" value="A chorus counts; TODOS and the like are listed apart">A chorus counts; TODOS and the like are listed apart</label>
+              <label for="q67-o3"><input type="radio" id="q67-o3" name="q67-choice" value="None counts: all are listed apart">None counts: all are listed apart</label>
+              <label for="q67-o4"><input type="radio" id="q67-o4" name="q67-choice" value="Not sure">Not sure</label>
+            </div>
+          </fieldset>
+          <div>
+            <label class="label" for="q67-text">Notes</label>
+            <textarea id="q67-text"></textarea>
           </div>
           <p class="status" aria-live="polite"></p>
           </div>
