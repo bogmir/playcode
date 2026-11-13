@@ -195,6 +195,15 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     assert has_element?(lv, "#play-counts a", String.downcase(t("Jornadas")))
   end
 
+  test "the structure gives each act its verses, its scenes' included", %{conn: conn} do
+    play = import_tei!(tei(body: mixed_play()))
+    Playcode.Statistics.recompute(play.id)
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "li", "Acto I · " <> n("%{count} verse", "%{count} verses", 2))
+    assert has_element?(lv, "li", "Acto II · " <> n("%{count} verse", "%{count} verses", 1))
+  end
+
   test "folds the licence with the project's texts", %{conn: conn} do
     play = play_fixture(%{"licence_text" => "CC BY-NC 4.0", "funder" => "Ministerio"})
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")

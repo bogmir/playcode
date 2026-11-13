@@ -79,17 +79,17 @@ defmodule Playcode.StatisticsTest do
     stat = Statistics.get_statistics(play.id)
 
     assert stat.data["num_acts"] == 1
-    assert get_in(stat.data, ["scenes", "total"]) == 1
+    assert stat.data["scenes"] == 1
     # The fixture's first part and this last part are one verse. Until 2026-10-22 both
     # counted parts: 2 verses, 2 split verses.
-    assert stat.data["total_verses"] == 1
+    assert stat.data["verses"] == 1
     assert stat.data["split_verses"] == 1
     assert stat.data["total_prose_fragments"] == 1
     assert stat.data["total_stage_directions"] == 1
     assert stat.data["total_asides"] == 1
     assert stat.data["aside_verses"] == 1
 
-    assert [%{"name" => "ALFA", "speeches" => 1}] = stat.data["character_appearances"]
+    assert [%{"name" => "ALFA", "speeches" => 1}] = stat.data["characters"]
   end
 
   # El amor al uso (EMOTHE0384) showed 816 split verses, its parts, for its 400, and 3,485
@@ -111,8 +111,8 @@ defmodule Playcode.StatisticsTest do
 
     data = Statistics.get_statistics(play.id).data
     assert data["split_verses"] == 2
-    assert data["total_verses"] == 3
-    assert [%{"count" => 3}] = data["verse_distribution"]
+    assert data["verses"] == 3
+    assert [%{"verses" => 3}] = data["divisions"]
   end
 
   test "an inline stage direction is counted as a stage direction, and its words are not spoken" do
@@ -189,10 +189,10 @@ defmodule Playcode.StatisticsTest do
 
     # No public function writes a stale row, by design, so the test ages it directly.
     alias Playcode.Repo
-    stale = stat.data |> Map.delete("version") |> Map.put("total_verses", 999)
+    stale = stat.data |> Map.delete("version") |> Map.put("verses", 999)
     stat |> Ecto.Changeset.change(data: stale) |> Repo.update!()
 
-    assert Statistics.get_statistics(play.id).data["total_verses"] == 1
+    assert Statistics.get_statistics(play.id).data["verses"] == 1
   end
 
   # Rows cached before 2026-11-08 (version 9) hold passages' ranges as integers: a read
@@ -412,8 +412,9 @@ defmodule Playcode.StatisticsTest do
                Map.new(data["characters"], &{&1["name"], &1["columns"]})
 
       assert [
-               %{"scene" => "Escena 1", "verses" => 1, "speeches" => 1, "speakers" => 1},
-               %{"scene" => "Escena 2", "verses" => 2, "speeches" => 2, "speakers" => 2}
+               %{"label" => "Acto I", "verses" => 3, "speeches" => 3, "speakers" => 2},
+               %{"label" => "Escena 1", "scene" => 1, "verses" => 1, "speeches" => 1},
+               %{"label" => "Escena 2", "scene" => 2, "verses" => 2, "speakers" => 2}
              ] = data["divisions"]
     end
 
@@ -483,7 +484,7 @@ defmodule Playcode.StatisticsTest do
     %{play: play, line_group: line_group, scene: scene} =
       TestFixtures.play_with_structure_fixture()
 
-    assert Statistics.get_statistics(play.id).data["total_verses"] == 1
+    assert Statistics.get_statistics(play.id).data["verses"] == 1
 
     # Postgres moves a play's version once per transaction, and the sandbox runs the
     # whole test in one; this stands in for the commit before the edit. It reaches past
@@ -503,7 +504,7 @@ defmodule Playcode.StatisticsTest do
         position: 10
       })
 
-    assert Statistics.get_statistics(play.id).data["total_verses"] == 2
+    assert Statistics.get_statistics(play.id).data["verses"] == 2
   end
 
   test "recompute/1 refreshes cached statistics after content changes" do
@@ -525,6 +526,6 @@ defmodule Playcode.StatisticsTest do
 
     refreshed = Statistics.recompute(play.id)
 
-    assert refreshed.data["total_verses"] == first.data["total_verses"] + 1
+    assert refreshed.data["verses"] == first.data["verses"] + 1
   end
 end

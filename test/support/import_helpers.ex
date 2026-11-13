@@ -91,6 +91,28 @@ defmodule Playcode.ImportHelpers do
   defp tei_code, do: "T#{System.unique_integer([:positive])}"
 
   @doc """
+  A `tei/1` body in verse and prose: an act of two scenes, with a shared verse, an aside and
+  a prose speech, then an act with no scenes. The statistics pages' tests read it.
+  """
+  def mixed_play do
+    """
+    <div1 type="acto" n="1"><head>Acto I</head>
+      <div2 type="escena" n="1"><head>Escena 1</head>
+        <sp who="#ana"><speaker>ANA</speaker>
+          <l n="1">uno <seg type="aside">dos</seg></l><l n="2" part="I">tres</l></sp>
+        <sp who="#bea"><speaker>BEA</speaker><l n="2" part="F">cuatro</l></sp>
+      </div2>
+      <div2 type="escena" n="2"><head>Escena 2</head>
+        <sp who="#bea"><speaker>BEA</speaker><p>Hola, señora.</p></sp>
+      </div2>
+    </div1>
+    <div1 type="acto" n="2"><head>Acto II</head>
+      <sp who="#ana"><speaker>ANA</speaker><l n="3">cinco</l></sp>
+    </div1>
+    """
+  end
+
+  @doc """
   `test/fixtures/outline.xml`, a play with a cast list, a paratext and the scene of the
   action in every place one can stand, under a code of its own: async tests importing one
   code would wait on each other's unique index.

@@ -328,21 +328,43 @@ defmodule Playcode.Statistics.Metrics do
 
   defp sum_words(items), do: items |> Enum.map(&words(&1.element.content)) |> Enum.sum()
 
-  @doc "Verses, speeches and speakers per top-level division and per scene, in order."
+  @doc """
+  Verses, prose passages, speeches and speakers per top-level division, its scenes'
+  included, each followed by its scenes', in order. A division's row carries its `"id"`,
+  a scene's its `"scene"` number.
+  """
   def divisions(items) do
     items
-    |> Enum.chunk_by(&{&1.division.id, &1.scene && &1.scene.id})
-    |> Enum.map(fn [first | _] = chunk ->
-      spoken = Enum.filter(chunk, &(&1.kind in [:verse, :prose] and &1.speech != nil))
+    |> Enum.chunk_by(& &1.division.id)
+    |> Enum.flat_map(fn [first | _] = division ->
+      scenes =
+        division
+        |> Enum.filter(& &1.scene)
+        |> Enum.chunk_by(& &1.scene.id)
+        |> Enum.map(fn [scene | _] = items ->
+          Map.merge(counts(items), %{"label" => unit_label(scene), "scene" => scene.scene_number})
+        end)
 
-      %{
-        "act" => first.act,
-        "division" => first.division.title,
-        "scene" => first.scene && first.scene.title,
-        "verses" => Enum.count(chunk, &whole_verse?/1),
-        "speeches" => spoken |> Enum.uniq_by(& &1.speech.id) |> length(),
-        "speakers" => spoken |> Enum.flat_map(& &1.speakers) |> Enum.uniq() |> length()
-      }
+      own = %{"id" => first.division.id, "label" => division_label(first)}
+      [Map.merge(counts(division), own) | scenes]
     end)
+  end
+
+  # Every untitled act would read "Acto" in a table of them.
+  defp division_label(%{division: %{title: nil, type: type}, act: act}) when is_integer(act),
+    do: "#{String.capitalize(type)} #{act}"
+
+  defp division_label(item), do: unit_label(%{item | scene: nil})
+
+  defp counts([first | _] = items) do
+    spoken = Enum.filter(items, &(&1.kind in [:verse, :prose] and &1.speech != nil))
+
+    %{
+      "act" => first.act,
+      "verses" => Enum.count(items, &whole_verse?/1),
+      "prose" => Enum.count(items, &(&1.kind == :prose)),
+      "speeches" => spoken |> Enum.uniq_by(& &1.speech.id) |> length(),
+      "speakers" => spoken |> Enum.flat_map(& &1.speakers) |> Enum.uniq() |> length()
+    }
   end
 end
