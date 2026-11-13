@@ -62,6 +62,10 @@ module. One exporter per change; the output must stay byte-comparable where test
 
 ## 4. Show the new statistics on the live play page
 
+**Done** (2026-11-12 and 2026-11-13, `docs/history.md`): the admin's panel draws the site's
+parts, the table by act and scene among them, and `verse_type_distribution` is no longer
+computed.
+
 **Problem**: the redesign adds a metrical synopsis, a per-act/scene table, a configuration
 matrix and per-character figures (verses, share, words, scenes, first entrance, asides,
 longest speech, verse forms spoken) to `Playcode.Statistics`. Only the static site renders
@@ -185,3 +189,9 @@ philologist's. In particular: where do `cuarteto`, `verso_suelto`, `copla_arte_m
 (2026-10-16), for a yes or corrections. **Decided** 2026-10-19 (question 16, by Playcode): no
 families. The three commonest forms keep a colour each and every other form is grey.
 **Built** the same day (*No verse-form families* in `docs/history.md`).
+
+## Not worth doing
+
+### One catalogue read per Generate
+
+Measured 2026-11-13, recorded so it is not proposed again. A Generate reads the whole catalogue about five times (`StaticSite.outdated/1`, then in `apply_changes/2` the live plays, the archived ones for the removals, `relatives/3` and `published_plays/1`). On dev, 407 plays, medians of seven: `Catalogue.list_plays/1` takes 14 to 20 ms. Passing one list through would save 40 to 60 ms of a Generate that spends about half a second on each play it writes, and `published_plays/1` is rightly read last, after the writes. Reopen only if `list_plays/1` grows preloads
