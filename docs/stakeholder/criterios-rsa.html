@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Playcode ante los criterios RSA</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,600&display=swap">
+<style>
+  /* Layout: one reading column; a summary table of the ten criteria, then one block per criterion with what exists and what is missing side by side. */
+  :root {
+    --bg: #f6f7f9;
+    --surface: #ffffff;
+    --ink: #172033;
+    --muted: #56607a;
+    --line: #c9cfdb;
+    --ok: #0f766e;
+    --ok-soft: #e3f3f0;
+    --part: #92400e;
+    --part-soft: #fdf0dc;
+    --gap: #9f1239;
+    --gap-soft: #fbeaee;
+    --proj: #3f4a63;
+    --proj-soft: #e9ecf2;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: Inter, "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #10151f; --surface: #182030; --ink: #e7ebf3; --muted: #9aa5bd; --line: #364057;
+      --ok: #5fd0c2; --ok-soft: #12332f; --part: #f2b36b; --part-soft: #3a2a14;
+      --gap: #f38ba3; --gap-soft: #3a1a25; --proj: #b8c2d8; --proj-soft: #262f42; color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #10151f; --surface: #182030; --ink: #e7ebf3; --muted: #9aa5bd; --line: #364057;
+    --ok: #5fd0c2; --ok-soft: #12332f; --part: #f2b36b; --part-soft: #3a2a14;
+    --gap: #f38ba3; --gap-soft: #3a1a25; --proj: #b8c2d8; --proj-soft: #262f42; color-scheme: dark;
+  }
+
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--sans); font-size: 16px; line-height: 1.55; }
+  .page {
+    max-width: 58rem; margin: 0 auto; padding-block: 3rem 4rem;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    display: flex; flex-direction: column; gap: 2.75rem;
+  }
+  h1, h2, h3, p, ul, dl, dd { margin: 0; }
+  h1 { font-family: var(--serif); font-size: clamp(1.9rem, 4.5vw, 2.6rem); line-height: 1.12; text-wrap: balance; }
+  h2 { font-family: var(--serif); font-size: 1.4rem; line-height: 1.2; text-wrap: balance; }
+  h3 { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .eyebrow { font-size: 0.75rem; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+  .lede { font-size: 1.08rem; max-width: 42rem; }
+  header, section { display: flex; flex-direction: column; gap: 1rem; }
+  a { color: inherit; }
+
+  .chip { display: inline-block; font-size: 0.78rem; font-weight: 600; padding: 0.12rem 0.55rem; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+  .ok { color: var(--ok); background: var(--ok-soft); }
+  .part { color: var(--part); background: var(--part-soft); }
+  .gap { color: var(--gap); background: var(--gap-soft); }
+  .proj { color: var(--proj); background: var(--proj-soft); }
+
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5rem 1.25rem; font-size: 0.9rem; color: var(--muted); }
+  .legend span { display: flex; align-items: center; gap: 0.45rem; }
+
+  .summary { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+  .summary a { display: grid; grid-template-columns: 2rem 1fr auto; gap: 1rem; align-items: baseline; padding-block: 0.7rem; border-bottom: 1px solid var(--line); text-decoration: none; }
+  .summary a:hover .name, .summary a:focus-visible .name { text-decoration: underline; }
+  .summary .n { color: var(--muted); font-variant-numeric: tabular-nums; }
+  .summary .name { font-weight: 500; min-width: 0; }
+
+  .crit { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem; scroll-margin-top: 1rem; }
+  .crit-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.5rem 1rem; }
+  .crit-head h2 { font-size: 1.25rem; }
+  .crit-head h2 span { color: var(--muted); font-family: var(--sans); font-size: 0.95rem; font-weight: 500; margin-right: 0.4rem; }
+  .verdict { font-size: 1rem; max-width: 46rem; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 1rem 2rem; }
+  .cols > div { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+  .cols ul { padding-left: 1.1rem; display: flex; flex-direction: column; gap: 0.35rem; font-size: 0.95rem; }
+  .crit .rsa { font-size: 0.85rem; color: var(--muted); font-style: italic; max-width: 46rem; }
+
+  .example { display: flex; flex-direction: column; gap: 0.75rem; border-top: 1px solid var(--line); padding-top: 1rem; }
+  .example summary { cursor: pointer; font-weight: 600; }
+  .example p { font-size: 0.95rem; max-width: 46rem; }
+  pre.code { margin: 0; overflow-x: auto; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 1rem; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 0.8rem; line-height: 1.5; }
+  pre.code:focus-visible { outline: 2px solid var(--ok); outline-offset: 2px; }
+
+  footer { border-top: 1px solid var(--line); padding-top: 1rem; font-size: 0.88rem; color: var(--muted); display: flex; flex-direction: column; gap: 0.5rem; max-width: 46rem; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <p class="eyebrow">EMOTHE · ARTELOPE · Playcode</p>
+    <h1>Playcode ante los criterios de la RSA</h1>
+    <p class="lede">Los diez criterios de la Renaissance Society of America para evaluar proyectos digitales, uno por uno: qué aporta hoy Playcode, la herramienta con la que se catalogan y publican las obras, y qué falta. Situación a 15 de noviembre de 2026.</p>
+    <div class="legend" aria-label="Leyenda">
+      <span><span class="chip ok">Cumple</span> ya está hecho</span>
+      <span><span class="chip part">Parcial</span> hay base, falta una parte</span>
+      <span><span class="chip gap">Pendiente</span> por hacer</span>
+      <span><span class="chip proj">Del proyecto</span> depende del equipo, no de la herramienta</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="h-summary">
+    <h2 id="h-summary">Resumen</h2>
+    <nav class="summary" aria-labelledby="h-summary">
+      <a href="#c1"><span class="n">1</span><span class="name">Interdisciplinariedad</span><span class="chip proj">Del proyecto</span></a>
+      <a href="#c2"><span class="n">2</span><span class="name">Alcance y adaptabilidad</span><span class="chip ok">Cumple</span></a>
+      <a href="#c3"><span class="n">3</span><span class="name">Vocabularios controlados</span><span class="chip part">Parcial</span></a>
+      <a href="#c4"><span class="n">4</span><span class="name">Linked Open Data</span><span class="chip gap">Pendiente</span></a>
+      <a href="#c5"><span class="n">5</span><span class="name">Metadatos</span><span class="chip part">Parcial</span></a>
+      <a href="#c6"><span class="n">6</span><span class="name">Colaboración y responsabilidad</span><span class="chip part">Parcial</span></a>
+      <a href="#c7"><span class="n">7</span><span class="name">Revisión crítica durante el trabajo</span><span class="chip part">Parcial</span></a>
+      <a href="#c8"><span class="n">8</span><span class="name">Preservación y acceso a largo plazo</span><span class="chip part">Parcial</span></a>
+      <a href="#c9"><span class="n">9</span><span class="name">Presentación pública</span><span class="chip proj">Del proyecto</span></a>
+      <a href="#c10"><span class="n">10</span><span class="name">Innovación</span><span class="chip ok">Cumple</span></a>
+    </nav>
+  </section>
+
+  <article class="crit" id="c1" aria-labelledby="h1c">
+    <div class="crit-head"><h2 id="h1c"><span>1</span>Interdisciplinariedad</h2><span class="chip proj">Del proyecto</span></div>
+    <p class="rsa">Especialistas de distintas disciplinas, o investigadores junto a bibliotecarios y especialistas en información.</p>
+    <p class="verdict">Lo decide la composición del equipo. Playcode lo apoya: une la filología con la ingeniería de software y registra el papel de cada persona en cada obra.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Cada obra acredita a sus participantes con su papel: editor digital, traductor, editor crítico, revisor.</li>
+        <li>Esos créditos viajan en el fichero TEI de la obra.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Nada en la herramienta. En la solicitud conviene nombrar los perfiles del equipo: filólogos, traductores, desarrollo, biblioteca.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c2" aria-labelledby="h2c">
+    <div class="crit-head"><h2 id="h2c"><span>2</span>Alcance y adaptabilidad</h2><span class="chip ok">Cumple</span></div>
+    <p class="rsa">De interés más allá de un grupo reducido de especialistas, o con métodos y herramientas fáciles de adaptar a otro proyecto.</p>
+    <p class="verdict">Playcode se diseñó para servir a más de un proyecto, y el corpus abarca cinco lenguas.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>373 obras publicables, en español, inglés, francés, italiano y portugués, con sus traducciones enlazadas a los originales.</li>
+        <li>Una sola herramienta para EMOTHE y ARTELOPE, que puede generar sitios para otros proyectos.</li>
+        <li>Lee TEI P5, el estándar de la edición de textos; cualquier corpus teatral en TEI puede entrar.</li>
+        <li>El código es público en GitHub.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>El código no tiene licencia abierta: es visible, pero legalmente nadie puede reutilizarlo. Basta con elegir una (MIT, GPL…).</li>
+        <li>ARTELOPE aún no está importado.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c3" aria-labelledby="h3c">
+    <div class="crit-head"><h2 id="h3c"><span>3</span>Vocabularios controlados</h2><span class="chip part">Parcial</span></div>
+    <p class="rsa">Conceptos, descriptores y categorías controlados para describir objetos y documentos.</p>
+    <p class="verdict">Los campos clave usan listas cerradas, no texto libre. Pero esas listas son internas: no están publicadas ni enlazadas con tesauros externos.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Listas cerradas para el tipo de obra (original, traducción, adaptación, versión), el tipo de testimonio, el tipo de lugar de representación, el periodo histórico, nueve tipos de acotación, el tipo de nota, verso o prosa, los tipos de lugar y los de bibliografía.</li>
+        <li>La clasificación CDU de cada obra.</li>
+        <li>El texto, codificado en TEI, que es en sí un vocabulario estándar.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Publicar las listas con su definición, en una página del sitio.</li>
+        <li>Enlazar cada término con un tesauro reconocido cuando exista (por ejemplo, Getty AAT).</li>
+        <li>El género, que FileMaker tiene y Playcode aún no.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c4" aria-labelledby="h4c">
+    <div class="crit-head"><h2 id="h4c"><span>4</span>Linked Open Data</h2><span class="chip gap">Pendiente</span></div>
+    <p class="rsa">LOD y tecnologías de la web semántica, que serán clave para descubrir el trabajo digital en el futuro.</p>
+    <p class="verdict">Playcode no produce RDF todavía. La base está: datos estructurados y una dirección fija para cada obra. Lo que más trabajo da es asignar identificadores, y eso es catalogación más que programación.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Datos estructurados: obras, versiones, autores, testimonios, representaciones, lugares y bibliografía.</li>
+        <li>Una dirección permanente para cada obra publicada.</li>
+        <li>Los lugares admiten un identificador de Wikidata, GeoNames, Getty TGN o Pleiades, que se guarda también en el TEI, y el editor de lugares busca en Wikidata.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Asignar esos identificadores: ningún lugar importado de FileMaker trae uno.</li>
+        <li>Enlazar autores con VIAF o Wikidata.</li>
+        <li>Dar dirección propia a autores, lugares y compañías.</li>
+        <li>Elegir un vocabulario (schema.org, o LRMoo/CIDOC-CRM para distinguir obra y versión) y generar el RDF como una salida más, igual que el TEI y la web.</li>
+      </ul></div>
+    </div>
+    <details class="example">
+      <summary>Ejemplo: <i>Hamlet</i> en RDF</summary>
+      <p>Así se vería la ficha de <i>Hamlet</i> (EMOTHE0010) en RDF, en formato Turtle y con el vocabulario schema.org. Todos los datos son los que Playcode ya guarda: título, autor, datación, lugar de la acción, traducciones, testimonios, una representación y los editores. Lo único nuevo son los enlaces marcados «por asignar», buscados aquí a mano en Wikidata y VIAF: es el trabajo de catalogación que falta. Cada línea es una afirmación que un programa ajeno puede leer y combinar con otras fuentes.</p>
+      <pre class="code" tabindex="0" role="region" aria-label="Hamlet en RDF, formato Turtle"><code># Hamlet (EMOTHE0010) en RDF, formato Turtle, con el vocabulario schema.org.
+# Los datos son los que Playcode ya guarda. Las líneas marcadas «por asignar»
+# son los enlaces externos que faltan: aquí se han buscado a mano en Wikidata y VIAF.
+# Las direcciones emothe.uv.es/id/… son un ejemplo: aún no existen.
+
+@prefix schema: &lt;https://schema.org/&gt; .
+@prefix xsd:    &lt;http://www.w3.org/2001/XMLSchema#&gt; .
+@prefix wd:     &lt;http://www.wikidata.org/entity/&gt; .
+@prefix viaf:   &lt;http://viaf.org/viaf/&gt; .
+@prefix e:      &lt;https://emothe.uv.es/id/&gt; .
+
+# La obra
+e:EMOTHE0010 a schema:Play ;
+    schema:name "The Tragedy of Hamlet, Prince of Denmark"@en ;
+    schema:inLanguage "en" ;
+    schema:author e:william-shakespeare ;
+    schema:dateCreated "1600/1601" ;                  # datación: entre 1600 y 1601
+    schema:contentLocation e:elsinor ;                # lugar de la acción
+    schema:workTranslation e:EMOTHE0053 ,             # Hamlet (español)
+                           e:EMOTHE0050 ,             # Amleto (italiano)
+                           e:EMOTHE0059 ;             # La Tragique Histoire de Hamlet (francés)
+    schema:workExample e:EMOTHE0010-Q1 , e:EMOTHE0010-Q2 ;
+    schema:contributor [ a schema:Role ;
+                         schema:roleName "editor principal"@es ;
+                         schema:contributor e:joan-oleza-simo ] ,
+                       [ a schema:Role ;
+                         schema:roleName "editor digital"@es ;
+                         schema:contributor e:jesus-tronch-perez ] ;
+    schema:url &lt;https://emothe.uv.es/plays/EMOTHE0010/&gt; ;
+    schema:encoding [ a schema:MediaObject ;
+                      schema:encodingFormat "application/tei+xml" ;
+                      schema:contentUrl &lt;https://emothe.uv.es/plays/EMOTHE0010/EMOTHE0010.xml&gt; ] ;
+    schema:sameAs wd:Q41567 .                         # por asignar
+
+# Una traducción enlazada con su original
+e:EMOTHE0053 a schema:Play ;
+    schema:name "Hamlet"@es ;
+    schema:inLanguage "es" ;
+    schema:translationOfWork e:EMOTHE0010 .
+
+# El autor
+e:william-shakespeare a schema:Person ;
+    schema:name "William Shakespeare" ;
+    schema:sameAs wd:Q692 ,                           # por asignar
+                  viaf:96994048 .                     # por asignar
+
+# El lugar de la acción, con sus nombres en cada lengua
+e:elsinor a schema:Place ;
+    schema:name "Elsinor"@es , "Elsinore"@en , "Elseneur"@fr , "Elsinora"@it , "Helsingør"@en ;
+    schema:sameAs wd:Q26881 .                         # por asignar
+
+# Dos testimonios
+e:EMOTHE0010-Q1 a schema:Book ;
+    schema:alternateName "Q1" ;                       # sigla
+    schema:name "THE Tragicall Historie of HAMLET Prince of Denmarke." ;
+    schema:datePublished "1603" ;
+    schema:locationCreated "London" ;
+    schema:publisher "Ling, Nicholas; Trundell, John" ;
+    schema:description "in-4º" .
+
+e:EMOTHE0010-Q2 a schema:Book ;
+    schema:alternateName "Q2" ;
+    schema:name "THE Tragicall Historie of HAMLET, Prince of Denmarke" ;
+    schema:datePublished "1604" ;
+    schema:locationCreated "London" ;
+    schema:publisher "Ling, Nicholas" ;
+    schema:description "in-4º" .
+
+# Una representación antigua
+[] a schema:TheaterEvent ;
+    schema:workPerformed e:EMOTHE0010 ;
+    schema:startDate "1619"^^xsd:gYear ;
+    schema:performer e:kings-men ;
+    schema:description "Representación en palacio"@es .
+
+e:kings-men a schema:PerformingGroup ;
+    schema:name "The King’s Men" ;
+    schema:sameAs wd:Q2715005 .                       # por asignar
+
+# Las personas del proyecto
+e:joan-oleza-simo a schema:Person ;
+    schema:name "Joan Oleza Simó" .
+
+e:jesus-tronch-perez a schema:Person ;
+    schema:name "Jesús Tronch Pérez" .</code></pre>
+    </details>
+  </article>
+
+  <article class="crit" id="c5" aria-labelledby="h5c">
+    <div class="crit-head"><h2 id="h5c"><span>5</span>Metadatos</h2><span class="chip part">Parcial</span></div>
+    <p class="rsa">Explicar cómo se modelan, se recogen y se ponen a disposición de otros.</p>
+    <p class="verdict">Están modelados en un estándar abierto, documentados campo por campo y publicados con cada obra. Falta explicarlos a quien no lee código, y completar algunos.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Cada dato de la ficha tiene su sitio en la cabecera TEI de la obra.</li>
+        <li>Una prueba automática exporta e importa cada obra y comprueba que el TEI no pierde ningún dato.</li>
+        <li>Cada fichero TEI se descarga desde la página de su obra.</li>
+        <li>El modelo está documentado elemento por elemento en el repositorio público, en inglés y en lenguaje técnico.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Una página pública que explique el modelo sin tecnicismos.</li>
+        <li>Las fichas de las obras sin texto, que siguen solo en FileMaker.</li>
+        <li>La licencia de uso: 212 de las 387 obras no declaran ninguna.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c6" aria-labelledby="h6c">
+    <div class="crit-head"><h2 id="h6c"><span>6</span>Colaboración y responsabilidad</h2><span class="chip part">Parcial</span></div>
+    <p class="rsa">Equipos de especialistas, a menudo con estudiantes, con declaraciones de propiedad intelectual y responsabilidad.</p>
+    <p class="verdict">La responsabilidad de cada persona queda registrada. Las declaraciones de propiedad intelectual están a medias.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Créditos por obra con el papel de cada persona, también en el TEI.</li>
+        <li>Un registro de actividad: quién cambió qué y cuándo, en las ediciones a mano y en cada importación.</li>
+        <li>Cuentas personales por invitación, con permisos según el papel.</li>
+        <li>Las obras que declaran licencia usan Creative Commons BY-NC-ND 4.0, y el sitio la muestra.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Una licencia para cada obra que no la tiene, y otra para el código.</li>
+        <li>La participación de estudiantes depende del proyecto.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c7" aria-labelledby="h7c">
+    <div class="crit-head"><h2 id="h7c"><span>7</span>Revisión crítica durante el trabajo</h2><span class="chip part">Parcial</span></div>
+    <p class="rsa">Mostrar cómo el trabajo en curso se sometió a especialistas y consultores cualificados.</p>
+    <p class="verdict">Las decisiones de edición se han consultado con los especialistas del proyecto, y queda constancia escrita. Falta la revisión externa.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Un documento de preguntas con 69 cuestiones de edición planteadas al equipo, 50 ya respondidas, cada una con su contexto y su decisión.</li>
+        <li>Una tabla que muestra, parte por parte, qué llega a cada salida (TEI, PDF, web) y qué falta.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Revisores ajenos al proyecto, que dependen del equipo: talleres, consultores, congresos.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c8" aria-labelledby="h8c">
+    <div class="crit-head"><h2 id="h8c"><span>8</span>Preservación y acceso a largo plazo</h2><span class="chip part">Parcial</span></div>
+    <p class="rsa">Prever el cambio tecnológico, preservar datos y metadatos, ponerlos a disposición del público, diseño universal.</p>
+    <p class="verdict">Es el punto más fuerte del diseño. Lo que falta es sobre todo publicarlo y guardar las versiones.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>El sitio público es estático, según los principios de The Endings Project: páginas ya hechas, sin servidor, que funcionan también abiertas desde un disco, búsqueda incluida.</li>
+        <li>Cada obra tiene una copia completa en TEI, y la base de datos se puede reconstruir reimportando esos ficheros.</li>
+        <li>El sitio y sus TEI se guardan en un repositorio git público.</li>
+        <li>Accesibilidad: enlace para saltar al contenido, idioma marcado en cada texto, controles con nombre, y una prueba automática de accesibilidad en las páginas de trabajo.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Publicar el nuevo sitio: está generado, pero emothe.uv.es sigue mostrando el antiguo.</li>
+        <li>Guardar las versiones. Cada publicación lleva su número, pero el repositorio conserva solo la última.</li>
+        <li>Depositar versiones numeradas en un repositorio institucional (Zenodo, RODERIC).</li>
+        <li>Validar los TEI contra el esquema en cada publicación, que hoy se hace a mano.</li>
+        <li>Una prueba automática de accesibilidad también para el sitio público.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c9" aria-labelledby="h9c">
+    <div class="crit-head"><h2 id="h9c"><span>9</span>Presentación pública</h2><span class="chip proj">Del proyecto</span></div>
+    <p class="rsa">Presentar el trabajo en todas sus fases en talleres, seminarios y congresos.</p>
+    <p class="verdict">Depende del equipo. Playcode aporta material para presentarlo.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Diagramas de la arquitectura y del viaje de ida y vuelta de los datos, para presentaciones y solicitudes.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Nada en la herramienta.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <article class="crit" id="c10" aria-labelledby="h10c">
+    <div class="crit-head"><h2 id="h10c"><span>10</span>Innovación</h2><span class="chip ok">Cumple</span></div>
+    <p class="rsa">Una metodología o herramienta nueva, o un uso nuevo de la investigación en el aula.</p>
+    <p class="verdict">Varias funciones son poco comunes en ediciones digitales de teatro, y algunas sirven directamente en clase.</p>
+    <div class="cols">
+      <div><h3>Lo que hay</h3><ul>
+        <li>Original y traducción en paralelo, con el desplazamiento sincronizado.</li>
+        <li>Estadísticas por obra y por personaje.</li>
+        <li>Búsqueda en todo el corpus, texto y notas, sin servidor.</li>
+        <li>El viaje de ida y vuelta: el TEI exportado es una copia completa de la obra que se puede volver a importar.</li>
+        <li>Un solo taller que genera sitios para varios proyectos.</li>
+        <li>En el aula: el sitio funciona sin conexión, copiado a un disco.</li>
+      </ul></div>
+      <div><h3>Lo que falta</h3><ul>
+        <li>Nada imprescindible. Las funciones de los criterios 3 y 4 sumarían aquí también.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <footer>
+    <p>Criterios tomados de “Best Practices for Digital Scholarship”, Renaissance Society of America: rsa.org/page/bestpracticesdigitalscholarship.</p>
+    <p>Las cifras son de Playcode en producción: 387 obras en total, de las que 373 entran en la última generación del sitio.</p>
+  </footer>
+</div>
+</body>
+</html>
