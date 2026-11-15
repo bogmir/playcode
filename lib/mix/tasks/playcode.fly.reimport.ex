@@ -12,6 +12,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
       mix playcode.fly.reimport generate
       mix playcode.fly.reimport deploy
       mix playcode.fly.reimport scale-down
+      mix playcode.fly.reimport export --dir DIR
 
   `prepare` snapshots the database volume, wakes the app, uploads the corpus, scales both
   machines up with autostop off, runs the dry run, and stops: it lists the plays whose
@@ -39,6 +40,12 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   preview is checked, is Deploy (`Release.deploy_site/0`), asking again the same way. `scale-down` scales back by
   itself, after an aborted run or build.
 
+  `export` brings production's TEI down, every play's as `DIR/CODE.xml`
+  (`Release.export_tei/2`), to refresh `doc/tei_corpus/` from the master copy. It scales
+  up with autostop off, as `prepare` does (on the shared CPU the export outlived the
+  proxy's autostop), asks again only when the app did not answer, checks that every file
+  written came down, and scales back however it ends.
+
   The counts that check what the re-import was for, and the preview, stay with you
   (steps 8 and 10 of the runbook).
   """
@@ -60,6 +67,8 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   @import_overwriting ~s[bin/playcode rpc 'Playcode.Release.import_tei("#{@remote_dir}", force: true, resume: true, overwrite_edits: true)']
   @generate ~s[bin/playcode rpc 'Playcode.Release.generate_site()']
   @deploy ~s[bin/playcode rpc 'Playcode.Release.deploy_site()']
+  @export_dir "/data/tei-export"
+  @export ~s[bin/playcode rpc 'Playcode.Release.export_tei("#{@export_dir}")']
 
   # A dry run's lines a person decides on: hand fixes the re-import loses, an archived
   # play it restores, a file it cannot read.
@@ -123,9 +132,22 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     scale_down!()
   end
 
+  def run(["export" | args]) do
+    out = dir(args, nil) || Mix.raise("usage: mix playcode.fly.reimport export --dir DIR")
+    step("Scaling up, autostop off")
+    scale_up!()
+
+    try do
+      export!(out)
+    after
+      step("Scaling back, autostop on")
+      scale_down!()
+    end
+  end
+
   def run(_args) do
     Mix.raise(
-      "usage: mix playcode.fly.reimport prepare [--dir DIR] | files --dir DIR | run [--overwrite-edits] | generate | deploy | scale-down"
+      "usage: mix playcode.fly.reimport prepare [--dir DIR] | files --dir DIR | run [--overwrite-edits] | generate | deploy | scale-down | export --dir DIR"
     )
   end
 
@@ -233,6 +255,42 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
     step("Scaling back, autostop on")
     scale_down!()
+  end
+
+  # An export that failed is not run again: only a session that ended before an answer is.
+  defp export!(out) do
+    step("Exporting every play's TEI")
+    wake!()
+    ssh("rm -rf #{@export_dir} #{@export_dir}.tgz")
+
+    written =
+      case until_done(@export, ~r/wrote \d+ file/, "** (") do
+        {:ok, output} ->
+          [_, count] = Regex.run(~r/wrote (\d+) file/, output)
+          String.to_integer(count)
+
+        :failed ->
+          Mix.raise("the export failed, above")
+
+        :cut_off ->
+          Mix.raise("the export was cut off #{@attempts} times; see the machine's status above")
+      end
+
+    step("Downloading")
+    ssh("tar czf #{@export_dir}.tgz -C #{@export_dir} .")
+    tgz = Path.join(System.tmp_dir!(), "playcode-tei-export.tgz")
+    File.rm(tgz)
+    fly!(["ssh", "sftp", "get", "#{@export_dir}.tgz", tgz, "-a", @app])
+
+    File.mkdir_p!(out)
+    :ok = :erl_tar.extract(tgz, [:compressed, cwd: String.to_charlist(out)])
+    {:ok, names} = :erl_tar.table(tgz, [:compressed])
+    downloaded = Enum.count(names, &String.ends_with?(to_string(&1), ".xml"))
+
+    if downloaded != written,
+      do: Mix.raise("#{written} file(s) written, #{downloaded} downloaded into #{out}")
+
+    Mix.shell().info("#{downloaded} file(s) in #{out}")
   end
 
   defp snapshot! do

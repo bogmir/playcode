@@ -17,12 +17,14 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
   echo "$*" >> "$d/calls"
   case "$*" in
     *"sftp put"*) cp "$4" "$d/uploaded.tgz" ;;
+    *"sftp get"*) cp "$d/exported.tgz" "$5" ;;
     *"wc -l"*) tar tzf "$d/uploaded.tgz" | grep -c xml ;;
     *"snapshots list"*) cat "$d/snapshots" ;;
     *dry_run*) cat "$d/dry_run.$(grep -c dry_run "$d/calls")" 2>/dev/null || cat "$d/dry_run" ;;
     *"resume: true"*) cat "$d/run.$(grep -c 'resume: true' "$d/calls")" 2>/dev/null ;;
     *generate_site*) cat "$d/generate.$(grep -c generate_site "$d/calls")" 2>/dev/null ;;
     *deploy_site*) cat "$d/deploy.$(grep -c deploy_site "$d/calls")" 2>/dev/null ;;
+    *export_tei*) cat "$d/export.$(grep -c export_tei "$d/calls")" 2>/dev/null ;;
     *"machine list"*) cat "$d/sizes" 2>/dev/null || echo '[]' ;;
   esac
   """
@@ -390,6 +392,72 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       end
 
       assert Enum.any?(calls(dir), &(&1 =~ "--autostop=stop"))
+    end
+  end
+
+  # Production is the master copy: its TEI comes down to refresh doc/tei_corpus/. On the
+  # shared CPU the export outlived the proxy's autostop (2026-11-15).
+  describe "export" do
+    setup %{dir: dir} do
+      plays = Path.join(dir, "plays")
+      File.mkdir_p!(plays)
+
+      for code <- ~w(FLY0001_Uno FLY0002_Dos),
+          do: File.write!(Path.join(plays, "#{code}.xml"), "<TEI/>")
+
+      {_, 0} = System.cmd("tar", ["czf", Path.join(dir, "exported.tgz"), "-C", plays, "."])
+      %{out: Path.join(dir, "out")}
+    end
+
+    test "scales up, exports, downloads the files into DIR, then scales back",
+         %{dir: dir, out: out} do
+      answer(dir, "export.1", "--rpc-eval : RPC failed with reason :noconnection\n")
+      answer(dir, "export.2", "wrote 2 file(s) to /data/tei-export\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["export", "--dir", out])
+
+      assert_in_order(calls(dir), [
+        "machine update d8d14e7b0465d8 --vm-size performance-1x -a emothe-db-1g --yes",
+        "machine update 7847063c04e7e8 --autostop=off -a playcode --yes",
+        "rm -rf /data/tei-export",
+        ~s[export_tei("/data/tei-export")],
+        ~s[export_tei("/data/tei-export")],
+        "tar czf /data/tei-export.tgz -C /data/tei-export .",
+        "ssh sftp get /data/tei-export.tgz",
+        "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes"
+      ])
+
+      assert File.read!(Path.join(out, "FLY0002_Dos.xml")) == "<TEI/>"
+      assert output() =~ "2 file(s) in #{out}"
+    end
+
+    test "a failed export is not run again, and the machines scale back", %{dir: dir, out: out} do
+      answer(dir, "export.1", "** (EXIT) shutdown\n")
+
+      assert_raise Mix.Error, ~r/export failed/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["export", "--dir", out])
+      end
+
+      calls = calls(dir)
+      assert Enum.count(calls, &(&1 =~ "export_tei")) == 1
+      refute Enum.any?(calls, &(&1 =~ "sftp get"))
+      assert List.last(calls) =~ "--vm-size shared-cpu-1x"
+    end
+
+    test "a download short of the files written stops with what it holds", %{dir: dir, out: out} do
+      answer(dir, "export.1", "wrote 387 file(s) to /data/tei-export\n")
+
+      assert_raise Mix.Error, ~r/387 file\(s\) written, 2 downloaded/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["export", "--dir", out])
+      end
+    end
+
+    test "refuses to run without --dir, touching nothing", %{dir: dir} do
+      assert_raise Mix.Error, ~r/--dir DIR/, fn ->
+        Mix.Task.rerun("playcode.fly.reimport", ["export"])
+      end
+
+      refute File.exists?(Path.join(dir, "calls"))
     end
   end
 end
