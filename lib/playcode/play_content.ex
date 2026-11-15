@@ -218,10 +218,10 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Updates a character.
+  Updates a character. `refresh: false` as in `refreshing/3`.
   """
-  def update_character(%Character{} = character, attrs) do
-    refreshing(character.play_id, fn ->
+  def update_character(%Character{} = character, attrs, opts \\ []) do
+    refreshing(character.play_id, opts, fn ->
       with {:ok, character} <- character |> Character.changeset(attrs) |> Repo.update() do
         case first_entry(character) do
           nil ->
@@ -389,9 +389,21 @@ defmodule Playcode.PlayContent do
   def change_entry(%CastListEntry{} = entry, attrs \\ %{}),
     do: CastListEntry.changeset(entry, attrs)
 
-  @doc "Updates an entry; its character follows when it is the character's first."
-  def update_entry(%CastListEntry{} = entry, attrs) do
+  @doc """
+  Updates an entry; its character follows when it is the character's first.
+  `character: {character, attrs}` updates the character it names first, in the same
+  transaction, so the entry's name and description are what it keeps.
+  """
+  def update_entry(%CastListEntry{} = entry, attrs, opts \\ []) do
     refreshing(entry.play_id, fn ->
+      case Keyword.get(opts, :character) do
+        {character, character_attrs} ->
+          character |> update_character(character_attrs, refresh: false) |> ok_or_rollback()
+
+        nil ->
+          :ok
+      end
+
       entry = entry |> CastListEntry.changeset(attrs) |> Repo.update() |> ok_or_rollback()
       sync_characters(entry.play_id)
       entry

@@ -980,17 +980,19 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   # An entry's line, and the character it names: its id, its actor, whether it is hidden.
-  # The character first, so the line's name and description are what its first entry keeps.
   defp save_entry(socket, params) do
     %{editing: entry, entry_character: character} = socket.assigns
 
-    with {:ok, _character} <-
-           update_entry_character(
+    with {:ok, character_attrs} <-
+           character_changes(
              character,
              form_params(params, "character"),
              socket.assigns.original_choice
            ),
-         {:ok, saved} <- PlayContent.update_entry(entry, form_params(params, "entry")) do
+         {:ok, saved} <-
+           PlayContent.update_entry(entry, form_params(params, "entry"),
+             character: character && {character, character_attrs}
+           ) do
       LiveHelpers.log_activity(socket, "update", "cast_list_entry", saved.id, %{name: saved.name})
 
       {:noreply,
@@ -1007,10 +1009,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
   end
 
-  defp update_entry_character(nil, _params, _choice), do: {:ok, nil}
+  defp character_changes(nil, _params, _choice), do: {:ok, nil}
 
   # The choice the form was opened with bounds what the select may send.
-  defp update_entry_character(character, %{"original" => value} = params, choice) do
+  defp character_changes(character, %{"original" => value} = params, choice) do
     case choice && correction(value, choice) do
       nil ->
         changeset =
@@ -1021,12 +1023,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         {:error, %{changeset | action: :update}}
 
       fields ->
-        PlayContent.update_character(character, Map.merge(Map.delete(params, "original"), fields))
+        {:ok, Map.merge(Map.delete(params, "original"), fields)}
     end
   end
 
-  defp update_entry_character(character, params, _choice),
-    do: PlayContent.update_character(character, params)
+  defp character_changes(_character, params, _choice), do: {:ok, params}
 
   # Problem 5, step 3: which original character a translation's character goes with, for
   # the entry form's select: the rule's pick (`Alignment`), each character of the original

@@ -555,6 +555,21 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorOutlineLiveTest do
     assert xml_texts(export_tei(play), "actor") == ["Mrs. Bracegirdle"]
   end
 
+  # The character is written before its entry: an entry the form refuses takes it back.
+  test "an entry refused keeps its character's fields as they were", %{conn: conn, play: play} do
+    lv = open_cast(conn, play)
+    ana = entry(play, "ANA")
+
+    lv |> element("#entry-#{ana.id} button[aria-label='#{t("Edit")}']") |> render_click()
+
+    lv
+    |> form("#entry-form", entry: %{"name" => ""}, character: %{"actor" => "Mrs. Bracegirdle"})
+    |> render_submit()
+
+    assert has_element?(lv, "#entry-form")
+    assert xml_texts(export_tei(play), "actor") == []
+  end
+
   test "a character marked a group goes into the file as one", %{conn: conn, play: play} do
     lv = open_cast(conn, play)
     ana = entry(play, "ANA")
