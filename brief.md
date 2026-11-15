@@ -1,36 +1,34 @@
-# Playcode brief 2026-11-14 (8adc0d1)
+# Playcode brief, 2026-11-15 (8adc0d1)
 
-Focus: none set.
+## Questions: 19 of 72 questions open
+Easiest (a clear choice or one fact):
+- [q7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: show or not, yes/no.
+- [q13](docs/stakeholder/preguntas.html#q13) Jodelle attribution: one name for 11 witnesses.
+- [q54](docs/stakeholder/preguntas.html#q54) English names for the relation kinds: a translation list to confirm.
+- [q72](docs/stakeholder/preguntas.html#q72) RoleCall link for translations: yes/no.
+- [q70](docs/stakeholder/preguntas.html#q70) Character genders: pick the vocabulary (women, men, X).
 
-## 19 of 72 questions open
-**Easiest** (yes/no or one fact)
-- [7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: show them? one yes/no.
-- [28](docs/stakeholder/preguntas.html#q28) Show the original cast's actors? one yes/no, 1 play.
-- [34](docs/stakeholder/preguntas.html#q34) Are two epilogues part of the play? two plays, the manual decides.
-- [72](docs/stakeholder/preguntas.html#q72) Link translations to the original's RoleCall chart? yes/no.
-- [54](docs/stakeholder/preguntas.html#q54) English names of the relation kinds: a short list to correct.
+Most important (unblock the most):
+- [q66](docs/stakeholder/preguntas.html#q66) 45 prologues on the wrong side in 33 plays: the whole C1 section waits on it.
+- [q69](docs/stakeholder/preguntas.html#q69) Renumber 16 hand-numbered plays: the Numbering section waits (also q68).
+- [q57](docs/stakeholder/preguntas.html#q57) Plays without a text: gates the Relations work (with q55, q56).
+- [q14](docs/stakeholder/preguntas.html#q14) Nine plays with a web edition but no TEI: corpus completeness.
+- [q28](docs/stakeholder/preguntas.html#q28) Show the original cast: a Round trip gap, published pages.
 
-**Most important**
-- [66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: 45 texts in 33 plays wait; backlog C1.
-- [68](docs/stakeholder/preguntas.html#q68) Word before a cited number: touches every play's numbering.
-- [69](docs/stakeholder/preguntas.html#q69) Recount 16 hand-numbered plays: finishes the Numbering section.
-- [14](docs/stakeholder/preguntas.html#q14) Nine plays with a web edition but no TEI file: publishing gap.
-- [57](docs/stakeholder/preguntas.html#q57) Plays held without a text: decides the relations work (q53-56 follow).
+## Round trip (docs/backlog.md, Round trip)
+- Asides: play page and site mark them less than the downloads.
+- Verse/prose/mixed: `auto_form` rule applied since 11-09, follow-up of q23 still open.
+- Original cast (`characters.actor`) is written to TEI but printed nowhere (q28).
+- ida-y-vuelta: cells short of "yes" follow the same three items.
 
-## Round trip (backlog, ida-y-vuelta)
-- Asides: play page and site mark them less than the downloads (note 37).
-- Verse/prose limit (q23 follow-up): 61 plays "mixed", file copies still say `verso`.
-- Original cast (q28): stored and exported, printed nowhere.
-- Cells short of "yes": split verses/indentation/asides, HTML typed into text (4 plays), editors' roles in HTML/PDF.
-
-## Top 3 features
-1. EMOTHE0443 `<set>` closing note is dropped: the last front-matter note lost; small, import fix.
-2. Folio words searched and their notes listed while the switch is off: hits land on invisible lines.
-3. Front matter prints header texts through `escape/1`: `<<…>>` shows once a header has italics.
-(Skipped: site deploy waits on UV; numbering, prologues, relations wait on the project.)
+## Top 3 features (current focus: none)
+1. Front matter titles through `NoteMarkup.inline/3`: `<<…>>` shows in the header's italics today.
+2. Hidden Folio words still searched and their notes still listed: a hit lands on text the reader cannot see.
+3. Admin import preview writes the file twice (the preview costs as much as the import).
+(Skipped: site deploy waits on UV's PHP patch; numbering, prologues, relations wait on the project.)
 
 ## Speed win
-- `lib/playcode/export/static_site.ex:600`: `original || Edition.load(parent.id)` rebuilds the whole original Edition for every translation's compare page.
-- Change: when the build already holds the original, or builds several translations of it, load it once and pass it in; delete the fallback load where callers can supply it.
-- Gain: an original with N translations (Hamlet, Celestina) is loaded N times; one load is many queries plus the text walk. Measure with `:timer.tc` around `Edition.load/1` over a Generate.
-- Risk: low-medium; memory holds one more edition, and a stale original would show if the change tracking (`relatives/3`) is bypassed. Differs from the previous brief (statistics lookups).
+- `lib/playcode/export/static_site/search.ex:131-140`: per line and word, `word in entry.stage_only` scans a list.
+- Change: build `stage_only` as a MapSet once per entry (or per play) and test with `MapSet.member?`.
+- Gain: small to moderate per line, millions of tests over a 394-play index on the shared CPU; measure with `:timer.tc` around `write_play/2`. I did not confirm `stage_only` is a list: check its type first.
+- Risk: low. Differs from the previous brief (compare page's original Edition load).
