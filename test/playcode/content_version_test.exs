@@ -127,6 +127,9 @@ defmodule Playcode.ContentVersionTest do
   # Only a play's own row shows on its relatives' title pages.
   test "an edit to a play's text moves that play and no other" do
     %{original: original, translation: translation} = translation_family_fixture()
+    # A fixture's play row was never refreshed: settle it, or the first content write
+    # refreshes it, a change to the row the original's title page shows.
+    PlayContent.refresh_derived(translation.id)
 
     next_transaction()
     {original_before, translation_before} = {version(original), version(translation)}

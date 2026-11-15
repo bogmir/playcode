@@ -49,13 +49,33 @@ defmodule Playcode.PlayContent do
   @doc """
   Refreshes what is derived from the content and stored on the play: its numbers, recounted
   by its numbering rule unless it is Manual (`Numbering.recount/1`), and its verse count.
-  Call it after a content edit. Subscribers hear of the edit from Postgres, on commit;
-  the cached statistics go stale by themselves, with the play's `content_version`.
+  Every write below that can move them does it in its own transaction (`refreshing/3`), so
+  a caller never has to; this is for a change to the play itself, its numbering rule.
+  Subscribers hear of the edit from Postgres, on commit; the cached statistics go stale by
+  themselves, with the play's `content_version`.
   """
   def refresh_derived(play_id) do
     Playcode.PlayContent.Numbering.recount(Repo.get!(Playcode.Catalogue.Play, play_id))
     Playcode.Catalogue.update_form_and_verse_count(play_id)
   end
+
+  @doc """
+  Runs `write` and refreshes the play's derived data (`refresh_derived/1`), all in one
+  transaction: a write that fails half way leaves the numbers and the verse count as they
+  were. Returns `{:ok, what write returned}`, or `{:error, reason}` when `write` called
+  `Repo.rollback(reason)`. `refresh: false` skips the refresh, for an importer that settles
+  the numbers itself once its whole text is in.
+  """
+  def refreshing(play_id, opts \\ [], write) do
+    Repo.transaction(fn ->
+      result = write.()
+      if Keyword.get(opts, :refresh, true), do: refresh_derived(play_id)
+      result
+    end)
+  end
+
+  defp ok_or_rollback({:ok, value}), do: value
+  defp ok_or_rollback({:error, reason}), do: Repo.rollback(reason)
 
   defp topic(play_id), do: "play_content:#{play_id}"
 
@@ -91,18 +111,22 @@ defmodule Playcode.PlayContent do
   has none. Its `xml_id` must be unique in the play.
   """
   def create_character(attrs) do
-    Repo.transaction(fn ->
+    refreshing(attr(attrs, :play_id), fn ->
       with {:ok, character} <- %Character{} |> Character.changeset(attrs) |> Repo.insert(),
            {:ok, _entry} <-
-             create_entry(%{
-               play_id: character.play_id,
-               cast_list_id: attr(attrs, :cast_list_id) || first_cast_list_id(character.play_id),
-               character_id: character.id,
-               name: character.name,
-               description: character.description,
-               group_heading: attr(attrs, :group_heading),
-               position: attr(attrs, :position)
-             }) do
+             create_entry(
+               %{
+                 play_id: character.play_id,
+                 cast_list_id:
+                   attr(attrs, :cast_list_id) || first_cast_list_id(character.play_id),
+                 character_id: character.id,
+                 name: character.name,
+                 description: character.description,
+                 group_heading: attr(attrs, :group_heading),
+                 position: attr(attrs, :position)
+               },
+               refresh: false
+             ) do
         Repo.get!(Character, character.id)
       else
         {:error, changeset} -> Repo.rollback(changeset)
@@ -119,7 +143,9 @@ defmodule Playcode.PlayContent do
 
       [] ->
         {:ok, list} =
-          create_division(%{play_id: play_id, type: "elenco", position: head_position(play_id)})
+          create_division(%{play_id: play_id, type: "elenco", position: head_position(play_id)},
+            refresh: false
+          )
 
         list.id
     end
@@ -195,7 +221,7 @@ defmodule Playcode.PlayContent do
   Updates a character.
   """
   def update_character(%Character{} = character, attrs) do
-    Repo.transaction(fn ->
+    refreshing(character.play_id, fn ->
       with {:ok, character} <- character |> Character.changeset(attrs) |> Repo.update() do
         case first_entry(character) do
           nil ->
@@ -229,7 +255,7 @@ defmodule Playcode.PlayContent do
   Deletes a character, and with it every speech's assignment to it.
   """
   def delete_character(%Character{} = character) do
-    Repo.delete(character)
+    refreshing(character.play_id, fn -> character |> Repo.delete() |> ok_or_rollback() end)
   end
 
   # --- Cast lists ---
@@ -268,7 +294,7 @@ defmodule Playcode.PlayContent do
   Creates an entry; `attrs` carry its `play_id` and `cast_list_id`, and its `character_id`
   unless it names no one. With no `position` it stands last in its list.
   """
-  def create_entry(attrs) do
+  def create_entry(attrs, opts \\ []) do
     attrs = Map.new(attrs, fn {key, value} -> {to_string(key), value} end)
 
     attrs =
@@ -276,10 +302,13 @@ defmodule Playcode.PlayContent do
         do: Map.put(attrs, "position", next_entry_position(attrs["cast_list_id"])),
         else: attrs
 
-    with {:ok, entry} <- %CastListEntry{} |> CastListEntry.changeset(attrs) |> Repo.insert() do
+    refreshing(attrs["play_id"], opts, fn ->
+      entry =
+        %CastListEntry{} |> CastListEntry.changeset(attrs) |> Repo.insert() |> ok_or_rollback()
+
       sync_characters(entry.play_id)
-      {:ok, entry}
-    end
+      entry
+    end)
   end
 
   defp next_entry_position(cast_list_id) do
@@ -315,7 +344,7 @@ defmodule Playcode.PlayContent do
     named_in = Enum.group_by(named, &elem(&1, 0), &elem(&1, 1))
     now = DateTime.utc_now(:second)
 
-    Repo.transaction(fn ->
+    refreshing(play_id, fn ->
       for list <- lists,
           entries = Map.get(named_in, list.id, []) ++ Enum.reject(list.entries, &(&1.id in moved)),
           {entry, position} <- Enum.with_index(entries),
@@ -347,7 +376,7 @@ defmodule Playcode.PlayContent do
     if last && Repo.exists?(where(ElementCharacter, character_id: ^last.id)) do
       {:error, {:speaking, [last.name]}}
     else
-      Repo.transaction(fn ->
+      refreshing(entry.play_id, fn ->
         Repo.delete!(entry)
         if last, do: Repo.delete!(last)
         sync_characters(entry.play_id)
@@ -362,10 +391,11 @@ defmodule Playcode.PlayContent do
 
   @doc "Updates an entry; its character follows when it is the character's first."
   def update_entry(%CastListEntry{} = entry, attrs) do
-    with {:ok, entry} <- entry |> CastListEntry.changeset(attrs) |> Repo.update() do
+    refreshing(entry.play_id, fn ->
+      entry = entry |> CastListEntry.changeset(attrs) |> Repo.update() |> ok_or_rollback()
       sync_characters(entry.play_id)
-      {:ok, entry}
-    end
+      entry
+    end)
   end
 
   @doc """
@@ -495,11 +525,12 @@ defmodule Playcode.PlayContent do
 
   @doc """
   Creates a division; `attrs` carry its `play_id`, and its `parent_id` for a scene.
+  `refresh: false` as in `refreshing/3`.
   """
-  def create_division(attrs) do
-    %Division{}
-    |> Division.changeset(attrs)
-    |> Repo.insert()
+  def create_division(attrs, opts \\ []) do
+    refreshing(attr(attrs, :play_id), opts, fn ->
+      %Division{} |> Division.changeset(attrs) |> Repo.insert() |> ok_or_rollback()
+    end)
   end
 
   @doc """
@@ -512,8 +543,14 @@ defmodule Playcode.PlayContent do
   @doc """
   Updates a division. Its notes keep their place in its title (`carry_notes/3`).
   """
-  def update_division(%Division{} = division, attrs),
-    do: division |> Division.changeset(attrs) |> update_anchor(division_id: division.id)
+  def update_division(%Division{} = division, attrs) do
+    refreshing(division.play_id, fn ->
+      division
+      |> Division.changeset(attrs)
+      |> update_anchor(division_id: division.id)
+      |> ok_or_rollback()
+    end)
+  end
 
   @doc """
   Deletes a division with its scenes, its cast lists and every element in them, and the
@@ -523,7 +560,7 @@ defmodule Playcode.PlayContent do
   def delete_division(%Division{} = division) do
     case stranded(division) do
       {[], silent} ->
-        Repo.transaction(fn ->
+        refreshing(division.play_id, fn ->
           Repo.delete!(division)
           Character |> where([c], c.id in ^silent) |> Repo.delete_all()
           sync_characters(division.play_id)
@@ -578,8 +615,13 @@ defmodule Playcode.PlayContent do
   """
   def reorder_children(%Division{} = act, ids) do
     children = Division |> where(parent_id: ^act.id) |> order_by([:position, :id]) |> Repo.all()
-    renumber(children, ids, & &1.id)
-    sync_characters(act.play_id)
+
+    {:ok, _} =
+      refreshing(act.play_id, fn ->
+        renumber(children, ids, & &1.id)
+        sync_characters(act.play_id)
+      end)
+
     :ok
   end
 
@@ -701,12 +743,31 @@ defmodule Playcode.PlayContent do
 
   @doc """
   Creates an element; `attrs` carry its `play_id`, `division_id` and `parent_id`.
+
+  Options: `characters: ids` gives a speech its speakers (`set_element_characters/2`) in the
+  same transaction, and `refresh: false` is as in `refreshing/3`.
   """
-  def create_element(attrs) do
-    %Element{}
-    |> Element.changeset(attrs)
-    |> Repo.insert()
+  def create_element(attrs, opts \\ []) do
+    refreshing(attr(attrs, :play_id), opts, fn ->
+      %Element{}
+      |> Element.changeset(attrs)
+      |> Repo.insert()
+      |> ok_or_rollback()
+      |> speakers(opts)
+    end)
   end
+
+  # The speakers a speech is saved with; any other element has none.
+  defp speakers(%Element{type: "speech"} = element, opts) do
+    case Keyword.fetch(opts, :characters) do
+      {:ok, character_ids} -> put_characters(element.id, character_ids)
+      :error -> :ok
+    end
+
+    element
+  end
+
+  defp speakers(element, _opts), do: element
 
   @doc """
   An element's changeset, for a form.
@@ -716,26 +777,57 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Updates an element. Its notes keep their place in its text (`carry_notes/3`).
+  Updates an element. Its notes keep their place in its text (`carry_notes/3`). The options
+  are `create_element/2`'s.
   """
-  def update_element(%Element{} = element, attrs),
-    do: element |> Element.changeset(attrs) |> update_anchor(element_id: element.id)
+  def update_element(%Element{} = element, attrs, opts \\ []) do
+    refreshing(element.play_id, opts, fn ->
+      element |> update_element_row(attrs) |> ok_or_rollback() |> speakers(opts)
+    end)
+  end
+
+  @doc """
+  Sets every one of `elements` (of one play) to the speaker label `label`, all or none, the
+  derived data refreshed once.
+  """
+  def set_speaker_labels(elements, label) do
+    with_play(elements, fn play_id ->
+      refreshing(play_id, fn ->
+        for element <- elements,
+            do: element |> update_element_row(%{speaker_label: label}) |> ok_or_rollback()
+      end)
+    end)
+  end
 
   @doc """
   Deletes an element and the elements under it.
   """
   def delete_element(%Element{} = element) do
-    Repo.transaction(fn ->
-      # As the row stands now: deleting the line before it may have handed it an aside's start.
-      element = Repo.reload(element) || element
-      if Element.asides_started(element) > 0, do: hand_on_aside(element)
+    with {:ok, [deleted]} <- delete_elements([element]), do: {:ok, deleted}
+  end
 
-      case Repo.delete(element) do
-        {:ok, deleted} -> deleted
-        {:error, changeset} -> Repo.rollback(changeset)
-      end
+  @doc """
+  Deletes `elements` (of one play) and the elements under them, all or none, the derived
+  data refreshed once.
+  """
+  def delete_elements(elements) do
+    with_play(elements, fn play_id ->
+      refreshing(play_id, fn -> Enum.map(elements, &delete_element_row/1) end)
     end)
   end
+
+  defp delete_element_row(element) do
+    # As the row stands now: deleting the line before it may have handed it an aside's start.
+    element = Repo.reload(element) || element
+    if Element.asides_started(element) > 0, do: hand_on_aside(element)
+    element |> Repo.delete() |> ok_or_rollback()
+  end
+
+  defp update_element_row(element, attrs),
+    do: element |> Element.changeset(attrs) |> update_anchor(element_id: element.id)
+
+  defp with_play([], _fun), do: {:ok, []}
+  defp with_play([%{play_id: play_id} | _], fun), do: fun.(play_id)
 
   # `element` starts an aside and is going: the line or paragraph after it in its speech,
   # if it continued that aside, starts it now, rather than joining whatever aside came
@@ -743,7 +835,7 @@ defmodule Playcode.PlayContent do
   defp hand_on_aside(element) do
     case next_in_speech(element) do
       %Element{is_aside: true, aside_continues: true} = next ->
-        {:ok, _} = update_element(next, %{aside_continues: false})
+        {:ok, _} = update_element_row(next, %{aside_continues: false})
 
       _none ->
         :ok
@@ -1058,27 +1150,29 @@ defmodule Playcode.PlayContent do
   Replaces all character associations for an element with the given character_ids.
   Position is assigned based on list order (0, 1, 2, ...).
   """
-  def set_element_characters(element_id, character_ids) when is_list(character_ids) do
-    Repo.transaction(fn ->
-      # Delete existing associations
-      ElementCharacter
-      |> where(element_id: ^element_id)
-      |> Repo.delete_all()
+  def set_element_characters(element_id, character_ids) when is_list(character_ids),
+    do: set_elements_characters([Repo.get!(Element, element_id)], character_ids)
 
-      # Insert new associations with position
-      character_ids
-      |> Enum.with_index()
-      |> Enum.each(fn {character_id, position} ->
-        %ElementCharacter{}
-        |> ElementCharacter.changeset(%{
-          element_id: element_id,
-          character_id: character_id,
-          position: position
-        })
-        |> Repo.insert!()
-      end)
+  @doc "As `set_element_characters/2`, for each of `elements` (of one play), refreshed once."
+  def set_elements_characters(elements, character_ids) when is_list(character_ids) do
+    with_play(elements, fn play_id ->
+      refreshing(play_id, fn -> Enum.each(elements, &put_characters(&1.id, character_ids)) end)
+    end)
+  end
 
-      :ok
+  defp put_characters(element_id, character_ids) do
+    ElementCharacter |> where(element_id: ^element_id) |> Repo.delete_all()
+
+    character_ids
+    |> Enum.with_index()
+    |> Enum.each(fn {character_id, position} ->
+      %ElementCharacter{}
+      |> ElementCharacter.changeset(%{
+        element_id: element_id,
+        character_id: character_id,
+        position: position
+      })
+      |> Repo.insert!()
     end)
   end
 

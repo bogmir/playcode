@@ -260,7 +260,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     save(view, %{"form" => "prose"})
     assert play.id |> Catalogue.get_play!() |> Play.form() == "prose"
 
-    # The content editor calls refresh_derived/1 after every edit, which recomputes
+    # Every content write refreshes the derived data, which recomputes
     # auto_form from the text (this fixture holds verse and prose, so automatic says
     # "mixed" since question 23's nine tenths; it said "verse" before); the curator's
     # choice stands.
@@ -274,8 +274,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
         line_number: "99",
         position: 99
       })
-
-    Playcode.PlayContent.refresh_derived(play.id)
 
     recomputed = Catalogue.get_play!(play.id)
     assert recomputed.auto_form == "mixed"
@@ -294,9 +292,11 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
     save(view, %{"form" => ""})
 
+    # The fixture holds verse and prose, so automatic says "mixed". It said "verse" while
+    # the fixture's content writes left auto_form unrefreshed; they refresh it themselves now.
     saved = Catalogue.get_play!(play.id)
     assert saved.form == nil
-    assert Play.form(saved) == "verse"
+    assert Play.form(saved) == "mixed"
   end
 
   test "the research metadata is saved: historical time and composition date",

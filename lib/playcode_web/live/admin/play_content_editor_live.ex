@@ -284,8 +284,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     with_row(socket, PlayContent.get_entry(socket.assigns.play.id, id), fn entry ->
       case PlayContent.delete_entry(entry) do
         {:ok, _} ->
-          PlayContent.refresh_derived(socket.assigns.play.id)
-
           LiveHelpers.log_activity(socket, "delete", "cast_list_entry", entry.id, %{
             name: entry.name
           })
@@ -313,14 +311,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   def handle_event("reorder_outline", %{"ids" => keys}, socket) do
     Outline.reorder(socket.assigns.play.id, keys)
-    PlayContent.refresh_derived(socket.assigns.play.id)
     {:noreply, socket |> reload_paratexts() |> reload_divisions() |> reload_characters()}
   end
 
   def handle_event("reorder_children", %{"parent" => parent_id, "ids" => ids}, socket) do
     with_row(socket, PlayContent.get_division(socket.assigns.play.id, parent_id), fn act ->
       PlayContent.reorder_children(act, ids)
-      PlayContent.refresh_derived(socket.assigns.play.id)
       socket |> reload_divisions() |> reload_characters()
     end)
   end
@@ -396,11 +392,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   def handle_event("cr_assign_characters", _params, socket) do
     character_ids = own_character_ids(socket, socket.assigns.cr_selected_character_ids)
 
-    socket
-    |> own_elements(socket.assigns.selected_speeches)
-    |> Enum.each(&PlayContent.set_element_characters(&1.id, character_ids))
-
-    PlayContent.refresh_derived(socket.assigns.play.id)
+    {:ok, _} =
+      socket
+      |> own_elements(socket.assigns.selected_speeches)
+      |> PlayContent.set_elements_characters(character_ids)
 
     LiveHelpers.log_activity(socket, "update", "element", nil, %{
       bulk: true,
@@ -422,11 +417,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         val -> val
       end
 
-    socket
-    |> own_elements(socket.assigns.selected_speeches)
-    |> Enum.each(&PlayContent.update_element(&1, %{speaker_label: label}))
-
-    PlayContent.refresh_derived(socket.assigns.play.id)
+    {:ok, _} =
+      PlayContent.set_speaker_labels(
+        own_elements(socket, socket.assigns.selected_speeches),
+        label
+      )
 
     {:noreply,
      socket
@@ -436,11 +431,8 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("cr_clear_label", _params, socket) do
-    socket
-    |> own_elements(socket.assigns.selected_speeches)
-    |> Enum.each(&PlayContent.update_element(&1, %{speaker_label: nil}))
-
-    PlayContent.refresh_derived(socket.assigns.play.id)
+    {:ok, _} =
+      PlayContent.set_speaker_labels(own_elements(socket, socket.assigns.selected_speeches), nil)
 
     {:noreply,
      socket
@@ -638,8 +630,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       with_row(socket, PlayContent.get_element(socket.assigns.play.id, id), fn element ->
         case PlayContent.update_element(element, %{"content" => value}) do
           {:ok, _el} ->
-            PlayContent.refresh_derived(socket.assigns.play.id)
-
             LiveHelpers.log_activity(socket, "update", "element", element.id, %{
               type: element.type,
               inline: true
@@ -700,13 +690,10 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   def handle_event("el_delete_selected", _params, socket) do
-    play_id = socket.assigns.play.id
     elements = own_elements(socket, socket.assigns.selected_elements)
     count = length(elements)
 
-    Enum.each(elements, fn element -> {:ok, _} = PlayContent.delete_element(element) end)
-
-    PlayContent.refresh_derived(play_id)
+    {:ok, _} = PlayContent.delete_elements(elements)
 
     {:noreply,
      socket
@@ -718,8 +705,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   # --- Division helpers ---
 
   defp division_deleted(socket, division) do
-    PlayContent.refresh_derived(socket.assigns.play.id)
-
     LiveHelpers.log_activity(socket, "delete", "division", division.id, %{
       type: division.type,
       number: division.number
@@ -809,9 +794,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   end
 
   defp delete_element(socket, element) do
-    play_id = socket.assigns.play.id
     {:ok, _} = PlayContent.delete_element(element)
-    PlayContent.refresh_derived(play_id)
     LiveHelpers.log_activity(socket, "delete", "element", element.id, %{type: element.type})
 
     socket
@@ -980,8 +963,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     case PlayContent.create_character(char_params) do
       {:ok, saved} ->
-        PlayContent.refresh_derived(play.id)
-
         LiveHelpers.log_activity(socket, "create", "character", saved.id, %{
           name: saved.name,
           xml_id: saved.xml_id
@@ -1001,7 +982,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   # An entry's line, and the character it names: its id, its actor, whether it is hidden.
   # The character first, so the line's name and description are what its first entry keeps.
   defp save_entry(socket, params) do
-    %{editing: entry, entry_character: character, play: play} = socket.assigns
+    %{editing: entry, entry_character: character} = socket.assigns
 
     with {:ok, _character} <-
            update_entry_character(
@@ -1010,7 +991,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
              socket.assigns.original_choice
            ),
          {:ok, saved} <- PlayContent.update_entry(entry, form_params(params, "entry")) do
-      PlayContent.refresh_derived(play.id)
       LiveHelpers.log_activity(socket, "update", "cast_list_entry", saved.id, %{name: saved.name})
 
       {:noreply,
@@ -1164,7 +1144,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     case result do
       {:ok, saved} ->
-        PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
 
         LiveHelpers.log_activity(socket, action, "division", saved.id, %{
@@ -1202,27 +1181,19 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     character_ids =
       own_character_ids(socket, List.wrap(params["character_ids"] || []))
 
-    play = socket.assigns.play
-
     result =
       case socket.assigns.editing do
         nil ->
           el_params
           |> Map.merge(socket.assigns.new_element)
-          |> PlayContent.create_element()
+          |> PlayContent.create_element(characters: character_ids)
 
         element ->
-          PlayContent.update_element(element, el_params)
+          PlayContent.update_element(element, el_params, characters: character_ids)
       end
 
     case result do
       {:ok, el} ->
-        # Set character associations for speech elements
-        if el.type == "speech" do
-          PlayContent.set_element_characters(el.id, character_ids)
-        end
-
-        PlayContent.refresh_derived(play.id)
         action = if socket.assigns.editing, do: "update", else: "create"
         LiveHelpers.log_activity(socket, action, "element", el.id, %{type: el.type})
 

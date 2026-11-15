@@ -40,15 +40,19 @@ defmodule Playcode.Outline do
   Puts the play's top-level items in the order of `keys`, each `"paratext:<id>"` or
   `"division:<id>"` as the Structure tab's rows carry them. A key that is not one of the
   play's top-level items is dropped; an item the keys leave out keeps its turn after them.
-  The characters follow their first entries.
+  The characters follow their first entries, and the numbers are recounted.
   """
   def reorder(play_id, keys) do
-    play_id
-    |> Catalogue.list_paratexts()
-    |> items(PlayContent.list_top_divisions(play_id))
-    |> PlayContent.renumber(keys, &key/1)
+    {:ok, _} =
+      PlayContent.refreshing(play_id, fn ->
+        play_id
+        |> Catalogue.list_paratexts()
+        |> items(PlayContent.list_top_divisions(play_id))
+        |> PlayContent.renumber(keys, &key/1)
 
-    PlayContent.sync_characters(play_id)
+        PlayContent.sync_characters(play_id)
+      end)
+
     :ok
   end
 

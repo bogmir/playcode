@@ -553,6 +553,25 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert who |> String.split() |> Enum.sort() == ["#ANA", "#DON"]
   end
 
+  # The same character twice breaks the speech's second write (one row per speaker), after
+  # its first: the speech and its speakers are one save, so the failure leaves neither.
+  test "a speech save that fails half way changes nothing", %{conn: conn, play: play} do
+    Process.flag(:trap_exit, true)
+    lv = open_scene(conn, play)
+    don = Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == "DON"))
+
+    lv |> element("span", "ANA") |> render_click()
+    form = lv |> form("#element-form", element: %{"speaker_label" => "ANA CAMBIADA"})
+
+    ExUnit.CaptureLog.capture_log(fn ->
+      catch_exit(render_submit(form, %{"character_ids" => [don.id, don.id]}))
+    end)
+
+    assert play |> export_tei() |> xml_texts("speaker") == ["ANA"]
+    assert speakers(play) == ["#ANA"]
+    assert lines(play) == [{"Primera línea", 1}, {"Segunda línea", 2}, {"Tercera línea", 3}]
+  end
+
   describe "the play's structure" do
     test "an act is added, retitled and deleted", %{conn: conn, play: play} do
       lv = open_structure(conn, play)
