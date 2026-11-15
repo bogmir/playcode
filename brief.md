@@ -1,34 +1,33 @@
-# Playcode brief, 2026-11-15 (8adc0d1)
+# Playcode brief, 2026-11-15 (commit 8adc0d1)
 
-## Questions: 19 of 72 questions open
-Easiest (a clear choice or one fact):
-- [q7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: show or not, yes/no.
-- [q13](docs/stakeholder/preguntas.html#q13) Jodelle attribution: one name for 11 witnesses.
-- [q54](docs/stakeholder/preguntas.html#q54) English names for the relation kinds: a translation list to confirm.
-- [q72](docs/stakeholder/preguntas.html#q72) RoleCall link for translations: yes/no.
-- [q70](docs/stakeholder/preguntas.html#q70) Character genders: pick the vocabulary (women, men, X).
+## 19 of 72 questions open ([preguntas](docs/stakeholder/preguntas.html))
+**Easiest**
+- [q72](docs/stakeholder/preguntas.html#q72) RoleCall link for translations: yes/no, one sentence
+- [q70](docs/stakeholder/preguntas.html#q70) Character genders: a short list to pick or amend
+- [q28](docs/stakeholder/preguntas.html#q28) Show the original cast: yes/no
+- [q13](docs/stakeholder/preguntas.html#q13) Jodelle's 11 witnesses: one fact (who really)
+- [q7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: show or hide
+**Most important**
+- [q66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: 45 texts in 33 plays wait on it (backlog C1)
+- [q69](docs/stakeholder/preguntas.html#q69) Recount 16 hand-numbered plays: corpus-wide numbering
+- [q68](docs/stakeholder/preguntas.html#q68) Word before a cited number: shapes every citation on the site
+- [q14](docs/stakeholder/preguntas.html#q14) Nine web editions with no TEI file: missing plays on the site
+- [q57](docs/stakeholder/preguntas.html#q57) Plays without a text (with q53-56: the relations project)
 
-Most important (unblock the most):
-- [q66](docs/stakeholder/preguntas.html#q66) 45 prologues on the wrong side in 33 plays: the whole C1 section waits on it.
-- [q69](docs/stakeholder/preguntas.html#q69) Renumber 16 hand-numbered plays: the Numbering section waits (also q68).
-- [q57](docs/stakeholder/preguntas.html#q57) Plays without a text: gates the Relations work (with q55, q56).
-- [q14](docs/stakeholder/preguntas.html#q14) Nine plays with a web edition but no TEI: corpus completeness.
-- [q28](docs/stakeholder/preguntas.html#q28) Show the original cast: a Round trip gap, published pages.
+## Round trip
+- Asides: play page and site mark them less than the downloads (note 37)
+- Verse/prose label vs text (q23 follow-up): our rule applied, project not yet confirmed
+- Original cast (`characters.actor`) printed nowhere, waits on q28
+- Not re-read this run: the cell-by-cell table in ida-y-vuelta.html
 
-## Round trip (docs/backlog.md, Round trip)
-- Asides: play page and site mark them less than the downloads.
-- Verse/prose/mixed: `auto_form` rule applied since 11-09, follow-up of q23 still open.
-- Original cast (`characters.actor`) is written to TEI but printed nowhere (q28).
-- ida-y-vuelta: cells short of "yes" follow the same three items.
-
-## Top 3 features (current focus: none)
-1. Front matter titles through `NoteMarkup.inline/3`: `<<…>>` shows in the header's italics today.
-2. Hidden Folio words still searched and their notes still listed: a hit lands on text the reader cannot see.
-3. Admin import preview writes the file twice (the preview costs as much as the import).
-(Skipped: site deploy waits on UV's PHP patch; numbering, prologues, relations wait on the project.)
+## Top 3 features (clear to implement)
+1. **EMOTHE0443's closing `<set>` note** (Next): the last front-matter note lost on import; fix: read it as a paratext's note is read.
+2. **Front matter header texts through `escape/1`** (Next): `<<…>>` would show for `<emph>` in titles/editors; fix: print through `NoteMarkup.inline/3`, then give the inline-markers test italics.
+3. **Space added after a line's opening `<stage>`** (Next; the cast-list tabs part is vaguer): `</stage>El Sol` gains a space; fix: stop adding it.
+Skipped: the UV deploy (waits on UV), Folio words in search (choice between two options).
 
 ## Speed win
-- `lib/playcode/export/static_site/search.ex:131-140`: per line and word, `word in entry.stage_only` scans a list.
-- Change: build `stage_only` as a MapSet once per entry (or per play) and test with `MapSet.member?`.
-- Gain: small to moderate per line, millions of tests over a 394-play index on the shared CPU; measure with `:timer.tc` around `write_play/2`. I did not confirm `stage_only` is a list: check its type first.
-- Risk: low. Differs from the previous brief (compare page's original Edition load).
+- `lib/playcode/statistics.ex:69-95` (`compute/1`): about eight separate passes over `all_elements` (counts by type, `stage_count`, `asides_started`, aside verses, split verses), plus `Metrics.words` per spoken item.
+- Change: one `Enum.reduce` over the elements into a counter map, or at least one parse of each element's inline content for stage and aside counts.
+- Gain: statistics per play, so small per play but paid on every content change of every play in a Generate on the shared CPU; measure with `:timer.tc(&Statistics.compute/1)` on Hamlet. I read only this file, not `Metrics`, so the real size is unknown.
+- Risk: low, `statistics` tests pin the numbers. Differs from the previous brief (search.ex `stage_only`).
