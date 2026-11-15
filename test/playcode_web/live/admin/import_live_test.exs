@@ -210,6 +210,39 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
                )
     end
 
+    # The warning alone let one click replace a researcher's fixes.
+    test "imports over rows edited by hand only once that is ticked", %{lv: lv, code: code} do
+      cast =
+        ~s(<div type="elenco"><castList><castItem><role xml:id="REY">REY</role></castItem></castList></div>)
+
+      play =
+        tei(code: code, title: "Primera versión", front: cast)
+        |> import_tei!()
+        |> Playcode.TestFixtures.age_rows!()
+
+      [character] = Playcode.PlayContent.list_characters(play.id)
+      {:ok, _} = Playcode.PlayContent.update_character(character, %{"actor" => "Mr. Betterton"})
+
+      upload(lv, [{"again.xml", tei(code: code, title: "Segunda versión", front: cast)}])
+      replace = element(lv, "#import-confirmation button", t("Replace and import"))
+
+      assert render(replace) =~ "disabled"
+
+      # The button is disabled, but the event can still be pushed.
+      render_click(lv, "confirm_import", %{})
+      await_import(lv)
+      assert Catalogue.get_play_by_code!(code).title == "Primera versión"
+
+      lv
+      |> form("#overwrite-edits-form", %{"overwrite_edits" => "true"})
+      |> render_change()
+
+      render_click(replace)
+      await_import(lv)
+
+      assert Catalogue.get_play_by_code!(code).title == "Segunda versión"
+    end
+
     # The preview names every column `TeiImport` keeps (`TeiImport.platform_owned/0`, in that
     # order); a column without a label crashed the page. A column added to the list fails here
     # until it has a value to set and a label to read, not in production.

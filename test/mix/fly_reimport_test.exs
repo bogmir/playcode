@@ -259,6 +259,18 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       assert output() =~ "mix playcode.fly.reimport generate"
     end
 
+    # A forced run keeps a play edited by hand since its import; once the project has
+    # looked at the dry run's list, --overwrite-edits replaces them.
+    test "--overwrite-edits passes the decision to the import", %{dir: dir} do
+      answer(dir, "run.1", "372 file(s) in /data/tei\nimported 372, skipped 0, failed 0\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["run", "--overwrite-edits"])
+
+      assert_in_order(calls(dir), [
+        ~s[import_tei("/data/tei", force: true, resume: true, overwrite_edits: true)]
+      ])
+    end
+
     test "stops at failed plays and keeps the machines scaled up", %{dir: dir} do
       answer(dir, "run.1", """
       372 file(s) in /data/tei

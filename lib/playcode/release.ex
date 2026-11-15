@@ -173,9 +173,10 @@ defmodule Playcode.Release do
       bin/playcode rpc 'Playcode.Release.import_tei("/tmp/tei", force: true)'
 
   Without `force: true` a play already imported is skipped. A forced re-import replaces a
-  play's text and loses hand edits to it, which the dry run counts per play. With
-  `resume: true` as well, a play imported since its file was written is skipped, so a run
-  that stopped part way carries on when run again.
+  play's text and loses hand edits to it, which the dry run counts per play; it skips a
+  play with rows from its file edited since their import unless `overwrite_edits: true`.
+  With `resume: true` as well, a play imported since its file was written is skipped, so
+  a run that stopped part way carries on when run again.
   """
   def import_tei(dir, opts \\ []) do
     load_app()
@@ -186,9 +187,25 @@ defmodule Playcode.Release do
     report = fn {_level, line} -> IO.puts(line) end
 
     if opts[:dry_run] do
-      TeiCorpus.dry_run(files, [force: opts[:force] || false], report)
+      TeiCorpus.dry_run(files, opts, report)
     else
-      TeiCorpus.run(files, Keyword.take(opts, [:force, :resume]), report)
+      TeiCorpus.run(files, opts, report)
+    end
+  end
+
+  @doc """
+  `mix playcode.export.tei` for a release: writes each play's TEI, as its download, to
+  `dir/CODE.xml`, or only that play's with `code: "CODE"`. Fetch them with `fly ssh sftp get`.
+
+      bin/playcode rpc 'Playcode.Release.export_tei("/tmp/tei-export")'
+  """
+  def export_tei(dir, opts \\ []) do
+    load_app()
+    {:ok, _} = Application.ensure_all_started(@app)
+
+    case TeiCorpus.export(dir, opts[:code]) do
+      {:ok, count} -> IO.puts("wrote #{count} file(s) to #{dir}")
+      {:error, :no_play} -> IO.puts("no play #{opts[:code]}")
     end
   end
 

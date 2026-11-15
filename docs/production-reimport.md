@@ -142,7 +142,9 @@ What the commands do, for when one of them fails part way, or something new is n
 
    Stop here if any line says a play has rows `edited since their import` (file rows changed
    in Playcode, which the re-import replaces) or `undoes N hand edit(s)` (logged edits to the
-   text): those are hand fixes that would be lost. Look at each with the project first.
+   text): those are hand fixes that would be lost. Look at each with the project first. A
+   play with rows `edited since their import` is skipped by the run unless it is given
+   `overwrite_edits: true` (`mix playcode.fly.reimport run --overwrite-edits`).
    `keeps N hand-entered record(s)` is fine; `restores it from the archive` un-archives a play.
    A note on dev: a backfill script's `update_all` also counts as edited (152 sources and 13
    characters on 2026-10-15); production had none.

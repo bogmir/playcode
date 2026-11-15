@@ -6438,3 +6438,8 @@ msgstr "escenas"
 #, elixir-autogen, elixir-format
 msgid "shared verses"
 msgstr "versos compartidos"
+
+#: lib/playcode_web/live/admin/import_live.ex:350
+#, elixir-autogen, elixir-format
+msgid "Replace the rows edited by hand too"
+msgstr "Reemplazar también las filas editadas a mano"

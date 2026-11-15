@@ -9,7 +9,9 @@ defmodule Playcode.Import.TeiCorpus do
   import Ecto.Query
 
   alias Playcode.ActivityLog
+  alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
+  alias Playcode.Export.{StaticSite, TeiXml}
   alias Playcode.Import.TeiImport
   alias Playcode.Repo
 
@@ -41,76 +43,137 @@ defmodule Playcode.Import.TeiCorpus do
   @doc """
   Imports each file. Codes already in the database are skipped unless `force: true`.
   Under `resume: true` a play imported since its file was written is skipped too, so a
-  forced run that stopped part way carries on where it stopped when run again.
+  forced run that stopped part way carries on where it stopped when run again. A play
+  with rows from its file edited since their import (`TeiImport.preview_import/2`'s
+  `edited`) is kept as it is, `{:kept, code, count}`, unless `overwrite_edits: true`.
   `on_result` is called with each file's result as it is reached, so a long run can
   report as it goes.
   """
   def import_all(files, opts \\ []) do
     force = Keyword.get(opts, :force, false)
+    overwrite_edits = Keyword.get(opts, :overwrite_edits, false)
     on_result = Keyword.get(opts, :on_result, fn _result -> :ok end)
     existing = existing_codes()
     imported_at = if Keyword.get(opts, :resume, false), do: last_import_by_code(), else: %{}
 
     Enum.map(files, fn {code, path} ->
+      exists = MapSet.member?(existing, code)
+
       result =
-        if (not force and MapSet.member?(existing, code)) or
-             imported_since_written?(imported_at[code], path),
-           do: {:skipped, code},
-           else: import_one(code, path)
+        cond do
+          (not force and exists) or imported_since_written?(imported_at[code], path) ->
+            {:skipped, code}
+
+          count = exists and not overwrite_edits and rows_edited(path) ->
+            {:kept, code, count}
+
+          true ->
+            import_one(code, path)
+        end
 
       on_result.(result)
       result
     end)
   end
 
+  # The file's rows edited by hand since their import, nil for none or an unreadable file
+  # (which the import then reports).
+  defp rows_edited(path) do
+    case TeiImport.preview_import(path, numbering: false) do
+      {:ok, %{edited: count}} when count > 0 -> count
+      _none -> nil
+    end
+  end
+
   @doc """
   What importing `files` would do, reported as `{:info | :error, line}`s as each file is
   read, then a summary. Writes nothing. Under `force: true` a play already imported
   would be re-imported, and its line says what that replaces and keeps, and how many hand
-  edits to its text since its last import it would undo. A play that would be imported
+  edits to its text since its last import it would undo, unless rows from its file were
+  edited since their import: `import_all/2` keeps such a play without
+  `overwrite_edits: true`, and its line says so. A play that would be imported
   lists the references it would gain and those it would skip, one line each.
   """
   def dry_run(files, opts, report) do
-    force = Keyword.get(opts, :force, false)
-
     counts =
       Enum.reduce(files, %{}, fn {code, path}, counts ->
-        {outcome, lines} = preview_lines(code, TeiImport.preview_import(path), force)
+        {outcome, lines} = preview_lines(code, TeiImport.preview_import(path), opts)
         Enum.each(lines, report)
         Map.update(counts, outcome, 1, &(&1 + 1))
       end)
 
     count = &Map.get(counts, &1, 0)
     edited = count.(:edited)
+    kept = count.(:kept)
 
     report.(
       {:info,
        "\ndry run, nothing written — #{count.(:new)} new, " <>
-         "#{count.(:existing) + edited} already imported" <>
+         "#{count.(:existing) + edited + kept} already imported" <>
          if(edited > 0, do: " (#{edited} with hand edits since their last import)", else: "") <>
+         if(kept > 0, do: ", #{kept} kept for their edits", else: "") <>
          ", #{count.(:unreadable)} unreadable"}
     )
   end
 
-  defp preview_lines(code, {:ok, %{existing: nil} = preview}, _force),
+  defp preview_lines(code, {:ok, %{existing: nil} = preview}, _opts),
     do:
       {:new, [{:info, "  #{code}  new" <> adds(preview) <> numbering(preview)} | added(preview)]}
 
-  defp preview_lines(code, {:ok, _preview}, false),
-    do: {:existing, [{:info, "  #{code}  already imported, would be skipped"}]}
+  defp preview_lines(code, {:ok, preview}, opts) do
+    cond do
+      not Keyword.get(opts, :force, false) ->
+        {:existing, [{:info, "  #{code}  already imported, would be skipped"}]}
 
-  defp preview_lines(code, {:ok, preview}, true) do
+      preview.edited > 0 and not Keyword.get(opts, :overwrite_edits, false) ->
+        {:kept, [{:info, "  #{code}  would be skipped" <> kept(preview.edited)}]}
+
+      true ->
+        replace_lines(code, preview)
+    end
+  end
+
+  defp preview_lines(code, {:error, reason}, _opts),
+    do: {:unreadable, [{:error, "  #{code}: #{inspect(reason)}"}]}
+
+  # Matches the fly reimport task's `@needs_a_look`, as `edited/1` does.
+  defp kept(count), do: edited(count) <> " (--overwrite-edits replaces them)"
+
+  defp replace_lines(code, preview) do
     undone = hand_edits(preview.existing.id)
     outcome = if undone > 0, do: :edited, else: :existing
     line = "  #{code}  " <> replaces(preview, undone) <> adds(preview) <> numbering(preview)
     {outcome, [{:info, line} | added(preview)]}
   end
 
-  defp preview_lines(code, {:error, reason}, _force),
-    do: {:unreadable, [{:error, "  #{code}: #{inspect(reason)}"}]}
-
   # The numbering rule the import would settle (`Numbering.describe/1`).
   defp numbering(preview), do: ", numbering #{preview.numbering}"
+
+  @doc """
+  Writes each play's TEI (`TeiXml.generate/1`, its download) to `dir/CODE.xml`, the
+  corpus's naming, or only the play `code` names (its full or short code). Archived plays
+  are left out. `{:ok, count}`, or `{:error, :no_play}` for a code no play has.
+  """
+  def export(dir, code \\ nil) do
+    plays =
+      Enum.filter(
+        Catalogue.list_plays(),
+        &(is_nil(code) or Play.short_code(&1.code) == Play.short_code(code))
+      )
+
+    if code && plays == [] do
+      {:error, :no_play}
+    else
+      File.mkdir_p!(dir)
+
+      for play <- plays do
+        xml = play.id |> Catalogue.get_play_with_all!() |> TeiXml.generate()
+        File.write!(Path.join(dir, StaticSite.safe_code!(play.code) <> ".xml"), xml)
+      end
+
+      {:ok, length(plays)}
+    end
+  end
 
   @doc """
   Imports `files` as `import_all/2` does, calling `report` with an `{:info | :error,
@@ -119,6 +182,7 @@ defmodule Playcode.Import.TeiCorpus do
   def run(files, opts, report) do
     on_result = fn
       {:error, code, reason} -> report.({:error, "  #{code}: #{inspect(reason)}"})
+      {:kept, code, count} -> report.({:info, "  #{code}  skipped" <> kept(count)})
       _other -> :ok
     end
 
@@ -128,7 +192,7 @@ defmodule Playcode.Import.TeiCorpus do
     report.(
       {:info,
        "imported #{count.(&match?({:ok, _, _}, &1))}, " <>
-         "skipped #{count.(&match?({:skipped, _}, &1))}, " <>
+         "skipped #{count.(&(match?({:skipped, _}, &1) or match?({:kept, _, _}, &1)))}, " <>
          "failed #{count.(&match?({:error, _, _}, &1))}"}
     )
   end

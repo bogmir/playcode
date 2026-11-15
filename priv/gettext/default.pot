@@ -6432,3 +6432,8 @@ msgstr ""
 #, elixir-autogen, elixir-format
 msgid "shared verses"
 msgstr ""
+
+#: lib/playcode_web/live/admin/import_live.ex:350
+#, elixir-autogen, elixir-format
+msgid "Replace the rows edited by hand too"
+msgstr ""

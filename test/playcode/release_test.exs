@@ -36,6 +36,39 @@ defmodule Playcode.ReleaseTest do
              "imported 0, skipped 1"
   end
 
+  test "import_tei keeps a play edited by hand unless told to overwrite the edits", %{dir: dir} do
+    File.write!(
+      Path.join(dir, "REL0001_Primera.xml"),
+      tei(code: "REL0001", title: "Primera", front: ~s(<div type="licencia"><p>P.</p></div>))
+    )
+
+    capture_io(fn -> Release.import_tei(dir) end)
+    [play] = Catalogue.list_plays()
+    Playcode.TestFixtures.age_rows!(play)
+    [paratext] = Catalogue.list_paratexts(play.id)
+    {:ok, _} = Catalogue.update_paratext(paratext, %{kind: "noticia_representacion"})
+
+    assert capture_io(fn -> Release.import_tei(dir, dry_run: true, force: true) end) =~
+             "REL0001  would be skipped"
+
+    assert capture_io(fn -> Release.import_tei(dir, force: true) end) =~ "imported 0, skipped 1"
+
+    assert capture_io(fn -> Release.import_tei(dir, force: true, overwrite_edits: true) end) =~
+             "imported 1, skipped 0"
+  end
+
+  test "export_tei writes each play's TEI as DIR/CODE.xml, or one play's under code:" do
+    play = import_tei!(tei(code: "REL0002_Segunda"))
+    out_dir = Path.join(System.tmp_dir!(), "release-out-#{System.unique_integer([:positive])}")
+    on_exit(fn -> File.rm_rf(out_dir) end)
+
+    assert capture_io(fn -> Release.export_tei(out_dir, code: play.code) end) =~
+             "wrote 1 file(s) to #{out_dir}"
+
+    assert File.read!(Path.join(out_dir, "REL0002_Segunda.xml")) ==
+             Playcode.Export.TeiXml.generate(Catalogue.get_play_with_all!(play.id))
+  end
+
   # Every play stored before the numbering rule came in Manual (the migration); this detects
   # each one's rule, as an import of its file would (numbering spec, "Plays already stored").
   test "settle_numbering reports a dry run, then settles every stored play's rule" do

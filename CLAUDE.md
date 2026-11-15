@@ -50,7 +50,8 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 | `mix compile`, `mix compile --warnings-as-errors` | Compile; the pre-commit hook runs the second |
 | `mix precommit` | `compile --warnings-as-errors`, `deps.unlock --unused`, `format` and `test` in one go |
 | `mix gettext.extract --merge` | Extract strings. It fuzzy-matches new strings onto unrelated existing translations: check every entry it marks fuzzy |
-| `mix playcode.import.tei` | The TEI corpus: `doc/tei_corpus/` and `test/fixtures/` (`--force`, `--resume`) |
+| `mix playcode.import.tei` | The TEI corpus: `doc/tei_corpus/` and `test/fixtures/` (`--force`, `--resume`). `--force` skips a play with rows edited by hand since their import unless `--overwrite-edits` |
+| `mix playcode.export.tei --dir DIR [--code CODE]` | Each play's TEI as `DIR/CODE.xml`, to refresh the corpus from Playcode (`Playcode.Release.export_tei/2` on Fly) |
 | `mix playcode.import.filemaker` | Language, kind and original from FileMaker's index, historical time |
 | `mix playcode.import.bibliography` | S4, FileMaker's bibliography |
 | `mix playcode.import.witnesses` | S3, its witnesses |
@@ -58,7 +59,7 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 | `mix playcode.import.performances` | S5, its historical performances |
 | `mix playcode.export.site` | Build the static site (also `/admin/export`). Runs in its own VM, outside `SiteBuilder`: pass `-o` while a server is building |
 | `mix playcode.invite EMAIL --admin --print-url` | Break-glass admin invite; bypasses SMTP |
-| `mix playcode.fly.reimport prepare` / `run` / `generate` / `deploy` | Re-import the corpus on Fly (`docs/production-reimport.md`) |
+| `mix playcode.fly.reimport prepare` / `run [--overwrite-edits]` / `generate` / `deploy` | Re-import the corpus on Fly (`docs/production-reimport.md`) |
 | `mix playcode.fly.reimport files --dir DIR` | A few corrected files on Fly in one go: a local round-trip check of each file, snapshot, upload, dry run, and when it needs no look, the import and Generate; never Deploy |
 | `Playcode.Release.import_*` | The imports on Fly; `dry_run: true` first |
 | `bin/playcode rpc 'Playcode.Release.invite_url("...")'` | An invite URL on Fly, bypassing SMTP (or `Playcode.Release.invite_url/1` from `fly ssh console`) |

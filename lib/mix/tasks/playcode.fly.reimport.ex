@@ -8,7 +8,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
       mix playcode.fly.reimport prepare [--dir doc/tei_corpus]
       mix playcode.fly.reimport files --dir DIR
-      mix playcode.fly.reimport run
+      mix playcode.fly.reimport run [--overwrite-edits]
       mix playcode.fly.reimport generate
       mix playcode.fly.reimport deploy
       mix playcode.fly.reimport scale-down
@@ -27,7 +27,9 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   `run` re-imports every play not imported since its file was uploaded
   (`Release.import_tei/2` with `force: true, resume: true`), running again up to three
   times when a run stops part way, and leaves the machines up. When a play fails it
-  stops; `run` again retries only what is left.
+  stops; `run` again retries only what is left. A play with rows from its file edited by
+  hand since their import is skipped and named; `run --overwrite-edits`, once the project
+  has looked at the dry run's list, replaces them too.
 
   `generate` is Generate on `/admin/export` (`Release.generate_site/0`) on performance-1x:
   it scales both machines up, as `prepare` does (a machine `run` left up stays as it is),
@@ -55,6 +57,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
   @dry_run ~s[bin/playcode rpc 'Playcode.Release.import_tei("#{@remote_dir}", dry_run: true, force: true)']
   @import ~s[bin/playcode rpc 'Playcode.Release.import_tei("#{@remote_dir}", force: true, resume: true)']
+  @import_overwriting ~s[bin/playcode rpc 'Playcode.Release.import_tei("#{@remote_dir}", force: true, resume: true, overwrite_edits: true)']
   @generate ~s[bin/playcode rpc 'Playcode.Release.generate_site()']
   @deploy ~s[bin/playcode rpc 'Playcode.Release.deploy_site()']
 
@@ -75,7 +78,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
     case prepare(dir) do
       :clean ->
-        import!()
+        import!(@import)
         generate!()
 
         Mix.shell().info(
@@ -87,8 +90,9 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     end
   end
 
-  def run(["run"]) do
-    import!()
+  def run(["run" | args]) do
+    {opts, _, _} = OptionParser.parse(args, strict: [overwrite_edits: :boolean])
+    import!(if opts[:overwrite_edits], do: @import_overwriting, else: @import)
 
     Mix.shell().info(
       "\nDone; the machines stay up. Check the counts, then: mix playcode.fly.reimport generate"
@@ -121,7 +125,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
   def run(_args) do
     Mix.raise(
-      "usage: mix playcode.fly.reimport prepare [--dir DIR] | files --dir DIR | run | generate | deploy | scale-down"
+      "usage: mix playcode.fly.reimport prepare [--dir DIR] | files --dir DIR | run [--overwrite-edits] | generate | deploy | scale-down"
     )
   end
 
@@ -202,9 +206,9 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     end
   end
 
-  defp import! do
+  defp import!(command) do
     step("Re-importing")
-    import_until_done(1)
+    import_until_done(command, 1)
   end
 
   defp generate! do
@@ -304,11 +308,11 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     )
   end
 
-  defp import_until_done(attempt) when attempt > @attempts,
+  defp import_until_done(_command, attempt) when attempt > @attempts,
     do: Mix.raise("the run stopped #{@attempts} times; see the machine's status above")
 
-  defp import_until_done(attempt) do
-    case Regex.run(~r/imported \d+, skipped \d+, failed (\d+)/, ssh(@import)) do
+  defp import_until_done(command, attempt) do
+    case Regex.run(~r/imported \d+, skipped \d+, failed (\d+)/, ssh(command)) do
       [_, "0"] ->
         :ok
 
@@ -322,7 +326,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
         Mix.shell().info("\nThe run stopped before its end (#{attempt} of #{@attempts}); again.")
         stream(~w(machine status #{@app_machine} -a #{@app}))
         wake!()
-        import_until_done(attempt + 1)
+        import_until_done(command, attempt + 1)
     end
   end
 

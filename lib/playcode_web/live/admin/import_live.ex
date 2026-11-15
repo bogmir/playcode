@@ -22,6 +22,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
      |> assign(:import_done, 0)
      |> assign(:pending, [])
      |> assign(:previews, [])
+     |> assign(:overwrite_edits, false)
      |> allow_upload(:tei_files,
        accept: ~w(.xml),
        max_entries: 20,
@@ -55,8 +56,15 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     {:noreply, start_or_confirm(socket, pending_files)}
   end
 
+  # The button is disabled until the box is ticked, but the event can still be pushed.
   def handle_event("confirm_import", _params, socket) do
-    {:noreply, start_import(socket, socket.assigns.pending)}
+    if edits_unconfirmed?(socket.assigns.previews, socket.assigns.overwrite_edits),
+      do: {:noreply, socket},
+      else: {:noreply, start_import(socket, socket.assigns.pending)}
+  end
+
+  def handle_event("overwrite_edits", params, socket) do
+    {:noreply, assign(socket, :overwrite_edits, params["overwrite_edits"] == "true")}
   end
 
   def handle_event("cancel_import", _params, socket) do
@@ -83,6 +91,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
       socket
       |> assign(:pending, pending)
       |> assign(:previews, previews)
+      |> assign(:overwrite_edits, false)
       |> assign(:successes, [])
       |> assign(:errors, [])
     end
@@ -324,8 +333,30 @@ defmodule PlaycodeWeb.Admin.ImportLive do
             </li>
           </ul>
 
+          <form
+            :if={edits_unconfirmed?(@previews, false)}
+            id="overwrite-edits-form"
+            phx-change="overwrite_edits"
+            class="mt-4"
+          >
+            <label class="label cursor-pointer justify-start gap-2 text-sm font-medium text-warning">
+              <input
+                type="checkbox"
+                name="overwrite_edits"
+                value="true"
+                checked={@overwrite_edits}
+                class="checkbox checkbox-warning checkbox-sm"
+              />
+              {gettext("Replace the rows edited by hand too")}
+            </label>
+          </form>
+
           <div class="card-actions mt-4">
-            <button phx-click="confirm_import" class="btn btn-primary btn-sm">
+            <button
+              phx-click="confirm_import"
+              class="btn btn-primary btn-sm"
+              disabled={edits_unconfirmed?(@previews, @overwrite_edits)}
+            >
               {if existing_count(@previews) > 0,
                 do: gettext("Replace and import"),
                 else: gettext("Import")}
@@ -447,6 +478,10 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   end
 
   defp existing_count(previews), do: Enum.count(previews, & &1.existing)
+
+  # A file whose rows were edited by hand since their import, not yet ticked for replacing.
+  defp edits_unconfirmed?(previews, overwrite_edits),
+    do: not overwrite_edits and Enum.any?(previews, &(&1.edited > 0))
 
   defp tei_total(preview), do: TeiImport.mixed_ownership_total(preview.replaces)
   defp preserved_total(preview), do: TeiImport.mixed_ownership_total(preview.preserves)

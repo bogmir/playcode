@@ -225,7 +225,8 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     end
 
     # The rows a forced re-import replaces, counted by when they changed rather than by
-    # the activity log, so an edit to any of the file's rows shows.
+    # the activity log, so an edit to any of the file's rows shows. Without
+    # --overwrite-edits such a play is kept, so the count is read under it.
     test "--dry-run --force counts the file's rows edited since their import", %{dir: dir} do
       File.write!(
         Path.join(dir, "TASK0001_Primera.xml"),
@@ -240,8 +241,62 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       [paratext] = Catalogue.list_paratexts(play.id)
       {:ok, _} = Catalogue.update_paratext(paratext, %{kind: "noticia_representacion"})
 
-      assert run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"]) =~
+      assert run("playcode.import.tei", [
+               "--dir",
+               dir,
+               "--dry-run",
+               "--force",
+               "--overwrite-edits"
+             ]) =~
                ~r/TASK0001  replaces .*, 1 row\(s\) from the file edited since their import/
+    end
+
+    # A forced re-import replaced edits made by hand with no more than a count in the dry
+    # run. It now keeps such a play, and says so, unless told to replace them.
+    test "--force keeps a play with rows edited since their import, unless --overwrite-edits",
+         %{dir: dir} do
+      path = Path.join(dir, "TASK0001_Primera.xml")
+
+      File.write!(
+        path,
+        tei(
+          code: "TASK0001",
+          title: "Primera",
+          front: ~s(<div type="licencia"><p>Privilège.</p></div>)
+        )
+      )
+
+      run("playcode.import.tei", ["--dir", dir])
+      [play] = Catalogue.list_plays()
+      play |> Playcode.TestFixtures.age_rows!()
+      [paratext] = Catalogue.list_paratexts(play.id)
+      {:ok, _} = Catalogue.update_paratext(paratext, %{kind: "noticia_representacion"})
+
+      File.write!(
+        path,
+        tei(
+          code: "TASK0001",
+          title: "Segunda",
+          front: ~s(<div type="licencia"><p>Privilège.</p></div>)
+        )
+      )
+
+      dry_run = run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"])
+
+      assert dry_run =~
+               ~r/TASK0001  would be skipped, 1 row\(s\) from the file edited since their import/
+
+      assert dry_run =~ "1 kept for their edits"
+
+      out = run("playcode.import.tei", ["--dir", dir, "--force"])
+      assert out =~ ~r/TASK0001  skipped, 1 row\(s\) from the file edited since their import/
+      assert out =~ "imported 0, skipped 1, failed 0"
+      assert [%{title: "Primera"}] = Catalogue.list_plays()
+
+      assert run("playcode.import.tei", ["--dir", dir, "--force", "--overwrite-edits"]) =~
+               "imported 1, skipped 0, failed 0"
+
+      assert [%{title: "Segunda"}] = Catalogue.list_plays()
     end
 
     # A later list's line keeps its own description: an edit to it changes no character.
@@ -264,7 +319,13 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       [line] = second.entries
       {:ok, _} = Playcode.PlayContent.update_entry(line, %{description: "disfrazada"})
 
-      assert run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"]) =~
+      assert run("playcode.import.tei", [
+               "--dir",
+               dir,
+               "--dry-run",
+               "--force",
+               "--overwrite-edits"
+             ]) =~
                ~r/TASK0001  replaces .*, 1 row\(s\) from the file edited since their import/
     end
 
@@ -285,6 +346,35 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
       assert out =~ "imported 1, skipped 0, failed 1"
       assert out =~ "TASK0002"
+    end
+  end
+
+  describe "playcode.export.tei" do
+    # Production is the master copy: its plays written back as a corpus directory, each
+    # file as the play's TEI download, named by its code as the corpus files are.
+    test "writes each play's TEI as DIR/CODE.xml, or one play's under --code" do
+      first = import_tei!(tei(code: "EXP0001_Primera", title: "Primera"))
+      second = import_tei!(tei(code: "EXP0002_Segunda", title: "Segunda"))
+      dir = tmp_dir()
+      file = &Path.join(dir, "#{&1.code}.xml")
+
+      assert run("playcode.export.tei", ["--dir", dir, "--code", second.code]) =~
+               "wrote 1 file(s) to #{dir}"
+
+      refute File.exists?(file.(first))
+
+      assert run("playcode.export.tei", ["--dir", dir]) =~ "wrote 2 file(s) to #{dir}"
+
+      for play <- [first, second] do
+        assert File.read!(file.(play)) ==
+                 Playcode.Export.TeiXml.generate(Catalogue.get_play_with_all!(play.id))
+      end
+    end
+
+    test "an unknown --code is refused" do
+      assert_raise Mix.Error, ~r/no play NOPE0001/, fn ->
+        Mix.Task.rerun("playcode.export.tei", ["--dir", tmp_dir(), "--code", "NOPE0001"])
+      end
     end
   end
 

@@ -9,9 +9,24 @@ mix playcode.import.tei             # skip codes already imported
 mix playcode.import.tei --dry-run   # report what would happen, write nothing
 mix playcode.import.tei --force     # re-import every file, updating in place
 mix playcode.import.tei --force --resume  # ...except plays imported since their file was written
+mix playcode.import.tei --force --overwrite-edits  # ...and plays edited by hand too
 ```
 
-On Fly, `mix playcode.fly.reimport prepare`, `run`, `generate` and, after the preview,
+`--force` skips a play with rows from its file edited by hand since their import, and names
+it; the dry run says which it would skip. `--overwrite-edits` replaces those rows as well,
+once someone has looked at them. The admin import page asks for the same thing as a tick.
+
+Write Playcode's own TEI back to a corpus directory, each play as its download, named
+`CODE.xml` as the corpus files are (archived plays left out); on Fly,
+`Playcode.Release.export_tei/2`:
+
+```bash
+mix playcode.export.tei --dir DIR              # every play
+mix playcode.export.tei --dir DIR --code CODE  # one play
+```
+
+On Fly, `mix playcode.fly.reimport prepare`, `run` (`run --overwrite-edits` to replace
+plays edited by hand), `generate` and, after the preview,
 `deploy`, from this directory (`docs/production-reimport.md`).
 
 ## FileMaker
