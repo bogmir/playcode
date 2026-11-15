@@ -352,8 +352,23 @@
   margin-top: 0.5em;
 }
 
-.play-text .aside-border {
+/* Asides, while their switch is on: a bar beside a speech, verse or paragraph spoken
+   wholly aside, a dotted underline under the words of one partly so. The bar is drawn
+   outside the line, so the parts of a split verse stay lined up. */
+.play-text[data-asides="on"] div.aside {
+  position: relative;
+}
+
+.play-text[data-asides="on"] div.aside::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 -0.5rem;
   border-left: 2px solid oklch(from var(--color-warning) l c h / 0.4);
+}
+
+.play-text[data-asides="on"] span.aside {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
 }
 
 /* ScrollSpy active sidebar link */

@@ -39,6 +39,7 @@ defmodule PlaycodeWeb.Components.PlayText do
       data-variants={if @show_variants, do: "on", else: "off"}
       data-folio={if @show_folio, do: "on", else: "off"}
       data-rs={if @show_rs, do: "on", else: "off"}
+      data-asides={if @show_asides, do: "on", else: "off"}
       data-shared={if @shade_shared, do: "on", else: "off"}
       data-sd-mark={if @shade_stage, do: "on", else: "off"}
     >
@@ -60,7 +61,6 @@ defmodule PlaycodeWeb.Components.PlayText do
                     elements={Map.get(division, :loaded_elements, [])}
                     show_line_numbers={@show_line_numbers}
                     show_stage_directions={@show_stage_directions}
-                    show_asides={@show_asides}
                     show_split_verses={@show_split_verses}
                     leads={@leads}
                     show_verse_type={@show_verse_type}
@@ -83,7 +83,6 @@ defmodule PlaycodeWeb.Components.PlayText do
                       elements={Map.get(child, :loaded_elements, [])}
                       show_line_numbers={@show_line_numbers}
                       show_stage_directions={@show_stage_directions}
-                      show_asides={@show_asides}
                       show_split_verses={@show_split_verses}
                       leads={@leads}
                       show_verse_type={@show_verse_type}
@@ -216,7 +215,6 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :elements, :list, required: true
   attr :show_line_numbers, :boolean, default: true
   attr :show_stage_directions, :boolean, default: true
-  attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
 
   attr :leads, :map,
@@ -235,7 +233,6 @@ defmodule PlaycodeWeb.Components.PlayText do
           element={element}
           show_line_numbers={@show_line_numbers}
           show_stage_directions={@show_stage_directions}
-          show_asides={@show_asides}
           show_split_verses={@show_split_verses}
           leads={@leads}
           show_verse_type={@show_verse_type}
@@ -255,7 +252,6 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :element, :map, required: true
   attr :show_line_numbers, :boolean, default: true
   attr :show_stage_directions, :boolean, default: true
-  attr :show_asides, :boolean, default: true
   attr :show_split_verses, :boolean, default: true
 
   attr :leads, :map,
@@ -268,10 +264,9 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp render_element(%{element: %{type: "speech"}} = assigns) do
     ~H"""
     <div
-      :if={!@element.is_aside || @show_asides}
       class={[
         "speech mt-3 mb-5",
-        @element.is_aside && "pl-6 aside-border",
+        @element.is_aside && "aside",
         Element.folio_only?(@element) && "folio"
       ]}
       data-sync-act={@act_key}
@@ -288,7 +283,6 @@ defmodule PlaycodeWeb.Components.PlayText do
           element={child}
           show_line_numbers={@show_line_numbers}
           show_stage_directions={@show_stage_directions}
-          show_asides={@show_asides}
           show_split_verses={@show_split_verses}
           leads={@leads}
           show_verse_type={@show_verse_type}
@@ -323,7 +317,6 @@ defmodule PlaycodeWeb.Components.PlayText do
           element={child}
           show_line_numbers={@show_line_numbers}
           show_stage_directions={@show_stage_directions}
-          show_asides={@show_asides}
           show_split_verses={@show_split_verses}
           leads={@leads}
           show_verse_type={@show_verse_type}
@@ -338,6 +331,7 @@ defmodule PlaycodeWeb.Components.PlayText do
     ~H"""
     <div class={[
       "verse-line flex items-baseline gap-1 sm:gap-2 ml-1 sm:ml-4",
+      Element.whole_aside?(@element) && "aside",
       Element.folio_only?(@element) && "folio"
     ]}>
       <span
@@ -402,10 +396,11 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   defp render_element(%{element: %{type: "prose"}} = assigns) do
     ~H"""
-    <div
-      :if={@show_asides or not Element.whole_aside?(@element)}
-      class={["ml-1 sm:ml-4 mb-2 text-justify", Element.folio_only?(@element) && "folio"]}
-    >
+    <div class={[
+      "ml-1 sm:ml-4 mb-2 text-justify",
+      Element.whole_aside?(@element) && "aside",
+      Element.folio_only?(@element) && "folio"
+    ]}>
       <.inline_content
         text={@element.content}
         notes={@element.notes}
@@ -498,6 +493,11 @@ defmodule PlaycodeWeb.Components.PlayText do
     attr = if title, do: [~s( title="), escape(title), ~s(")], else: []
     [~s(<span class="rs"), attr, ">", part_html(Map.delete(part, :rs), show), "</span>"]
   end
+
+  # Words spoken aside in a line that is not all aside: underlined while the "Asides"
+  # switch is on (app.css), as a line all aside has its bar.
+  defp part_html(%{aside: true} = part, show),
+    do: [~s(<span class="aside">), part_html(Map.delete(part, :aside), show), "</span>"]
 
   # Where a printed line of the source starts; gone while the line numbers are hidden.
   defp part_html(%{number: _}, %{numbers: false}), do: ""

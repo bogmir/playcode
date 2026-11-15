@@ -341,6 +341,28 @@ defmodule Playcode.Export.StaticSitePlayTest do
              [1, 3, 4]
   end
 
+  # The downloads' marks: a bar beside what is all aside, an underline under the words of
+  # what is partly so (style.css).
+  test "a verse or paragraph all aside is marked whole, one partly aside by its words" do
+    {play, dir} =
+      publish!("""
+      <div1 type="acto" n="1"><head>Acto I</head>
+        <sp><speaker>A</speaker><lg>
+          <l n="1"><seg type="aside">uno aparte</seg></l>
+          <l n="2">dos <seg type="aside">medio aparte</seg> dicho</l>
+          <l n="3">tres</l>
+        </lg></sp>
+        <sp><speaker>B</speaker><p><seg type="aside">Todo aparte.</seg></p></sp>
+      </div1>
+      """)
+
+    act = page(dir, play, "act-1.html")
+
+    assert LazyHTML.attribute(LazyHTML.query(act, ".l.as"), "id") == ["l1"]
+    assert act |> LazyHTML.query(".pr.as") |> Enum.map(&LazyHTML.text/1) == ["Todo aparte."]
+    assert act |> LazyHTML.query("span.as") |> Enum.map(&LazyHTML.text/1) == ["medio aparte"]
+  end
+
   test "the second half of a split verse starts where the first half ended" do
     {play, dir} = publish!(two_acts())
 

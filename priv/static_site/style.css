@@ -185,7 +185,9 @@ body[data-va="off"] .vref { display: none; }
 .fo { color: var(--muted); }
 .fl { font-size: .65em; line-height: 0; vertical-align: super; }
 body[data-fo="off"] .fo { display: none; }
-body[data-rs="on"] .rs { text-decoration: underline dotted; text-underline-offset: .2em; }
+body[data-rs="on"] .rs, span.as { text-decoration: underline dotted; text-underline-offset: .2em; }
+:is(.l.as .t, .pr.as) { position: relative; }
+:is(.l.as .t, .pr.as)::before { content: ""; position: absolute; inset: 0 auto 0 -.6rem; border-left: 2px solid var(--faint); }
 /* The Highlight switches: a shared line's parts in three greys, the stage directions
    tinted, the one the arrows landed on outlined; ink keeps 9.8:1 and ink-2 5.4:1 over them. */
 body[data-sh="on"] .l[data-part="I"] .t, .sw[data-part="I"] { background: var(--sh-i); }

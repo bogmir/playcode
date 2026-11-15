@@ -299,6 +299,74 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
 
       assert squish(html |> LazyHTML.from_fragment() |> LazyHTML.text()) =~ "El me consola."
     end
+
+    # Regression: cutting a text at its asides dropped the printed lines' numbers, in 766
+    # paragraphs of 87 plays, on every page and in every download.
+    test "keeps the numbers of its printed lines", %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Act I</head>
+            <sp><speaker>SIR TOPHAS</speaker><p n="119">Well. <seg type="aside">A watch, quoth you? A</seg> <lb n="120"/><seg type="aside">man may watch.</seg></p></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+
+      assert html
+             |> LazyHTML.from_fragment()
+             |> LazyHTML.query(".pn")
+             |> Enum.map(&LazyHTML.text/1) ==
+               ["119", "120"]
+    end
+  end
+
+  describe "the asides' marks" do
+    setup %{conn: conn} do
+      play =
+        tei(
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp><speaker>A</speaker><lg>
+              <l n="1"><seg type="aside">uno aparte</seg></l>
+              <l n="2">dos <seg type="aside">medio aparte</seg> dicho</l>
+              <l n="3">tres</l>
+            </lg></sp>
+            <sp><speaker>B</speaker><p><seg type="aside">Todo aparte.</seg></p></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+        |> TestFixtures.mark_complete!()
+
+      {:ok, view, html} = live(conn, ~p"/plays/#{play.code}")
+      %{view: view, html: html}
+    end
+
+    test "a verse or paragraph all aside is marked whole, one partly aside by its words",
+         %{html: html} do
+      doc = LazyHTML.from_fragment(html)
+
+      assert [verse, "Todo aparte."] =
+               doc |> LazyHTML.query("div.aside") |> Enum.map(&squish(LazyHTML.text(&1)))
+
+      assert verse =~ "uno aparte"
+      assert doc |> LazyHTML.query("span.aside") |> Enum.map(&LazyHTML.text/1) == ["medio aparte"]
+      assert LazyHTML.attribute(LazyHTML.query(doc, ".play-text"), "data-asides") == ["on"]
+    end
+
+    # The switch used to hide a paragraph all aside and leave a verse all aside as it was;
+    # now it takes the marks off (app.css) and every word stays.
+    test "the switch takes the marks off and hides no words", %{view: view} do
+      doc = view |> render_click("toggle_asides") |> LazyHTML.from_fragment()
+
+      assert LazyHTML.attribute(LazyHTML.query(doc, ".play-text"), "data-asides") == ["off"]
+      assert squish(LazyHTML.text(doc)) =~ "uno aparte"
+      assert squish(LazyHTML.text(doc)) =~ "Todo aparte."
+    end
   end
 
   describe "prose line breaks and numbers" do

@@ -116,6 +116,8 @@ defmodule Playcode.PlayContent.InlineMarkup do
   # A marker stands in plain text only (`asides_well_formed?/1`), so cutting a part there
   # cuts no italics or stage. Only its words are marked: a note or a line's number inside an
   # aside stays as it is.
+  defp aside_pieces(%{number: _} = part, inside), do: {[part], inside}
+
   defp aside_pieces(%{text: text} = part, inside) when is_binary(text) do
     @aside_cut
     |> Regex.split(text, include_captures: true, trim: true)

@@ -937,6 +937,7 @@ defmodule Playcode.Export.StaticSite.Components do
       class={[
         "l",
         @el.rend == "indent" && "indent",
+        Element.whole_aside?(@el) && "as",
         Element.folio_only?(@el) && "fo",
         part_step(@el)
       ]}
@@ -962,7 +963,11 @@ defmodule Playcode.Export.StaticSite.Components do
       assign(assigns, number: number, text: text, anchor: assigns.edition.anchors[assigns.el.id])
 
     ~H"""
-    <p phx-no-format class={["pr", Element.folio_only?(@el) && "fo"]} id={@anchor}><a :if={@number} class={["pn", fifth?(@number) && "m5"]} href={"#" <> @anchor}>{@number}</a><.inline text={@text} notes={@el.notes} /></p>
+    <p
+      phx-no-format
+      class={["pr", Element.whole_aside?(@el) && "as", Element.folio_only?(@el) && "fo"]}
+      id={@anchor}
+    ><a :if={@number} class={["pn", fifth?(@number) && "m5"]} href={"#" <> @anchor}>{@number}</a><.inline text={@text} notes={@el.notes} /></p>
     """
   end
 
@@ -1032,6 +1037,11 @@ defmodule Playcode.Export.StaticSite.Components do
 
     [~s(<span class="rs"), attr, ">", part(Map.delete(part, :rs)), "</span>"]
   end
+
+  # Words spoken aside in a line that is not all aside: underlined, as a line all aside
+  # has its bar (style.css).
+  defp part(%{aside: true} = part),
+    do: [~s(<span class="as">), part(Map.delete(part, :aside)), "</span>"]
 
   # Where a printed line of the source starts inside a paragraph: its number, which the
   # "Line numbers" control hides (style.css), every fifth kept by "5". Plain text: only the
