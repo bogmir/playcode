@@ -108,10 +108,10 @@ defmodule Playcode.PlayContent do
   Creates a character with its entry in a cast list; `attrs` carry its `play_id`, and may
   carry the list's `cast_list_id`, the entry's `group_heading` and `position`. With no list
   named, the entry goes in the play's first, made at the head of the outline when the play
-  has none. Its `xml_id` must be unique in the play.
+  has none. Its `xml_id` must be unique in the play. `refresh: false` as in `refreshing/3`.
   """
-  def create_character(attrs) do
-    refreshing(attr(attrs, :play_id), fn ->
+  def create_character(attrs, opts \\ []) do
+    refreshing(attr(attrs, :play_id), opts, fn ->
       with {:ok, character} <- %Character{} |> Character.changeset(attrs) |> Repo.insert(),
            {:ok, _entry} <-
              create_entry(
@@ -175,14 +175,14 @@ defmodule Playcode.PlayContent do
   Used during TEI import where malformed files may contain duplicate xml:id entries.
   Returns the existing character when a conflict is detected.
   """
-  def create_character_unless_exists(attrs) do
+  def create_character_unless_exists(attrs, opts \\ []) do
     play_id = attrs[:play_id] || attrs["play_id"]
     xml_id = attrs[:xml_id] || attrs["xml_id"]
     name = attrs[:name] || attrs["name"]
 
     case find_character_by_xml_id(play_id, xml_id) do
       nil ->
-        create_character(attrs)
+        create_character(attrs, opts)
 
       %Character{name: existing_name} = existing when existing_name == name ->
         {:ok, existing}
@@ -190,7 +190,7 @@ defmodule Playcode.PlayContent do
       _different_name ->
         # Same xml_id but different name — generate a unique suffix
         unique_id = generate_unique_xml_id(play_id, xml_id, 2)
-        create_character(Map.put(attrs, :xml_id, unique_id))
+        create_character(Map.put(attrs, :xml_id, unique_id), opts)
     end
   end
 
@@ -839,7 +839,12 @@ defmodule Playcode.PlayContent do
     do: element |> Element.changeset(attrs) |> update_anchor(element_id: element.id)
 
   defp with_play([], _fun), do: {:ok, []}
-  defp with_play([%{play_id: play_id} | _], fun), do: fun.(play_id)
+
+  # Only that play is refreshed, so rows of another would be left with stale numbers.
+  defp with_play(rows, fun) do
+    [play_id] = rows |> Enum.map(& &1.play_id) |> Enum.uniq()
+    fun.(play_id)
+  end
 
   # `element` starts an aside and is going: the line or paragraph after it in its speech,
   # if it continued that aside, starts it now, rather than joining whatever aside came

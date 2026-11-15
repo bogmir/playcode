@@ -732,13 +732,16 @@ defmodule Playcode.Import.WordParser do
     |> Enum.with_index()
     |> Enum.reduce(%{}, fn {label, idx}, acc ->
       {:ok, char} =
-        PlayContent.create_character_unless_exists(%{
-          play_id: play_id,
-          xml_id: character_xml_id(label, idx),
-          name: label,
-          position: idx,
-          cast_list_id: cast_list_id
-        })
+        PlayContent.create_character_unless_exists(
+          %{
+            play_id: play_id,
+            xml_id: character_xml_id(label, idx),
+            name: label,
+            position: idx,
+            cast_list_id: cast_list_id
+          },
+          refresh: false
+        )
 
       Map.put(acc, label, char.id)
     end)
