@@ -2693,6 +2693,11 @@ msgstr ""
 msgid "This device"
 msgstr ""
 
+#: lib/playcode_web/controllers/user_reset_password_controller.ex:34
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please wait a while and try again."
+msgstr ""
+
 #: lib/playcode_web/controllers/user_session_controller.ex:52
 #, elixir-autogen, elixir-format
 msgid "Too many login attempts. Please wait a few minutes and try again."

@@ -2695,6 +2695,11 @@ msgstr "Se han cerrado todas las demás sesiones."
 msgid "This device"
 msgstr "Este dispositivo"
 
+#: lib/playcode_web/controllers/user_reset_password_controller.ex:34
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please wait a while and try again."
+msgstr "Demasiados intentos. Espere un rato e inténtelo de nuevo."
+
 #: lib/playcode_web/controllers/user_session_controller.ex:52
 #, elixir-autogen, elixir-format
 msgid "Too many login attempts. Please wait a few minutes and try again."
