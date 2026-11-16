@@ -51,6 +51,7 @@ defmodule PlaycodeWeb.Endpoint do
     param_key: "request_logger",
     cookie_key: "request_logger"
 
+  plug :put_fly_client_ip
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
 
@@ -63,4 +64,16 @@ defmodule PlaycodeWeb.Endpoint do
   plug Plug.Head
   plug Plug.Session, @session_options
   plug PlaycodeWeb.Router
+
+  # Fly's proxy sets Fly-Client-IP to the visitor's address. Trusted only where config says
+  # the app runs behind it (`:behind_fly`): anywhere else a client could send its own.
+  defp put_fly_client_ip(conn, _opts) do
+    with true <- Application.get_env(:playcode, :behind_fly, false),
+         [value] <- get_req_header(conn, "fly-client-ip"),
+         {:ok, ip} <- :inet.parse_address(String.to_charlist(value)) do
+      %{conn | remote_ip: ip}
+    else
+      _ -> conn
+    end
+  end
 end

@@ -12,6 +12,7 @@ defmodule Playcode.Accounts.User do
 
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
+  @max_email_length 160
 
   schema "users" do
     field :email, :string
@@ -25,6 +26,9 @@ defmodule Playcode.Accounts.User do
 
     timestamps(type: :utc_datetime)
   end
+
+  @doc "The longest email address an account can have, in characters."
+  def max_email_length, do: @max_email_length
 
   @doc """
   A changeset for creating an invited user: email and role, no password.
@@ -73,7 +77,7 @@ defmodule Playcode.Accounts.User do
     changeset
     |> validate_required([:email])
     |> validate_format(:email, ~r/^[^\s]+@[^\s]+$/, message: "must have the @ sign and no spaces")
-    |> validate_length(:email, max: 160)
+    |> validate_length(:email, max: @max_email_length)
     |> maybe_validate_unique_email(opts)
   end
 

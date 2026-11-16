@@ -89,6 +89,9 @@ if config_env() == :prod do
 
   config :playcode, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
+  # Fly sets FLY_APP_NAME on its machines; the endpoint then trusts Fly-Client-IP.
+  config :playcode, :behind_fly, System.get_env("FLY_APP_NAME") != nil
+
   config :playcode, PlaycodeWeb.Endpoint,
     url: [host: host, port: 443, scheme: "https"],
     http: [

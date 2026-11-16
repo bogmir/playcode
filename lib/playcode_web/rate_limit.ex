@@ -1,16 +1,25 @@
 defmodule PlaycodeWeb.RateLimit do
   @moduledoc """
-  Simple sliding-window rate limiter backed by ETS.
+  Simple fixed-window rate limiter backed by ETS.
 
   Best-effort (not perfectly atomic under concurrent load), which is
   acceptable for auth-endpoint protection — the goal is blocking bots,
   not enforcing a hard cap to the exact request.
 
-  The ETS table `:playcode_rate_limit` must be created before this module is
-  used; it is started in `Playcode.Application.start/2`.
+  `create_table/0` makes the ETS table `:playcode_rate_limit`, from
+  `Playcode.Application.start/2`, and sweeps it every minute.
   """
 
   @table :playcode_rate_limit
+  @sweep_every 60_000
+
+  @doc "Creates the table and sweeps expired counters from it every minute."
+  @spec create_table() :: :ok
+  def create_table do
+    :ets.new(@table, [:set, :public, :named_table])
+    {:ok, _} = :timer.apply_interval(@sweep_every, __MODULE__, :sweep, [])
+    :ok
+  end
 
   @doc """
   Checks the rate for `key`.
@@ -27,16 +36,17 @@ defmodule PlaycodeWeb.RateLimit do
     now = System.monotonic_time(:millisecond)
 
     case :ets.lookup(@table, key) do
-      [{^key, count, window_start}] when now - window_start < window_ms ->
+      [{^key, count, expires_at}] when now < expires_at ->
         if count >= limit do
           {:error, :rate_limited}
         else
-          :ets.update_counter(@table, key, {2, 1})
+          # The default row stands in for one swept or reset since the lookup.
+          :ets.update_counter(@table, key, {2, 1}, {key, 0, now + window_ms})
           :ok
         end
 
       _ ->
-        :ets.insert(@table, {key, 1, now})
+        :ets.insert(@table, {key, 1, now + window_ms})
         :ok
     end
   end
@@ -49,5 +59,12 @@ defmodule PlaycodeWeb.RateLimit do
   def reset(key) do
     :ets.delete(@table, key)
     :ok
+  end
+
+  @doc "Deletes every counter whose window has passed; returns how many."
+  @spec sweep() :: non_neg_integer()
+  def sweep do
+    now = System.monotonic_time(:millisecond)
+    :ets.select_delete(@table, [{{:_, :_, :"$1"}, [{:"=<", :"$1", now}], [true]}])
   end
 end
