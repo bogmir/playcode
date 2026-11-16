@@ -210,6 +210,20 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
                )
     end
 
+    # A second click before the page redrew started an import of no files: it wiped the
+    # first one's report and said the import was over.
+    test "a second confirmation while the import runs changes nothing", %{lv: lv, code: code} do
+      upload(lv, [{"again.xml", tei(code: code, title: "Segunda versión")}])
+
+      render_click(lv, "confirm_import", %{})
+      render_click(lv, "confirm_import", %{})
+      html = await_import(lv)
+
+      # The report's row: wiped whether the second click lands during the import or after.
+      assert html =~ "again.xml"
+      assert html =~ t("Successfully imported %{count} play(s).", count: 1)
+    end
+
     # The warning alone let one click replace a researcher's fixes.
     test "imports over rows edited by hand only once that is ticked", %{lv: lv, code: code} do
       cast =

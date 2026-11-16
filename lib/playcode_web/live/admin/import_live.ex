@@ -2,6 +2,11 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   @moduledoc """
   /admin/plays/import: upload TEI files. A file whose code already exists is previewed
   first (`TeiImport.preview_import/1`): what the re-import replaces and what it keeps.
+
+  The page is in one `@phase`: `:idle` (choose files; the last import's report, if any),
+  `:confirming` (the uploaded files wait in `@pending` behind `@previews`) or `:importing`
+  (one file per message). Import leads from `:idle` to either of the others, Confirm and
+  Cancel out of `:confirming`, the last file back to `:idle`.
   """
 
   use PlaycodeWeb, :live_view
@@ -17,7 +22,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
      |> assign(:page_title, gettext("Import TEI-XML"))
      |> assign(:successes, [])
      |> assign(:errors, [])
-     |> assign(:importing, false)
+     |> assign(:phase, :idle)
      |> assign(:import_total, 0)
      |> assign(:import_done, 0)
      |> assign(:pending, [])
@@ -39,7 +44,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     {:noreply, cancel_upload(socket, :tei_files, ref)}
   end
 
-  def handle_event("import", _params, socket) do
+  def handle_event("import", _params, %{assigns: %{phase: :idle}} = socket) do
     # Consume uploads: copy each to a stable temp path so we can process async
     pending_files =
       consume_uploaded_entries(socket, :tei_files, fn %{path: path}, entry ->
@@ -57,7 +62,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   end
 
   # The button is disabled until the box is ticked, but the event can still be pushed.
-  def handle_event("confirm_import", _params, socket) do
+  def handle_event("confirm_import", _params, %{assigns: %{phase: :confirming}} = socket) do
     if edits_unconfirmed?(socket.assigns.previews, socket.assigns.overwrite_edits),
       do: {:noreply, socket},
       else: {:noreply, start_import(socket, socket.assigns.pending)}
@@ -67,11 +72,16 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     {:noreply, assign(socket, :overwrite_edits, params["overwrite_edits"] == "true")}
   end
 
-  def handle_event("cancel_import", _params, socket) do
+  def handle_event("cancel_import", _params, %{assigns: %{phase: :confirming}} = socket) do
     Enum.each(socket.assigns.pending, fn {path, _filename} -> File.rm(path) end)
 
-    {:noreply, socket |> assign(:pending, []) |> assign(:previews, [])}
+    {:noreply, socket |> assign(:phase, :idle) |> assign(:pending, []) |> assign(:previews, [])}
   end
+
+  # A click the page's phase has moved past: the second of two on one button, mostly.
+  def handle_event(event, _params, socket)
+      when event in ~w(import confirm_import cancel_import),
+      do: {:noreply, socket}
 
   # An import that lands on a play we already hold replaces its whole text, and one whose
   # file brings references may add one Playcode holds under a corrected description; a
@@ -89,6 +99,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
       start_import(socket, pending)
     else
       socket
+      |> assign(:phase, :confirming)
       |> assign(:pending, pending)
       |> assign(:previews, previews)
       |> assign(:overwrite_edits, false)
@@ -101,7 +112,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     send(self(), {:import_next, pending})
 
     socket
-    |> assign(:importing, true)
+    |> assign(:phase, :importing)
     |> assign(:pending, [])
     |> assign(:previews, [])
     |> assign(:successes, [])
@@ -115,7 +126,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
     successes = Enum.reverse(socket.assigns.successes)
     errors = Enum.reverse(socket.assigns.errors)
 
-    socket = assign(socket, :importing, false)
+    socket = assign(socket, :phase, :idle)
     socket = assign(socket, :successes, successes)
 
     socket =
@@ -205,7 +216,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
               <.drop_zone
                 upload={@uploads.tei_files}
                 label={gettext("Drop TEI-XML files here, or choose them")}
-                disabled={@importing}
+                disabled={@phase != :idle}
               />
             </div>
 
@@ -234,7 +245,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
             <button
               type="submit"
               class="btn btn-primary mt-2"
-              disabled={@uploads.tei_files.entries == [] || @importing}
+              disabled={@uploads.tei_files.entries == [] || @phase != :idle}
             >
               {import_label(length(@uploads.tei_files.entries))}
             </button>
@@ -244,7 +255,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
 
       <%!-- Replacement confirmation --%>
       <div
-        :if={@previews != []}
+        :if={@phase == :confirming}
         id="import-confirmation"
         class="card mb-6 border border-warning bg-base-100 shadow-sm"
       >
@@ -369,7 +380,10 @@ defmodule PlaycodeWeb.Admin.ImportLive do
       </div>
 
       <%!-- Import progress --%>
-      <div :if={@importing} class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
+      <div
+        :if={@phase == :importing}
+        class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
+      >
         <div class="card-body">
           <div class="flex items-center gap-3">
             <span class="loading loading-spinner loading-md text-primary"></span>
@@ -390,7 +404,7 @@ defmodule PlaycodeWeb.Admin.ImportLive do
 
       <%!-- Success results --%>
       <div
-        :if={@successes != [] && !@importing}
+        :if={@successes != [] && @phase == :idle}
         class="card border border-base-300 bg-base-100 shadow-sm"
       >
         <div class="card-body">
