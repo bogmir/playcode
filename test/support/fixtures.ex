@@ -25,6 +25,13 @@ defmodule Playcode.TestFixtures do
   end
 
   @doc """
+  Gives `play` a code `Play.changeset/2` refuses, as a row saved before it checked codes
+  may hold one. No context writes such a code, so this reaches the table directly.
+  """
+  def unchecked_code!(play, code),
+    do: Playcode.Repo.update!(Ecto.Changeset.change(play, code: code))
+
+  @doc """
   Moves a play's rows a day into the past, so an edit made now is after their import:
   timestamps are to the second, and the test's import and edit fall in the same one.
   Time travel: no context ages a row, so this reaches the tables directly.

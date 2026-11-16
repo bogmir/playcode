@@ -117,6 +117,9 @@ defmodule Playcode.Catalogue.Play do
 
   def valid_languages, do: @valid_languages
 
+  @doc "What a play code may be: it names the play's files and its folder on the static site."
+  def code_format, do: ~r/\A[A-Za-z0-9_-]+\z/
+
   @language_names %{
     "es" => "Español",
     "en" => "English",
@@ -288,6 +291,8 @@ defmodule Playcode.Catalogue.Play do
     |> update_change(:edition_notes, &squeeze_notes/1)
     |> cast_embed(:revisions, sort_param: :revisions_order, drop_param: :revisions_delete)
     |> validate_required([:title, :code])
+    |> validate_format(:code, code_format())
+    |> validate_code_kept_while_complete()
     |> validate_inclusion(:language, @valid_languages)
     |> validate_number(:verse_count, greater_than_or_equal_to: 0)
     |> validate_inclusion(:relationship_type, @relationship_types)
@@ -309,6 +314,15 @@ defmodule Playcode.Catalogue.Play do
 
   # A note left blank, in the file or the form, is no note.
   defp squeeze_notes(notes), do: notes |> Enum.map(&Text.squeeze/1) |> Enum.reject(&is_nil/1)
+
+  # The static site files a play's pages under its code, so a complete play renamed would
+  # leave the site at the next Generate. A draft's code is free.
+  defp validate_code_kept_while_complete(changeset) do
+    if changeset.data.is_complete and get_field(changeset, :is_complete) and
+         get_change(changeset, :code),
+       do: add_error(changeset, :code, "cannot be changed while the play is complete"),
+       else: changeset
+  end
 
   # Both endpoints or neither: a lone year is a half-filled form, not a dating.
   defp validate_composition_date_span(changeset) do

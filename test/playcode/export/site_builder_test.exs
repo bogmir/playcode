@@ -134,8 +134,9 @@ defmodule Playcode.Export.SiteBuilderTest do
 
   @tag :capture_log
   test "a batch that crashes is reported, and the queue carries on" do
-    # Play codes are not validated, and one that is not a plain name cannot be a folder.
-    bad = play_fixture(%{"code" => "bad/code"})
+    # A code that is not a plain name cannot be a folder. The play form refuses one now,
+    # so this is a row saved before it did.
+    bad = unchecked_code!(play_fixture(), "bad/code")
     good = play_fixture()
 
     assert :started = SiteBuilder.add(bad.id, [])

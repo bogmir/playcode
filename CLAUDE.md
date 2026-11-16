@@ -232,7 +232,7 @@ An Endings-compliant static archive of the complete plays (`is_complete: true`):
 HTML/CSS/JS, no third-party requests, and everything, search included, works from the unzipped
 archive opened as `file://`. The full write-up is `docs/static-site.md`; the rules that bite:
 
-- **Every path built from a play code goes through `StaticSite.safe_code!/1`.** Play codes have no format validation, and `apply_changes/2` takes a removed play's code from a socket event.
+- **Every path built from a play code goes through `StaticSite.safe_code!/1`.** `Play.changeset/2` holds a code to `Play.code_format/0`, but not the rows saved before it did, and `apply_changes/2` takes a removed play's code from a socket event.
 - **Every build and deploy goes through `Playcode.Export.SiteBuilder`, one job at a time.** Two builds at once drop a play from the incremental index; a deploy during a build pushes half a site.
 - **The search normaliser has two halves that must agree**: `StaticSite.Search` and `EMOTHE.normalise` in `site.js`, both run against `test/fixtures/search_normalisation.json`. The browser half runs under `node --test`.
 - **Generate rebuilds only what changed** (`build.json`, `StaticSite.Fingerprint`). There is no forced full rebuild: a play Generate misses is a tracking bug. `fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access.

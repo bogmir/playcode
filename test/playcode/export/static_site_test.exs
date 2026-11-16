@@ -534,7 +534,7 @@ defmodule Playcode.Export.StaticSiteTest do
     File.write!(Path.join(sentinel, "keep.txt"), "keep")
     on_exit(fn -> File.rm_rf(sentinel) end)
 
-    evil = complete_play(%{"code" => "../../#{Path.basename(sentinel)}"})
+    evil = unchecked_code!(complete_play(), "../../#{Path.basename(sentinel)}")
 
     assert_raise ArgumentError, fn ->
       StaticSite.generate(output_dir: dir, play_codes: [evil.code])
@@ -887,7 +887,7 @@ defmodule Playcode.Export.StaticSiteTest do
     test "a batch with an unusable code raises before it writes anything" do
       a = complete_play(%{"title" => "Alfa Untouched Tragedy"})
       b = complete_play()
-      bad = complete_play(%{"code" => "bad/code"})
+      bad = unchecked_code!(complete_play(), "bad/code")
       dir = generate!([a])
 
       assert_raise ArgumentError, fn ->

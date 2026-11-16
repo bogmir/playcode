@@ -113,6 +113,9 @@ msgstr "no es válida"
 msgid "is already in use for this play"
 msgstr "ya se usa en esta obra"
 
+msgid "cannot be changed while the play is complete"
+msgstr "no se puede cambiar mientras la obra esté completa"
+
 msgid "must be given together with the end year"
 msgstr "debe indicarse junto con el año final"
 

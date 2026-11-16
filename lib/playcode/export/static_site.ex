@@ -342,11 +342,12 @@ defmodule Playcode.Export.StaticSite do
     end
   end
 
-  # Play codes become folder names that are deleted and rewritten; Play does not
-  # validate them, so anything but a plain name ("..", "", "a/b") is refused here.
+  # Play codes become folder names that are deleted and rewritten. Play validates a code
+  # it is given, but not the rows saved before it did nor a code from a socket event, so
+  # anything but a plain name ("..", "", "a/b") is refused here.
   @doc false
   def safe_code!(code) do
-    if is_binary(code) and Regex.match?(~r/\A[A-Za-z0-9_-]+\z/, code) do
+    if is_binary(code) and Regex.match?(Play.code_format(), code) do
       code
     else
       raise ArgumentError, "play code #{inspect(code)} cannot be used as a folder name"

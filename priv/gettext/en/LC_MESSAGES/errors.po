@@ -125,6 +125,9 @@ msgstr ""
 msgid "is already in use for this play"
 msgstr ""
 
+msgid "cannot be changed while the play is complete"
+msgstr ""
+
 msgid "must be given together with the end year"
 msgstr ""
 

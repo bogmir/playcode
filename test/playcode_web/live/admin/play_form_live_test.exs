@@ -231,6 +231,28 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     assert Catalogue.list_plays() == []
   end
 
+  # A code names the play's folder on the static site, and StaticSite.safe_code!/1 takes
+  # no other: one such code used to stop every play queued with it.
+  test "a code that cannot name a folder is refused", %{conn: conn} do
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+    html = save(view, %{"title" => "Sémiramis", "code" => "EMOTHE 9999"})
+
+    assert html =~ error("has invalid format")
+  end
+
+  # The site files a play's pages under its code: renamed, the play left the site at the
+  # next Generate and nothing put it back.
+  test "a complete play's code cannot be changed", %{conn: conn} do
+    play = mark_complete!(play_fixture())
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+    html = save(view, %{"code" => unique_code()})
+
+    assert html =~ error("cannot be changed while the play is complete")
+    assert Catalogue.get_play!(play.id).code == play.code
+  end
+
   test "an edit is saved", %{conn: conn} do
     play = play_fixture(%{"title" => "Original Title"})
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
