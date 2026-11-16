@@ -46,6 +46,12 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   creates a password-less row plus a 7-day `"invite"` token; accepting sets the password
   and `confirmed_at` in one transaction, because clicking the emailed link already proves
   the mailbox. Re-inviting invalidates the previous link.
+- **`Accounts.status/1` is the one reading of an account's state**: `:invited` (no password
+  or not confirmed), `:active` (may log in), `:deactivated`. The users page, `Authz` (through
+  `active?/1`) and the boot reconciliation all ask it; nothing else reads `confirmed_at` or
+  `deactivated_at` to decide. Only accepting an invitation or a reset writes `confirmed_at`:
+  promoting an invitee used to, leaving an "active" account with no password and no
+  invitation to resend.
 - **A password reset confirms an unconfirmed account.** The link was mailed to that
   address, so following it proves the mailbox — the same argument as accepting an invite.
   Without this, an invited user who reaches for "forgot password" instead of their invite

@@ -365,12 +365,29 @@ defmodule Playcode.Accounts do
   def protected_admin?(_), do: false
 
   @doc """
-  Returns true if the user may log in: confirmed and not deactivated.
-  """
-  def active?(%User{confirmed_at: confirmed_at, deactivated_at: nil})
-      when not is_nil(confirmed_at),
-      do: true
+  Where an account is in its life, the one reading of `confirmed_at`, `hashed_password`
+  and `deactivated_at`:
 
+    * `:invited` - no password yet. `accept_invite/2` or `reset_user_password/2` makes it
+      `:active`; `invite_user/3` sends a new link.
+    * `:active` - may log in.
+    * `:deactivated` - switched off by `deactivate_user/1`, whatever it was before;
+      `reactivate_user/1` gives it back what it was.
+  """
+  def status(%User{deactivated_at: deactivated_at}) when not is_nil(deactivated_at),
+    do: :deactivated
+
+  # Either missing is no way in. Promoting used to confirm an account that had no password.
+  def status(%User{confirmed_at: confirmed_at, hashed_password: hashed_password})
+      when is_nil(confirmed_at) or is_nil(hashed_password),
+      do: :invited
+
+  def status(%User{}), do: :active
+
+  @doc """
+  Returns true if the user may log in.
+  """
+  def active?(%User{} = user), do: status(user) == :active
   def active?(_), do: false
 
   @doc """
@@ -449,14 +466,7 @@ defmodule Playcode.Accounts do
   permission when it opens, so one left open would keep the old role's.
   """
   def update_user_role(%User{} = user, role) do
-    changeset = User.role_changeset(user, %{role: role})
-
-    changeset =
-      if role in ["admin", :admin] and is_nil(user.confirmed_at),
-        do: Ecto.Changeset.change(changeset, %{confirmed_at: DateTime.utc_now(:second)}),
-        else: changeset
-
-    with {:ok, updated} <- Repo.update(changeset) do
+    with {:ok, updated} <- user |> User.role_changeset(%{role: role}) |> Repo.update() do
       if updated.role != user.role, do: force_logout(updated)
       {:ok, updated}
     end

@@ -95,7 +95,7 @@ defmodule Playcode.Accounts.AdminBootstrap do
       Logger.info("admin bootstrap: promoted #{user.email}")
     end
 
-    if user.deactivated_at do
+    if Accounts.status(user) == :deactivated do
       {:ok, _} = Accounts.reactivate_user(user)
       Logger.info("admin bootstrap: reactivated #{user.email}")
     end
