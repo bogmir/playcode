@@ -79,6 +79,9 @@ defmodule PlaycodeWeb.Router do
       live "/users/log-in", UserLoginLive, :new
       live "/users/reset-password", UserForgotPasswordLive, :new
     end
+
+    # A LiveView event cannot see Fly-Client-IP, so the form posts here to be throttled.
+    post "/users/reset-password", UserResetPasswordController, :create
   end
 
   # An emailed token — invitation or password reset — must work on a browser

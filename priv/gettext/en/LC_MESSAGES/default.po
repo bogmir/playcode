@@ -340,7 +340,7 @@ msgid "Element saved."
 msgstr ""
 
 #: lib/playcode_web/live/admin/user_list_live.ex:268
-#: lib/playcode_web/live/user_forgot_password_live.ex:17
+#: lib/playcode_web/live/user_forgot_password_live.ex:20
 #: lib/playcode_web/live/user_login_live.ex:17
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -372,7 +372,7 @@ msgstr ""
 msgid "File is too large (max 20MB)"
 msgstr ""
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:12
+#: lib/playcode_web/live/user_forgot_password_live.ex:10
 #: lib/playcode_web/live/user_login_live.ex:23
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
@@ -395,7 +395,7 @@ msgstr ""
 msgid "Hidden character"
 msgstr ""
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:44
+#: lib/playcode_web/controllers/user_reset_password_controller.ex:24
 #, elixir-autogen, elixir-format
 msgid "If your email is in our system, you will receive instructions to reset your password shortly."
 msgstr ""
@@ -442,7 +442,7 @@ msgstr ""
 msgid "Insert Above"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:48
+#: lib/playcode_web/controllers/user_session_controller.ex:44
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr ""
@@ -491,7 +491,7 @@ msgid "Line numbers"
 msgstr ""
 
 #: lib/playcode_web/components/layouts.ex:126
-#: lib/playcode_web/live/user_forgot_password_live.ex:25
+#: lib/playcode_web/live/user_forgot_password_live.ex:28
 #: lib/playcode_web/live/user_login_live.ex:28
 #: lib/playcode_web/live/user_reset_password_live.ex:42
 #, elixir-autogen, elixir-format
@@ -503,7 +503,7 @@ msgstr ""
 msgid "Log out"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:65
+#: lib/playcode_web/controllers/user_session_controller.ex:61
 #, elixir-autogen, elixir-format
 msgid "Logged out successfully."
 msgstr ""
@@ -612,7 +612,7 @@ msgstr ""
 msgid "Password reset successfully."
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:21
+#: lib/playcode_web/controllers/user_session_controller.ex:17
 #, elixir-autogen, elixir-format
 msgid "Password updated successfully!"
 msgstr ""
@@ -781,12 +781,12 @@ msgstr ""
 msgid "Select a scene or act from the Structure tab to edit its content."
 msgstr ""
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:20
+#: lib/playcode_web/live/user_forgot_password_live.ex:23
 #, elixir-autogen, elixir-format
 msgid "Send password reset instructions"
 msgstr ""
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:19
+#: lib/playcode_web/live/user_forgot_password_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Sending..."
 msgstr ""
@@ -967,12 +967,12 @@ msgstr ""
 msgid "We can't find the internet"
 msgstr ""
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:13
+#: lib/playcode_web/live/user_forgot_password_live.ex:11
 #, elixir-autogen, elixir-format
 msgid "We'll send a password reset link to your inbox"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:25
+#: lib/playcode_web/controllers/user_session_controller.ex:21
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
 msgstr ""
@@ -2693,7 +2693,7 @@ msgstr ""
 msgid "This device"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:57
+#: lib/playcode_web/controllers/user_session_controller.ex:53
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Too many login attempts. Please wait a few minutes and try again."
 msgstr ""
@@ -3218,7 +3218,7 @@ msgstr ""
 msgid "Welcome to Playcode"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:15
+#: lib/playcode_web/controllers/user_session_controller.ex:11
 #, elixir-autogen, elixir-format
 msgid "Welcome to Playcode!"
 msgstr ""
@@ -6436,4 +6436,9 @@ msgstr ""
 #: lib/playcode_web/live/admin/import_live.ex:350
 #, elixir-autogen, elixir-format
 msgid "Replace the rows edited by hand too"
+msgstr ""
+
+#: lib/playcode_web/controllers/user_reset_password_controller.ex:34
+#, elixir-autogen, elixir-format, fuzzy
+msgid "Too many attempts. Please wait a while and try again."
 msgstr ""

@@ -340,7 +340,7 @@ msgid "Element saved."
 msgstr "Elemento guardado."
 
 #: lib/playcode_web/live/admin/user_list_live.ex:268
-#: lib/playcode_web/live/user_forgot_password_live.ex:17
+#: lib/playcode_web/live/user_forgot_password_live.ex:20
 #: lib/playcode_web/live/user_login_live.ex:17
 #, elixir-autogen, elixir-format
 msgid "Email"
@@ -372,7 +372,7 @@ msgstr "Archivo"
 msgid "File is too large (max 20MB)"
 msgstr "El archivo es demasiado grande (máx. 20MB)"
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:12
+#: lib/playcode_web/live/user_forgot_password_live.ex:10
 #: lib/playcode_web/live/user_login_live.ex:23
 #, elixir-autogen, elixir-format
 msgid "Forgot your password?"
@@ -395,7 +395,7 @@ msgstr "Ir a Estructura"
 msgid "Hidden character"
 msgstr "Personaje oculto"
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:44
+#: lib/playcode_web/controllers/user_reset_password_controller.ex:24
 #, elixir-autogen, elixir-format
 msgid "If your email is in our system, you will receive instructions to reset your password shortly."
 msgstr "Si su correo está en nuestro sistema, recibirá instrucciones para restablecer su contraseña en breve."
@@ -442,7 +442,7 @@ msgstr "Obras importadas"
 msgid "Insert Above"
 msgstr "Insertar encima"
 
-#: lib/playcode_web/controllers/user_session_controller.ex:48
+#: lib/playcode_web/controllers/user_session_controller.ex:44
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr "Correo electrónico o contraseña no válidos"
@@ -491,7 +491,7 @@ msgid "Line numbers"
 msgstr "Números de verso"
 
 #: lib/playcode_web/components/layouts.ex:126
-#: lib/playcode_web/live/user_forgot_password_live.ex:25
+#: lib/playcode_web/live/user_forgot_password_live.ex:28
 #: lib/playcode_web/live/user_login_live.ex:28
 #: lib/playcode_web/live/user_reset_password_live.ex:42
 #, elixir-autogen, elixir-format
@@ -503,7 +503,7 @@ msgstr "Iniciar sesión"
 msgid "Log out"
 msgstr "Cerrar sesión"
 
-#: lib/playcode_web/controllers/user_session_controller.ex:65
+#: lib/playcode_web/controllers/user_session_controller.ex:61
 #, elixir-autogen, elixir-format
 msgid "Logged out successfully."
 msgstr "Sesión cerrada correctamente."
@@ -612,7 +612,7 @@ msgstr "Contraseña"
 msgid "Password reset successfully."
 msgstr "Contraseña restablecida correctamente."
 
-#: lib/playcode_web/controllers/user_session_controller.ex:21
+#: lib/playcode_web/controllers/user_session_controller.ex:17
 #, elixir-autogen, elixir-format
 msgid "Password updated successfully!"
 msgstr "¡Contraseña actualizada correctamente!"
@@ -781,12 +781,12 @@ msgstr "Seleccionar archivos"
 msgid "Select a scene or act from the Structure tab to edit its content."
 msgstr "Seleccione una escena o acto en la pestaña Estructura para editar su contenido."
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:20
+#: lib/playcode_web/live/user_forgot_password_live.ex:23
 #, elixir-autogen, elixir-format
 msgid "Send password reset instructions"
 msgstr "Enviar instrucciones para restablecer la contraseña"
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:19
+#: lib/playcode_web/live/user_forgot_password_live.ex:22
 #, elixir-autogen, elixir-format
 msgid "Sending..."
 msgstr "Enviando..."
@@ -967,12 +967,12 @@ msgstr "Ver todas las obras"
 msgid "We can't find the internet"
 msgstr "No se puede encontrar la conexión a internet"
 
-#: lib/playcode_web/live/user_forgot_password_live.ex:13
+#: lib/playcode_web/live/user_forgot_password_live.ex:11
 #, elixir-autogen, elixir-format
 msgid "We'll send a password reset link to your inbox"
 msgstr "Le enviaremos un enlace para restablecer su contraseña"
 
-#: lib/playcode_web/controllers/user_session_controller.ex:25
+#: lib/playcode_web/controllers/user_session_controller.ex:21
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
 msgstr "¡Bienvenido de nuevo!"
@@ -2695,7 +2695,7 @@ msgstr "Se han cerrado todas las demás sesiones."
 msgid "This device"
 msgstr "Este dispositivo"
 
-#: lib/playcode_web/controllers/user_session_controller.ex:57
+#: lib/playcode_web/controllers/user_session_controller.ex:53
 #, elixir-autogen, elixir-format
 msgid "Too many login attempts. Please wait a few minutes and try again."
 msgstr ""
@@ -3224,7 +3224,7 @@ msgstr "Iniciar sesión en Playcode"
 msgid "Welcome to Playcode"
 msgstr "Bienvenido a Playcode"
 
-#: lib/playcode_web/controllers/user_session_controller.ex:15
+#: lib/playcode_web/controllers/user_session_controller.ex:11
 #, elixir-autogen, elixir-format
 msgid "Welcome to Playcode!"
 msgstr "¡Bienvenido a Playcode!"
@@ -6443,3 +6443,8 @@ msgstr "versos compartidos"
 #, elixir-autogen, elixir-format
 msgid "Replace the rows edited by hand too"
 msgstr "Reemplazar también las filas editadas a mano"
+
+#: lib/playcode_web/controllers/user_reset_password_controller.ex:34
+#, elixir-autogen, elixir-format
+msgid "Too many attempts. Please wait a while and try again."
+msgstr "Demasiados intentos. Espere un rato e inténtelo de nuevo."

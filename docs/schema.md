@@ -60,6 +60,11 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   10/15 minutes per email address, and a successful login clears the email counter. The IP
   is the visitor's: behind Fly's proxy (`:behind_fly`, set where `FLY_APP_NAME` is) the
   endpoint takes it from `Fly-Client-IP`, never `X-Forwarded-For`, and the sessions list
-  records the same address. An IPv6 client's whole /64 shares one IP counter. An address
-  longer than an account's (160 characters, 640 bytes) gets no email counter, and expired
-  counters are swept every minute.
+  records the same address. An IPv6 client's whole /64 shares one IP counter. A
+  password-reset request has two more: 10/hour per IP, answered "too many attempts", and
+  3/15 minutes per email address, counted whether or not an account has it and answered past
+  the cap with the usual neutral message and no mail, so the cap reveals nothing. The form
+  posts to `UserResetPasswordController`, since a LiveView event cannot see `Fly-Client-IP`.
+  The reset mail is still sent inside the request, so a known address answers slower. An
+  address longer than an account's (160 characters, 640 bytes) gets no email counter, and
+  expired counters are swept every minute.
