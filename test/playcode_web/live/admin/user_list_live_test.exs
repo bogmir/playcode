@@ -87,6 +87,22 @@ defmodule PlaycodeWeb.Admin.UserListLiveTest do
     assert Accounts.get_user!(user.id).role == :admin
   end
 
+  # The pages check a permission when they open: an admin demoted with /admin/users open
+  # went on inviting admins from it.
+  test "given an admin with open sessions then demoting them ends their sessions",
+       %{conn: conn} do
+    admin = admin_fixture()
+    Accounts.generate_user_session_token(admin)
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> element("#user-#{admin.id} button[aria-label='#{t("Demote to researcher")}']")
+    |> render_click()
+
+    assert Accounts.get_user!(admin.id).role == :researcher
+    assert Accounts.list_user_sessions(admin) == []
+  end
+
   test "given a protected admin then demotion is refused", %{conn: conn} do
     # Configured in different case from the account: ADMIN_EMAILS is matched
     # case-insensitively.

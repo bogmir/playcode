@@ -53,6 +53,8 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   with no UI escape. A reset never clears `deactivated_at`.
 - **Accounts are deactivated, never deleted** — `activity_logs.user_id` references them.
   Deactivating destroys every token and disconnects open LiveViews.
+- **A role change ends the user's sessions** (`Accounts.update_user_role/2`): a page checks its
+  permission when it opens, so one left open would keep the old role's.
 - Sessions last 30 days and are listed and revocable at `/users/settings`; admins can force
   logout from `/admin/users`. Login throttling has two ETS keys: 20/minute per IP and
   10/15 minutes per email address, and a successful login clears the email counter.

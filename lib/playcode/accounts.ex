@@ -445,7 +445,8 @@ defmodule Playcode.Accounts do
   end
 
   @doc """
-  Updates the role of a user.
+  Updates the role of a user. A changed role ends the user's sessions: a page checks its
+  permission when it opens, so one left open would keep the old role's.
   """
   def update_user_role(%User{} = user, role) do
     changeset = User.role_changeset(user, %{role: role})
@@ -455,6 +456,9 @@ defmodule Playcode.Accounts do
         do: Ecto.Changeset.change(changeset, %{confirmed_at: DateTime.utc_now(:second)}),
         else: changeset
 
-    Repo.update(changeset)
+    with {:ok, updated} <- Repo.update(changeset) do
+      if updated.role != user.role, do: force_logout(updated)
+      {:ok, updated}
+    end
   end
 end
