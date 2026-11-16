@@ -103,6 +103,8 @@ lib/
     │       ├── export_site_live.ex   # Admin: /admin/export - static site generation UI
     │       ├── play_compare_live.ex  # Admin: /admin/plays/:id/compare - side-by-side comparison; ?view=pairs the pair review
     │       ├── play_bibliography_live.ex # Admin: /admin/plays/:id/bibliography - a play's bibliography
+    │       ├── play_content_editor_live.ex # Admin: /admin/plays/:id/content - a play's text: events, state, the tab bar
+    │       ├── content_editor/           # Its tabs' templates and modal forms, one module per tab, plus the pieces they share
     │       ├── notes_component.ex        # The note editor inside the content editor's modals
     │       ├── play_statistics_live.ex   # Admin: /admin/plays/:id/statistics - the statistics panel and Recompute
     │       ├── play_notes_live.ex        # Admin: /admin/plays/:id/notes - a play's notes, edited in place
