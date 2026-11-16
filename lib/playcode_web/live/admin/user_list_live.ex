@@ -190,19 +190,16 @@ defmodule PlaycodeWeb.Admin.UserListLive do
 
   defp state_badge(assigns) do
     ~H"""
-    <span :if={Playcode.Accounts.protected_admin?(@user)} class="badge badge-sm badge-neutral">
+    <span :if={Accounts.protected_admin?(@user)} class="badge badge-sm badge-neutral">
       {gettext("Protected")}
     </span>
-    <span :if={@user.deactivated_at} class="badge badge-sm badge-error">
+    <span :if={Accounts.status(@user) == :deactivated} class="badge badge-sm badge-error">
       {gettext("Deactivated")}
     </span>
-    <span
-      :if={is_nil(@user.deactivated_at) and is_nil(@user.confirmed_at)}
-      class="badge badge-sm badge-warning"
-    >
+    <span :if={Accounts.status(@user) == :invited} class="badge badge-sm badge-warning">
       {gettext("Invited")}
     </span>
-    <span :if={Playcode.Accounts.active?(@user)} class="badge badge-sm badge-success">
+    <span :if={Accounts.status(@user) == :active} class="badge badge-sm badge-success">
       {gettext("Active")}
     </span>
     """
@@ -329,7 +326,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                     <% end %>
                   <% end %>
                   <button
-                    :if={is_nil(user.confirmed_at) and is_nil(user.deactivated_at)}
+                    :if={Accounts.status(user) == :invited}
                     class="btn btn-xs btn-ghost"
                     phx-click="resend_invite"
                     phx-value-id={user.id}
@@ -337,7 +334,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                     {gettext("Resend invitation")}
                   </button>
                   <button
-                    :if={Playcode.Accounts.active?(user)}
+                    :if={Accounts.status(user) == :active}
                     class="btn btn-xs btn-ghost"
                     phx-click="force_logout"
                     phx-value-id={user.id}
@@ -345,7 +342,9 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                     {gettext("Force logout")}
                   </button>
                   <button
-                    :if={is_nil(user.deactivated_at) and not Playcode.Accounts.protected_admin?(user)}
+                    :if={
+                      Accounts.status(user) != :deactivated and not Accounts.protected_admin?(user)
+                    }
                     class="btn btn-xs btn-ghost text-error"
                     phx-click="deactivate"
                     phx-value-id={user.id}
@@ -353,7 +352,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                     {gettext("Deactivate")}
                   </button>
                   <button
-                    :if={user.deactivated_at}
+                    :if={Accounts.status(user) == :deactivated}
                     class="btn btn-xs btn-ghost"
                     phx-click="reactivate"
                     phx-value-id={user.id}
@@ -361,7 +360,7 @@ defmodule PlaycodeWeb.Admin.UserListLive do
                     {gettext("Reactivate")}
                   </button>
                   <span
-                    :if={Playcode.Accounts.protected_admin?(user)}
+                    :if={Accounts.protected_admin?(user)}
                     class="tooltip"
                     data-tip={gettext("Defined in ADMIN_EMAILS")}
                   >

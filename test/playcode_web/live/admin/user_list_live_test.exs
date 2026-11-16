@@ -48,6 +48,22 @@ defmodule PlaycodeWeb.Admin.UserListLiveTest do
     assert_email_sent(to: invitee.email)
   end
 
+  # Promoting used to confirm the account: an invitee with no password showed as active,
+  # with no invitation left to resend.
+  test "given an invitee promoted before accepting then the invitation can still be resent",
+       %{conn: conn} do
+    {invitee, _token} = invited_user_fixture()
+    {:ok, lv, _html} = live(conn, ~p"/admin/users")
+
+    lv
+    |> element("#user-#{invitee.id} button[aria-label='#{t("Promote to admin")}']")
+    |> render_click()
+
+    assert has_element?(lv, "#user-#{invitee.id}", t("Invited"))
+    click(lv, invitee, t("Resend invitation"))
+    assert_email_sent(to: invitee.email)
+  end
+
   test "given an active user then deactivating them ends their sessions", %{conn: conn} do
     victim = user_fixture()
     Accounts.generate_user_session_token(victim)
