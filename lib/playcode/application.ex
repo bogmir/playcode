@@ -16,8 +16,7 @@ defmodule Playcode.Application do
       OpentelemetryEcto.setup([:playcode, :repo])
     end
 
-    # ETS table for rate limiting (used by PlaycodeWeb.RateLimit)
-    :ets.new(:playcode_rate_limit, [:set, :public, :named_table])
+    PlaycodeWeb.RateLimit.create_table()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options

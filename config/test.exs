@@ -24,6 +24,9 @@ config :playcode, PlaycodeWeb.Endpoint,
   secret_key_base: "3ySNf4PvdqVIMzyo9+6ciUOSYNucw+BOVzy5MYaX4ZS07TB3wxOf10eaXAqYOTaZ",
   server: false
 
+# The login tests give each visitor an address through Fly-Client-IP.
+config :playcode, :behind_fly, true
+
 # In test we don't send emails
 config :playcode, Playcode.Mailer, adapter: Swoosh.Adapters.Test
 

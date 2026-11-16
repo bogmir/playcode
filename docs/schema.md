@@ -57,4 +57,9 @@ Division types: `acto`, `escena`, `prologo`, `argumento`, `dedicatoria`, `elenco
   permission when it opens, so one left open would keep the old role's.
 - Sessions last 30 days and are listed and revocable at `/users/settings`; admins can force
   logout from `/admin/users`. Login throttling has two ETS keys: 20/minute per IP and
-  10/15 minutes per email address, and a successful login clears the email counter.
+  10/15 minutes per email address, and a successful login clears the email counter. The IP
+  is the visitor's: behind Fly's proxy (`:behind_fly`, set where `FLY_APP_NAME` is) the
+  endpoint takes it from `Fly-Client-IP`, never `X-Forwarded-For`, and the sessions list
+  records the same address. An IPv6 client's whole /64 shares one IP counter. An address
+  longer than an account's (160 characters, 640 bytes) gets no email counter, and expired
+  counters are swept every minute.
