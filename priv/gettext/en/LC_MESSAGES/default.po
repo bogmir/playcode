@@ -23,35 +23,35 @@ msgstr ""
 msgid "Actions"
 msgstr ""
 
+#: lib/playcode_web/live/admin/content_editor/characters.ex:366
+#: lib/playcode_web/live/admin/content_editor/components.ex:169
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:393
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1428
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3379
 #: lib/playcode_web/live/admin/play_places_live.ex:270
 #, elixir-autogen, elixir-format
 msgid "Add"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1649
+#: lib/playcode_web/live/admin/content_editor/characters.ex:32
 #, elixir-autogen, elixir-format
 msgid "Add Character"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3030
+#: lib/playcode_web/live/admin/content_editor/content.ex:499
 #, elixir-autogen, elixir-format
 msgid "Add Line Group"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3046
+#: lib/playcode_web/live/admin/content_editor/content.ex:515
 #, elixir-autogen, elixir-format
 msgid "Add Prose"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3038
+#: lib/playcode_web/live/admin/content_editor/content.ex:507
 #, elixir-autogen, elixir-format
 msgid "Add Stage Direction"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3056
+#: lib/playcode_web/live/admin/content_editor/content.ex:525
 #, elixir-autogen, elixir-format
 msgid "Add Verse Line"
 msgstr ""
@@ -67,7 +67,7 @@ msgstr ""
 msgid "Admin - Plays"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3545
+#: lib/playcode_web/live/admin/content_editor/content.ex:661
 #, elixir-autogen, elixir-format
 msgid "Aside"
 msgstr ""
@@ -85,7 +85,7 @@ msgstr ""
 msgid "Attempting to reconnect"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:292
+#: lib/playcode_web/live/admin/play_detail_live.ex:288
 #: lib/playcode_web/live/admin/play_form_live.ex:695
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:160
 #, elixir-autogen, elixir-format
@@ -102,17 +102,17 @@ msgstr ""
 msgid "Author Name"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:334
+#: lib/playcode_web/live/admin/content_editor/characters.ex:239
+#: lib/playcode_web/live/admin/content_editor/characters.ex:332
+#: lib/playcode_web/live/admin/content_editor/characters.ex:368
+#: lib/playcode_web/live/admin/content_editor/content.ex:245
+#: lib/playcode_web/live/admin/content_editor/content.ex:811
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:153
+#: lib/playcode_web/live/admin/content_editor/structure.ex:303
+#: lib/playcode_web/live/admin/import_live.ex:365
 #: lib/playcode_web/live/admin/notes_component.ex:293
 #: lib/playcode_web/live/admin/place_form_component.ex:344
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:444
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2182
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3209
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3262
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3348
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3381
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3442
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3695
 #: lib/playcode_web/live/admin/play_editors_live.ex:232
 #: lib/playcode_web/live/admin/play_form_live.ex:1037
 #: lib/playcode_web/live/admin/play_notes_live.ex:339
@@ -125,7 +125,7 @@ msgstr ""
 msgid "Cancel"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1491
+#: lib/playcode/export/static_site/components.ex:1525
 #: lib/playcode_web/live/admin/play_form_live.ex:379
 #, elixir-autogen, elixir-format
 msgid "Catalan"
@@ -148,39 +148,39 @@ msgstr ""
 msgid "Changing..."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1343
-#: lib/playcode/export/static_site/components.ex:1414
-#: lib/playcode_web/components/statistics_panel.ex:252
-#: lib/playcode_web/components/statistics_panel.ex:352
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3219
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3272
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3374
+#: lib/playcode/export/static_site/components.ex:1377
+#: lib/playcode/export/static_site/components.ex:1448
+#: lib/playcode_web/components/statistics_panel.ex:258
+#: lib/playcode_web/components/statistics_panel.ex:358
+#: lib/playcode_web/live/admin/content_editor/characters.ex:196
+#: lib/playcode_web/live/admin/content_editor/characters.ex:256
+#: lib/playcode_web/live/admin/content_editor/characters.ex:361
 #, elixir-autogen, elixir-format
 msgid "Character"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:992
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1018
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:983
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1010
 #, elixir-autogen, elixir-format
 msgid "Character saved."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1327
-#: lib/playcode_web/components/statistics_panel.ex:245
-#: lib/playcode_web/components/statistics_panel.ex:248
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2582
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3487
+#: lib/playcode/export/static_site/components.ex:1361
+#: lib/playcode_web/components/statistics_panel.ex:251
+#: lib/playcode_web/components/statistics_panel.ex:254
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:58
+#: lib/playcode_web/live/admin/content_editor/content.ex:603
 #, elixir-autogen, elixir-format
 msgid "Characters"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:192
+#: lib/playcode_web/live/admin/import_live.ex:201
 #, elixir-autogen, elixir-format
 msgid "Choose one or more TEI-XML files from your computer."
 msgstr ""
 
 #: lib/playcode/export/static_site/pages/title.html.heex:15
-#: lib/playcode_web/live/admin/import_live.ex:378
+#: lib/playcode_web/live/admin/import_live.ex:409
 #: lib/playcode_web/live/admin/play_form_live.ex:533
 #: lib/playcode_web/live/admin/play_list_live.ex:293
 #, elixir-autogen, elixir-format
@@ -195,12 +195,12 @@ msgstr ""
 
 #: lib/playcode_web/components/layouts.ex:268
 #: lib/playcode_web/components/layouts.ex:300
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1497
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1556
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3174
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3553
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3594
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3646
+#: lib/playcode_web/live/admin/content_editor/content.ex:669
+#: lib/playcode_web/live/admin/content_editor/content.ex:710
+#: lib/playcode_web/live/admin/content_editor/content.ex:762
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:118
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1427
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1486
 #, elixir-autogen, elixir-format
 msgid "Content"
 msgstr ""
@@ -223,15 +223,15 @@ msgstr ""
 msgid "Dashboard"
 msgstr ""
 
+#: lib/playcode_web/live/admin/content_editor/content.ex:470
+#: lib/playcode_web/live/admin/content_editor/content.ex:471
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:71
+#: lib/playcode_web/live/admin/content_editor/structure.ex:92
+#: lib/playcode_web/live/admin/content_editor/structure.ex:93
+#: lib/playcode_web/live/admin/content_editor/structure.ex:203
+#: lib/playcode_web/live/admin/content_editor/structure.ex:204
 #: lib/playcode_web/live/admin/notes_component.ex:222
 #: lib/playcode_web/live/admin/place_list_live.ex:189
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1629
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2305
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2306
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2417
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2418
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3001
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3002
 #: lib/playcode_web/live/admin/play_editors_live.ex:281
 #: lib/playcode_web/live/admin/play_notes_live.ex:382
 #: lib/playcode_web/live/admin/play_sources_live.ex:293
@@ -240,56 +240,56 @@ msgstr ""
 msgid "Delete"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2444
+#: lib/playcode_web/live/admin/content_editor/structure.ex:230
 #, elixir-autogen, elixir-format
 msgid "Delete this division and all its content?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2999
+#: lib/playcode_web/live/admin/content_editor/content.ex:468
 #, elixir-autogen, elixir-format
 msgid "Delete this element and its children?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2455
+#: lib/playcode_web/live/admin/content_editor/structure.ex:241
 #, elixir-autogen, elixir-format
 msgid "Delete this scene and all its content?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3243
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3293
+#: lib/playcode_web/live/admin/content_editor/characters.ex:220
+#: lib/playcode_web/live/admin/content_editor/characters.ex:277
 #, elixir-autogen, elixir-format
 msgid "Description"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3391
+#: lib/playcode_web/live/admin/content_editor/structure.ex:252
 #, elixir-autogen, elixir-format
 msgid "Division"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:737
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:732
 #, elixir-autogen, elixir-format
 msgid "Division deleted."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1177
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1167
 #, elixir-autogen, elixir-format
 msgid "Division saved."
 msgstr ""
 
+#: lib/playcode_web/live/admin/content_editor/characters.ex:139
+#: lib/playcode_web/live/admin/content_editor/characters.ex:140
+#: lib/playcode_web/live/admin/content_editor/characters.ex:256
+#: lib/playcode_web/live/admin/content_editor/components.ex:170
+#: lib/playcode_web/live/admin/content_editor/content.ex:460
+#: lib/playcode_web/live/admin/content_editor/content.ex:461
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:63
+#: lib/playcode_web/live/admin/content_editor/structure.ex:82
+#: lib/playcode_web/live/admin/content_editor/structure.ex:83
 #: lib/playcode_web/live/admin/notes_component.ex:212
 #: lib/playcode_web/live/admin/place_list_live.ex:181
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:521
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1429
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1621
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1757
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1758
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2295
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2296
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2991
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2992
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3272
-#: lib/playcode_web/live/admin/play_detail_live.ex:282
-#: lib/playcode_web/live/admin/play_detail_live.ex:371
+#: lib/playcode_web/live/admin/play_detail_live.ex:278
+#: lib/playcode_web/live/admin/play_detail_live.ex:367
 #: lib/playcode_web/live/admin/play_editors_live.ex:273
 #: lib/playcode_web/live/admin/play_form_live.ex:128
 #: lib/playcode_web/live/admin/play_notes_live.ex:373
@@ -299,22 +299,22 @@ msgstr ""
 msgid "Edit"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:63
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2347
+#: lib/playcode_web/live/admin/content_editor/structure.ex:134
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:73
 #, elixir-autogen, elixir-format
 msgid "Edit Content"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:419
-#: lib/playcode_web/live/admin/import_live.ex:420
+#: lib/playcode_web/live/admin/import_live.ex:450
+#: lib/playcode_web/live/admin/import_live.ex:451
 #: lib/playcode_web/live/play_show_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Edit in Admin"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2407
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2408
-#: lib/playcode_web/live/admin/play_detail_live.ex:187
+#: lib/playcode_web/live/admin/content_editor/structure.ex:193
+#: lib/playcode_web/live/admin/content_editor/structure.ex:194
+#: lib/playcode_web/live/admin/play_detail_live.ex:183
 #, elixir-autogen, elixir-format
 msgid "Edit metadata"
 msgstr ""
@@ -329,12 +329,12 @@ msgstr ""
 msgid "Editors"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:818
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:811
 #, elixir-autogen, elixir-format
 msgid "Element deleted."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1231
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1213
 #, elixir-autogen, elixir-format
 msgid "Element saved."
 msgstr ""
@@ -346,13 +346,13 @@ msgstr ""
 msgid "Email"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1489
+#: lib/playcode/export/static_site/components.ex:1523
 #: lib/playcode_web/live/admin/play_form_live.ex:377
 #, elixir-autogen, elixir-format
 msgid "English"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:470
+#: lib/playcode_web/live/admin/import_live.ex:505
 #, elixir-autogen, elixir-format
 msgid "Error"
 msgstr ""
@@ -362,12 +362,12 @@ msgstr ""
 msgid "Export"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:376
+#: lib/playcode_web/live/admin/import_live.ex:407
 #, elixir-autogen, elixir-format
 msgid "File"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:467
+#: lib/playcode_web/live/admin/import_live.ex:502
 #, elixir-autogen, elixir-format
 msgid "File is too large (max 20MB)"
 msgstr ""
@@ -378,19 +378,19 @@ msgstr ""
 msgid "Forgot your password?"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1492
+#: lib/playcode/export/static_site/components.ex:1526
 #: lib/playcode_web/live/admin/play_form_live.ex:380
 #, elixir-autogen, elixir-format
 msgid "French"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2070
+#: lib/playcode_web/live/admin/content_editor/content.ex:133
 #, elixir-autogen, elixir-format
 msgid "Go to Structure"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3254
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3334
+#: lib/playcode_web/live/admin/content_editor/characters.ex:231
+#: lib/playcode_web/live/admin/content_editor/characters.ex:318
 #, elixir-autogen, elixir-format
 msgid "Hidden character"
 msgstr ""
@@ -401,8 +401,8 @@ msgid "If your email is in our system, you will receive instructions to reset yo
 msgstr ""
 
 #: lib/playcode_web/components/layouts.ex:309
-#: lib/playcode_web/live/admin/import_live.ex:331
-#: lib/playcode_web/live/admin/import_live.ex:472
+#: lib/playcode_web/live/admin/import_live.ex:362
+#: lib/playcode_web/live/admin/import_live.ex:507
 #, elixir-autogen, elixir-format
 msgid "Import"
 msgstr ""
@@ -413,41 +413,41 @@ msgstr ""
 msgid "Import TEI-XML"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:181
+#: lib/playcode_web/live/admin/import_live.ex:190
 #, elixir-autogen, elixir-format
 msgid "Import TEI-XML Files"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:123
+#: lib/playcode_web/live/admin/import_live.ex:132
 #, elixir-autogen, elixir-format
 msgid "Import errors"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:183
+#: lib/playcode_web/live/admin/import_live.ex:192
 #, elixir-autogen, elixir-format
 msgid "Import one or many TEI files and review successful ingestions."
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:366
-#: lib/playcode_web/live/admin/import_live.ex:371
+#: lib/playcode_web/live/admin/import_live.ex:397
+#: lib/playcode_web/live/admin/import_live.ex:402
 #, elixir-autogen, elixir-format
 msgid "Imported Plays"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2933
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2934
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2982
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2983
+#: lib/playcode_web/live/admin/content_editor/content.ex:402
+#: lib/playcode_web/live/admin/content_editor/content.ex:403
+#: lib/playcode_web/live/admin/content_editor/content.ex:451
+#: lib/playcode_web/live/admin/content_editor/content.ex:452
 #, elixir-autogen, elixir-format
 msgid "Insert Above"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:43
+#: lib/playcode_web/controllers/user_session_controller.ex:48
 #, elixir-autogen, elixir-format
 msgid "Invalid email or password"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1490
+#: lib/playcode/export/static_site/components.ex:1524
 #: lib/playcode_web/live/admin/play_form_live.ex:378
 #, elixir-autogen, elixir-format
 msgid "Italian"
@@ -458,12 +458,12 @@ msgstr ""
 msgid "Keep me logged in"
 msgstr ""
 
-#: lib/playcode/export/static_site.ex:695
+#: lib/playcode/export/static_site.ex:714
 #: lib/playcode/export/static_site/pages.ex:48
 #: lib/playcode/export/static_site/pages/title.html.heex:17
 #: lib/playcode_web/live/admin/entry_fields.ex:37
 #: lib/playcode_web/live/admin/place_form_component.ex:256
-#: lib/playcode_web/live/admin/play_detail_live.ex:289
+#: lib/playcode_web/live/admin/play_detail_live.ex:285
 #: lib/playcode_web/live/admin/play_form_live.ex:689
 #: lib/playcode_web/live/admin/play_sources_live.ex:214
 #: lib/playcode_web/live/admin/play_sources_live.ex:308
@@ -471,12 +471,12 @@ msgstr ""
 msgid "Language"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3089
+#: lib/playcode_web/live/admin/content_editor/content.ex:558
 #, elixir-autogen, elixir-format
 msgid "Line Group"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3679
+#: lib/playcode_web/live/admin/content_editor/content.ex:795
 #, elixir-autogen, elixir-format
 msgid "Line Number"
 msgstr ""
@@ -503,7 +503,7 @@ msgstr ""
 msgid "Log out"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:60
+#: lib/playcode_web/controllers/user_session_controller.ex:65
 #, elixir-autogen, elixir-format
 msgid "Logged out successfully."
 msgstr ""
@@ -520,9 +520,9 @@ msgstr ""
 msgid "Metadata"
 msgstr ""
 
+#: lib/playcode_web/live/admin/content_editor/characters.ex:214
+#: lib/playcode_web/live/admin/content_editor/characters.ex:271
 #: lib/playcode_web/live/admin/place_form_component.ex:250
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3237
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3287
 #: lib/playcode_web/live/admin/play_editors_live.ex:194
 #, elixir-autogen, elixir-format
 msgid "Name"
@@ -541,30 +541,30 @@ msgid "New password"
 msgstr ""
 
 #: lib/playcode_web/live/admin/activity_log_live.ex:363
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2108
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2109
+#: lib/playcode_web/live/admin/content_editor/content.ex:171
+#: lib/playcode_web/live/admin/content_editor/content.ex:172
 #: lib/playcode_web/live/admin/play_list_live.ex:378
 #: lib/playcode_web/live/admin/user_list_live.ex:400
 #, elixir-autogen, elixir-format
 msgid "Next"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1927
+#: lib/playcode_web/live/admin/content_editor/structure.ex:44
 #, elixir-autogen, elixir-format
 msgid "No acts or scenes yet. Add an act to get started."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1662
+#: lib/playcode_web/live/admin/content_editor/characters.ex:45
 #, elixir-autogen, elixir-format
 msgid "No characters yet. Add one to get started."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2231
+#: lib/playcode_web/live/admin/content_editor/preview.ex:45
 #, elixir-autogen, elixir-format
 msgid "No content to preview yet."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2146
+#: lib/playcode_web/live/admin/content_editor/content.ex:209
 #, elixir-autogen, elixir-format
 msgid "No content yet. Add a speech, stage direction, or prose."
 msgstr ""
@@ -574,12 +574,12 @@ msgstr ""
 msgid "No plays yet. Import a TEI-XML file or create a new play."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3413
+#: lib/playcode_web/live/admin/content_editor/structure.ex:274
 #, elixir-autogen, elixir-format
 msgid "Number"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:468
+#: lib/playcode_web/live/admin/import_live.ex:503
 #, elixir-autogen, elixir-format
 msgid "Only .xml files are accepted"
 msgstr ""
@@ -595,7 +595,7 @@ msgstr ""
 msgid "Overview"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3685
+#: lib/playcode_web/live/admin/content_editor/content.ex:801
 #, elixir-autogen, elixir-format
 msgid "Part (split line)"
 msgstr ""
@@ -612,18 +612,18 @@ msgstr ""
 msgid "Password reset successfully."
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:16
+#: lib/playcode_web/controllers/user_session_controller.ex:21
 #, elixir-autogen, elixir-format
 msgid "Password updated successfully!"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1907
+#: lib/playcode_web/live/admin/content_editor/structure.ex:24
 #, elixir-autogen, elixir-format
 msgid "Play Structure"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2202
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2210
+#: lib/playcode_web/live/admin/content_editor/preview.ex:16
+#: lib/playcode_web/live/admin/content_editor/preview.ex:24
 #, elixir-autogen, elixir-format
 msgid "Play Text Preview"
 msgstr ""
@@ -638,7 +638,7 @@ msgstr ""
 msgid "Play updated successfully."
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:172
+#: lib/playcode_web/live/admin/import_live.ex:181
 #, elixir-autogen, elixir-format
 msgid "Play with code %{code} already exists"
 msgstr ""
@@ -654,15 +654,15 @@ msgstr ""
 msgid "Plays"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1493
+#: lib/playcode/export/static_site/components.ex:1527
 #: lib/playcode_web/live/admin/play_form_live.ex:381
 #, elixir-autogen, elixir-format
 msgid "Portuguese"
 msgstr ""
 
 #: lib/playcode_web/live/admin/activity_log_live.ex:353
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2098
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2099
+#: lib/playcode_web/live/admin/content_editor/content.ex:161
+#: lib/playcode_web/live/admin/content_editor/content.ex:162
 #: lib/playcode_web/live/admin/play_list_live.ex:368
 #: lib/playcode_web/live/admin/user_list_live.ex:390
 #, elixir-autogen, elixir-format
@@ -670,15 +670,15 @@ msgid "Previous"
 msgstr ""
 
 #: lib/playcode/export/static_site/components.ex:643
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2136
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2969
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3088
+#: lib/playcode_web/live/admin/content_editor/content.ex:199
+#: lib/playcode_web/live/admin/content_editor/content.ex:438
+#: lib/playcode_web/live/admin/content_editor/content.ex:557
 #: lib/playcode_web/play_labels.ex:181
 #, elixir-autogen, elixir-format
 msgid "Prose"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3600
+#: lib/playcode_web/live/admin/content_editor/content.ex:716
 #, elixir-autogen, elixir-format
 msgid "Prose text..."
 msgstr ""
@@ -698,14 +698,14 @@ msgstr ""
 msgid "Recompute"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:214
-#: lib/playcode_web/live/admin/import_live.ex:215
+#: lib/playcode_web/live/admin/content_editor/characters.ex:149
+#: lib/playcode_web/live/admin/content_editor/characters.ex:150
+#: lib/playcode_web/live/admin/import_live.ex:223
+#: lib/playcode_web/live/admin/import_live.ex:224
 #: lib/playcode_web/live/admin/notes_component.ex:336
 #: lib/playcode_web/live/admin/place_form_component.ex:281
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:531
 #: lib/playcode_web/live/admin/play_compare_live.ex:266
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1767
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1768
 #: lib/playcode_web/live/admin/play_form_live.ex:966
 #: lib/playcode_web/live/admin/play_places_live.ex:330
 #: lib/playcode_web/live/play_compare_live.ex:170
@@ -729,14 +729,14 @@ msgstr ""
 msgid "Resetting..."
 msgstr ""
 
+#: lib/playcode_web/live/admin/content_editor/characters.ex:237
+#: lib/playcode_web/live/admin/content_editor/characters.ex:330
+#: lib/playcode_web/live/admin/content_editor/content.ex:809
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:151
+#: lib/playcode_web/live/admin/content_editor/structure.ex:301
 #: lib/playcode_web/live/admin/notes_component.ex:286
 #: lib/playcode_web/live/admin/place_form_component.ex:346
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:446
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3207
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3260
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3346
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3440
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3693
 #: lib/playcode_web/live/admin/play_editors_live.ex:235
 #: lib/playcode_web/live/admin/play_notes_live.ex:341
 #: lib/playcode_web/live/admin/play_performances_live.ex:802
@@ -771,12 +771,12 @@ msgstr ""
 msgid "Sections"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:190
+#: lib/playcode_web/live/admin/import_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "Select Files"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2063
+#: lib/playcode_web/live/admin/content_editor/content.ex:126
 #, elixir-autogen, elixir-format
 msgid "Select a scene or act from the Structure tab to edit its content."
 msgstr ""
@@ -809,36 +809,36 @@ msgstr ""
 msgid "Source"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1488
+#: lib/playcode/export/static_site/components.ex:1522
 #: lib/playcode_web/live/admin/play_form_live.ex:376
 #, elixir-autogen, elixir-format
 msgid "Spanish"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3478
+#: lib/playcode_web/live/admin/content_editor/content.ex:594
 #, elixir-autogen, elixir-format
 msgid "Speaker Label"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2122
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2949
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3085
+#: lib/playcode_web/live/admin/content_editor/content.ex:185
+#: lib/playcode_web/live/admin/content_editor/content.ex:418
+#: lib/playcode_web/live/admin/content_editor/content.ex:554
 #, elixir-autogen, elixir-format
 msgid "Speech"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2129
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3086
+#: lib/playcode_web/live/admin/content_editor/content.ex:192
+#: lib/playcode_web/live/admin/content_editor/content.ex:555
 #, elixir-autogen, elixir-format
 msgid "Stage Dir."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2959
+#: lib/playcode_web/live/admin/content_editor/content.ex:428
 #, elixir-autogen, elixir-format
 msgid "Stage Direction"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3559
+#: lib/playcode_web/live/admin/content_editor/content.ex:675
 #, elixir-autogen, elixir-format
 msgid "Stage direction text..."
 msgstr ""
@@ -849,7 +849,7 @@ msgstr ""
 #: lib/playcode/export/static_site/pages.ex:60
 #: lib/playcode/export/static_site/pages/stage_directions.html.heex:11
 #: lib/playcode_web/live/admin/play_compare_live.ex:197
-#: lib/playcode_web/live/admin/play_detail_live.ex:439
+#: lib/playcode_web/live/admin/play_detail_live.ex:435
 #: lib/playcode_web/live/play_compare_live.ex:102
 #: lib/playcode_web/live/play_show_live.ex:252
 #: lib/playcode_web/live/play_show_live.ex:356
@@ -860,7 +860,7 @@ msgstr ""
 #: lib/playcode/export/static_site/components.ex:330
 #: lib/playcode/export/static_site/pages/statistics.html.heex:9
 #: lib/playcode_web/components/layouts.ex:270
-#: lib/playcode_web/live/admin/play_detail_live.ex:427
+#: lib/playcode_web/live/admin/play_detail_live.ex:423
 #: lib/playcode_web/live/admin/play_statistics_live.ex:21
 #: lib/playcode_web/live/admin/play_statistics_live.ex:40
 #: lib/playcode_web/live/play_show_live.ex:180
@@ -873,13 +873,13 @@ msgstr ""
 msgid "Statistics recomputed."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1536
-#: lib/playcode_web/live/admin/play_detail_live.ex:344
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1466
+#: lib/playcode_web/live/admin/play_detail_live.ex:340
 #, elixir-autogen, elixir-format
 msgid "Structure"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:135
+#: lib/playcode_web/live/admin/import_live.ex:144
 #, elixir-autogen, elixir-format
 msgid "Successfully imported %{count} play(s)."
 msgstr ""
@@ -899,10 +899,10 @@ msgid "Text"
 msgstr ""
 
 #: lib/playcode/export/static_site/pages/catalogue.html.heex:47
+#: lib/playcode_web/live/admin/content_editor/structure.ex:280
 #: lib/playcode_web/live/admin/entry_fields.ex:47
 #: lib/playcode_web/live/admin/entry_fields.ex:57
-#: lib/playcode_web/live/admin/import_live.ex:377
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3419
+#: lib/playcode_web/live/admin/import_live.ex:408
 #: lib/playcode_web/live/admin/play_form_live.ex:455
 #: lib/playcode_web/live/admin/play_list_live.ex:294
 #: lib/playcode_web/live/admin/play_sources_live.ex:186
@@ -910,16 +910,16 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:469
+#: lib/playcode_web/live/admin/import_live.ex:504
 #, elixir-autogen, elixir-format
 msgid "Too many files (max 20)"
 msgstr ""
 
+#: lib/playcode_web/live/admin/content_editor/structure.ex:264
 #: lib/playcode_web/live/admin/entry_fields.ex:30
 #: lib/playcode_web/live/admin/notes_component.ex:261
 #: lib/playcode_web/live/admin/place_form_component.ex:303
 #: lib/playcode_web/live/admin/place_list_live.ex:143
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3403
 #: lib/playcode_web/live/admin/play_notes_live.ex:307
 #: lib/playcode_web/live/admin/play_witnesses_live.ex:154
 #, elixir-autogen, elixir-format
@@ -932,32 +932,32 @@ msgid "Update bibliographic and editorial metadata for this play."
 msgstr ""
 
 #: lib/playcode/export/static_site/components.ex:646
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3087
+#: lib/playcode_web/live/admin/content_editor/content.ex:556
 #: lib/playcode_web/play_labels.ex:179
 #, elixir-autogen, elixir-format
 msgid "Verse"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3630
+#: lib/playcode_web/live/admin/content_editor/content.ex:746
 #, elixir-autogen, elixir-format
 msgid "Verse Type"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3652
+#: lib/playcode_web/live/admin/content_editor/content.ex:768
 #, elixir-autogen, elixir-format
 msgid "Verse line text..."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1167
-#: lib/playcode/export/static_site/components.ex:1257
+#: lib/playcode/export/static_site/components.ex:1201
+#: lib/playcode/export/static_site/components.ex:1291
 #: lib/playcode_web/components/statistics_panel.ex:57
-#: lib/playcode_web/components/statistics_panel.ex:205
+#: lib/playcode_web/components/statistics_panel.ex:211
 #: lib/playcode_web/live/admin/play_list_live.ex:296
 #, elixir-autogen, elixir-format
 msgid "Verses"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:440
+#: lib/playcode_web/live/admin/import_live.ex:471
 #, elixir-autogen, elixir-format
 msgid "View all plays"
 msgstr ""
@@ -972,7 +972,7 @@ msgstr ""
 msgid "We'll send a password reset link to your inbox"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:20
+#: lib/playcode_web/controllers/user_session_controller.ex:25
 #, elixir-autogen, elixir-format
 msgid "Welcome back!"
 msgstr ""
@@ -983,7 +983,7 @@ msgstr ""
 msgid "You must log in to access this page."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2923
+#: lib/playcode_web/live/admin/content_editor/content.ex:392
 #, elixir-autogen, elixir-format
 msgid "aside"
 msgstr ""
@@ -993,7 +993,7 @@ msgstr ""
 msgid "close"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3421
+#: lib/playcode_web/live/admin/content_editor/structure.ex:282
 #, elixir-autogen, elixir-format
 msgid "e.g. ACTO PRIMERO"
 msgstr ""
@@ -1003,56 +1003,56 @@ msgstr ""
 msgid "e.g. AL0569"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3480
+#: lib/playcode_web/live/admin/content_editor/content.ex:596
 #, elixir-autogen, elixir-format
 msgid "e.g. ANA"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3233
+#: lib/playcode_web/live/admin/content_editor/characters.ex:210
 #, elixir-autogen, elixir-format
 msgid "e.g. DONA_ANA"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3239
+#: lib/playcode_web/live/admin/content_editor/characters.ex:216
 #, elixir-autogen, elixir-format
 msgid "e.g. Dona Ana"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3586
+#: lib/playcode_web/live/admin/content_editor/content.ex:702
 #, elixir-autogen, elixir-format
 msgid "e.g. italics"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3245
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3295
+#: lib/playcode_web/live/admin/content_editor/characters.ex:222
+#: lib/playcode_web/live/admin/content_editor/characters.ex:279
 #, elixir-autogen, elixir-format
 msgid "e.g. una dama"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2387
+#: lib/playcode_web/live/admin/content_editor/structure.ex:173
 #, elixir-autogen, elixir-format
 msgid "editing"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1733
+#: lib/playcode_web/live/admin/content_editor/characters.ex:115
 #, elixir-autogen, elixir-format
 msgid "hidden"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1130
-#: lib/playcode_web/components/statistics_panel.ex:98
-#: lib/playcode_web/live/admin/play_detail_live.ex:242
+#: lib/playcode/export/static_site/components.ex:1164
+#: lib/playcode_web/components/statistics_panel.ex:104
+#: lib/playcode_web/live/admin/play_detail_live.ex:238
 #: lib/playcode_web/play_labels.ex:188
 #, elixir-autogen, elixir-format
 msgid "verses"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1449
+#: lib/playcode_web/live/admin/content_editor/structure.ex:326
 #, elixir-autogen, elixir-format
 msgid "Act (act)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1448
+#: lib/playcode_web/live/admin/content_editor/structure.ex:325
 #, elixir-autogen, elixir-format
 msgid "Act (acto)"
 msgstr ""
@@ -1067,7 +1067,7 @@ msgstr ""
 msgid "Add the first source"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1452
+#: lib/playcode_web/live/admin/content_editor/structure.ex:329
 #: lib/playcode_web/play_labels.ex:133
 #, elixir-autogen, elixir-format
 msgid "Argument"
@@ -1084,7 +1084,7 @@ msgid "Author"
 msgstr ""
 
 #: lib/playcode_web/live/admin/place_list_live.ex:144
-#: lib/playcode_web/live/admin/play_detail_live.ex:323
+#: lib/playcode_web/live/admin/play_detail_live.ex:319
 #: lib/playcode_web/live/admin/play_form_live.ex:753
 #, elixir-autogen, elixir-format
 msgid "Authority"
@@ -1100,10 +1100,10 @@ msgstr ""
 msgid "Bibliographic Sources"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1456
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1543
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1640
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1681
+#: lib/playcode_web/live/admin/content_editor/characters.ex:23
+#: lib/playcode_web/live/admin/content_editor/characters.ex:63
+#: lib/playcode_web/live/admin/content_editor/structure.ex:333
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1473
 #, elixir-autogen, elixir-format
 msgid "Cast list"
 msgstr ""
@@ -1133,7 +1133,7 @@ msgstr ""
 msgid "Digital editor"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:310
+#: lib/playcode_web/live/admin/play_detail_live.ex:306
 #: lib/playcode_web/live/admin/play_form_live.ex:544
 #, elixir-autogen, elixir-format
 msgid "EMOTHE ID"
@@ -1158,13 +1158,13 @@ msgstr ""
 msgid "Editor role"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1453
+#: lib/playcode_web/live/admin/content_editor/structure.ex:330
 #: lib/playcode_web/play_labels.ex:138
 #, elixir-autogen, elixir-format
 msgid "Epilogue"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:325
+#: lib/playcode_web/live/admin/play_detail_live.ex:321
 #: lib/playcode_web/live/admin/play_form_live.ex:997
 #, elixir-autogen, elixir-format
 msgid "Funder"
@@ -1186,7 +1186,7 @@ msgstr ""
 msgid "Institutional authority"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1450
+#: lib/playcode_web/live/admin/content_editor/structure.ex:327
 #: lib/playcode_web/play_labels.ex:288
 #: lib/playcode_web/play_labels.ex:292
 #, elixir-autogen, elixir-format
@@ -1240,7 +1240,7 @@ msgstr ""
 msgid "Principal investigator"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1451
+#: lib/playcode_web/live/admin/content_editor/structure.ex:328
 #: lib/playcode_web/play_labels.ex:132
 #: lib/playcode_web/play_labels.ex:356
 #, elixir-autogen, elixir-format
@@ -1248,7 +1248,7 @@ msgid "Prologue"
 msgstr ""
 
 #: lib/playcode_web/live/admin/entry_fields.ex:67
-#: lib/playcode_web/live/admin/play_detail_live.ex:306
+#: lib/playcode_web/live/admin/play_detail_live.ex:302
 #: lib/playcode_web/live/admin/play_form_live.ex:747
 #: lib/playcode_web/live/admin/play_sources_live.ex:220
 #: lib/playcode_web/live/admin/play_sources_live.ex:305
@@ -1278,12 +1278,12 @@ msgstr ""
 msgid "Reviewer"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1446
+#: lib/playcode_web/live/admin/content_editor/structure.ex:323
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Scene (escena)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1446
+#: lib/playcode_web/live/admin/content_editor/structure.ex:323
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Scene (scene)"
 msgstr ""
@@ -1317,7 +1317,7 @@ msgstr ""
 msgid "Split verses"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:324
+#: lib/playcode_web/live/admin/play_detail_live.ex:320
 #: lib/playcode_web/live/admin/play_form_live.ex:987
 #, elixir-autogen, elixir-format
 msgid "Sponsor"
@@ -1370,8 +1370,8 @@ msgstr ""
 msgid "e.g. traductor"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1254
-#: lib/playcode_web/components/statistics_panel.ex:202
+#: lib/playcode/export/static_site/components.ex:1288
+#: lib/playcode_web/components/statistics_panel.ex:208
 #: lib/playcode_web/play_labels.ex:289
 #: lib/playcode_web/play_labels.ex:293
 #, elixir-autogen, elixir-format, fuzzy
@@ -1445,8 +1445,8 @@ msgid "Canción"
 msgstr ""
 
 #: lib/playcode_web/live/admin/activity_log_live.ex:286
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:195
 #: lib/playcode_web/live/admin/place_picker.ex:35
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2719
 #: lib/playcode_web/live/admin/play_form_live.ex:589
 #, elixir-autogen, elixir-format
 msgid "Clear"
@@ -1457,7 +1457,7 @@ msgstr ""
 msgid "Delete this editor?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:406
+#: lib/playcode_web/live/admin/play_detail_live.ex:402
 #, elixir-autogen, elixir-format
 msgid "Derived works:"
 msgstr ""
@@ -1472,8 +1472,8 @@ msgstr ""
 msgid "Edit editor"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1703
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1704
+#: lib/playcode_web/live/admin/content_editor/characters.ex:85
+#: lib/playcode_web/live/admin/content_editor/characters.ex:86
 #, elixir-autogen, elixir-format
 msgid "Edit header"
 msgstr ""
@@ -1508,8 +1508,8 @@ msgstr ""
 msgid "Full editorial citation"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3164
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3634
+#: lib/playcode_web/live/admin/content_editor/content.ex:750
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:108
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Heading"
 msgstr ""
@@ -1659,20 +1659,20 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:387
+#: lib/playcode_web/live/admin/play_detail_live.ex:383
 #: lib/playcode_web/live/admin/play_form_live.ex:560
 #: lib/playcode_web/live/admin/play_form_live.ex:1051
 #, elixir-autogen, elixir-format
 msgid "Work Relationship"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:401
+#: lib/playcode_web/live/admin/play_detail_live.ex:397
 #, elixir-autogen, elixir-format
 msgid "not linked"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:394
-#: lib/playcode_web/live/admin/play_detail_live.ex:401
+#: lib/playcode_web/live/admin/play_detail_live.ex:390
+#: lib/playcode_web/live/admin/play_detail_live.ex:397
 #: lib/playcode_web/live/play_show_live.ex:399
 #: lib/playcode_web/live/play_show_live.ex:790
 #, elixir-autogen, elixir-format
@@ -1684,58 +1684,58 @@ msgstr ""
 msgid "— (Original / standalone)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:346
+#: lib/playcode_web/live/admin/import_live.ex:377
 #, elixir-autogen, elixir-format
 msgid "Importing file %{done} of %{total}..."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:221
+#: lib/playcode_web/live/admin/play_detail_live.ex:217
 #, elixir-autogen, elixir-format
 msgid "Show %{count} error(s)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:211
+#: lib/playcode_web/live/admin/play_detail_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "TEI schema file not found."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:195
+#: lib/playcode_web/live/admin/play_detail_live.ex:191
 #, elixir-autogen, elixir-format
 msgid "TEI-XML is valid against TEI P5 schema."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:218
+#: lib/playcode_web/live/admin/play_detail_live.ex:214
 #, elixir-autogen, elixir-format
 msgid "TEI-XML validation failed:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:184
+#: lib/playcode_web/live/admin/play_detail_live.ex:180
 #, elixir-autogen, elixir-format
 msgid "Validate TEI-XML"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:203
+#: lib/playcode_web/live/admin/play_detail_live.ex:199
 #, elixir-autogen, elixir-format
 msgid "xmllint is not installed. Cannot validate."
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:400
-#: lib/playcode_web/live/admin/import_live.ex:405
+#: lib/playcode_web/live/admin/import_live.ex:431
+#: lib/playcode_web/live/admin/import_live.ex:436
 #, elixir-autogen, elixir-format
 msgid "%{count} warning(s)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:379
+#: lib/playcode_web/live/admin/import_live.ex:410
 #, elixir-autogen, elixir-format
 msgid "Schema"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:394
+#: lib/playcode_web/live/admin/import_live.ex:425
 #, elixir-autogen, elixir-format
 msgid "Valid"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:409
+#: lib/playcode_web/live/admin/import_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "and %{count} more"
 msgstr ""
@@ -1892,8 +1892,8 @@ msgstr ""
 msgid "Only one file allowed."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2167
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2652
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:128
+#: lib/playcode_web/live/admin/content_editor/content.ex:230
 #, elixir-autogen, elixir-format
 msgid "%{count} selected"
 msgstr ""
@@ -1903,7 +1903,7 @@ msgstr ""
 msgid "(auto)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2744
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:220
 #, elixir-autogen, elixir-format
 msgid "(no speaker)"
 msgstr ""
@@ -1914,13 +1914,13 @@ msgstr ""
 #: lib/playcode/export/static_site/pages/notes.html.heex:17
 #: lib/playcode/export/static_site/pages/stage_directions.html.heex:19
 #: lib/playcode_web/components/play_text.ex:600
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2630
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:106
 #: lib/playcode_web/live/admin/play_list_live.ex:167
 #, elixir-autogen, elixir-format
 msgid "All"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2612
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:88
 #, elixir-autogen, elixir-format
 msgid "All speakers"
 msgstr ""
@@ -1935,12 +1935,12 @@ msgstr ""
 msgid "Apócrifa (apocryphal)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2569
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:45
 #, elixir-autogen, elixir-format
 msgid "Assign characters to speeches. Create characters from speaker labels found in the text."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2631
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:107
 #, elixir-autogen, elixir-format
 msgid "Assigned"
 msgstr ""
@@ -1950,13 +1950,13 @@ msgstr ""
 msgid "Atribuida (attributed)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1550
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2567
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:43
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1480
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Character Review"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:415
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:420
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Characters assigned."
 msgstr ""
@@ -1978,8 +1978,8 @@ msgstr ""
 msgid "Custom attribution..."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2158
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2642
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:118
+#: lib/playcode_web/live/admin/content_editor/content.ex:221
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Deselect"
 msgstr ""
@@ -1994,12 +1994,12 @@ msgstr ""
 msgid "Fiable (reliable)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2597
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:73
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No characters yet."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2786
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:262
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No speeches found."
 msgstr ""
@@ -2009,139 +2009,139 @@ msgstr ""
 msgid "Other..."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2151
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2639
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:115
+#: lib/playcode_web/live/admin/content_editor/content.ex:214
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Select all"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2633
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:109
 #, elixir-autogen, elixir-format
 msgid "Unassigned"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2769
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:245
 #, elixir-autogen, elixir-format
 msgid "unassigned"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:713
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:710
 #, elixir-autogen, elixir-format, fuzzy
 msgid "%{count} elements deleted."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2172
+#: lib/playcode_web/live/admin/content_editor/content.ex:235
 #, elixir-autogen, elixir-format
 msgid "Delete %{count} elements and their children?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2179
+#: lib/playcode_web/live/admin/content_editor/content.ex:242
 #, elixir-autogen, elixir-format
 msgid "Delete selected"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2706
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:182
 #, elixir-autogen, elixir-format
 msgid "Leave empty to clear"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2614
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:90
 #, elixir-autogen, elixir-format
 msgid "(No label)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2011
+#: lib/playcode_web/live/admin/content_editor/content.ex:74
 #, elixir-autogen, elixir-format
 msgid "1 result"
 msgid_plural "%{count} results"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3524
+#: lib/playcode_web/live/admin/content_editor/content.ex:640
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Add character..."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2682
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:158
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Add..."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2690
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:166
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Assign Characters"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2657
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:133
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Characters:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2716
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:192
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Clear label"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1191
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1194
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1181
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1184
 #, elixir-autogen, elixir-format
 msgid "Could not save element."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:449
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:451
 #, elixir-autogen, elixir-format
 msgid "Label cleared."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:435
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:440
 #, elixir-autogen, elixir-format
 msgid "Label updated."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2700
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:176
 #, elixir-autogen, elixir-format
 msgid "Label:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3541
+#: lib/playcode_web/live/admin/content_editor/content.ex:657
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No characters defined."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2051
+#: lib/playcode_web/live/admin/content_editor/content.ex:114
 #, elixir-autogen, elixir-format, fuzzy
 msgid "No results found."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2668
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3508
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:144
+#: lib/playcode_web/live/admin/content_editor/content.ex:624
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Remove %{name}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1990
+#: lib/playcode_web/live/admin/content_editor/content.ex:53
 #, elixir-autogen, elixir-format
 msgid "Search text across all scenes..."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2710
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:186
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Set Label"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2794
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:270
 #, elixir-autogen, elixir-format
 msgid "Show more (%{remaining} remaining)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2775
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2776
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:251
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:252
 #, elixir-autogen, elixir-format
 msgid "View in content"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2674
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3514
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:150
+#: lib/playcode_web/live/admin/content_editor/content.ex:630
 #, elixir-autogen, elixir-format, fuzzy
 msgid "none"
 msgstr ""
@@ -2284,7 +2284,7 @@ msgstr ""
 msgid "user"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1566
+#: lib/playcode/export/static_site/components.ex:1600
 #, elixir-autogen, elixir-format
 msgid "Compare"
 msgstr ""
@@ -2299,7 +2299,7 @@ msgstr ""
 msgid "%{complete} of %{total} plays marked as complete"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:246
+#: lib/playcode_web/live/admin/import_live.ex:255
 #, elixir-autogen, elixir-format
 msgid "%{count} of these plays already exist"
 msgstr ""
@@ -2309,12 +2309,12 @@ msgstr ""
 msgid "About the Static Site"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:481
+#: lib/playcode_web/live/admin/play_detail_live.ex:477
 #, elixir-autogen, elixir-format
 msgid "Archive"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:488
+#: lib/playcode_web/live/admin/play_detail_live.ex:484
 #, elixir-autogen, elixir-format
 msgid "Archive «%{title}»? It is hidden from the site and can be restored."
 msgstr ""
@@ -2407,17 +2407,17 @@ msgstr ""
 msgid "Generation Complete"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:250
+#: lib/playcode_web/live/admin/import_live.ex:259
 #, elixir-autogen, elixir-format
 msgid "Importing replaces the text and the records that came from TEI. Anything entered by hand is kept."
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:283
+#: lib/playcode_web/live/admin/import_live.ex:292
 #, elixir-autogen, elixir-format
 msgid "Keeps %{count} record(s) you entered by hand."
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:288
+#: lib/playcode_web/live/admin/import_live.ex:297
 #, elixir-autogen, elixir-format
 msgid "Keeps: %{fields}"
 msgstr ""
@@ -2452,12 +2452,12 @@ msgstr ""
 msgid "Pure HTML/CSS/JS — no server or database required to view."
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:330
+#: lib/playcode_web/live/admin/import_live.ex:361
 #, elixir-autogen, elixir-format
 msgid "Replace and import"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:268
+#: lib/playcode_web/live/admin/import_live.ex:277
 #, elixir-autogen, elixir-format
 msgid "Replaces %{divisions} division(s), %{elements} element(s), %{characters} character(s) and %{tei} record(s) imported from TEI."
 msgstr ""
@@ -2504,27 +2504,27 @@ msgstr ""
 msgid "Your static site is live at:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:264
+#: lib/playcode_web/live/admin/import_live.ex:273
 #, elixir-autogen, elixir-format
 msgid "archived — will be restored"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:457
+#: lib/playcode_web/live/admin/import_live.ex:492
 #, elixir-autogen, elixir-format
 msgid "completeness"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:454
+#: lib/playcode_web/live/admin/import_live.ex:489
 #, elixir-autogen, elixir-format, fuzzy
 msgid "language"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:456
+#: lib/playcode_web/live/admin/import_live.ex:491
 #, elixir-autogen, elixir-format
 msgid "parent play"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:455
+#: lib/playcode_web/live/admin/import_live.ex:490
 #, elixir-autogen, elixir-format, fuzzy
 msgid "relationship"
 msgstr ""
@@ -2570,7 +2570,7 @@ msgid "Historical Time Note"
 msgstr ""
 
 #: lib/playcode/export/static_site/components.ex:387
-#: lib/playcode_web/live/admin/play_detail_live.ex:298
+#: lib/playcode_web/live/admin/play_detail_live.ex:294
 #: lib/playcode_web/live/play_show_live.ex:473
 #, elixir-autogen, elixir-format
 msgid "Historical time"
@@ -2693,7 +2693,7 @@ msgstr ""
 msgid "This device"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:52
+#: lib/playcode_web/controllers/user_session_controller.ex:57
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Too many login attempts. Please wait a few minutes and try again."
 msgstr ""
@@ -3218,7 +3218,7 @@ msgstr ""
 msgid "Welcome to Playcode"
 msgstr ""
 
-#: lib/playcode_web/controllers/user_session_controller.ex:10
+#: lib/playcode_web/controllers/user_session_controller.ex:15
 #, elixir-autogen, elixir-format
 msgid "Welcome to Playcode!"
 msgstr ""
@@ -3343,10 +3343,10 @@ msgstr ""
 msgid "Automatic follows the text: verse when it has any verse lines."
 msgstr ""
 
-#: lib/playcode/export/static_site.ex:696
-#: lib/playcode/export/static_site/components.ex:1255
+#: lib/playcode/export/static_site.ex:715
+#: lib/playcode/export/static_site/components.ex:1289
 #: lib/playcode/export/static_site/pages/title.html.heex:19
-#: lib/playcode_web/components/statistics_panel.ex:203
+#: lib/playcode_web/components/statistics_panel.ex:209
 #: lib/playcode_web/live/admin/play_form_live.ex:866
 #, elixir-autogen, elixir-format
 msgid "Form"
@@ -3512,7 +3512,7 @@ msgstr[1] ""
 msgid "Accessed on"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1500
+#: lib/playcode/export/static_site/components.ex:1534
 #: lib/playcode_web/play_labels.ex:310
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Adaptations"
@@ -3575,8 +3575,8 @@ msgstr ""
 msgid "Book or journal"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1091
-#: lib/playcode/export/static_site/components.ex:1108
+#: lib/playcode/export/static_site/components.ex:1125
+#: lib/playcode/export/static_site/components.ex:1142
 #: lib/playcode_web/components/core_components.ex:412
 #: lib/playcode_web/components/play_text.ex:659
 #: lib/playcode_web/components/play_text.ex:677
@@ -3585,7 +3585,7 @@ msgstr ""
 msgid "Close"
 msgstr ""
 
-#: lib/playcode/export/static_site.ex:698
+#: lib/playcode/export/static_site.ex:717
 #: lib/playcode_web/play_labels.ex:336
 #: lib/playcode_web/play_labels.ex:360
 #, elixir-autogen, elixir-format
@@ -3615,7 +3615,7 @@ msgstr ""
 
 #: lib/playcode/export/static_site/pages/title.html.heex:26
 #: lib/playcode_web/live/admin/entry_fields.ex:69
-#: lib/playcode_web/live/admin/play_detail_live.ex:368
+#: lib/playcode_web/live/admin/play_detail_live.ex:364
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Edition"
 msgstr ""
@@ -3687,11 +3687,11 @@ msgstr ""
 msgid "Journal article"
 msgstr ""
 
-#: lib/playcode/export/static_site.ex:697
+#: lib/playcode/export/static_site.ex:716
 #: lib/playcode/export/static_site/pages.ex:50
+#: lib/playcode_web/live/admin/content_editor/content.ex:690
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:98
 #: lib/playcode_web/live/admin/entry_fields.ex:24
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3154
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3574
 #, elixir-autogen, elixir-format
 msgid "Kind"
 msgstr ""
@@ -3739,7 +3739,7 @@ msgstr ""
 
 #: lib/playcode/export/static_site/comparison.ex:109
 #: lib/playcode/export/static_site/components.ex:334
-#: lib/playcode/export/static_site/components.ex:1080
+#: lib/playcode/export/static_site/components.ex:1114
 #: lib/playcode/export/static_site/pages.ex:60
 #: lib/playcode/export/static_site/pages/notes.html.heex:9
 #: lib/playcode_web/components/layouts.ex:269
@@ -3772,7 +3772,7 @@ msgid "Number of volumes"
 msgstr ""
 
 #: lib/playcode_web/live/admin/entry_fields.ex:75
-#: lib/playcode_web/live/admin/play_detail_live.ex:286
+#: lib/playcode_web/live/admin/play_detail_live.ex:282
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Original title"
 msgstr ""
@@ -3790,7 +3790,7 @@ msgid "Printed note"
 msgstr ""
 
 #: lib/playcode_web/live/admin/entry_fields.ex:64
-#: lib/playcode_web/live/admin/play_detail_live.ex:301
+#: lib/playcode_web/live/admin/play_detail_live.ex:297
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Publication"
 msgstr ""
@@ -3836,7 +3836,7 @@ msgstr ""
 msgid "That entry is already in this play's bibliography."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1499
+#: lib/playcode/export/static_site/components.ex:1533
 #: lib/playcode_web/play_labels.ex:309
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Translations"
@@ -3971,8 +3971,8 @@ msgstr ""
 msgid "The site's styles and scripts are updated."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3603
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3655
+#: lib/playcode_web/live/admin/content_editor/content.ex:719
+#: lib/playcode_web/live/admin/content_editor/content.ex:771
 #, elixir-autogen, elixir-format
 msgid "Stage direction in the text: <stage type=\"delivery\">…</stage>"
 msgstr ""
@@ -3993,8 +3993,8 @@ msgstr ""
 msgid "%{shown} of %{total} notes"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3202
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3435
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:146
+#: lib/playcode_web/live/admin/content_editor/structure.ex:296
 #: lib/playcode_web/live/admin/play_notes_live.ex:335
 #, elixir-autogen, elixir-format
 msgid "A blank line starts a new paragraph; <<…>> marks italics."
@@ -4020,7 +4020,7 @@ msgstr ""
 msgid "Note saved."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:347
+#: lib/playcode_web/live/admin/play_detail_live.ex:343
 #: lib/playcode_web/live/admin/play_notes_live.ex:202
 #, elixir-autogen, elixir-format
 msgid "Open Content"
@@ -4055,24 +4055,24 @@ msgid_plural "%{count} notes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1689
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2680
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3522
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:156
+#: lib/playcode_web/live/admin/content_editor/characters.ex:71
+#: lib/playcode_web/live/admin/content_editor/content.ex:638
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Add character"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2000
+#: lib/playcode_web/live/admin/content_editor/content.ex:63
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Clear search"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2628
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:104
 #, elixir-autogen, elixir-format
 msgid "Filter by assignment"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2610
+#: lib/playcode_web/live/admin/content_editor/character_review.ex:86
 #, elixir-autogen, elixir-format
 msgid "Filter by speaker"
 msgstr ""
@@ -4094,7 +4094,7 @@ msgstr ""
 msgid "Move up"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2022
+#: lib/playcode_web/live/admin/content_editor/content.ex:85
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Search results"
 msgstr ""
@@ -4239,22 +4239,22 @@ msgstr ""
 msgid "witness"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:293
+#: lib/playcode_web/live/admin/import_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "Adds %{count} reference(s) to the bibliography:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:301
+#: lib/playcode_web/live/admin/import_live.ex:310
 #, elixir-autogen, elixir-format
 msgid "Skips %{count} reference(s) Playcode cannot store:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:247
+#: lib/playcode_web/live/admin/import_live.ex:256
 #, elixir-autogen, elixir-format
 msgid "Check the references before importing"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:261
+#: lib/playcode_web/live/admin/import_live.ex:270
 #, elixir-autogen, elixir-format, fuzzy
 msgid "new play"
 msgstr ""
@@ -4330,20 +4330,20 @@ msgstr ""
 msgid "Where the digital text came from: Gallica, Canon 60…"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1749
+#: lib/playcode_web/live/admin/content_editor/characters.ex:131
 #: lib/playcode_web/live/admin/play_performances_live.ex:930
 #, elixir-autogen, elixir-format
 msgid "Actor"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3249
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3313
+#: lib/playcode_web/live/admin/content_editor/characters.ex:226
+#: lib/playcode_web/live/admin/content_editor/characters.ex:297
 #, elixir-autogen, elixir-format
 msgid "Actor in the original cast"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3251
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3318
+#: lib/playcode_web/live/admin/content_editor/characters.ex:228
+#: lib/playcode_web/live/admin/content_editor/characters.ex:302
 #, elixir-autogen, elixir-format
 msgid "e.g. Mr. Betterton"
 msgstr ""
@@ -4354,44 +4354,44 @@ msgstr ""
 msgid "Scene of the action"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1581
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:23
 #, elixir-autogen, elixir-format
 msgid "Add Paratext"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1626
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2303
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:68
+#: lib/playcode_web/live/admin/content_editor/structure.ex:90
 #, elixir-autogen, elixir-format
 msgid "Delete this paratext?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1594
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:36
 #, elixir-autogen, elixir-format
 msgid "No paratexts yet."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3142
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:86
 #, elixir-autogen, elixir-format
 msgid "Paratext"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:228
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:238
 #, elixir-autogen, elixir-format
 msgid "Paratext deleted."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:942
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:935
 #, elixir-autogen, elixir-format
 msgid "Paratext saved."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1529
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1577
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:19
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1459
 #, elixir-autogen, elixir-format
 msgid "Paratexts"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1585
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:27
 #, elixir-autogen, elixir-format
 msgid "Texts around the play's text: dedications, editor's introductions, prologues, arguments, the scene of the action."
 msgstr ""
@@ -4451,12 +4451,12 @@ msgstr ""
 msgid "Note on the digital edition"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3169
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:113
 #, elixir-autogen, elixir-format
 msgid "Optional heading"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3180
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:124
 #, elixir-autogen, elixir-format
 msgid "Paragraphs, separated by a blank line"
 msgstr ""
@@ -4482,7 +4482,7 @@ msgstr ""
 msgid "Title page"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:276
+#: lib/playcode_web/live/admin/import_live.ex:285
 #, elixir-autogen, elixir-format
 msgid "%{count} row(s) from the file were edited by hand since its import: importing replaces them too."
 msgstr ""
@@ -4492,13 +4492,13 @@ msgstr ""
 msgid "Add every complete play"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3623
+#: lib/playcode_web/live/admin/content_editor/content.ex:739
 #, elixir-autogen, elixir-format
 msgid "Number of a printed line in the text: <lb n=\"1320\"/>"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3606
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3658
+#: lib/playcode_web/live/admin/content_editor/content.ex:722
+#: lib/playcode_web/live/admin/content_editor/content.ex:774
 #, elixir-autogen, elixir-format
 msgid "Words spoken aside: <aside>…</aside>"
 msgstr ""
@@ -4508,7 +4508,7 @@ msgstr ""
 msgid "Textual variant"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1101
+#: lib/playcode/export/static_site/components.ex:1135
 #: lib/playcode_web/components/play_text.ex:670
 #, elixir-autogen, elixir-format
 msgid "Textual variants"
@@ -4525,37 +4525,37 @@ msgstr ""
 msgid "Show variant readings"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:462
+#: lib/playcode_web/live/admin/import_live.ex:497
 #, elixir-autogen, elixir-format
 msgid "composition date (from)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:463
+#: lib/playcode_web/live/admin/import_live.ex:498
 #, elixir-autogen, elixir-format
 msgid "composition date (to)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:464
+#: lib/playcode_web/live/admin/import_live.ex:499
 #, elixir-autogen, elixir-format
 msgid "composition date note"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:465
+#: lib/playcode_web/live/admin/import_live.ex:500
 #, elixir-autogen, elixir-format
 msgid "form"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:460
+#: lib/playcode_web/live/admin/import_live.ex:495
 #, elixir-autogen, elixir-format
 msgid "historical time"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:461
+#: lib/playcode_web/live/admin/import_live.ex:496
 #, elixir-autogen, elixir-format
 msgid "historical time note"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:458
+#: lib/playcode_web/live/admin/import_live.ex:493
 #, elixir-autogen, elixir-format
 msgid "variant readings"
 msgstr ""
@@ -4603,10 +4603,10 @@ msgstr ""
 msgid "Folio interpolations"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3482
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3562
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3614
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3666
+#: lib/playcode_web/live/admin/content_editor/content.ex:598
+#: lib/playcode_web/live/admin/content_editor/content.ex:678
+#: lib/playcode_web/live/admin/content_editor/content.ex:730
+#: lib/playcode_web/live/admin/content_editor/content.ex:782
 #, elixir-autogen, elixir-format
 msgid "Words only the Folio prints: <folio>…</folio>"
 msgstr ""
@@ -4932,127 +4932,127 @@ msgctxt "cast"
 msgid "Role"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1697
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3358
+#: lib/playcode_web/live/admin/content_editor/characters.ex:79
+#: lib/playcode_web/live/admin/content_editor/characters.ex:345
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Add an existing character"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1913
+#: lib/playcode_web/live/admin/content_editor/structure.ex:30
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Add division"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1910
+#: lib/playcode_web/live/admin/content_editor/structure.ex:27
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Add paratext"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2339
+#: lib/playcode_web/live/admin/content_editor/structure.ex:126
 #, elixir-autogen, elixir-format
 msgid "Add subdivision"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1139
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1130
 #, elixir-autogen, elixir-format
 msgid "Added to the list."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3283
+#: lib/playcode_web/live/admin/content_editor/characters.ex:267
 #, elixir-autogen, elixir-format
 msgid "As this list gives the character. Another list may name it otherwise."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2430
+#: lib/playcode_web/live/admin/content_editor/structure.ex:216
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Delete this cast list?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2433
+#: lib/playcode_web/live/admin/content_editor/structure.ex:219
 #, elixir-autogen, elixir-format
 msgid "Delete this cast list? One character listed nowhere else goes with it."
 msgid_plural "Delete this cast list? %{count} characters listed nowhere else go with it."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2447
+#: lib/playcode_web/live/admin/content_editor/structure.ex:233
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Delete this division and all its content? One character listed nowhere else goes with it."
 msgid_plural "Delete this division and all its content? %{count} characters listed nowhere else go with it."
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:2270
+#: lib/playcode_web/live/admin/content_editor/components.ex:152
 #, elixir-autogen, elixir-format
 msgid "Drag to reorder"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1653
+#: lib/playcode_web/live/admin/content_editor/characters.ex:36
 #, elixir-autogen, elixir-format
 msgid "Each cast list of the play, in the order it is read. Drag a line within its list or into another; a character is named as its first line names it."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3361
+#: lib/playcode_web/live/admin/content_editor/characters.ex:348
 #, elixir-autogen, elixir-format
 msgid "Every character is in this list already."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1918
+#: lib/playcode_web/live/admin/content_editor/structure.ex:35
 #, elixir-autogen, elixir-format
 msgid "Everything in the play in the order it is read, as the file and every page give it. A new item stands last: drag it into place."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3299
+#: lib/playcode_web/live/admin/content_editor/characters.ex:283
 #, elixir-autogen, elixir-format
 msgid "Group"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3304
+#: lib/playcode_web/live/admin/content_editor/characters.ex:288
 #, elixir-autogen, elixir-format
 msgid "In every list"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1724
+#: lib/playcode_web/live/admin/content_editor/characters.ex:106
 #, elixir-autogen, elixir-format
 msgid "Names no character"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:752
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:747
 #, elixir-autogen, elixir-format
 msgid "Not deleted: %{names} speak in the play and are listed nowhere else. List them elsewhere first."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:301
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:309
 #, elixir-autogen, elixir-format
 msgid "Not removed: %{name} speaks in the play and is listed nowhere else."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1765
+#: lib/playcode_web/live/admin/content_editor/characters.ex:147
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Remove this line from the list?"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:294
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:302
 #, elixir-autogen, elixir-format
 msgid "Removed from the list."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3301
+#: lib/playcode_web/live/admin/content_editor/characters.ex:285
 #, elixir-autogen, elixir-format
 msgid "e.g. Criados"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3192
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:136
 #, elixir-autogen, elixir-format
 msgid "Closing formula"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3187
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:131
 #, elixir-autogen, elixir-format
 msgid "In verse"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3194
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:138
 #, elixir-autogen, elixir-format
 msgid "e.g. FIN"
 msgstr ""
@@ -5072,39 +5072,39 @@ msgstr ""
 msgid "a middle part that completes no verse"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:312
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1502
+#: lib/playcode_web/live/admin/import_live.ex:321
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1432
 #, elixir-autogen, elixir-format
 msgid "%{count} part of a split verse out of order:"
 msgid_plural "%{count} parts of split verses out of order:"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3257
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3341
+#: lib/playcode_web/live/admin/content_editor/characters.ex:234
+#: lib/playcode_web/live/admin/content_editor/characters.ex:325
 #, elixir-autogen, elixir-format
 msgid "A group speaking as one"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3611
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3663
+#: lib/playcode_web/live/admin/content_editor/content.ex:727
+#: lib/playcode_web/live/admin/content_editor/content.ex:779
 #, elixir-autogen, elixir-format
 msgid "Continues the aside before it"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3636
+#: lib/playcode_web/live/admin/content_editor/content.ex:752
 #, elixir-autogen, elixir-format
 msgid "A Song"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3638
+#: lib/playcode_web/live/admin/content_editor/content.ex:754
 #, elixir-autogen, elixir-format
 msgid "Printed before the stanza's lines, as a song's title is; blank for none."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3565
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3617
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3669
+#: lib/playcode_web/live/admin/content_editor/content.ex:681
+#: lib/playcode_web/live/admin/content_editor/content.ex:733
+#: lib/playcode_web/live/admin/content_editor/content.ex:785
 #, elixir-autogen, elixir-format
 msgid "A tagged name, place or prop: <rs type=\"atrezzo\">…</rs>; its kind one of %{kinds}"
 msgstr ""
@@ -5135,7 +5135,7 @@ msgstr ""
 msgid "Team note"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:459
+#: lib/playcode_web/live/admin/import_live.ex:494
 #, elixir-autogen, elixir-format
 msgid "team note"
 msgstr ""
@@ -5206,17 +5206,17 @@ msgstr ""
 msgid "Prose with occasional verse"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3425
+#: lib/playcode_web/live/admin/content_editor/structure.ex:286
 #, elixir-autogen, elixir-format
 msgid "Before the list"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3431
+#: lib/playcode_web/live/admin/content_editor/structure.ex:292
 #, elixir-autogen, elixir-format
 msgid "Note after the list"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1513
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1443
 #, elixir-autogen, elixir-format
 msgid "v. %{number}"
 msgstr ""
@@ -5259,7 +5259,7 @@ msgstr ""
 msgid "Numbering"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:309
+#: lib/playcode_web/live/admin/import_live.ex:318
 #, elixir-autogen, elixir-format
 msgid "Numbering: %{rule}"
 msgstr ""
@@ -5296,54 +5296,54 @@ msgid_plural "Shows readers the play's %{count} variants; the TEI file always ke
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3198
+#: lib/playcode_web/live/admin/content_editor/paratexts.ex:142
 #, elixir-autogen, elixir-format
 msgid "Closing note"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1110
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1101
 #, elixir-autogen, elixir-format
 msgid "Automatic (%{name})"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1107
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1098
 #, elixir-autogen, elixir-format
 msgid "Automatic (none found)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1083
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1074
 #, elixir-autogen, elixir-format
 msgid "Missing: %{id}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1081
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3107
+#: lib/playcode_web/live/admin/content_editor/characters.ex:181
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1072
 #, elixir-autogen, elixir-format
 msgid "No original"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3325
+#: lib/playcode_web/live/admin/content_editor/characters.ex:309
 #, elixir-autogen, elixir-format
 msgid "Original character"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1039
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1031
 #, elixir-autogen, elixir-format
 msgid "is no character of the original"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3110
+#: lib/playcode_web/live/admin/content_editor/characters.ex:184
 #, elixir-autogen, elixir-format
 msgid "No original found"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3101
+#: lib/playcode_web/live/admin/content_editor/characters.ex:175
 #, elixir-autogen, elixir-format
 msgid "Original:"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3104
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:3108
+#: lib/playcode_web/live/admin/content_editor/characters.ex:178
+#: lib/playcode_web/live/admin/content_editor/characters.ex:182
 #, elixir-autogen, elixir-format
 msgid "corrected"
 msgstr ""
@@ -5478,9 +5478,9 @@ msgid "Breadcrumb"
 msgstr ""
 
 #: lib/playcode_web/components/layouts.ex:277
-#: lib/playcode_web/live/admin/import_live.ex:428
-#: lib/playcode_web/live/admin/import_live.ex:429
-#: lib/playcode_web/live/admin/play_content_editor_live.ex:1566
+#: lib/playcode_web/live/admin/import_live.ex:459
+#: lib/playcode_web/live/admin/import_live.ex:460
+#: lib/playcode_web/live/admin/play_content_editor_live.ex:1496
 #: lib/playcode_web/live/play_show_live.ex:78
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Preview"
@@ -5491,16 +5491,16 @@ msgstr ""
 msgid "Toggle theme"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:357
+#: lib/playcode_web/live/admin/play_detail_live.ex:353
 #, elixir-autogen, elixir-format
 msgid "%{count} character"
 msgid_plural "%{count} characters"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode/export/static_site/components.ex:1287
-#: lib/playcode_web/components/statistics_panel.ex:156
-#: lib/playcode_web/live/admin/play_detail_live.ex:360
+#: lib/playcode/export/static_site/components.ex:1321
+#: lib/playcode_web/components/statistics_panel.ex:162
+#: lib/playcode_web/live/admin/play_detail_live.ex:356
 #, elixir-autogen, elixir-format
 msgid "%{count} verse"
 msgid_plural "%{count} verses"
@@ -5518,7 +5518,7 @@ msgstr ""
 msgid "All plays"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:326
+#: lib/playcode_web/live/admin/play_detail_live.ex:322
 #, elixir-autogen, elixir-format
 msgid "Availability"
 msgstr ""
@@ -5528,13 +5528,13 @@ msgstr ""
 msgid "Back to draft"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:442
+#: lib/playcode_web/live/admin/play_detail_live.ex:438
 #: lib/playcode_web/live/admin/play_statistics_live.ex:44
 #, elixir-autogen, elixir-format
 msgid "Computed"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:295
+#: lib/playcode_web/live/admin/play_detail_live.ex:291
 #, elixir-autogen, elixir-format
 msgid "Dating"
 msgstr ""
@@ -5545,22 +5545,22 @@ msgstr ""
 msgid "Download"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:452
+#: lib/playcode_web/live/admin/play_detail_live.ex:448
 #, elixir-autogen, elixir-format
 msgid "Drafts only."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:307
+#: lib/playcode_web/live/admin/play_detail_live.ex:303
 #, elixir-autogen, elixir-format
 msgid "Edition title"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:451
+#: lib/playcode_web/live/admin/play_detail_live.ex:447
 #, elixir-autogen, elixir-format
 msgid "It replaces all the current text."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:329
+#: lib/playcode_web/live/admin/play_detail_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Licence"
 msgstr ""
@@ -5581,42 +5581,42 @@ msgstr ""
 msgid "Play sections"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:320
+#: lib/playcode_web/live/admin/play_detail_live.ex:316
 #, elixir-autogen, elixir-format
 msgid "Project, funding and availability"
 msgstr ""
 
 #: lib/playcode_web/components/layouts.ex:251
-#: lib/playcode_web/live/admin/play_detail_live.ex:279
+#: lib/playcode_web/live/admin/play_detail_live.ex:275
 #, elixir-autogen, elixir-format
 msgid "Record"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:470
+#: lib/playcode_web/live/admin/play_detail_live.ex:466
 #, elixir-autogen, elixir-format
 msgid "Replace the text"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:448
+#: lib/playcode_web/live/admin/play_detail_live.ex:444
 #, elixir-autogen, elixir-format
 msgid "Replace the text from Word"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:421
+#: lib/playcode_web/live/admin/play_detail_live.ex:417
 #, elixir-autogen, elixir-format
 msgid "Revisions"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:434
+#: lib/playcode_web/live/admin/play_detail_live.ex:430
 #, elixir-autogen, elixir-format
 msgid "See all"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1168
-#: lib/playcode/export/static_site/components.ex:1344
+#: lib/playcode/export/static_site/components.ex:1202
+#: lib/playcode/export/static_site/components.ex:1378
 #: lib/playcode_web/components/statistics_panel.ex:58
-#: lib/playcode_web/components/statistics_panel.ex:253
-#: lib/playcode_web/live/admin/play_detail_live.ex:438
+#: lib/playcode_web/components/statistics_panel.ex:259
+#: lib/playcode_web/live/admin/play_detail_live.ex:434
 #, elixir-autogen, elixir-format
 msgid "Speeches"
 msgstr ""
@@ -5626,14 +5626,14 @@ msgstr ""
 msgid "Tradition"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:450
+#: lib/playcode_web/live/admin/play_detail_live.ex:446
 #, elixir-autogen, elixir-format
 msgid "Upload a premarcado .docx file."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1128
-#: lib/playcode_web/components/statistics_panel.ex:96
-#: lib/playcode_web/live/admin/play_detail_live.ex:160
+#: lib/playcode/export/static_site/components.ex:1162
+#: lib/playcode_web/components/statistics_panel.ex:102
+#: lib/playcode_web/live/admin/play_detail_live.ex:156
 #, elixir-autogen, elixir-format
 msgid "acts"
 msgstr ""
@@ -5643,27 +5643,27 @@ msgstr ""
 msgid "add"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:262
+#: lib/playcode_web/live/admin/play_detail_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "bibliography entries"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:252
+#: lib/playcode_web/live/admin/play_detail_live.ex:248
 #, elixir-autogen, elixir-format
 msgid "characters"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:267
+#: lib/playcode_web/live/admin/play_detail_live.ex:263
 #, elixir-autogen, elixir-format
 msgid "notes"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:257
+#: lib/playcode_web/live/admin/play_detail_live.ex:253
 #, elixir-autogen, elixir-format
 msgid "performances"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:272
+#: lib/playcode_web/live/admin/play_detail_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "witnesses"
 msgstr ""
@@ -5693,17 +5693,17 @@ msgstr ""
 msgid "Published on the site; changed since the last deploy."
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:198
+#: lib/playcode_web/live/admin/import_live.ex:207
 #, elixir-autogen, elixir-format
 msgid "Drop TEI-XML files here, or choose them"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:457
+#: lib/playcode_web/live/admin/play_detail_live.ex:453
 #, elixir-autogen, elixir-format
 msgid "Drop the Word file here, or choose it"
 msgstr ""
 
-#: lib/playcode_web/live/admin/import_live.ex:473
+#: lib/playcode_web/live/admin/import_live.ex:508
 #, elixir-autogen, elixir-format
 msgid "Import %{count} file"
 msgid_plural "Import %{count} files"
@@ -5774,12 +5774,12 @@ msgstr[1] ""
 msgid "Filters"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1498
+#: lib/playcode/export/static_site/components.ex:1532
 #, elixir-autogen, elixir-format
 msgid "Originals"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1501
+#: lib/playcode/export/static_site/components.ex:1535
 #, elixir-autogen, elixir-format
 msgid "Versions"
 msgstr ""
@@ -5791,24 +5791,24 @@ msgid_plural "%{count} authors"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode/export/static_site/components.ex:1435
-#: lib/playcode/export/static_site/components.ex:1471
-#: lib/playcode_web/components/statistics_panel.ex:382
-#: lib/playcode_web/components/statistics_panel.ex:417
+#: lib/playcode/export/static_site/components.ex:1469
+#: lib/playcode/export/static_site/components.ex:1505
+#: lib/playcode_web/components/statistics_panel.ex:388
+#: lib/playcode_web/components/statistics_panel.ex:423
 #, elixir-autogen, elixir-format
 msgid "%{count} line"
 msgid_plural "%{count} lines"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode/export/static_site/components.ex:1390
-#: lib/playcode_web/components/statistics_panel.ex:304
+#: lib/playcode/export/static_site/components.ex:1424
+#: lib/playcode_web/components/statistics_panel.ex:310
 #, elixir-autogen, elixir-format
 msgid "%{n} of %{total} lines"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1391
-#: lib/playcode_web/components/statistics_panel.ex:305
+#: lib/playcode/export/static_site/components.ex:1425
+#: lib/playcode_web/components/statistics_panel.ex:311
 #, elixir-autogen, elixir-format
 msgid "%{n} of %{total} words"
 msgstr ""
@@ -5828,14 +5828,14 @@ msgstr ""
 msgid "; every play's TEI-XML source is published beside it."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1456
-#: lib/playcode_web/components/statistics_panel.ex:404
+#: lib/playcode/export/static_site/components.ex:1490
+#: lib/playcode_web/components/statistics_panel.ex:410
 #, elixir-autogen, elixir-format
 msgid "A filled cell means the character speaks in that division."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1446
-#: lib/playcode_web/components/statistics_panel.ex:394
+#: lib/playcode/export/static_site/components.ex:1480
+#: lib/playcode_web/components/statistics_panel.ex:400
 #, elixir-autogen, elixir-format
 msgid "A filled cell means the character speaks in that scene."
 msgstr ""
@@ -5865,7 +5865,7 @@ msgstr ""
 msgid "About — EMOTHE"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1521
+#: lib/playcode/export/static_site/components.ex:1555
 #, elixir-autogen, elixir-format
 msgid "Adaptation of"
 msgstr ""
@@ -5976,8 +5976,8 @@ msgstr ""
 msgid "Filter the catalogue"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1348
-#: lib/playcode_web/components/statistics_panel.ex:257
+#: lib/playcode/export/static_site/components.ex:1382
+#: lib/playcode_web/components/statistics_panel.ex:263
 #, elixir-autogen, elixir-format
 msgid "First speaks"
 msgstr ""
@@ -5987,7 +5987,7 @@ msgstr ""
 msgid "Full text"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1494
+#: lib/playcode/export/static_site/components.ex:1528
 #, elixir-autogen, elixir-format
 msgid "German"
 msgstr ""
@@ -6002,14 +6002,14 @@ msgstr ""
 msgid "It works the same opened from a disk."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1345
-#: lib/playcode_web/components/statistics_panel.ex:254
+#: lib/playcode/export/static_site/components.ex:1379
+#: lib/playcode_web/components/statistics_panel.ex:260
 #, elixir-autogen, elixir-format
 msgid "Lines"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1349
-#: lib/playcode_web/components/statistics_panel.ex:258
+#: lib/playcode/export/static_site/components.ex:1383
+#: lib/playcode_web/components/statistics_panel.ex:264
 #, elixir-autogen, elixir-format
 msgid "Main forms"
 msgstr ""
@@ -6019,14 +6019,14 @@ msgstr ""
 msgid "Match"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1223
-#: lib/playcode_web/components/statistics_panel.ex:167
+#: lib/playcode/export/static_site/components.ex:1257
+#: lib/playcode_web/components/statistics_panel.ex:173
 #, elixir-autogen, elixir-format
 msgid "Metrical synopsis"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1230
-#: lib/playcode_web/components/statistics_panel.ex:175
+#: lib/playcode/export/static_site/components.ex:1264
+#: lib/playcode_web/components/statistics_panel.ex:181
 #, elixir-autogen, elixir-format
 msgid "Metrical synopsis drawn to scale; the table below lists every passage."
 msgstr ""
@@ -6056,8 +6056,8 @@ msgstr ""
 msgid "Principles"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1272
-#: lib/playcode_web/components/statistics_panel.ex:223
+#: lib/playcode/export/static_site/components.ex:1306
+#: lib/playcode_web/components/statistics_panel.ex:229
 #, elixir-autogen, elixir-format
 msgid "Rhyme is not encoded, so two consecutive romances with different assonance show as one passage."
 msgstr ""
@@ -6082,8 +6082,8 @@ msgstr ""
 msgid "Search — EMOTHE"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1347
-#: lib/playcode_web/components/statistics_panel.ex:256
+#: lib/playcode/export/static_site/components.ex:1381
+#: lib/playcode_web/components/statistics_panel.ex:262
 #, elixir-autogen, elixir-format
 msgid "Share of the play"
 msgstr ""
@@ -6125,14 +6125,14 @@ msgstr ""
 msgid "Statistics — %{title} — EMOTHE"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1329
-#: lib/playcode_web/components/statistics_panel.ex:292
+#: lib/playcode/export/static_site/components.ex:1363
+#: lib/playcode_web/components/statistics_panel.ex:298
 #, elixir-autogen, elixir-format
 msgid "The %{n} speaking characters, those with the most lines first. A shared verse counts for each speaker."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1335
-#: lib/playcode_web/components/statistics_panel.ex:299
+#: lib/playcode/export/static_site/components.ex:1369
+#: lib/playcode_web/components/statistics_panel.ex:305
 #, elixir-autogen, elixir-format
 msgid "The %{n} speaking characters, those with the most words first. A shared verse counts for each speaker."
 msgstr ""
@@ -6147,8 +6147,8 @@ msgstr ""
 msgid "The band's links to the EMOTHE portal (Portal, Database) lead out of the archive to the site it belongs to, and need a connection; nothing a page needs to work is outside it."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1225
-#: lib/playcode_web/components/statistics_panel.ex:169
+#: lib/playcode/export/static_site/components.ex:1259
+#: lib/playcode_web/components/statistics_panel.ex:175
 #, elixir-autogen, elixir-format
 msgid "The verse forms in order, each passage drawn to scale. Dashed lines mark the acts."
 msgstr ""
@@ -6160,13 +6160,13 @@ msgid_plural "This archive holds %{count} plays, published as version %{version}
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode/export/static_site/components.ex:1450
-#: lib/playcode_web/components/statistics_panel.ex:398
+#: lib/playcode/export/static_site/components.ex:1484
+#: lib/playcode_web/components/statistics_panel.ex:404
 #, elixir-autogen, elixir-format
 msgid "This play encodes no scenes, so the columns are its %{n} metrical passages. A filled cell means the character speaks in that passage."
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1520
+#: lib/playcode/export/static_site/components.ex:1554
 #, elixir-autogen, elixir-format
 msgid "Translation of"
 msgstr ""
@@ -6186,14 +6186,14 @@ msgstr ""
 msgid "Verse · %{n} verses"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1522
+#: lib/playcode/export/static_site/components.ex:1556
 #, elixir-autogen, elixir-format
 msgid "Version of"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1408
-#: lib/playcode_web/components/statistics_panel.ex:340
-#: lib/playcode_web/components/statistics_panel.ex:347
+#: lib/playcode/export/static_site/components.ex:1442
+#: lib/playcode_web/components/statistics_panel.ex:346
+#: lib/playcode_web/components/statistics_panel.ex:353
 #, elixir-autogen, elixir-format
 msgid "Who shares the stage"
 msgstr ""
@@ -6203,8 +6203,8 @@ msgstr ""
 msgid "Whole word"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1346
-#: lib/playcode_web/components/statistics_panel.ex:255
+#: lib/playcode/export/static_site/components.ex:1380
+#: lib/playcode_web/components/statistics_panel.ex:261
 #, elixir-autogen, elixir-format
 msgid "Words"
 msgstr ""
@@ -6214,7 +6214,7 @@ msgstr ""
 msgid "Work family"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1512
+#: lib/playcode/export/static_site/components.ex:1546
 #: lib/playcode/export/static_site/pages.ex:57
 #, elixir-autogen, elixir-format
 msgid "adaptation"
@@ -6225,48 +6225,48 @@ msgstr ""
 msgid "mentioned"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1132
-#: lib/playcode_web/components/statistics_panel.ex:100
+#: lib/playcode/export/static_site/components.ex:1166
+#: lib/playcode_web/components/statistics_panel.ex:106
 #, elixir-autogen, elixir-format
 msgid "metrical passages"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1510
+#: lib/playcode/export/static_site/components.ex:1544
 #, elixir-autogen, elixir-format
 msgid "original"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1135
-#: lib/playcode_web/components/statistics_panel.ex:103
+#: lib/playcode/export/static_site/components.ex:1169
+#: lib/playcode_web/components/statistics_panel.ex:109
 #, elixir-autogen, elixir-format
 msgid "speaking characters"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1134
-#: lib/playcode_web/components/statistics_panel.ex:102
+#: lib/playcode/export/static_site/components.ex:1168
+#: lib/playcode_web/components/statistics_panel.ex:108
 #, elixir-autogen, elixir-format
 msgid "speeches"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1136
-#: lib/playcode_web/components/statistics_panel.ex:104
+#: lib/playcode/export/static_site/components.ex:1170
+#: lib/playcode_web/components/statistics_panel.ex:110
 #, elixir-autogen, elixir-format
 msgid "stage directions"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1511
+#: lib/playcode/export/static_site/components.ex:1545
 #: lib/playcode/export/static_site/pages.ex:56
 #, elixir-autogen, elixir-format
 msgid "translation"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1138
-#: lib/playcode_web/components/statistics_panel.ex:106
+#: lib/playcode/export/static_site/components.ex:1172
+#: lib/playcode_web/components/statistics_panel.ex:112
 #, elixir-autogen, elixir-format
 msgid "verses in asides"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1513
+#: lib/playcode/export/static_site/components.ex:1547
 #: lib/playcode/export/static_site/pages.ex:58
 #, elixir-autogen, elixir-format
 msgid "version"
@@ -6312,17 +6312,17 @@ msgstr ""
 msgid "plays"
 msgstr ""
 
-#: lib/playcode_web/components/statistics_panel.ex:197
+#: lib/playcode_web/components/statistics_panel.ex:203
 #, elixir-autogen, elixir-format
 msgid "The %{count} passages, one by one"
 msgstr "The %{count} passages, one by one"
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:483
+#: lib/playcode_web/live/admin/play_detail_live.ex:479
 #, elixir-autogen, elixir-format
 msgid "An archived play is hidden from the site. It can be restored."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_detail_live.ex:494
+#: lib/playcode_web/live/admin/play_detail_live.ex:490
 #, elixir-autogen, elixir-format, fuzzy
 msgid "Archive play"
 msgstr ""
@@ -6384,51 +6384,51 @@ msgstr ""
 msgid "prose"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1166
+#: lib/playcode/export/static_site/components.ex:1200
 #: lib/playcode_web/components/statistics_panel.ex:56
 #, elixir-autogen, elixir-format
 msgid "Act or scene"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1162
+#: lib/playcode/export/static_site/components.ex:1196
 #: lib/playcode_web/components/statistics_panel.ex:51
 #: lib/playcode_web/components/statistics_panel.ex:52
 #, elixir-autogen, elixir-format
 msgid "By act and scene"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1170
+#: lib/playcode/export/static_site/components.ex:1204
 #: lib/playcode_web/components/statistics_panel.ex:60
 #, elixir-autogen, elixir-format
 msgid "Prose passages"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1169
+#: lib/playcode/export/static_site/components.ex:1203
 #: lib/playcode_web/components/statistics_panel.ex:59
 #, elixir-autogen, elixir-format
 msgid "Speaking characters"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1137
-#: lib/playcode_web/components/statistics_panel.ex:105
+#: lib/playcode/export/static_site/components.ex:1171
+#: lib/playcode_web/components/statistics_panel.ex:111
 #, elixir-autogen, elixir-format
 msgid "asides"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1133
-#: lib/playcode_web/components/statistics_panel.ex:101
+#: lib/playcode/export/static_site/components.ex:1167
+#: lib/playcode_web/components/statistics_panel.ex:107
 #, elixir-autogen, elixir-format
 msgid "prose passages"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1129
-#: lib/playcode_web/components/statistics_panel.ex:97
+#: lib/playcode/export/static_site/components.ex:1163
+#: lib/playcode_web/components/statistics_panel.ex:103
 #, elixir-autogen, elixir-format
 msgid "scenes"
 msgstr ""
 
-#: lib/playcode/export/static_site/components.ex:1131
-#: lib/playcode_web/components/statistics_panel.ex:99
+#: lib/playcode/export/static_site/components.ex:1165
+#: lib/playcode_web/components/statistics_panel.ex:105
 #, elixir-autogen, elixir-format
 msgid "shared verses"
 msgstr ""
