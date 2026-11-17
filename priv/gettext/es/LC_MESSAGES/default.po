@@ -6660,6 +6660,7 @@ msgid "Downloads"
 msgstr "Descargas"
 
 #: lib/playcode/export/static_site/components.ex:149
+#: lib/playcode/export/static_site/pages/text.html.heex:9
 #, elixir-autogen, elixir-format
 msgid "Print or save as PDF"
 msgstr "Imprimir o guardar como PDF"

@@ -271,7 +271,7 @@ mark { background: var(--mark); color: var(--accent); font-weight: 600; padding:
 
 @media print {
   body { background: #fff; color: #000; font-size: 11pt; }
-  .bar, .rail, .pager, .foot, .tools { display: none !important; }
+  .bar, .rail, .pager, .foot, .tools, [data-print] { display: none !important; }
   [data-current] { outline: none !important; }
   .frame { display: block; }
   main { padding: 0; }

@@ -6,6 +6,7 @@
 >
   <:rail><Components.play_rail edition={@edition} current="text" tools /></:rail>
   <Components.play_header play={@edition.play} />
+  <button type="button" class="copy" data-print hidden>{t("Print or save as PDF")}</button>
   <div
     class="text"
     lang={@edition.play.language}

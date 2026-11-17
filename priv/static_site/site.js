@@ -234,6 +234,24 @@
     }
   }
 
+  // On paper each later part of a shared line keeps its fixed step, which cannot wrap: the
+  // paper's column cannot be measured. The title page's link asks for print with #print,
+  // dropped once used so a reload does not print again.
+  function initPrint() {
+    root.addEventListener('beforeprint', function () {
+      document.querySelectorAll('[data-aligned]').forEach(function (box) { box.removeAttribute('data-aligned'); });
+    });
+    root.addEventListener('afterprint', realign);
+    var button = document.querySelector('[data-print]');
+    if (!button) return;
+    button.hidden = false;
+    button.addEventListener('click', function () { root.print(); });
+    if (root.location.hash === '#print') root.addEventListener('load', function () {
+      root.history.replaceState(null, '', root.location.pathname + root.location.search);
+      root.print();
+    });
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
     // The rail is open in the markup so it shows without JS; on a narrow screen it
     // starts closed once JS is here to open it.
@@ -244,6 +262,7 @@
     initTheme();
     initUi();
     initTools();
+    initPrint();
     initLinks();
     realign();
     if (document.fonts) document.fonts.ready.then(realign);

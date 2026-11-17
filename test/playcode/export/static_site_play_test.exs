@@ -190,6 +190,18 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert section |> LazyHTML.query("a[download]") |> Enum.count() == 2
     end
 
+    test "the full text has a print button, hidden until the script shows it, and never printed" do
+      play = tei(body: two_acts()) |> import_tei!() |> mark_complete!()
+      dir = generate!([play])
+
+      button =
+        html!(dir, "plays/#{play.code}/text.html", "es") |> LazyHTML.query("button[data-print]")
+
+      assert LazyHTML.attribute(button, "hidden") == [""]
+      assert texts(button, "button") == ["Imprimir o guardar como PDF"]
+      assert read!(dir, "assets/style.css") =~ ~r/@media print \{[^@]*\[data-print\]/s
+    end
+
     test "a play without a text offers its TEI file alone" do
       play = play_without_text_fixture(%{"is_complete" => true})
       page = html!(generate!([play]), "plays/#{play.code}/index.html")

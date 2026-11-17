@@ -96,6 +96,13 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
     play
   end
 
+  test "the script shows the full text's print button", %{dir: dir, verse: verse} do
+    page = Browser.dom!(dir, "plays/#{verse.code}/text.html")
+    button = LazyHTML.query(page, "button[data-print]")
+    assert Enum.count(button) == 1
+    assert LazyHTML.attribute(button, "hidden") == []
+  end
+
   # The rows showing in one of the two lists: the plays whose record matches (Obras), or,
   # once the box has words, those whose text holds them (`[data-works-text]`).
   defp shown(page, list \\ "[data-works]"),
