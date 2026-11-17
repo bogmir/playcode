@@ -55,8 +55,12 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     PlaycodeWeb.PlayLabels
   ]
 
-  # StaticSite modules that shape no page: pushing the site, and this hash itself.
-  @left_out [Playcode.Export.StaticSite.Deployer, __MODULE__]
+  # The catalogue's own code: no play page calls it, and it has a hash of its own.
+  @catalogue [Playcode.Export.StaticSite.CataloguePage, Playcode.Export.StaticSite.Records]
+
+  # StaticSite modules that shape no play page: the catalogue, pushing the site, and this
+  # hash itself.
+  @left_out @catalogue ++ [Playcode.Export.StaticSite.Deployer, __MODULE__]
 
   @libraries [:phoenix_live_view, :phoenix_html, :jason, :xml_builder]
 
@@ -76,7 +80,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Enum.sort(exported ++ @modules)
   end
 
-  @doc "The StaticSite modules left out of `modules/0` because they shape no page."
+  @doc "The StaticSite modules left out of `modules/0` because they shape no play page."
   def left_out, do: @left_out
 
   @doc """
@@ -86,9 +90,17 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   def current(opts) do
     code = Enum.map(modules(), &{&1, &1.module_info(:md5)})
     libraries = Enum.map(@libraries, &{&1, Application.spec(&1, :vsn)})
-    gettext_dir = opts[:gettext_dir] || Application.app_dir(:playcode, "priv/gettext")
+    hash({code, translations(opts, modules()), libraries, opts[:version]})
+  end
 
-    hash({code, translations(gettext_dir), libraries, opts[:version]})
+  @doc """
+  A hex SHA-256 of the catalogue's own code and the translations it prints: the catalogue
+  is written whole on every Generate, so a change to it alone rewrites it and no play.
+  `:gettext_dir` as `current/1`.
+  """
+  def catalogue(opts \\ []) do
+    code = Enum.map(@catalogue, &{&1, &1.module_info(:md5)})
+    hash({code, translations(opts, @catalogue)})
   end
 
   @doc """
@@ -120,7 +132,9 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   # files' contents: an edit is a new key, never a stale answer.
   # ponytail: never evicted, one entry per contents seen; a dev .po edit leaves the old one
   # until restart.
-  defp translations(gettext_dir) do
+  defp translations(opts, modules) do
+    gettext_dir = opts[:gettext_dir] || Application.app_dir(:playcode, "priv/gettext")
+
     files =
       gettext_dir
       |> Path.join("*/LC_MESSAGES/*.po")
@@ -128,7 +142,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
       |> Enum.sort()
       |> Enum.map(&{Path.relative_to(&1, gettext_dir), File.read!(&1)})
 
-    sources = Enum.map(modules(), &source!/1)
+    sources = Enum.map(modules, &source!/1)
     key = {__MODULE__, :translations, hash({files, sources})}
 
     with nil <- :persistent_term.get(key, nil) do
@@ -159,7 +173,8 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   end
 
   # A message one of the modules' files asks for: the module's own file, or a template in
-  # the folder named after it, as `embed_templates "pages/*"` beside `pages.ex`.
+  # the folder named after it, as `embed_templates "pages/*"` beside `pages.ex`. Only a
+  # template: `static_site/` is also the folder named after `static_site.ex`.
   defp printed?(message, sources) do
     for reference <- List.flatten(message.references),
         file = with({file, _line} <- reference, do: file),
@@ -167,7 +182,8 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
         reduce: false do
       found ->
         found or String.ends_with?(source, "/" <> file) or
-          String.ends_with?(source, "/" <> Path.dirname(file) <> ".ex")
+          (Path.extname(file) == ".heex" and
+             String.ends_with?(source, "/" <> Path.dirname(file) <> ".ex"))
     end
   end
 

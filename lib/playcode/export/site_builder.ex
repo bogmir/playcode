@@ -42,7 +42,7 @@ defmodule Playcode.Export.SiteBuilder do
   complete play if it is empty) and the result is `StaticSite.generate/1`'s. Otherwise
   only the plays that changed are written again and the ones no longer published taken
   out, in one batch, and the result is `{:ok, %{changed: count, skipped: [play_id]}}`,
-  plus `assets: true` when only the styles and scripts were copied.
+  plus `assets:` and `catalogue:` when no play changed and those alone were written again.
   `opts` as `StaticSite.generate/1` takes them, but for the directory and plays.
   """
   def generate(opts), do: request(:generate, opts)
@@ -162,16 +162,19 @@ defmodule Playcode.Export.SiteBuilder do
     |> StaticSite.generate()
   end
 
-  # Only what changed since the last build; with nothing to do, nothing is written but
-  # the assets, when they alone changed. A batch writes them anyway.
+  # Only what changed since the last build; with no play to write, nothing is written but
+  # the assets and the catalogue, when they changed. A batch writes them anyway.
   defp refresh(opts) do
     dir = StaticSite.output_dir()
 
     case StaticSite.outdated(dir) do
       [] ->
-        if StaticSite.assets_changed?(dir) do
-          StaticSite.update_assets(dir)
-          {:ok, %{changed: 0, skipped: [], assets: true}}
+        assets? = StaticSite.assets_changed?(dir)
+        catalogue? = StaticSite.catalogue_changed?(dir)
+
+        if assets? or catalogue? do
+          StaticSite.update_shared(dir, in_site(opts))
+          {:ok, %{changed: 0, skipped: [], assets: assets?, catalogue: catalogue?}}
         else
           {:ok, %{changed: 0, skipped: []}}
         end

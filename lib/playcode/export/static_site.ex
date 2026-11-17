@@ -22,25 +22,20 @@ defmodule Playcode.Export.StaticSite do
   what changed since, and `built_version/1` which version the site was built with.
   """
 
-  import Playcode.Export.StaticSite.Bilingual
-
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue.Play
 
   alias Playcode.Export.StaticSite.{
+    CataloguePage,
     Comparison,
-    Components,
     Edition,
     Fingerprint,
     Pages,
-    Records,
     Search
   }
 
-  alias Playcode.Performances.Performance
   alias Playcode.PlayContent.InlineMarkup
-  alias PlaycodeWeb.PlayLabels
 
   @build "build.json"
 
@@ -212,7 +207,7 @@ defmodule Playcode.Export.StaticSite do
       record =
         if MapSet.size(on_disk) == 0,
           do: built_with(opts),
-          else: built |> Map.take([:site, :version]) |> Map.put(:assets, Fingerprint.assets())
+          else: shared(built)
 
       versions = Map.new(written, &{&1.code, &1.version})
       write_build(dir, record, built.plays |> Map.drop(removes) |> Map.merge(versions))
@@ -286,19 +281,24 @@ defmodule Playcode.Export.StaticSite do
   def assets_changed?(dir), do: read_build(dir).assets != Fingerprint.assets()
 
   @doc """
-  Copies `priv/static_site` into the site at `dir` and records it in `build.json`; no
-  page is rebuilt, since none embeds anything of those files but their links, which are
-  moved to the new stamp in place.
+  Whether the catalogue of the site at `dir` was written by other code or words than
+  today's: `build.json` records another `Fingerprint.catalogue/1`, or none.
   """
-  def update_assets(dir) do
-    built = read_build(dir)
-    refresh_assets(dir, built)
+  def catalogue_changed?(dir), do: read_build(dir).catalogue != Fingerprint.catalogue()
 
-    write_build(
-      dir,
-      built |> Map.take([:site, :version]) |> Map.put(:assets, Fingerprint.assets()),
-      built.plays
-    )
+  @doc """
+  Copies `priv/static_site` into the site at `dir` and rewrites the catalogue, recording
+  both in `build.json`; no play is rebuilt, since no play page embeds anything of those
+  files but their links, which are moved to the new stamp in place. Options as
+  `generate/1`.
+  """
+  def update_shared(dir, opts \\ []) do
+    in_english(fn ->
+      built = read_build(dir)
+      refresh_assets(dir, built)
+      write_catalogue(published_plays(dir), dir, defaults(opts))
+      write_build(dir, shared(built), built.plays)
+    end)
   end
 
   @doc """
@@ -537,14 +537,33 @@ defmodule Playcode.Export.StaticSite do
   defp read_build_file(path) do
     with {:ok, json} <- File.read(path),
          {:ok, %{"plays" => %{} = plays} = build} <- Jason.decode(json) do
-      %{site: build["site"], version: build["version"], assets: build["assets"], plays: plays}
+      %{
+        site: build["site"],
+        version: build["version"],
+        assets: build["assets"],
+        catalogue: build["catalogue"],
+        plays: plays
+      }
     else
-      _ -> %{site: nil, version: nil, assets: nil, plays: %{}}
+      _ -> %{site: nil, version: nil, assets: nil, catalogue: nil, plays: %{}}
     end
   end
 
-  defp built_with(opts),
-    do: %{site: Fingerprint.current(opts), version: opts[:version], assets: Fingerprint.assets()}
+  defp built_with(opts) do
+    %{
+      site: Fingerprint.current(opts),
+      version: opts[:version],
+      assets: Fingerprint.assets(),
+      catalogue: Fingerprint.catalogue()
+    }
+  end
+
+  # The record of a site whose plays stand and whose assets and catalogue were just written.
+  defp shared(built) do
+    built
+    |> Map.take([:site, :version])
+    |> Map.merge(%{assets: Fingerprint.assets(), catalogue: Fingerprint.catalogue()})
+  end
 
   defp write_build(dir, built_with, plays) do
     json = built_with |> Map.put(:plays, plays) |> Jason.encode!(pretty: true)
@@ -647,23 +666,9 @@ defmodule Playcode.Export.StaticSite do
   # The catalogue, about and search pages, and the record index; returns the index's size.
   defp write_catalogue(plays, dir, opts) do
     site = site(opts, MapSet.new(plays, & &1.code))
-    by_id = Map.new(plays, &{&1.id, &1})
-    entries = Records.entries(plays, Map.new(plays, &{&1.id, by_id[root_id(&1, by_id)]}))
-
-    assigns = %{
-      site: site,
-      works: works(plays),
-      lists: lists(entries),
-      count: length(plays),
-      authors:
-        plays |> Enum.map(& &1.author_name) |> Enum.reject(&is_nil/1) |> Enum.uniq() |> length()
-    }
-
-    File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
     File.write!(Path.join(dir, "search.html"), Pages.render(:search, %{site: site}))
-
-    Records.write(dir, entries)
+    CataloguePage.write(plays, dir, site)
   end
 
   # The search index. `postings` holds freshly computed postings by code; every other
@@ -691,159 +696,4 @@ defmodule Playcode.Export.StaticSite do
   @doc "Plays in the catalogue's order of a work's translations: by title, normalised."
   def translation_order(plays),
     do: Enum.sort_by(plays, &Search.normalise(&1.title_sort || &1.title))
-
-  # One entry per work: each published play under the published play at the root of
-  # its translation chain.
-  defp works(plays) do
-    by_id = Map.new(plays, &{&1.id, &1})
-
-    plays
-    |> Enum.group_by(&root_id(&1, by_id))
-    |> Enum.map(fn {root, members} ->
-      lead = by_id[root]
-
-      translations = members |> Enum.reject(&(&1.id == root)) |> translation_order()
-
-      %{
-        play: lead,
-        translations: translations,
-        # The comparison the lead's Compare link opens: its first own derived play's with a
-        # text, when the lead has one.
-        compare:
-          Play.has_text?(lead) &&
-            Enum.find_value(
-              translations,
-              &(&1.parent_play_id == root && Play.has_text?(&1) && &1.code)
-            ),
-        sort_author: Search.normalise(lead.author_sort || lead.author_name),
-        sort_title: Search.normalise(lead.title_sort || lead.title),
-        date: lead.composition_date_from
-      }
-    end)
-    |> Enum.sort_by(&{&1.sort_author, &1.sort_title})
-  end
-
-  # Follows parent_play_id to the root; on a cycle (hand-edited data) the play stands
-  # alone as its own root.
-  defp root_id(play, by_id), do: root_id(play, by_id, MapSet.new([play.id]), play.id)
-
-  defp root_id(play, by_id, seen, start) do
-    case by_id[play.parent_play_id] do
-      nil ->
-        play.id
-
-      parent ->
-        if parent.id in seen,
-          do: start,
-          else: root_id(parent, by_id, MapSet.put(seen, parent.id), start)
-    end
-  end
-
-  # The options of the catalogue form's lists, by control name, from the record entries:
-  # "All" first, then the values the published plays hold, each `{value, {spanish, english}}`.
-  # The first four with their counts, most frequent first; the vocabularies in their own order.
-  defp lists(entries) do
-    witnesses = Enum.flat_map(entries, &Map.get(&1, :w, []))
-    performances = Enum.flat_map(entries, &Map.get(&1, :r, []))
-    all = tp("All")
-    all_f = tpc("feminine", "All")
-
-    %{
-      "l" => [{"", all} | by_count(entries, :l, &Components.language/1, true)],
-      "o" => [{"", all} | by_count(entries, :o, &Components.language/1, false)],
-      "k" => [{"", all} | by_count(entries, :k, &Components.kind_label/1, true)],
-      "s" => [{"", all_f} | by_count(entries, :s, &same/1, true)],
-      "f" => [{"", all_f} | by_count(entries, :f, in_both(&PlayLabels.form_label/1), true)],
-      "x" => [{"", all_f}, {"1", tp("With a text")}, {"0", tp("No text")}],
-      "wt" => [
-        {"", all}
-        | in_order(
-            witnesses,
-            0,
-            approved(witness_types()),
-            in_both(&PlayLabels.witness_type_label/1)
-          )
-      ],
-      "wf" => [{"", all} | in_order(witnesses, 4, formats(witnesses), &same/1)],
-      "rc" => [
-        {"", all_f}
-        | in_order(performances, 2, approved(Performance.venue_types()), &venue_type_label/1)
-      ],
-      "h" => [
-        {"", all}
-        | in_order(
-            entries,
-            :h,
-            approved(Play.historical_times()),
-            in_both(&PlayLabels.historical_time_label/1)
-          )
-      ]
-    }
-  end
-
-  defp by_count(entries, key, label, counted?) do
-    entries
-    |> Enum.map(&Map.get(&1, key))
-    |> Enum.reject(&is_nil/1)
-    |> Enum.frequencies()
-    |> Enum.sort_by(&(-elem(&1, 1)))
-    |> Enum.map(fn {value, n} ->
-      {es, en} = label.(value)
-      {value, if(counted?, do: {"#{es} (#{n})", "#{en} (#{n})"}, else: {es, en})}
-    end)
-  end
-
-  # The vocabulary's values some row holds at `at`, a tuple's index or an entry's key.
-  defp in_order(rows, at, vocabulary, label) do
-    present = MapSet.new(rows, &if(is_atom(at), do: Map.get(&1, at), else: Enum.at(&1, at)))
-    for value <- vocabulary, value in present, do: {value, label.(value)}
-  end
-
-  # The lists' order in the mock the researcher approved (2026-11-17); the admin's forms keep
-  # each vocabulary's own. A value the mock does not name goes last.
-  @approved ~w(loose early_edition collection_single_author collection_several_authors collection
-               manuscript autograph copy
-               commercial_theatre palace private_theatre street other unknown
-               antiguedad_clasica antiguo_testamento edad_media siglo_xv siglo_xvi siglo_xvii
-               tiempo_indeterminado tiempo_maravilloso tiempo_alegorico)
-
-  defp approved(vocabulary),
-    do:
-      Enum.sort_by(vocabulary, fn value -> Enum.find_index(@approved, &(&1 == value)) || 999 end)
-
-  defp witness_types,
-    do:
-      for(
-        {_group, options} <- PlayLabels.witness_type_options(),
-        {_, value} <- options,
-        do: value
-      )
-
-  # Formats as written, by their number: 2º, 4º, 8º, 12º.
-  defp formats(witnesses) do
-    witnesses
-    |> Enum.map(&Enum.at(&1, 4))
-    |> Enum.reject(&is_nil/1)
-    |> Enum.uniq()
-    |> Enum.sort_by(fn format ->
-      case Integer.parse(format) do
-        {n, _} -> {0, n, format}
-        :error -> {1, 0, format}
-      end
-    end)
-  end
-
-  # A label function of the app's, said in both languages.
-  defp in_both(label), do: fn value -> pair(fn -> label.(value) end) end
-
-  # The mock's words: capitalised, and agreeing with «Todas» (la circunstancia escénica),
-  # where the play pages' inline labels are lower case.
-  defp venue_type_label("commercial_theatre"), do: tpc("venue type", "Commercial theatre")
-  defp venue_type_label("public_theatre"), do: tpc("venue type", "Public theatre")
-  defp venue_type_label("private_theatre"), do: tpc("venue type", "Private theatre")
-  defp venue_type_label("palace"), do: tpc("venue type", "Palace")
-  defp venue_type_label("university"), do: tpc("venue type", "University, inns of court")
-  defp venue_type_label("street"), do: tpc("venue type", "Street, square")
-  defp venue_type_label("other"), do: tpc("venue type", "Other")
-  defp venue_type_label("unknown"), do: tpc("venue type", "Unknown")
 end
