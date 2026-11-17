@@ -291,7 +291,7 @@
     <p class="lede">New questions are added at the end of the list. A question keeps its number, so an answer to question 5 is always an answer to question 5.</p>
     <p class="lede">Some questions turned out to be ours to settle, from the files and the code. They are marked “Decided by Playcode”; if you disagree, “Change this answer” brings the question back.</p>
     <p class="lede">The questions still open come first. The answered ones, with their answers, are in the archive at the end of the page.</p>
-    <p class="meta">Prepared by Bogdan. Last updated 13 November 2026. 72 questions, 51 of them answered (eighteen decided by Playcode), lists of the credits, split verses, spaces and numbers corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
+    <p class="meta">Prepared by Bogdan. Last updated 17 November 2026. 72 questions, 52 of them answered (eighteen decided by Playcode), lists of the credits, split verses, spaces and numbers corrected, a list of kinds to correct, and a short list of FileMaker tables we still need.</p>
   </header>
 
   <nav aria-label="Topics">
@@ -304,7 +304,7 @@
       <li><a href="#t-paratexts">Texts around the play</a><span class="nums">29, 34</span></li>
       <li><a href="#t-split">Split verses</a><span class="nums">50</span></li>
       <li><a href="#t-github">Work only in the GitHub copy</a><span class="nums">48</span></li>
-      <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–57</span></li>
+      <li><a href="#t-relations">Plays made from other plays</a><span class="nums">53–56</span></li>
       <li><a href="#t-prologues">Prologues on the wrong side</a><span class="nums">66</span></li>
       <li><a href="#t-speakers">Who counts as a character in the statistics</a><span class="nums">68</span></li>
       <li><a href="#t-numbering">Plays numbered by hand</a><span class="nums">69</span></li>
@@ -313,7 +313,7 @@
       <li><a href="#t-files-fixed">Files corrected</a><span class="nums">—</span></li>
       <li><a href="#t-correct">Kinds to correct</a><span class="nums">—</span></li>
       <li><a href="#t-requests">FileMaker tables we still need</a><span class="nums">—</span></li>
-      <li><a href="#archive">Archive: the answered questions</a><span class="nums">51</span></li>
+      <li><a href="#archive">Archive: the answered questions</a><span class="nums">52</span></li>
     </ul>
   </nav>
 
@@ -766,26 +766,6 @@
       </div>
     </div>
 
-    <div class="q" id="q57" data-q="q57" data-n="57">
-      <span class="q-num" aria-hidden="true">57</span>
-      <div class="q-body">
-        <h3>What should Playcode record about a play it holds no text of, and where should readers see it?</h3>
-        <p class="why">The emails say Playcode will hold source plays, and their translations and adaptations, even without a text: a source no one has edited for EMOTHE, say, or a seventeenth-century adaptation of it. Today every play in Playcode comes from a file with its text, and the published site lists only finished plays, each with its text. A play without one would have its title, author, language, date and its relations to other plays. What else it needs, and whether readers see it, is for you to say.</p>
-        <fieldset>
-          <legend>Answer</legend>
-          <div class="options">
-            <label for="q57-o1"><input type="radio" id="q57-o1" name="q57-choice" value="In the catalogue, with a page of its own and no text">In the catalogue, with a page of its own and no text</label>
-            <label for="q57-o2"><input type="radio" id="q57-o2" name="q57-choice" value="Only named on the pages of the plays it is related to">Only named on the pages of the plays it is related to</label>
-            <label for="q57-o3"><input type="radio" id="q57-o3" name="q57-choice" value="Not on the published site: for researchers only">Not on the published site: for researchers only</label>
-          </div>
-        </fieldset>
-        <div>
-          <label class="label" for="q57-text">Notes: what such a play needs besides its title, author, language, date and relations (where its text can be found, for instance)</label>
-          <textarea id="q57-text"></textarea>
-        </div>
-        <p class="status" aria-live="polite"></p>
-      </div>
-    </div>
   </section>
 
   <section id="t-prologues" aria-labelledby="h-prologues">
@@ -982,8 +962,15 @@
 
   <section id="t-requests" aria-labelledby="h-requests">
     <h2 id="h-requests">FileMaker tables we still need</h2>
-    <p>Not questions, but they unblock the next pieces of work. The tables asked for before have arrived, so none is outstanding now; one export can carry any later request.</p>
+    <p>Not questions, but they unblock the next pieces of work. The tables asked for before have arrived. The plays without a text (question 57) need the seven below; one export can carry them all.</p>
     <ul class="requests">
+      <li><strong>For the 121 works with no text: what each is, and of which play.</strong> The published index says whether a version is an original or a translation, and of what, only for the versions on the old site. For the others the export gives a work number shared by the versions of one work, and for some a translator’s name. We need, per version: its kind (original, translation, adaptation) and its original.</li>
+      <li><strong>Their characters, as a table.</strong> The export’s search field holds a version’s characters as one run of words (“Husband All Master Gentleman”), which cannot be split into names.</li>
+      <li><strong>Their author, per version.</strong> The field we have gives the author of the work, not of the version, and a few have none.</li>
+      <li><strong>Their accepted years of composition.</strong> The export gives the competing datings as text; the accepted years are in the published index, which lists none of these works. Until then the catalogue’s search by dating does not find them.</li>
+      <li><strong>The work’s title with its article.</strong> The export reads “burlador de Sevilla”, so the original title of a translation cannot be filled from it.</li>
+      <li><strong>What the collection numbers mean</strong> (1, 2 and 3 in the search field). Playcode works out a play’s collection from its code, so all 121 read EMOTHE.</li>
+      <li><strong>The TEI files of 35 further versions</strong> FileMaker holds and Playcode does not: 29 marked as having a web edition, 6 with the mark empty. With no file and no “no web edition” mark, they are not among the 121.</li>
       <li><strong>The places tables</strong> (<code>T10</code>, its tables of cities, continents, vague locations, countries and regions, and the names of every place), <strong>arrived on 19 October</strong>. They give each play its places of action, with the state each place belonged to at the time. The places of performances were in them too: 49 of the links are performances’, the table 142 performances pointed at. Playcode has imported the plays’ places, and on 20 October the performances’ places with the performances.</li>
       <li><strong>The genre tables</strong> (<code>T01.42</code>, <code>T01.43</code> and <code>T14.1</code>), <strong>arrived on 19 October</strong>, in place of the value lists. They wait for the genre to be built.</li>
       <li><strong>When exporting, choose every field</strong> (“Mover todo”). The export dialog remembers the previous selection, which is how one table first arrived with 26 of its 41 fields.</li>
@@ -991,7 +978,7 @@
   </section>
 
   <details class="archive" id="archive">
-    <summary><span class="when-closed">Show the archive: 51 answered questions</span><span class="when-open">Hide the archive</span></summary>
+    <summary><span class="when-closed">Show the archive: 52 answered questions</span><span class="when-open">Hide the archive</span></summary>
     <div class="archive-body">
       <p class="note">The questions answered, or decided by Playcode, each with its answer, under its topic. “Change this answer” still brings a question back.</p>
     <section id="t-variants" aria-labelledby="h-variants">
@@ -2747,6 +2734,38 @@
             <label class="label" for="q67-text">Notes</label>
             <textarea id="q67-text"></textarea>
           </div>
+          <p class="status" aria-live="polite"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="a-relations" aria-labelledby="h-a-relations">
+      <h2 id="h-a-relations">Plays made from other plays</h2>
+      <p class="note">The background is with the open questions: <a href="#t-relations">Plays made from other plays</a>.</p>
+      <div class="q" id="q57" data-q="q57" data-n="57" data-answered="2026-11-17">
+        <span class="q-num" aria-hidden="true">57</span>
+        <div class="q-body">
+          <h3>What should Playcode record about a play it holds no text of, and where should readers see it?</h3>
+          <p class="why">The emails say Playcode will hold source plays, and their translations and adaptations, even without a text: a source no one has edited for EMOTHE, say, or a seventeenth-century adaptation of it. Today every play in Playcode comes from a file with its text, and the published site lists only finished plays, each with its text. A play without one would have its title, author, language, date and its relations to other plays. What else it needs, and whether readers see it, is for you to say.</p>
+  <div class="answered">
+  <p><strong>Answered on 17 November 2026:</strong> in the catalogue, like any other play. A work with no text is marked as having no text, has no HTML, PDF or parallel formats, and its page gives its record (witnesses, performances, places, characters, bibliography) with the text section empty. The full-text search cannot find it; every other search can. Its code is EMOTHE plus FileMaker’s number: FileMaker holds 121 such works that Playcode does not, EMOTHE0034 to EMOTHE0632. One state, not two: a play is published when its record is marked complete, with a text or without.</p>
+  <p>With the same answer: the published site gets one search, the catalogue, with the fields of the old database form (title, author, language, original language, kind, collection, verse or prose, with or without text, the text and its notes, dating, witnesses, performances, historical time, place of action and characters). Its result is always a list of plays.</p>
+  <p>Designed on 17 November 2026, not built yet. FileMaker’s export says which works these are, with their title, author, language, historical time and datings, and its other tables give their witnesses, bibliography, places and performances. It does not say whether each is an original, a translation or an adaptation, nor of which play: they arrive with no kind, as drafts, for you to complete (see <a href="#t-requests">FileMaker tables we still need</a>).</p>
+  <button type="button" class="reopen" aria-expanded="false" aria-controls="q57-form">Change this answer</button>
+  </div>
+  <div class="answer-form" id="q57-form" hidden>
+          <fieldset>
+          <legend>Answer</legend>
+          <div class="options">
+            <label for="q57-o1"><input type="radio" id="q57-o1" name="q57-choice" value="In the catalogue, with a page of its own and no text">In the catalogue, with a page of its own and no text</label>
+            <label for="q57-o2"><input type="radio" id="q57-o2" name="q57-choice" value="Only named on the pages of the plays it is related to">Only named on the pages of the plays it is related to</label>
+            <label for="q57-o3"><input type="radio" id="q57-o3" name="q57-choice" value="Not on the published site: for researchers only">Not on the published site: for researchers only</label>
+          </div>
+        </fieldset>
+        <div>
+          <label class="label" for="q57-text">Notes: what such a play needs besides its title, author, language, date and relations (where its text can be found, for instance)</label>
+          <textarea id="q57-text"></textarea>
+        </div>
           <p class="status" aria-live="polite"></p>
           </div>
         </div>
