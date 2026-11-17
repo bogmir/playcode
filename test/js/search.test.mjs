@@ -85,3 +85,33 @@ test('a line is looked up in the chunk the build wrote it to', () => {
   assert.equal(S.chunkKey('EMOTHE0001', S.NOTE_BASE + 100), 'EMOTHE0001/n1');
 });
 
+
+// The two entry points the catalogue calls. site.js loads into a context with no
+// `document`, so only its pure half runs; search.js then gets a stub one, so its second
+// half loads, and every file it would add as a <script> is already loaded by hand.
+const engine = () => {
+  const ctx = vm.createContext({});
+  vm.runInContext(read('../../priv/static_site/site.js'), ctx);
+  ctx.document = { head: { appendChild() { throw new Error('nothing to load'); } }, createElement: () => ({}) };
+  vm.runInContext(read('../../priv/static_site/search.js'), ctx);
+  const E = ctx.EMOTHE.search;
+  E.load('plays', 'all', [{ code: 'EMOTHE0001', title: 'La vida es sueño' }, { code: 'EMOTHE0002', title: 'Otra' }]);
+  // sueño: play 0, line 3 spoken, line 9 stage; suelo: play 1, line 2.
+  E.load('index', 'su', { 'sueño': [0, 2, 6, 13], 'suelo': [1, 1, 4] });
+  return E;
+};
+
+test('find groups a query’s hits by play, lines ascending, with their kind', async () => {
+  const E = engine();
+  assert.deepEqual(plain(await E.find('sueño', 'prefix')), { EMOTHE0001: [[3, 'spoken'], [9, 'stage']] });
+  assert.deepEqual(plain(await E.find('sue', 'prefix')), { EMOTHE0001: [[3, 'spoken'], [9, 'stage']], EMOTHE0002: [[2, 'spoken']] });
+  assert.deepEqual(plain(await E.find('  ', 'prefix')), {});
+});
+
+test('passages give each line its link, reference, speaker and text', async () => {
+  const E = engine();
+  const lines = []; lines[3] = ['jornada-1', 'l3', '3', 0, 'v', 'es un sueño la vida'];
+  E.load('lines', 'EMOTHE0001/0', { speakers: ['SEGISMUNDO'], lines });
+  assert.deepEqual(plain(await E.passages('EMOTHE0001', [3])), [
+    { href: 'plays/EMOTHE0001/jornada-1.html#l3', ref: '3', speaker: 'SEGISMUNDO', kind: 'v', text: 'es un sueño la vida' }]);
+});
