@@ -411,6 +411,17 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("Drafts")} · 1")
     end
 
+    test "a derived play whose kind was never set is listed under its original, unnamed",
+         %{conn: conn} do
+      original = play_fixture(%{"title_sort" => "Alpha"})
+      untyped = derived(original, %{"title_sort" => "Beta", "relationship_type" => nil})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert row_ids(view) == ["play-#{original.id}", "play-#{untyped.id}"]
+      refute has_element?(view, "#play-#{untyped.id} td", t("Translation"))
+    end
+
     test "a translation of a translation is listed under the original of the chain",
          %{conn: conn} do
       middle = play_fixture(%{"title_sort" => "Middle"})

@@ -313,7 +313,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                     name="hero-arrow-turn-down-right-mini"
                     class="size-4 text-base-content/70"
                   />
-                  <span class="badge badge-sm badge-ghost">
+                  <span :if={play.relationship_type} class="badge badge-sm badge-ghost">
                     {PlayLabels.relationship_type_label(play.relationship_type)}
                   </span>
                 </span>
