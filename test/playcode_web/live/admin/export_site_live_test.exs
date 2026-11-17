@@ -531,6 +531,29 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       assert render(lv) =~ t("Every play in the site is up to date.")
     end
 
+    # The catalogue's code is out of the site fingerprint, so a change to it rebuilds no
+    # play; Generate must still rewrite the catalogue, which it once left as it was.
+    test "a catalogue changed since the build is rewritten, not the plays", %{conn: conn} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      generate(lv)
+
+      dir = StaticSite.output_dir()
+      path = Path.join(dir, "build.json")
+      json = path |> File.read!() |> Jason.decode!() |> Map.put("catalogue", "older")
+      File.write!(path, Jason.encode!(json))
+      File.write!(Path.join(dir, "index.html"), "stale")
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/export")
+      assert render(lv) =~ t("The catalogue has changed. Generate rewrites it.")
+      refute render(lv) =~ t("Every play in the site is up to date.")
+      refute has_element?(lv, "#site-changed")
+
+      lv |> element("form[phx-submit=generate]") |> render_submit()
+      wait_for(fn -> render(lv) =~ t("The catalogue is updated.") end)
+      assert File.read!(Path.join(dir, "index.html")) =~ "data-works"
+      assert render(lv) =~ t("Every play in the site is up to date.")
+    end
+
     test "Generate with nothing changed says so", %{conn: conn} do
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
       generate(lv)
