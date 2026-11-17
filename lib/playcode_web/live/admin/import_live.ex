@@ -293,8 +293,10 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                   tei: tei_total(p)
                 )}
                 <span :if={p.removes_text} class="font-medium text-warning">
-                  {gettext("This file has no text: the play's %{count} lines will be removed.",
-                    count: p.removes_text
+                  {ngettext(
+                    "This file has no text: the play's only line will be removed.",
+                    "This file has no text: the play's %{count} lines will be removed.",
+                    p.removes_text
                   )}
                 </span>
                 <span :if={p.edited > 0} class="font-medium text-warning">
