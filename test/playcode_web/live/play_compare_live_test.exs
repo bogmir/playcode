@@ -9,6 +9,17 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
   # The preview is for staff; a visitor is sent to log in (authorization_test.exs).
   setup %{conn: conn}, do: %{conn: log_in_user(conn, Playcode.TestFixtures.user_fixture())}
 
+  test "a play without a text is not compared: back to its preview, with the notice",
+       %{conn: conn} do
+    play = Playcode.TestFixtures.play_without_text_fixture()
+
+    assert {:error, {:live_redirect, %{to: to, flash: flash}}} =
+             live(conn, ~p"/plays/#{play.code}/compare")
+
+    assert to == ~p"/plays/#{play.code}"
+    assert flash["info"] == t("EMOTHE does not hold the text of this play.")
+  end
+
   describe "public comparison page" do
     test "renders the family panels", %{conn: conn} do
       %{original: original, translation: translation} = TestFixtures.translation_family_fixture()

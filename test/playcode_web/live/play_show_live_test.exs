@@ -14,6 +14,21 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
   # The preview is for staff; a visitor is sent to log in (authorization_test.exs).
   setup %{conn: conn}, do: %{conn: log_in_user(conn, Playcode.TestFixtures.user_fixture())}
 
+  describe "a play without a text" do
+    test "says so where the text goes, and offers no statistics", %{conn: conn} do
+      play = Playcode.TestFixtures.play_without_text_fixture()
+      {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+      assert has_element?(
+               view,
+               "#play-tab-text",
+               t("EMOTHE does not hold the text of this play.")
+             )
+
+      refute has_element?(view, "button", t("Statistics"))
+    end
+  end
+
   test "the header's theme toggle and the breadcrumb are named in Spanish", %{conn: conn} do
     play = import_tei!(tei(body: "<div1 type=\"acto\" n=\"1\"><head>A</head></div1>"))
     TestFixtures.mark_complete!(play)
