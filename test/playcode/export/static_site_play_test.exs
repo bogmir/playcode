@@ -184,7 +184,8 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert texts(section, "a") == [
                "Descargar la fuente TEI-XML",
                "Descargar el libro electrónico EPUB",
-               "Imprimir o guardar como PDF"
+               # A link opens another page: it names the full text it prints.
+               "Imprimir el texto completo o guardarlo como PDF"
              ]
 
       assert section |> LazyHTML.query("a[download]") |> Enum.count() == 2

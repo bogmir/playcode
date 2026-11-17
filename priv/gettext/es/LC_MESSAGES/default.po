@@ -6669,8 +6669,12 @@ msgstr "Descargar el libro electrónico EPUB"
 msgid "Downloads"
 msgstr "Descargas"
 
-#: lib/playcode/export/static_site/components.ex:149
 #: lib/playcode/export/static_site/pages/text.html.heex:9
 #, elixir-autogen, elixir-format
 msgid "Print or save as PDF"
 msgstr "Imprimir o guardar como PDF"
+
+#: lib/playcode/export/static_site/components.ex:149
+#, elixir-autogen, elixir-format
+msgid "Print the full text or save it as PDF"
+msgstr "Imprimir el texto completo o guardarlo como PDF"

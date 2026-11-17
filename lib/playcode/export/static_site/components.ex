@@ -146,7 +146,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <li><a href={"#{@play.code}.xml"} download>{t("Download the TEI-XML source")}</a></li>
         <%= if Play.has_text?(@play) do %>
           <li><a href={"#{@play.code}.epub"} download>{t("Download the EPUB e-book")}</a></li>
-          <li><a href="text.html#print">{t("Print or save as PDF")}</a></li>
+          <li><a href="text.html#print">{t("Print the full text or save it as PDF")}</a></li>
         <% end %>
       </ul>
     </section>
