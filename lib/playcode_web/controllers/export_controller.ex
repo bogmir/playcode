@@ -6,6 +6,8 @@ defmodule PlaycodeWeb.ExportController do
 
   use PlaycodeWeb, :controller
 
+  plug PlaycodeWeb.Plugs.RequireText, :preview when action in [:html, :pdf, :epub]
+
   alias Playcode.Catalogue
   alias Playcode.Export
   alias Playcode.Export.PdfCache

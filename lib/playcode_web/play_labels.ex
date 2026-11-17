@@ -175,15 +175,22 @@ defmodule PlaycodeWeb.PlayLabels do
 
   def paratext_title(paratext), do: kind_label(paratext.kind)
 
+  @doc "What a page says where a play without a text would show it."
+  def no_text_notice, do: gettext("EMOTHE does not hold the text of this play.")
+
   @doc "The name of a play's form, as `Play.form/1` gives it."
   def form_label("verse"), do: gettext("Verse")
   def form_label("occasional_verse"), do: gettext("Prose with occasional verse")
   def form_label("prose"), do: gettext("Prose")
   def form_label("mixed"), do: gettext("Verse and prose")
 
-  @doc "The play's form and its verses, as a line: \"Verse · 2400 verses\", \"Prose\"."
+  @doc """
+  The play's form and its verses, as a line: "Verse · 2400 verses", "Prose"; nil for a play
+  with no form, one without a text.
+  """
   def form_line(%Play{} = play) do
     case {Play.form(play), play.verse_count} do
+      {nil, _} -> nil
       {form, _} when form in ["prose", "occasional_verse"] -> form_label(form)
       {form, n} when is_integer(n) and n > 0 -> "#{form_label(form)} · #{n} #{gettext("verses")}"
       {form, _} -> form_label(form)
@@ -192,10 +199,14 @@ defmodule PlaycodeWeb.PlayLabels do
 
   @doc "The form select's options: automatic first, saying what it currently gives."
   def form_options(%Play{} = play) do
-    automatic = Play.form(%{play | form: nil})
+    automatic =
+      case Play.form(%{play | form: nil}) do
+        nil -> gettext("Automatic (no text)")
+        form -> gettext("Automatic (%{form})", form: form_label(form))
+      end
 
     [
-      {gettext("Automatic (%{form})", form: form_label(automatic)), nil}
+      {automatic, nil}
       | Enum.map(Play.forms(), &{form_label(&1), &1})
     ]
   end

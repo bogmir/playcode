@@ -74,6 +74,12 @@ defmodule Playcode.CompleteCopyTest do
     assert differences(built, imported) == []
   end
 
+  test "a play without a text comes back whole from its TEI file" do
+    {built, imported} = round_trip(&play_without_text/0)
+
+    assert differences(built, imported) == []
+  end
+
   # A new column joins the comparison by itself; a new table only when snapshot/1 reads it.
   test "every table holding a play's rows is compared, or kept out of the file on purpose" do
     compared = ~w(play_editors play_sources play_witnesses play_bibliography play_places
@@ -135,46 +141,15 @@ defmodule Playcode.CompleteCopyTest do
   # of verse with its split lines, asides, stage directions and notes.
   defp ordinary_play(original) do
     {:ok, play} =
-      Catalogue.create_play(%{
-        title: "La comedia completa",
-        title_sort: "comedia completa",
-        code: "CC#{System.unique_integer([:positive])}",
-        language: "it",
-        author_name: "Autora, Ana",
-        author_sort: "Autora",
-        author_attribution: "fiable",
-        publication_date: "2026",
-        form: "mixed",
-        publisher: "ARTELOPE/EMOTHE",
-        pub_place: "Valencia",
-        availability_note: "Uso libre.",
-        project_description: "El proyecto.",
-        editorial_declaration: "Los criterios.",
-        original_title: "The Complete Comedy",
-        licence_url: "https://creativecommons.org/licenses/by-nc-nd/4.0/",
-        licence_text: "CC BY-NC-ND 4.0",
-        emothe_id: "0999",
-        sponsor: "Plan Nacional",
-        funder: "Ministerio",
-        authority: "Universitat de València",
-        parent_play_id: original.id,
-        relationship_type: "traduccion",
-        edition_title: "Edición crítica",
-        historical_time: "siglo_xvi",
-        historical_time_note: "Durante una guerra.",
-        composition_date_from: 1605,
-        composition_date_to: 1607,
-        composition_date_note: "hacia 1606",
-        revisions: [
-          %{
-            date: "2021",
-            people: "Muñoz Pons, Carlos; Tronch, Jesús",
-            description: "Revisión en TEI-XML",
-            note: "Con correcciones."
-          },
-          %{date: "2026-10-18", people: "Amelang, David", description: "Corrección"}
-        ]
-      })
+      Catalogue.create_play(
+        Map.merge(record(), %{
+          title: "La comedia completa",
+          title_sort: "comedia completa",
+          code: "CC#{System.unique_integer([:positive])}",
+          parent_play_id: original.id,
+          relationship_type: "traduccion"
+        })
+      )
 
     credits!(play, [
       {"translator", "Sanderson, John D.", "Universidad de Málaga"},
@@ -270,6 +245,81 @@ defmodule Playcode.CompleteCopyTest do
 
     element!(scene, speech, %{type: "prose", content: "Prosa en una línea,\nen otra."})
     element!(act, %{type: "trailer", content: "FIN DEL PRIMER ACTO"})
+
+    PlayContent.refresh_derived(play.id)
+    play
+  end
+
+  # Every column of a play's record off its default, as the admin form fills them.
+  defp record do
+    %{
+      language: "it",
+      author_name: "Autora, Ana",
+      author_sort: "Autora",
+      author_attribution: "fiable",
+      publication_date: "2026",
+      form: "mixed",
+      publisher: "ARTELOPE/EMOTHE",
+      pub_place: "Valencia",
+      availability_note: "Uso libre.",
+      project_description: "El proyecto.",
+      editorial_declaration: "Los criterios.",
+      original_title: "The Complete Comedy",
+      licence_url: "https://creativecommons.org/licenses/by-nc-nd/4.0/",
+      licence_text: "CC BY-NC-ND 4.0",
+      emothe_id: "0999",
+      sponsor: "Plan Nacional",
+      funder: "Ministerio",
+      authority: "Universitat de València",
+      edition_title: "Edición crítica",
+      historical_time: "siglo_xvi",
+      historical_time_note: "Durante una guerra.",
+      composition_date_from: 1605,
+      composition_date_to: 1607,
+      composition_date_note: "hacia 1606",
+      revisions: [
+        %{
+          date: "2021",
+          people: "Muñoz Pons, Carlos; Tronch, Jesús",
+          description: "Revisión en TEI-XML",
+          note: "Con correcciones."
+        },
+        %{date: "2026-10-18", people: "Amelang, David", description: "Corrección"}
+      ]
+    }
+  end
+
+  # A play Playcode holds the record of and no text (no verse line, no line of prose): its
+  # cast list and paratexts all come before a body that has nothing.
+  defp play_without_text do
+    {:ok, play} =
+      Catalogue.create_play(
+        Map.merge(record(), %{
+          title: "Una obra sin texto",
+          code: "CN#{System.unique_integer([:positive])}"
+        })
+      )
+
+    # The principal first, as a file is read (the ordinary play's known gap).
+    credits!(play, [
+      {"principal", "Oleza Simó, Joan", nil},
+      {"critical_editor", "Crítico, Carlos", "Universidad de Valencia"}
+    ])
+
+    witnesses!(play)
+    bibliography!(play)
+    places!(play)
+    performances!(play)
+
+    paratexts!(play, [
+      %{kind: "dedicatoria", heading: "DEDICATORIA", content: "Al <<lector>>."},
+      %{kind: "argumento", heading: "ARGUMENTO", content: "Lo que pasa.", position: 2}
+    ])
+
+    cast!(play, [
+      %{xml_id: "ANA", name: "Ana", description: "dama <<joven>>"},
+      %{xml_id: "BLAS", name: "Blas"}
+    ])
 
     PlayContent.refresh_derived(play.id)
     play

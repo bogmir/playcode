@@ -50,7 +50,9 @@ defmodule Playcode.Export.StaticSite.Edition do
     play = Catalogue.get_play_with_all!(id)
     divisions = PlayContent.load_play_content(id, variants: play.show_variants)
     items = Metrics.items(divisions)
-    pages = pages(divisions, items)
+    # A play without a text has no page but its title page, which then prints every
+    # paratext and cast list: acts of stage directions alone get no page of their own.
+    pages = if Catalogue.Play.has_text?(play), do: pages(divisions, items), else: []
     outline = outline(play.paratexts, divisions, pages)
     refs = refs(items, play.numbering_restart)
     anchors = Map.merge(anchors(items, pages, play.numbering_restart), outline.anchors)

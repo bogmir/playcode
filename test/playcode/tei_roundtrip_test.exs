@@ -104,6 +104,41 @@ defmodule Playcode.TeiRoundtripTest do
     {"source note", "note", "bibl", %{}, "Notas de la fuente."}
   ]
 
+  describe "a play without a text" do
+    alias Playcode.Catalogue.Play
+
+    test "its body is one empty paragraph, and it has no extent" do
+      xml = export_tei(Playcode.TestFixtures.play_without_text_fixture())
+      assert xml_elements(xml, "p", within: "body") == [{%{}, ""}]
+      assert xml_elements(xml, "extent") == []
+    end
+
+    test "with a form its curator chose, the extent says the form and no count" do
+      xml = export_tei(Playcode.TestFixtures.play_without_text_fixture(%{"form" => "verse"}))
+      assert [{attrs, ""}] = xml_elements(xml, "extent")
+      assert {"ana", "verso"} in attrs
+    end
+
+    test "comes back from its file without a text, and writes the same file again" do
+      xml = export_tei(Playcode.TestFixtures.play_without_text_fixture(%{"code" => "EMOTHE9701"}))
+      play = import_tei!(xml)
+      refute Play.has_text?(play)
+      assert Play.form(play) == nil
+      assert export_tei(play) == xml
+    end
+
+    test "acts and stage directions alone are written as they are, with no empty paragraph" do
+      xml =
+        roundtrip(
+          tei(body: ~s(<div1 type="acto" n="1"><head>ACTO I</head><stage>Sale.</stage></div1>))
+        )
+
+      assert xml_elements(xml, "p", within: "body") == []
+      assert [_act] = xml_elements(xml, "div1")
+      assert xml_elements(xml, "extent") == []
+    end
+  end
+
   describe "the header" do
     setup do
       %{xml: roundtrip(tei(@rich_header))}
@@ -1589,8 +1624,10 @@ defmodule Playcode.TeiRoundtripTest do
           cast_list_id: list.id
         })
 
+      # The body's empty paragraph is new: a body with no item now holds one, which the
+      # schema requires (a play without a text).
       assert text_order(export_tei(play)) ==
-               ["front/titlePage", "front/div[dedicatoria]", "front/div[elenco]"]
+               ["front/titlePage", "front/div[dedicatoria]", "front/div[elenco]", "body/p"]
     end
 
     # `prologo` and `argumento` are a paratext's kinds and a division's types both.

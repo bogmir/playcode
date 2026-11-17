@@ -10,7 +10,9 @@ defmodule PlaycodeWeb.Admin.PlayStatisticsLive do
   import PlaycodeWeb.Components.StatisticsPanel
 
   alias Playcode.Catalogue
+  alias Playcode.Catalogue.Play
   alias Playcode.Statistics
+  alias PlaycodeWeb.PlayLabels
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -20,6 +22,7 @@ defmodule PlaycodeWeb.Admin.PlayStatisticsLive do
      socket
      |> assign(:page_title, "#{play.title} — #{gettext("Statistics")}")
      |> assign(:play, play)
+     |> assign(:has_text, Play.has_text?(play))
      |> assign(:statistic, Statistics.get_statistics(play.id))
      |> assign(:play_context, %{play: play, active_tab: :statistics})}
   end
@@ -40,15 +43,20 @@ defmodule PlaycodeWeb.Admin.PlayStatisticsLive do
         {gettext("Statistics")}
         <:subtitle>{@play.title}</:subtitle>
         <:actions>
-          <span id="computed-at" class="text-sm text-base-content/70">
+          <span :if={@has_text} id="computed-at" class="text-sm text-base-content/70">
             {gettext("Computed")} {Calendar.strftime(@statistic.computed_at, "%Y-%m-%d %H:%M")}
           </span>
-          <button phx-click="recompute_stats" class="btn btn-sm btn-outline btn-primary">
+          <button
+            :if={@has_text}
+            phx-click="recompute_stats"
+            class="btn btn-sm btn-outline btn-primary"
+          >
             <.icon name="hero-arrow-path-mini" class="size-4" /> {gettext("Recompute")}
           </button>
         </:actions>
       </.page_header>
-      <.stats_panel statistic={@statistic} play={@play} />
+      <.stats_panel :if={@has_text} statistic={@statistic} play={@play} />
+      <p :if={!@has_text} class="text-base-content/70">{PlayLabels.no_text_notice()}</p>
     </.page>
     """
   end

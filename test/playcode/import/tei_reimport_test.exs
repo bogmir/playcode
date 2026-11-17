@@ -47,6 +47,30 @@ defmodule Playcode.Import.TeiReimportTest do
     %{path: write_tmp!(@tei)}
   end
 
+  # A FileMaker work whose TEI file arrives later.
+  test "a file with a text over a play without one gives it the text in place" do
+    without =
+      Playcode.TestFixtures.play_without_text_fixture(%{
+        "code" => "EMOTHE9703",
+        "team_note" => "de FileMaker",
+        "is_complete" => true
+      })
+
+    play =
+      import_tei!(
+        tei(
+          code: "EMOTHE9703",
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Uno.</l><l n="2">Dos.</l></sp></div1>)
+        )
+      )
+
+    assert play.id == without.id
+    assert Playcode.Catalogue.Play.has_text?(play)
+    assert play.team_note == "de FileMaker"
+    assert play.is_complete
+  end
+
   test "re-importing updates the same play, and brings an archived one back", %{path: path} do
     {:ok, play} = TeiImport.import_file(path)
     {:ok, _} = Catalogue.delete_play(play)

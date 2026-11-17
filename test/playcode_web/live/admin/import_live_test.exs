@@ -192,6 +192,33 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
       assert html =~ "Liber"
     end
 
+    test "the confirmation warns that the play's text will be removed", %{conn: conn} do
+      for lines <- [1, 2] do
+        code = "IMP#{System.unique_integer([:positive])}"
+        verses = Enum.map_join(1..lines, &~s(<l n="#{&1}">Verso #{&1}.</l>))
+
+        import_tei!(
+          tei(
+            code: code,
+            body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker>#{verses}</sp></div1>)
+          )
+        )
+
+        {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
+        upload(lv, [{"sin-texto.xml", tei(code: code)}])
+
+        assert has_element?(
+                 lv,
+                 "li",
+                 n(
+                   "This file has no text: the play's only line will be removed.",
+                   "This file has no text: the play's %{count} lines will be removed.",
+                   lines
+                 )
+               )
+      end
+    end
+
     test "says how many of the file's rows were edited since their import",
          %{lv: lv, code: code} do
       cast =

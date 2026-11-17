@@ -21,7 +21,8 @@ defmodule Playcode.Catalogue.Play do
     * The curators own the columns in `TeiImport`'s `@platform_owned`, which a
       re-import never touches.
     * `verse_count` and `auto_form` are derived from the text by
-      `Catalogue.update_form_and_verse_count/1`. Read the play's form through `form/1`.
+      `Catalogue.update_form_and_verse_count/1`; both are nil for a play without a text.
+      Read the play's form through `form/1`, and whether it has a text through `has_text?/1`.
     * `deleted_at` and `content_version` are written only by the functions and the
       triggers named next to them.
 
@@ -56,7 +57,7 @@ defmodule Playcode.Catalogue.Play do
     field :author_attribution, :string
     field :publication_date, :string
     field :verse_count, :integer
-    field :auto_form, :string, default: "prose"
+    field :auto_form, :string
     field :form, :string
     field :numbering_type, :string, default: "V"
     field :numbering_restart, :string, default: "never"
@@ -173,6 +174,12 @@ defmodule Playcode.Catalogue.Play do
   """
   def form(%__MODULE__{form: form}) when is_binary(form), do: form
   def form(%__MODULE__{auto_form: auto_form}), do: auto_form
+
+  @doc """
+  Whether the play has a text: at least one verse line or line of prose, as the last
+  import or content edit found.
+  """
+  def has_text?(%__MODULE__{auto_form: auto_form}), do: not is_nil(auto_form)
 
   # Question 23 still asks where verse and prose ends; nine tenths is Playcode's proposal,
   # applied until the project answers.

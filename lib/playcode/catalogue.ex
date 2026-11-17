@@ -211,7 +211,9 @@ defmodule Playcode.Catalogue do
 
   @doc """
   Recomputes the play's `verse_count`, every verse numbered or not, and `auto_form`, the form its
-  verse and prose give (`Play.auto_form/2`), from its text.
+  verse and prose give (`Play.auto_form/2`), from its text. A play with no verse line and no
+  line of prose gets nil for both: it has no text (`Play.has_text?/1`), an empty line still
+  counts as one.
   """
   def update_form_and_verse_count(play_id) do
     alias Playcode.PlayContent.Element
@@ -219,11 +221,12 @@ defmodule Playcode.Catalogue do
     # Every verse once, a split verse by its first part, numbered or not (Q10: the structure;
     # a play numbered by speech numbers few of its verses). The form counts every verse line
     # by its length against the prose's.
-    {count, verse_length, prose_length} =
+    {lines, count, verse_length, prose_length} =
       Element
       |> where(play_id: ^play_id)
       |> where([e], e.type in ["verse_line", "prose"])
       |> select([e], {
+        count(e.id),
         filter(
           count(e.id),
           e.type == "verse_line" and (is_nil(e.part) or e.part in ["", "I"])
@@ -235,31 +238,13 @@ defmodule Playcode.Catalogue do
 
     Play
     |> Repo.get!(play_id)
-    |> Ecto.Changeset.change(%{
-      verse_count: count,
-      auto_form: Play.auto_form(verse_length, prose_length)
-    })
+    |> Ecto.Changeset.change(
+      if lines == 0,
+        do: %{verse_count: nil, auto_form: nil},
+        else: %{verse_count: count, auto_form: Play.auto_form(verse_length, prose_length)}
+    )
     |> Repo.update()
   end
-
-  @doc """
-  Which of `play_ids` have no text: not a verse, not a line of prose. A prose play has
-  text; a play whose file brought none, or that was created by hand and never filled,
-  has not.
-  """
-  def without_text(play_ids) do
-    with_text =
-      text_elements()
-      |> where([e], e.play_id in ^play_ids)
-      |> select([e], e.play_id)
-      |> distinct(true)
-      |> Repo.all()
-
-    MapSet.difference(MapSet.new(play_ids), MapSet.new(with_text))
-  end
-
-  defp text_elements,
-    do: where(Playcode.PlayContent.Element, [e], e.type in ["verse_line", "prose"])
 
   @doc """
   The admin form's changeset (`Play.form_changeset/2`).
@@ -533,13 +518,7 @@ defmodule Playcode.Catalogue do
   defp apply_status(query, :draft), do: where(query, [p], not p.is_complete)
   defp apply_status(query, :complete), do: where(query, [p], p.is_complete)
 
-  # NOT EXISTS, an anti-join; `NOT IN` over play_elements took 20 seconds in production.
-  defp apply_status(query, :no_text) do
-    from(p in query,
-      as: :play,
-      where: not exists(where(text_elements(), [e], e.play_id == parent_as(:play).id))
-    )
-  end
+  defp apply_status(query, :no_text), do: where(query, [p], is_nil(p.auto_form))
 
   defp apply_status(query, _), do: query
 

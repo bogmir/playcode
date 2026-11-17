@@ -18,6 +18,17 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
   @impl true
   def mount(%{"id" => id}, _session, socket) do
     play = Catalogue.get_play_with_all!(id)
+
+    if Catalogue.Play.has_text?(play),
+      do: mount_comparison(play, socket),
+      else:
+        {:ok,
+         socket
+         |> put_flash(:info, PlaycodeWeb.PlayLabels.no_text_notice())
+         |> push_navigate(to: ~p"/admin/plays/#{play.id}")}
+  end
+
+  defp mount_comparison(play, socket) do
     family = PlayComparison.build_family(play)
 
     # Both views load whole plays, so they are built once, for the live connection: the

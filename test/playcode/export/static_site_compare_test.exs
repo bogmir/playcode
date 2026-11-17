@@ -22,6 +22,60 @@ defmodule Playcode.Export.StaticSiteCompareTest do
     {:ok, _} = Playcode.PlayContent.update_character(character, %{original_xml_id: to})
   end
 
+  test "a translation is not compared with an original that has no text" do
+    original = play_without_text_fixture(%{"is_complete" => true})
+
+    translation =
+      play_fixture(%{
+        "is_complete" => true,
+        "parent_play_id" => original.id,
+        "relationship_type" => "traduccion"
+      })
+
+    dir = generate!([original, translation])
+
+    refute File.exists?(Path.join(dir, "plays/#{translation.code}/compare.html"))
+    assert count(html!(dir, "index.html"), "a.compare") == 0
+
+    assert "../#{original.code}/index.html" in attribute(
+             html!(dir, "plays/#{translation.code}/index.html"),
+             "a",
+             "href"
+           )
+  end
+
+  test "an original with a text is not compared with a translation that has none" do
+    original = play_fixture(%{"is_complete" => true})
+
+    translation =
+      play_without_text_fixture(%{
+        "is_complete" => true,
+        "parent_play_id" => original.id,
+        "relationship_type" => "traduccion"
+      })
+
+    dir = generate!([original, translation])
+
+    refute File.exists?(Path.join(dir, "plays/#{translation.code}/compare.html"))
+    assert count(html!(dir, "index.html"), "a.compare") == 0
+  end
+
+  test "a translation without a text is not in another's comparison menu" do
+    original = play_fixture(%{"is_complete" => true})
+
+    relative = %{
+      "is_complete" => true,
+      "parent_play_id" => original.id,
+      "relationship_type" => "traduccion"
+    }
+
+    french = play_fixture(relative)
+    without = play_without_text_fixture(relative)
+
+    compare = read!(generate!([original, french, without]), "plays/#{french.code}/compare.html")
+    refute compare =~ without.code
+  end
+
   test "a published translation beside its published original gets a comparison page" do
     %{original: original, french: french} = split_speech_editions()
     dir = generate!([original, french])

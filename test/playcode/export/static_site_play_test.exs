@@ -7,6 +7,99 @@ defmodule Playcode.Export.StaticSitePlayTest do
   import Playcode.StaticSitePlayHelpers
   import Playcode.TestFixtures
 
+  describe "a play without a text" do
+    test "has its record and its TEI file, and nothing else" do
+      play = play_without_text_fixture(%{"is_complete" => true})
+      dir = generate!([play])
+
+      assert dir |> Path.join("plays/#{play.code}") |> File.ls!() |> Enum.sort() ==
+               ["#{play.code}.xml", "index.html"]
+
+      # The old layout's redirect, and the full-text index's bookkeeping.
+      assert File.exists?(Path.join(dir, "plays/#{play.code}.html"))
+      assert File.dir?(Path.join(dir, "search/lines/#{play.code}"))
+    end
+
+    test "its title page says there is no text, and links no page of one" do
+      play = play_without_text_fixture(%{"is_complete" => true})
+      page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+
+      assert "Texto" in texts(page, "article h2")
+      refute "Índice" in texts(page, "article h2")
+      assert texts(page, "article") |> Enum.join() =~ "EMOTHE no dispone del texto de esta obra."
+      refute "Forma" in texts(page, "dl.facts dt")
+
+      links = page |> LazyHTML.query("a") |> LazyHTML.attribute("href")
+      for gone <- ~w(text.html statistics.html notes.html), do: refute(gone in links)
+      assert "#{play.code}.xml" in links
+    end
+
+    test "with acts and stage directions only, it has no page for them" do
+      play =
+        tei(body: ~s(<div1 type="acto" n="1"><head>ACTO I</head><stage>Sale.</stage></div1>))
+        |> import_tei!()
+        |> mark_complete!()
+
+      dir = generate!([play])
+
+      assert dir |> Path.join("plays/#{play.code}") |> File.ls!() |> Enum.sort() ==
+               ["#{play.code}.xml", "index.html"]
+    end
+
+    test "with acts of stage directions only, its paratexts print on the title page, and every link there leads somewhere" do
+      play =
+        tei(
+          body: ~s(<div1 type="acto" n="1"><head>ACTO I</head><stage>Sale.</stage></div1>),
+          back: ~s(<div type="dedicatoria"><head>AL LECTOR</head><p>Vale el lector.</p></div>)
+        )
+        |> import_tei!()
+        |> mark_complete!()
+
+      dir = generate!([play])
+      page = html!(dir, "plays/#{play.code}/index.html", "es")
+
+      assert texts(page, "article") |> Enum.join() =~ "Vale el lector."
+
+      for href <- page |> LazyHTML.query("a") |> LazyHTML.attribute("href"),
+          file = href |> String.split("#") |> hd(),
+          file =~ ~r/^[\w-]+\.html$/,
+          do: assert(File.exists?(Path.join([dir, "plays", play.code, file])), "#{href} is dead")
+    end
+
+    test "its cast list, witnesses and performances print as any play's" do
+      play = play_without_text_fixture(%{"is_complete" => true})
+
+      {:ok, list} =
+        Playcode.PlayContent.create_division(%{play_id: play.id, type: "elenco", position: 0})
+
+      {:ok, _} =
+        Playcode.PlayContent.create_character(%{
+          play_id: play.id,
+          xml_id: "ANA",
+          name: "Doña Ana",
+          cast_list_id: list.id
+        })
+
+      {:ok, _} =
+        Playcode.Witnesses.create_witness(%{
+          "play_id" => play.id,
+          "siglum" => "M",
+          "title" => "Manuscrito de Madrid",
+          "type" => "manuscript"
+        })
+
+      performance_fixture(play, %{"venue" => "Corral del Príncipe"})
+
+      text =
+        html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+        |> texts("article")
+        |> Enum.join()
+
+      for name <- ["Doña Ana", "Manuscrito de Madrid", "Corral del Príncipe"],
+          do: assert(text =~ name)
+    end
+  end
+
   test "an act's closing formula ends its page and its part of the full text" do
     {play, dir} =
       publish!(

@@ -13,6 +13,32 @@ defmodule PlaycodeWeb.Admin.PlayCompareLiveTest do
     Map.put(split_speech_editions(), :conn, log_in_user(conn, user_fixture(role: :researcher)))
   end
 
+  test "a play without a text is not compared: back to its page, with the notice",
+       %{conn: conn} do
+    play = play_without_text_fixture()
+
+    assert {:error, {:live_redirect, %{to: to, flash: flash}}} =
+             live(conn, ~p"/admin/plays/#{play.id}/compare")
+
+    assert to == ~p"/admin/plays/#{play.id}"
+    assert flash["info"] == t("EMOTHE does not hold the text of this play.")
+  end
+
+  test "a relative without a text is not offered as a panel", %{conn: conn} do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    without =
+      play_without_text_fixture(%{
+        "parent_play_id" => original.id,
+        "relationship_type" => "traduccion"
+      })
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{original.id}/compare")
+    render(lv)
+    assert has_element?(lv, "select[name='id'] option[value='#{translation.id}']")
+    refute has_element?(lv, "select[name='id'] option[value='#{without.id}']")
+  end
+
   test "the first HTML is the page's frame; the panels come with the live connection",
        %{conn: conn, french: french} do
     html = conn |> get(~p"/admin/plays/#{french.id}/compare") |> html_response(200)

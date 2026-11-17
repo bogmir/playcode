@@ -292,6 +292,13 @@ defmodule PlaycodeWeb.Admin.ImportLive do
                   characters: p.replaces.characters,
                   tei: tei_total(p)
                 )}
+                <span :if={p.removes_text} class="font-medium text-warning">
+                  {ngettext(
+                    "This file has no text: the play's only line will be removed.",
+                    "This file has no text: the play's %{count} lines will be removed.",
+                    p.removes_text
+                  )}
+                </span>
                 <span :if={p.edited > 0} class="font-medium text-warning">
                   {gettext(
                     "%{count} row(s) from the file were edited by hand since its import: importing replaces them too.",

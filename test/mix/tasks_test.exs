@@ -140,6 +140,22 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     # TEI's schema checks a part's value, not its order, so a valid file can hold a last
     # part that completes nothing (EMOTHE0284's "O molto") or a first part nothing
     # completes. A split verse may cross scenes, never acts.
+    test "--dry-run says a file with no text would remove the play's lines", %{dir: dir} do
+      import_tei!(
+        tei(
+          code: "TASK0009",
+          body:
+            ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Uno.</l><l n="2">Dos.</l></sp></div1>)
+        )
+      )
+
+      File.write!(Path.join(dir, "TASK0009_Novena.xml"), tei(code: "TASK0009"))
+
+      out = run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"])
+
+      assert out =~ ~r/TASK0009  .*; no text: 2 lines would be removed/
+    end
+
     test "--dry-run lists the parts of split verses out of order", %{dir: dir} do
       File.write!(
         Path.join(dir, "TASK0005_Quinta.xml"),

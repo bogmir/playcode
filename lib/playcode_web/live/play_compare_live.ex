@@ -15,6 +15,17 @@ defmodule PlaycodeWeb.PlayCompareLive do
   @impl true
   def mount(%{"code" => code}, _session, socket) do
     play = Catalogue.get_play_by_code_with_all!(code)
+
+    if Catalogue.Play.has_text?(play),
+      do: mount_comparison(play, socket),
+      else:
+        {:ok,
+         socket
+         |> put_flash(:info, PlaycodeWeb.PlayLabels.no_text_notice())
+         |> push_navigate(to: ~p"/plays/#{play.code}")}
+  end
+
+  defp mount_comparison(play, socket) do
     family = PlayComparison.build_family(play)
     panels = PlayComparison.build_initial_panels(play, family)
 

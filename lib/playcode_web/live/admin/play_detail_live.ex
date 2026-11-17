@@ -166,12 +166,21 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           <code class="rounded border border-base-300 bg-base-100 px-1.5 font-mono text-xs">
             {@play.code}
           </code>
-          · {Playcode.Catalogue.Play.language_name(@play.language)} · {PlayLabels.form_label(
-            Playcode.Catalogue.Play.form(@play)
-          )}
+          · {Playcode.Catalogue.Play.language_name(@play.language)}
+          <span :if={form = Playcode.Catalogue.Play.form(@play)}>
+            · {PlayLabels.form_label(form)}
+          </span>
         </:subtitle>
         <:actions>
-          <.download_group base={"/admin/plays/#{@play.id}/export"} target="_blank" />
+          <.download_group
+            base={"/admin/plays/#{@play.id}/export"}
+            formats={
+              if Playcode.Catalogue.Play.has_text?(@play),
+                do: ~w(tei html pdf epub),
+                else: ~w(tei)
+            }
+            target="_blank"
+          />
           <button
             phx-click="validate_tei"
             class="btn btn-sm btn-outline btn-primary"

@@ -43,7 +43,8 @@ defmodule Playcode.Export.TeiValidatorTest do
         {"a scene of the action", &scene_of_the_action/0},
         {"a translation naming its original, after the edition's notes", &translation/0},
         {"performances", &performances/0},
-        {"cast lists and paratexts before, inside, between and after the acts", &outline/0}
+        {"cast lists and paratexts before, inside, between and after the acts", &outline/0},
+        {"a play without a text", &without_text/0}
       ]
 
       xmls = Enum.map(shapes, fn {_shape, build} -> build.() end)
@@ -124,6 +125,16 @@ defmodule Playcode.Export.TeiValidatorTest do
 
     assert xml =~ ~s(<citedRange unit="volume">5</citedRange>)
     assert xml =~ ~r{<div type="colofon">.*<lb/>.*<div type="bibliografia">}s
+    xml
+  end
+
+  # @fixture_file with its body emptied. A body must hold an element: an empty one is
+  # "Expecting an element, got nothing".
+  defp without_text do
+    play = own_copy(@fixture_file, "NT", &Regex.replace(~r{<body>.*</body>}s, &1, "<body/>"))
+    xml = export_tei(play)
+
+    assert xml =~ ~r{<body>\s*<p/>\s*</body>}
     xml
   end
 

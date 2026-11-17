@@ -31,6 +31,12 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
   defp save(view, fields), do: view |> form("#play-form", play: fields) |> render_submit()
 
+  test "the form of a play without a text is automatic, with none to name", %{conn: conn} do
+    play = play_without_text_fixture()
+    {:ok, _view, html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+    assert html =~ t("Automatic (no text)")
+  end
+
   test "the attribution options carry no English gloss", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
 

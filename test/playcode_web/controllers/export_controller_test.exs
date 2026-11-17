@@ -18,7 +18,38 @@ defmodule PlaycodeWeb.ExportControllerTest do
     %{conn: log_in_user(conn, Playcode.TestFixtures.user_fixture()), play: play}
   end
 
+  # A play without a text has no download: a test about what surrounds the text gives its
+  # play one line.
+  @a_line ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Verso.</l></sp></div1>)
+
   defp attachment(conn), do: conn |> get_resp_header("content-disposition") |> List.first()
+
+  describe "a play without a text" do
+    for format <- ~w(html pdf epub), base <- ~w(export admin) do
+      # The admin's twin goes back to the admin page its link was on.
+      test "has no #{format} under /#{base}: back to where it was offered, with the notice",
+           %{conn: conn} do
+        play = Playcode.TestFixtures.play_without_text_fixture()
+
+        {path, back} =
+          if unquote(base) == "export",
+            do: {"/export/#{play.id}/#{unquote(format)}", ~p"/plays/#{play.code}"},
+            else:
+              {"/admin/plays/#{play.id}/export/#{unquote(format)}", ~p"/admin/plays/#{play.id}"}
+
+        conn = get(conn, path)
+        assert redirected_to(conn) == back
+
+        assert Phoenix.Flash.get(conn.assigns.flash, :info) ==
+                 t("EMOTHE does not hold the text of this play.")
+      end
+    end
+
+    test "its TEI file downloads", %{conn: conn} do
+      play = Playcode.TestFixtures.play_without_text_fixture()
+      assert response(get(conn, "/export/#{play.id}/tei"), 200) =~ "<body>"
+    end
+  end
 
   test "the TEI download is the play's TEI, as a named attachment", %{conn: conn, play: play} do
     conn = get(conn, ~p"/export/#{play.id}/tei")
@@ -392,6 +423,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
     play =
       import_tei!(
         tei(
+          body: @a_line,
           front: """
           <div type="elenco"><castList><castItem><role xml:id="DON">Don Juan</role></castItem></castList></div>
           <set><head>SCENE:</head><p>An English wood.</p></set>
@@ -416,6 +448,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
     play =
       import_tei!(
         tei(
+          body: @a_line,
           source_desc:
             "<bibl><title>Aminta</title><note>Tasso. <emph>Aminta</emph>. Venezia.</note></bibl>",
           front: """
@@ -448,6 +481,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
   test "a paratext's line breaks are printed", %{conn: conn} do
     play =
       tei(
+        body: @a_line,
         front:
           ~s(<div type="dedicatoria"><p>The banished cavaliers!<lb/>A roving blade!</p></div>)
       )
@@ -468,7 +502,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
   # them into one block, set apart only by its white-space: pre-line.
   test "the HTML and EPUB downloads print a paratext's paragraphs", %{conn: conn} do
     play =
-      tei(front: ~s(<div type="dedicatoria"><p>Al lector.</p><p>Vale.</p></div>))
+      tei(body: @a_line, front: ~s(<div type="dedicatoria"><p>Al lector.</p><p>Vale.</p></div>))
       |> import_tei!()
       |> Playcode.TestFixtures.mark_complete!()
 
@@ -590,6 +624,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
   test "a paratext's note is printed after it", %{conn: conn} do
     play =
       tei(
+        body: @a_line,
         back:
           ~s(<div type="argumento"><p>Argumento.</p><trailer>FIN</trailer><note><p>NOTA: Pierre Rotrou.</p></note></div>)
       )
@@ -608,6 +643,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
   test "a paratext in verse is printed with its closing formula", %{conn: conn} do
     play =
       tei(
+        body: @a_line,
         back: """
         <div type="epilogo"><head>SONNET</head>
           <lg><l>Réjouis-toi, Paris,</l><l>Un de tes citoyens</l></lg><trailer>FIN</trailer>

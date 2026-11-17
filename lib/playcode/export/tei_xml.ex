@@ -138,7 +138,9 @@ defmodule Playcode.Export.TeiXml do
         build_edition_stmt(play),
         build_extent(play),
         build_publication_stmt(play)
-      ] ++ build_notes_stmt(play) ++ [build_source_desc(play)]
+      ]
+      |> Enum.reject(&is_nil/1)
+      |> Kernel.++(build_notes_stmt(play) ++ [build_source_desc(play)])
     )
   end
 
@@ -268,12 +270,18 @@ defmodule Playcode.Export.TeiXml do
 
   # The form as the EMOTHE files label it (question 22), with the numbered verses; a form a
   # researcher chose is marked, so an import reads it back and no old label passes for one.
+  # A play without a text and no chosen form has none to name.
   defp build_extent(play) do
-    label = %{ana: Play.file_label(Play.form(play))}
-    label = if play.form, do: Map.put(label, :resp, "#equipo"), else: label
-    count = if (play.verse_count || 0) > 0, do: "#{play.verse_count} versos", else: ""
+    case Play.form(play) do
+      nil ->
+        nil
 
-    element(:extent, label, count)
+      form ->
+        label = %{ana: Play.file_label(form)}
+        label = if play.form, do: Map.put(label, :resp, "#equipo"), else: label
+        count = if (play.verse_count || 0) > 0, do: "#{play.verse_count} versos", else: ""
+        element(:extent, label, count)
+    end
   end
 
   defp build_publication_stmt(play) do
@@ -925,13 +933,20 @@ defmodule Playcode.Export.TeiXml do
           Enum.map(section.(:front), &outer_item(&1, :front, cast)) ++
           build_performances(performances, gazetteer)
       ),
-      element(:body, section.(:body) |> Enum.map(&{&1, body_item(&1, cast)}) |> identify(play)),
+      element(:body, build_body(section.(:body), cast, play)),
       build_back(
         Enum.map(section.(:back), &outer_item(&1, :back, cast)),
         Playcode.Bibliography.list_for_play(play.id)
       )
     ])
   end
+
+  # A body must hold an element (tei_all.rng): a play without a text gets one empty
+  # paragraph, which the import reads as nothing.
+  defp build_body([], _cast, _play), do: [element(:p, nil)]
+
+  defp build_body(items, cast, play),
+    do: items |> Enum.map(&{&1, body_item(&1, cast)}) |> identify(play)
 
   defp title_page(play) do
     element(

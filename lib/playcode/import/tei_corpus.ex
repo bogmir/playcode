@@ -142,9 +142,17 @@ defmodule Playcode.Import.TeiCorpus do
   defp replace_lines(code, preview) do
     undone = hand_edits(preview.existing.id)
     outcome = if undone > 0, do: :edited, else: :existing
-    line = "  #{code}  " <> replaces(preview, undone) <> adds(preview) <> numbering(preview)
+
+    line =
+      "  #{code}  " <>
+        replaces(preview, undone) <> adds(preview) <> numbering(preview) <> removes_text(preview)
+
     {outcome, [{:info, line} | added(preview)]}
   end
+
+  defp removes_text(%{removes_text: nil}), do: ""
+  defp removes_text(%{removes_text: 1}), do: "; no text: its only line would be removed"
+  defp removes_text(%{removes_text: n}), do: "; no text: #{n} lines would be removed"
 
   # The numbering rule the import would settle (`Numbering.describe/1`).
   defp numbering(preview), do: ", numbering #{preview.numbering}"

@@ -1,7 +1,7 @@
 defmodule Playcode.Import.TeiPreviewTest do
   use Playcode.DataCase, async: true
 
-  import Playcode.ImportHelpers, only: [write_tmp!: 1, tei: 1]
+  import Playcode.ImportHelpers, only: [write_tmp!: 1, tei: 1, import_tei!: 1]
 
   alias Playcode.Catalogue
   alias Playcode.Import.TeiImport
@@ -312,5 +312,30 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert is_binary(full.numbering)
     assert light.numbering == nil
     assert Map.delete(light, :numbering) == Map.delete(full, :numbering)
+  end
+
+  describe "a file with no text" do
+    @two_verses ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Uno.</l><l n="2">Dos.</l></sp></div1>)
+
+    defp removes_text(code),
+      do: TeiImport.preview_import(write_tmp!(tei(code: code)), numbering: false)
+
+    test "over a play with a text says how many lines go" do
+      import_tei!(tei(code: "EMOTHE9702", body: @two_verses))
+      assert {:ok, %{removes_text: 2}} = removes_text("EMOTHE9702")
+    end
+
+    test "removes no text from a new play, or from a play without one" do
+      Playcode.TestFixtures.play_without_text_fixture(%{"code" => "EMOTHE9706"})
+
+      assert {:ok, %{removes_text: nil}} = removes_text("EMOTHE9704")
+      assert {:ok, %{removes_text: nil}} = removes_text("EMOTHE9706")
+    end
+
+    test "a file with a text over a play with one removes none" do
+      import_tei!(tei(code: "EMOTHE9705", body: @two_verses))
+      path = write_tmp!(tei(code: "EMOTHE9705", body: @two_verses))
+      assert {:ok, %{removes_text: nil}} = TeiImport.preview_import(path, numbering: false)
+    end
   end
 end

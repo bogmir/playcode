@@ -244,8 +244,11 @@ defmodule PlaycodeWeb.Layouts do
   # is behind :view_admin but the preview, behind :preview_plays; the play is passed for the
   # per-play scoping `Authz` plans.
   defp play_sections(play, user, deployed) do
+    # A play without a text is never compared (its comparison page sends it back).
     related? =
-      play.parent_play_id || (Ecto.assoc_loaded?(play.derived_plays) and play.derived_plays != [])
+      Playcode.Catalogue.Play.has_text?(play) and
+        (not is_nil(play.parent_play_id) or
+           (Ecto.assoc_loaded?(play.derived_plays) and play.derived_plays != []))
 
     [
       {gettext("Record"),

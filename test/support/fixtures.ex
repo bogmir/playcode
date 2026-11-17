@@ -15,6 +15,7 @@ defmodule Playcode.TestFixtures do
           "author_name" => "Author",
           "author_sort" => "Author",
           "language" => "es",
+          # Most tests take this as "some play", which has a text.
           "auto_form" => "verse"
         },
         attrs
@@ -23,6 +24,10 @@ defmodule Playcode.TestFixtures do
     {:ok, play} = Catalogue.create_play(attrs)
     play
   end
+
+  @doc "A play with no verse line and no line of prose: `Play.has_text?/1` is false."
+  def play_without_text_fixture(attrs \\ %{}),
+    do: play_fixture(Map.merge(%{"auto_form" => nil}, attrs))
 
   @doc """
   Gives `play` a code `Play.changeset/2` refuses, as a row saved before it checked codes

@@ -131,6 +131,16 @@ defmodule PlaycodeWeb.AccessibilityTest do
     end
   end
 
+  test "a play without a text's pages have no barrier", %{conn: conn} do
+    play = play_without_text_fixture(%{"is_complete" => true})
+
+    for path <-
+          ~w(/plays/:code /admin/plays/:id /admin/plays/:id/edit /admin/plays/:id/statistics) do
+      path = path |> String.replace(":id", play.id) |> String.replace(":code", play.code)
+      assert {path, conn |> get(path) |> html_response(200) |> barriers()} == {path, []}
+    end
+  end
+
   # Both views of the admin comparison fill in once the live connection opens.
   test "the admin comparison's panels and pair review have no barrier", %{conn: conn} do
     %{french: french} = Playcode.ImportHelpers.split_speech_editions()

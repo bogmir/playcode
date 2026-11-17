@@ -27,6 +27,12 @@ defmodule PlaycodeWeb.Admin.PlayStatisticsLiveTest do
     )
   end
 
+  test "a play without a text has the notice in place of the figures", %{conn: conn} do
+    {:ok, _view, html} = live(conn, ~p"/admin/plays/#{play_without_text_fixture().id}/statistics")
+    assert html =~ t("EMOTHE does not hold the text of this play.")
+    refute html =~ t("Recompute")
+  end
+
   test "the section draws the site's four parts, in one language", %{conn: conn} do
     play = play_with_forms()
     {:ok, lv, html} = live(conn, ~p"/admin/plays/#{play.id}/statistics")

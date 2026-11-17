@@ -177,7 +177,11 @@ defmodule PlaycodeWeb.PlayShowLive do
                   <button
                     :for={
                       {tab_key, tab_label} <-
-                        [{:text, gettext("Text")}, {:statistics, gettext("Statistics")}] ++
+                        [{:text, gettext("Text")}] ++
+                          if(Play.has_text?(@play),
+                            do: [{:statistics, gettext("Statistics")}],
+                            else: []
+                          ) ++
                           if(@notes != [], do: [{:notes, gettext("Notes")}], else: [])
                     }
                     phx-click="switch_tab"
@@ -442,7 +446,8 @@ defmodule PlaycodeWeb.PlayShowLive do
             </div>
 
             <p class="mt-2 text-xs text-base-content/70">
-              {Play.language_name(@play.language)}{" · " <> PlayLabels.form_line(@play)}
+              {Play.language_name(@play.language)}{if line = PlayLabels.form_line(@play),
+                do: " · " <> line}
             </p>
             <p
               :if={@play.licence_url || @play.licence_text}
@@ -664,6 +669,9 @@ defmodule PlaycodeWeb.PlayShowLive do
               show_folio={@show_folio}
               show_rs={@show_rs}
             />
+            <p :if={!Play.has_text?(@play)} class="max-w-2xl mx-auto text-base-content/70">
+              {PlayLabels.no_text_notice()}
+            </p>
           </div>
 
           <%!-- Statistics tab --%>

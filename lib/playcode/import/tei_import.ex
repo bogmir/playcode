@@ -125,6 +125,9 @@ defmodule Playcode.Import.TeiImport do
   Settling `:numbering` writes the whole file in a transaction it rolls back, as costly as the
   import itself; `numbering: false` skips that and returns `nil` there, for a caller that
   needs only the rest.
+
+  `:removes_text` is the number of verse lines and lines of prose the stored play would lose
+  to a file with none, nil when nothing is lost.
   """
   def preview_import(path, opts \\ []) do
     with {:ok, tei} <- TeiParser.parse_file(path),
@@ -144,6 +147,7 @@ defmodule Playcode.Import.TeiImport do
       preserves: preserved_counts(existing),
       preserves_fields: preserved_fields(existing),
       split_verses: parts_out_of_order(tei.divisions),
+      removes_text: removes_text(tei.divisions, existing),
       numbering: if(with_numbering, do: numbering(tei))
     }
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
@@ -180,6 +184,23 @@ defmodule Playcode.Import.TeiImport do
       }
     end)
   end
+
+  defp removes_text(_divisions, nil), do: nil
+
+  defp removes_text(divisions, %Play{id: id}) do
+    stored =
+      Repo.aggregate(
+        from(e in Element, where: e.play_id == ^id and e.type in ["verse_line", "prose"]),
+        :count
+      )
+
+    if stored > 0 and not Enum.any?(divisions, &text?/1), do: stored
+  end
+
+  defp text?(%{type: type}) when type in ["verse_line", "prose"], do: true
+
+  defp text?(node),
+    do: Enum.any?(Map.get(node, :divisions, []) ++ node.elements, &text?/1)
 
   defp verse_lines(%{type: "verse_line"} = line), do: [line]
   defp verse_lines(element), do: Enum.flat_map(element.elements, &verse_lines/1)
