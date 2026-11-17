@@ -447,6 +447,81 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLiveTest do
     assert html =~ t("a first part that nothing completes")
   end
 
+  # A paragraph's own number (`<p n="8">`) is stored as an <lb n="8"/> opening its text: the
+  # editor showed that marker as the paragraph's words (L'alcade de Zalamea, 2026-11-17).
+  describe "a prose paragraph's own number" do
+    setup do
+      play =
+        import_tei!(
+          tei(
+            body: """
+            <div1 type="acto" n="1"><head>ACTO PRIMERO</head>
+              <div2 type="escena" n="1"><head>ESCENA I</head>
+                <sp><speaker>ANA</speaker><p n="8">Ce ne sera pas</p></sp>
+              </div2>
+            </div1>
+            """
+          )
+        )
+
+      %{play: manual!(play)}
+    end
+
+    defp paragraphs(play),
+      do: for({%{"n" => n}, text} <- play |> export_tei() |> xml_elements("p"), do: {n, text})
+
+    test "shows beside the paragraph's words, not as markup", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      assert has_element?(lv, "#{card(lv, "Ce ne sera pas")} span", "L8")
+      refute render(lv) =~ "lb n="
+    end
+
+    test "is typed in a field of its own", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Ce ne sera pas")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      assert has_element?(lv, "#element-form textarea#element_content", "Ce ne sera pas")
+      refute has_element?(lv, "#element-form textarea#element_content", "lb n=")
+      assert has_element?(lv, "#element-form input#element_number[value='8']")
+
+      lv
+      |> form("#element-form", element: %{"content" => "Ce sera", "number" => "9"})
+      |> render_submit()
+
+      assert paragraphs(play) == [{"9", "Ce sera"}]
+    end
+
+    test "is counted by the play's rule when the play is not Manual", %{conn: conn, play: play} do
+      {:ok, play} =
+        Playcode.Catalogue.update_play(play, %{numbering_manual: false, numbering_type: "VP"})
+
+      lv = open_scene(conn, play)
+
+      lv
+      |> element("#{card(lv, "Ce ne sera pas")} button[aria-label='#{t("Edit")}']")
+      |> render_click()
+
+      refute has_element?(lv, "#element-form input#element_number")
+      lv |> form("#element-form", element: %{"content" => "Ce sera"}) |> render_submit()
+
+      assert paragraphs(play) == [{"1", "Ce sera"}]
+    end
+
+    test "stays when the words are edited in place", %{conn: conn, play: play} do
+      lv = open_scene(conn, play)
+      lv |> element("span[title='Ce ne sera pas']") |> render_click()
+
+      assert has_element?(lv, "form[id^='inline-edit-'] input[value='Ce ne sera pas']")
+      lv |> element("form[id^='inline-edit-']") |> render_submit(%{"value" => "Ce sera"})
+
+      assert paragraphs(play) == [{"8", "Ce sera"}]
+    end
+  end
+
   # Each form posts back, as hidden fields, the ids that place its row, and the browser can
   # change them: a crafted save put a line into another play's text, or moved a row into
   # another play. The ids come from the server (CLAUDE.md, *Access control*).

@@ -8,6 +8,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
 
   import PlaycodeWeb.Admin.ContentEditor.Components
 
+  alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
 
   attr :content_search, :string, required: true
@@ -358,11 +359,9 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
             }
             phx-value-id={@element.id}
             class="text-sm text-base-content/80 cursor-pointer hover:text-base-content truncate"
-            title={@element.content}
+            title={InlineMarkup.plain(@element.content)}
           >
-            {String.slice(@element.content || "", 0..80)}{if String.length(@element.content || "") >
-                                                               80,
-                                                             do: "..."}
+            {summary(@element.content)}
           </span>
           <form
             :if={@is_inline_editing}
@@ -375,7 +374,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
             <input
               type="text"
               name="value"
-              value={@element.content || ""}
+              value={words(@element)}
               class="input input-sm input-bordered w-full"
               aria-label={element_type_label(@element.type)}
               phx-key="Escape"
@@ -387,6 +386,9 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           </span>
           <span :if={@element.line_number} class="text-xs text-base-content/70 ml-1">
             L{@element.line_number}
+          </span>
+          <span :if={paragraph_number(@element)} class="text-xs text-base-content/70 ml-1">
+            L{paragraph_number(@element)}
           </span>
           <span :if={@element.is_aside} class="badge badge-ghost badge-sm ml-1">
             {gettext("aside")}
@@ -713,7 +715,21 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           field={@form[:content]}
           type="textarea"
           rows="4"
+          value={@form[:content].value |> InlineMarkup.paragraph_number() |> elem(1)}
           placeholder={gettext("Prose text...")}
+        />
+        <%!-- A play not Manual is numbered by its rule on every save: the number rides along. --%>
+        <div :if={@manual_numbers} class="mt-2">
+          <label class="label" for={@form[:number].id}>
+            <span class="label-text font-medium">{gettext("Line Number")}</span>
+          </label>
+          <.input field={@form[:number]} type="text" value={form_number(@form)} />
+        </div>
+        <input
+          :if={!@manual_numbers}
+          type="hidden"
+          name={@form[:number].name}
+          value={form_number(@form)}
         />
         <p class="mt-1 text-xs text-base-content/70">
           {gettext("Stage direction in the text: <stage type=\"delivery\">…</stage>")}
@@ -849,5 +865,28 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
       {"M - Medio", "M"},
       {"F - Final", "F"}
     ]
+  end
+
+  defp summary(content) do
+    text = InlineMarkup.plain(content)
+    if String.length(text) > 80, do: String.slice(text, 0..80) <> "...", else: text
+  end
+
+  # The number a prose paragraph's text opens with; the editor shows it apart from the words.
+  defp paragraph_number(%{type: "prose", content: content}),
+    do: content |> InlineMarkup.paragraph_number() |> elem(0)
+
+  defp paragraph_number(_element), do: nil
+
+  defp words(%{type: "prose", content: content}),
+    do: content |> InlineMarkup.paragraph_number() |> elem(1)
+
+  defp words(element), do: element.content || ""
+
+  # What was typed, once the form has been sent; until then, the number the text opens with.
+  defp form_number(form) do
+    if Map.has_key?(form.params, "number"),
+      do: form.params["number"],
+      else: form[:content].value |> InlineMarkup.paragraph_number() |> elem(0)
   end
 end

@@ -638,7 +638,7 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       {:noreply, socket}
     else
       with_row(socket, PlayContent.get_element(socket.assigns.play.id, id), fn element ->
-        case PlayContent.update_element(element, %{"content" => value}) do
+        case PlayContent.update_element(element, inline_attrs(element, value)) do
           {:ok, _el} ->
             LiveHelpers.log_activity(socket, "update", "element", element.id, %{
               type: element.type,
@@ -840,6 +840,12 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       form: to_form(PlayContent.change_division(division))
     )
   end
+
+  # A paragraph's quick edit holds its words only; its own number stays.
+  defp inline_attrs(%{type: "prose", content: content}, value),
+    do: %{"content" => value, "number" => content |> InlineMarkup.paragraph_number() |> elem(0)}
+
+  defp inline_attrs(_element, value), do: %{"content" => value}
 
   defp element_modal(socket, element) do
     assign(socket,
