@@ -55,7 +55,6 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   alias Playcode.Import.TeiImport
 
   @app "playcode"
-  @app_machine "7847063c04e7e8"
   @db "emothe-db-1g"
   @db_machine "d8d14e7b0465d8"
   @volume "vol_40l3p92ozj187o94"
@@ -119,9 +118,9 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   def run(["deploy"]) do
     step("Deploying the site, autostop off")
     wake!()
-    fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
+    fly!(~w(machine update #{app_machine()} --autostop=off -a #{@app} --yes))
     result = until_done(@deploy, "site deployed", "deploy failed")
-    fly!(~w(machine update #{@app_machine} --autostop=stop -a #{@app} --yes))
+    fly!(~w(machine update #{app_machine()} --autostop=stop -a #{@app} --yes))
 
     unless match?({:ok, _output}, result),
       do: Mix.raise("the deploy failed or did not finish; see above")
@@ -345,8 +344,25 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
     unless performance?(@db, @db_machine),
       do: fly!(~w(machine update #{@db_machine} --vm-size performance-1x -a #{@db} --yes))
 
-    unless performance?(@app, @app_machine), do: fly!(~w(scale vm performance-1x -a #{@app}))
-    fly!(~w(machine update #{@app_machine} --autostop=off -a #{@app} --yes))
+    unless performance?(@app, app_machine()), do: fly!(~w(scale vm performance-1x -a #{@app}))
+    fly!(~w(machine update #{app_machine()} --autostop=off -a #{@app} --yes))
+  end
+
+  # The app's one machine (CLAUDE.md, *Production*), asked for once a run: Fly gives the
+  # app a new one when it replaces it, as it did on 2026-11-17.
+  defp app_machine do
+    with nil <- Process.get(:app_machine) do
+      {json, 0} = System.cmd(flyctl(), ~w(machine list -a #{@app} --json))
+
+      case Jason.decode!(json) do
+        [%{"id" => id}] ->
+          Process.put(:app_machine, id)
+          id
+
+        machines ->
+          Mix.raise("#{@app} has #{length(machines)} machines, not one; nothing done")
+      end
+    end
   end
 
   defp performance?(app, machine) do
@@ -358,7 +374,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
   end
 
   defp scale_down! do
-    fly!(~w(machine update #{@app_machine} --autostop=stop -a #{@app} --yes))
+    fly!(~w(machine update #{app_machine()} --autostop=stop -a #{@app} --yes))
     fly!(~w(scale vm shared-cpu-1x --vm-memory 1024 -a #{@app}))
 
     fly!(
@@ -382,7 +398,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
       nil ->
         Mix.shell().info("\nThe run stopped before its end (#{attempt} of #{@attempts}); again.")
-        stream(~w(machine status #{@app_machine} -a #{@app}))
+        stream(~w(machine status #{app_machine()} -a #{@app}))
         wake!()
         import_until_done(command, attempt + 1)
     end
@@ -412,7 +428,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
           "\nThe session ended before the job did (#{attempt} of #{@attempts}); again."
         )
 
-        stream(~w(machine status #{@app_machine} -a #{@app}))
+        stream(~w(machine status #{app_machine()} -a #{@app}))
         wake!()
         until_done(command, done, failed, attempt + 1)
     end
@@ -420,7 +436,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
   # An app the proxy stopped for want of traffic has no VM to SSH into; starting one that
   # runs only says so.
-  defp wake!, do: stream(~w(machine start #{@app_machine} -a #{@app}))
+  defp wake!, do: stream(~w(machine start #{app_machine()} -a #{@app}))
 
   defp created_after?(timestamp, time) do
     case DateTime.from_iso8601(timestamp || "") do

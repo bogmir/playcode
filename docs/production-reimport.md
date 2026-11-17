@@ -16,7 +16,7 @@ an interrupted run leaves every play either wholly old or wholly new.
 
 | What | Fly app | Machine | Size day to day |
 |---|---|---|---|
-| The application | `playcode` | `7847063c04e7e8` | shared-cpu-1x, 1 GB (`fly.toml`) |
+| The application | `playcode` | `859947b4102ee8` (Fly replaces it; `flyctl machine list -a playcode`, as the task asks) | shared-cpu-1x, 1 GB (`fly.toml`) |
 | The database | `emothe-db-1g` | `d8d14e7b0465d8`, volume `vol_40l3p92ozj187o94` | shared-cpu-1x, 512 MB |
 
 `flyctl` lives at `~/.fly/bin/flyctl`; it is not on the PATH of Claude Code's `!` shell.
@@ -124,7 +124,7 @@ What the commands do, for when one of them fails part way, or something new is n
    ```bash
    ~/.fly/bin/flyctl machine update d8d14e7b0465d8 --vm-size performance-1x -a emothe-db-1g --yes
    ~/.fly/bin/flyctl scale vm performance-1x -a playcode
-   ~/.fly/bin/flyctl machine update 7847063c04e7e8 --autostop=off -a playcode --yes
+   ~/.fly/bin/flyctl machine update 859947b4102ee8 --autostop=off -a playcode --yes
    ```
 
    Do this before the dry run: restarting the database ends any run in progress (the dry run
@@ -169,7 +169,7 @@ What the commands do, for when one of them fails part way, or something new is n
    ```
 
    Check the machine's events first
-   (`~/.fly/bin/flyctl machine status 7847063c04e7e8 -a playcode`): `requested_stop=true` is
+   (`~/.fly/bin/flyctl machine status 859947b4102ee8 -a playcode`): `requested_stop=true` is
    autostop, `oom_killed=true` memory. On 2026-10-15, before `resume`, the files left to
    do were copied into `/data/tei-rest` by hand.
 
@@ -182,7 +182,7 @@ What the commands do, for when one of them fails part way, or something new is n
 9. **Scale back, autostop back on.**
 
    ```bash
-   ~/.fly/bin/flyctl machine update 7847063c04e7e8 --autostop=stop -a playcode --yes
+   ~/.fly/bin/flyctl machine update 859947b4102ee8 --autostop=stop -a playcode --yes
    ~/.fly/bin/flyctl scale vm shared-cpu-1x --vm-memory 1024 -a playcode
    ~/.fly/bin/flyctl machine update d8d14e7b0465d8 --vm-size shared-cpu-1x --vm-memory 512 -a emothe-db-1g --yes
    ```
@@ -214,7 +214,7 @@ moves nearly every play, so Generate rebuilds the whole site: run it with `gener
 scales up, not with a plain `generate_site()` rpc, which on the shared CPU crawled through 25
 plays in two minutes (2026-11-08). Turn autostop off for the settle, as for any SSH run:
 
-    ~/.fly/bin/flyctl machine update 7847063c04e7e8 --autostop=off -a playcode --yes
+    ~/.fly/bin/flyctl machine update 859947b4102ee8 --autostop=off -a playcode --yes
     bin/playcode rpc 'Playcode.Release.settle_numbering(dry_run: true)'
     bin/playcode rpc 'Playcode.Release.settle_numbering()'
     mix playcode.fly.reimport generate    # locally; turns autostop back on when done
