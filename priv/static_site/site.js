@@ -11,6 +11,18 @@
       .normalize('NFD').replace(/\p{Mn}/gu, '').replace(/\uE000/g, 'ñ');
   };
   E.words = function (s) { return E.normalise(s).match(/[\p{L}\p{N}]+/gu) || []; };
+  // The search box: words in quotes are a phrase; every word, in a phrase or not, must occur.
+  E.parse = function (query) {
+    var phrases = [];
+    var rest = String(query || '').replace(/"([^"]*)"/g, function (_, inner) {
+      var words = E.words(inner);
+      if (words.length) phrases.push(words);
+      return ' ';
+    });
+    var all = E.words(rest);
+    phrases.forEach(function (phrase) { all = all.concat(phrase); });
+    return { words: all.filter(function (w, i) { return all.indexOf(w) === i; }), phrases: phrases };
+  };
 
   // The interface's language: Spanish as the build writes it, or English.
   E.say = function (es, en) { return document.documentElement.dataset.ui === 'en' ? en : es; };

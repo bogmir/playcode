@@ -27,12 +27,12 @@ test('shard keys and file names match the build', () => {
 });
 
 test('quoted words are a phrase, and every word must occur', () => {
-  assert.deepEqual(plain(S.parse('"la vida es" Sueño')), { words: ['sueño', 'la', 'vida', 'es'], phrases: [['la', 'vida', 'es']] });
+  assert.deepEqual(plain(EMOTHE.parse('"la vida es" Sueño')), { words: ['sueño', 'la', 'vida', 'es'], phrases: [['la', 'vida', 'es']] });
 });
 
 test('a query of punctuation has no words', () => {
-  assert.deepEqual(plain(S.parse('¿¡ "" !?')), { words: [], phrases: [] });
-  assert.deepEqual(plain(S.parse('')), { words: [], phrases: [] });
+  assert.deepEqual(plain(EMOTHE.parse('¿¡ "" !?')), { words: [], phrases: [] });
+  assert.deepEqual(plain(EMOTHE.parse('')), { words: [], phrases: [] });
 });
 
 test('starts-with matches a prefix, except a one-letter word, which matches whole', () => {
