@@ -78,7 +78,8 @@ defmodule Playcode.Export.Epub do
           description: metadata(play.original_title),
           date: metadata(play.publication_date),
           pages: all_pages,
-          styles: [css_path],
+          # Named, or BUPE names it with a random UUID and no two builds agree.
+          styles: [%BUPE.Item{href: css_path, id: "style"}],
           # BUPE 0.6.5 names a "cover" in every spine and writes its page only with this
           # on: a plain title page, out of the reading order (linear="no").
           cover: true

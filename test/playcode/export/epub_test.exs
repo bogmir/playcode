@@ -46,6 +46,11 @@ defmodule Playcode.Export.EpubTest do
     assert opf =~ ~s(<meta property="dcterms:modified">2020-03-04T05:06:07Z</meta>)
   end
 
+  test "the same play gives the same bytes" do
+    play = old_play()
+    assert Epub.generate(play) == Epub.generate(play)
+  end
+
   test "the archive opens with its mimetype, stored as it is" do
     {:ok, epub} = Epub.generate(text_play())
 
