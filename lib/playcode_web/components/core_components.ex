@@ -513,6 +513,7 @@ defmodule PlaycodeWeb.CoreComponents do
   each format's name is appended to.
   """
   attr :base, :string, required: true
+  attr :formats, :list, default: ~w(tei html pdf epub)
   attr :class, :string, default: nil
   attr :rest, :global, include: ~w(download target rel)
 
@@ -528,7 +529,7 @@ defmodule PlaycodeWeb.CoreComponents do
     >
       <span class="px-2.5 py-1.5 text-base-content/70">{gettext("Download")}</span>
       <a
-        :for={format <- ~w(tei html pdf epub)}
+        :for={format <- @formats}
         href={"#{@base}/#{format}"}
         class="border-l border-base-300 px-2.5 py-1.5 font-semibold text-primary hover:bg-base-200"
         {@rest}

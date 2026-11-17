@@ -240,7 +240,9 @@ defmodule Playcode.Import.TeiImportTest do
     stored = Catalogue.get_play!(returned.id)
 
     assert {returned.verse_count, returned.auto_form} == {stored.verse_count, stored.auto_form}
-    assert {stored.verse_count, stored.auto_form} == {0, "prose"}
+    # A file with no line gives a play without a text: nil for both since 2026-11-17, where
+    # it used to be 0 and "prose".
+    assert {stored.verse_count, stored.auto_form} == {nil, nil}
   end
 
   test "respStmt wording decides the editor's role, in titleStmt and editionStmt alike" do

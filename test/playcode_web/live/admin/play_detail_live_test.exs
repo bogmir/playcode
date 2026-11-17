@@ -77,6 +77,17 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
   # sees the play, with the one button that changes it.
   # It used to check Playcode's own catalogue too; the published site is the catalogue now,
   # and which plays it takes is static_site_catalogue_test.exs's.
+  test "a play without a text offers its TEI file alone, and names no form", %{conn: conn} do
+    play = play_without_text_fixture()
+    {:ok, view, html} = live(conn, ~p"/admin/plays/#{play.id}")
+    assert has_element?(view, ~s(a[href="/admin/plays/#{play.id}/export/tei"]))
+
+    for format <- ~w(html pdf epub),
+        do: refute(has_element?(view, ~s(a[href="/admin/plays/#{play.id}/export/#{format}"])))
+
+    refute html =~ t("Prose")
+  end
+
   test "marking a play complete, and back to draft", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     assert has_element?(lv, "#play-state", t("Draft"))

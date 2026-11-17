@@ -24,20 +24,21 @@ defmodule PlaycodeWeb.Admin.ExportController do
   end
 
   def html(conn, %{"id" => id}) do
-    play = Catalogue.get_play_with_all!(id)
-    html = Export.Html.generate(play)
+    with_text(conn, id, fn play ->
+      html = Export.Html.generate(play)
 
-    log_export(conn, play, "html")
+      log_export(conn, play, "html")
 
-    conn
-    |> put_resp_content_type("text/html")
-    |> put_resp_header("content-disposition", ~s(attachment; filename="#{play.code}.html"))
-    |> send_resp(200, html)
+      conn
+      |> put_resp_content_type("text/html")
+      |> put_resp_header("content-disposition", ~s(attachment; filename="#{play.code}.html"))
+      |> send_resp(200, html)
+    end)
   end
 
-  def pdf(conn, %{"id" => id}) do
-    play = Catalogue.get_play_with_all!(id)
+  def pdf(conn, %{"id" => id}), do: with_text(conn, id, &pdf_of(conn, &1, id))
 
+  defp pdf_of(conn, play, id) do
     case PdfCache.fetch(play) do
       {:ok, path} ->
         log_export(conn, play, "pdf")
@@ -56,9 +57,9 @@ defmodule PlaycodeWeb.Admin.ExportController do
     end
   end
 
-  def epub(conn, %{"id" => id}) do
-    play = Catalogue.get_play_with_all!(id)
+  def epub(conn, %{"id" => id}), do: with_text(conn, id, &epub_of(conn, &1, id))
 
+  defp epub_of(conn, play, id) do
     case Export.Epub.generate(play) do
       {:ok, epub_binary} ->
         log_export(conn, play, "epub")
@@ -103,6 +104,11 @@ defmodule PlaycodeWeb.Admin.ExportController do
     else
       _ -> send_resp(conn, 404, "Not found")
     end
+  end
+
+  defp with_text(conn, id, download) do
+    play = Catalogue.get_play_with_all!(id)
+    PlaycodeWeb.ExportController.with_text(conn, play, download, &~p"/admin/plays/#{&1.id}")
   end
 
   defp log_export(conn, play, format) do

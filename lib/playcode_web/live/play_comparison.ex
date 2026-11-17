@@ -14,6 +14,7 @@ defmodule PlaycodeWeb.PlayComparison do
   import Phoenix.Component, only: [assign: 2]
 
   alias Playcode.{Alignment, Catalogue}
+  alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
 
   @max_panels 4
@@ -51,7 +52,8 @@ defmodule PlaycodeWeb.PlayComparison do
 
   @doc """
   Builds a flat list of all plays in the same translation family as `play`
-  (root original + its derived plays), excluding `play` itself.
+  (root original + its derived plays), excluding `play` itself and any play without a
+  text, which has nothing to compare.
   """
   def build_family(play) do
     root =
@@ -63,6 +65,7 @@ defmodule PlaycodeWeb.PlayComparison do
 
     [root | root.derived_plays || []]
     |> Enum.reject(&(&1.id == play.id))
+    |> Enum.filter(&Play.has_text?/1)
   end
 
   @doc "Plays in `family` that are not already shown in `panels`."

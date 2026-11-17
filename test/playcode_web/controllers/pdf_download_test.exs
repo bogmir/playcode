@@ -46,6 +46,12 @@ defmodule PlaycodeWeb.PdfDownloadTest do
   defp busy, do: t("Other PDFs are being prepared. Try again in a minute.")
   defp failed, do: t("The PDF could not be made. Try again later.")
 
+  test "a play without a text is never rendered", %{conn: conn} do
+    download(conn, play_without_text_fixture(%{"is_complete" => true}))
+    refute_receive {:rendering, _code, _renderer}, 200
+    refute File.exists?(PdfCache.dir()) and File.ls!(PdfCache.dir()) != []
+  end
+
   test "a PDF is rendered once per version of the play, then served from disk",
        %{conn: conn, play: play} do
     first = download(conn, play)
