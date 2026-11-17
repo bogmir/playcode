@@ -464,6 +464,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       output = run("playcode.export.site", ["-o", dir, "--all"])
       assert output =~ "largest act page"
       assert output =~ "largest comparison page"
+      assert output =~ ~r/record index \d+(\.\d)? [KM]?B/
     end
   end
 

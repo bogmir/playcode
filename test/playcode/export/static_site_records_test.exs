@@ -10,6 +10,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   import Playcode.StaticSiteHelpers
 
   alias Playcode.{PlayContent, Witnesses}
+  alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.Records
 
   defp complete(attrs), do: play_fixture(Map.put(attrs, "is_complete", true))
@@ -20,7 +21,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
       complete(%{
         "title" => "La <<Celestina>>",
         "original_title" => "Tragicomedia de Calisto y Melibea",
-        "author_name" => "Fernando de Rojas",
+        "author_name" => "Fernando de <<Rojas>>",
         "language" => "es",
         "form" => "prose",
         "composition_date_from" => 1499,
@@ -111,6 +112,16 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   test "a bare play's entry is under 200 bytes" do
     play = complete(%{"title" => "Hamlet", "author_name" => "William Shakespeare"})
     assert generate!([play]) |> entry(play) |> Jason.encode!() |> byte_size() < 200
+  end
+
+  test "Generate reports the index's size" do
+    play = complete(%{})
+    dir = site_dir!()
+
+    assert {:ok, %{records_bytes: bytes}} =
+             StaticSite.generate(output_dir: dir, play_codes: [play.code])
+
+    assert bytes == File.stat!(Path.join(dir, "search/records.js")).size
   end
 
   defp witness!(play, attrs) do
@@ -206,6 +217,21 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
     assert entry(generate!([play]), play)["p"] == [["Sevilla", "Seville", "Andalucía", "España"]]
   end
 
+  test "a name a place has in several languages is listed once" do
+    play = complete(%{})
+
+    madrid =
+      place_fixture(%{
+        "names" => [
+          %{"name" => "Madrid", "language" => "es"},
+          %{"name" => "Madrid", "language" => "en"}
+        ]
+      })
+
+    play_place_fixture(play, madrid)
+    assert entry(generate!([play]), play)["p"] == [["Madrid"]]
+  end
+
   test "its characters are named plain, the hidden ones left out" do
     play = complete(%{})
 
@@ -235,7 +261,9 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
 
     two = for _ <- 1..2, do: complete(%{})
     six = two ++ for _ <- 1..4, do: complete(%{})
-    assert count.(two) == count.(six)
+    queries = count.(two)
+    assert queries > 0
+    assert count.(six) == queries
   end
 
   defp counted(fun) do
@@ -243,10 +271,11 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
     me = self()
     handler = "records-query-count-#{inspect(ref)}"
 
+    # Handlers are global: count this test's own queries only.
     :telemetry.attach(
       handler,
       [:playcode, :repo, :query],
-      fn _, _, _, _ -> send(me, ref) end,
+      fn _, _, _, _ -> if self() == me, do: send(me, ref) end,
       nil
     )
 

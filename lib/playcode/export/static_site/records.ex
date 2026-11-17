@@ -34,7 +34,7 @@ defmodule Playcode.Export.StaticSite.Records do
     [
       c: play.code,
       t: titles(play),
-      a: play.author_name,
+      a: plain(play.author_name),
       l: play.language,
       o: roots[play.id].language,
       k: Components.kind(play),
@@ -94,6 +94,7 @@ defmodule Playcode.Export.StaticSite.Records do
   defp names_around(place, gazetteer) do
     [place | Enum.reverse(Places.ancestors(place, gazetteer))]
     |> Enum.flat_map(fn place -> Enum.map(place.names, & &1.name) end)
+    |> Enum.uniq()
   end
 
   defp characters(characters),

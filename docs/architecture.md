@@ -78,6 +78,7 @@ lib/
 │           ├── pages.ex              # embed_templates "pages/*" → HTML strings
 │           ├── components.ex         # Shell, rail, play text, charts, catalogue entry
 │           ├── search.ex             # Normaliser + full-text index writer
+│           ├── records.ex            # The record index, search/records.js: each published play's record fields
 │           ├── fingerprint.ex        # One hash of the code, assets and settings the pages are built with
 │           └── deployer.ex           # Pushes the site to a git branch, then tells the publish server to fetch it
 └── playcode_web/
