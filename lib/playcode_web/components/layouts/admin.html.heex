@@ -37,7 +37,8 @@
         class="flex items-center gap-2.5 min-w-0 hover:opacity-90"
       >
         <img src={~p"/images/logo.svg"} width="24" height="24" class="shrink-0" alt="" />
-        <span class="font-bold tracking-[0.14em]">PLAYCODE</span>
+        <%!-- Below 400px the bar holds the logo alone; the word still names the link. --%>
+        <span class="font-bold tracking-[0.14em] max-[399px]:sr-only">PLAYCODE</span>
         <span class="hidden sm:inline text-xs tracking-[0.08em] text-[#d8c888] uppercase truncate">
           {gettext("Administration")}
         </span>

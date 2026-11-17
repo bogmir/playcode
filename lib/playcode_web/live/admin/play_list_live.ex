@@ -252,15 +252,16 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           />
         </form>
 
+        <%!-- Four buttons are wider than a small phone: they scroll within the row, not the page. --%>
         <nav
           :if={!@archived}
           aria-label={gettext("Status")}
-          class="join"
+          class="join max-w-full overflow-x-auto"
         >
           <.link
             :for={{value, label, count} <- status_choices(@status_counts)}
             patch={~p"/admin/plays?#{list_params(@search, value)}"}
-            class={["btn btn-sm join-item", @status == value && "btn-active"]}
+            class={["btn btn-sm join-item shrink-0", @status == value && "btn-active"]}
             aria-current={@status == value && "page"}
           >
             {label} · {count}
