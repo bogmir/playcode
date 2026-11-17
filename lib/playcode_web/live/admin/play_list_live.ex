@@ -179,9 +179,9 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp status_label(%{is_complete: true}), do: gettext("Complete")
   defp status_label(_play), do: gettext("Draft")
 
-  defp status_badge(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: "badge-outline"
+  defp status_badge(%{deleted_at: deleted_at}) when not is_nil(deleted_at), do: "badge-ghost"
   defp status_badge(%{is_complete: true}), do: "badge-success badge-soft"
-  defp status_badge(_play), do: "badge-ghost"
+  defp status_badge(_play), do: "badge-outline"
 
   defp verses(play) do
     cond do
@@ -238,7 +238,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         </h2>
         <ul class="flex flex-wrap gap-2">
           <li :for={play <- @recent_plays}>
-            <.link navigate={~p"/admin/plays/#{play.id}"} class="btn btn-sm btn-ghost">
+            <.link navigate={~p"/admin/plays/#{play.id}"} class="btn btn-sm btn-soft">
               {play.title}
             </.link>
           </li>
@@ -266,7 +266,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
           <.link
             :for={{value, label, count} <- status_choices(@status_counts)}
             patch={~p"/admin/plays?#{list_params(@search, value)}"}
-            class={["btn btn-sm join-item shrink-0", @status == value && "btn-active"]}
+            class={["btn btn-sm join-item shrink-0", @status == value && "btn-primary"]}
             aria-current={@status == value && "page"}
           >
             {label} · {count}
@@ -290,63 +290,72 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         role="region"
         aria-label={gettext("Plays")}
       >
-        <table class="table table-zebra">
+        <table class="table">
           <thead>
             <tr class="text-xs uppercase tracking-wide text-base-content/70">
-              <th class="w-28 max-sm:hidden">{gettext("Code")}</th>
-              <th>{gettext("Title")}</th>
-              <th class="w-24">{gettext("Status")}</th>
-              <th class="w-20 text-right max-sm:hidden">{gettext("Verses")}</th>
-              <th :if={@archived} class="w-32 text-right">{gettext("Actions")}</th>
+              <th class="max-sm:hidden">{gettext("Code")}</th>
+              <%!-- The title takes the width the others leave. --%>
+              <th class="w-full">{gettext("Title")}</th>
+              <th>{gettext("Status")}</th>
+              <th class="text-right max-sm:hidden">{gettext("Verses")}</th>
+              <th :if={@archived} class="text-right">{gettext("Actions")}</th>
             </tr>
           </thead>
           <tbody>
             <tr
               :for={%{play: play, derived?: derived?, match?: match?} <- @rows}
               id={"play-#{play.id}"}
-              class="hover"
+              class="hover:bg-base-200"
             >
-              <td class="font-mono text-xs text-base-content/70 max-sm:hidden">{play.code}</td>
-              <td class={derived? && "pl-6"}>
-                <span :if={derived?} class="mr-1 inline-flex items-center gap-1 align-middle">
-                  <.icon
-                    name="hero-arrow-turn-down-right-mini"
-                    class="size-4 text-base-content/70"
-                  />
-                  <span :if={play.relationship_type} class="badge badge-sm badge-ghost">
-                    {PlayLabels.relationship_type_label(play.relationship_type)}
-                  </span>
-                </span>
-                <%!-- Archived plays are hidden from every Catalogue reader, so
-                      linking to their pages raises. Restore is the only action. --%>
-                <.link
-                  :if={is_nil(play.deleted_at)}
-                  navigate={~p"/admin/plays/#{play.id}"}
-                  class={[
-                    "link link-hover font-medium",
-                    if(match?, do: "text-primary", else: "text-base-content/70")
-                  ]}
-                >
-                  {play.title}
-                </.link>
-                <span :if={play.deleted_at} class="font-medium text-base-content/70">
-                  {play.title}
-                </span>
-                <p :if={play.author_name} class="text-xs text-base-content/70 mt-0.5">
-                  {play.author_name}
-                </p>
-                <%!-- On a phone the code's column is left out; the code goes under the title. --%>
-                <p class="sm:hidden font-mono text-xs text-base-content/70 break-all">
-                  {play.code}
-                </p>
+              <%!-- Some codes run to 90 characters; cut, they leave the title its room. --%>
+              <td class="font-mono text-xs text-base-content/70 max-sm:hidden">
+                <span class="block max-w-56 truncate" title={play.code}>{play.code}</span>
               </td>
               <td>
-                <span class={["badge badge-sm", status_badge(play)]}>
-                  {status_label(play)}
-                </span>
-                <span :if={not Play.has_text?(play)} class="badge badge-sm badge-warning mt-1">
-                  {gettext("No text")}
-                </span>
+                <div class={derived? && "ml-2 border-l-2 border-base-300 pl-4"}>
+                  <%!-- Archived plays are hidden from every Catalogue reader, so
+                        linking to their pages raises. Restore is the only action. --%>
+                  <.link
+                    :if={is_nil(play.deleted_at)}
+                    navigate={~p"/admin/plays/#{play.id}"}
+                    class={[
+                      "link link-hover font-medium",
+                      if(match?, do: "text-primary", else: "text-base-content/70")
+                    ]}
+                  >
+                    {play.title}
+                  </.link>
+                  <span :if={play.deleted_at} class="font-medium text-base-content/70">
+                    {play.title}
+                  </span>
+                  <p class="mt-0.5 text-xs text-base-content/70">
+                    <span
+                      :if={derived? && play.relationship_type}
+                      class="font-semibold uppercase tracking-wide"
+                    >
+                      {PlayLabels.relationship_type_label(play.relationship_type)}
+                    </span>
+                    <span :if={derived? && play.relationship_type && play.author_name}>·</span>
+                    {play.author_name}
+                  </p>
+                  <%!-- On a phone the code's column is left out; the code goes under the title. --%>
+                  <p class="sm:hidden font-mono text-xs text-base-content/70 break-all">
+                    {play.code}
+                  </p>
+                </div>
+              </td>
+              <td>
+                <div class="flex flex-wrap gap-1">
+                  <span class={["badge badge-sm whitespace-nowrap", status_badge(play)]}>
+                    {status_label(play)}
+                  </span>
+                  <span
+                    :if={not Play.has_text?(play)}
+                    class="badge badge-sm badge-soft badge-warning whitespace-nowrap"
+                  >
+                    {gettext("No text")}
+                  </span>
+                </div>
               </td>
               <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
                 {verses(play)}
