@@ -1,33 +1,35 @@
-# Playcode brief, 2026-11-15 (commit 8adc0d1)
+# Playcode brief, 2026-11-17 (commit 1df4962)
 
-## 19 of 72 questions open ([preguntas](docs/stakeholder/preguntas.html))
-**Easiest**
-- [q72](docs/stakeholder/preguntas.html#q72) RoleCall link for translations: yes/no, one sentence
-- [q70](docs/stakeholder/preguntas.html#q70) Character genders: a short list to pick or amend
-- [q28](docs/stakeholder/preguntas.html#q28) Show the original cast: yes/no
-- [q13](docs/stakeholder/preguntas.html#q13) Jodelle's 11 witnesses: one fact (who really)
-- [q7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: show or hide
-**Most important**
-- [q66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: 45 texts in 33 plays wait on it (backlog C1)
-- [q69](docs/stakeholder/preguntas.html#q69) Recount 16 hand-numbered plays: corpus-wide numbering
-- [q68](docs/stakeholder/preguntas.html#q68) Word before a cited number: shapes every citation on the site
-- [q14](docs/stakeholder/preguntas.html#q14) Nine web editions with no TEI file: missing plays on the site
-- [q57](docs/stakeholder/preguntas.html#q57) Plays without a text (with q53-56: the relations project)
+Current focus: none.
+
+## Questions: 19 of 72 questions open
+**5 easiest** (yes/no or one fact):
+- [q7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: show them? yes/no.
+- [q28](docs/stakeholder/preguntas.html#q28) Show the original cast's actors? yes/no; data already stored.
+- [q34](docs/stakeholder/preguntas.html#q34) Are the two epilogues divisions of the play? yes/no, two plays.
+- [q72](docs/stakeholder/preguntas.html#q72) Translation links to the original's RoleCall chart? yes/no.
+- [q13](docs/stakeholder/preguntas.html#q13) Who replaces Jodelle on 11 witnesses? One name to give.
+
+**5 most important** (what they unblock):
+- [q66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: 45 texts in 33 plays; blocks backlog C1 and the corpus fixes.
+- [q69](docs/stakeholder/preguntas.html#q69) Recount 16 hand-numbered plays; a yes lets Manual go and Generate follow.
+- [q68](docs/stakeholder/preguntas.html#q68) Word before a cited number; the site's cite button and statistics ranges use it.
+- [q57](docs/stakeholder/preguntas.html#q57) Plays without a text; gates the whole relations design (q53-57).
+- [q14](docs/stakeholder/preguntas.html#q14) Nine plays with a web edition but no TEI file; corpus completeness.
 
 ## Round trip
-- Asides: play page and site mark them less than the downloads (note 37)
-- Verse/prose label vs text (q23 follow-up): our rule applied, project not yet confirmed
-- Original cast (`characters.actor`) printed nowhere, waits on q28
-- Not re-read this run: the cell-by-cell table in ida-y-vuelta.html
+- Original cast (`characters.actor`) is written to TEI but printed nowhere: waits on q28.
+- Verse/prose label: our 61 corpus copies still say `verso` for the "mixed" plays; waits on q23's follow-up.
+- Nothing else short of "yes" in ida-y-vuelta that is not already tied to a question.
 
-## Top 3 features (clear to implement)
-1. **EMOTHE0443's closing `<set>` note** (Next): the last front-matter note lost on import; fix: read it as a paratext's note is read.
-2. **Front matter header texts through `escape/1`** (Next): `<<…>>` would show for `<emph>` in titles/editors; fix: print through `NoteMarkup.inline/3`, then give the inline-markers test italics.
-3. **Space added after a line's opening `<stage>`** (Next; the cast-list tabs part is vaguer): `</stage>El Sol` gains a space; fix: stop adding it.
-Skipped: the UV deploy (waits on UV), Folio words in search (choice between two options).
+## Top 3 features (clear to implement, verified in code)
+1. **Admin import writes each file twice**: preview costs as much as the import (4.2 s vs 4.1 s). `lib/playcode_web/live/admin/import_live.ex:93` calls `preview_import(path)` with numbering on (`tei_import.ex:147`) just to decide whether to ask for confirmation; the filter never reads `numbering`. Fix: `numbering: false` there, compute it only for files that reach the confirm screen (shown at `import_live.ex:329`).
+2. **A shared line's lead carries no note numbers**: `lib/playcode/play_content/split_verses.ex:44-66` builds `lead` from `content` only, so a part after one with a note starts up to ~28px short, in every output. Fix: print the markers in the lead as a plain `<sup>`, no id or link, in each renderer (`download.ex:360` and its siblings).
+3. **Front matter prints header text through `escape/1`**: `lib/playcode/export/download.ex:51-52` (title, author; also 107, 124, 146) would show `<<…>>` for an `<emph>` in a header; latent, none of the 385 files has one. Fix: `NoteMarkup.inline/3`, then give `inline_markers_test.exs` its italics.
+
+Stale in backlog: none found. Skipped as a choice between options: "Folio words searched while the switch is off".
 
 ## Speed win
-- `lib/playcode/statistics.ex:69-95` (`compute/1`): about eight separate passes over `all_elements` (counts by type, `stage_count`, `asides_started`, aside verses, split verses), plus `Metrics.words` per spoken item.
-- Change: one `Enum.reduce` over the elements into a counter map, or at least one parse of each element's inline content for stage and aside counts.
-- Gain: statistics per play, so small per play but paid on every content change of every play in a Generate on the shared CPU; measure with `:timer.tc(&Statistics.compute/1)` on Hamlet. I read only this file, not `Metrics`, so the real size is unknown.
-- Risk: low, `statistics` tests pin the numbers. Differs from the previous brief (search.ex `stage_only`).
+- Weak find; the big paths are measured or batched (catalogue reads: `static-site-improvements.md:197`; TEI import: already `insert_all` in 1,000-row batches, `tei_import.ex:965`). Remaining: `lib/playcode/import/bibliography.ex:155-165` inserts each FileMaker link with `Repo.insert!` in an `Enum.each`; batch it with `insert_all`.
+- Gain: one round trip per link instead of thousands, seconds at most, on a one-time import; measure with `mix playcode.import.bibliography` on dev.
+- Risk: low; `insert_all` skips `Link.changeset` validation, so keep a check on volume/pages/note. Not worth doing before the items above.
