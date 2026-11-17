@@ -9,6 +9,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   alias Playcode.Accounts
   alias Playcode.ActivityLog
   alias Playcode.Catalogue
+  alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
   alias PlaycodeWeb.Admin.LiveHelpers
 
@@ -52,7 +53,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
     {:noreply,
      socket
-     |> assign_plays(plays)
+     |> assign(:plays, plays)
      |> assign(:search, search)
      |> assign(:status, status)
      |> assign(:page, page)
@@ -99,13 +100,9 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     plays = Catalogue.list_plays(opts ++ [page: page, per_page: @per_page])
 
     socket
-    |> assign_plays(plays)
+    |> assign(:plays, plays)
     |> assign(page: page, total_pages: total_pages)
     |> assign_counts()
-  end
-
-  defp assign_plays(socket, plays) do
-    assign(socket, plays: plays, without_text: Catalogue.without_text(Enum.map(plays, & &1.id)))
   end
 
   # The filter's counts follow the search; the heading's is the whole corpus.
@@ -181,10 +178,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp status_badge(%{is_complete: true}), do: "badge-success badge-soft"
   defp status_badge(_play), do: "badge-ghost"
 
-  defp verses(play, without_text) do
+  defp verses(play) do
     cond do
-      play.id in without_text -> "—"
-      Playcode.Catalogue.Play.form(play) == "prose" -> gettext("prose")
+      not Play.has_text?(play) -> "—"
+      Play.form(play) == "prose" -> gettext("prose")
       true -> play.verse_count
     end
   end
@@ -325,12 +322,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
                 <span class={["badge badge-sm", status_badge(play)]}>
                   {status_label(play)}
                 </span>
-                <span :if={play.id in @without_text} class="badge badge-sm badge-warning mt-1">
+                <span :if={not Play.has_text?(play)} class="badge badge-sm badge-warning mt-1">
                   {gettext("No text")}
                 </span>
               </td>
               <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
-                {verses(play, @without_text)}
+                {verses(play)}
               </td>
               <td :if={@archived}>
                 <div class="flex items-center justify-end gap-1">

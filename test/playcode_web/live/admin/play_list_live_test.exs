@@ -257,7 +257,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
 
   describe "a play whose text did not arrive" do
     setup %{conn: conn} do
-      empty = play_fixture(%{"title" => "Empty Play"})
+      empty = play_without_text_fixture(%{"title" => "Empty Play"})
 
       prose =
         import_tei!(

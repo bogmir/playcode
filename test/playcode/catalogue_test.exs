@@ -4,33 +4,8 @@ defmodule Playcode.CatalogueTest do
   import Playcode.TestFixtures
 
   alias Playcode.Catalogue
-
-  # Regression: `NOT IN (subquery)` over play_elements cannot be hashed in production's
-  # work_mem, so Postgres compared every play against 1.3 million rows and the play list
-  # took 20 seconds to load. Too few rows here to time it; the plan shows it instead.
-  test "counting plays with no text is an anti-join, not a subquery run per play" do
-    test_pid = self()
-    handler = "no-text-plan-#{inspect(test_pid)}"
-
-    :telemetry.attach(
-      handler,
-      [:playcode, :repo, :query],
-      fn _event, _measurements, %{query: sql, params: params}, _ ->
-        if self() == test_pid, do: send(test_pid, {:sql, sql, params})
-      end,
-      nil
-    )
-
-    Catalogue.count_plays(status: :no_text)
-    :telemetry.detach(handler)
-    assert_received {:sql, sql, params}
-
-    plan =
-      Ecto.Adapters.SQL.query!(Playcode.Repo, "EXPLAIN " <> sql, params).rows
-      |> Enum.map_join("\n", &hd/1)
-
-    assert plan =~ "Anti Join"
-  end
+  alias Playcode.Catalogue.Play
+  alias Playcode.PlayContent
 
   describe "a play's verse count" do
     import Playcode.ImportHelpers
@@ -199,6 +174,65 @@ defmodule Playcode.CatalogueTest do
                  heading: "LOS CONTENTOS",
                  verse: true
                })
+    end
+  end
+
+  describe "a play's text" do
+    test "a play made with nothing in it has no text, and no form" do
+      {:ok, play} =
+        Catalogue.create_play(%{
+          "title" => "Sin texto",
+          "code" => unique_code(),
+          "language" => "es"
+        })
+
+      refute Play.has_text?(play)
+      assert Play.form(play) == nil
+      assert play.verse_count == nil
+    end
+
+    test "its first line gives it a text, and deleting its last takes it away" do
+      play = play_without_text_fixture()
+
+      {:ok, act} =
+        PlayContent.create_division(%{play_id: play.id, type: "acto", number: 1, position: 1})
+
+      refute Play.has_text?(Catalogue.get_play!(play.id))
+
+      {:ok, _stage} =
+        PlayContent.create_element(%{
+          play_id: play.id,
+          division_id: act.id,
+          type: "stage_direction",
+          content: "Sale.",
+          position: 1
+        })
+
+      refute Play.has_text?(Catalogue.get_play!(play.id))
+
+      {:ok, line} =
+        PlayContent.create_element(%{
+          play_id: play.id,
+          division_id: act.id,
+          type: "prose",
+          content: "",
+          position: 2
+        })
+
+      assert Play.has_text?(Catalogue.get_play!(play.id))
+      assert Play.form(Catalogue.get_play!(play.id)) == "prose"
+
+      {:ok, _} = PlayContent.delete_element(line)
+      refute Play.has_text?(Catalogue.get_play!(play.id))
+      assert Catalogue.get_play!(play.id).verse_count == nil
+    end
+
+    test "the play list's no-text filter finds it" do
+      without = play_without_text_fixture()
+      with_text = play_fixture()
+      codes = Catalogue.list_plays(status: :no_text) |> Enum.map(& &1.code)
+      assert without.code in codes
+      refute with_text.code in codes
     end
   end
 end
