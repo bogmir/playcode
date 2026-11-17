@@ -28,13 +28,14 @@ defmodule Playcode.Export.Download do
   @doc """
   `play` with what its front matter prints, and its divisions as the downloads print
   them: its variants if it shows them, each later part of a shared line with its lead.
+  `divisions`, when given, are the play's as `PlayContent.load_play_content/2` gives them,
+  already read by the caller.
   """
-  def load(play) do
+  def load(play, divisions \\ nil) do
     play = Playcode.Repo.preload(play, [:editors, :sources, :paratexts])
 
     divisions =
-      play.id
-      |> PlayContent.load_play_content(variants: play.show_variants)
+      (divisions || PlayContent.load_play_content(play.id, variants: play.show_variants))
       |> SplitVerses.with_leads()
 
     {play, divisions}

@@ -10,8 +10,9 @@ defmodule Playcode.Export.Epub do
   alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
 
-  def generate(play) do
-    {play, divisions} = Download.load(play)
+  @doc "The book of `play`; `divisions:` gives its content when the caller has read it."
+  def generate(play, opts \\ []) do
+    {play, divisions} = Download.load(play, opts[:divisions])
 
     {front, rest} =
       play.paratexts

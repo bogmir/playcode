@@ -6,7 +6,8 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
 
   It covers the code (`module_info(:md5)` of `modules/0`), the translations of the
   messages those modules print, the versions of the libraries that render and encode the
-  pages, and the `:version` option.
+  pages, and the `:version` option. A play's EPUB is one of its pages here: the code and
+  the library that write it are in the hash.
   Not the files under `priv/static_site` (styles, scripts, fonts): no page embeds anything
   of them but their links, stamped with the start of their own hash, `assets/1`, so a
   change to them alone is copied and the stamps moved in place, not rebuilt. Not `build_date`: a page's footer says when that page
@@ -27,6 +28,8 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   # The modules outside StaticSite whose code shapes a page.
   @modules [
     Playcode.Alignment,
+    Playcode.Export.Download,
+    Playcode.Export.Epub,
     Playcode.Export.NoteMarkup,
     Playcode.Export.TeiXml,
     Playcode.Bibliography,
@@ -58,7 +61,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   # StaticSite modules that shape no page: pushing the site, and this hash itself.
   @left_out [Playcode.Export.StaticSite.Deployer, __MODULE__]
 
-  @libraries [:phoenix_live_view, :phoenix_html, :jason, :xml_builder]
+  @libraries [:phoenix_live_view, :phoenix_html, :jason, :xml_builder, :bupe]
 
   @doc """
   Every `Playcode.Export.StaticSite*` module but `left_out/0`, and the modules listed

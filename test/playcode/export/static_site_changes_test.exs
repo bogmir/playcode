@@ -127,6 +127,16 @@ defmodule Playcode.Export.StaticSiteChangesTest do
              Enum.sort([{:add, changed.id}, {:remove, archived.code}, {:remove, draft.code}])
   end
 
+  test "a play taken off the site takes its EPUB with it" do
+    [goes, stays] = [complete_play(), complete_play()]
+    dir = generate!([goes, stays])
+    epub = Path.join(dir, "plays/#{goes.code}/#{goes.code}.epub")
+    assert File.exists?(epub)
+
+    {:ok, _} = StaticSite.apply_changes([{:remove, goes.code}], output_dir: dir)
+    refute File.exists?(epub)
+  end
+
   test "a published play that loses its text keeps its record alone" do
     import Playcode.ImportHelpers
 
@@ -144,6 +154,7 @@ defmodule Playcode.Export.StaticSiteChangesTest do
     dir = generate!([original, translation])
     files = &(dir |> Path.join("plays/#{&1.code}") |> File.ls!() |> Enum.sort())
     assert "text.html" in files.(original)
+    assert "#{original.code}.epub" in files.(original)
     assert "compare.html" in files.(translation)
 
     {:ok, _} =

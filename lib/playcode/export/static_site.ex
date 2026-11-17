@@ -25,7 +25,7 @@ defmodule Playcode.Export.StaticSite do
   import Playcode.Export.StaticSite.Bilingual
 
   alias Playcode.Catalogue
-  alias Playcode.Export.TeiXml
+  alias Playcode.Export.{Epub, TeiXml}
   alias Playcode.Catalogue.Play
 
   alias Playcode.Export.StaticSite.{
@@ -586,7 +586,10 @@ defmodule Playcode.Export.StaticSite do
       else: %{largest_page_gzip: 0, compare_gzip: 0}
   end
 
-  defp write_text(edition, original, play_dir, site, assigns) do
+  defp write_text(%Edition{play: play} = edition, original, play_dir, site, assigns) do
+    {:ok, epub} = Epub.generate(play, divisions: edition.divisions)
+    File.write!(Path.join(play_dir, "#{safe_code!(play.code)}.epub"), epub)
+
     largest =
       edition.pages
       |> Edition.neighbours()

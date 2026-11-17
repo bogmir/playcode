@@ -62,8 +62,6 @@
     <p :if={Components.licence?(@edition.play)} class="lede">
       <Components.licence play={@edition.play} />
     </p>
-    <p>
-      <a href={"#{@edition.play.code}.xml"} download>{t("Download the TEI-XML source")}</a>
-    </p>
+    <Components.downloads play={@edition.play} />
   </article>
 </Components.shell>
