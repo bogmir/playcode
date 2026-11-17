@@ -173,6 +173,7 @@ Playcode has no public pages: the published static site is the catalogue (decide
 - **Saxy for XML**: SAX-style streaming parser; uses `Saxy.SimpleForm` to parse into tree
 - **UUID primary keys**: All tables use `binary_id` for eventual distributed deployment
 - **JSONB statistics**: Cached stats stored as a JSON blob, recomputed on demand
+- **A play's text is known from `auto_form`**: the form Playcode works out from the elements on every import and content edit is nil when the play has no verse line and no line of prose; `Play.has_text?/1` reads it, and every output that needs a text asks it (design `docs/superpowers/specs/2026-11-17-plays-without-text-and-record-search-design.md`, 7.1)
 - **Self-referencing trees**: Both divisions and elements use `parent_id` for hierarchy
 - **bcrypt authentication**: Standard Phoenix auth pattern with session tokens and password reset; accounts arrive by invitation, so accepting the invite replaces a separate confirmation step
 - **One authorization seam**: two roles (`:admin`, `:researcher`) but every access decision goes through `Playcode.Authz.can?/3`, which already takes the resource — per-play scoping becomes one extra clause instead of a rewrite

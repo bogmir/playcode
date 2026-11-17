@@ -11,6 +11,17 @@ was printed around it, edited by researchers and published from one TEI copy.
 The play itself: its divisions, the speeches in them and the stage directions.
 _Avoid_: body, content
 
+**Play without a text**:
+A play Playcode holds the record of and no text: no act, scene or line. It may have a cast
+list, paratexts, witnesses, performances.
+_Avoid_: textless play, empty play, stub, record-only play
+
+**Record**:
+What Playcode holds about a play besides its text: title, author, language, dating,
+relations, witnesses, performances, places of action, historical time, characters,
+bibliography.
+_Avoid_: metadata, file (the TEI file)
+
 **Division**:
 A part of the text: an act, a scene, a spoken prologue or epilogue.
 _Avoid_: section
