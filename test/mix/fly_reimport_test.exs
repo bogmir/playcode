@@ -25,6 +25,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     *generate_site*) cat "$d/generate.$(grep -c generate_site "$d/calls")" 2>/dev/null ;;
     *deploy_site*) cat "$d/deploy.$(grep -c deploy_site "$d/calls")" 2>/dev/null ;;
     *export_tei*) cat "$d/export.$(grep -c export_tei "$d/calls")" 2>/dev/null ;;
+    *"machine list -a playcode"*) cat "$d/app_sizes" 2>/dev/null || echo '[{"id":"7847063c04e7e8"}]' ;;
     *"machine list"*) cat "$d/sizes" 2>/dev/null || echo '[]' ;;
   esac
   """
@@ -312,13 +313,38 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       assert output() =~ "mix playcode.fly.reimport deploy"
     end
 
+    # Fly gives the app a new machine when it replaces one (2026-11-17: 859947b4102ee8 for
+    # 7847063c04e7e8), so the task asks for it rather than naming it.
+    test "the app's machine is the one Fly lists", %{dir: dir} do
+      answer(
+        dir,
+        "app_sizes",
+        Jason.encode!([%{id: "m_new", config: %{guest: %{cpu_kind: "shared"}}}])
+      )
+
+      answer(dir, "generate.1", "site generated: %{changed: 0}\n")
+
+      Mix.Task.rerun("playcode.fly.reimport", ["generate"])
+
+      calls = calls(dir)
+      assert Enum.any?(calls, &(&1 =~ "machine update m_new --autostop=off -a playcode"))
+      refute Enum.any?(calls, &(&1 =~ "7847063c04e7e8"))
+    end
+
     # A resize restarts the machine, the database's ending whatever it was serving.
     test "after a run, leaves the machines on performance-1x as they are", %{dir: dir} do
       answer(
         dir,
         "sizes",
         Jason.encode!([
-          %{id: "d8d14e7b0465d8", config: %{guest: %{cpu_kind: "performance", cpus: 1}}},
+          %{id: "d8d14e7b0465d8", config: %{guest: %{cpu_kind: "performance", cpus: 1}}}
+        ])
+      )
+
+      answer(
+        dir,
+        "app_sizes",
+        Jason.encode!([
           %{id: "7847063c04e7e8", config: %{guest: %{cpu_kind: "performance", cpus: 1}}}
         ])
       )
