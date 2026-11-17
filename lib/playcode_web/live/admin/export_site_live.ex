@@ -24,6 +24,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       |> assign(:changed, MapSet.new())
       |> assign(:site_changed, false)
       |> assign(:assets_changed, false)
+      |> assign(:catalogue_changed, false)
       |> assign(:indexing, false)
       |> assign(:generating, false)
       |> assign(:deploying, false)
@@ -187,7 +188,13 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               </span>
             </div>
             <p class="text-xs text-base-content/70">
-              {generate_hint(@exported_codes, @site_changed, @assets_changed, @changed, @plays)}
+              {generate_hint(
+                @exported_codes,
+                @site_changed,
+                shared_hint(@assets_changed, @catalogue_changed),
+                @changed,
+                @plays
+              )}
             </p>
           </form>
         </div>
@@ -587,7 +594,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     assign(socket,
       changed: MapSet.new(StaticSite.changed_plays(dir)),
       site_changed: StaticSite.site_changed?(dir, version: socket.assigns.version),
-      assets_changed: StaticSite.assets_changed?(dir)
+      assets_changed: StaticSite.assets_changed?(dir),
+      catalogue_changed: StaticSite.catalogue_changed?(dir)
     )
   end
 
@@ -688,7 +696,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   # What Generate will do, under its button. A play in the site but not in `plays`, the
   # complete ones, is archived or no longer complete, and Generate takes it out.
-  defp generate_hint(exported, site_changed?, assets_changed?, changed, plays) do
+  defp generate_hint(exported, site_changed?, shared, changed, plays) do
     removed = MapSet.size(MapSet.difference(exported, MapSet.new(plays, & &1.code)))
 
     cond do
@@ -708,22 +716,28 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
           " "
         )
 
-      MapSet.size(changed) == 0 and removed == 0 and not assets_changed? ->
+      MapSet.size(changed) == 0 and removed == 0 and shared == [] ->
         gettext("Every play in the site is up to date.")
 
       true ->
         Enum.join(
-          assets_hint(assets_changed?) ++
+          shared ++
             changed_hint(MapSet.size(changed)) ++ removed_hint(removed),
           " "
         )
     end
   end
 
-  defp assets_hint(false), do: []
-
-  defp assets_hint(true),
-    do: [gettext("The site's styles and scripts have changed. Generate updates them.")]
+  # What Generate writes again without rebuilding a play.
+  defp shared_hint(assets?, catalogue?) do
+    Enum.filter(
+      [
+        catalogue? && gettext("The catalogue has changed. Generate rewrites it."),
+        assets? && gettext("The site's styles and scripts have changed. Generate updates them.")
+      ],
+      & &1
+    )
+  end
 
   defp changed_hint(0), do: []
 
@@ -761,8 +775,18 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     )
   end
 
-  defp done(socket, :generate, {:ok, %{changed: 0, assets: true}}),
-    do: put_flash(socket, :info, gettext("The site's styles and scripts are updated."))
+  defp done(socket, :generate, {:ok, %{changed: 0, assets: assets?, catalogue: catalogue?}}) do
+    done =
+      Enum.filter(
+        [
+          catalogue? && gettext("The catalogue is updated."),
+          assets? && gettext("The site's styles and scripts are updated.")
+        ],
+        & &1
+      )
+
+    put_flash(socket, :info, Enum.join(done, " "))
+  end
 
   defp done(socket, :generate, {:ok, %{changed: 0}}),
     do: put_flash(socket, :info, gettext("Nothing has changed since the last build."))

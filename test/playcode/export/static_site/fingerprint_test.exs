@@ -56,6 +56,21 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     assert current.() != spanish
   end
 
+  # The catalogue is rewritten whole on every Generate, so its words have a hash of their
+  # own beside its code: one of them changed rebuilds no play.
+  test "a translation only the catalogue prints changes its hash, not the fingerprint" do
+    dir = Path.join(System.tmp_dir!(), "catalogue-#{System.unique_integer([:positive])}")
+    File.cp_r!(Application.app_dir(:playcode, "priv/gettext"), dir)
+    on_exit(fn -> File.rm_rf!(dir) end)
+
+    site = Fingerprint.current(version: "1.0", gettext_dir: dir)
+    catalogue = Fingerprint.catalogue(gettext_dir: dir)
+
+    translate(dir, "es", "Show the passages", "Ver los pasajes", "Mostrar los pasajes")
+    assert Fingerprint.current(version: "1.0", gettext_dir: dir) == site
+    assert Fingerprint.catalogue(gettext_dir: dir) != catalogue
+  end
+
   # The rule above matches the .po references against each module's source file, which
   # `mix release` strips from the beams unless told to keep it: without it no translation
   # reached production's fingerprint.
@@ -78,6 +93,21 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
       refute module in Fingerprint.modules()
       assert module in Fingerprint.left_out()
     end
+  end
+
+  # The catalogue page and the record index are written whole on every Generate from the
+  # plays' rows, so a change to their code needs no play rebuilt: one rebuilt all 374.
+  # That holds while no play page uses them, so only the build itself may call them.
+  test "the catalogue's own code is left out, and only the build calls it" do
+    catalogue = [Playcode.Export.StaticSite.CataloguePage, Playcode.Export.StaticSite.Records]
+
+    for module <- catalogue do
+      refute module in Fingerprint.modules()
+      assert module in Fingerprint.left_out()
+    end
+
+    for module <- Fingerprint.modules() -- [Playcode.Export.StaticSite],
+        do: assert(Enum.filter(calls(module), &(&1 in catalogue)) == [], inspect(module))
   end
 
   test "every module the export calls is in the fingerprint, or only reads play data" do

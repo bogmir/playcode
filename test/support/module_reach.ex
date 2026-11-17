@@ -56,8 +56,8 @@ defmodule Playcode.ModuleReach do
         do: {callee, function}
   end
 
-  # This app's modules that `module` calls.
-  defp calls(module) do
+  @doc "This app's modules that `module` calls directly."
+  def calls(module) do
     ours = Application.spec(:playcode, :modules)
     for {callee, _function, _arity} <- imports(module), callee in ours, uniq: true, do: callee
   end

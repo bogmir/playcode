@@ -19,9 +19,7 @@
         type="checkbox"
         autocomplete="off"
         class="sr-only"
-        checked={
-          match?(%{active_tab: tab} when tab in [:content, :compare], assigns[:play_context])
-        }
+        checked={sidebar_folded?(assigns[:play_context])}
       />
       <label
         for="admin-sidebar"
@@ -58,11 +56,14 @@
   </div>
 
   <main id="main" class="min-w-0 lg:col-start-2 lg:row-start-2">
-    <%!-- Below lg the header's bare icon alone hid a play's sections from phone users. --%>
+    <%!-- The header's bare icon alone hid a play's sections, below lg and on a folded page. --%>
     <label
       :if={assigns[:play_context]}
       for="admin-sidebar"
-      class="btn btn-sm btn-outline mx-4 mt-4 lg:hidden"
+      class={[
+        "btn btn-sm btn-outline mx-4 mt-4",
+        !sidebar_folded?(assigns[:play_context]) && "lg:hidden"
+      ]}
     >
       <.icon name="hero-bars-3" class="size-4" /> {gettext("Play sections")}
     </label>
