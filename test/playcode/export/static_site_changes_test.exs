@@ -128,4 +128,36 @@ defmodule Playcode.Export.StaticSiteChangesTest do
     assert Enum.sort(StaticSite.outdated(dir)) ==
              Enum.sort([{:add, changed.id}, {:remove, archived.code}, {:remove, draft.code}])
   end
+
+  test "a published play that loses its text keeps its record alone" do
+    import Playcode.ImportHelpers
+
+    original =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><head>ACTO I</head><sp><speaker>A</speaker><l n="1">Uno.</l><l n="2">Dos.</l></sp></div1>)
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    translation =
+      complete_play(%{"parent_play_id" => original.id, "relationship_type" => "traduccion"})
+
+    dir = generate!([original, translation])
+    files = &(dir |> Path.join("plays/#{&1.code}") |> File.ls!() |> Enum.sort())
+    assert "text.html" in files.(original)
+    assert "compare.html" in files.(translation)
+
+    {:ok, _} =
+      original.id
+      |> Playcode.PlayContent.list_top_divisions()
+      |> Enum.flat_map(&Playcode.PlayContent.list_elements_for_division(&1.id))
+      |> Enum.filter(&is_nil(&1.parent_id))
+      |> Playcode.PlayContent.delete_elements()
+
+    {:ok, _} = StaticSite.apply_changes([{:add, original.id}], output_dir: dir)
+
+    assert files.(original) == ["#{original.code}.xml", "index.html"]
+    refute "compare.html" in files.(translation)
+  end
 end

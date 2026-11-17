@@ -16,8 +16,10 @@
       <dd>{@edition.play.code}</dd>
       <dt>{t("Language")}</dt>
       <dd>{html(Components.language(@edition.play.language))}</dd>
-      <dt>{t("Form")}</dt>
-      <dd>{Components.form_summary(@edition.play, @edition.stats)}</dd>
+      <%= if Play.form(@edition.play) do %>
+        <dt>{t("Form")}</dt>
+        <dd>{Components.form_summary(@edition.play, @edition.stats)}</dd>
+      <% end %>
       <Components.study play={@edition.play} />
     </dl>
     <Components.family play={@edition.play} published={@site.published} />
@@ -44,9 +46,13 @@
     <Components.performances edition={@edition} />
     <Components.bibliography groups={@edition.bibliography} />
     <Components.outline_item :for={item <- @edition.front} edition={@edition} item={item} />
-    <section>
+    <section :if={Play.has_text?(@edition.play)}>
       <h2>{t("Contents")}</h2>
       <Components.play_contents edition={@edition} all_scenes />
+    </section>
+    <section :if={!Play.has_text?(@edition.play)}>
+      <h2>{t("Text")}</h2>
+      <p>{t("EMOTHE does not hold the text of this play.")}</p>
     </section>
     <section class="cite">
       <h2>{t("Cite this edition")}</h2>

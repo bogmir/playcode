@@ -545,7 +545,8 @@ defmodule Playcode.Export.StaticSite do
     File.rm(Path.join([dir, "plays", "#{code}.html"]))
   end
 
-  # Writes one play's pages and TEI; returns what the index pages need from it.
+  # Writes one play's pages and TEI; returns what the index pages need from it. A play
+  # without a text has its title page, its TEI file and the redirect alone.
   defp write_play(%Edition{play: play} = edition, original, dir, site) do
     code = safe_code!(play.code)
     play_dir = Path.join([dir, "plays", code])
@@ -563,6 +564,17 @@ defmodule Playcode.Export.StaticSite do
       )
     )
 
+    File.write!(
+      Path.join([dir, "plays", "#{code}.html"]),
+      Pages.render(:redirect, %{code: code, title: InlineMarkup.plain(play.title)})
+    )
+
+    if Play.has_text?(play),
+      do: write_text(edition, original, play_dir, site, assigns),
+      else: %{largest_page_gzip: 0, compare_gzip: 0}
+  end
+
+  defp write_text(edition, original, play_dir, site, assigns) do
     largest =
       edition.pages
       |> Edition.neighbours()
@@ -585,26 +597,23 @@ defmodule Playcode.Export.StaticSite do
       File.write!(Path.join(play_dir, "stage-directions.html"), html)
     end
 
-    File.write!(
-      Path.join([dir, "plays", "#{code}.html"]),
-      Pages.render(:redirect, %{code: code, title: InlineMarkup.plain(play.title)})
-    )
-
     %{largest_page_gzip: largest, compare_gzip: compare}
   end
 
   # A play whose original is published is compared with it, in its own folder: a
   # change to the original re-exports it (`relatives/3`), so the page follows both.
   # `original` is the original's Edition when the build holds it, nil to load it here.
+  # The caller has checked the play has a text; an original without one is not compared.
   defp write_comparison(%Edition{play: play} = edition, original, play_dir, site) do
     parent = play.parent_play
 
-    if parent && parent.is_complete && MapSet.member?(site.published, parent.code) do
+    if parent && parent.is_complete && MapSet.member?(site.published, parent.code) &&
+         Play.has_text?(parent) do
       {original, translation} = Comparison.prepare(original || Edition.load(parent.id), edition)
 
       menu =
         original.play.derived_plays
-        |> Enum.filter(&MapSet.member?(site.published, &1.code))
+        |> Enum.filter(&(MapSet.member?(site.published, &1.code) and Play.has_text?(&1)))
         |> translation_order()
         |> Comparison.menu()
 
@@ -682,8 +691,14 @@ defmodule Playcode.Export.StaticSite do
       %{
         play: lead,
         translations: translations,
-        # The comparison the lead's Compare link opens: its first own derived play's.
-        compare: Enum.find_value(translations, &(&1.parent_play_id == root && &1.code)),
+        # The comparison the lead's Compare link opens: its first own derived play's with a
+        # text, when the lead has one.
+        compare:
+          Play.has_text?(lead) &&
+            Enum.find_value(
+              translations,
+              &(&1.parent_play_id == root && Play.has_text?(&1) && &1.code)
+            ),
         sort_author: Search.normalise(lead.author_sort || lead.author_name),
         sort_title: Search.normalise(lead.title_sort || lead.title),
         date: lead.composition_date_from
@@ -712,7 +727,8 @@ defmodule Playcode.Export.StaticSite do
   defp facets(plays) do
     [
       {"lang", t("Language"), options(plays, & &1.language, &html(Components.language(&1)))},
-      {"form", t("Form"), options(plays, &Play.form/1, &form_label/1)},
+      {"form", t("Form"),
+       plays |> Enum.filter(&Play.form/1) |> options(&Play.form/1, &form_label/1)},
       {"kind", t("Kind"), options(plays, &Components.kind/1, &html(Components.kind_label(&1)))},
       {"coll", t("Collection"), options(plays, &Components.collection/1, & &1)}
     ]

@@ -7,6 +7,21 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
 
   defp works(index), do: index |> LazyHTML.query("[data-works] > li") |> Enum.to_list()
 
+  test "a play without a text is in the catalogue, tagged, with its years and no form" do
+    play =
+      play_without_text_fixture(%{
+        "is_complete" => true,
+        "title" => "El Adonis",
+        "composition_date_from" => 1632,
+        "composition_date_to" => 1632
+      })
+
+    index = html!(generate!([play]), "index.html", "es")
+    assert "sin texto" in texts(index, "[data-play] .tag")
+    assert texts(index, "[data-play] .meta") == ["1632"]
+    assert texts(index, "fieldset legend") |> Enum.any?()
+  end
+
   test "a one-play site says \"1 play · 1 author\"" do
     play = play_fixture(%{"is_complete" => true, "author_name" => "Lope de Vega"})
 

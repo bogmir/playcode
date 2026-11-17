@@ -397,7 +397,8 @@ defmodule Playcode.Export.StaticSiteTest do
         Playcode.PlayContent.create_element(%{
           play_id: play.id,
           division_id: act.id,
-          type: "stage_direction",
+          # A line, not a stage direction: a play with no line has no text, and no act pages.
+          type: "prose",
           content: text,
           position: 1
         })

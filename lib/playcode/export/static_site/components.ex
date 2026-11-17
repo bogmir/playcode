@@ -288,10 +288,12 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :all_scenes, :boolean, default: false
 
   def play_contents(assigns) do
+    assigns = assign(assigns, :text, Play.has_text?(assigns.edition.play))
+
     ~H"""
     <ul>
       <li><a href="index.html" aria-current={@current == "index" && "page"}>{t("Title page")}</a></li>
-      <%= for entry <- @edition.contents do %>
+      <%= for entry <- @edition.contents, @text or match?({:item, _}, entry) do %>
         <%= case entry do %>
           <% {:item, item} -> %>
             <li><a href={item_href(@edition, item)}>{item_title(item)}</a></li>
@@ -324,16 +326,18 @@ defmodule Playcode.Export.StaticSite.Components do
             </li>
         <% end %>
       <% end %>
-      <li><a href="text.html" aria-current={@current == "text" && "page"}>{t("Full text")}</a></li>
-      <li>
+      <li :if={@text}>
+        <a href="text.html" aria-current={@current == "text" && "page"}>{t("Full text")}</a>
+      </li>
+      <li :if={@text}>
         <a href="statistics.html" aria-current={@current == "statistics" && "page"}>
           {t("Statistics")}
         </a>
       </li>
-      <li :if={@edition.notes != []}>
+      <li :if={@text and @edition.notes != []}>
         <a href="notes.html" aria-current={@current == "notes" && "page"}>{t("Notes")}</a>
       </li>
-      <li :if={@edition.stage_directions != []}>
+      <li :if={@text and @edition.stage_directions != []}>
         <a href="stage-directions.html" aria-current={@current == "stage-directions" && "page"}>
           {t("Stage directions")}
         </a>
@@ -1608,6 +1612,7 @@ defmodule Playcode.Export.StaticSite.Components do
         </svg>
       </a>
       <span :if={kind(@play) != "original"} class="tag">{html(kind_word(@play))}</span>
+      <span :if={!Play.has_text?(@play)} class="tag">{html(tp("no text"))}</span>
       <span class="meta">{entry_meta(@play)}</span>
       <span :if={@lead} class="author">{@play.author_name}</span>
     </div>
@@ -1617,6 +1622,9 @@ defmodule Playcode.Export.StaticSite.Components do
   defp entry_meta(play) do
     form =
       case Play.form(play) do
+        nil ->
+          nil
+
         "verse" when is_integer(play.verse_count) and play.verse_count > 0 ->
           same("#{number(play.verse_count)} vv.")
 
@@ -1624,9 +1632,9 @@ defmodule Playcode.Export.StaticSite.Components do
           pair(fn -> PlayLabels.form_label(form) end)
       end
 
-    case Play.composition_years(play) do
-      nil -> html(form)
-      years -> html(join([same(years), form], " · "))
+    case [Play.composition_years(play) && same(Play.composition_years(play)), form] do
+      [nil, nil] -> nil
+      parts -> parts |> Enum.reject(&is_nil/1) |> join(" · ") |> html()
     end
   end
 end
