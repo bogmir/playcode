@@ -131,10 +131,11 @@ defmodule Playcode.Import.TeiImport do
   """
   def preview_import(path, opts \\ []) do
     with {:ok, tei} <- TeiParser.parse_file(path),
-         do: {:ok, preview(tei, Keyword.get(opts, :numbering, true))}
+         {:ok, numbering} <- numbering(tei, Keyword.get(opts, :numbering, true)),
+         do: {:ok, preview(tei, numbering)}
   end
 
-  defp preview(%{play: %{code: code, title: title}} = tei, with_numbering) do
+  defp preview(%{play: %{code: code, title: title}} = tei, numbering) do
     existing = Repo.get_by(Play, code: code)
 
     %{
@@ -148,21 +149,28 @@ defmodule Playcode.Import.TeiImport do
       preserves_fields: preserved_fields(existing),
       split_verses: parts_out_of_order(tei.divisions),
       removes_text: removes_text(tei.divisions, existing),
-      numbering: if(with_numbering, do: numbering(tei))
+      numbering: numbering
     }
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
   end
 
   # The numbering rule the import would settle, as `Numbering.describe/1` words it: the file
   # written in a transaction rolled back, so detection reads the rows as the import stores them.
-  defp numbering(tei) do
-    {:error, text} =
-      Repo.transaction(
-        fn -> Repo.rollback(tei |> write_with_numbering() |> elem(1) |> Numbering.describe()) end,
-        timeout: :infinity
-      )
+  # A row the database refuses rolls back with its own reason, which the preview returns.
+  defp numbering(_tei, false), do: {:ok, nil}
 
-    text
+  defp numbering(tei, true) do
+    Repo.transaction(
+      fn ->
+        {_play, numbering} = write_with_numbering(tei)
+        Repo.rollback({:numbering, Numbering.describe(numbering)})
+      end,
+      timeout: :infinity
+    )
+    |> case do
+      {:error, {:numbering, text}} -> {:ok, text}
+      {:error, refused} -> {:error, refused}
+    end
   end
 
   # The parts of the file's split verses out of order (`SplitVerses.out_of_order/1`), as the

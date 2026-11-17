@@ -314,6 +314,20 @@ defmodule Playcode.Import.TeiPreviewTest do
     assert Map.delete(light, :numbering) == Map.delete(full, :numbering)
   end
 
+  # The numbering is settled by writing the file, so a row the database refuses is found
+  # there; a stage direction is a stage already, so a <stage> marker in one is refused.
+  test "a file the import would refuse previews as that refusal, not a crash" do
+    body =
+      ~s(<div1 type="acto" n="1"><head>I</head><stage>&lt;stage&gt;Sale.&lt;/stage&gt;</stage></div1>)
+
+    path = write_tmp!(tei(body: body))
+
+    assert {:error, {:element_create_failed, :stage_direction, _changeset}} =
+             TeiImport.preview_import(path)
+
+    assert {:ok, _preview} = TeiImport.preview_import(path, numbering: false)
+  end
+
   describe "a file with no text" do
     @two_verses ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Uno.</l><l n="2">Dos.</l></sp></div1>)
 
