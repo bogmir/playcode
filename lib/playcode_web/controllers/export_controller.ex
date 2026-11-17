@@ -6,11 +6,11 @@ defmodule PlaycodeWeb.ExportController do
 
   use PlaycodeWeb, :controller
 
+  plug PlaycodeWeb.Plugs.RequireText, :preview when action in [:html, :pdf, :epub]
+
   alias Playcode.Catalogue
-  alias Playcode.Catalogue.Play
   alias Playcode.Export
   alias Playcode.Export.PdfCache
-  alias PlaycodeWeb.PlayLabels
 
   def tei(conn, %{"id" => id}) do
     play = Catalogue.get_play_with_all!(id)
@@ -23,19 +23,18 @@ defmodule PlaycodeWeb.ExportController do
   end
 
   def html(conn, %{"id" => id}) do
-    with_text(conn, id, fn play ->
-      html = Export.Html.generate(play)
+    play = Catalogue.get_play_with_all!(id)
+    html = Export.Html.generate(play)
 
-      conn
-      |> put_resp_content_type("text/html")
-      |> put_resp_header("content-disposition", ~s(attachment; filename="#{play.code}.html"))
-      |> send_resp(200, html)
-    end)
+    conn
+    |> put_resp_content_type("text/html")
+    |> put_resp_header("content-disposition", ~s(attachment; filename="#{play.code}.html"))
+    |> send_resp(200, html)
   end
 
-  def pdf(conn, %{"id" => id}), do: with_text(conn, id, &pdf_of(conn, &1))
+  def pdf(conn, %{"id" => id}) do
+    play = Catalogue.get_play_with_all!(id)
 
-  defp pdf_of(conn, play) do
     case PdfCache.fetch(play) do
       {:ok, path} ->
         conn
@@ -58,9 +57,9 @@ defmodule PlaycodeWeb.ExportController do
   def pdf_unavailable(:busy), do: gettext("Other PDFs are being prepared. Try again in a minute.")
   def pdf_unavailable(_reason), do: gettext("The PDF could not be made. Try again later.")
 
-  def epub(conn, %{"id" => id}), do: with_text(conn, id, &epub_of(conn, &1))
+  def epub(conn, %{"id" => id}) do
+    play = Catalogue.get_play_with_all!(id)
 
-  defp epub_of(conn, play) do
     case Export.Epub.generate(play) do
       {:ok, epub_binary} ->
         conn
@@ -72,24 +71,6 @@ defmodule PlaycodeWeb.ExportController do
         conn
         |> put_resp_content_type("text/plain")
         |> send_resp(500, "EPUB generation failed")
-    end
-  end
-
-  defp with_text(conn, id, download),
-    do: with_text(conn, Catalogue.get_play_with_all!(id), download, &~p"/plays/#{&1.code}")
-
-  @doc """
-  `download.(play)`, unless the play has no text: then nothing is rendered or cached, and
-  the reader is sent to `back.(play)` with the notice. A play without a text has no HTML,
-  PDF or EPUB.
-  """
-  def with_text(conn, play, download, back) do
-    if Play.has_text?(play) do
-      download.(play)
-    else
-      conn
-      |> put_flash(:info, PlayLabels.no_text_notice())
-      |> redirect(to: back.(play))
     end
   end
 end

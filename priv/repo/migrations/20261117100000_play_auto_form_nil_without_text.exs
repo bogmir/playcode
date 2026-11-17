@@ -18,7 +18,7 @@ defmodule Playcode.Repo.Migrations.PlayAutoFormNilWithoutText do
   end
 
   def down do
-    execute "UPDATE plays SET auto_form = 'prose' WHERE auto_form IS NULL"
+    execute "UPDATE plays SET auto_form = 'prose', verse_count = 0 WHERE auto_form IS NULL"
 
     execute "ALTER TABLE plays ALTER COLUMN auto_form SET DEFAULT 'prose', ALTER COLUMN auto_form SET NOT NULL"
   end

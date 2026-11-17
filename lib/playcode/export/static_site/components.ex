@@ -1632,9 +1632,11 @@ defmodule Playcode.Export.StaticSite.Components do
           pair(fn -> PlayLabels.form_label(form) end)
       end
 
-    case [Play.composition_years(play) && same(Play.composition_years(play)), form] do
-      [nil, nil] -> nil
-      parts -> parts |> Enum.reject(&is_nil/1) |> join(" · ") |> html()
+    years = if years = Play.composition_years(play), do: same(years)
+
+    case Enum.reject([years, form], &is_nil/1) do
+      [] -> nil
+      parts -> parts |> join(" · ") |> html()
     end
   end
 end

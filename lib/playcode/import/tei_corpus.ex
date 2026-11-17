@@ -151,6 +151,7 @@ defmodule Playcode.Import.TeiCorpus do
   end
 
   defp removes_text(%{removes_text: nil}), do: ""
+  defp removes_text(%{removes_text: 1}), do: "; no text: its only line would be removed"
   defp removes_text(%{removes_text: n}), do: "; no text: #{n} lines would be removed"
 
   # The numbering rule the import would settle (`Numbering.describe/1`).
