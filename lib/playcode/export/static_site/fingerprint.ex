@@ -56,7 +56,11 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
   ]
 
   # The catalogue's own code: no play page calls it, and it has a hash of its own.
-  @catalogue [Playcode.Export.StaticSite.CataloguePage, Playcode.Export.StaticSite.Records]
+  @catalogue [
+    Playcode.Catalogue.Families,
+    Playcode.Export.StaticSite.CataloguePage,
+    Playcode.Export.StaticSite.Records
+  ]
 
   # StaticSite modules that shape no play page: the catalogue, pushing the site, and this
   # hash itself.

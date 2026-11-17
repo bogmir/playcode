@@ -8,7 +8,7 @@ defmodule Playcode.Export.StaticSite.CataloguePage do
 
   import Playcode.Export.StaticSite.Bilingual
 
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Families, Play}
   alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.{Components, Pages, Records, Search}
   alias Playcode.Performances.Performance
@@ -19,7 +19,8 @@ defmodule Playcode.Export.StaticSite.CataloguePage do
   @doc "Writes `index.html` and the record index into `dir`; returns the record index's size."
   def write(plays, dir, site) do
     by_id = Map.new(plays, &{&1.id, &1})
-    entries = Records.entries(plays, Map.new(plays, &{&1.id, by_id[root_id(&1, by_id)]}))
+    roots = Families.root_ids(plays)
+    entries = Records.entries(plays, Map.new(plays, &{&1.id, by_id[roots[&1.id]]}))
 
     html =
       %{
@@ -191,9 +192,10 @@ defmodule Playcode.Export.StaticSite.CataloguePage do
   # its translation chain.
   defp works(plays) do
     by_id = Map.new(plays, &{&1.id, &1})
+    roots = Families.root_ids(plays)
 
     plays
-    |> Enum.group_by(&root_id(&1, by_id))
+    |> Enum.group_by(&roots[&1.id])
     |> Enum.map(fn {root, members} ->
       lead = by_id[root]
 
@@ -216,22 +218,6 @@ defmodule Playcode.Export.StaticSite.CataloguePage do
       }
     end)
     |> Enum.sort_by(&{&1.sort_author, &1.sort_title})
-  end
-
-  # Follows parent_play_id to the root; on a cycle (hand-edited data) the play stands
-  # alone as its own root.
-  defp root_id(play, by_id), do: root_id(play, by_id, MapSet.new([play.id]), play.id)
-
-  defp root_id(play, by_id, seen, start) do
-    case by_id[play.parent_play_id] do
-      nil ->
-        play.id
-
-      parent ->
-        if parent.id in seen,
-          do: start,
-          else: root_id(parent, by_id, MapSet.put(seen, parent.id), start)
-    end
   end
 
   # The options of the catalogue form's lists, by control name, from the record entries:
