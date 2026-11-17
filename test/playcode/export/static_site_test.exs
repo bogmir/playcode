@@ -589,7 +589,8 @@ defmodule Playcode.Export.StaticSiteTest do
     assert size.("style.css") <= 25_000
     assert size.("site.js") <= 15_000
     assert size.("search.js") <= 15_000
-    assert size.("catalogue.js") <= 15_000
+    # 20 KB since one box searches the records and the texts in two lists (2026-11-17).
+    assert size.("catalogue.js") <= 20_000
     assert size.("catalogue.css") <= 8_000
 
     fonts =

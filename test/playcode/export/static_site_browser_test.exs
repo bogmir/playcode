@@ -83,17 +83,26 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
     play
   end
 
-  defp shown(page),
+  # The rows showing in one of the two lists: the plays whose record matches (Obras), or,
+  # once the box has words, those whose text holds them (`[data-works-text]`).
+  defp shown(page, list \\ "[data-works]"),
     do:
       page
-      |> LazyHTML.query("[data-play]:not([hidden])")
+      |> LazyHTML.query("#{list} [data-play]:not([hidden])")
       |> LazyHTML.attribute("data-code")
       |> Enum.sort()
 
-  test "with no filter every play shows and the form is visible", %{dir: dir, plays: plays} do
+  defp hidden?(page, selector),
+    do: page |> LazyHTML.query(selector) |> LazyHTML.attribute("hidden") == [""]
+
+  test "with no filter every play shows, the box shows and the filters wait behind their button",
+       %{dir: dir, plays: plays} do
     page = Browser.dom!(dir, "index.html")
     assert shown(page) == Enum.sort(Enum.map(plays, & &1.code))
-    assert LazyHTML.attribute(LazyHTML.query(page, "form[data-search]"), "hidden") == []
+    refute hidden?(page, "[data-catalogue-controls]")
+
+    # The form was the rail and always open; since the box, it is a panel the Filters button opens.
+    assert hidden?(page, "form[data-search]")
   end
 
   test "a list filter in the address hides the rest and fills its control", %{
@@ -139,24 +148,29 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
 
   test "words in q keep the plays that hold them, each with its count", %{dir: dir, verse: verse} do
     page = Browser.dom!(dir, "index.html#q=sue%C3%B1o")
-    assert shown(page) == [verse.code]
+    # The box's words search the records too since it became one box: the passages are in
+    # the second list.
+    assert shown(page, "[data-works-text]") == [verse.code]
     # Inside the row since the review: beside it, no `.entry .meta` rule set it as the mock does.
     assert texts(page, ~s([data-code="#{verse.code}"] [data-hits])) == ["2 pasajes"]
   end
 
   test "where narrows the hits", %{dir: dir} do
     assert texts(Browser.dom!(dir, "index.html#q=sue%C3%B1o&in=n"), "[data-hits]") == ["1 pasaje"]
-    assert shown(Browser.dom!(dir, "index.html#q=sue%C3%B1o&in=d")) == []
+    assert shown(Browser.dom!(dir, "index.html#q=sue%C3%B1o&in=d"), "[data-works-text]") == []
   end
 
   # Review Focus 1 of the plan: a shared address opened cold loads both indexes at once.
   test "full text and record filters combine, from a cold address", %{dir: dir, verse: verse} do
-    assert shown(Browser.dom!(dir, "index.html#f=verse&q=sue")) == [verse.code]
-    assert shown(Browser.dom!(dir, "index.html#f=prose&q=sue%C3%B1o")) == []
+    assert shown(Browser.dom!(dir, "index.html#f=verse&q=sue"), "[data-works-text]") == [
+             verse.code
+           ]
+
+    assert shown(Browser.dom!(dir, "index.html#f=prose&q=sue%C3%B1o"), "[data-works-text]") == []
   end
 
   test "a play without a text never has a hit", %{dir: dir, french: french} do
-    refute french.code in shown(Browser.dom!(dir, "index.html#q=a&x=0"))
+    refute french.code in shown(Browser.dom!(dir, "index.html#q=a&x=0"), "[data-works-text]")
   end
 
   test "a text search whose engine is missing says so instead of searching for ever", %{dir: dir} do
@@ -167,5 +181,42 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
 
     assert texts(Browser.dom!(broken, "index.html#q=sue%C3%B1o"), "[data-count]") ==
              ["La búsqueda en los textos no está disponible."]
+  end
+
+  test "the box finds a play by its title, apart from the passages", %{
+    dir: dir,
+    english: english,
+    translation: translation
+  } do
+    page = Browser.dom!(dir, "index.html#q=bruja")
+    assert shown(page) == Enum.sort([english.code, translation.code])
+    assert shown(page, "[data-works-text]") == []
+  end
+
+  test "a play the box finds by a character says so", %{dir: dir, verse: verse} do
+    page = Browser.dom!(dir, "index.html#q=clarin")
+    assert shown(page) == [verse.code]
+    assert texts(page, "[data-works] [data-why]") == ["Personaje: CLARÍN"]
+  end
+
+  test "the box shows the plays, or the texts, alone", %{dir: dir} do
+    assert hidden?(Browser.dom!(dir, "index.html#q=sue%C3%B1o&sec=t"), ~s([data-sect="o"]))
+    assert hidden?(Browser.dom!(dir, "index.html#q=sue%C3%B1o&sec=o"), ~s([data-sect="t"]))
+    refute hidden?(Browser.dom!(dir, "index.html#q=sue%C3%B1o"), ~s([data-sect="t"]))
+  end
+
+  test "an empty box shows one list and no headings", %{dir: dir} do
+    page = Browser.dom!(dir, "index.html#l=es")
+    assert hidden?(page, ~s([data-sect="t"]))
+    assert hidden?(page, ~s([data-sect="o"] h2))
+  end
+
+  test "each filter in use is a chip, and the Filters button counts them", %{dir: dir} do
+    page = Browser.dom!(dir, "index.html#l=es&x=1")
+    assert [language, text] = texts(page, "[data-chips] .chip")
+    # The option's count ("Español (2)") stays in the list, not on the chip.
+    assert language =~ ~r/^Idioma: [^(]+×$/
+    assert text =~ "Con o sin texto: Con texto"
+    assert texts(page, "[data-active]") == ["2"]
   end
 end

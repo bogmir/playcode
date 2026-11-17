@@ -68,7 +68,7 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert LazyHTML.text(work) =~ "Second-hand"
   end
 
-  @names ~w(t a l o k s f x q m in d-from d-to wt wc wy-from wy-to wf rp rv rc ry-from ry-to rk ra h p n sort)
+  @names ~w(t a l o k s f x q sec m in d-from d-to wt wc wy-from wy-to wf rp rv rc ry-from ry-to rk ra h p n sort)
 
   # The controls of the catalogue's form: inside it, or tied to it by `form=` from above the list.
   defp controls(page, selector) do
@@ -96,7 +96,12 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
 
   test "the form holds every control, named, labelled, and hidden until the script shows it" do
     page = html!(generate!([complete_play()]), "index.html", "es")
-    assert page |> LazyHTML.query("form[data-search]") |> LazyHTML.attribute("hidden") == [""]
+
+    assert page |> LazyHTML.query("[data-catalogue-controls]") |> LazyHTML.attribute("hidden") ==
+             [""]
+
+    # The filters left the rail for a panel under the box (draft A, 2026-11-17).
+    assert page |> LazyHTML.query(".rail") |> Enum.empty?()
 
     for name <- @names,
         do:
@@ -110,6 +115,7 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
            |> LazyHTML.query("form[data-search] details > summary")
            |> Enum.map(&(&1 |> LazyHTML.text() |> squish() |> String.split(" (") |> hd())) ==
              [
+               "Texto y notas",
                "Obra",
                "Datación",
                "Testimonios",
