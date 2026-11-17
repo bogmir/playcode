@@ -12,7 +12,7 @@ defmodule Playcode.Catalogue do
 
   import Ecto.Query
   alias Playcode.Repo
-  alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
+  alias Playcode.Catalogue.{Families, Play, PlayEditor, PlaySource, Paratext}
   alias Playcode.Places.{PlaceName, PlayPlace}
   alias Playcode.Witnesses.Witness
   alias Playcode.Performances.{CastMember, Performance}
@@ -57,6 +57,44 @@ defmodule Playcode.Catalogue do
         |> offset(^offset)
         |> Repo.all()
     end
+  end
+
+  @doc """
+  One page of families (`Playcode.Catalogue.Families`) in title order, with how many there
+  are in all. A family is listed whole when a member matches `:search` and `:status`; its
+  root always heads it, and only its derived plays that pass `:status` are kept. Each play
+  says whether it matched.
+  """
+  def list_families(opts \\ []) do
+    page = opts[:page] || 1
+    per_page = opts[:per_page] || @per_page
+
+    # The whole corpus per call: cheap at ~600 plays; a recursive CTE once it reaches thousands.
+    all = list_plays()
+    roots = Families.root_ids(all)
+    by_root = Enum.group_by(all, &roots[&1.id])
+    ids = &MapSet.new(list_plays(&1), fn play -> play.id end)
+    visible = ids.(status: opts[:status])
+    matched = ids.(search: opts[:search], status: opts[:status])
+
+    families =
+      for root <- all,
+          roots[root.id] == root.id,
+          members = by_root[root.id],
+          Enum.any?(members, &(&1.id in matched)),
+          do: %{
+            play: root,
+            match?: root.id in matched,
+            derived:
+              for(
+                play <- members,
+                play.id != root.id,
+                play.id in visible,
+                do: %{play: play, match?: play.id in matched}
+              )
+          }
+
+    {Enum.slice(families, (page - 1) * per_page, per_page), length(families)}
   end
 
   @doc """

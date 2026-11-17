@@ -12,6 +12,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
   alias PlaycodeWeb.Admin.LiveHelpers
+  alias PlaycodeWeb.PlayLabels
 
   @per_page 50
 
@@ -21,7 +22,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
      socket
      |> assign(:page_title, gettext("Admin - Plays"))
      |> assign(:recent_plays, ActivityLog.recent_plays(socket.assigns.current_user.id))
-     |> assign(:plays, [])
+     |> assign(:rows, [])
      |> assign(:search, "")
      |> assign(:status, nil)
      |> assign(:page, 1)
@@ -36,30 +37,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     archived = params["archived"] == "1"
     status = if archived, do: nil, else: parse_status(params["status"])
 
-    total = Catalogue.count_plays(search: search, archived: archived, status: status)
-    total_pages = max(1, ceil(total / @per_page))
-    page = min(page, total_pages)
-
-    plays =
-      Catalogue.list_plays(
-        search: search,
-        page: page,
-        per_page: @per_page,
-        archived: archived,
-        status: status
-      )
-
-    socket = if connected?(socket), do: listen_to(socket, plays), else: socket
-
     {:noreply,
      socket
-     |> assign(:plays, plays)
-     |> assign(:search, search)
-     |> assign(:status, status)
-     |> assign(:page, page)
-     |> assign(:total_pages, total_pages)
-     |> assign(:archived, archived)
-     |> assign_counts()}
+     |> assign(search: search, status: status, page: page, archived: archived)
+     |> reload()}
   end
 
   @impl true
@@ -88,22 +69,46 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   end
 
   defp reload(socket) do
-    opts = [
-      search: socket.assigns.search,
-      archived: socket.assigns.archived,
-      status: socket.assigns.status
-    ]
-
-    total = Catalogue.count_plays(opts)
-    total_pages = max(1, ceil(total / @per_page))
-    page = min(socket.assigns.page, total_pages)
-    plays = Catalogue.list_plays(opts ++ [page: page, per_page: @per_page])
+    %{search: search, status: status, archived: archived, page: page} = socket.assigns
+    {rows, page, total_pages} = rows(search, status, archived, page)
+    socket = if connected?(socket), do: listen_to(socket, Enum.map(rows, & &1.play)), else: socket
 
     socket
-    |> assign(:plays, plays)
-    |> assign(page: page, total_pages: total_pages)
+    |> assign(rows: rows, page: page, total_pages: total_pages)
     |> assign_counts()
   end
+
+  # Archived plays stay a flat list; the rest are listed by family, a page per 50 families.
+  defp rows(search, _status, true, page) do
+    total_pages = total_pages(Catalogue.count_plays(search: search, archived: true))
+    page = min(page, total_pages)
+
+    plays =
+      Catalogue.list_plays(search: search, archived: true, page: page, per_page: @per_page)
+
+    {for(play <- plays, do: %{play: play, derived?: false, match?: true}), page, total_pages}
+  end
+
+  defp rows(search, status, false, page) do
+    {families, total} =
+      Catalogue.list_families(search: search, status: status, page: page, per_page: @per_page)
+
+    total_pages = total_pages(total)
+
+    if page > total_pages do
+      rows(search, status, false, total_pages)
+    else
+      rows =
+        Enum.flat_map(families, fn family ->
+          [Map.put(Map.delete(family, :derived), :derived?, false)] ++
+            for(row <- family.derived, do: Map.put(row, :derived?, true))
+        end)
+
+      {rows, page, total_pages}
+    end
+  end
+
+  defp total_pages(count), do: max(1, ceil(count / @per_page))
 
   # The filter's counts follow the search; the heading's is the whole corpus.
   defp assign_counts(socket) do
@@ -296,15 +301,31 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
             </tr>
           </thead>
           <tbody>
-            <tr :for={play <- @plays} id={"play-#{play.id}"} class="hover">
+            <tr
+              :for={%{play: play, derived?: derived?, match?: match?} <- @rows}
+              id={"play-#{play.id}"}
+              class="hover"
+            >
               <td class="font-mono text-xs text-base-content/70 max-sm:hidden">{play.code}</td>
-              <td>
+              <td class={derived? && "pl-6"}>
+                <span :if={derived?} class="mr-1 inline-flex items-center gap-1 align-middle">
+                  <.icon
+                    name="hero-arrow-turn-down-right-mini"
+                    class="size-4 text-base-content/70"
+                  />
+                  <span class="badge badge-sm badge-ghost">
+                    {PlayLabels.relationship_type_label(play.relationship_type)}
+                  </span>
+                </span>
                 <%!-- Archived plays are hidden from every Catalogue reader, so
                       linking to their pages raises. Restore is the only action. --%>
                 <.link
                   :if={is_nil(play.deleted_at)}
                   navigate={~p"/admin/plays/#{play.id}"}
-                  class="link link-hover font-medium text-primary"
+                  class={[
+                    "link link-hover font-medium",
+                    if(match?, do: "text-primary", else: "text-base-content/70")
+                  ]}
                 >
                   {play.title}
                 </.link>
@@ -350,7 +371,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
       </div>
 
       <p
-        :if={@plays == []}
+        :if={@rows == []}
         class="mt-8 rounded-box border border-dashed border-base-300 py-10 text-center text-base-content/70"
       >
         {gettext("No plays yet. Import a TEI-XML file or create a new play.")}

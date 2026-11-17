@@ -339,6 +339,133 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     end
   end
 
+  describe "families" do
+    defp row_ids(view),
+      do:
+        view
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("tbody tr")
+        |> LazyHTML.attribute("id")
+
+    defp derived(original, attrs) do
+      %{"parent_play_id" => original.id, "relationship_type" => "traduccion"}
+      |> Map.merge(attrs)
+      |> play_fixture()
+    end
+
+    defp search(view, term),
+      do: view |> element("form[phx-change=search]") |> render_change(%{"search" => term})
+
+    test "a derived play is listed under its original, named by its kind", %{conn: conn} do
+      middle = play_fixture(%{"title_sort" => "Middle"})
+      original = play_fixture(%{"title_sort" => "Zeta"})
+      translation = derived(original, %{"title_sort" => "Alpha"})
+
+      adaptation =
+        derived(original, %{"title_sort" => "Beta", "relationship_type" => "adaptacion"})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert row_ids(view) == [
+               "play-#{middle.id}",
+               "play-#{original.id}",
+               "play-#{translation.id}",
+               "play-#{adaptation.id}"
+             ]
+
+      assert has_element?(view, "#play-#{translation.id} td", t("Translation"))
+      assert has_element?(view, "#play-#{adaptation.id} td", t("Adaptation"))
+      refute has_element?(view, "#play-#{original.id} td", t("Translation"))
+    end
+
+    test "a search that finds one member shows the whole family, the original first",
+         %{conn: conn} do
+      original =
+        play_fixture(%{"title" => "El burlador de Sevilla", "title_sort" => "Burlador"})
+
+      trickster =
+        derived(original, %{"title" => "The Trickster of Seville", "title_sort" => "Trickster"})
+
+      other = play_fixture(%{"title" => "Alpha Tragedy"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      search(view, "Trickster")
+      assert row_ids(view) == ["play-#{original.id}", "play-#{trickster.id}"]
+
+      search(view, "burlador")
+      assert row_ids(view) == ["play-#{original.id}", "play-#{trickster.id}"]
+      refute has_element?(view, "#play-#{other.id}")
+    end
+
+    test "a status filter keeps the original as the heading of the derived plays it lets through",
+         %{conn: conn} do
+      original = play_fixture(%{"title_sort" => "A", "is_complete" => true})
+      draft = derived(original, %{"title_sort" => "B"})
+      done = derived(original, %{"title_sort" => "C", "is_complete" => true})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays?status=draft")
+
+      assert row_ids(view) == ["play-#{original.id}", "play-#{draft.id}"]
+      refute has_element?(view, "#play-#{done.id}")
+      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("Drafts")} · 1")
+    end
+
+    test "a translation of a translation is listed under the original of the chain",
+         %{conn: conn} do
+      middle = play_fixture(%{"title_sort" => "Middle"})
+      original = play_fixture(%{"title_sort" => "Zeta"})
+      first = derived(original, %{"title_sort" => "Beta"})
+      second = derived(first, %{"title_sort" => "Alpha"})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert row_ids(view) == [
+               "play-#{middle.id}",
+               "play-#{original.id}",
+               "play-#{second.id}",
+               "play-#{first.id}"
+             ]
+    end
+
+    test "a derived play whose original is archived heads its own family", %{conn: conn} do
+      original = play_fixture(%{"title_sort" => "Alpha"})
+      translation = derived(original, %{"title_sort" => "Beta"})
+      archive(conn, original)
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert row_ids(view) == ["play-#{translation.id}"]
+      refute has_element?(view, "#play-#{translation.id} td", t("Translation"))
+    end
+
+    test "plays that name each other as parent are each listed once", %{conn: conn} do
+      a = play_fixture(%{"title_sort" => "Alpha"})
+      b = play_fixture(%{"title_sort" => "Beta"})
+
+      {:ok, a} =
+        Catalogue.update_play(a, %{"parent_play_id" => b.id, "relationship_type" => "traduccion"})
+
+      {:ok, b} =
+        Catalogue.update_play(b, %{"parent_play_id" => a.id, "relationship_type" => "traduccion"})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert row_ids(view) == ["play-#{a.id}", "play-#{b.id}"]
+    end
+
+    test "a page holds 50 families, however many derived plays they have", %{conn: conn} do
+      original = play_fixture(%{"title_sort" => "Alpha"})
+      for n <- 1..50, do: derived(original, %{"title_sort" => "Alpha #{n}"})
+      play_fixture(%{"title_sort" => "Beta"})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert length(row_ids(view)) == 52
+      refute has_element?(view, "a", t("Next"))
+    end
+  end
+
   test "the sidebar's checkbox is not restored by the browser", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/admin/plays")
 
