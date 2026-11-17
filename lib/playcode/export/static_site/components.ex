@@ -293,7 +293,7 @@ defmodule Playcode.Export.StaticSite.Components do
     ~H"""
     <ul>
       <li><a href="index.html" aria-current={@current == "index" && "page"}>{t("Title page")}</a></li>
-      <%= for entry <- @edition.contents, @text or match?({:item, _}, entry) do %>
+      <%= for entry <- @edition.contents do %>
         <%= case entry do %>
           <% {:item, item} -> %>
             <li><a href={item_href(@edition, item)}>{item_title(item)}</a></li>

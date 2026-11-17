@@ -46,6 +46,26 @@ defmodule Playcode.Export.StaticSitePlayTest do
                ["#{play.code}.xml", "index.html"]
     end
 
+    test "with acts of stage directions only, its paratexts print on the title page, and every link there leads somewhere" do
+      play =
+        tei(
+          body: ~s(<div1 type="acto" n="1"><head>ACTO I</head><stage>Sale.</stage></div1>),
+          back: ~s(<div type="dedicatoria"><head>AL LECTOR</head><p>Vale el lector.</p></div>)
+        )
+        |> import_tei!()
+        |> mark_complete!()
+
+      dir = generate!([play])
+      page = html!(dir, "plays/#{play.code}/index.html", "es")
+
+      assert texts(page, "article") |> Enum.join() =~ "Vale el lector."
+
+      for href <- page |> LazyHTML.query("a") |> LazyHTML.attribute("href"),
+          file = href |> String.split("#") |> hd(),
+          file =~ ~r/^[\w-]+\.html$/,
+          do: assert(File.exists?(Path.join([dir, "plays", play.code, file])), "#{href} is dead")
+    end
+
     test "its cast list, witnesses and performances print as any play's" do
       play = play_without_text_fixture(%{"is_complete" => true})
 
