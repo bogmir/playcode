@@ -247,7 +247,8 @@
     button.hidden = false;
     button.addEventListener('click', function () { root.print(); });
     if (root.location.hash === '#print') root.addEventListener('load', function () {
-      root.history.replaceState(null, '', root.location.pathname + root.location.search);
+      // A browser may refuse to touch a file:// address; the print is what was asked for.
+      try { root.history.replaceState(null, '', root.location.pathname + root.location.search); } catch (e) { /* keep the hash */ }
       root.print();
     });
   }
