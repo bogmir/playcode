@@ -12,7 +12,7 @@ defmodule Playcode.Export.StaticSite.Components do
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue.{Paratext, Play}
   alias Playcode.Export.NoteMarkup
-  alias Playcode.Export.StaticSite.{Edition, Search}
+  alias Playcode.Export.StaticSite.Edition
   alias Playcode.Performances
   alias Playcode.PlayContent.{CastListEntry, Division, Element, InlineMarkup, Note}
   alias Playcode.Witnesses
@@ -31,6 +31,11 @@ defmodule Playcode.Export.StaticSite.Components do
     doc: "the play shown, or the plays, whose licences the footer states"
 
   attr :rail_label, :any, default: nil
+
+  attr :stylesheet, :string,
+    default: nil,
+    doc: "a page's own stylesheet in assets/, after style.css"
+
   slot :rail
   slot :inner_block, required: true
 
@@ -65,6 +70,11 @@ defmodule Playcode.Export.StaticSite.Components do
           (function(){var d=document.documentElement,t,u;try{t=localStorage.getItem("reader.theme");u=localStorage.getItem("reader.ui")}catch(e){}d.dataset.theme=t||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light");if(u)d.lang=d.dataset.ui=u})()
         </script>
         <link rel="stylesheet" href={@root <> "assets/style.css?v=" <> @site.assets} />
+        <link
+          :if={@stylesheet}
+          rel="stylesheet"
+          href={@root <> "assets/" <> @stylesheet <> "?v=" <> @site.assets}
+        />
         <script src={@root <> "assets/site.js?v=" <> @site.assets} defer>
         </script>
       </head>
@@ -77,9 +87,6 @@ defmodule Playcode.Export.StaticSite.Components do
           <nav {ta("aria-label", "Site")} class="site">
             <a href={@root <> "index.html"} aria-current={@current == :catalogue && "page"}>
               {t("Catalogue")}
-            </a>
-            <a href={@root <> "search.html"} aria-current={@current == :search && "page"}>
-              {t("Search")}
             </a>
             <a href={@root <> "about.html"} aria-current={@current == :about && "page"}>
               {t("About")}
@@ -1582,15 +1589,7 @@ defmodule Playcode.Export.StaticSite.Components do
     <div
       class="entry"
       data-play
-      data-lang={@play.language}
-      data-form={Play.form(@play)}
-      data-kind={kind(@play)}
-      data-coll={collection(@play)}
-      data-text={
-        Search.normalise(
-          Enum.join([@play.title, @play.original_title, @play.author_name, @play.code], " ")
-        )
-      }
+      data-code={@play.code}
     >
       <span class="tag">{@play.language}</span>
       <a class={["entry-title", @lead && "lead"]} href={"plays/#{@play.code}/index.html"}>

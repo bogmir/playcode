@@ -99,9 +99,6 @@ main { padding: 1.75rem clamp(1rem, 4vw, 2.75rem) 3rem; min-width: 0; }
 .seg button { font: inherit; border: 0; background: var(--raised); color: var(--ink-2); padding: .25rem .7rem; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: var(--paper); }
 .tools select { font: inherit; width: 100%; padding: .25rem; border: 1px solid var(--hair); border-radius: 6px; background: var(--raised); color: var(--ink); }
-.entry .compare { display: inline-flex; align-self: center; color: var(--muted); }
-.entry .compare:hover, .entry .compare:focus-visible { color: var(--accent); }
-.entry .compare svg { width: .875rem; height: .875rem; }
 /* The comparison (plays/<CODE>/compare.html): two panels at every width, each its own scroll box. */
 .compare-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; margin-bottom: 1rem; font: .8125rem/1.5 var(--sans); color: var(--ink-2); }
 .compare-bar select { font: inherit; padding: .2rem; border: 1px solid var(--hair); border-radius: 6px; background: var(--raised); color: var(--ink); }
@@ -243,41 +240,12 @@ main td { padding: .3rem .5rem; border-bottom: 1px solid var(--hair-2); }
 .matrix .act-start { padding-left: .6rem; }
 .matrix thead i.sw { display: block; width: 1.1rem; height: .3rem; margin: 0 auto; }
 
-/* Catalogue */
-.controls { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; margin: 1rem 0; max-width: 48rem; font: .8125rem var(--sans); color: var(--muted); }
-.controls input[type="search"], .controls select { font: .875rem var(--sans); padding: .5rem .75rem; border: 1px solid var(--faint); border-radius: 6px; background: var(--raised); color: var(--ink); }
-.controls input[type="search"] { flex: 1 1 16rem; }
-.works { list-style: none; margin: 0; padding: 0; max-width: 48rem; }
-.work { padding: .85rem 0; border-top: 1px solid var(--hair-2); }
-.entry { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; }
-.entry-title { color: var(--ink); text-decoration: none; }
-.entry-title.lead { font-size: 1.2rem; font-weight: 600; }
-.entry .author { flex-basis: 100%; font: .875rem var(--serif); color: var(--ink-2); }
-.entry .meta { margin-left: auto; font: .75rem var(--sans); color: var(--muted); }
-.tag { font: 600 .625rem/1.5 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--hair); border-radius: 4px; padding: 0 .3rem; min-width: 2.1em; text-align: center; }
-.code { font: .6875rem var(--sans); color: var(--faint); font-variant-numeric: tabular-nums; }
-.translations { list-style: none; margin: .4rem 0 0 1.1rem; padding: 0; font-size: .9375rem; }
 .facet { border: 0; margin: 0 0 1rem; padding: 0; }
 .facet legend { font: 600 .6875rem var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); padding: 0; margin-bottom: .35rem; }
 .facet label { display: flex; align-items: center; gap: .4rem; padding: .1rem 0; cursor: pointer; }
 .facet .count { margin-left: auto; color: var(--faint); font-variant-numeric: tabular-nums; }
 .facet input:checked + span { color: var(--accent); font-weight: 600; }
 
-/* Search */
-[data-search-form] { display: flex; flex-wrap: wrap; gap: .5rem .75rem; align-items: center; margin: 1rem 0; max-width: 48rem; }
-[data-search-form] input[type="search"] { flex: 1 1 18rem; font: 1.125rem var(--serif); padding: .55rem .9rem; border: 1px solid var(--faint); border-radius: 8px; background: var(--raised); color: var(--ink); }
-.mode { display: flex; gap: .75rem; border: 0; margin: 0; padding: 0; font: .8125rem var(--sans); color: var(--ink-2); }
-[data-search-form] button { font: 600 .875rem var(--sans); background: var(--accent); color: var(--paper); border: 0; border-radius: 6px; padding: .55rem 1rem; cursor: pointer; }
-.group { border-top: 1px solid var(--hair); padding: .75rem 0; max-width: 48rem; }
-.group h2 { margin: 0; font-size: 1.125rem; font-style: italic; }
-.group-meta { margin: .1rem 0 .4rem; font: .75rem var(--sans); color: var(--muted); }
-.hits { list-style: none; margin: 0; padding: 0; }
-.hit { display: grid; grid-template-columns: 5.5rem 8rem minmax(0, 1fr); gap: .75rem; align-items: baseline; padding: .15rem 0; }
-.hit .ref { font: .75rem var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
-.hit .spk { margin: 0; }
-.hit .stage { font-style: italic; color: var(--ink-2); }
-.hit .note { font: .875rem/1.5 var(--sans); color: var(--ink-2); }
-.hit .note::before { content: "Note: "; color: var(--muted); }
 mark { background: var(--mark); color: var(--accent); font-weight: 600; padding: 0 .1em; border-radius: 2px; }
 
 /* In-text notes: the number after a glossed word opens its note, a popover. In print,
@@ -299,13 +267,11 @@ mark { background: var(--mark); color: var(--accent); font-weight: 600; padding:
 @media (max-width: 600px) {
   :root { --gutter: 2.4rem; --margin: 0rem; }
   .l .margin { display: none; }
-  .hit { grid-template-columns: 4.5rem minmax(0, 1fr); }
-  .hit .spk { display: none; }
 }
 
 @media print {
   body { background: #fff; color: #000; font-size: 11pt; }
-  .bar, .rail, .pager, .foot, .tools, .controls { display: none !important; }
+  .bar, .rail, .pager, .foot, .tools { display: none !important; }
   [data-current] { outline: none !important; }
   .frame { display: block; }
   main { padding: 0; }

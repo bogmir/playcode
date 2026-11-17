@@ -4,20 +4,81 @@
   current={:catalogue}
   site={@site}
   rail_label={t("Filters")}
+  stylesheet="catalogue.css"
 >
   <:rail>
-    <form class="facets" data-facets hidden>
-      <fieldset :for={{name, legend, options} <- @facets} class="facet">
-        <legend>{legend}</legend>
-        <label>
-          <input type="radio" name={name} value="" checked /> <span>{t("All")}</span>
-          <span class="count">{@count}</span>
-        </label>
-        <label :for={{value, label, count} <- options}>
-          <input type="radio" name={name} value={value} /> <span>{label}</span>
-          <span class="count">{count}</span>
-        </label>
-      </fieldset>
+    <%!-- One form for the 23 controls: the text search and the sort above the list join it by form="search". Hidden until catalogue.js runs: without it, the page is the full list. --%>
+    <form
+      id="search"
+      class="search"
+      data-search
+      data-words={catalogue_words()}
+      data-assets={@site.assets}
+      hidden
+    >
+      <details open>
+        <summary>{t("Play")}</summary>
+        <.search_text name="t" label={t("Title")} hint={t("(or code)")} />
+        <.search_text name="a" label={t("Author")} suggest />
+        <.search_list name="l" label={t("Language")} options={@lists["l"]} />
+        <.search_list name="o" label={t("Language of the original")} options={@lists["o"]} />
+        <.search_list name="k" label={t("Kind")} options={@lists["k"]} />
+        <.search_list name="s" label={t("Collection")} options={@lists["s"]} />
+        <.search_list name="f" label={t("Verse or prose")} options={@lists["f"]} />
+        <.search_list name="x" label={t("With or without a text")} options={@lists["x"]} />
+      </details>
+      <details>
+        <summary>{t("Dating")}</summary>
+        <.search_range
+          name="d"
+          label={t("Years of composition")}
+          from={tp("Dating, from the year")}
+          to={tp("Dating, to the year")}
+        />
+      </details>
+      <details>
+        <summary>{t("Witnesses")} <small>{t("(all four, of one witness)")}</small></summary>
+        <.search_list name="wt" label={t("Support")} options={@lists["wt"]} />
+        <.search_text name="wc" label={t("City")} suggest />
+        <.search_range
+          name="wy"
+          label={t("Year")}
+          from={tp("Year of the witness, from")}
+          to={tp("Year of the witness, to")}
+        />
+        <.search_list name="wf" label={t("Format")} options={@lists["wf"]} />
+      </details>
+      <details>
+        <summary>
+          {t("Performances")} <small>{t("(all six, of one performance)")}</small>
+        </summary>
+        <.search_text name="rp" label={t("Toponym")} suggest />
+        <.search_text name="rv" label={html(tpc("search", "Venue"))} suggest />
+        <.search_list name="rc" label={t("Venue type")} options={@lists["rc"]} />
+        <.search_range
+          name="ry"
+          label={t("Date")}
+          from={tp("Year of the performance, from")}
+          to={tp("Year of the performance, to")}
+        />
+        <.search_text name="rk" label={t("Company")} suggest />
+        <.search_text name="ra" label={t("Cast")} suggest />
+      </details>
+      <details>
+        <summary>{t("Time and place")}</summary>
+        <.search_list name="h" label={t("Historical time")} options={@lists["h"]} />
+        <.search_text
+          name="p"
+          label={t("Place of action")}
+          hint={t("(«Spain» also finds Seville)")}
+          suggest
+        />
+      </details>
+      <details>
+        <summary>{t("Characters")}</summary>
+        <.search_text name="n" label={t("Character")} />
+      </details>
+      <button type="reset" class="more">{t("Clear filters")}</button>
     </form>
   </:rail>
   <h1>{t("Catalogue")}</h1>
@@ -34,16 +95,39 @@
     )}
   </p>
   <div class="controls" data-catalogue-controls hidden>
-    <input
-      type="search"
-      data-filter
-      {ta("placeholder", "Filter by title, author or code")}
-      {ta("aria-label", "Filter the catalogue")}
-    />
+    <div class="text" role="search">
+      <label for="c-q">{t("Text and notes")}</label>
+      <input
+        type="search"
+        id="c-q"
+        name="q"
+        form="search"
+        autocomplete="off"
+        {ta("placeholder", "Search every line and every note of every play")}
+      />
+      <fieldset>
+        <legend class="sr-only">{t("Match")}</legend>
+        <label>
+          <input type="radio" name="m" value="" form="search" checked /> {t("Starts with")}
+        </label>
+        <label><input type="radio" name="m" value="w" form="search" /> {t("Exact word")}</label>
+      </fieldset>
+      <fieldset>
+        <legend class="sr-only">{t("Where")}</legend>
+        <label>
+          <input type="radio" name="in" value="" form="search" checked /> {t("Everywhere")}
+        </label>
+        <label><input type="radio" name="in" value="s" form="search" /> {t("Speeches")}</label>
+        <label>
+          <input type="radio" name="in" value="d" form="search" /> {t("Stage directions")}
+        </label>
+        <label><input type="radio" name="in" value="n" form="search" /> {t("Notes")}</label>
+      </fieldset>
+    </div>
     <label>
       {t("Sort")}
-      <select data-sort {ta("aria-label", "Sort the catalogue")}>
-        <option value="author" {ta("label", "Author")}></option>
+      <select name="sort" form="search">
+        <option value="" {ta("label", "Author")}></option>
         <option value="title" {ta("label", "Title")}></option>
         <option value="date" {ta("label", "Date")}></option>
       </select>
@@ -54,6 +138,7 @@
     <li
       :for={work <- @works}
       class="work"
+      data-work
       data-author={work.sort_author}
       data-title={work.sort_title}
       data-date={work.date}
@@ -66,4 +151,6 @@
       </ul>
     </li>
   </ol>
+  <script src={"assets/catalogue.js?v=" <> @site.assets} defer>
+  </script>
 </Components.shell>

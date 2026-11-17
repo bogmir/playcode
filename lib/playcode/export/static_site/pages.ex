@@ -40,35 +40,82 @@ defmodule Playcode.Export.StaticSite.Pages do
       else: type
   end
 
-  # What search.js says, `{spanish, english}` as JSON pairs: its facets' legends and values
-  # (each kind by its own name, question 15), its counts and its buttons.
-  defp search_words do
+  # What catalogue.js says, `{spanish, english}` as JSON pairs: its count and a row's
+  # passages. `more` keeps its `%{count}` for the script to fill.
+  defp catalogue_words do
     words = %{
-      legends: %{
-        language: tp("Language"),
-        author: tp("Author"),
-        kind: tp("Kind"),
-        type: tp("Text")
-      },
-      kinds:
-        Map.new(~w(original translation adaptation version), &{&1, Components.kind_label(&1)}),
-      kind_words: %{
-        translation: tp("translation"),
-        adaptation: tp("adaptation"),
-        version: tp("version")
-      },
-      types: %{spoken: tp("Spoken"), stage: tp("Stage directions"), note: tp("Notes")},
-      all: tp("All"),
-      searching: tp("Searching…"),
-      line: tp("line"),
-      lines: tp("lines"),
+      of: tp("of"),
       play: tp("play"),
       plays: tp("plays"),
-      in: tp("in"),
-      show_all: tp("Show all")
+      passage: tp("passage"),
+      passages: tp("passages"),
+      searching: tp("Searching…"),
+      open: tp("Show the passages"),
+      more: tp("Show the other %{count}", count: "%{count}"),
+      unavailable: tp("Text search is unavailable."),
+      note: tp("note")
     }
 
     Jason.encode!(lists(words))
+  end
+
+  # The catalogue form's three kinds of control. Each is named by its label; a range's two
+  # boxes by their aria-labels, its label pointing at the first.
+  attr :name, :string, required: true
+  attr :label, :any, required: true
+  attr :hint, :any, default: nil
+  attr :suggest, :boolean, default: false, doc: "a datalist, which catalogue.js fills"
+
+  defp search_text(assigns) do
+    ~H"""
+    <label for={"c-" <> @name}>{@label} <small :if={@hint}>{@hint}</small></label>
+    <input
+      type="text"
+      id={"c-" <> @name}
+      name={@name}
+      list={@suggest && "dl-" <> @name}
+      autocomplete="off"
+    />
+    <datalist :if={@suggest} id={"dl-" <> @name}></datalist>
+    """
+  end
+
+  attr :name, :string, required: true
+  attr :label, :any, required: true
+  attr :options, :list, required: true, doc: "`{value, {spanish, english}}`, the first \"All\""
+
+  defp search_list(assigns) do
+    ~H"""
+    <label for={"c-" <> @name}>{@label}</label>
+    <select id={"c-" <> @name} name={@name}>
+      <option :for={{value, label} <- @options} value={value} {attrs(label, "label")}></option>
+    </select>
+    """
+  end
+
+  attr :name, :string, required: true
+  attr :label, :any, required: true
+  attr :from, :any, required: true, doc: "the first box's aria-label, `{spanish, english}`"
+  attr :to, :any, required: true
+
+  defp search_range(assigns) do
+    ~H"""
+    <label for={"c-" <> @name <> "-from"}>{@label}</label>
+    <div class="range">
+      <input
+        type="number"
+        id={"c-" <> @name <> "-from"}
+        name={@name <> "-from"}
+        {Enum.uniq(ta("placeholder", "from") ++ attrs(@from, "aria-label"))}
+      />
+      <span aria-hidden="true">–</span>
+      <input
+        type="number"
+        name={@name <> "-to"}
+        {Enum.uniq(ta("placeholder", "to") ++ attrs(@to, "aria-label"))}
+      />
+    </div>
+    """
   end
 
   defp lists(%{} = map), do: Map.new(map, fn {key, value} -> {key, lists(value)} end)

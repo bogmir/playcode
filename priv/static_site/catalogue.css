@@ -1,0 +1,45 @@
+/* EMOTHE static edition: the catalogue, index.html, its list and its search form. */
+.works { list-style: none; margin: 0; padding: 0; max-width: 48rem; }
+.work { padding: .85rem 0; border-top: 1px solid var(--hair-2); }
+.entry { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; }
+.entry.muted .entry-title { color: var(--muted); }
+.entry-title { color: var(--ink); text-decoration: none; }
+.entry-title.lead { font-size: 1.2rem; font-weight: 600; }
+.entry .author { flex-basis: 100%; font: .875rem var(--serif); color: var(--ink-2); }
+.entry .meta { margin-left: auto; font: .75rem var(--sans); color: var(--muted); }
+.entry .compare { display: inline-flex; align-self: center; color: var(--muted); }
+.entry .compare:hover, .entry .compare:focus-visible { color: var(--accent); }
+.entry .compare svg { width: .875rem; height: .875rem; }
+.tag { font: 600 .625rem/1.5 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--hair); border-radius: 4px; padding: 0 .3rem; min-width: 2.1em; text-align: center; }
+.code { font: .6875rem var(--sans); color: var(--faint); font-variant-numeric: tabular-nums; }
+.translations { list-style: none; margin: .4rem 0 0 1.1rem; padding: 0; font-size: .9375rem; }
+
+/* The form: six groups in the rail, the text search and the sort above the list. */
+.search details { border-top: 1px solid var(--hair-2); padding: .5rem 0; }
+.search summary { font: 600 .6875rem var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); cursor: pointer; }
+.search summary small { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.search label, .controls .text > label { display: block; margin: .6rem 0 .2rem; font: .8125rem var(--sans); color: var(--ink-2); }
+.search label small { color: var(--muted); }
+.search input, .search select, .controls input[type="search"], .controls select { box-sizing: border-box; width: 100%; font: .875rem var(--sans); padding: .35rem .5rem; border: 1px solid var(--faint); border-radius: 6px; background: var(--raised); color: var(--ink); }
+.search .range { display: flex; align-items: center; gap: .4rem; }
+.search .range input { min-width: 0; }
+.search button { margin-top: 1rem; }
+.controls { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: end; margin: 1rem 0; max-width: 48rem; font: .8125rem var(--sans); color: var(--ink-2); }
+.controls .text { flex: 1 1 20rem; }
+.controls input[type="search"] { font: 1.0625rem var(--serif); padding: .5rem .8rem; }
+.controls fieldset { display: inline-flex; flex-wrap: wrap; gap: .2rem .75rem; border: 0; margin: .4rem 1.25rem 0 0; padding: 0; }
+.controls fieldset label { display: inline-flex; gap: .3rem; align-items: center; }
+.controls > label select { width: auto; margin-left: .4rem; }
+
+/* A row's passages, when the search has words. */
+.passages { margin: .3rem 0 0; font: .875rem/1.5 var(--serif); }
+.passages summary { font: .75rem var(--sans); color: var(--accent); cursor: pointer; }
+.passages p { margin: .25rem 0; }
+.passages a { text-decoration: none; color: inherit; }
+.passages .s { font-style: italic; }
+.passages .n { font: .8125rem/1.5 var(--sans); color: var(--ink-2); }
+.passages .ref { margin-right: .6rem; font: .75rem var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
+
+@media print {
+  .controls { display: none !important; }
+}

@@ -1,5 +1,6 @@
 /* EMOTHE static edition: full-text search over the files StaticSite.Search writes.
-   Loaded only by search.html, after site.js (EMOTHE.normalise, EMOTHE.words). */
+   Added by catalogue.js for words in the catalogue's text box, after site.js
+   (EMOTHE.normalise, EMOTHE.words). Its page is the catalogue's. */
 (function (root) {
   'use strict';
   var E = root.EMOTHE = root.EMOTHE || {};
@@ -98,36 +99,6 @@
 
   if (!root.document) return;
 
-  // The page's words, each [Spanish, English] from the site's translations (the search
-  // form's data-words, StaticSite.Pages), said in the interface's language.
-  var W;
-  function say(pair) { return root.EMOTHE.say(pair[0], pair[1]); }
-
-  var FIRST_PLAYS = 10, FIRST_LINES = 5;
-  var form, results, count, facetsEl, state = null, renders = 0, runs = 0;
-  // Each facet: its name, a hit's value, and the value's name.
-  var FACETS = [
-    ['language', function (play) { return play.language; }, function (play) { return say(play.language_name); }],
-    ['author', function (play) { return play.author || '—'; }],
-    ['kind', function (play) { return play.kind; }, function (play) { return say(W.kinds[play.kind]); }],
-    ['type', function (play, kind) { return kind; }, function (play, kind) { return say(W.types[kind]); }]
-  ];
-  function counted(n, one, many) { return n + ' ' + say(n === 1 ? W[one] : W[many]); }
-
-  function el(tag, cls, text) {
-    var node = document.createElement(tag);
-    if (cls) node.className = cls;
-    if (text !== undefined && text !== null) node.textContent = text;
-    return node;
-  }
-
-  function button(label, onClick) {
-    var b = el('button', 'more', label);
-    b.type = 'button';
-    b.addEventListener('click', onClick);
-    return b;
-  }
-
   // Loads a search file once; a missing file (a word with no shard) loads as empty.
   function need(kind, key, src) {
     var have = kind === 'plays' ? store.plays : store[kind][key];
@@ -174,15 +145,13 @@
     return out;
   }
 
-  function run() {
-    var query = form.elements.q.value, mode = form.elements.mode.value;
-    var my = ++runs;
-    try { root.history.replaceState(null, '', '?' + new URLSearchParams({ q: query, mode: mode }).toString()); } catch (e) { /* file:// may refuse */ }
+  // A query's hits by play: { CODE: [[line, kind], …] }, lines ascending; {} for no word.
+  // mode is "prefix" or "word".
+  S.find = function (query, mode) {
     var parsed = S.parse(query);
-    if (!parsed.words.length) { state = null; render(); return; }
+    if (!parsed.words.length) return Promise.resolve({});
     var keys = parsed.words.map(S.shardKey).filter(function (k, i, a) { return a.indexOf(k) === i; });
-    count.textContent = say(W.searching);
-    need('plays', 'all', 'search/plays.js')
+    return need('plays', 'all', 'search/plays.js')
       .then(function () {
         return Promise.all(keys.map(function (k) { return need('index', k, 'search/index/' + S.shardFile(k) + '.js'); }));
       })
@@ -193,140 +162,26 @@
         return loadLines(pairsOf(hits)).then(function () { return phraseFilter(hits, parsed.phrases, mode); });
       })
       .then(function (hits) {
-        if (my !== runs) return;
-        state = { hits: hits, words: parsed.words, mode: mode, open: {}, filters: {}, allPlays: false };
-        render();
+        var out = {};
+        pairsOf(hits).sort(function (a, b) { return a[1] - b[1]; }).forEach(function (pl) {
+          var code = store.plays[pl[0]].code;
+          (out[code] = out[code] || []).push([pl[1], hits[pl[0] + ':' + pl[1]]]);
+        });
+        return out;
       });
-  }
+  };
 
-  function passes(play, kind, skip) {
-    return FACETS.every(function (f) {
-      var want = state.filters[f[0]];
-      return f === skip || !want || f[1](play, kind) === want;
-    });
-  }
-
-  function render() {
-    var token = ++renders;
-    results.textContent = '';
-    facetsEl.textContent = '';
-    if (!state) { count.textContent = ''; return; }
-
-    var groups = {};
-    Object.keys(state.hits).forEach(function (k) {
-      var pl = k.split(':').map(Number);
-      if (passes(store.plays[pl[0]], state.hits[k])) (groups[pl[0]] = groups[pl[0]] || []).push(pl[1]);
-    });
-    var order = Object.keys(groups).map(Number).sort(function (a, b) {
-      return groups[b].length - groups[a].length || store.plays[a].title.localeCompare(store.plays[b].title);
-    });
-    var total = order.reduce(function (n, p) { return n + groups[p].length; }, 0);
-    count.textContent = counted(total, 'line', 'lines') + ' ' + say(W.in) + ' ' + counted(order.length, 'play', 'plays');
-    renderFacets();
-
-    var shown = state.allPlays ? order : order.slice(0, FIRST_PLAYS);
-    var visible = {}, pairs = [];
-    shown.forEach(function (p) {
-      var lines = groups[p].sort(function (a, b) { return a - b; });
-      visible[p] = state.open[p] ? lines : lines.slice(0, FIRST_LINES);
-      visible[p].forEach(function (l) { pairs.push([p, l]); });
-    });
-    loadLines(pairs).then(function () {
-      if (token !== renders) return;
-      shown.forEach(function (p) { results.appendChild(group(p, groups[p].length, visible[p])); });
-      if (order.length > shown.length) {
-        results.appendChild(button(say(W.show_all) + ' ' + counted(order.length, 'play', 'plays'), function () { state.allPlays = true; render(); }));
-      }
-    });
-  }
-
-  function renderFacets() {
-    FACETS.forEach(function (f) {
-      var counts = {}, names = {};
-      Object.keys(state.hits).forEach(function (k) {
-        var p = Number(k.split(':')[0]), kind = state.hits[k], play = store.plays[p];
-        if (passes(play, kind, f)) {
-          var v = f[1](play, kind);
-          counts[v] = (counts[v] || 0) + 1;
-          names[v] = (f[2] || f[1])(play, kind);
-        }
+  // The given lines of a play, as links to where they stand; a line whose chunk could not
+  // be loaded is left out.
+  S.passages = function (code, lines) {
+    var p = store.plays.map(function (play) { return play.code; }).indexOf(code);
+    var pairs = lines.map(function (l) { return [p, l]; });
+    return loadLines(pairs).then(function () {
+      return pairs.map(function (pl) { return lineOf(pl[0], pl[1]); }).filter(Boolean).map(function (line) {
+        var row = line.row;
+        return { href: 'plays/' + code + '/' + row[0] + '.html#' + row[1], ref: row[2],
+          speaker: row[3] === null ? null : line.speakers[row[3]], kind: row[4], text: row[5] };
       });
-      var values = Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; });
-      if (values.length < 2 && !state.filters[f[0]]) return;
-      var fieldset = el('fieldset', 'facet');
-      fieldset.appendChild(el('legend', null, say(W.legends[f[0]])));
-      [''].concat(values).forEach(function (v) {
-        var label = el('label'), input = el('input');
-        input.type = 'radio';
-        input.name = 'facet-' + f[0];
-        input.value = v;
-        input.checked = (state.filters[f[0]] || '') === v;
-        input.addEventListener('change', function () { state.filters[f[0]] = v; state.open = {}; render(); });
-        label.appendChild(input);
-        label.appendChild(el('span', null, v ? names[v] : say(W.all)));
-        label.appendChild(el('span', 'count', v ? String(counts[v]) : ''));
-        fieldset.appendChild(label);
-      });
-      facetsEl.appendChild(fieldset);
     });
-  }
-
-  function group(p, total, shown) {
-    var play = store.plays[p];
-    var section = el('section', 'group'), heading = el('h2'), link = el('a', null, play.title);
-    link.href = 'plays/' + play.code + '/index.html';
-    heading.appendChild(link);
-    section.appendChild(heading);
-    var kind = play.kind === 'original' ? null : say(W.kind_words[play.kind]);
-    var meta = [play.author, kind, counted(total, 'line', 'lines')];
-    section.appendChild(el('p', 'group-meta', meta.filter(Boolean).join(' · ')));
-    var list = el('ol', 'hits');
-    shown.forEach(function (l) {
-      var line = lineOf(p, l);
-      if (line) list.appendChild(hit(play, line));
-    });
-    section.appendChild(list);
-    if (total > shown.length) section.appendChild(button(say(W.show_all) + ' ' + counted(total, 'line', 'lines'), function () { state.open[p] = true; render(); }));
-    return section;
-  }
-
-  function hit(play, line) {
-    var row = line.row, li = el('li', 'hit'), ref = el('a', 'ref', row[2]);
-    ref.href = 'plays/' + play.code + '/' + row[0] + '.html#' + row[1];
-    li.appendChild(ref);
-    li.appendChild(el('span', 'spk', row[3] === null ? '' : line.speakers[row[3]]));
-    var text = el('span', row[4] === 's' ? 'line stage' : row[4] === 'n' ? 'line note' : 'line');
-    highlight(text, row[5]);
-    li.appendChild(text);
-    return li;
-  }
-
-  // Built with text nodes, never innerHTML: the line text is data.
-  function highlight(target, text) {
-    text.split(/([\p{L}\p{M}\p{N}]+)/u).forEach(function (part, i) {
-      var word = i % 2 === 1 && E.normalise(part);
-      if (word && state.words.some(function (w) { return S.matches(word, w, state.mode); })) {
-        target.appendChild(el('mark', null, part));
-      } else if (part) {
-        target.appendChild(document.createTextNode(part));
-      }
-    });
-  }
-
-  document.addEventListener('DOMContentLoaded', function () {
-    form = document.querySelector('[data-search-form]');
-    if (!form) return;
-    W = JSON.parse(form.dataset.words);
-    results = document.querySelector('[data-search-results]');
-    count = document.querySelector('[data-search-count]');
-    facetsEl = document.querySelector('[data-search-facets]');
-    form.hidden = false;
-    var params = new URLSearchParams(root.location.search);
-    form.elements.q.value = params.get('q') || '';
-    if (params.get('mode') === 'word') form.elements.mode.value = 'word';
-    form.addEventListener('submit', function (event) { event.preventDefault(); run(); });
-    // Only results are said again: a search still loading keeps its "Searching…".
-    document.addEventListener('emothe:ui', function () { if (state) render(); });
-    if (form.elements.q.value) run();
-  });
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
