@@ -100,6 +100,13 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert Catalogue.list_plays() == []
     end
 
+    test "--dry-run says when a new play's number is another play's", %{dir: dir} do
+      play_fixture(%{"code" => "TASK0001_Otra"})
+
+      assert run("playcode.import.tei", ["--dir", dir, "--dry-run"]) =~
+               "TASK0001  new, but TASK0001_Otra holds its number"
+    end
+
     test "--dry-run lists the references an import would add", %{dir: dir} do
       File.write!(
         Path.join(dir, "TASK0003_Tercera.xml"),

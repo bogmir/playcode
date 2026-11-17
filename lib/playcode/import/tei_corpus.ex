@@ -118,7 +118,11 @@ defmodule Playcode.Import.TeiCorpus do
 
   defp preview_lines(code, {:ok, %{existing: nil} = preview}, _opts),
     do:
-      {:new, [{:info, "  #{code}  new" <> adds(preview) <> numbering(preview)} | added(preview)]}
+      {:new,
+       [
+         {:info, "  #{code}  new" <> same_number(preview) <> adds(preview) <> numbering(preview)}
+         | added(preview)
+       ]}
 
   defp preview_lines(code, {:ok, preview}, opts) do
     cond do
@@ -135,6 +139,10 @@ defmodule Playcode.Import.TeiCorpus do
 
   defp preview_lines(code, {:error, reason}, _opts),
     do: {:unreadable, [{:error, "  #{code}: #{inspect(reason)}"}]}
+
+  # Matches the fly reimport task's `@needs_a_look`.
+  defp same_number(%{same_number: nil}), do: ""
+  defp same_number(%{same_number: code}), do: ", but #{code} holds its number"
 
   # Matches the fly reimport task's `@needs_a_look`, as `edited/1` does.
   defp kept(count), do: edited(count) <> " (--overwrite-edits replaces them)"

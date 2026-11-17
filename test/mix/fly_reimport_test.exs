@@ -92,8 +92,9 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       2 file(s) in /data/tei
         EMOTHE0001  replaces 3 division(s), 40 element(s), 5 character(s), 2 TEI record(s)
         EMOTHE0002  replaces 2 division(s), 9 element(s), 4 character(s), 1 TEI record(s), undoes 2 hand edit(s) to its text
+        EMOTHE0003  new, but EMOTHE0003_Otra holds its number, numbering V never
 
-      dry run, nothing written — 0 new, 2 already imported (1 with hand edits since their last import), 0 unreadable
+      dry run, nothing written — 1 new, 2 already imported (1 with hand edits since their last import), 0 unreadable
       """)
 
       Mix.Task.rerun("playcode.fly.reimport", ["prepare", "--dir", corpus])
@@ -118,6 +119,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       out = output()
       assert out =~ "2 file(s) uploaded"
       assert out =~ ~r/look.*\n.*EMOTHE0002 .*undoes 2 hand edit/i
+      assert out =~ ~r/look.*\n(.*\n)*.*EMOTHE0003  new, but/i
       refute out =~ ~r/look.*\n.*EMOTHE0001/i
       assert out =~ "mix playcode.fly.reimport run"
     end

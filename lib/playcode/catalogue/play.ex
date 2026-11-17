@@ -118,8 +118,14 @@ defmodule Playcode.Catalogue.Play do
 
   def valid_languages, do: @valid_languages
 
-  @doc "What a play code may be: it names the play's files and its folder on the static site."
-  def code_format, do: ~r/\A[A-Za-z0-9_-]+\z/
+  @doc """
+  What a play code may be: it names the play's files and its folder on the static site. It
+  is what `clean_code/1` leaves, so a code always survives its own TEI file's import.
+  """
+  def code_format, do: ~r/\A[A-Za-z0-9_]+\z/
+
+  @doc "A TEI file's or FileMaker's file name as a code: `EMOTHE0110_Hamlet(1603)` is `EMOTHE0110_Hamlet1603`."
+  def clean_code(name), do: name |> String.trim() |> String.replace(~r/[^A-Za-z0-9_]/, "")
 
   @language_names %{
     "es" => "Español",

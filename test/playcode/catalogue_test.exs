@@ -65,6 +65,13 @@ defmodule Playcode.CatalogueTest do
       assert %{code: _} = errors_on(changeset)
     end
 
+    test "a code holds letters, digits and underscores only, as a TEI file's code is read" do
+      assert {:error, changeset} =
+               Catalogue.create_play(%{"code" => "EMOTHE9102_East-WardHoe", "title" => "x"})
+
+      assert %{code: _} = errors_on(changeset)
+    end
+
     test "restoring brings it back" do
       {:ok, archived} = Catalogue.delete_play(play_fixture())
 

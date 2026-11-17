@@ -86,9 +86,7 @@ defmodule Playcode.ImportHelpers do
     ~s(<refsDecl n="manual">#{structure}</refsDecl>)
   end
 
-  # The importer strips hyphens from a code, so TestFixtures.unique_code/0 ("PLAY-1")
-  # would be stored as something else.
-  defp tei_code, do: "T#{System.unique_integer([:positive])}"
+  defp tei_code, do: Playcode.TestFixtures.unique_code()
 
   @doc """
   A `tei/1` body in verse and prose: an act of two scenes, with a shared verse, an aside and

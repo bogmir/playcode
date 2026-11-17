@@ -1630,6 +1630,13 @@ defmodule Playcode.TeiRoundtripTest do
                ["front/titlePage", "front/div[dedicatoria]", "front/div[elenco]", "body/p"]
     end
 
+    # Over the play itself, its paratexts made by hand would stay beside the file's.
+    defp import_into_empty(play) do
+      xml = export_tei(play)
+      {:ok, _} = Catalogue.purge_play(play)
+      import_tei!(xml)
+    end
+
     # `prologo` and `argumento` are a paratext's kinds and a division's types both.
     test "an argument between two acts comes back a paratext, not a division" do
       play = play_fixture(%{})
@@ -1645,7 +1652,7 @@ defmodule Playcode.TeiRoundtripTest do
           position: 1
         })
 
-      back = import_tei!(export_tei(play))
+      back = import_into_empty(play)
 
       assert [%{kind: "argumento", heading: "ARGUMENTO"}] = Catalogue.list_paratexts(back.id)
       assert Enum.map(PlayContent.list_top_divisions(back.id), & &1.type) == ~w(acto acto)
@@ -1667,7 +1674,7 @@ defmodule Playcode.TeiRoundtripTest do
           position: 1
         })
 
-      play = play |> export_tei() |> import_tei!()
+      play = import_into_empty(play)
 
       assert [%{type: "acto"}, %{kind: "lugar_accion", content: "Un bosque."}] =
                Playcode.Outline.items(play.paratexts, PlayContent.list_top_divisions(play.id))

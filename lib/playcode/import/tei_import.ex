@@ -128,6 +128,10 @@ defmodule Playcode.Import.TeiImport do
 
   `:removes_text` is the number of verse lines and lines of prose the stored play would lose
   to a file with none, nil when nothing is lost.
+
+  `:same_number` is the code of another play holding a new play's number
+  (`Play.short_code/1`), which the import would leave beside it: nil for none, or for a play
+  that exists.
   """
   def preview_import(path, opts \\ []) do
     with {:ok, tei} <- TeiParser.parse_file(path),
@@ -149,9 +153,21 @@ defmodule Playcode.Import.TeiImport do
       preserves_fields: preserved_fields(existing),
       split_verses: parts_out_of_order(tei.divisions),
       removes_text: removes_text(tei.divisions, existing),
+      same_number: if(existing, do: nil, else: same_number(code)),
       numbering: numbering
     }
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
+  end
+
+  defp same_number(code) do
+    short = Play.short_code(code)
+
+    Repo.one(
+      from p in Play,
+        where: p.code == ^short or like(p.code, ^"#{short}\\_%"),
+        select: p.code,
+        limit: 1
+    )
   end
 
   # The numbering rule the import would settle, as `Numbering.describe/1` words it: the file
