@@ -677,6 +677,12 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
         Mix.Task.rerun("playcode.import.bibliography", ["--path", "test/fixtures/filemaker/nope"])
       end
     end
+
+    test "a play without a text gains its bibliography" do
+      play = play_without_text_fixture(%{"code" => "EMOTHE0999_Sin"})
+      run("playcode.import.bibliography", ["--path", @dump])
+      assert Bibliography.list_links(play.id) != []
+    end
   end
 
   describe "playcode.import.witnesses" do
@@ -760,6 +766,13 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.witnesses", ["--path", "test/fixtures/filemaker/nope"])
       end
+    end
+
+    # FileMaker's plays without a text (mix playcode.import.filemaker.plays) are filled too.
+    test "a play without a text gains its witnesses" do
+      play = play_without_text_fixture(%{"code" => "EMOTHE0327_RalphRoisterDoister"})
+      run("playcode.import.witnesses", ["--path", @witnesses])
+      assert witness_lines(play) != []
     end
   end
 
@@ -890,6 +903,12 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.places", ["--path", "test/fixtures/filemaker/nope"])
       end
+    end
+
+    test "a play without a text gains its places" do
+      play = play_without_text_fixture(%{"code" => "EMOTHE0418_TheFaithfulShepherdess"})
+      run("playcode.import.places", ["--path", @places])
+      assert Places.list_play_places(play.id) != []
     end
   end
 
@@ -1176,6 +1195,14 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
           "test/fixtures/filemaker/nope"
         ])
       end
+    end
+
+    # The sample's one version not held, 0083, has an empty row only.
+    test "a play without a text gains its performances", %{plays: plays} do
+      {:ok, play} = Catalogue.update_play(plays["0714"], %{"auto_form" => nil})
+      refute Play.has_text?(play)
+      run("playcode.import.performances", ["--path", @performances])
+      assert performances(play) != []
     end
   end
 end
