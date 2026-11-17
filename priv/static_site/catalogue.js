@@ -14,7 +14,7 @@
   R.ready = function (callback) { if (R.entries) callback(R.entries); else waiting.push(callback); };
 
   function texts(list) {
-    return (list || []).filter(function (v) { return v !== null && v !== undefined; }).map(E.normalise);
+    return (list || []).filter(function (v) { return v != null; }).map(E.normalise);
   }
 
   // The entry of spec 7.4 with every text value a list of normalised strings, every range
@@ -50,7 +50,7 @@
     list: function (have, want) { return have === want; },
     range: function (have, want) {
       var ends = want.split('-'), from = ends[0] ? Number(ends[0]) : -Infinity, to = ends[1] ? Number(ends[1]) : Infinity;
-      return have[0] !== null && have[0] !== undefined && from <= to && have[1] >= from && have[0] <= to;
+      return have[0] != null && from <= to && have[1] >= from && have[0] <= to;
     }
   };
 
@@ -106,16 +106,29 @@
     return { rows: rows, count: count };
   };
 
+  // A passage cut by the words found into [[text, marked], …], as the search matches them.
+  R.marked = function (text, words, mode) {
+    var out = [];
+    text.split(/([\p{L}\p{M}\p{N}]+)/u).forEach(function (part, i) {
+      var mark = i % 2 === 1 && words.some(function (w) { return E.search.matches(E.normalise(part), w, mode); });
+      var last = out[out.length - 1];
+      if (!part) return;
+      if (last && last[1] === mark) last[0] += part; else out.push([part, mark]);
+    });
+    return out;
+  };
+
   if (!root.document) return;
 
   // The page. It never decides a match: R.match and R.shown do.
   var RANGES = ['d', 'wy', 'ry'], NOT_RECORDS = ['q', 'm', 'in', 'sort'];
+  var KINDS = { s: 'spoken', d: 'stage', n: 'note' }, FIRST = 5;
   // A datalist's values: where they are in an entry, or in its witnesses or performances.
   var SUGGEST = [['a', '', 'a'], ['wc', 'w', 1], ['rp', 'r', 0], ['rv', 'r', 1], ['rk', 'r', 5], ['ra', 'r', 6], ['p', '', 'p']];
-  var form, list, count, W, works, rows, prepared, loading, sorted = '';
+  var form, list, count, W, works, rows, prepared, loading, engine, found, sorted = '';
 
   function say(pair) { return E.say(pair[0], pair[1]); }
-  function each(selector, scope, fn) { Array.prototype.forEach.call((scope || document).querySelectorAll(selector), fn); }
+  function each(selector, scope, fn) { scope.querySelectorAll(selector).forEach(fn); }
 
   // The form's controls, and those tied to it by form="search", into a state, and back.
   function read() {
@@ -149,17 +162,17 @@
     return Object.keys(state).some(function (name) { return NOT_RECORDS.indexOf(name) < 0; });
   }
 
-  function loadRecords() {
-    if (loading) return;
-    loading = true;
+  function add(src) {
     var script = document.createElement('script');
-    script.src = 'search/records.js';
-    document.head.appendChild(script);
+    script.src = src;
+    return document.head.appendChild(script);
   }
+
+  function loadRecords() { if (!loading) loading = add('search/records.js'); }
 
   function flat(value, out) {
     if (Array.isArray(value)) value.forEach(function (v) { flat(v, out); });
-    else if (value !== null && value !== undefined) out.push(value);
+    else if (value != null) out.push(value);
     return out;
   }
 
@@ -169,47 +182,108 @@
       entries.forEach(function (e) {
         (s[1] ? e[s[1]] || [] : [e]).forEach(function (row) { flat(row[s[2]], []).forEach(function (v) { seen[v] = true; }); });
       });
-      Object.keys(seen).sort(function (a, b) { return a.localeCompare(b); }).forEach(function (v) {
-        var option = document.createElement('option');
-        option.value = v;
-        datalist.appendChild(option);
-      });
+      Object.keys(seen).sort(function (a, b) { return a.localeCompare(b); })
+        .forEach(function (v) { datalist.appendChild(new Option('', v)); });
     });
   }
 
   function reorder(key) {
     if (key === sorted) return;
-    sorted = key;
-    key = key || 'author';
-    var items = Array.prototype.slice.call(list.children);
-    items.sort(function (a, b) {
+    key = (sorted = key) || 'author';
+    Array.from(list.children).sort(function (a, b) {
       var x = a.dataset[key] || '', y = b.dataset[key] || '';
       if (x === y) return 0;
       if (key === 'date') { x = x ? Number(x) : Infinity; y = y ? Number(y) : Infinity; return x - y; }
       return x.localeCompare(y);
+    }).forEach(function (item) { list.appendChild(item); });
+  }
+
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text) node.textContent = text;
+    return node;
+  }
+
+  function counted(n, one, many) { return n + ' ' + say(n === 1 ? W[one] : W[many]); }
+
+  // search.js, added once with the assets' stamp, for words in the text box.
+  function needEngine() {
+    return engine = engine || new Promise(function (resolve) {
+      add('assets/search.js?v=' + form.dataset.assets).onload = resolve;
     });
-    items.forEach(function (item) { list.appendChild(item); });
+  }
+
+  function textKey(state) { return (state.m || '') + ':' + (state.q || ''); }
+
+  function search(state) {
+    count.textContent = say(W.searching);
+    needEngine().then(function () { return E.search.find(state.q, state.m === 'w' ? 'word' : 'prefix'); })
+      .then(function (hits) {
+        // A search typed over by another is dropped: the later one shows.
+        if (textKey(read()) !== textKey(state)) return;
+        found = { key: textKey(state), hits: hits };
+        filter(read());
+      });
+  }
+
+  // A row's passages, folded: opened, its first lines load, and "show more" the rest.
+  function passages(row, lines, state) {
+    var details = el('details', 'passages'), words = E.search.parse(state.q).words;
+    var mode = state.m === 'w' ? 'word' : 'prefix', shown = 0;
+    details.appendChild(el('summary', null, say(W.open)));
+    function more(n) {
+      var next = lines.slice(shown, shown + n);
+      shown += next.length;
+      return E.search.passages(row.dataset.code, next).then(function (found) {
+        each('button', details, function (b) { b.remove(); });
+        found.forEach(function (p) {
+          var line = el('p'), link = el('a');
+          link.href = p.href;
+          link.appendChild(el('span', 'ref', [p.ref, p.speaker].filter(Boolean).join(' · ')));
+          line.appendChild(link);
+          // Built with text nodes, never innerHTML: the line text is data.
+          R.marked(p.text, words, mode).forEach(function (piece) {
+            line.appendChild(piece[1] ? el('mark', null, piece[0]) : document.createTextNode(piece[0]));
+          });
+          details.appendChild(line);
+        });
+        if (shown < lines.length) {
+          var rest = el('button', 'more', say(W.more).replace('%{count}', lines.length - shown));
+          rest.type = 'button';
+          rest.addEventListener('click', function () { more(lines.length); });
+          details.appendChild(rest);
+        }
+      });
+    }
+    details.addEventListener('toggle', function () { if (details.open && !shown) more(FIRST); });
+    row.after(el('span', 'meta', counted(lines.length, 'passage', 'passages')), details);
+    row.nextSibling.setAttribute('data-hits', '');
   }
 
   // Shows the rows the state lets through; until the records it needs land, every row.
-  function filter(state, passing) {
+  // With words in the text box, only plays with hits of the kind asked for, once found.
+  function filter(state) {
     var asked = recordsAsked(state), all = !asked || !prepared;
-    if (!passing) {
-      passing = {};
-      rows.forEach(function (row) {
-        var code = row.dataset.code;
-        passing[code] = all || !!prepared[code] && R.match(prepared[code], state);
-      });
-    }
+    var text = E.words(state.q || '').length > 0, kind = KINDS[state.in], lines = {};
+    if (text && (!found || found.key !== textKey(state))) { search(state); return; }
+    var passing = {};
+    rows.forEach(function (row) {
+      var code = row.dataset.code;
+      lines[code] = text && (found.hits[code] || [])
+        .filter(function (h) { return !kind || h[1] === kind; }).map(function (h) { return h[0]; });
+      passing[code] = (all || !!prepared[code] && R.match(prepared[code], state)) && (!text || lines[code].length > 0);
+    });
+    each('[data-hits], .passages', list, function (node) { node.remove(); });
     var result = R.shown(works, passing);
     rows.forEach(function (row) {
       var shown = result.rows[row.dataset.code];
       row.hidden = shown === 'hide';
       row.classList.toggle('muted', shown === 'muted');
+      if (text && passing[row.dataset.code]) passages(row, lines[row.dataset.code], state);
     });
     each('[data-work]', list, function (work) { work.hidden = !work.querySelector('[data-play]:not([hidden])'); });
-    count.textContent = result.count === rows.length ? '' :
-      result.count + ' ' + say(result.count === 1 ? W.play : W.plays) + ' ' + say(W.of) + ' ' + rows.length;
+    count.textContent = result.count === rows.length ? '' : counted(result.count, 'play', 'plays') + ' ' + say(W.of) + ' ' + rows.length;
   }
 
   function update() {
@@ -233,9 +307,9 @@
     list = document.querySelector('[data-works]');
     count = document.querySelector('[data-count]');
     W = JSON.parse(form.dataset.words);
-    rows = Array.prototype.slice.call(list.querySelectorAll('[data-play]'));
-    works = Array.prototype.map.call(list.children, function (work) {
-      return Array.prototype.map.call(work.querySelectorAll('[data-play]'), function (row) { return row.dataset.code; });
+    rows = Array.from(list.querySelectorAll('[data-play]'));
+    works = Array.from(list.children, function (work) {
+      return Array.from(work.querySelectorAll('[data-play]'), function (row) { return row.dataset.code; });
     });
     form.hidden = false;
     document.querySelector('[data-catalogue-controls]').hidden = false;

@@ -8,6 +8,7 @@ import vm from 'node:vm';
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8');
 const context = vm.createContext({});
 vm.runInContext(read('../../priv/static_site/site.js'), context);
+vm.runInContext(read('../../priv/static_site/search.js'), context);   // EMOTHE.search.matches, for R.marked
 vm.runInContext(read('../../priv/static_site/catalogue.js'), context);
 const R = context.EMOTHE.records;
 const plain = (value) => JSON.parse(JSON.stringify(value)); // across vm realms
@@ -71,4 +72,11 @@ test('a work shows when any of its plays passes; its lead stays, muted, to head 
   assert.deepEqual(plain(R.shown(works, { A1: true, B: true })), {
     rows: { A: 'muted', A1: 'show', A2: 'hide', B: 'show', C: 'hide', C1: 'hide' }, count: 2 });
   assert.equal(R.shown(works, { A: true, A1: true, A2: true, B: true, C: true, C1: true }).count, 6);
+});
+
+test('a passage is cut into plain and marked pieces by the words found', () => {
+  assert.deepEqual(plain(R.marked('¿Es un Sueño, la vida?', ['sueño'], 'prefix')),
+    [['¿Es un ', false], ['Sueño', true], [', la vida?', false]]);
+  assert.deepEqual(plain(R.marked('sueños y sueño', ['sueño'], 'word')), [['sueños y ', false], ['sueño', true]]);
+  assert.deepEqual(plain(R.marked('nada', ['sueño'], 'prefix')), [['nada', false]]);
 });

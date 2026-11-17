@@ -136,4 +136,25 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
   test "a character is found without its accent", %{dir: dir, verse: verse} do
     assert shown(Browser.dom!(dir, "index.html#n=clarin")) == [verse.code]
   end
+
+  test "words in q keep the plays that hold them, each with its count", %{dir: dir, verse: verse} do
+    page = Browser.dom!(dir, "index.html#q=sue%C3%B1o")
+    assert shown(page) == [verse.code]
+    assert texts(page, ~s([data-code="#{verse.code}"] ~ [data-hits])) == ["2 pasajes"]
+  end
+
+  test "where narrows the hits", %{dir: dir} do
+    assert texts(Browser.dom!(dir, "index.html#q=sue%C3%B1o&in=n"), "[data-hits]") == ["1 pasaje"]
+    assert shown(Browser.dom!(dir, "index.html#q=sue%C3%B1o&in=d")) == []
+  end
+
+  # Review Focus 1 of the plan: a shared address opened cold loads both indexes at once.
+  test "full text and record filters combine, from a cold address", %{dir: dir, verse: verse} do
+    assert shown(Browser.dom!(dir, "index.html#f=verse&q=sue")) == [verse.code]
+    assert shown(Browser.dom!(dir, "index.html#f=prose&q=sue%C3%B1o")) == []
+  end
+
+  test "a play without a text never has a hit", %{dir: dir, french: french} do
+    refute french.code in shown(Browser.dom!(dir, "index.html#q=a&x=0"))
+  end
 end
