@@ -1,13 +1,15 @@
 defmodule PlaycodeWeb.Admin.PlayListLive do
   @moduledoc """
   /admin/plays: every play, searchable, 50 to a page, with archiving, and the archived
-  plays behind a filter, restorable.
+  plays behind a filter, restorable, and deletable for good by an admin who types the
+  play's code.
   """
 
   use PlaycodeWeb, :live_view
 
   alias Playcode.Accounts
   alias Playcode.ActivityLog
+  alias Playcode.Authz
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
@@ -27,6 +29,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
      |> assign(:status, nil)
      |> assign(:page, 1)
      |> assign(:total_pages, 1)
+     |> assign(:purging, nil)
+     |> assign(:can_purge, Authz.can?(socket.assigns.current_user, :purge_play))
      |> assign(:listening, MapSet.new())}
   end
 
@@ -68,6 +72,35 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     {:noreply, reload(socket)}
   end
 
+  def handle_event("open_purge", %{"id" => id}, socket) do
+    play = Enum.find(Catalogue.list_plays(archived: true), &(&1.id == id))
+    {:noreply, assign(socket, :purging, play)}
+  end
+
+  def handle_event("close_purge", _params, socket), do: {:noreply, assign(socket, :purging, nil)}
+
+  def handle_event("purge", %{"code" => code}, socket) do
+    %{purging: play, can_purge: can_purge} = socket.assigns
+
+    if can_purge and play != nil and code == play.code do
+      LiveHelpers.log_activity(socket, "delete", "play", play.id, %{
+        title: play.title,
+        code: play.code,
+        purged: true
+      })
+
+      {:ok, _} = Catalogue.purge_play(play)
+
+      {:noreply,
+       socket
+       |> assign(:purging, nil)
+       |> put_flash(:info, gettext("%{title} was deleted.", title: play.title))
+       |> reload()}
+    else
+      {:noreply, socket}
+    end
+  end
+
   defp reload(socket) do
     %{search: search, status: status, archived: archived, page: page} = socket.assigns
     {rows, page, total_pages} = rows(search, status, archived, page)
@@ -101,7 +134,11 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
       rows =
         Enum.flat_map(families, fn family ->
           [Map.put(Map.delete(family, :derived), :derived?, false)] ++
-            for(row <- family.derived, do: Map.put(row, :derived?, true))
+            for(
+              kind <- Enum.chunk_by(family.derived, & &1.play.relationship_type),
+              {row, i} <- Enum.with_index(kind),
+              do: Map.merge(row, %{derived?: true, heading?: i == 0})
+            )
         end)
 
       {rows, page, total_pages}
@@ -189,6 +226,98 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
       Play.form(play) == "prose" -> gettext("prose")
       true -> play.verse_count
     end
+  end
+
+  attr :row, :map, required: true
+  attr :archived, :boolean, required: true
+  attr :can_purge, :boolean, required: true
+
+  # A derived play that starts a kind's group brings the group's heading with it.
+  defp play_row(assigns) do
+    assigns = assign(assigns, assigns.row)
+
+    ~H"""
+    <tr :if={@row[:heading?]}>
+      <td class="max-sm:hidden"></td>
+      <td colspan="4" class="pt-4 pb-1">
+        <p class="ml-2 border-l-2 border-base-300 pl-4 text-xs font-semibold uppercase tracking-wide text-base-content/70">
+          {PlayLabels.relationship_group_label(@play.relationship_type)}
+        </p>
+      </td>
+    </tr>
+    <tr id={"play-#{@play.id}"} class="hover:bg-base-200">
+      <%!-- Some codes run to 90 characters; cut, they leave the title its room. --%>
+      <td class="font-mono text-xs text-base-content/70 max-sm:hidden">
+        <span class="block max-w-56 truncate" title={@play.code}>{@play.code}</span>
+      </td>
+      <td>
+        <div class={@derived? && "ml-2 border-l-2 border-base-300 pl-4"}>
+          <%!-- Archived plays are hidden from every Catalogue reader, so
+                linking to their pages raises. Restore and delete are the only actions. --%>
+          <.link
+            :if={is_nil(@play.deleted_at)}
+            navigate={~p"/admin/plays/#{@play.id}"}
+            class={[
+              "link link-hover font-medium",
+              if(@match?, do: "text-primary", else: "text-base-content/70")
+            ]}
+          >
+            {@play.title}
+          </.link>
+          <span :if={@play.deleted_at} class="font-medium text-base-content/70">
+            {@play.title}
+          </span>
+          <p class="mt-0.5 text-xs text-base-content/70">
+            {@play.author_name}
+          </p>
+          <%!-- On a phone the code's column is left out; the code goes under the title. --%>
+          <p class="sm:hidden font-mono text-xs text-base-content/70 break-all">
+            {@play.code}
+          </p>
+        </div>
+      </td>
+      <td>
+        <div class="flex flex-wrap gap-1">
+          <span class={["badge badge-sm whitespace-nowrap", status_badge(@play)]}>
+            {status_label(@play)}
+          </span>
+          <span
+            :if={not Play.has_text?(@play)}
+            class="badge badge-sm badge-soft badge-warning whitespace-nowrap"
+          >
+            {gettext("No text")}
+          </span>
+        </div>
+      </td>
+      <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
+        {verses(@play)}
+      </td>
+      <td :if={@archived}>
+        <div class="flex items-center justify-end gap-1">
+          <button
+            :if={@play.deleted_at}
+            phx-click="restore"
+            phx-value-id={@play.id}
+            class="btn btn-ghost btn-xs text-success tooltip tooltip-left"
+            aria-label={gettext("Restore")}
+            data-tip={gettext("Restore")}
+          >
+            <.icon name="hero-arrow-uturn-left-mini" class="size-4" />
+          </button>
+          <button
+            :if={@can_purge && @play.deleted_at}
+            phx-click="open_purge"
+            phx-value-id={@play.id}
+            class="btn btn-ghost btn-xs text-error tooltip tooltip-left"
+            aria-label={gettext("Delete permanently")}
+            data-tip={gettext("Delete permanently")}
+          >
+            <.icon name="hero-trash-mini" class="size-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+    """
   end
 
   @impl true
@@ -302,82 +431,43 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
             </tr>
           </thead>
           <tbody>
-            <tr
-              :for={%{play: play, derived?: derived?, match?: match?} <- @rows}
-              id={"play-#{play.id}"}
-              class="hover:bg-base-200"
-            >
-              <%!-- Some codes run to 90 characters; cut, they leave the title its room. --%>
-              <td class="font-mono text-xs text-base-content/70 max-sm:hidden">
-                <span class="block max-w-56 truncate" title={play.code}>{play.code}</span>
-              </td>
-              <td>
-                <div class={derived? && "ml-2 border-l-2 border-base-300 pl-4"}>
-                  <%!-- Archived plays are hidden from every Catalogue reader, so
-                        linking to their pages raises. Restore is the only action. --%>
-                  <.link
-                    :if={is_nil(play.deleted_at)}
-                    navigate={~p"/admin/plays/#{play.id}"}
-                    class={[
-                      "link link-hover font-medium",
-                      if(match?, do: "text-primary", else: "text-base-content/70")
-                    ]}
-                  >
-                    {play.title}
-                  </.link>
-                  <span :if={play.deleted_at} class="font-medium text-base-content/70">
-                    {play.title}
-                  </span>
-                  <p class="mt-0.5 text-xs text-base-content/70">
-                    <span
-                      :if={derived? && play.relationship_type}
-                      class="font-semibold uppercase tracking-wide"
-                    >
-                      {PlayLabels.relationship_type_label(play.relationship_type)}
-                    </span>
-                    <span :if={derived? && play.relationship_type && play.author_name}>·</span>
-                    {play.author_name}
-                  </p>
-                  <%!-- On a phone the code's column is left out; the code goes under the title. --%>
-                  <p class="sm:hidden font-mono text-xs text-base-content/70 break-all">
-                    {play.code}
-                  </p>
-                </div>
-              </td>
-              <td>
-                <div class="flex flex-wrap gap-1">
-                  <span class={["badge badge-sm whitespace-nowrap", status_badge(play)]}>
-                    {status_label(play)}
-                  </span>
-                  <span
-                    :if={not Play.has_text?(play)}
-                    class="badge badge-sm badge-soft badge-warning whitespace-nowrap"
-                  >
-                    {gettext("No text")}
-                  </span>
-                </div>
-              </td>
-              <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
-                {verses(play)}
-              </td>
-              <td :if={@archived}>
-                <div class="flex items-center justify-end gap-1">
-                  <button
-                    :if={play.deleted_at}
-                    phx-click="restore"
-                    phx-value-id={play.id}
-                    class="btn btn-ghost btn-xs text-success tooltip tooltip-left"
-                    aria-label={gettext("Restore")}
-                    data-tip={gettext("Restore")}
-                  >
-                    <.icon name="hero-arrow-uturn-left-mini" class="size-4" />
-                  </button>
-                </div>
-              </td>
-            </tr>
+            <.play_row
+              :for={row <- @rows}
+              row={row}
+              archived={@archived}
+              can_purge={@can_purge}
+            />
           </tbody>
         </table>
       </div>
+
+      <.modal :if={@purging} id="purge-modal" on_cancel={JS.push("close_purge")}>
+        <h3 id="purge-modal-title" class="text-lg font-semibold">
+          {gettext("Delete %{title} permanently?", title: @purging.title)}
+        </h3>
+        <p class="mt-3 text-sm">
+          {gettext(
+            "Its text, notes, records and history go, and cannot be brought back. Its translations, adaptations and versions stay, without their original."
+          )}
+        </p>
+        <.form for={%{}} phx-submit="purge" class="mt-4 space-y-3">
+          <label for="purge-code" class="block text-sm">
+            {gettext("To confirm, type the play's code:")}
+            <span class="font-mono font-semibold break-all">{@purging.code}</span>
+          </label>
+          <input
+            id="purge-code"
+            type="text"
+            name="code"
+            autocomplete="off"
+            spellcheck="false"
+            class="input input-bordered w-full font-mono"
+          />
+          <button type="submit" class="btn btn-error w-full">
+            {gettext("Delete this play")}
+          </button>
+        </.form>
+      </.modal>
 
       <p
         :if={@rows == []}
