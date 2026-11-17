@@ -113,9 +113,9 @@ defmodule Playcode.Import.Filemaker do
   defp build_version(fields, code) do
     %{
       code: code,
-      historical_time: historical_time(fields),
-      historical_time_note: historical_time_note(fields),
-      composition_date_note: composition_date_note(fields)
+      historical_time: historical_time(field(fields, "bus_tiemHistorico")),
+      historical_time_note: historical_time_note(field(fields, "pub_TiemHistorico")),
+      composition_date_note: composition_date_note(field(fields, "pub_datacion"))
     }
   end
 
@@ -131,16 +131,17 @@ defmodule Playcode.Import.Filemaker do
     end
   end
 
-  defp historical_time(fields) do
-    fields
-    |> field("bus_tiemHistorico")
+  @doc "FileMaker's historical time code (`bus_tiemHistorico`) as Playcode's, or nil."
+  def historical_time(code) do
+    code
     |> String.split("\n", trim: true)
     |> List.first()
     |> then(&Map.get(@historical_times, &1))
   end
 
-  defp historical_time_note(fields) do
-    with [_all, item] <- Regex.run(@list_item, field(fields, "pub_TiemHistorico")),
+  @doc "The note in FileMaker's rendered historical time (`pub_TiemHistorico`), or nil."
+  def historical_time_note(html) do
+    with [_all, item] <- Regex.run(@list_item, html),
          [_label, note] <- String.split(item, ~r|<br\s*/?>\s*Note:|, parts: 2) do
       case strip_tags(note) do
         "" -> nil
@@ -151,12 +152,15 @@ defmodule Playcode.Import.Filemaker do
     end
   end
 
-  # Every <li> is a *competing* dating, unattributed. All of them verbatim, so a curator
-  # reads the disagreement; the years come from the index header, which carries the
-  # accepted dating rather than the union of the competing ones.
-  defp composition_date_note(fields) do
+  @doc """
+  FileMaker's rendered datings (`pub_datacion`) as one note, or nil. Every `<li>` is a
+  *competing* dating, unattributed. All of them verbatim, so a curator reads the
+  disagreement; the years come from the index header, which carries the accepted dating
+  rather than the union of the competing ones.
+  """
+  def composition_date_note(html) do
     @list_item
-    |> Regex.scan(field(fields, "pub_datacion"))
+    |> Regex.scan(html)
     |> Enum.map(fn [_all, item] -> strip_tags(item) end)
     |> Enum.reject(&(&1 == ""))
     |> Enum.join("; ")
