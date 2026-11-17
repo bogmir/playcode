@@ -69,7 +69,7 @@ lib/
 │       ├── html.ex                   # Standalone HTML document export: page, CSS and script around Download
 │       ├── pdf.ex                    # PDF via ChromicPDF (headless Chrome)
 │       ├── pdf_cache.ex              # Each play's PDF rendered once per version, kept on the volume
-│       ├── epub.ex                   # EPUB 3 generation via BUPE: package, CSS and chapters around Download
+│       ├── epub.ex                   # EPUB 3 generation via BUPE, the same bytes for the same play: the preview's download and the static site's CODE.epub
 │       ├── note_markup.ex            # Italics and note references for the HTML/PDF and EPUB downloads
 │       ├── site_builder.ex           # The one process that writes and ships the admin's site
 │       ├── play_change_listener.ex   # Relays Postgres's play_changed notifications to the export page and the play's topic
