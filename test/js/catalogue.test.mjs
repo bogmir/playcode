@@ -80,3 +80,15 @@ test('a passage is cut into plain and marked pieces by the words found', () => {
   assert.deepEqual(plain(R.marked('sueños y sueño', ['sueño'], 'word')), [['sueños y ', false], ['sueño', true]]);
   assert.deepEqual(plain(R.marked('nada', ['sueño'], 'prefix')), [['nada', false]]);
 });
+
+test('a burst of calls runs once, after the pause', () => {
+  const pending = [];
+  context.setTimeout = (fn) => pending.push(fn);
+  context.clearTimeout = (id) => { pending[id - 1] = null; };
+  let runs = 0;
+  const later = R.later(() => runs++, 250);
+  later(); later(); later();
+  assert.equal(runs, 0);
+  pending.filter(Boolean).forEach((fn) => fn());
+  assert.equal(runs, 1);
+});

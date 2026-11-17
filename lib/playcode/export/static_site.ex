@@ -757,18 +757,24 @@ defmodule Playcode.Export.StaticSite do
       "x" => [{"", all_f}, {"1", tp("With a text")}, {"0", tp("No text")}],
       "wt" => [
         {"", all}
-        | in_order(witnesses, 0, witness_types(), in_both(&PlayLabels.witness_type_label/1))
+        | in_order(
+            witnesses,
+            0,
+            approved(witness_types()),
+            in_both(&PlayLabels.witness_type_label/1)
+          )
       ],
       "wf" => [{"", all} | in_order(witnesses, 4, formats(witnesses), &same/1)],
       "rc" => [
-        {"", all_f} | in_order(performances, 2, Performance.venue_types(), &venue_type_label/1)
+        {"", all_f}
+        | in_order(performances, 2, approved(Performance.venue_types()), &venue_type_label/1)
       ],
       "h" => [
         {"", all}
         | in_order(
             entries,
             :h,
-            Play.historical_times(),
+            approved(Play.historical_times()),
             in_both(&PlayLabels.historical_time_label/1)
           )
       ]
@@ -792,6 +798,18 @@ defmodule Playcode.Export.StaticSite do
     present = MapSet.new(rows, &if(is_atom(at), do: Map.get(&1, at), else: Enum.at(&1, at)))
     for value <- vocabulary, value in present, do: {value, label.(value)}
   end
+
+  # The lists' order in the mock the researcher approved (2026-11-17); the admin's forms keep
+  # each vocabulary's own. A value the mock does not name goes last.
+  @approved ~w(loose early_edition collection_single_author collection_several_authors collection
+               manuscript autograph copy
+               commercial_theatre palace private_theatre street other unknown
+               antiguedad_clasica antiguo_testamento edad_media siglo_xv siglo_xvi siglo_xvii
+               tiempo_indeterminado tiempo_maravilloso tiempo_alegorico)
+
+  defp approved(vocabulary),
+    do:
+      Enum.sort_by(vocabulary, fn value -> Enum.find_index(@approved, &(&1 == value)) || 999 end)
 
   defp witness_types,
     do:

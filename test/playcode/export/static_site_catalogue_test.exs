@@ -132,6 +132,27 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert options(page, "x") == [{"", "Todas"}, {"1", "Con texto"}, {"0", "Sin texto"}]
   end
 
+  # The mock the researcher approved orders these three: support from the loose quarto to
+  # the copy, staging from the commercial theatre to the unknown, historical time from
+  # antiquity on. The admin's forms keep the vocabularies' own order.
+  test "the support, staging and historical time lists are in the researcher's order" do
+    plays =
+      for time <- ~w(tiempo_alegorico siglo_xvii antiguedad_clasica),
+          do: complete_play(%{"historical_time" => time})
+
+    for type <- ~w(manuscript collection loose),
+        do: witness!(hd(plays), %{"witness_type" => type})
+
+    for type <- ~w(unknown palace commercial_theatre),
+        do: performance_fixture(hd(plays), %{"venue_type" => type})
+
+    page = html!(generate!(plays), "index.html", "es")
+    values = fn name -> page |> options(name) |> tl() |> Enum.map(&elem(&1, 0)) end
+    assert values.("wt") == ~w(loose collection manuscript)
+    assert values.("rc") == ~w(commercial_theatre palace unknown)
+    assert values.("h") == ~w(antiguedad_clasica siglo_xvii tiempo_alegorico)
+  end
+
   # Review Focus 5 of the plan: a small site, a test site.
   test "a site with no witness, performance or place offers only the first option there" do
     page = html!(generate!([complete_play()]), "index.html", "es")

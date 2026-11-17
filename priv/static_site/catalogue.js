@@ -1,5 +1,5 @@
-/* EMOTHE static edition: the catalogue's search, over search/records.js and, for words in
-   its text box, search.js. Loaded only by index.html, after site.js (EMOTHE.normalise). */
+/* EMOTHE static edition: the catalogue's search over search/records.js, and search.js for
+   its text box. Loaded by index.html after site.js. */
 (function (root) {
   'use strict';
   var E = root.EMOTHE = root.EMOTHE || {};
@@ -17,8 +17,7 @@
     return (list || []).filter(function (v) { return v != null; }).map(E.normalise);
   }
 
-  // The entry of spec 7.4 with every text value a list of normalised strings, every range
-  // a pair, and each witness and performance a tuple of the same.
+  // Spec 7.4's entry with text as lists of normalised strings and ranges as pairs.
   R.prepare = function (e) {
     return {
       c: e.c, t: texts((e.t || []).concat(e.c)), a: texts([e.a]), l: e.l, o: e.o, k: e.k, s: e.s, f: e.f,
@@ -30,8 +29,7 @@
     };
   };
 
-  // Each filter: its name in the form and the address, how it matches, and where it reads
-  // in the prepared entry, or in one of its witnesses (w) or performances (r).
+  // Each filter: its name, how it matches, where it reads in the entry, a witness (w) or a performance (r).
   var FIELDS = {
     '': [['t', 'text', 't'], ['a', 'text', 'a'], ['l', 'list', 'l'], ['o', 'list', 'o'], ['k', 'list', 'k'],
       ['s', 'list', 's'], ['f', 'list', 'f'], ['x', 'list', 'x'], ['d', 'range', 'd'], ['h', 'list', 'h'],
@@ -40,8 +38,7 @@
     r: [['rp', 'text', 0], ['rv', 'text', 1], ['rc', 'list', 2], ['ry', 'range', 3], ['rk', 'text', 4], ['ra', 'text', 5]]
   };
 
-  // A range is "from-to", "from-" or "-to"; one typed backwards matches nothing, and a value
-  // with no year matches no range.
+  // A range is "from-to", "from-" or "-to"; backwards matches nothing, nor does a value with no year.
   var TESTS = {
     text: function (have, want) {
       want = E.normalise(want);
@@ -92,8 +89,7 @@
       .map(function (name) { return name + '=' + encodeURIComponent(state[name]); }).join('&');
   };
 
-  // works: [[leadCode, code, …], …]; passing: { CODE: true }. A work shows when any of its
-  // plays passes; its lead then stays, muted when it does not pass itself, to head it.
+  // works: [[lead, code, …], …]. A work shows when any play passes; its lead stays, muted, to head it.
   R.shown = function (works, passing) {
     var rows = {}, count = 0;
     works.forEach(function (codes) {
@@ -116,6 +112,12 @@
       if (last && last[1] === mark) last[0] += part; else out.push([part, mark]);
     });
     return out;
+  };
+
+  // fn, run once a burst of calls pauses for ms: a search per word typed, not per letter.
+  R.later = function (fn, ms) {
+    var timer;
+    return function () { clearTimeout(timer); timer = setTimeout(fn, ms); };
   };
 
   if (!root.document) return;
@@ -210,16 +212,20 @@
   // search.js, added once with the assets' stamp, for words in the text box.
   function needEngine() {
     return engine = engine || new Promise(function (resolve) {
-      add('assets/search.js?v=' + form.dataset.assets).onload = resolve;
+      var script = add('assets/search.js?v=' + form.dataset.assets);
+      script.onload = script.onerror = resolve;
     });
   }
+
+  function modeOf(state) { return state.m === 'w' ? 'word' : 'prefix'; }
 
   function textKey(state) { return (state.m || '') + ':' + (state.q || ''); }
 
   function search(state) {
     count.textContent = say(W.searching);
-    needEngine().then(function () { return E.search.find(state.q, state.m === 'w' ? 'word' : 'prefix'); })
+    needEngine().then(function () { return E.search && E.search.find(state.q, modeOf(state)); })
       .then(function (hits) {
+        if (!hits) { count.textContent = say(W.unavailable); return; }
         // A search typed over by another is dropped: the later one shows.
         if (textKey(read()) !== textKey(state)) return;
         found = { key: textKey(state), hits: hits };
@@ -230,12 +236,12 @@
   // A row's passages, folded: opened, its first lines load, and "show more" the rest.
   function passages(row, lines, state) {
     var details = el('details', 'passages'), words = E.search.parse(state.q).words;
-    var mode = state.m === 'w' ? 'word' : 'prefix', shown = 0;
+    var mode = modeOf(state), shown = 0;
     details.appendChild(el('summary', null, say(W.open)));
     function more(n) {
       var next = lines.slice(shown, shown + n);
       shown += next.length;
-      return E.search.passages(row.dataset.code, next).then(function (found) {
+      E.search.passages(row.dataset.code, next).then(function (found) {
         each('button', details, function (b) { b.remove(); });
         found.forEach(function (p) {
           var line = el('p'), link = el('a');
@@ -251,18 +257,17 @@
         if (shown < lines.length) {
           var rest = el('button', 'more', say(W.more).replace('%{count}', lines.length - shown));
           rest.type = 'button';
-          rest.addEventListener('click', function () { more(lines.length); });
+          rest.onclick = function () { more(lines.length); };
           details.appendChild(rest);
         }
       });
     }
-    details.addEventListener('toggle', function () { if (details.open && !shown) more(FIRST); });
+    details.ontoggle = function () { if (details.open && !shown) more(FIRST); };
     row.after(el('span', 'meta', counted(lines.length, 'passage', 'passages')), details);
     row.nextSibling.setAttribute('data-hits', '');
   }
 
-  // Shows the rows the state lets through; until the records it needs land, every row.
-  // With words in the text box, only plays with hits of the kind asked for, once found.
+  // Shows the rows the state lets through: every row until the records land; with words, only plays with hits.
   function filter(state) {
     var asked = recordsAsked(state), all = !asked || !prepared;
     var text = E.words(state.q || '').length > 0, kind = KINDS[state.in], lines = {};
@@ -315,10 +320,12 @@
     document.querySelector('[data-catalogue-controls]').hidden = false;
     write(R.parse(root.location.hash));
     // The text search and the sort are outside the form's element, tied by form="search".
+    var typed = R.later(update, 300);
     ['input', 'change', 'focusin'].forEach(function (type) {
       document.addEventListener(type, function (event) {
-        if (event.target.form !== form) return;
-        if (type === 'focusin') loadRecords(); else update();
+        var target = event.target;
+        if (target.form !== form) return;
+        if (type === 'focusin') loadRecords(); else if (target.name === 'q') typed(); else update();
       });
     });
     form.addEventListener('reset', function () { setTimeout(update); });

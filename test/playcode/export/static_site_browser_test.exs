@@ -157,4 +157,14 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
   test "a play without a text never has a hit", %{dir: dir, french: french} do
     refute french.code in shown(Browser.dom!(dir, "index.html#q=a&x=0"))
   end
+
+  test "a text search whose engine is missing says so instead of searching for ever", %{dir: dir} do
+    broken = dir <> "-no-engine"
+    File.cp_r!(dir, broken)
+    on_exit(fn -> File.rm_rf(broken) end)
+    File.rm!(Path.join([broken, "assets", "search.js"]))
+
+    assert texts(Browser.dom!(broken, "index.html#q=sue%C3%B1o"), "[data-count]") ==
+             ["La búsqueda en los textos no está disponible."]
+  end
 end
