@@ -410,14 +410,6 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
         |> LazyHTML.query("tbody tr[id]")
         |> LazyHTML.attribute("id")
 
-    defp headings(view),
-      do:
-        view
-        |> render()
-        |> LazyHTML.from_fragment()
-        |> LazyHTML.query("tbody tr:not([id])")
-        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
-
     defp derived(original, attrs) do
       %{"parent_play_id" => original.id, "relationship_type" => "traduccion"}
       |> Map.merge(attrs)
@@ -427,8 +419,9 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     defp search(view, term),
       do: view |> element("form[phx-change=search]") |> render_change(%{"search" => term})
 
-    # The kind used to be named on each derived row; it is now a heading over its group.
-    test "a derived play is listed under its original, under a heading naming its kind",
+    # Between 2026-11-17 and 2026-11-18 the kind was a heading row over its group; the
+    # owner chose a chip on each row instead, kind and language, and no rows of headings.
+    test "a derived play is listed under its original, its chip naming its kind and language",
          %{conn: conn} do
       middle = play_fixture(%{"title_sort" => "Middle"})
       original = play_fixture(%{"title_sort" => "Zeta"})
@@ -446,11 +439,13 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
                "play-#{adaptation.id}"
              ]
 
-      assert headings(view) == [t("Translations"), t("Adaptations")]
-      refute has_element?(view, "#play-#{translation.id} td", t("Translation"))
+      assert has_element?(view, "#play-#{translation.id} td", "#{t("Translation")} · ES")
+      assert has_element?(view, "#play-#{adaptation.id} td", "#{t("Adaptation")} · ES")
+      refute has_element?(view, "#play-#{original.id} td", t("Translation"))
+      refute has_element?(view, "tbody tr:not([id])")
     end
 
-    test "a family's derived plays go by kind, then language, then title, each kind headed once",
+    test "a family's derived plays go by kind, then language, then title",
          %{conn: conn} do
       original = play_fixture(%{"title_sort" => "Original"})
       version = derived(original, %{"title_sort" => "A", "relationship_type" => "version"})
@@ -468,8 +463,8 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
                  &"play-#{&1.id}"
                )
 
-      assert headings(view) ==
-               [t("Translations"), t("Adaptations"), t("Versions"), t("Kind not set")]
+      assert has_element?(view, "#play-#{french.id} td", "#{t("Translation")} · FR")
+      assert has_element?(view, "#play-#{version.id} td", "#{t("Version")} · ES")
     end
 
     test "a search that finds one member shows the whole family, the original first",

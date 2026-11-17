@@ -62,9 +62,8 @@ defmodule Playcode.Catalogue do
   @doc """
   One page of families (`Playcode.Catalogue.Families`) in title order, with how many there
   are in all. A family is listed whole when a member matches `:search` and `:status`; its
-  root always heads it, and only its derived plays that pass `:status` are kept, by kind
-  (`Play.relationship_types/0`'s order, an unset kind last), then language, then title.
-  Each play says whether it matched.
+  root always heads it, and only its derived plays that pass `:status` are kept, in
+  `family_order/1`. Each play says whether it matched.
   """
   def list_families(opts \\ []) do
     page = opts[:page] || 1
@@ -88,7 +87,7 @@ defmodule Playcode.Catalogue do
             match?: root.id in matched,
             derived:
               for(
-                play <- Enum.sort_by(members, &{kind_rank(&1.relationship_type), &1.language}),
+                play <- family_order(members),
                 play.id != root.id,
                 play.id in visible,
                 do: %{play: play, match?: play.id in matched}
@@ -97,6 +96,21 @@ defmodule Playcode.Catalogue do
 
     {Enum.slice(families, (page - 1) * per_page, per_page), length(families)}
   end
+
+  @doc """
+  Derived plays in the order a family lists them: by kind (`Play.relationship_types/0`'s
+  order, an unset kind last), then language, then title.
+  """
+  def family_order(plays),
+    do:
+      Enum.sort_by(
+        plays,
+        &{kind_rank(&1.relationship_type), &1.language, &1.title_sort, &1.title}
+      )
+
+  @doc "The plays derived from `play`, archived ones left out, in `family_order/1`."
+  def list_derived(%Play{id: id}),
+    do: Play |> scope([]) |> where(parent_play_id: ^id) |> Repo.all() |> family_order()
 
   defp kind_rank(kind),
     do:
