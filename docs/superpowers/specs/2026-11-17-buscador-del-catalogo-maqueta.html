@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maqueta: el buscador del catálogo</title>
+<style>
+  :root { color-scheme: light dark; --ink: #1d1a16; --soft: #5f574c; --line: #d8d0c2; --paper: #fbf8f2; --panel: #f2ecdf; --accent: #7a2e1d; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #ece6da; --soft: #b3aa9a; --line: #4a443a; --paper: #1b1915; --panel: #25221c; --accent: #e09a85; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 Georgia, "Times New Roman", serif; color: var(--ink); background: var(--paper); }
+  .aviso { margin: 0; padding: .7rem 1rem; background: var(--accent); color: var(--paper); font-family: system-ui, sans-serif; font-size: .9rem; }
+  .pagina { display: grid; grid-template-columns: 19rem 1fr; gap: 2rem; max-width: 76rem; margin: 0 auto; padding: 1.5rem 1rem 4rem; }
+  @media (max-width: 52rem) { .pagina { grid-template-columns: 1fr; } }
+  h1 { margin: 0 0 .3rem; font-size: 1.9rem; font-weight: normal; }
+  h2 { margin: 0 0 .6rem; font: 600 .8rem system-ui, sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--soft); }
+  .filtros { font-family: system-ui, sans-serif; font-size: .9rem; }
+  details { border-top: 1px solid var(--line); padding: .5rem 0; }
+  details:last-of-type { border-bottom: 1px solid var(--line); }
+  summary { cursor: pointer; font-weight: 600; padding: .2rem 0; }
+  summary small { font-weight: normal; color: var(--soft); }
+  label { display: block; margin: .6rem 0 .15rem; color: var(--soft); }
+  input, select, button { font: inherit; color: inherit; }
+  input[type=text], input[type=search], input[type=number], select { width: 100%; padding: .35rem .5rem; border: 1px solid var(--line); border-radius: 3px; background: var(--paper); }
+  .rango { display: grid; grid-template-columns: 1fr auto 1fr; gap: .4rem; align-items: center; }
+  .limpiar { margin-top: 1rem; padding: .4rem .8rem; border: 1px solid var(--line); border-radius: 3px; background: var(--panel); cursor: pointer; }
+  .texto { display: grid; gap: .5rem; padding: 1rem; background: var(--panel); border-radius: 4px; font-family: system-ui, sans-serif; font-size: .9rem; }
+  .texto .opciones { display: flex; flex-wrap: wrap; gap: .3rem 1.2rem; }
+  .texto .opciones label { display: inline; margin: 0; color: var(--ink); }
+  .barra { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between; margin: 1rem 0 .5rem; font-family: system-ui, sans-serif; font-size: .9rem; }
+  .barra label { display: inline; margin: 0; }
+  .barra select { width: auto; }
+  .cuenta { color: var(--soft); }
+  ol.obras { list-style: none; margin: 0; padding: 0; }
+  ol.obras > li { padding: .7rem 0; border-top: 1px solid var(--line); }
+  .autor { font: .8rem system-ui, sans-serif; color: var(--soft); }
+  .entrada { display: flex; flex-wrap: wrap; gap: .2rem .6rem; align-items: baseline; }
+  .entrada a { color: var(--accent); font-size: 1.1rem; }
+  .entrada.atenuada a { color: var(--soft); }
+  .etq { font: .7rem system-ui, sans-serif; padding: .05rem .4rem; border: 1px solid var(--line); border-radius: 3px; text-transform: uppercase; color: var(--soft); }
+  .etq.sin { border-color: var(--accent); color: var(--accent); }
+  .cod, .meta { font: .8rem system-ui, sans-serif; color: var(--soft); }
+  ul.trad { list-style: none; margin: .3rem 0 0 1.5rem; padding: 0; }
+  .pasajes { margin: .3rem 0 0 2.4rem; border: 0; padding: 0; font-size: .95rem; }
+  .pasajes summary { font: .85rem system-ui, sans-serif; font-weight: normal; color: var(--accent); }
+  .pasajes p { margin: .25rem 0; }
+  .pasajes .ref { font: .75rem system-ui, sans-serif; color: var(--soft); margin-right: .5rem; }
+  mark { background: none; color: inherit; font-weight: bold; text-decoration: underline; }
+  .notas { max-width: 76rem; margin: 0 auto; padding: 0 1rem 3rem; font-family: system-ui, sans-serif; font-size: .9rem; }
+  .notas li { margin: .3rem 0; }
+</style>
+</head>
+<body>
+<p class="aviso"><strong>Maqueta, 17 de noviembre de 2026.</strong> Muestra el formulario y la lista tal como quedarán en el sitio publicado. Los controles se pueden abrir y rellenar, pero aquí no filtran: los ejemplos de la lista son fijos, y sus códigos, cifras y pasajes, inventados.</p>
+
+<div class="pagina">
+  <form class="filtros" aria-label="Filtros">
+    <h2>Filtros</h2>
+
+    <details open>
+      <summary>Obra</summary>
+      <label for="titulo">Título <small>(o código)</small></label>
+      <input type="text" id="titulo" placeholder="El burlador de Sevilla">
+      <label for="autor">Autor</label>
+      <input type="text" id="autor" list="autores" placeholder="Tirso de Molina">
+      <datalist id="autores"><option value="Tirso de Molina"><option value="William Shakespeare"><option value="Félix Lope de Vega y Carpio"><option value="Pierre Corneille"></datalist>
+      <label for="idioma">Idioma</label>
+      <select id="idioma"><option>Todos<option>Español (148)<option>Inglés (139)<option>Francés (78)<option>Italiano (56)<option>Portugués (5)</select>
+      <label for="idioma-original">Idioma del original</label>
+      <select id="idioma-original"><option>Todos<option>Español<option>Inglés<option>Francés<option>Italiano<option>Portugués</select>
+      <label for="tipo">Tipo</label>
+      <select id="tipo"><option>Todos<option>Originales (290)<option>Traducciones (210)<option>Adaptaciones (22)<option>Versiones (4)</select>
+      <label for="coleccion">Colección</label>
+      <select id="coleccion"><option>Todas<option>EMOTHE (498)<option>ARTELOPE (28)</select>
+      <label for="forma">Verso o prosa</label>
+      <select id="forma"><option>Todas<option>Verso (212)<option>Prosa (131)<option>Prosa con verso ocasional (38)<option>Verso y prosa (24)</select>
+      <label for="con-texto">Con o sin texto</label>
+      <select id="con-texto"><option>Todas<option>Con texto<option>Sin texto</select>
+    </details>
+
+    <details>
+      <summary>Datación</summary>
+      <label for="dat-desde">Años de composición</label>
+      <div class="rango"><input type="number" id="dat-desde" placeholder="desde" aria-label="Datación, desde el año"><span>–</span><input type="number" placeholder="hasta" aria-label="Datación, hasta el año"></div>
+    </details>
+
+    <details>
+      <summary>Testimonios <small>(los cuatro, de un mismo testimonio)</small></summary>
+      <label for="soporte">Soporte</label>
+      <select id="soporte"><option>Todos<option>Suelta<option>Edición antigua<option>Colección de un autor<option>Colección de varios autores<option>Colección<option>Manuscrito<option>Autógrafo<option>Copia</select>
+      <label for="t-ciudad">Ciudad</label>
+      <input type="text" id="t-ciudad" list="ciudades" placeholder="London">
+      <datalist id="ciudades"><option value="London"><option value="Madrid"><option value="Paris"><option value="Valencia"><option value="Venezia"></datalist>
+      <label for="t-desde">Año</label>
+      <div class="rango"><input type="number" id="t-desde" placeholder="desde" aria-label="Año del testimonio, desde"><span>–</span><input type="number" placeholder="hasta" aria-label="Año del testimonio, hasta"></div>
+      <label for="formato">Formato</label>
+      <select id="formato"><option>Todos<option>2º<option>4º<option>8º<option>12º</select>
+    </details>
+
+    <details>
+      <summary>Representaciones <small>(los seis, de una misma representación)</small></summary>
+      <label for="toponimo">Topónimo</label>
+      <input type="text" id="toponimo" list="toponimos" placeholder="London">
+      <datalist id="toponimos"><option value="London"><option value="England"><option value="Madrid"><option value="Paris"></datalist>
+      <label for="lugar">Lugar</label>
+      <input type="text" id="lugar" list="lugares" placeholder="The Globe">
+      <datalist id="lugares"><option value="The Globe"><option value="The Blackfriars"><option value="Lincoln’s Inn Fields"><option value="Corral de la Cruz"></datalist>
+      <label for="circunstancia">Circunstancia escénica</label>
+      <select id="circunstancia"><option>Todas<option>Teatro comercial<option>Palacio<option>Teatro privado<option>Calle<option>Otra<option>Desconocida</select>
+      <label for="r-desde">Fecha</label>
+      <div class="rango"><input type="number" id="r-desde" placeholder="desde" aria-label="Año de la representación, desde"><span>–</span><input type="number" placeholder="hasta" aria-label="Año de la representación, hasta"></div>
+      <label for="compania">Compañía</label>
+      <input type="text" id="compania" list="companias" placeholder="The King’s Men">
+      <datalist id="companias"><option value="The King’s Men"><option value="The Duke’s Company"><option value="Lady Elizabeth’s Men"></datalist>
+      <label for="reparto">Reparto</label>
+      <input type="text" id="reparto" list="actores" placeholder="Burbage">
+      <datalist id="actores"><option value="Richard Burbage"><option value="Joseph Taylor"><option value="John Lowin"></datalist>
+    </details>
+
+    <details>
+      <summary>Tiempo y lugar</summary>
+      <label for="tiempo">Tiempo histórico</label>
+      <select id="tiempo"><option>Todos<option>Antigüedad clásica<option>Antiguo Testamento<option>Edad Media<option>Siglo XV<option>Siglo XVI<option>Siglo XVII<option>Tiempo indeterminado<option>Tiempo maravilloso<option>Tiempo alegórico</select>
+      <label for="accion">Lugar de acción <small>(«España» encuentra también Sevilla)</small></label>
+      <input type="text" id="accion" list="acciones" placeholder="Sevilla">
+      <datalist id="acciones"><option value="Sevilla"><option value="España"><option value="Europa"><option value="Londres"><option value="Dinamarca"></datalist>
+    </details>
+
+    <details>
+      <summary>Personajes</summary>
+      <label for="personaje">Personaje</label>
+      <input type="text" id="personaje" placeholder="Don Juan">
+    </details>
+
+    <button type="button" class="limpiar">Limpiar filtros</button>
+  </form>
+
+  <main>
+    <h1>Catálogo</h1>
+    <p class="cuenta">526 obras · 96 autores</p>
+
+    <div class="texto" role="search">
+      <label for="q" style="margin:0">Texto y notas</label>
+      <input type="search" id="q" value="convidado" placeholder="Buscar en cada verso y cada nota de cada obra">
+      <div class="opciones">
+        <span><label><input type="radio" name="modo" checked> Empieza por</label> <label><input type="radio" name="modo"> Palabra exacta</label></span>
+        <span><label><input type="radio" name="donde" checked> En todo</label> <label><input type="radio" name="donde"> Parlamentos</label> <label><input type="radio" name="donde"> Acotaciones</label> <label><input type="radio" name="donde"> Notas</label></span>
+      </div>
+    </div>
+
+    <div class="barra">
+      <span class="cuenta" aria-live="polite">3 obras de 526</span>
+      <label>Ordenar <select><option>Autor<option>Título<option>Fecha</select></label>
+    </div>
+
+    <ol class="obras">
+      <li>
+        <div class="autor">Tirso de Molina</div>
+        <div class="entrada"><span class="etq">es</span><a href="#">El burlador de Sevilla y convidado de piedra</a><span class="cod">EMOTHE0038</span><span class="meta">1616–1625 · 2.867 vv.</span><span class="meta">14 pasajes</span></div>
+        <details class="pasajes" open>
+          <summary>Ver los pasajes</summary>
+          <p><span class="ref">v. 2238 · Don Juan</span>mi <mark>convidado</mark> has de ser</p>
+          <p><span class="ref">v. 2301 · Catalinón</span>¡Señor, el <mark>convidado</mark> de piedra!</p>
+          <p><span class="ref">nota 41</span>El <mark>convidado</mark> es la estatua de don Gonzalo…</p>
+          <p><a href="#">Ver los 11 restantes</a></p>
+        </details>
+        <ul class="trad">
+          <li>
+            <div class="entrada"><span class="etq">fr</span><a href="#">Le trompeur de Séville et le convive de pierre</a><span class="cod">EMOTHE0301</span><span class="etq">traducción</span><span class="meta">Prosa</span><span class="meta">2 pasajes</span></div>
+          </li>
+        </ul>
+      </li>
+      <li>
+        <div class="autor">Molière</div>
+        <div class="entrada atenuada"><span class="etq">fr</span><a href="#">Dom Juan ou le Festin de pierre</a><span class="cod">EMOTHE0412</span><span class="meta">1665 · Prosa</span></div>
+        <ul class="trad">
+          <li>
+            <div class="entrada"><span class="etq">es</span><a href="#">Don Juan o el convidado de piedra</a><span class="cod">EMOTHE0733</span><span class="etq">traducción</span><span class="meta">Prosa</span><span class="meta">1 pasaje</span></div>
+          </li>
+        </ul>
+      </li>
+    </ol>
+
+    <h2 style="margin-top:2.5rem">Así se ve una obra sin texto en la lista</h2>
+    <ol class="obras">
+      <li>
+        <div class="autor">Tirso de Molina</div>
+        <div class="entrada"><span class="etq">fr</span><a href="#">L’abuseur de Séville</a><span class="cod">EMOTHE0596</span><span class="etq sin">sin texto</span><span class="meta">1604</span></div>
+      </li>
+    </ol>
+  </main>
+</div>
+
+<section class="notas">
+  <h2>Qué mirar</h2>
+  <ul>
+    <li><strong>Los 23 campos</strong>: 8 en «Obra», el texto y las notas sobre la lista, la datación, 4 de testimonios, 6 de representaciones, tiempo histórico, lugar de acción y personaje. ¿Falta o sobra alguno? ¿Están en el grupo que esperaría?</li>
+    <li><strong>Listas</strong>: se elige un valor. <strong>Campos con sugerencias</strong> (autor, ciudad, topónimo, lugar, compañía, reparto, lugar de acción): proponen los nombres que existen, pero se puede escribir cualquier cosa. <strong>Años</strong>: desde y hasta, cualquiera de los dos puede quedar vacío.</li>
+    <li><strong>Testimonios y representaciones</strong>: los campos de un grupo se cumplen en un mismo testimonio o una misma representación. «4º, London, 1600–1610» encuentra una obra con un testimonio que es las tres cosas.</li>
+    <li><strong>El resultado es siempre la lista de obras.</strong> Al buscar en el texto, cada obra muestra cuántos pasajes tiene y los primeros, plegados. Una obra sin texto no aparece en una búsqueda de texto; sí en todas las demás.</li>
+    <li><strong>Una familia</strong> se muestra cuando alguna de sus obras cumple la búsqueda; el original queda atenuado si solo la cumple una traducción (segundo ejemplo).</li>
+    <li>No están, aunque el formulario antiguo los tenía: género, traductor, año de la traducción, año de la crítica, anotada y cotejada.</li>
+  </ul>
+</section>
+</body>
+</html>
