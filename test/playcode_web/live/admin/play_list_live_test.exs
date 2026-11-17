@@ -126,6 +126,68 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     assert has_element?(view, "#play-#{play.id} button[aria-label='#{t("Restore")}']")
   end
 
+  describe "deleting an archived play" do
+    setup %{conn: conn} do
+      play = play_fixture(%{"title" => "Doomed Play", "code" => "EMOTHE9990_Doomed"})
+      {:ok, _} = Catalogue.delete_play(play)
+      %{play: play, admin: log_in_user(conn, admin_fixture())}
+    end
+
+    defp open_delete(view, play),
+      do:
+        view
+        |> element("#play-#{play.id} button[aria-label='#{t("Delete permanently")}']")
+        |> render_click()
+
+    defp confirm_delete(view, code),
+      do: view |> form("#purge-modal form", %{"code" => code}) |> render_submit()
+
+    test "an admin deletes it for good by typing its code", %{admin: conn, play: play} do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays?archived=1")
+
+      open_delete(view, play)
+      assert has_element?(view, "#purge-modal", play.code)
+      confirm_delete(view, "EMOTHE9990_Doomed")
+
+      refute has_element?(view, "#play-#{play.id}")
+      assert has_element?(view, "#flash-info", t("%{title} was deleted.", title: "Doomed Play"))
+      refute Enum.any?(Catalogue.list_plays(include_deleted: true), &(&1.id == play.id))
+
+      assert [%{metadata: %{"code" => "EMOTHE9990_Doomed", "purged" => true}}] =
+               ActivityLog.list_entries(resource_type: "play", action: "delete")
+               |> Enum.filter(&(&1.resource_id == play.id))
+    end
+
+    test "a code typed wrong deletes nothing", %{admin: conn, play: play} do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays?archived=1")
+
+      open_delete(view, play)
+      assert has_element?(view, "#purge-modal button[type=submit][disabled]")
+
+      view |> form("#purge-modal form", %{"code" => "EMOTHE9990"}) |> render_change()
+      assert has_element?(view, "#purge-modal button[type=submit][disabled]")
+
+      view |> form("#purge-modal form", %{"code" => "EMOTHE9990_Doomed"}) |> render_change()
+      refute has_element?(view, "#purge-modal button[type=submit][disabled]")
+
+      confirm_delete(view, "Doomed Play")
+
+      assert has_element?(view, "#purge-modal")
+      assert Catalogue.get_play!(play.id, archived: true)
+    end
+
+    test "a researcher is offered no delete, and one sent by hand is refused",
+         %{conn: conn, play: play} do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays?archived=1")
+
+      refute has_element?(view, "button[aria-label='#{t("Delete permanently")}']")
+      render_click(view, "open_purge", %{"id" => play.id})
+      render_click(view, "purge", %{"code" => play.code})
+
+      assert Catalogue.get_play!(play.id, archived: true)
+    end
+  end
+
   test "the heading names what the page holds and how many, archived plays not counted",
        %{conn: conn} do
     play_fixture()
@@ -345,8 +407,16 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
         view
         |> render()
         |> LazyHTML.from_fragment()
-        |> LazyHTML.query("tbody tr")
+        |> LazyHTML.query("tbody tr[id]")
         |> LazyHTML.attribute("id")
+
+    defp headings(view),
+      do:
+        view
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("tbody tr:not([id])")
+        |> Enum.map(&(&1 |> LazyHTML.text() |> String.trim()))
 
     defp derived(original, attrs) do
       %{"parent_play_id" => original.id, "relationship_type" => "traduccion"}
@@ -357,7 +427,9 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     defp search(view, term),
       do: view |> element("form[phx-change=search]") |> render_change(%{"search" => term})
 
-    test "a derived play is listed under its original, named by its kind", %{conn: conn} do
+    # The kind used to be named on each derived row; it is now a heading over its group.
+    test "a derived play is listed under its original, under a heading naming its kind",
+         %{conn: conn} do
       middle = play_fixture(%{"title_sort" => "Middle"})
       original = play_fixture(%{"title_sort" => "Zeta"})
       translation = derived(original, %{"title_sort" => "Alpha"})
@@ -374,9 +446,30 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
                "play-#{adaptation.id}"
              ]
 
-      assert has_element?(view, "#play-#{translation.id} td", t("Translation"))
-      assert has_element?(view, "#play-#{adaptation.id} td", t("Adaptation"))
-      refute has_element?(view, "#play-#{original.id} td", t("Translation"))
+      assert headings(view) == [t("Translations"), t("Adaptations")]
+      refute has_element?(view, "#play-#{translation.id} td", t("Translation"))
+    end
+
+    test "a family's derived plays go by kind, then language, then title, each kind headed once",
+         %{conn: conn} do
+      original = play_fixture(%{"title_sort" => "Original"})
+      version = derived(original, %{"title_sort" => "A", "relationship_type" => "version"})
+      adaptation = derived(original, %{"title_sort" => "B", "relationship_type" => "adaptacion"})
+      french = derived(original, %{"title_sort" => "C", "language" => "fr"})
+      english_b = derived(original, %{"title_sort" => "E", "language" => "en"})
+      english_a = derived(original, %{"title_sort" => "D", "language" => "en"})
+      untyped = derived(original, %{"title_sort" => "0", "relationship_type" => nil})
+
+      {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+      assert row_ids(view) ==
+               Enum.map(
+                 [original, english_a, english_b, french, adaptation, version, untyped],
+                 &"play-#{&1.id}"
+               )
+
+      assert headings(view) ==
+               [t("Translations"), t("Adaptations"), t("Versions"), t("Kind not set")]
     end
 
     test "a search that finds one member shows the whole family, the original first",

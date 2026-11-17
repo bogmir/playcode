@@ -22,6 +22,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
     play = mark_complete!(structure.play)
 
     {:ok, _} = Catalogue.create_play_source(%{play_id: play.id, title: "Fuente", position: 1})
+    {:ok, _} = Catalogue.delete_play(play_fixture(%{"title" => "Archivada"}))
 
     {:ok, _} =
       Catalogue.create_play_editor(%{
@@ -191,6 +192,7 @@ defmodule PlaycodeWeb.AccessibilityTest do
           {"/admin/plays/:id/bibliography", [{"button", t("Add existing")}]},
           {"/admin/plays/:id/places", [{"button", t("New place")}]},
           {"/admin/places", [{"button", t("New place")}]},
+          {"/admin/plays?archived=1", [{"button[aria-label='#{t("Delete permanently")}']", nil}]},
           {content, [tab.(t("Paratexts")), {"button", t("Add Paratext")}]},
           {content, [tab.(t("Cast list")), {"button", t("Add Character")}]},
           {content, [tab.(t("Character Review")), {"button", t("Select all")}]},

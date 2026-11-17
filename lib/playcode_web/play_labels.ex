@@ -288,6 +288,12 @@ defmodule PlaycodeWeb.PlayLabels do
   def relationship_type_label("adaptacion"), do: gettext("Adaptation")
   def relationship_type_label("version"), do: gettext("Version")
 
+  @doc "The heading over a group of plays of one kind; nil, the kind never set."
+  def relationship_group_label("traduccion"), do: gettext("Translations")
+  def relationship_group_label("adaptacion"), do: gettext("Adaptations")
+  def relationship_group_label("version"), do: gettext("Versions")
+  def relationship_group_label(nil), do: gettext("Kind not set")
+
   @doc "The kinds for the play form's select, an original first."
   def relationship_type_options do
     [{gettext("— (Original / standalone)"), ""}] ++

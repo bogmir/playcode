@@ -62,8 +62,9 @@ defmodule Playcode.Catalogue do
   @doc """
   One page of families (`Playcode.Catalogue.Families`) in title order, with how many there
   are in all. A family is listed whole when a member matches `:search` and `:status`; its
-  root always heads it, and only its derived plays that pass `:status` are kept. Each play
-  says whether it matched.
+  root always heads it, and only its derived plays that pass `:status` are kept, by kind
+  (`Play.relationship_types/0`'s order, an unset kind last), then language, then title.
+  Each play says whether it matched.
   """
   def list_families(opts \\ []) do
     page = opts[:page] || 1
@@ -87,7 +88,7 @@ defmodule Playcode.Catalogue do
             match?: root.id in matched,
             derived:
               for(
-                play <- members,
+                play <- Enum.sort_by(members, &{kind_rank(&1.relationship_type), &1.language}),
                 play.id != root.id,
                 play.id in visible,
                 do: %{play: play, match?: play.id in matched}
@@ -96,6 +97,11 @@ defmodule Playcode.Catalogue do
 
     {Enum.slice(families, (page - 1) * per_page, per_page), length(families)}
   end
+
+  defp kind_rank(kind),
+    do:
+      Enum.find_index(Play.relationship_types(), &(&1 == kind)) ||
+        length(Play.relationship_types())
 
   @doc """
   How many plays `list_plays/1` finds for the same options, all pages together.
