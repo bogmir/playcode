@@ -239,7 +239,7 @@ archive opened as `file://`. The full write-up is `docs/static-site.md`; the rul
 - **The search normaliser has two halves that must agree**: `StaticSite.Search` and `EMOTHE.normalise` in `site.js`, both run against `test/fixtures/search_normalisation.json`. The browser half runs under `node --test`; `catalogue.js` normalises through it and never with one of its own.
 - **Generate rebuilds only what changed** (`build.json`, `StaticSite.Fingerprint`). There is no forced full rebuild: a play Generate misses is a tracking bug. `fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access.
 - **A page links a style or script as `assets/…?v=` and `@site.assets`**, the assets' stamp, which an asset change moves in every page in place; an unstamped link lets a returning reader's browser pair new pages with an old stylesheet. The font preload is the exception (it must match `style.css`'s `url()`).
-- **Size budgets** for `style.css` (25 KB), `site.js`, `search.js` and `catalogue.js` (15 KB each), `catalogue.css` (8 KB) and the fonts (300 KB) are asserted in `static_site_test.exs`. The catalogue's code and styles live in `catalogue.js` and `catalogue.css`, which only `index.html` loads.
+- **Size budgets** for `style.css` (25 KB), `site.js` and `search.js` (15 KB each), `catalogue.js` (20 KB), `catalogue.css` (8 KB) and the fonts (300 KB) are asserted in `static_site_test.exs`. The catalogue's code and styles live in `catalogue.js` and `catalogue.css`, which only `index.html` loads.
 - **`assets/js/sync_scroll.mjs` is the comparison's one scroll-sync implementation**: the compare pages' hook imports it and the static site's `StaticSite.Comparison` inlines it at compile time.
 </important>
 

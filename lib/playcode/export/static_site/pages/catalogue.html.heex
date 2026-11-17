@@ -3,11 +3,59 @@
   title={tp("EMOTHE — Catalogue")}
   current={:catalogue}
   site={@site}
-  rail_label={t("Filters")}
   stylesheet="catalogue.css"
 >
-  <:rail>
-    <%!-- One form for the 23 controls: the text search and the sort above the list join it by form="search". Hidden until catalogue.js runs: without it, the page is the full list. --%>
+  <h1>{t("Catalogue")}</h1>
+  <p class="intro">
+    {t(
+      "A repertoire of plays from the five basic traditions of early modern European theatre (Italian, English, French, Portuguese and Spanish), with their translations and adaptations."
+    )}
+  </p>
+  <p class="lede">
+    {tn("%{count} play", "%{count} plays", @count)} · {tn(
+      "%{count} author",
+      "%{count} authors",
+      @authors
+    )}
+  </p>
+  <%!-- The box searches the records and the texts at once; the filters are a panel under it.
+       Hidden until catalogue.js runs: without it, the page is the full list. --%>
+  <div class="find" data-catalogue-controls hidden>
+    <div class="box" role="search">
+      <label for="c-q" class="sr-only">{t("Search the catalogue")}</label>
+      <input
+        type="search"
+        id="c-q"
+        name="q"
+        form="search"
+        autocomplete="off"
+        {ta("placeholder", "Title, author, character or words of the text")}
+      />
+    </div>
+    <div class="tools">
+      <fieldset class="seg">
+        <legend class="sr-only">{t("Show")}</legend>
+        <label>
+          <input type="radio" name="sec" value="" form="search" checked /> {t("Everything")}
+        </label>
+        <label><input type="radio" name="sec" value="o" form="search" /> {t("Plays")}</label>
+        <label>
+          <input type="radio" name="sec" value="t" form="search" /> {t("Texts and notes")}
+        </label>
+      </fieldset>
+      <button type="button" class="more" aria-expanded="false" aria-controls="search" data-filters>
+        {t("Filters")} <span data-active></span>
+      </button>
+      <label class="sort">
+        {t("Sort")}
+        <select name="sort" form="search">
+          <option value="" {ta("label", "Author")}></option>
+          <option value="title" {ta("label", "Title")}></option>
+          <option value="date" {ta("label", "Date")}></option>
+        </select>
+      </label>
+    </div>
+    <div class="chips" data-chips></div>
     <form
       id="search"
       class="search"
@@ -16,6 +64,21 @@
       data-assets={@site.assets}
       hidden
     >
+      <details open>
+        <summary>{t("Text and notes")}</summary>
+        <fieldset>
+          <legend class="sr-only">{t("Match")}</legend>
+          <label><input type="radio" name="m" value="" checked /> {t("Starts with")}</label>
+          <label><input type="radio" name="m" value="w" /> {t("Exact word")}</label>
+        </fieldset>
+        <fieldset>
+          <legend class="sr-only">{t("Where")}</legend>
+          <label><input type="radio" name="in" value="" checked /> {t("Everywhere")}</label>
+          <label><input type="radio" name="in" value="s" /> {t("Speeches")}</label>
+          <label><input type="radio" name="in" value="d" /> {t("Stage directions")}</label>
+          <label><input type="radio" name="in" value="n" /> {t("Notes")}</label>
+        </fieldset>
+      </details>
       <details open>
         <summary>{t("Play")}</summary>
         <.search_text name="t" label={t("Title")} hint={t("(or code)")} />
@@ -80,77 +143,32 @@
       </details>
       <button type="reset" class="more">{t("Clear filters")}</button>
     </form>
-  </:rail>
-  <h1>{t("Catalogue")}</h1>
-  <p class="intro">
-    {t(
-      "A repertoire of plays from the five basic traditions of early modern European theatre (Italian, English, French, Portuguese and Spanish), with their translations and adaptations."
-    )}
-  </p>
-  <p class="lede">
-    {tn("%{count} play", "%{count} plays", @count)} · {tn(
-      "%{count} author",
-      "%{count} authors",
-      @authors
-    )}
-  </p>
-  <div class="controls" data-catalogue-controls hidden>
-    <div class="text" role="search">
-      <label for="c-q">{t("Text and notes")}</label>
-      <input
-        type="search"
-        id="c-q"
-        name="q"
-        form="search"
-        autocomplete="off"
-        {ta("placeholder", "Search every line and every note of every play")}
-      />
-      <fieldset>
-        <legend class="sr-only">{t("Match")}</legend>
-        <label>
-          <input type="radio" name="m" value="" form="search" checked /> {t("Starts with")}
-        </label>
-        <label><input type="radio" name="m" value="w" form="search" /> {t("Exact word")}</label>
-      </fieldset>
-      <fieldset>
-        <legend class="sr-only">{t("Where")}</legend>
-        <label>
-          <input type="radio" name="in" value="" form="search" checked /> {t("Everywhere")}
-        </label>
-        <label><input type="radio" name="in" value="s" form="search" /> {t("Speeches")}</label>
-        <label>
-          <input type="radio" name="in" value="d" form="search" /> {t("Stage directions")}
-        </label>
-        <label><input type="radio" name="in" value="n" form="search" /> {t("Notes")}</label>
-      </fieldset>
-    </div>
-    <label>
-      {t("Sort")}
-      <select name="sort" form="search">
-        <option value="" {ta("label", "Author")}></option>
-        <option value="title" {ta("label", "Title")}></option>
-        <option value="date" {ta("label", "Date")}></option>
-      </select>
-    </label>
   </div>
   <p data-count aria-live="polite" class="lede"></p>
-  <ol class="works" data-works>
-    <li
-      :for={work <- @works}
-      class="work"
-      data-work
-      data-author={work.sort_author}
-      data-title={work.sort_title}
-      data-date={work.date}
-    >
-      <Components.catalogue_entry play={work.play} lead compare={work.compare} />
-      <ul :if={work.translations != []} class="translations">
-        <li :for={translation <- work.translations}>
-          <Components.catalogue_entry play={translation} />
-        </li>
-      </ul>
-    </li>
-  </ol>
+  <section data-sect="o">
+    <h2 class="sect" hidden></h2>
+    <ol class="works" data-works>
+      <li
+        :for={work <- @works}
+        class="work"
+        data-work
+        data-author={work.sort_author}
+        data-title={work.sort_title}
+        data-date={work.date}
+      >
+        <Components.catalogue_entry play={work.play} lead compare={work.compare} />
+        <ul :if={work.translations != []} class="translations">
+          <li :for={translation <- work.translations}>
+            <Components.catalogue_entry play={translation} />
+          </li>
+        </ul>
+      </li>
+    </ol>
+  </section>
+  <%!-- catalogue.js copies the list in here for the plays whose text holds the box's words. --%>
+  <section data-sect="t" hidden>
+    <h2 class="sect"></h2>
+  </section>
   <script src={"assets/catalogue.js?v=" <> @site.assets} defer>
   </script>
 </Components.shell>

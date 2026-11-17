@@ -14,22 +14,37 @@
 .code { font: .6875rem var(--sans); color: var(--faint); font-variant-numeric: tabular-nums; }
 .translations { list-style: none; margin: .4rem 0 0 1.1rem; padding: 0; font-size: .9375rem; }
 
-/* The form: six groups in the rail, the text search and the sort above the list. */
+/* The box, the bar under it (what to show, Filters, Sort), the filters in use, and the panel. */
+.find { margin: 1rem 0; max-width: 48rem; font: .8125rem var(--sans); color: var(--ink-2); }
+.box input { box-sizing: border-box; width: 100%; font: 1.125rem var(--serif); padding: .65rem 1.1rem; border: 1px solid var(--faint); border-radius: 999px; background: var(--raised); color: var(--ink); }
+.tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin: .7rem 0; }
+.seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 999px; margin: 0; padding: 0; overflow: hidden; }
+.seg label { padding: .3rem .8rem; cursor: pointer; }
+.seg input { position: absolute; opacity: 0; }
+.seg label:has(:checked) { background: var(--accent); color: var(--paper); }
+.seg label:has(:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tools .more { margin: 0; }
+[data-active]:not(:empty) { display: inline-block; min-width: 1.2rem; margin-left: .3rem; border-radius: 999px; background: var(--accent); color: var(--paper); font-weight: 600; text-align: center; }
+.sort { margin-left: auto; }
+.sort select { width: auto; margin-left: .4rem; font: .875rem var(--sans); padding: .3rem .4rem; border: 1px solid var(--faint); border-radius: 6px; background: var(--raised); color: var(--ink); }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.chip { display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .3rem .15rem .7rem; border-radius: 999px; background: var(--mark); color: var(--ink-2); }
+.chip b { color: var(--ink); font-weight: 600; }
+.chip button { border: 0; background: none; color: var(--ink-2); font: 1rem/1 var(--sans); padding: 0 .25rem; cursor: pointer; }
+.search { margin-top: .8rem; padding: .2rem 1rem .8rem; border: 1px solid var(--hair); border-radius: 8px; background: var(--raised); display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: 0 1.5rem; }
 .search details { border-top: 1px solid var(--hair-2); padding: .5rem 0; }
 .search summary { font: 600 .6875rem var(--sans); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); cursor: pointer; }
 .search summary small { text-transform: none; letter-spacing: 0; font-weight: 400; }
-.search label, .controls .text > label { display: block; margin: .6rem 0 .2rem; font: .8125rem var(--sans); color: var(--ink-2); }
+.search label { display: block; margin: .6rem 0 .2rem; color: var(--ink-2); }
 .search label small { color: var(--muted); }
-.search input, .search select, .controls input[type="search"], .controls select { box-sizing: border-box; width: 100%; font: .875rem var(--sans); padding: .35rem .5rem; border: 1px solid var(--faint); border-radius: 6px; background: var(--raised); color: var(--ink); }
+.search input:not([type=radio]), .search select { box-sizing: border-box; width: 100%; font: .875rem var(--sans); padding: .35rem .5rem; border: 1px solid var(--faint); border-radius: 6px; background: var(--paper); color: var(--ink); }
+.search fieldset { border: 0; margin: .4rem 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: .2rem .75rem; }
+.search fieldset label { display: inline-flex; gap: .3rem; align-items: center; margin: 0; }
 .search .range { display: flex; align-items: center; gap: .4rem; }
 .search .range input { min-width: 0; }
-.search button { margin-top: 1rem; }
-.controls { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: end; margin: 1rem 0; max-width: 48rem; font: .8125rem var(--sans); color: var(--ink-2); }
-.controls .text { flex: 1 1 20rem; }
-.controls input[type="search"] { font: 1.0625rem var(--serif); padding: .5rem .8rem; }
-.controls fieldset { display: inline-flex; flex-wrap: wrap; gap: .2rem .75rem; border: 0; margin: .4rem 1.25rem 0 0; padding: 0; }
-.controls fieldset label { display: inline-flex; gap: .3rem; align-items: center; }
-.controls > label select { width: auto; margin-left: .4rem; }
+.search > button { justify-self: start; margin-top: .8rem; }
+.sect { margin: 1.4rem 0 .2rem; font: 600 .75rem var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.entry .why { flex-basis: 100%; font: .75rem var(--sans); color: var(--muted); }
 
 /* A row's passages, when the search has words. */
 .passages { margin: .3rem 0 0; font: .875rem/1.5 var(--serif); }
@@ -41,5 +56,5 @@
 .passages .ref { margin-right: .6rem; font: .75rem var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 @media print {
-  .controls { display: none !important; }
+  .find { display: none !important; }
 }

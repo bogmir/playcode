@@ -70,8 +70,25 @@
     });
   };
 
+  function has(value, word) { return E.normalise(value).indexOf(word) !== -1; }
+
+  // The box's words (E.words): each must be in the play's titles, code, author, characters or places,
+  // or the play is not found (null). A word found only in a character or a place names it, once.
+  R.about = function (e, words) {
+    var said = [], own = (e.t || []).concat(e.c, e.a).filter(Boolean);
+    for (var i = 0; i < words.length; i++) {
+      var w = words[i], hint = null;
+      if (own.some(function (v) { return has(v, w); })) continue;
+      (e.n || []).some(function (v) { return has(v, w) && (hint = ['n', v]); }) ||
+        (e.p || []).some(function (names) { return names.some(function (v) { return has(v, w); }) && (hint = ['p', names[0]]); });
+      if (!hint) return null;
+      if (!said.some(function (h) { return h[1] === hint[1]; })) said.push(hint);
+    }
+    return said;
+  };
+
   // The address's names, in the order it writes them.
-  var NAMES = 't a l o k s f x q m in d wt wc wy wf rp rv rc ry rk ra h p n sort'.split(' ');
+  var NAMES = 't a l o k s f x q sec m in d wt wc wy wf rp rv rc ry rk ra h p n sort'.split(' ');
 
   // "#l=en&d=1600-" to { l: "en", d: "1600-" }; unknown names and undecodable values dropped.
   R.parse = function (hash) {
@@ -128,11 +145,11 @@
   if (!root.document) return;
 
   // The page. It never decides a match: R.match and R.shown do.
-  var RANGES = ['d', 'wy', 'ry'], NOT_RECORDS = ['q', 'm', 'in', 'sort'];
+  var RANGES = ['d', 'wy', 'ry'], NOT_RECORDS = ['sec', 'm', 'in', 'sort'], NOT_CHIPS = NOT_RECORDS.concat('q');
   var KINDS = { s: 'spoken', d: 'stage', n: 'note' }, FIRST = 5;
   // A datalist's values: where they are in an entry, or in its witnesses or performances.
   var SUGGEST = [['a', '', 'a'], ['wc', 'w', 1], ['rp', 'r', 0], ['rv', 'r', 1], ['rk', 'r', 5], ['ra', 'r', 6], ['p', '', 'p']];
-  var form, list, count, W, works, rows, prepared, loading, engine, found, sorted = '';
+  var form, list, textList, count, W, works, codes, prepared, raw, loading, engine, found, sorted = '';
 
   function say(pair) { return E.say(pair[0], pair[1]); }
   function each(selector, scope, fn) { scope.querySelectorAll(selector).forEach(fn); }
@@ -197,12 +214,14 @@
   function reorder(key) {
     if (key === sorted) return;
     key = (sorted = key) || 'author';
-    Array.from(list.children).sort(function (a, b) {
-      var x = a.dataset[key] || '', y = b.dataset[key] || '';
-      if (x === y) return 0;
-      if (key === 'date') { x = x ? Number(x) : Infinity; y = y ? Number(y) : Infinity; return x - y; }
-      return x.localeCompare(y);
-    }).forEach(function (item) { list.appendChild(item); });
+    [list, textList].forEach(function (ol) {
+      Array.from(ol.children).sort(function (a, b) {
+        var x = a.dataset[key] || '', y = b.dataset[key] || '';
+        if (x === y) return 0;
+        if (key === 'date') { x = x ? Number(x) : Infinity; y = y ? Number(y) : Infinity; return x - y; }
+        return x.localeCompare(y);
+      }).forEach(function (item) { ol.appendChild(item); });
+    });
   }
 
   function el(tag, cls, text) {
@@ -230,10 +249,9 @@
     count.textContent = say(W.searching);
     needEngine().then(function () { return E.search && E.search.find(state.q, modeOf(state)); })
       .then(function (hits) {
-        if (!hits) { count.textContent = say(W.unavailable); return; }
         // A search typed over by another is dropped: the later one shows.
         if (textKey(read()) !== textKey(state)) return;
-        found = { key: textKey(state), hits: hits };
+        found = { key: textKey(state), hits: hits || {}, failed: !hits };
         filter(read());
       });
   }
@@ -273,28 +291,74 @@
     row.after(details);
   }
 
-  // Shows the rows the state lets through: every row until the records land; with words, only plays with hits.
-  function filter(state) {
-    var asked = recordsAsked(state), all = !asked || !prepared;
-    var text = E.words(state.q || '').length > 0, kind = KINDS[state.in], lines = {};
-    if (text && (!found || found.key !== textKey(state))) { search(state); return; }
-    var passing = {};
-    rows.forEach(function (row) {
-      var code = row.dataset.code;
-      lines[code] = text && (found.hits[code] || [])
-        .filter(function (h) { return !kind || h[1] === kind; }).map(function (h) { return h[0]; });
-      passing[code] = (all || !!prepared[code] && R.match(prepared[code], state)) && (!text || lines[code].length > 0);
-    });
-    each('[data-hits], .passages', list, function (node) { node.remove(); });
+  // One list's rows: those passing show, a lead heads a passing translation, muted. A row found
+  // by a character or a place says which; with lines, a row gets its passages.
+  function show(ol, passing, state, why, lines) {
+    each('[data-hits], [data-why], .passages', ol, function (node) { node.remove(); });
     var result = R.shown(works, passing);
-    rows.forEach(function (row) {
-      var shown = result.rows[row.dataset.code];
+    each('[data-play]', ol, function (row) {
+      var code = row.dataset.code, shown = result.rows[code];
       row.hidden = shown === 'hide';
       row.classList.toggle('muted', shown === 'muted');
-      if (text && passing[row.dataset.code]) passages(row, lines[row.dataset.code], state);
+      if (!passing[code]) return;
+      if (lines) passages(row, lines[code], state);
+      else if (why && why[code] && why[code].length) {
+        row.appendChild(el('span', 'why', why[code].map(function (h) {
+          return say(W[h[0] === 'n' ? 'character' : 'place']) + ': ' + h[1];
+        }).join(' · '))).setAttribute('data-why', '');
+      }
     });
-    each('[data-work]', list, function (work) { work.hidden = !work.querySelector('[data-play]:not([hidden])'); });
-    count.textContent = result.count === rows.length ? '' : counted(result.count, 'play', 'plays') + ' ' + say(W.of) + ' ' + rows.length;
+    each('[data-work]', ol, function (work) { work.hidden = !work.querySelector('[data-play]:not([hidden])'); });
+    return result.count;
+  }
+
+  // Without words, one list: every row until the records land. With words, the plays whose record
+  // holds them (section o) and those whose text does (section t), each section alone if asked.
+  function filter(state) {
+    var words = E.words(state.q || ''), text = words.length > 0, sec = state.sec || '';
+    var inText = text && sec !== 'o', kind = KINDS[state.in], all = !recordsAsked(state) || !prepared;
+    if (inText && (!found || found.key !== textKey(state))) { search(state); return; }
+    var byRecord = {}, byText = {}, why = {}, lines = {}, total = 0;
+    codes.forEach(function (code) {
+      var ok = all || !!prepared[code] && R.match(prepared[code], state);
+      why[code] = text && ok && prepared && raw[code] ? R.about(raw[code], words) : null;
+      byRecord[code] = text ? !!why[code] : ok;
+      lines[code] = inText ? (found.hits[code] || []).filter(function (h) { return !kind || h[1] === kind; })
+        .map(function (h) { return h[0]; }) : [];
+      byText[code] = ok && lines[code].length > 0;
+      if (byText[code]) total += lines[code].length;
+    });
+    var plays = show(list, byRecord, state, why), heads = document.querySelectorAll('.sect');
+    list.parentNode.hidden = text && sec === 't';
+    textList.parentNode.hidden = !inText;
+    heads[0].hidden = !text;
+    heads[0].textContent = say(W.works) + ' · ' + counted(plays, 'play', 'plays');
+    if (inText) {
+      heads[1].textContent = say(W.texts) + ' · ' + counted(show(textList, byText, state, null, lines), 'play', 'plays') +
+        ' · ' + counted(total, 'passage', 'passages');
+    }
+    count.textContent = inText && found.failed ? say(W.unavailable)
+      : text || plays === codes.length ? '' : counted(plays, 'play', 'plays') + ' ' + say(W.of) + ' ' + codes.length;
+  }
+
+  // Each filter in use as a chip naming it, its button taking it off; the Filters button counts them.
+  function chips(state) {
+    var box = document.querySelector('[data-chips]'), n = 0, lang = E.say('x-es', 'x-en');
+    box.textContent = '';
+    NAMES.forEach(function (name) {
+      var v = state[name];
+      if (!v || NOT_CHIPS.indexOf(name) >= 0) return;
+      var control = form.elements[RANGES.indexOf(name) < 0 ? name : name + '-from'];
+      var label = form.querySelector('label[for="' + control.id + '"]'), off = el('button', null, '×');
+      label = (label.querySelector(lang) || label.firstChild).textContent.trim();
+      off.type = 'button';
+      off.setAttribute('aria-label', say(W.remove) + ' ' + label);
+      off.onclick = function () { var s = read(); delete s[name]; write(s); update(); };
+      var chip = box.appendChild(el('span', 'chip', label + ': '));
+      chip.append(el('b', null, control.tagName === 'SELECT' ? control.selectedOptions[0].label.replace(/ \(\d+\)$/, '') : v.replace('-', '–')), off);
+      n++;
+    });
+    document.querySelector('[data-active]').textContent = n || '';
   }
 
   function update() {
@@ -302,12 +366,14 @@
     try { root.history.replaceState(null, '', address ? '#' + address : root.location.pathname); } catch (e) { /* file:// may refuse */ }
     if (recordsAsked(state)) loadRecords();
     reorder(state.sort || '');
+    chips(state);
     filter(state);
   }
 
   R.ready(function (entries) {
     prepared = {};
-    entries.forEach(function (e) { prepared[e.c] = R.prepare(e); });
+    raw = {};
+    entries.forEach(function (e) { prepared[e.c] = R.prepare(e); raw[e.c] = e; });
     suggest(entries);
     filter(read());
   });
@@ -318,12 +384,17 @@
     list = document.querySelector('[data-works]');
     count = document.querySelector('[data-count]');
     W = JSON.parse(form.dataset.words);
-    rows = Array.from(list.querySelectorAll('[data-play]'));
+    codes = Array.from(list.querySelectorAll('[data-play]'), function (row) { return row.dataset.code; });
     works = Array.from(list.children, function (work) {
       return Array.from(work.querySelectorAll('[data-play]'), function (row) { return row.dataset.code; });
     });
-    form.hidden = false;
+    textList = list.cloneNode(true);
+    textList.removeAttribute('data-works');
+    textList.setAttribute('data-works-text', '');
+    document.querySelector('[data-sect="t"]').appendChild(textList);
     document.querySelector('[data-catalogue-controls]').hidden = false;
+    var toggle = document.querySelector('[data-filters]');
+    toggle.onclick = function () { form.hidden = !form.hidden; toggle.setAttribute('aria-expanded', !form.hidden); };
     write(R.parse(root.location.hash));
     // The text search and the sort are outside the form's element, tied by form="search".
     var typed = R.later(update, 300);
@@ -336,7 +407,7 @@
     });
     form.addEventListener('reset', function () { setTimeout(update); });
     root.addEventListener('hashchange', function () { write(R.parse(root.location.hash)); update(); });
-    document.addEventListener('emothe:ui', function () { filter(read()); });
+    document.addEventListener('emothe:ui', function () { chips(read()); filter(read()); });
     update();
   });
 })(typeof window !== 'undefined' ? window : globalThis);

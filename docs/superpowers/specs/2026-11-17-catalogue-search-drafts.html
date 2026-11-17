@@ -1,0 +1,584 @@
+<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catalogue Search Drafts</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+<style>
+/* The static site's own tokens (priv/static_site/style.css): the drafts must look like the site. */
+:root {
+  --paper: #f7f4ea; --raised: #fffdf7; --ink: #221c2e; --ink-2: #4a4458; --muted: #645d70; --faint: #6f687b;
+  --hair: #ddd6c2; --hair-2: #e9e4d3; --accent: #4c2c82; --mark: #efe6c4; --band: #4c2c82; --gold: #c9a63c; --on-band: #ffffff;
+  --note-bg: #efe9d8;
+  --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+  --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --paper: #16131c; --raised: #1d1925; --ink: #ebe7f0; --ink-2: #c4bdd0; --muted: #a39cb0; --faint: #8f889c;
+  --hair: #332c3f; --hair-2: #211c2a; --accent: #bfa9ee; --mark: #33284d; --band: #3a2166; --gold: #c9a63c; --on-band: #ffffff;
+  --note-bg: #211c2a; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --paper: #16131c; --raised: #1d1925; --ink: #ebe7f0; --ink-2: #c4bdd0; --muted: #a39cb0; --faint: #8f889c;
+  --hair: #332c3f; --hair-2: #211c2a; --accent: #bfa9ee; --mark: #33284d; --band: #3a2166; --gold: #c9a63c; --on-band: #ffffff;
+  --note-bg: #211c2a; color-scheme: dark; }
+
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--paper); color: var(--ink); font: 400 1.0625rem/1.6 var(--serif); }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 64rem; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+.top { background: var(--band); border-bottom: 3px solid var(--gold); color: var(--on-band); }
+.top .wrap { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem; padding-block: .6rem; }
+.brand { font: 600 1rem var(--sans); letter-spacing: .12em; }
+.tabs { display: flex; flex-wrap: wrap; gap: .25rem; margin-left: auto; }
+.tabs a { font: 500 .8125rem var(--sans); color: var(--on-band); text-decoration: none; padding: .3rem .7rem; border-radius: 999px; border: 1px solid transparent; }
+.tabs a[aria-current="page"] { border-color: var(--gold); }
+
+.sample { font: .75rem var(--sans); color: var(--muted); margin: .75rem 0 0; }
+.about { margin: 1rem 0 1.5rem; padding: .9rem 1.1rem; background: var(--note-bg); border-radius: 6px; font: .875rem/1.55 var(--sans); color: var(--ink-2); max-width: 48rem; }
+.about h2 { font: 600 1rem var(--sans); color: var(--ink); margin: 0 0 .35rem; }
+.about p { margin: .3rem 0; }
+.about b { color: var(--ink); }
+
+h1 { font-size: 2rem; font-weight: 600; margin: .2rem 0 .3rem; line-height: 1.2; }
+.lede { font: .8125rem/1.5 var(--sans); color: var(--muted); margin: 0 0 1rem; }
+
+/* The catalogue's list, as catalogue.css draws it. */
+.works { list-style: none; margin: 0; padding: 0; max-width: 48rem; }
+.work { padding: .85rem 0; border-top: 1px solid var(--hair-2); }
+.entry { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; }
+.entry-title { color: var(--ink); text-decoration: none; }
+.entry-title.lead { font-size: 1.2rem; font-weight: 600; }
+.entry.muted .entry-title { color: var(--muted); }
+.entry .author { flex-basis: 100%; font-size: .875rem; color: var(--ink-2); }
+.entry .meta { margin-left: auto; font: .75rem var(--sans); color: var(--muted); }
+.entry .why { flex-basis: 100%; font: .75rem var(--sans); color: var(--muted); }
+.entry .why mark { font-weight: 600; }
+.tag { font: 600 .625rem/1.5 var(--sans); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); border: 1px solid var(--hair); border-radius: 4px; padding: 0 .3rem; min-width: 2.1em; text-align: center; }
+.code { font: .6875rem var(--sans); color: var(--faint); }
+.translations { list-style: none; margin: .4rem 0 0 1.1rem; padding: 0; font-size: .9375rem; }
+.translations li + li { margin-top: .25rem; }
+.passages { margin: .35rem 0 0; font: .9rem/1.5 var(--serif); }
+.passages p { margin: .2rem 0; }
+.passages .ref { margin-right: .6rem; font: .75rem var(--sans); color: var(--muted); }
+.passages .s { font-style: italic; }
+.passages .n { font: .8125rem/1.5 var(--sans); color: var(--ink-2); }
+.passages button { font: .75rem var(--sans); color: var(--accent); background: none; border: 0; padding: 0; cursor: pointer; }
+mark { background: var(--mark); color: var(--accent); font-weight: 600; padding: 0 .1em; border-radius: 2px; }
+.count { font: .8125rem var(--sans); color: var(--muted); margin: .25rem 0 .5rem; }
+.empty { font: .875rem var(--sans); color: var(--muted); padding: .5rem 0 1rem; }
+
+/* Shared controls */
+label.lab { display: block; font: .8125rem var(--sans); color: var(--ink-2); margin-bottom: .2rem; }
+input[type=search], input[type=text], input[type=number], select { font: 1rem var(--sans); color: var(--ink); background: var(--raised); border: 1px solid var(--hair); border-radius: 6px; padding: .45rem .6rem; min-width: 0; }
+input[type=search]:focus, input[type=text]:focus, select:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px var(--mark); }
+.radios { display: flex; flex-wrap: wrap; gap: .2rem .9rem; font: .8125rem var(--sans); color: var(--ink-2); margin-top: .4rem; }
+.radios label { display: inline-flex; align-items: center; gap: .3rem; cursor: pointer; }
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; }
+.chip { display: inline-flex; align-items: center; gap: .35rem; font: .8125rem var(--sans); color: var(--accent); background: var(--mark); border: 0; border-radius: 999px; padding: .2rem .35rem .2rem .7rem; }
+.chip b { font-weight: 600; color: var(--ink); }
+.chip button { border: 0; background: none; color: var(--muted); cursor: pointer; font: 1rem/1 var(--sans); padding: 0 .2rem; }
+.btn { font: 500 .875rem var(--sans); color: var(--ink); background: var(--raised); border: 1px solid var(--hair); border-radius: 6px; padding: .45rem .8rem; cursor: pointer; }
+.btn.primary { background: var(--accent); color: var(--paper); border-color: var(--accent); }
+.badge { display: inline-block; min-width: 1.2rem; font: 600 .6875rem/1.2rem var(--sans); text-align: center; border-radius: 999px; background: var(--accent); color: var(--paper); margin-left: .3rem; }
+
+/* A: one box */
+.a-box { display: flex; gap: .5rem; max-width: 44rem; }
+.a-box input { flex: 1; font-size: 1.125rem; padding: .7rem 1rem; border-radius: 999px; }
+.a-box .btn { border-radius: 999px; }
+.a-under { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem; margin: .6rem 0 1rem; max-width: 44rem; }
+.seg { display: inline-flex; border: 1px solid var(--hair); border-radius: 999px; overflow: hidden; }
+.seg button { font: .8125rem var(--sans); color: var(--ink-2); background: none; border: 0; padding: .3rem .8rem; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--paper); }
+.a-panel { border: 1px solid var(--hair); border-radius: 8px; background: var(--raised); padding: 1rem; margin: 0 0 1rem; max-width: 44rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr)); gap: .8rem 1rem; }
+.a-panel select, .a-panel input { width: 100%; }
+.a-panel .later { grid-column: 1 / -1; font: .8125rem var(--sans); color: var(--muted); }
+h2.sect { font: 600 .75rem var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin: 1.4rem 0 .2rem; }
+h2.sect span { font-weight: 400; text-transform: none; letter-spacing: 0; }
+
+/* B: two boxes and a bar */
+.b-boxes { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: .8rem; max-width: 48rem; }
+.b-boxes input[type=search] { width: 100%; }
+.b-opts { display: flex; flex-wrap: wrap; gap: .3rem .6rem; margin-top: .35rem; }
+.b-opts select { font-size: .8125rem; padding: .2rem .4rem; }
+.b-bar { display: flex; flex-wrap: wrap; gap: .4rem; margin: .9rem 0 .3rem; max-width: 48rem; }
+.drop { position: relative; }
+.drop > summary { list-style: none; font: .8125rem var(--sans); color: var(--ink); border: 1px solid var(--hair); border-radius: 999px; padding: .25rem .75rem; cursor: pointer; background: var(--raised); }
+.drop > summary::-webkit-details-marker { display: none; }
+.drop > summary::after { content: " ▾"; color: var(--muted); }
+.drop.on > summary { border-color: var(--accent); color: var(--accent); background: var(--mark); }
+.drop .pop { position: absolute; z-index: 5; top: calc(100% + .3rem); left: 0; min-width: 14rem; padding: .8rem; background: var(--raised); border: 1px solid var(--hair); border-radius: 8px; box-shadow: 0 6px 20px rgb(0 0 0 / .15); display: grid; gap: .5rem; font: .8125rem var(--sans); }
+.drop .pop label { display: flex; align-items: center; gap: .4rem; cursor: pointer; }
+.drop .pop .range { display: flex; align-items: center; gap: .4rem; }
+.drop .pop input[type=number] { width: 5.5rem; font-size: .875rem; }
+.drop .pop .later { color: var(--muted); }
+
+/* C: one box that suggests */
+.c-box { position: relative; max-width: 44rem; }
+.c-field { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; background: var(--raised); border: 1px solid var(--hair); border-radius: 10px; padding: .45rem .6rem; cursor: text; }
+.c-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--mark); }
+.c-field input { flex: 1 1 10rem; border: 0; background: none; box-shadow: none !important; padding: .3rem .2rem; font-size: 1.0625rem; }
+.c-list { position: absolute; z-index: 5; left: 0; right: 0; top: calc(100% + .3rem); margin: 0; padding: .35rem 0; list-style: none; background: var(--raised); border: 1px solid var(--hair); border-radius: 10px; box-shadow: 0 8px 24px rgb(0 0 0 / .18); font: .875rem var(--sans); max-height: 24rem; overflow: auto; }
+.c-list .grp { font: 600 .6875rem var(--sans); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); padding: .45rem .9rem .15rem; }
+.c-list [role=option] { display: flex; gap: .6rem; align-items: baseline; padding: .35rem .9rem; cursor: pointer; color: var(--ink); }
+.c-list [role=option] .k { font-size: .75rem; color: var(--muted); min-width: 6.5rem; }
+.c-list [role=option] .n { margin-left: auto; font-size: .75rem; color: var(--muted); }
+.c-list [role=option][aria-selected="true"] { background: var(--mark); }
+.c-more { margin: .7rem 0 0; }
+.c-more summary { font: .8125rem var(--sans); color: var(--accent); cursor: pointer; }
+.c-rail { margin-top: .6rem; display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: .3rem 1rem; font: .8125rem var(--sans); color: var(--ink-2); max-width: 44rem; }
+.c-rail div { border-top: 1px solid var(--hair-2); padding: .4rem 0; }
+.c-rail small { color: var(--muted); display: block; }
+.c-help { font: .75rem var(--sans); color: var(--muted); margin: .45rem 0 0; }
+
+.views > section { padding-block: 1rem 3rem; }
+@media (max-width: 40rem) {
+  .b-boxes { grid-template-columns: minmax(0, 1fr); }
+  .tabs { margin-left: 0; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <span class="brand">EMOTHE</span>
+    <nav class="tabs" aria-label="Borradores">
+      <a href="#a">A · Una caja</a>
+      <a href="#b">B · Dos cajas</a>
+      <a href="#c">C · Caja con sugerencias</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap views">
+  <p class="sample">Draft for the catalogue page. Example data: 11 plays with a few sample passages each. The real page runs on <code>search/records.js</code> and the full-text index.</p>
+
+  <!-- ============ A ============ -->
+  <section id="view-a" aria-labelledby="a-h">
+    <div class="about">
+      <h2 id="a-h">A. One box, like Google</h2>
+      <p>A single box searches everything at once: title, author, code, character and place of action, and the words of the text and notes. The answer comes in two parts: <b>Obras</b>, the plays whose catalogue record matches (with the reason), and <b>En los textos</b>, the plays whose lines or notes hold the words, with their passages.</p>
+      <p>The rail goes. The filters sit behind a <b>Filtros</b> button, and each active one shows as a chip you can remove.</p>
+      <p><b>Good:</b> nothing to choose before typing. <b>Cost:</b> a play can appear in both parts; the filters are one click further away.</p>
+    </div>
+    <h1>Catálogo</h1>
+    <p class="lede" data-total></p>
+    <form class="a-box" role="search" id="a-form">
+      <label for="a-q" class="sr" hidden>Buscar</label>
+      <input type="search" id="a-q" aria-label="Buscar obras, autores o palabras del texto" placeholder="Título, autor, personaje o palabras del texto" value="sevilla" autocomplete="off">
+      <button class="btn primary" type="submit">Buscar</button>
+    </form>
+    <div class="a-under">
+      <div class="seg" role="group" aria-label="Buscar en">
+        <button type="button" data-scope="all" aria-pressed="true">Todo</button>
+        <button type="button" data-scope="works" aria-pressed="false">Obras</button>
+        <button type="button" data-scope="text" aria-pressed="false">Textos y notas</button>
+      </div>
+      <button type="button" class="btn" id="a-ftoggle" aria-expanded="false" aria-controls="a-panel">Filtros<span class="badge" id="a-fcount" hidden></span></button>
+      <div class="chips" id="a-chips"></div>
+    </div>
+    <div class="a-panel" id="a-panel" hidden>
+      <div><label class="lab" for="a-l">Idioma</label><select id="a-l" data-f="l"></select></div>
+      <div><label class="lab" for="a-k">Tipo</label><select id="a-k" data-f="k"></select></div>
+      <div><label class="lab" for="a-f">Verso o prosa</label><select id="a-f" data-f="f"></select></div>
+      <div><label class="lab" for="a-from">Datación, desde</label><input type="number" id="a-from" data-f="from" placeholder="1500"></div>
+      <div><label class="lab" for="a-to">hasta</label><input type="number" id="a-to" data-f="to" placeholder="1700"></div>
+      <p class="later">Testimonios, Representaciones, Tiempo y lugar: the same groups as now, folded, in this panel.</p>
+    </div>
+    <div id="a-out"></div>
+  </section>
+
+  <!-- ============ B ============ -->
+  <section id="view-b" aria-labelledby="b-h" hidden>
+    <div class="about">
+      <h2 id="b-h">B. Two boxes, filters in a bar</h2>
+      <p>Two boxes side by side, each with one job: <b>Obra</b> for title, author or code, and <b>En el texto</b> for words in the lines and notes. Both combine, and the answer is always one list of plays.</p>
+      <p>The rail becomes a bar of small menus above the list (Idioma, Tipo, Datación, Personaje…). A menu in use is highlighted; the rarer groups go under <b>Más filtros</b>.</p>
+      <p><b>Good:</b> closest to what we have now, and each box says what it does. <b>Cost:</b> two boxes to read before you type; the bar hides the rarer filters.</p>
+    </div>
+    <h1>Catálogo</h1>
+    <p class="lede" data-total></p>
+    <div class="b-boxes" role="search">
+      <div>
+        <label class="lab" for="b-w">Obra</label>
+        <input type="search" id="b-w" placeholder="Título, autor o código" value="calderón" autocomplete="off">
+      </div>
+      <div>
+        <label class="lab" for="b-q">En el texto</label>
+        <input type="search" id="b-q" placeholder="Palabras en los versos y las notas" value="sueño" autocomplete="off">
+        <div class="b-opts">
+          <select id="b-m" aria-label="Cómo coinciden las palabras"><option value="p">Empieza por</option><option value="w">Palabra exacta</option></select>
+          <select id="b-in" aria-label="Dónde buscar"><option value="">En todo</option><option value="v">Parlamentos</option><option value="s">Acotaciones</option><option value="n">Notas</option></select>
+        </div>
+      </div>
+    </div>
+    <div class="b-bar" id="b-bar">
+      <details class="drop" data-drop="l"><summary>Idioma</summary><div class="pop" data-opts="l"></div></details>
+      <details class="drop" data-drop="k"><summary>Tipo</summary><div class="pop" data-opts="k"></div></details>
+      <details class="drop" data-drop="d"><summary>Datación</summary><div class="pop"><div class="range"><input type="number" id="b-from" aria-label="Datación, desde" placeholder="desde"> – <input type="number" id="b-to" aria-label="Datación, hasta" placeholder="hasta"></div></div></details>
+      <details class="drop" data-drop="n"><summary>Personaje</summary><div class="pop"><input type="text" id="b-n" aria-label="Personaje" placeholder="p. ej. Hamlet"></div></details>
+      <details class="drop"><summary>Más filtros</summary><div class="pop"><span class="later">Colección, Verso o prosa, Con o sin texto, Testimonios, Representaciones, Tiempo y lugar: the same controls as now.</span></div></details>
+      <button type="button" class="btn" id="b-clear">Limpiar</button>
+    </div>
+    <p class="count" id="b-count" aria-live="polite"></p>
+    <div id="b-out"></div>
+  </section>
+
+  <!-- ============ C ============ -->
+  <section id="view-c" aria-labelledby="c-h" hidden>
+    <div class="about">
+      <h2 id="c-h">C. One box that suggests</h2>
+      <p>One box, but it tells you what your word could be. Type <i>sev</i> and it offers: a title with that word, the place of action Sevilla, words in the text, an author, a character. Pick one and it becomes a chip in the box; chips combine. Enter takes the first offer, "title or author".</p>
+      <p>The rail stays, folded under <b>Más filtros</b>, for the rarer groups.</p>
+      <p><b>Good:</b> one box with no guessing about what it searched. <b>Cost:</b> the most new code; an extra step (picking an offer) for someone who only wants to type and press Enter.</p>
+    </div>
+    <h1>Catálogo</h1>
+    <p class="lede" data-total></p>
+    <div class="c-box" role="search">
+      <div class="c-field" id="c-field">
+        <span class="chips" id="c-chips"></span>
+        <input type="text" id="c-q" role="combobox" aria-expanded="false" aria-controls="c-list" aria-autocomplete="list" aria-label="Buscar en el catálogo" placeholder="Escribe una obra, un autor, un personaje, un lugar o unas palabras" autocomplete="off">
+      </div>
+      <ul class="c-list" id="c-list" role="listbox" aria-label="Sugerencias" hidden></ul>
+    </div>
+    <p class="c-help">Try <i>sev</i>, <i>hamlet</i>, <i>vida</i> or <i>inglés</i>. ↑ ↓ to move, Enter to choose, Backspace in an empty box removes the last chip.</p>
+    <details class="c-more">
+      <summary>Más filtros</summary>
+      <div class="c-rail">
+        <div>Idioma, Idioma del original, Tipo, Colección<small>as now</small></div>
+        <div>Verso o prosa, Con o sin texto<small>as now</small></div>
+        <div>Datación<small>años desde / hasta</small></div>
+        <div>Testimonios<small>soporte, ciudad, año, formato</small></div>
+        <div>Representaciones<small>topónimo, lugar, circunstancia, fecha, compañía, reparto</small></div>
+        <div>Tiempo histórico<small>as now</small></div>
+      </div>
+    </details>
+    <p class="count" id="c-count" aria-live="polite"></p>
+    <div id="c-out"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  'use strict';
+  // Example plays. x: [ref, speaker, kind (v spoken, s stage direction, n note), text].
+  var P = [
+    { id: 'ham', c: 'EMOTHE0010_TheTragedyOfHamletPrinceOfDenmark', t: 'The Tragedy of Hamlet, Prince of Denmark', a: 'William Shakespeare', l: 'en', k: 'original', d: [1600, 1601], f: 'Verso y prosa',
+      n: ['HAMLET', 'OFELIA', 'HORACIO', 'CLAUDIO', 'GERTRUDIS'], pl: ['Elsinor', 'Dinamarca'],
+      x: [['III, 56', 'HAMLET', 'v', 'To be, or not to be, that is the question'],
+          ['I, 90', 'MARCELLUS', 'v', 'Something is rotten in the state of Denmark.'],
+          ['IV, 53', 'HAMLET', 'v', 'But greatly to find quarrel in a straw / When honour’s at the stake.'],
+          ['V, 1', null, 's', 'Enter two Clowns with spades and mattocks.']] },
+    { id: 'ham-es', lead: 'ham', c: 'EMOTHE0053_Hamlet', t: 'Hamlet', a: 'William Shakespeare', l: 'es', k: 'traducción', f: 'Prosa con versos ocasionales',
+      n: ['HAMLET', 'OFELIA', 'HORACIO'], pl: ['Elsinor', 'Dinamarca'],
+      x: [['III, 56', 'HAMLET', 'v', 'Ser o no ser, esa es la cuestión.'],
+          ['III, 56', 'HAMLET', 'n', 'La traducción deja en prosa el monólogo, que en el original está en verso.']] },
+    { id: 'ham-fr', lead: 'ham', c: 'EMOTHE0059_LaTragiqueHistoireDeHamletPrinceDeDanemark', t: 'La Tragique Histoire de Hamlet, Prince de Danemark', a: 'William Shakespeare', l: 'fr', k: 'traducción', f: 'Prosa con versos ocasionales',
+      n: ['HAMLET', 'OPHÉLIE'], pl: ['Elseneur'], x: [['III, 56', 'HAMLET', 'v', 'Être ou ne pas être, c’est là la question.']] },
+    { id: 'phl', c: 'EMOTHE0196_LePremierHamlet', t: 'Le Premier Hamlet', a: 'William Shakespeare', l: 'fr', k: 'traducción', f: 'Prosa con versos ocasionales',
+      n: ['HAMLET', 'OFELIA'], pl: ['Dinamarca'], x: [] },
+    { id: 'eho', c: 'EMOTHE0341_EastwardHo', t: 'Eastward Ho!', a: 'George Chapman', l: 'en', k: 'original', f: 'Prosa con versos ocasionales',
+      n: ['TOUCHSTONE', 'QUICKSILVER', 'GOLDING', 'HAMLET'], pl: ['Londres'], x: [['III, 2', 'HAMLET', 'v', 'What, coachman! My lady’s coach, for shame!']] },
+    { id: 'bur', c: 'EMOTHE0038', t: 'El burlador de Sevilla y convidado de piedra', a: 'Tirso de Molina', l: 'es', k: 'original', d: [1616, 1625], f: 'Verso',
+      n: ['DON JUAN', 'CATALINÓN', 'TISBEA', 'DON GONZALO'], pl: ['Sevilla', 'Nápoles', 'Tarragona'],
+      x: [['II, 1314', 'DON JUAN', 'v', 'Sevilla a voces me llama / el Burlador, y el mayor / gusto que en mí puede haber / es burlar una mujer / y dejalla sin honor.'],
+          ['I, 904', 'DON JUAN', 'v', '¡Qué largo me lo fiáis!'],
+          ['III, 2690', null, 's', 'Sale DON GONZALO como estatua.'],
+          ['III, 2690', null, 'n', 'El convidado de piedra es la estatua de don Gonzalo, que vuelve para cumplir la cita.']] },
+    { id: 'bur-fr', lead: 'bur', c: 'EMOTHE0301', t: 'Le trompeur de Séville et le convive de pierre', a: 'Tirso de Molina', l: 'fr', k: 'traducción', f: 'Prosa',
+      n: ['DON JUAN', 'CATALINON'], pl: ['Séville'], x: [['II, 1314', 'DON JUAN', 'v', 'Séville m’appelle à grands cris le Trompeur.']] },
+    { id: 'vida', c: 'EMOTHE0005', t: 'La vida es sueño', a: 'Pedro Calderón de la Barca', l: 'es', k: 'original', d: [1635, 1635], f: 'Verso',
+      n: ['SEGISMUNDO', 'ROSAURA', 'CLARÍN', 'BASILIO', 'CLOTALDO'], pl: ['Polonia'],
+      x: [['II, 2182', 'SEGISMUNDO', 'v', '¿Qué es la vida? Un frenesí. / ¿Qué es la vida? Una ilusión, / una sombra, una ficción,'],
+          ['II, 2186', 'SEGISMUNDO', 'v', 'que toda la vida es sueño, / y los sueños, sueños son.'],
+          ['I, 77', null, 's', 'Descúbrese SEGISMUNDO con una cadena y vestido de pieles.'],
+          ['II, 2186', 'SEGISMUNDO', 'n', 'Sueño: el tópico de la vida como sueño, de raíz platónica y cristiana.']] },
+    { id: 'fue', c: 'EMOTHE0120', t: 'Fuenteovejuna', a: 'Lope de Vega', l: 'es', k: 'original', d: [1612, 1614], f: 'Verso',
+      n: ['LAURENCIA', 'FRONDOSO', 'COMENDADOR', 'ESTEBAN'], pl: ['Fuenteovejuna', 'Córdoba', 'Ciudad Real'],
+      x: [['III, 2105', 'JUEZ', 'v', '¿Quién mató al Comendador?'], ['III, 2106', 'TODOS', 'v', 'Fuenteovejuna, señor.']] },
+    { id: 'cid', c: 'EMOTHE0402', t: 'Le Cid', a: 'Pierre Corneille', l: 'fr', k: 'original', d: [1637, 1637], f: 'Verso',
+      n: ['RODRIGUE', 'CHIMÈNE', 'DON DIÈGUE', 'LE COMTE'], pl: ['Sevilla'],
+      x: [['I, 237', 'DON DIÈGUE', 'v', 'Ô rage ! ô désespoir ! ô vieillesse ennemie !'], ['I, 261', 'DON DIÈGUE', 'v', 'Rodrigue, as-tu du cœur ?']] },
+    { id: 'spt', c: 'EMOTHE0233', t: 'The Spanish Tragedy', a: 'Thomas Kyd', l: 'en', k: 'original', d: [1587, 1587], f: 'Verso',
+      n: ['HIERONIMO', 'BEL-IMPERIA', 'LORENZO', 'HORATIO'], pl: ['España', 'Portugal'],
+      x: [['III, 1', 'HIERONIMO', 'v', 'O eyes! no eyes, but fountains fraught with tears;']] }
+  ];
+  var LANG = { es: 'español', en: 'inglés', fr: 'francés', it: 'italiano', pt: 'portugués' };
+  var byId = {}; P.forEach(function (p) { byId[p.id] = p; });
+  var leads = P.filter(function (p) { return !p.lead; });
+  var authors = {}; P.forEach(function (p) { authors[p.a] = 1; });
+  [].forEach.call(document.querySelectorAll('[data-total]'), function (n) { n.textContent = P.length + ' obras · ' + Object.keys(authors).length + ' autores (ejemplo)'; });
+
+  // Accents ignored, ñ kept: EMOTHE.normalise's rule. One character in, one out, so places line up for <mark>.
+  function nc(ch) { var l = ch.toLowerCase(); return l === 'ñ' ? l : l.normalize('NFD').charAt(0); }
+  function norm(s) { return Array.from(s || '').map(nc).join(''); }
+  function has(s, q) { return norm(s).indexOf(norm(q).trim()) >= 0; }
+  function words(q) { return norm(q).split(/[^\p{L}\p{N}]+/u).filter(Boolean); }
+  // Where in text each word occurs, as the full-text search matches: a word starting with it, or the exact word.
+  function ranges(text, ws, exact) {
+    var t = norm(text), out = [], re = /[\p{L}\p{N}]+/gu, m;
+    while ((m = re.exec(t))) ws.forEach(function (w) {
+      if (exact ? m[0] === w : m[0].indexOf(w) === 0) out.push([m.index, m.index + (exact ? w.length : w.length)]);
+    });
+    return out;
+  }
+  function hits(p, q, exact, kind) {
+    var ws = words(q); if (!ws.length) return [];
+    return p.x.filter(function (x) {
+      if (kind && x[2] !== kind) return false;
+      return ws.every(function (w) { return ranges(x[3], [w], exact).length; });
+    });
+  }
+  function many(n, one, other) { return n + ' ' + (n === 1 ? one : other); }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  function marked(text, q, exact) {
+    var rs = ranges(text, words(q), exact).sort(function (a, b) { return a[0] - b[0]; }), chars = Array.from(text), out = '', at = 0;
+    rs.forEach(function (r) { if (r[0] < at) return; out += esc(chars.slice(at, r[0]).join('')) + '<mark>' + esc(chars.slice(r[0], r[1]).join('')) + '</mark>'; at = r[1]; });
+    return out + esc(chars.slice(at).join(''));
+  }
+  function markIn(s, q) {
+    var i = norm(s).indexOf(norm(q).trim()), n = norm(q).trim().length, c = Array.from(s);
+    return i < 0 ? esc(s) : esc(c.slice(0, i).join('')) + '<mark>' + esc(c.slice(i, i + n).join('')) + '</mark>' + esc(c.slice(i + n).join(''));
+  }
+
+  function entry(p, isLead, opts) {
+    opts = opts || {};
+    var meta = [p.d ? p.d[0] + (p.d[1] !== p.d[0] ? '–' + p.d[1] : '') : null, p.f].filter(Boolean).join(' · ');
+    return '<div class="entry' + (opts.muted ? ' muted' : '') + '"><span class="tag">' + p.l + '</span>' +
+      '<a class="entry-title' + (isLead ? ' lead' : '') + '" href="#' + location.hash.slice(1) + '">' + (opts.q ? markIn(p.t, opts.q) : esc(p.t)) + '</a>' +
+      '<span class="code">' + esc(p.c) + '</span>' + (p.k === 'traducción' ? '<span class="tag">traducción</span>' : '') +
+      '<span class="meta">' + esc(meta) + (opts.hits ? ' · ' + opts.hits.length + (opts.hits.length === 1 ? ' pasaje' : ' pasajes') : '') + '</span>' +
+      (isLead || p.k === 'traducción' && !p.lead ? '<span class="author">' + (opts.q ? markIn(p.a, opts.q) : esc(p.a)) + '</span>' : '') +
+      (opts.why ? '<span class="why">' + opts.why + '</span>' : '') + '</div>' +
+      (opts.hits && opts.hits.length ? passages(opts.hits, opts.text, opts.exact) : '');
+  }
+  function passages(hs, q, exact) {
+    var first = hs.slice(0, 2), rest = hs.length - first.length;
+    function line(x) {
+      var ref = x[2] === 'n' ? 'nota ' + x[0] : [x[0], x[1]].filter(Boolean).join(' · ');
+      return '<p class="' + x[2] + '"><span class="ref">' + esc(ref) + '</span>' + marked(x[3], q, exact) + '</p>';
+    }
+    return '<div class="passages">' + first.map(line).join('') +
+      (rest ? '<button type="button" data-more>Ver ' + (rest === 1 ? 'el otro pasaje' : 'los ' + rest + ' restantes') + '</button><div hidden>' + hs.slice(2).map(line).join('') + '</div>' : '') + '</div>';
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-more]'); if (!b) return;
+    b.nextElementSibling.hidden = false; b.remove();
+  });
+  // Each work shows when one of its plays passes; its lead stays, muted, to head a passing translation.
+  function list(pass) {
+    var html = '', count = 0;
+    leads.forEach(function (lead) {
+      var trs = P.filter(function (p) { return p.lead === lead.id; });
+      var lr = pass(lead), rs = trs.map(pass);
+      if (!lr && !rs.some(Boolean)) return;
+      count += (lr ? 1 : 0) + rs.filter(Boolean).length;
+      html += '<li class="work">' + entry(lead, true, lr || { muted: true }) +
+        (trs.length ? '<ul class="translations">' + trs.map(function (t, i) { return rs[i] ? "<li>" + entry(t, false, rs[i]) + "</li>" : ""; }).join('') + '</ul>' : '') + '</li>';
+    });
+    return { html: html ? '<ol class="works">' + html + '</ol>' : '', count: count };
+  }
+  function fill(sel, key, all) {
+    var seen = {}; P.forEach(function (p) { seen[p[key]] = (seen[p[key]] || 0) + 1; });
+    sel.innerHTML = '<option value="">' + all + '</option>' + Object.keys(seen).sort(function (a, b) { return seen[b] - seen[a]; })
+      .map(function (v) { return '<option value="' + esc(v) + '">' + esc(key === 'l' ? LANG[v] : v) + ' (' + seen[v] + ')</option>'; }).join('');
+  }
+  function dated(p, from, to) {
+    if (!from && !to) return true;
+    if (!p.d) return false;
+    return (!from || p.d[1] >= from) && (!to || p.d[0] <= to);
+  }
+
+  // ---------- A: one box ----------
+  (function () {
+    var q = document.getElementById('a-q'), out = document.getElementById('a-out'), scope = 'all';
+    var panel = document.getElementById('a-panel'), toggle = document.getElementById('a-ftoggle');
+    var ctrls = [].slice.call(panel.querySelectorAll('[data-f]'));
+    fill(ctrls[0], 'l', 'Todos'); fill(ctrls[1], 'k', 'Todos'); fill(ctrls[2], 'f', 'Todas');
+    var NAMES = { l: 'Idioma', k: 'Tipo', f: 'Verso o prosa', from: 'Desde', to: 'Hasta' };
+    function filters(p) {
+      var v = {}; ctrls.forEach(function (c) { v[c.dataset.f] = c.value; });
+      return (!v.l || p.l === v.l) && (!v.k || p.k === v.k) && (!v.f || p.f === v.f) && dated(p, +v.from, +v.to);
+    }
+    function why(p, s) {
+      if (has(p.t, s) || has(p.c, s)) return null;
+      if (has(p.a, s)) return null;
+      var n = p.n.filter(function (x) { return has(x, s); })[0]; if (n) return 'Personaje: ' + markIn(n, s);
+      var pl = p.pl.filter(function (x) { return has(x, s); })[0]; if (pl) return 'Lugar de acción: ' + markIn(pl, s);
+      return false;
+    }
+    function update() {
+      var s = q.value.trim(), active = ctrls.filter(function (c) { return c.value; });
+      document.getElementById('a-fcount').hidden = !active.length;
+      document.getElementById('a-fcount').textContent = active.length;
+      document.getElementById('a-chips').innerHTML = active.map(function (c) {
+        var label = c.tagName === 'SELECT' ? c.options[c.selectedIndex].text.replace(/ \(\d+\)$/, '') : c.value;
+        return '<span class="chip">' + NAMES[c.dataset.f] + ': <b>' + esc(label) + '</b><button type="button" aria-label="Quitar ' + NAMES[c.dataset.f] + '" data-clear="' + c.id + '">×</button></span>';
+      }).join('');
+      if (!s) { var all = list(function (p) { return filters(p) ? {} : null; }); out.innerHTML = '<p class="count">' + all.count + ' obras de ' + P.length + '</p>' + all.html; return; }
+      var html = '';
+      if (scope !== 'text') {
+        var works = list(function (p) { var w = filters(p) && why(p, s); return w === false || !filters(p) ? null : { q: s, why: w }; });
+        html += '<h2 class="sect">Obras <span>· ' + many(works.count, 'obra', 'obras') + ' con «' + esc(s) + '» en el título, el autor, un personaje o un lugar</span></h2>' + (works.html || '<p class="empty">Ninguna.</p>');
+      }
+      if (scope !== 'works') {
+        var n = 0, texts = list(function (p) { var h = filters(p) ? hits(p, s, false) : []; n += h.length; return h.length ? { hits: h, text: s } : null; });
+        html += '<h2 class="sect">En los textos <span>· ' + many(texts.count, 'obra', 'obras') + ', ' + many(n, 'pasaje', 'pasajes') + '</span></h2>' + (texts.html || '<p class="empty">Ninguna obra tiene estas palabras en sus versos o notas.</p>');
+      }
+      out.innerHTML = html;
+    }
+    document.getElementById('a-form').addEventListener('submit', function (e) { e.preventDefault(); update(); });
+    q.addEventListener('input', update);
+    ctrls.forEach(function (c) { c.addEventListener('input', update); });
+    [].forEach.call(document.querySelectorAll('[data-scope]'), function (b) {
+      b.addEventListener('click', function () {
+        scope = b.dataset.scope;
+        [].forEach.call(document.querySelectorAll('[data-scope]'), function (o) { o.setAttribute('aria-pressed', o === b); });
+        update();
+      });
+    });
+    toggle.addEventListener('click', function () { panel.hidden = !panel.hidden; toggle.setAttribute('aria-expanded', !panel.hidden); });
+    document.getElementById('a-chips').addEventListener('click', function (e) {
+      var b = e.target.closest('[data-clear]'); if (!b) return; document.getElementById(b.dataset.clear).value = ''; update();
+    });
+    update();
+  })();
+
+  // ---------- B: two boxes and a bar ----------
+  (function () {
+    var w = document.getElementById('b-w'), q = document.getElementById('b-q'), m = document.getElementById('b-m'), inn = document.getElementById('b-in');
+    var from = document.getElementById('b-from'), to = document.getElementById('b-to'), n = document.getElementById('b-n');
+    var picked = { l: {}, k: {} };
+    ['l', 'k'].forEach(function (key) {
+      var box = document.querySelector('[data-opts="' + key + '"]'), seen = {};
+      P.forEach(function (p) { seen[p[key]] = (seen[p[key]] || 0) + 1; });
+      box.innerHTML = Object.keys(seen).sort(function (a, b) { return seen[b] - seen[a]; }).map(function (v) {
+        return '<label><input type="checkbox" value="' + esc(v) + '" data-key="' + key + '"> ' + esc(key === 'l' ? LANG[v] : v) + ' <span class="code">' + seen[v] + '</span></label>';
+      }).join('');
+    });
+    function any(set) { return Object.keys(set).some(function (k) { return set[k]; }); }
+    function update() {
+      var ws = w.value.trim(), qs = q.value.trim(), exact = m.value === 'w', kind = inn.value, total = 0;
+      var r = list(function (p) {
+        if (any(picked.l) && !picked.l[p.l]) return null;
+        if (any(picked.k) && !picked.k[p.k]) return null;
+        if (!dated(p, +from.value, +to.value)) return null;
+        if (n.value.trim() && !p.n.some(function (x) { return has(x, n.value); })) return null;
+        if (ws && !(has(p.t, ws) || has(p.a, ws) || has(p.c, ws))) return null;
+        if (!qs) return { q: ws };
+        var h = hits(p, qs, exact, kind); total += h.length;
+        return h.length ? { q: ws, hits: h, text: qs, exact: exact } : null;
+      });
+      var on = { l: any(picked.l), k: any(picked.k), d: !!(from.value || to.value), n: !!n.value.trim() };
+      [].forEach.call(document.querySelectorAll('[data-drop]'), function (d) { d.classList.toggle('on', !!on[d.dataset.drop]); });
+      document.getElementById('b-count').textContent = many(r.count, 'obra', 'obras') + ' de ' + P.length + (qs ? ' · ' + many(total, 'pasaje', 'pasajes') : '');
+      document.getElementById('b-out').innerHTML = r.html || '<p class="empty">Ninguna obra cumple todo a la vez.</p>';
+    }
+    document.getElementById('b-bar').addEventListener('change', function (e) {
+      if (e.target.dataset.key) picked[e.target.dataset.key][e.target.value] = e.target.checked; update();
+    });
+    [w, q, m, inn, from, to, n].forEach(function (c) { c.addEventListener('input', update); });
+    // One menu open at a time, and a click outside closes it.
+    document.addEventListener('click', function (e) {
+      [].forEach.call(document.querySelectorAll('.drop[open]'), function (d) { if (!d.contains(e.target)) d.open = false; });
+    });
+    document.getElementById('b-clear').addEventListener('click', function () {
+      [w, q, from, to, n].forEach(function (c) { c.value = ''; }); m.value = 'p'; inn.value = '';
+      picked = { l: {}, k: {} }; [].forEach.call(document.querySelectorAll('#b-bar input[type=checkbox]'), function (c) { c.checked = false; });
+      update();
+    });
+    update();
+  })();
+
+  // ---------- C: one box that suggests ----------
+  (function () {
+    var q = document.getElementById('c-q'), box = document.getElementById('c-list'), chipsEl = document.getElementById('c-chips');
+    var chips = [{ f: 'n', v: 'HAMLET', label: 'Personaje' }], offers = [], at = 0;
+    var KIND = { any: 'Título o autor', t: 'Obra', a: 'Autor', n: 'Personaje', pl: 'Lugar de acción', l: 'Idioma', x: 'En el texto' };
+    function test(p, c) {
+      if (c.f === 'any') return has(p.t, c.v) || has(p.a, c.v) || has(p.c, c.v);
+      if (c.f === 't') return p.t === c.v;
+      if (c.f === 'a') return p.a === c.v;
+      if (c.f === 'n') return p.n.some(function (x) { return norm(x) === norm(c.v); });
+      if (c.f === 'pl') return p.pl.some(function (x) { return norm(x) === norm(c.v); });
+      if (c.f === 'l') return p.l === c.v;
+      return true;
+    }
+    function suggest(s) {
+      var o = [{ f: 'any', v: s }], seen = {};
+      function add(f, v, label, count) { var key = f + v; if (seen[key]) return; seen[key] = 1; o.push({ f: f, v: v, show: label || v, count: count }); }
+      P.forEach(function (p) { if (has(p.t, s)) add('t', p.t, p.t); });
+      P.forEach(function (p) { if (has(p.a, s)) add('a', p.a, p.a, P.filter(function (x) { return x.a === p.a; }).length); });
+      Object.keys(LANG).forEach(function (l) { if (has(LANG[l], s) && P.some(function (p) { return p.l === l; })) add('l', l, LANG[l], P.filter(function (p) { return p.l === l; }).length); });
+      var ns = {}, ps = {};
+      P.forEach(function (p) {
+        p.n.forEach(function (x) { if (has(x, s)) ns[norm(x)] = ns[norm(x)] || [x, 0], ns[norm(x)][1]++; });
+        p.pl.forEach(function (x) { if (has(x, s)) ps[norm(x)] = ps[norm(x)] || [x, 0], ps[norm(x)][1]++; });
+      });
+      Object.keys(ns).forEach(function (k) { add('n', ns[k][0], ns[k][0], ns[k][1]); });
+      Object.keys(ps).forEach(function (k) { add('pl', ps[k][0], ps[k][0], ps[k][1]); });
+      var tn = P.filter(function (p) { return hits(p, s).length; }).length;
+      o.push({ f: 'x', v: s, count: tn });
+      return o.slice(0, 1).concat(o.slice(1, -1).slice(0, 8), o.slice(-1));
+    }
+    function draw() {
+      var s = q.value.trim();
+      offers = s ? suggest(s) : [];
+      box.hidden = !offers.length; q.setAttribute('aria-expanded', !box.hidden);
+      var last = '';
+      box.innerHTML = offers.map(function (o, i) {
+        var grp = o.f === 'any' ? '' : o.f === 'x' ? 'Texto y notas' : 'Catálogo';
+        var head = grp && grp !== last ? '<li class="grp" role="presentation">' + grp + '</li>' : ''; if (grp) last = grp;
+        var text = o.f === 'any' ? 'Título o autor con «<b>' + esc(s) + '</b>»' : o.f === 'x' ? 'Buscar «<b>' + esc(s) + '</b>» en los versos y las notas' : markIn(o.show, s);
+        return head + '<li role="option" id="c-o' + i + '" aria-selected="' + (i === at) + '" data-i="' + i + '"><span class="k">' + KIND[o.f] + '</span><span>' + text + '</span>' +
+          (o.count != null ? '<span class="n">' + o.count + (o.count === 1 ? ' obra' : ' obras') + '</span>' : '') + '</li>';
+      }).join('');
+      if (offers.length) q.setAttribute('aria-activedescendant', 'c-o' + at); else q.removeAttribute('aria-activedescendant');
+    }
+    function choose(i) {
+      var o = offers[i]; if (!o) return;
+      chips.push({ f: o.f, v: o.v, label: KIND[o.f], show: o.f === 'l' ? LANG[o.v] : o.v });
+      q.value = ''; at = 0; draw(); update(); q.focus();
+    }
+    function update() {
+      chipsEl.innerHTML = chips.map(function (c, i) {
+        return '<span class="chip">' + c.label + ': <b>' + esc(c.show || c.v) + '</b><button type="button" aria-label="Quitar ' + c.label + ' ' + esc(c.show || c.v) + '" data-x="' + i + '">×</button></span>';
+      }).join('');
+      var texts = chips.filter(function (c) { return c.f === 'x'; }), total = 0;
+      var r = list(function (p) {
+        if (!chips.every(function (c) { return test(p, c); })) return null;
+        if (!texts.length) return {};
+        var h = hits(p, texts.map(function (c) { return c.v; }).join(' ')); total += h.length;
+        return h.length ? { hits: h, text: texts.map(function (c) { return c.v; }).join(' ') } : null;
+      });
+      document.getElementById('c-count').textContent = many(r.count, 'obra', 'obras') + ' de ' + P.length + (texts.length ? ' · ' + many(total, 'pasaje', 'pasajes') : '');
+      document.getElementById('c-out').innerHTML = r.html || '<p class="empty">Ninguna obra cumple todo a la vez.</p>';
+    }
+    q.addEventListener('input', function () { at = 0; draw(); });
+    q.addEventListener('focus', draw);
+    q.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowDown' && offers.length) { at = (at + 1) % offers.length; draw(); e.preventDefault(); }
+      else if (e.key === 'ArrowUp' && offers.length) { at = (at - 1 + offers.length) % offers.length; draw(); e.preventDefault(); }
+      else if (e.key === 'Enter') { e.preventDefault(); choose(at); }
+      else if (e.key === 'Escape') { box.hidden = true; q.setAttribute('aria-expanded', 'false'); }
+      else if (e.key === 'Backspace' && !q.value && chips.length) { chips.pop(); update(); }
+    });
+    box.addEventListener('mousedown', function (e) { var li = e.target.closest('[data-i]'); if (li) { e.preventDefault(); choose(+li.dataset.i); } });
+    q.addEventListener('blur', function () { setTimeout(function () { box.hidden = true; q.setAttribute('aria-expanded', 'false'); }, 0); });
+    chipsEl.addEventListener('click', function (e) { var b = e.target.closest('[data-x]'); if (b) { chips.splice(+b.dataset.x, 1); update(); q.focus(); } });
+    document.getElementById('c-field').addEventListener('click', function (e) { if (e.target === this) q.focus(); });
+    update();
+  })();
+
+  // Views on the hash: #a, #b, #c.
+  function route() {
+    var v = (location.hash.slice(1) || 'a').toLowerCase(); if (!/^[abc]$/.test(v)) v = 'a';
+    ['a', 'b', 'c'].forEach(function (k) { document.getElementById('view-' + k).hidden = k !== v; });
+    [].forEach.call(document.querySelectorAll('.tabs a'), function (a) {
+      if (a.getAttribute('href') === '#' + v) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+  }
+  window.addEventListener('hashchange', route); route();
+})();
+</script>

@@ -53,7 +53,12 @@ defmodule Playcode.Export.StaticSite.Pages do
       open: tp("Show the passages"),
       more: tp("Show the other %{count}", count: "%{count}"),
       unavailable: tp("Text search is unavailable."),
-      note: tp("note")
+      note: tp("note"),
+      works: tp("Plays"),
+      texts: tp("In the texts"),
+      character: tp("Character"),
+      place: tp("Place of action"),
+      remove: tp("Remove")
     }
 
     Jason.encode!(lists(words))
