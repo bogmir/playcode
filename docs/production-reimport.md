@@ -205,6 +205,15 @@ What the commands do, for when one of them fails part way, or something new is n
     Generate); the commands turn autostop off first. Deploy only pushes what Generate built:
     on 2026-10-17 a Deploy pressed before Generate sent the build of the day before again.
 
+## The first Generate with EPUBs (2026-11-17)
+
+The first `generate` after the site's EPUBs (`docs/static-site.md`, *Downloads*) failed on its
+first play: BUPE 0.6.5 reads an EPUB's stylesheet and `container.xml` from its own source
+folder, by the path it was compiled at (`/app/deps/bupe/...`), and the release image had no
+`deps/`, so the preview's `/export/:id/epub` had failed on Fly all along. Both Dockerfiles copy
+those templates into the image since. A failed `generate` leaves the machines scaled up:
+`mix playcode.fly.reimport scale-down`.
+
 ## The numbering rule, once (2026-11-08)
 
 The migration that brought in the numbering rule left every play Manual, so no save recounts

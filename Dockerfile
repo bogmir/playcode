@@ -49,6 +49,9 @@ ENV LC_ALL=en_US.UTF-8
 WORKDIR /app
 
 COPY --from=build /app/_build/prod/rel/playcode ./
+# BUPE 0.6.5 reads an EPUB's stylesheet and container.xml from its own source folder at
+# run time, by the path it was compiled at; without them every EPUB fails.
+COPY --from=build /app/deps/bupe/lib/bupe/builder/templates ./deps/bupe/lib/bupe/builder/templates
 
 RUN chown -R nobody:nogroup /app
 USER nobody:nogroup
