@@ -9,16 +9,15 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   import Playcode.TestFixtures
   import Playcode.StaticSiteHelpers
 
-  alias Playcode.{PlayContent, Witnesses}
+  alias Playcode.PlayContent
   alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.Records
 
-  defp complete(attrs), do: play_fixture(Map.put(attrs, "is_complete", true))
   defp entry(dir, play), do: Enum.find(records!(dir), &(&1["c"] == play.code))
 
   test "a play's entry holds its own fields, under their keys" do
     play =
-      complete(%{
+      complete_play(%{
         "title" => "La <<Celestina>>",
         "original_title" => "Tragicomedia de Calisto y Melibea",
         "author_name" => "Fernando de <<Rojas>>",
@@ -66,15 +65,15 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   end
 
   test "an original title the same as the title is not listed twice" do
-    play = complete(%{"title" => "Hamlet", "original_title" => "Hamlet"})
+    play = complete_play(%{"title" => "Hamlet", "original_title" => "Hamlet"})
     assert entry(generate!([play]), play)["t"] == ["Hamlet"]
   end
 
   test "a translation's original language is its published root's" do
-    original = complete(%{"language" => "en"})
+    original = complete_play(%{"language" => "en"})
 
     translation =
-      complete(%{
+      complete_play(%{
         "language" => "fr",
         "parent_play_id" => original.id,
         "relationship_type" => "traduccion"
@@ -89,7 +88,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
     original = play_fixture(%{"language" => "en"})
 
     translation =
-      complete(%{
+      complete_play(%{
         "language" => "fr",
         "parent_play_id" => original.id,
         "relationship_type" => "traduccion"
@@ -100,8 +99,8 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
 
   test "the entries are in the catalogue's order, and a draft has none" do
     [b, a] = [
-      complete(%{"title" => "B", "title_sort" => "b"}),
-      complete(%{"title" => "A", "title_sort" => "a"})
+      complete_play(%{"title" => "B", "title_sort" => "b"}),
+      complete_play(%{"title" => "A", "title_sort" => "a"})
     ]
 
     draft = play_fixture()
@@ -110,12 +109,12 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   end
 
   test "a bare play's entry is under 200 bytes" do
-    play = complete(%{"title" => "Hamlet", "author_name" => "William Shakespeare"})
+    play = complete_play(%{"title" => "Hamlet", "author_name" => "William Shakespeare"})
     assert generate!([play]) |> entry(play) |> Jason.encode!() |> byte_size() < 200
   end
 
   test "Generate reports the index's size" do
-    play = complete(%{})
+    play = complete_play(%{})
     dir = site_dir!()
 
     assert {:ok, %{records_bytes: bytes}} =
@@ -124,15 +123,8 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
     assert bytes == File.stat!(Path.join(dir, "search/records.js")).size
   end
 
-  defp witness!(play, attrs) do
-    {:ok, witness} =
-      Witnesses.create_witness(Map.merge(%{"play_id" => play.id, "title" => "Comedia"}, attrs))
-
-    witness
-  end
-
   test "a witness is its support, city, years and format" do
-    play = complete(%{})
+    play = complete_play(%{})
 
     witness!(play, %{
       "witness_type" => "loose",
@@ -153,7 +145,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   end
 
   test "a performance is its place and the places around it, its venue, years, company and actors" do
-    play = complete(%{})
+    play = complete_play(%{})
 
     england =
       place_fixture(%{
@@ -195,7 +187,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   end
 
   test "a place of action is listed with the places containing it" do
-    play = complete(%{})
+    play = complete_play(%{})
     spain = place_fixture(%{"names" => [%{"name" => "España", "language" => "es"}]})
 
     andalusia =
@@ -218,7 +210,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   end
 
   test "a name a place has in several languages is listed once" do
-    play = complete(%{})
+    play = complete_play(%{})
 
     madrid =
       place_fixture(%{
@@ -233,7 +225,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   end
 
   test "its characters are named plain, the hidden ones left out" do
-    play = complete(%{})
+    play = complete_play(%{})
 
     for {id, name, hidden} <- [
           {"juan", "DON <<JUAN>>", false},
@@ -256,11 +248,11 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   test "the queries do not grow with the plays" do
     count = fn plays ->
       dir = site_dir!()
-      counted(fn -> Records.write(dir, plays, Map.new(plays, &{&1.id, &1})) end)
+      counted(fn -> Records.write(dir, Records.entries(plays, Map.new(plays, &{&1.id, &1}))) end)
     end
 
-    two = for _ <- 1..2, do: complete(%{})
-    six = two ++ for _ <- 1..4, do: complete(%{})
+    two = for _ <- 1..2, do: complete_play(%{})
+    six = two ++ for _ <- 1..4, do: complete_play(%{})
     queries = count.(two)
     assert queries > 0
     assert count.(six) == queries

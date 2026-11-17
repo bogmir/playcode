@@ -1,38 +1,19 @@
-<Components.shell
-  root=""
-  title={tp("Search — EMOTHE")}
-  current={:search}
-  site={@site}
-  rail_label={t("Filters")}
->
-  <:rail>
-    <div data-search-facets></div>
-  </:rail>
-  <h1>{t("Search")}</h1>
-  <noscript>
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <%!-- The search is the catalogue's since 2026-11: an old link's words come along. --%>
+    <script>
+      location.replace('index.html' + (/[?&]q=([^&]*)/.test(location.search) ? '#q=' + RegExp.$1 : ''))
+    </script>
+    <meta http-equiv="refresh" content="0; url=index.html" />
+    <link rel="canonical" href="index.html" />
+    <title>EMOTHE</title>
+  </head>
+  <body>
+    <%!-- No stylesheet here to pick one language: the line in both. --%>
     <p>
-      {t("Search needs JavaScript.")}
-      <a href="index.html">{t("Browse the catalogue instead.")}</a>
+      Esta página se ha trasladado / <span lang="en">This page has moved</span>: <a href="index.html">Catálogo / <span lang="en">Catalogue</span></a>.
     </p>
-  </noscript>
-  <form data-search-form role="search" data-words={search_words()} hidden>
-    <label for="q" class="sr-only">{t("Search the texts")}</label>
-    <input
-      id="q"
-      name="q"
-      type="search"
-      autocomplete="off"
-      {ta("placeholder", "Search every line of every play")}
-    />
-    <fieldset class="mode">
-      <legend class="sr-only">{t("Match")}</legend>
-      <label><input type="radio" name="mode" value="word" /> {t("Whole word")}</label>
-      <label><input type="radio" name="mode" value="prefix" checked /> {t("Starts with")}</label>
-    </fieldset>
-    <button type="submit">{t("Search")}</button>
-  </form>
-  <p class="lede" data-search-count aria-live="polite"></p>
-  <div data-search-results></div>
-  <script src={"assets/search.js?v=" <> @site.assets} defer>
-  </script>
-</Components.shell>
+  </body>
+</html>

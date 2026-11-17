@@ -41,6 +41,20 @@ defmodule Playcode.StaticSiteHelpers do
 
   def read!(dir, path), do: File.read!(Path.join(dir, path))
 
+  @doc "A play marked complete, so the site publishes it."
+  def complete_play(attrs \\ %{}),
+    do: Playcode.TestFixtures.play_fixture(Map.put(attrs, "is_complete", true))
+
+  @doc "A witness of `play`, a \"Comedia\" unless `attrs` names it otherwise."
+  def witness!(play, attrs) do
+    {:ok, witness} =
+      Playcode.Witnesses.create_witness(
+        Map.merge(%{"play_id" => play.id, "title" => "Comedia"}, attrs)
+      )
+
+    witness
+  end
+
   @doc """
   A page as a reader of the `ui` interface sees it, English unless asked: the other
   language's texts (`<x-es>`, `<x-en>`) dropped and, in English, each attribute's English

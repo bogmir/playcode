@@ -1,5 +1,5 @@
 defmodule Playcode.Export.StaticSiteCatalogueTest do
-  @moduledoc "The static site's catalogue page: one entry per work, facets, filter hooks."
+  @moduledoc "The static site's catalogue page: one entry per work, and the search form."
   use Playcode.DataCase, async: true
 
   import Playcode.TestFixtures
@@ -19,7 +19,6 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     index = html!(generate!([play]), "index.html", "es")
     assert "sin texto" in texts(index, "[data-play] .tag")
     assert texts(index, "[data-play] .meta") == ["1632"]
-    assert texts(index, "fieldset legend") |> Enum.any?()
   end
 
   test "a one-play site says \"1 play · 1 author\"" do
@@ -69,53 +68,123 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert LazyHTML.text(work) =~ "Second-hand"
   end
 
-  test "facets count the plays by language, form, kind and collection" do
-    es = play_fixture(%{"is_complete" => true, "language" => "es"})
-    fr = play_fixture(%{"is_complete" => true, "language" => "fr", "auto_form" => "prose"})
+  @names ~w(t a l o k s f x q m in d-from d-to wt wc wy-from wy-to wf rp rv rc ry-from ry-to rk ra h p n sort)
 
-    al =
-      play_fixture(%{"is_complete" => true, "code" => "AL#{System.unique_integer([:positive])}"})
-
-    labels = texts(html!(generate!([es, fr, al]), "index.html"), "[data-facets] label")
-
-    assert "Spanish 2" in labels
-    assert "French 1" in labels
-    assert "Prose 1" in labels
-    assert "Originals 3" in labels
-    assert "ARTELOPE 1" in labels
+  # The controls of the catalogue's form: inside it, or tied to it by `form=` from above the list.
+  defp controls(page, selector) do
+    [id] = page |> LazyHTML.query("form[data-search]") |> LazyHTML.attribute("id")
+    LazyHTML.query(page, "form[data-search] #{selector}, #{selector}[form=#{id}]")
   end
 
-  test "the Form facet follows a curator's choice over the automatic one" do
-    verse = play_fixture(%{"is_complete" => true})
-    prose = play_fixture(%{"is_complete" => true, "form" => "prose"})
-    mixed = play_fixture(%{"is_complete" => true, "form" => "mixed"})
+  # A control is named by a label for it, a label around it, or an aria-label.
+  defp labelled?(page, control) do
+    [name] = LazyHTML.attribute(control, "name")
+    ids = page |> LazyHTML.query("label[for]") |> LazyHTML.attribute("for")
+    wrapped = page |> LazyHTML.query("label input, label select") |> LazyHTML.attribute("name")
 
-    index = html!(generate!([verse, prose, mixed]), "index.html")
-    labels = texts(index, "[data-facets] label")
-
-    assert "Verse 1" in labels
-    assert "Prose 1" in labels
-    assert "Verse and prose 1" in labels
-
-    assert index
-           |> LazyHTML.query("[data-play]")
-           |> LazyHTML.attribute("data-form")
-           |> Enum.sort() ==
-             ["mixed", "prose", "verse"]
+    LazyHTML.attribute(control, "aria-label") != [] or
+      LazyHTML.attribute(control, "id") |> Enum.any?(&(&1 in ids)) or name in wrapped
   end
 
-  test "each entry carries what the filter and facets match on" do
-    play = play_fixture(%{"is_complete" => true, "title" => "La Vida es Sueño"})
-    entry = html!(generate!([play]), "index.html") |> LazyHTML.query("[data-play]")
+  # A select's options as {value, label}; the label is the attribute, the option's text empty.
+  defp options(page, name) do
+    for option <- LazyHTML.query(page, ~s(select[name="#{name}"] option)) do
+      {option |> LazyHTML.attribute("value") |> hd(),
+       option |> LazyHTML.attribute("label") |> hd()}
+    end
+  end
 
-    assert LazyHTML.attribute(entry, "data-lang") == ["es"]
-    assert LazyHTML.attribute(entry, "data-kind") == ["original"]
-    assert [text] = LazyHTML.attribute(entry, "data-text")
-    assert text =~ "la vida es sueño"
+  test "the form holds every control, named, labelled, and hidden until the script shows it" do
+    page = html!(generate!([complete_play()]), "index.html", "es")
+    assert page |> LazyHTML.query("form[data-search]") |> LazyHTML.attribute("hidden") == [""]
+
+    for name <- @names,
+        do:
+          assert({name, page |> controls(~s([name="#{name}"])) |> Enum.empty?()} == {name, false})
+
+    for control <-
+          controls(page, "input:not([type=radio])") |> Enum.concat(controls(page, "select")),
+        do: assert(labelled?(page, control), inspect(LazyHTML.attribute(control, "name")))
+
+    assert page
+           |> LazyHTML.query("form[data-search] details > summary")
+           |> Enum.map(&(&1 |> LazyHTML.text() |> squish() |> String.split(" (") |> hd())) ==
+             [
+               "Obra",
+               "Datación",
+               "Testimonios",
+               "Representaciones",
+               "Tiempo y lugar",
+               "Personajes"
+             ]
+  end
+
+  test "a list offers the values the published plays hold, the first four with their counts" do
+    plays = [
+      complete_play(%{"language" => "es"}),
+      complete_play(%{"language" => "es"}),
+      complete_play(%{"language" => "en", "form" => "prose"})
+    ]
+
+    page = html!(generate!(plays), "index.html", "es")
+    assert options(page, "l") == [{"", "Todos"}, {"es", "Español (2)"}, {"en", "Inglés (1)"}]
+    assert {"prose", "Prosa (1)"} in options(page, "f")
+    assert options(page, "x") == [{"", "Todas"}, {"1", "Con texto"}, {"0", "Sin texto"}]
+  end
+
+  # Review Focus 5 of the plan: a small site, a test site.
+  test "a site with no witness, performance or place offers only the first option there" do
+    page = html!(generate!([complete_play()]), "index.html", "es")
+    for name <- ~w(wt wf rc h), do: assert([{"", _all}] = options(page, name))
+  end
+
+  test "a list's options follow the interface's language" do
+    play = complete_play()
+    witness!(play, %{"witness_type" => "manuscript"})
+    dir = generate!([play])
+    assert {"manuscript", "Manuscrito"} in options(html!(dir, "index.html", "es"), "wt")
+    assert {"manuscript", "Manuscript"} in options(html!(dir, "index.html", "en"), "wt")
+  end
+
+  # The filter reads search/records.js alone (static_site_records_test.exs), so the
+  # attributes the old filter and facets matched on are gone.
+  test "a row names its play by code and carries no filter data" do
+    play = complete_play()
+    row = html!(generate!([play]), "index.html") |> LazyHTML.query("[data-play]")
+    assert LazyHTML.attribute(row, "data-code") == [play.code]
+
+    for gone <- ~w(data-lang data-form data-kind data-coll data-text),
+        do: assert(LazyHTML.attribute(row, gone) == [])
+  end
+
+  test "the page links its own stylesheet and script, stamped, and the site has no Search entry" do
+    page = html!(generate!([complete_play()]), "index.html")
+
+    assert [href] =
+             page
+             |> LazyHTML.query(~s(link[href^="assets/catalogue.css"]))
+             |> LazyHTML.attribute("href")
+
+    assert href =~ ~r/\?v=[0-9a-f]{12}\z/
+
+    assert [_src] =
+             page
+             |> LazyHTML.query(~s(script[src^="assets/catalogue.js?v="]))
+             |> LazyHTML.attribute("src")
+
+    refute "search.html" in (page |> LazyHTML.query("nav.site a") |> LazyHTML.attribute("href"))
+  end
+
+  test "the old search page sends its reader, and their words, to the catalogue" do
+    page = read!(generate!([complete_play()]), "search.html")
+    assert page =~ ~s(http-equiv="refresh")
+    assert page =~ "index.html"
+    # The inline script that carries ?q= over.
+    assert page =~ "#q="
   end
 
   # Question 15: each kind by its own name. Every non-original used to be a translation.
-  test "an adaptation is called one in its entry, its tag and the Kind facet" do
+  test "an adaptation is called one in its entry, its tag and the Kind list" do
     original = play_fixture(%{"is_complete" => true, "title" => "La verdad sospechosa"})
 
     adaptation =
@@ -130,9 +199,9 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     alone = play_fixture(%{"is_complete" => true, "relationship_type" => "adaptacion"})
     index = html!(generate!([original, adaptation, alone]), "index.html")
 
-    kinds = index |> LazyHTML.query("[data-play]") |> LazyHTML.attribute("data-kind")
-    assert Enum.sort(kinds) == ["adaptation", "adaptation", "original"]
-    assert "Adaptations 2" in texts(index, "[data-facets] label")
+    # The kinds themselves are in search/records.js since the record search
+    # (static_site_records_test.exs); the page's Kind list counts them.
+    assert {"adaptation", "Adaptations (2)"} in options(index, "k")
     assert "adaptation" in texts(index, "[data-play] .tag")
   end
 

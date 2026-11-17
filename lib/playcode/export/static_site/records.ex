@@ -14,16 +14,19 @@ defmodule Playcode.Export.StaticSite.Records do
   alias Playcode.PlayContent.InlineMarkup
 
   @doc """
-  Writes `dir/search/records.js` with an entry per play of `plays`, in their order.
-  `roots` maps each play's id to the published play at the root of its family. Returns
-  the bytes written.
+  An entry per play of `plays`, in their order. `roots` maps each play's id to the
+  published play at the root of its family.
   """
-  def write(dir, plays, roots) do
+  def entries(plays, roots) do
+    gazetteer = Places.gazetteer()
+    plays |> Catalogue.preload_record() |> Enum.map(&entry(&1, roots, gazetteer))
+  end
+
+  @doc "Writes `entries` to `dir/search/records.js`; returns the bytes written."
+  def write(dir, entries) do
     path = Path.join([dir, "search", "records.js"])
     File.mkdir_p!(Path.dirname(path))
 
-    gazetteer = Places.gazetteer()
-    entries = plays |> Catalogue.preload_record() |> Enum.map(&entry(&1, roots, gazetteer))
     js = ["EMOTHE.records.load(", Jason.encode!(entries, escape: :javascript_safe), ");\n"]
 
     File.write!(path, js)

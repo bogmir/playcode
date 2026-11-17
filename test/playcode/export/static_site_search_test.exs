@@ -116,25 +116,19 @@ defmodule Playcode.Export.StaticSiteSearchTest do
       assert Map.has_key?(shard, "ñaque")
     end
 
-    # Question 15: each kind by its own name; every non-original used to be a translation.
-    # search.js says the page's words, which come from the site's translations.
-    test "the search page gives search.js its words in both languages", %{dir: dir} do
+    # search.js says no word since the search is the catalogue's: catalogue.js says them,
+    # from the catalogue form's data-words, which come from the site's translations.
+    test "the catalogue gives catalogue.js its words in both languages", %{dir: dir} do
       [words] =
         dir
-        |> html!("search.html")
-        |> LazyHTML.query("[data-search-form]")
+        |> html!("index.html")
+        |> LazyHTML.query("form[data-search]")
         |> LazyHTML.attribute("data-words")
 
       words = Jason.decode!(words)
 
-      assert words["kinds"] == %{
-               "original" => ["Originales", "Originals"],
-               "translation" => ["Traducciones", "Translations"],
-               "adaptation" => ["Adaptaciones", "Adaptations"],
-               "version" => ["Versiones", "Versions"]
-             }
-
-      assert words["legends"]["kind"] == ["Tipo", "Kind"]
+      assert words["passages"] == ["pasajes", "passages"]
+      assert words["more"] == ["Ver los %{count} restantes", "Show the other %{count}"]
     end
 
     test "the play list is in index order, with what the facets need", %{play: play, dir: dir} do
@@ -500,16 +494,17 @@ defmodule Playcode.Export.StaticSiteSearchTest do
     end
   end
 
-  test "the search page works only with JavaScript, and says so without it" do
-    dir = generate!([Playcode.TestFixtures.play_fixture(%{"is_complete" => true})])
-    page = html!(dir, "search.html")
+  # The search page was the full-text search; it is the catalogue's since the record
+  # search, and the catalogue is the full list without JavaScript.
+  test "the search page sends its reader to the catalogue, whose list needs no JavaScript" do
+    play = Playcode.TestFixtures.play_fixture(%{"is_complete" => true})
+    dir = generate!([play])
 
-    assert page |> LazyHTML.query(~s(form[hidden][role="search"])) |> Enum.count() == 1
-    assert page |> LazyHTML.query("noscript") |> LazyHTML.text() =~ "Search needs JavaScript"
+    assert read!(dir, "search.html") =~ ~s(url=index.html)
 
-    # Each link carries the assets' stamp, `?v=` (site_builder_test.exs); the path is the point here.
-    srcs = page |> LazyHTML.query("script") |> LazyHTML.attribute("src")
-    assert "assets/search.js" in Enum.map(srcs, &(&1 |> String.split("?") |> hd()))
+    catalogue = html!(dir, "index.html")
+    assert catalogue |> LazyHTML.query("form[data-search][hidden]") |> Enum.count() == 1
+    assert catalogue |> LazyHTML.query("[data-play]:not([hidden])") |> Enum.count() == 1
   end
 
   # A last part belongs to the verse its first part opened. After a first part with no

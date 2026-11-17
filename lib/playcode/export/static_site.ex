@@ -38,6 +38,7 @@ defmodule Playcode.Export.StaticSite do
     Search
   }
 
+  alias Playcode.Performances.Performance
   alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
 
@@ -646,11 +647,13 @@ defmodule Playcode.Export.StaticSite do
   # The catalogue, about and search pages, and the record index; returns the index's size.
   defp write_catalogue(plays, dir, opts) do
     site = site(opts, MapSet.new(plays, & &1.code))
+    by_id = Map.new(plays, &{&1.id, &1})
+    entries = Records.entries(plays, Map.new(plays, &{&1.id, by_id[root_id(&1, by_id)]}))
 
     assigns = %{
       site: site,
       works: works(plays),
-      facets: facets(plays),
+      lists: lists(entries),
       count: length(plays),
       authors:
         plays |> Enum.map(& &1.author_name) |> Enum.reject(&is_nil/1) |> Enum.uniq() |> length()
@@ -660,8 +663,7 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
     File.write!(Path.join(dir, "search.html"), Pages.render(:search, %{site: site}))
 
-    by_id = Map.new(plays, &{&1.id, &1})
-    Records.write(dir, plays, Map.new(plays, &{&1.id, by_id[root_id(&1, by_id)]}))
+    Records.write(dir, entries)
   end
 
   # The search index. `postings` holds freshly computed postings by code; every other
@@ -737,23 +739,85 @@ defmodule Playcode.Export.StaticSite do
     end
   end
 
-  # Each facet's legend and each value's name in the interface's two languages.
-  defp facets(plays) do
-    [
-      {"lang", t("Language"), options(plays, & &1.language, &html(Components.language(&1)))},
-      {"form", t("Form"),
-       plays |> Enum.filter(&Play.form/1) |> options(&Play.form/1, &form_label/1)},
-      {"kind", t("Kind"), options(plays, &Components.kind/1, &html(Components.kind_label(&1)))},
-      {"coll", t("Collection"), options(plays, &Components.collection/1, & &1)}
-    ]
+  # The options of the catalogue form's lists, by control name, from the record entries:
+  # "All" first, then the values the published plays hold, each `{value, {spanish, english}}`.
+  # The first four with their counts, most frequent first; the vocabularies in their own order.
+  defp lists(entries) do
+    witnesses = Enum.flat_map(entries, &Map.get(&1, :w, []))
+    performances = Enum.flat_map(entries, &Map.get(&1, :r, []))
+    all = tp("All")
+    all_f = tpc("feminine", "All")
+
+    %{
+      "l" => [{"", all} | by_count(entries, :l, &Components.language/1, true)],
+      "o" => [{"", all} | by_count(entries, :o, &Components.language/1, false)],
+      "k" => [{"", all} | by_count(entries, :k, &Components.kind_label/1, true)],
+      "s" => [{"", all_f} | by_count(entries, :s, &same/1, true)],
+      "f" => [{"", all_f} | by_count(entries, :f, in_both(&PlayLabels.form_label/1), true)],
+      "x" => [{"", all_f}, {"1", tp("With a text")}, {"0", tp("No text")}],
+      "wt" => [
+        {"", all}
+        | in_order(witnesses, 0, witness_types(), in_both(&PlayLabels.witness_type_label/1))
+      ],
+      "wf" => [{"", all} | in_order(witnesses, 4, formats(witnesses), &same/1)],
+      "rc" => [
+        {"", all_f} | in_order(performances, 2, Performance.venue_types(), &venue_type_label/1)
+      ],
+      "h" => [
+        {"", all}
+        | in_order(
+            entries,
+            :h,
+            Play.historical_times(),
+            in_both(&PlayLabels.historical_time_label/1)
+          )
+      ]
+    }
   end
 
-  defp form_label(form), do: both(fn -> PlayLabels.form_label(form) end)
-
-  defp options(plays, value_of, label) do
-    plays
-    |> Enum.frequencies_by(value_of)
+  defp by_count(entries, key, label, counted?) do
+    entries
+    |> Enum.map(&Map.get(&1, key))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.frequencies()
     |> Enum.sort_by(&(-elem(&1, 1)))
-    |> Enum.map(fn {value, n} -> {value, label.(value), n} end)
+    |> Enum.map(fn {value, n} ->
+      {es, en} = label.(value)
+      {value, if(counted?, do: {"#{es} (#{n})", "#{en} (#{n})"}, else: {es, en})}
+    end)
   end
+
+  # The vocabulary's values some row holds at `at`, a tuple's index or an entry's key.
+  defp in_order(rows, at, vocabulary, label) do
+    present = MapSet.new(rows, &if(is_atom(at), do: Map.get(&1, at), else: Enum.at(&1, at)))
+    for value <- vocabulary, value in present, do: {value, label.(value)}
+  end
+
+  defp witness_types,
+    do:
+      for(
+        {_group, options} <- PlayLabels.witness_type_options(),
+        {_, value} <- options,
+        do: value
+      )
+
+  # Formats as written, by their number: 2º, 4º, 8º, 12º.
+  defp formats(witnesses) do
+    witnesses
+    |> Enum.map(&Enum.at(&1, 4))
+    |> Enum.reject(&is_nil/1)
+    |> Enum.uniq()
+    |> Enum.sort_by(fn format ->
+      case Integer.parse(format) do
+        {n, _} -> {0, n, format}
+        :error -> {1, 0, format}
+      end
+    end)
+  end
+
+  # A label function of the app's, said in both languages.
+  defp in_both(label), do: fn value -> pair(fn -> label.(value) end) end
+
+  defp venue_type_label(type),
+    do: {Performance.venue_type_label(type, "es"), Performance.venue_type_label(type, "en")}
 end

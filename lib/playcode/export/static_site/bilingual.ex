@@ -58,6 +58,20 @@ defmodule Playcode.Export.StaticSite.Bilingual do
     end
   end
 
+  @doc """
+  `tp/2` with a context, for a word whose Spanish depends on what it speaks of:
+  `tpc("feminine", "All")` is "Todas" where `tp("All")` is "Todos".
+  """
+  defmacro tpc(context, msgid) do
+    quote do
+      unquote(__MODULE__).pair(fn ->
+        require Gettext.Macros
+
+        Gettext.Macros.pgettext_with_backend(unquote(@backend), unquote(context), unquote(msgid))
+      end)
+    end
+  end
+
   @doc "What `fun` returns in Spanish and in English, `{spanish, english}`."
   def pair(fun), do: {in_locale("es", fun), in_locale("en", fun)}
 

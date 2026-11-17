@@ -14,7 +14,6 @@ defmodule Playcode.Export.StaticSiteTest do
   alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.Pages
 
-  defp complete_play(attrs \\ %{}), do: play_fixture(Map.put(attrs, "is_complete", true))
   defp title_page(dir, play), do: html!(dir, "plays/#{play.code}/index.html")
   defp hrefs(html), do: html |> LazyHTML.query("a") |> LazyHTML.attribute("href")
 
@@ -590,6 +589,8 @@ defmodule Playcode.Export.StaticSiteTest do
     assert size.("style.css") <= 25_000
     assert size.("site.js") <= 15_000
     assert size.("search.js") <= 15_000
+    assert size.("catalogue.js") <= 15_000
+    assert size.("catalogue.css") <= 8_000
 
     fonts =
       dir
@@ -667,7 +668,8 @@ defmodule Playcode.Export.StaticSiteTest do
     play = complete_play()
     dir = generate!([play], all: true)
 
-    for path <- ["index.html", "about.html", "search.html", "plays/#{play.code}/index.html"] do
+    # search.html is a redirect to the catalogue since the record search, a page with no band.
+    for path <- ["index.html", "about.html", "plays/#{play.code}/index.html"] do
       page = html!(dir, path)
       first = page |> LazyHTML.query("body a, body button, body input, body select") |> Enum.at(0)
 
@@ -716,7 +718,8 @@ defmodule Playcode.Export.StaticSiteTest do
     play = complete_play()
     dir = generate!([play], all: true)
 
-    for path <- ["index.html", "about.html", "search.html", "plays/#{play.code}/index.html"] do
+    # search.html is a redirect to the catalogue since the record search, a page with no band.
+    for path <- ["index.html", "about.html", "plays/#{play.code}/index.html"] do
       assert {path, read!(dir, path) =~ ~s(<html lang="es" data-ui="es">)} == {path, true}
 
       spanish = html!(dir, path, "es")

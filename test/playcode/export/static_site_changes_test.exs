@@ -12,8 +12,6 @@ defmodule Playcode.Export.StaticSiteChangesTest do
   alias Playcode.{Catalogue, Performances, PlayContent}
   alias Playcode.Export.StaticSite
 
-  defp complete_play(attrs \\ %{}), do: play_fixture(Map.put(attrs, "is_complete", true))
-
   test "a play edited since the site was built is changed until it is written again" do
     [a, b] = [complete_play(), complete_play()]
     dir = generate!([a, b])
