@@ -36,6 +36,23 @@ defmodule PlaycodeWeb.Admin.LayoutTest do
       refute Enum.any?(sidebar_links?(lv, @admin_only))
     end
 
+    test "a play without a text offers no Comparison, even beside its relatives", %{conn: conn} do
+      %{original: original} = translation_family_fixture()
+
+      without =
+        play_without_text_fixture(%{
+          "parent_play_id" => original.id,
+          "relationship_type" => "traduccion"
+        })
+
+      conn = log_in_user(conn, user_fixture(role: :researcher))
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{without.id}")
+      refute has_element?(lv, "aside a[href='/admin/plays/#{without.id}/compare']")
+
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{original.id}")
+      assert has_element?(lv, "aside a[href='/admin/plays/#{original.id}/compare']")
+    end
+
     test "only the current page's entry is marked as current", %{conn: conn} do
       {:ok, lv, _html} = live(log_in_user(conn, admin_fixture()), ~p"/admin/plays/import")
 
