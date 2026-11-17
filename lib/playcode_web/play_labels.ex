@@ -288,6 +288,27 @@ defmodule PlaycodeWeb.PlayLabels do
   def relationship_type_label("adaptacion"), do: gettext("Adaptation")
   def relationship_type_label("version"), do: gettext("Version")
 
+  @doc "A derived play's language, said after its kind: \"Translation into French\"."
+  def into_language_label("es"), do: gettext("into Spanish")
+  def into_language_label("en"), do: gettext("into English")
+  def into_language_label("it"), do: gettext("into Italian")
+  def into_language_label("ca"), do: gettext("into Catalan")
+  def into_language_label("fr"), do: gettext("into French")
+  def into_language_label("pt"), do: gettext("into Portuguese")
+  def into_language_label(_other), do: nil
+
+  @doc "How many derived plays one kind has: \"2 translations\"; nil, the kind never set."
+  def kind_count_label("traduccion", n),
+    do: ngettext("%{count} translation", "%{count} translations", n)
+
+  def kind_count_label("adaptacion", n),
+    do: ngettext("%{count} adaptation", "%{count} adaptations", n)
+
+  def kind_count_label("version", n), do: ngettext("%{count} version", "%{count} versions", n)
+
+  def kind_count_label(nil, n),
+    do: ngettext("%{count} of no set kind", "%{count} of no set kind", n)
+
   @doc "The heading over a group of plays of one kind; nil, the kind never set."
   def relationship_group_label("traduccion"), do: gettext("Translations")
   def relationship_group_label("adaptacion"), do: gettext("Adaptations")

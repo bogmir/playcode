@@ -8,6 +8,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   use PlaycodeWeb, :live_view
 
   alias Playcode.Catalogue
+  alias Playcode.Catalogue.Play
   alias Playcode.Export.TeiValidator
   alias Playcode.Export.TeiXml
   alias Playcode.Import.WordParser
@@ -27,6 +28,8 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
      socket
      |> assign(:page_title, "Admin: #{play.title}")
      |> assign(:play, play)
+     |> assign(:derived, Catalogue.list_derived(play))
+     |> assign(:siblings, siblings(play))
      |> assign(:divisions, divisions)
      |> assign(:statistic, statistic)
      |> assign(:play_context, %{play: play, active_tab: :overview})
@@ -142,6 +145,58 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   end
 
   # A top-level division's whole verses, its scenes' included.
+  defp siblings(%Play{parent_play: %Play{} = parent, id: id}),
+    do: parent |> Catalogue.list_derived() |> Enum.reject(&(&1.id == id))
+
+  defp siblings(_play), do: []
+
+  defp original_line(original) do
+    status = if original.is_complete, do: gettext("Complete"), else: gettext("Draft")
+    Enum.join(Enum.reject([original.author_name, status], &is_nil/1), " · ")
+  end
+
+  # "into French" only when the play leaves its original's language.
+  defp into_language(%Play{parent_play: %Play{language: from}, language: to}) when from != to,
+    do: PlayLabels.into_language_label(to)
+
+  defp into_language(_play), do: nil
+
+  # The derived plays come in `Catalogue.family_order/1`, so each kind is one run.
+  defp by_kind(plays), do: Enum.chunk_by(plays, & &1.relationship_type)
+
+  defp kind_counts(plays),
+    do:
+      Enum.map_join(by_kind(plays), " · ", fn [play | _] = kind ->
+        PlayLabels.kind_count_label(play.relationship_type, length(kind))
+      end)
+
+  attr :plays, :list, required: true
+
+  defp family(assigns) do
+    ~H"""
+    <div :for={[first | _] = kind <- by_kind(@plays)} class="mt-2">
+      <p class="text-xs font-semibold uppercase tracking-wide text-base-content/70">
+        {PlayLabels.relationship_group_label(first.relationship_type)}
+      </p>
+      <ul class="mt-1 space-y-0.5">
+        <li :for={play <- kind} class="flex items-baseline gap-1.5">
+          <span :if={play.language} class="badge badge-sm shrink-0 border-0 bg-base-300 font-mono">
+            {String.upcase(play.language)}
+          </span>
+          <span class="min-w-0">
+            <.link navigate={~p"/admin/plays/#{play.id}"} class="link link-hover text-primary">
+              {play.title}
+            </.link>
+            <span class="whitespace-nowrap font-mono text-xs text-base-content/70">
+              {Play.short_code(play.code)}
+            </span>
+          </span>
+        </li>
+      </ul>
+    </div>
+    """
+  end
+
   defp act_verses(nil, _division), do: nil
 
   defp act_verses(statistic, division),
@@ -388,38 +443,55 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
           </.card>
 
           <.card
-            :if={@play.relationship_type || @play.derived_plays != []}
+            :if={@play.relationship_type || @play.parent_play || @derived != []}
+            id="work-relationship"
             title={gettext("Work Relationship")}
           >
-            <p :if={@play.relationship_type}>
-              <span class="badge badge-outline badge-sm mr-2">
-                {PlayLabels.relationship_type_label(@play.relationship_type)}
-              </span>
-              <%= if @play.parent_play do %>
-                {gettext("of")}
-                <.link navigate={~p"/admin/plays/#{@play.parent_play.id}"} class="link link-primary">
+            <div :if={@play.relationship_type || @play.parent_play} class="space-y-3">
+              <p>
+                <span :if={@play.relationship_type} class="badge badge-outline badge-sm mr-1">
+                  {PlayLabels.relationship_type_label(@play.relationship_type)}
+                </span>
+                {into_language(@play)}
+                <span :if={@play.parent_play || @play.original_title}>{gettext("of")}</span>
+                <span :if={!@play.parent_play && @play.original_title} class="text-base-content/70">
+                  {@play.original_title} ({gettext("not linked")})
+                </span>
+              </p>
+              <div :if={@play.parent_play} class="rounded-box bg-base-200 px-3 py-2">
+                <.link
+                  navigate={~p"/admin/plays/#{@play.parent_play.id}"}
+                  class="link link-primary font-medium"
+                >
                   {@play.parent_play.title}
                 </.link>
-                <span class="text-base-content/70">({@play.parent_play.code})</span>
-              <% else %>
-                <span :if={@play.original_title} class="text-base-content/70">
-                  {gettext("of")} {@play.original_title} ({gettext("not linked")})
+                <span class="font-mono text-xs text-base-content/70">
+                  {Play.short_code(@play.parent_play.code)}
                 </span>
-              <% end %>
-            </p>
-            <div :if={@play.derived_plays != []} class="mt-2">
-              <span class="text-sm text-base-content/70">{gettext("Derived works:")}</span>
-              <ul class="mt-1 ml-4 list-disc">
-                <li :for={derived <- @play.derived_plays}>
-                  <.link navigate={~p"/admin/plays/#{derived.id}"} class="link link-primary">
-                    {derived.title}
-                  </.link>
-                  <span class="text-base-content/70">({derived.code})</span>
-                  <span :if={derived.relationship_type} class="badge badge-ghost badge-sm ml-1">
-                    {PlayLabels.relationship_type_label(derived.relationship_type)}
-                  </span>
-                </li>
-              </ul>
+                <p class="text-xs text-base-content/70">{original_line(@play.parent_play)}</p>
+              </div>
+              <details :if={@siblings != []}>
+                <summary class="cursor-pointer text-sm font-semibold text-primary">
+                  {gettext("The rest of its family (%{count})", count: length(@siblings))}
+                </summary>
+                <.family plays={@siblings} />
+              </details>
+            </div>
+            <div :if={@derived != []} class={(@play.relationship_type || @play.parent_play) && "mt-4"}>
+              <p>
+                {ngettext(
+                  "Original of %{count} play: %{kinds}.",
+                  "Original of %{count} plays: %{kinds}.",
+                  length(@derived),
+                  kinds: kind_counts(@derived)
+                )}
+              </p>
+              <details open class="mt-2">
+                <summary class="cursor-pointer text-sm font-semibold text-primary">
+                  {gettext("Show them")}
+                </summary>
+                <.family plays={@derived} />
+              </details>
             </div>
           </.card>
 

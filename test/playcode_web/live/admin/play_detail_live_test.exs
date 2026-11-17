@@ -222,6 +222,97 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     assert has_element?(lv, "details", "CC BY-NC 4.0")
   end
 
+  describe "the work relationship" do
+    setup do
+      original =
+        play_fixture(%{
+          "title" => "El burlador de Sevilla",
+          "code" => "EMOTHE0201_Burlador",
+          "author_name" => "Tirso de Molina"
+        })
+
+      kin = fn title, kind, language ->
+        play_fixture(%{
+          "title" => title,
+          "title_sort" => title,
+          "parent_play_id" => original.id,
+          "relationship_type" => kind,
+          "language" => language
+        })
+      end
+
+      %{
+        original: original,
+        abuseur: kin.("L'abuseur de Sevilla", "traduccion", "fr"),
+        trickster: kin.("Trickster of Seville", "traduccion", "en"),
+        adaptation: kin.("A burlador adapted", "adaptacion", "es")
+      }
+    end
+
+    defp family(lv),
+      do:
+        lv
+        |> render()
+        |> LazyHTML.from_fragment()
+        |> LazyHTML.query("#work-relationship details li a")
+        |> Enum.map(&LazyHTML.text/1)
+        |> Enum.map(&String.trim/1)
+
+    test "a translation names its original first, then folds the rest of its family",
+         %{conn: conn, abuseur: abuseur, original: original} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{abuseur.id}")
+
+      assert has_element?(lv, "#work-relationship .badge", t("Translation"))
+      assert has_element?(lv, "#work-relationship", t("into French"))
+
+      assert has_element?(
+               lv,
+               "#work-relationship a[href='/admin/plays/#{original.id}']",
+               "El burlador de Sevilla"
+             )
+
+      assert has_element?(lv, "#work-relationship", "Tirso de Molina")
+
+      assert has_element?(
+               lv,
+               "#work-relationship summary",
+               t("The rest of its family (%{count})", count: 2)
+             )
+
+      assert family(lv) == ["Trickster of Seville", "A burlador adapted"]
+    end
+
+    test "a play in its original's language is not said to go into it",
+         %{conn: conn, adaptation: adaptation} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{adaptation.id}")
+
+      assert has_element?(lv, "#work-relationship", t("Adaptation"))
+      refute has_element?(lv, "#work-relationship", t("into Spanish"))
+    end
+
+    test "an original counts its derived plays by kind and lists them by kind, then language",
+         %{conn: conn, original: original} do
+      {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{original.id}")
+
+      kinds =
+        n("%{count} translation", "%{count} translations", 2) <>
+          " · " <> n("%{count} adaptation", "%{count} adaptations", 1)
+
+      assert has_element?(
+               lv,
+               "#work-relationship",
+               n(
+                 "Original of %{count} play: %{kinds}.",
+                 "Original of %{count} plays: %{kinds}.",
+                 3,
+                 kinds: kinds
+               )
+             )
+
+      assert family(lv) == ["Trickster of Seville", "L'abuseur de Sevilla", "A burlador adapted"]
+    end
+  end
+
   test "archiving is the last thing on the overview, and sends the user to the list",
        %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")

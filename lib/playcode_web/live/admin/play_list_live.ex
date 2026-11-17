@@ -137,11 +137,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
       rows =
         Enum.flat_map(families, fn family ->
           [Map.put(Map.delete(family, :derived), :derived?, false)] ++
-            for(
-              kind <- Enum.chunk_by(family.derived, & &1.play.relationship_type),
-              {row, i} <- Enum.with_index(kind),
-              do: Map.merge(row, %{derived?: true, heading?: i == 0})
-            )
+            for(row <- family.derived, do: Map.put(row, :derived?, true))
         end)
 
       {rows, page, total_pages}
@@ -223,6 +219,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp status_badge(%{is_complete: true}), do: "badge-success badge-soft"
   defp status_badge(_play), do: "badge-outline"
 
+  defp kind_and_language(%{relationship_type: kind, language: language}) do
+    [kind && PlayLabels.relationship_type_label(kind), language && String.upcase(language)]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(" · ")
+  end
+
   defp verses(play) do
     cond do
       not Play.has_text?(play) -> "—"
@@ -235,19 +237,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   attr :archived, :boolean, required: true
   attr :can_purge, :boolean, required: true
 
-  # A derived play that starts a kind's group brings the group's heading with it.
   defp play_row(assigns) do
     assigns = assign(assigns, assigns.row)
 
     ~H"""
-    <tr :if={@row[:heading?]}>
-      <td class="max-sm:hidden"></td>
-      <td colspan="4" class="pt-4 pb-1">
-        <p class="ml-2 border-l-2 border-base-300 pl-4 text-xs font-semibold uppercase tracking-wide text-base-content/70">
-          {PlayLabels.relationship_group_label(@play.relationship_type)}
-        </p>
-      </td>
-    </tr>
     <tr id={"play-#{@play.id}"} class="hover:bg-base-200">
       <%!-- Some codes run to 90 characters; cut, they leave the title its room. --%>
       <td class="font-mono text-xs text-base-content/70 max-sm:hidden">
@@ -257,6 +250,9 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         <div class={@derived? && "ml-2 border-l-2 border-base-300 pl-4"}>
           <%!-- Archived plays are hidden from every Catalogue reader, so
                 linking to their pages raises. Restore and delete are the only actions. --%>
+          <span :if={@derived?} class="badge badge-sm border-0 bg-base-300 mr-1.5 align-[1px]">
+            {kind_and_language(@play)}
+          </span>
           <.link
             :if={is_nil(@play.deleted_at)}
             navigate={~p"/admin/plays/#{@play.id}"}

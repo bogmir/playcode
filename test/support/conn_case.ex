@@ -43,8 +43,8 @@ defmodule PlaycodeWeb.ConnCase do
   def t(msgid, bindings \\ []), do: Gettext.gettext(PlaycodeWeb.Gettext, msgid, bindings)
 
   @doc "`t/2` for a plural entry, which `gettext/3` cannot reach."
-  def n(singular, plural, count),
-    do: Gettext.ngettext(PlaycodeWeb.Gettext, singular, plural, count)
+  def n(singular, plural, count, bindings \\ []),
+    do: Gettext.ngettext(PlaycodeWeb.Gettext, singular, plural, count, bindings)
 
   @doc """
   Puts a valid session token for `user` into `conn`.
