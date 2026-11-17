@@ -72,6 +72,7 @@ defmodule Playcode.Export.Epub do
           language: play.language || "es",
           publisher: metadata(play.publisher),
           identifier: metadata("urn:playcode:#{play.code}"),
+          modified: DateTime.to_iso8601(play.updated_at),
           unique_identifier: "EMOTHE",
           rights: metadata(play.licence_text || play.licence_url),
           description: metadata(play.original_title),
@@ -86,12 +87,42 @@ defmodule Playcode.Export.Epub do
       output_path = Path.join(tmp_dir, "#{play.code}.epub")
 
       case BUPE.build(config, output_path, [:memory]) do
-        {:ok, {_name, binary}} -> {:ok, binary}
+        {:ok, {_name, binary}} -> stable(binary, play.updated_at)
         {:error, reason} -> {:error, reason}
       end
     after
       File.rm_rf!(tmp_dir)
     end
+  end
+
+  # The same play gives the same bytes on every build, so a rebuild of the static site
+  # pushes no EPUB whose play has not changed: every entry takes the play's time, not the
+  # clock's. BUPE's own options keep `mimetype` first and stored.
+  defp stable(epub, updated_at) do
+    time = updated_at |> DateTime.to_naive() |> NaiveDateTime.to_erl()
+    {:ok, files} = :zip.unzip(epub, [:memory])
+
+    entries =
+      for {name, body} <- files do
+        stat = %File.Stat{
+          type: :regular,
+          size: byte_size(body),
+          mode: 0o644,
+          mtime: time,
+          atime: time,
+          ctime: time
+        }
+
+        {name, body, File.Stat.to_record(stat)}
+      end
+
+    with {:ok, {_name, binary}} <-
+           :zip.create(~c"book.epub", entries, [
+             :memory,
+             compress: ~w(.css .xhtml .ncx .opf)c,
+             extra: []
+           ]),
+         do: {:ok, binary}
   end
 
   defp write_chapter(tmp_dir, filename, title, language, body_html) do
