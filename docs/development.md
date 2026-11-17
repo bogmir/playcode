@@ -48,6 +48,24 @@ the families question 15 corrected stay so (`FilemakerSync`'s `@corrected_origin
 fill-only: written when blank, reported as a conflict when they differ, overwritten only under
 `--force`.
 
+Create FileMaker's records Playcode does not hold as draft plays without a text, once, before the
+four imports below, which then fill them too (`T01_ObraTitulo.xml` and `T00_ObraIndice.xml`, the
+2026-11-17 export, under `doc/ctce_dades/`). A record whose code Playcode holds, archived plays
+included, is left alone; FileMaker's tests and records with no title, no work or no language are
+skipped and named. Each play gets its kind and, when Playcode holds it or the run creates it, its
+original. A re-run creates nothing. FileMaker's own TEI for these plays goes through the TEI import,
+which keeps the kind and original; a file that does not read is left for later:
+
+```bash
+mix playcode.import.filemaker.plays --texts tmp/fm-texts   # FileMaker's texts, nothing created
+mix playcode.import.filemaker.plays --dry-run              # the plan: each play, each skip
+mix playcode.import.filemaker.plays                        # create them
+mix playcode.import.tei --dir tmp/fm-texts --force         # fill in the texts that read
+```
+
+On Fly, `Playcode.Release.import_filemaker_plays/2`, `dry_run: true` first, then the texts with
+`mix playcode.fly.reimport files --dir tmp/fm-texts` (keep only the files the local import read).
+
 Bring FileMaker's bibliography into the plays we hold, once (S4; the six tables of the
 `ctce_dades` dump under `doc/ctce_dades/`, git-ignored). A re-run skips plays already imported,
 so a curator's edits stay; on Fly, `Playcode.Release.import_bibliography/2`:

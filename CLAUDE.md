@@ -54,6 +54,7 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 | `mix playcode.import.tei` | The TEI corpus: `doc/tei_corpus/` and `test/fixtures/` (`--force`, `--resume`). `--force` skips a play with rows edited by hand since their import unless `--overwrite-edits` |
 | `mix playcode.export.tei --dir DIR [--code CODE]` | Each play's TEI as `DIR/CODE.xml`, to refresh the corpus from Playcode (`Playcode.Release.export_tei/2` on Fly) |
 | `mix playcode.import.filemaker` | Language, kind and original from FileMaker's index, historical time |
+| `mix playcode.import.filemaker.plays` | FileMaker's records Playcode lacks, as draft plays without a text (`--texts DIR` first writes their TEI for `mix playcode.import.tei --dir DIR --force`); before the four below |
 | `mix playcode.import.bibliography` | S4, FileMaker's bibliography |
 | `mix playcode.import.witnesses` | S3, its witnesses |
 | `mix playcode.import.places` | S9b, its places of action |
