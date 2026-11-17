@@ -63,6 +63,9 @@ defmodule Playcode.PlayContent.Element do
     # A speech's place among its original's speeches, set by the comparison alone
     # (`Playcode.Alignment.mark_pairs/1`).
     field :pair, :integer, virtual: true
+    # A prose paragraph's own number, typed apart from its words and stored as the marker
+    # that opens its content.
+    field :number, :string, virtual: true
     field :rend, :string
     field :stage_type, :string
     field :position, :integer, default: 0
@@ -224,8 +227,11 @@ defmodule Playcode.PlayContent.Element do
       :position,
       :play_id,
       :division_id,
-      :parent_id
+      :parent_id,
+      :number
     ])
+    |> validate_format(:number, ~r/\A[A-Za-z0-9.\-]+\z/)
+    |> put_paragraph_number(attrs)
     |> validate_required([:type])
     |> validate_inclusion(
       :type,
@@ -237,6 +243,17 @@ defmodule Playcode.PlayContent.Element do
     |> validate_folio_markers()
     |> validate_number_markers()
     |> continue_only_an_aside()
+  end
+
+  defp put_paragraph_number(changeset, attrs) do
+    if Map.has_key?(attrs, "number") or Map.has_key?(attrs, :number) do
+      {_old, words} = InlineMarkup.paragraph_number(get_field(changeset, :content))
+      number = if changeset.errors[:number], do: nil, else: get_field(changeset, :number)
+      content = InlineMarkup.number_marker(number) <> (words || "")
+      put_change(changeset, :content, if(content == "", do: nil, else: content))
+    else
+      changeset
+    end
   end
 
   # Only a line or paragraph spoken aside can continue an aside.
