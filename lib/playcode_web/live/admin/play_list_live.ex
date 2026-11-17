@@ -250,7 +250,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         <div class={@derived? && "ml-2 border-l-2 border-base-300 pl-4"}>
           <%!-- Archived plays are hidden from every Catalogue reader, so
                 linking to their pages raises. Restore and delete are the only actions. --%>
-          <span :if={@derived?} class="badge badge-sm badge-ghost mr-1.5 align-[1px]">
+          <span :if={@derived?} class="badge badge-sm border-0 bg-base-300 mr-1.5 align-[1px]">
             {kind_and_language(@play)}
           </span>
           <.link

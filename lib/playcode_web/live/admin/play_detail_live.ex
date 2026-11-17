@@ -179,14 +179,18 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         {PlayLabels.relationship_group_label(first.relationship_type)}
       </p>
       <ul class="mt-1 space-y-0.5">
-        <li :for={play <- kind}>
-          <span :if={play.language} class="badge badge-sm badge-ghost mr-1 font-mono">
+        <li :for={play <- kind} class="flex items-baseline gap-1.5">
+          <span :if={play.language} class="badge badge-sm shrink-0 border-0 bg-base-300 font-mono">
             {String.upcase(play.language)}
           </span>
-          <.link navigate={~p"/admin/plays/#{play.id}"} class="link link-primary">
-            {play.title}
-          </.link>
-          <span class="font-mono text-xs text-base-content/70">{Play.short_code(play.code)}</span>
+          <span class="min-w-0">
+            <.link navigate={~p"/admin/plays/#{play.id}"} class="link link-hover text-primary">
+              {play.title}
+            </.link>
+            <span class="whitespace-nowrap font-mono text-xs text-base-content/70">
+              {Play.short_code(play.code)}
+            </span>
+          </span>
         </li>
       </ul>
     </div>
