@@ -151,6 +151,67 @@ defmodule Playcode.Export.StaticSitePlayTest do
              Playcode.Export.TeiXml.generate(Playcode.Catalogue.get_play!(play.id))
   end
 
+  describe "downloads" do
+    test "a play's EPUB is published beside its pages, the book staff download" do
+      play = tei(body: two_acts()) |> import_tei!() |> mark_complete!()
+      dir = generate!([play])
+
+      {:ok, epub} = Playcode.Export.Epub.generate(Playcode.Catalogue.get_play_with_all!(play.id))
+      assert read!(dir, "plays/#{play.code}/#{play.code}.epub") == epub
+    end
+
+    # Holds the wiring only: two builds inside one second agree whatever the times.
+    # `EpubTest` holds the rule that an EPUB's times are its play's.
+    test "building an unchanged play again gives the same EPUB" do
+      play = tei(body: two_acts()) |> import_tei!() |> mark_complete!()
+      dir = generate!([play])
+      before = read!(dir, "plays/#{play.code}/#{play.code}.epub")
+
+      {:ok, _} = Playcode.Export.StaticSite.apply_changes([{:add, play.id}], output_dir: dir)
+      assert read!(dir, "plays/#{play.code}/#{play.code}.epub") == before
+    end
+
+    test "the title page offers the TEI file, the EPUB and print, each naming its format" do
+      play = tei(body: two_acts()) |> import_tei!() |> mark_complete!()
+      page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+      section = LazyHTML.query(page, "section.downloads")
+
+      assert texts(section, "h2") == ["Descargas"]
+
+      assert section |> LazyHTML.query("a") |> LazyHTML.attribute("href") ==
+               ["#{play.code}.xml", "#{play.code}.epub", "text.html#print"]
+
+      assert texts(section, "a") == [
+               "Descargar la fuente TEI-XML",
+               "Descargar el libro electrónico EPUB",
+               # A link opens another page: it names the full text it prints.
+               "Imprimir el texto completo o guardarlo como PDF"
+             ]
+
+      assert section |> LazyHTML.query("a[download]") |> Enum.count() == 2
+    end
+
+    test "the full text has a print button, hidden until the script shows it, and never printed" do
+      play = tei(body: two_acts()) |> import_tei!() |> mark_complete!()
+      dir = generate!([play])
+
+      button =
+        html!(dir, "plays/#{play.code}/text.html", "es") |> LazyHTML.query("button[data-print]")
+
+      assert LazyHTML.attribute(button, "hidden") == [""]
+      assert texts(button, "button") == ["Imprimir o guardar como PDF"]
+      assert read!(dir, "assets/style.css") =~ ~r/@media print \{[^@]*\[data-print\]/s
+    end
+
+    test "a play without a text offers its TEI file alone" do
+      play = play_without_text_fixture(%{"is_complete" => true})
+      page = html!(generate!([play]), "plays/#{play.code}/index.html")
+
+      assert page |> LazyHTML.query("section.downloads a") |> LazyHTML.attribute("href") ==
+               ["#{play.code}.xml"]
+    end
+  end
+
   test "each act has its own page, linked to the acts before and after it" do
     {play, dir} = publish!(two_acts())
     first = page(dir, play, "act-1.html")

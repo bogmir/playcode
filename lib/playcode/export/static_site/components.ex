@@ -137,6 +137,24 @@ defmodule Playcode.Export.StaticSite.Components do
 
   attr :play, :map, required: true
 
+  @doc "The play's files: its TEI source, and for a play with a text its EPUB and print."
+  def downloads(assigns) do
+    ~H"""
+    <section class="downloads">
+      <h2>{t("Downloads")}</h2>
+      <ul>
+        <li><a href={"#{@play.code}.xml"} download>{t("Download the TEI-XML source")}</a></li>
+        <%= if Play.has_text?(@play) do %>
+          <li><a href={"#{@play.code}.epub"} download>{t("Download the EPUB e-book")}</a></li>
+          <li><a href="text.html#print">{t("Print the full text or save it as PDF")}</a></li>
+        <% end %>
+      </ul>
+    </section>
+    """
+  end
+
+  attr :play, :map, required: true
+
   @doc "The play's licence: its text, linked to its URL when that is a web address."
   def licence(assigns) do
     ~H"""
