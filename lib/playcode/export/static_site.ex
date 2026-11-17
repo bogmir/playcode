@@ -27,7 +27,17 @@ defmodule Playcode.Export.StaticSite do
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue.Play
-  alias Playcode.Export.StaticSite.{Comparison, Components, Edition, Fingerprint, Pages, Search}
+
+  alias Playcode.Export.StaticSite.{
+    Comparison,
+    Components,
+    Edition,
+    Fingerprint,
+    Pages,
+    Records,
+    Search
+  }
+
   alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
 
@@ -648,6 +658,9 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
     File.write!(Path.join(dir, "search.html"), Pages.render(:search, %{site: site}))
+
+    by_id = Map.new(plays, &{&1.id, &1})
+    Records.write(dir, plays, Map.new(plays, &{&1.id, by_id[root_id(&1, by_id)]}))
   end
 
   # The search index. `postings` holds freshly computed postings by code; every other
