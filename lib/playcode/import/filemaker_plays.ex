@@ -20,8 +20,11 @@ defmodule Playcode.Import.FilemakerPlays do
   (`write_texts/2`), which keeps both.
   """
 
+  alias Playcode.ActivityLog
+  alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.Import.{Filemaker, FilemakerXml}
+  alias Playcode.Repo
 
   @default_dir "doc/ctce_dades"
   @titles "T01_ObraTitulo.xml"
@@ -39,6 +42,17 @@ defmodule Playcode.Import.FilemakerPlays do
 
   # T01.3
   @states %{"0" => "sin texto", "1" => "en curso", "2" => "finalizada", "3" => "publicada"}
+
+  @skip_reasons %{
+    no_code: "no record number",
+    test: "a FileMaker test",
+    held_under_file_name: "its file is a play Playcode holds",
+    no_title: "no title",
+    no_work: "no work",
+    no_language: "no language"
+  }
+
+  @archivo ~r|(<title key="archivo">)[^<]*(</title>)|
 
   def default_dir, do: @default_dir
 
@@ -89,6 +103,91 @@ defmodule Playcode.Import.FilemakerPlays do
         end)
         |> Enum.sort_by(& &1.code)
     }
+  end
+
+  @doc """
+  Creates every play of the plan in one transaction, each logged in the activity log:
+  `{:ok, created}`, or `{:error, {code, changeset}}` for the first refused, nothing kept.
+  """
+  def apply_plan(plan) do
+    Repo.transaction(fn ->
+      Enum.reduce(plan.create, 0, fn %{attrs: attrs, original: original}, created ->
+        case Catalogue.create_play(attrs, %Play{pending_original_code: original}) do
+          {:ok, play} ->
+            # No user: the import runs from the backend, by mix task.
+            ActivityLog.log!(%{
+              play_id: play.id,
+              action: "create",
+              resource_type: "play",
+              resource_id: play.id,
+              metadata: %{"source" => "filemaker_plays"}
+            })
+
+            created + 1
+
+          {:error, changeset} ->
+            Repo.rollback({attrs["code"], changeset})
+        end
+      end)
+    end)
+  end
+
+  @doc "The plan as lines to print: each play to create, each record skipped, the counts."
+  def report(plan) do
+    creates =
+      Enum.flat_map(plan.create, fn %{attrs: attrs} = play ->
+        line =
+          [
+            attrs["code"],
+            attrs["title"],
+            "[#{attrs["language"]}]",
+            attrs["author_name"],
+            "(#{play.state})"
+          ]
+          |> Enum.reject(&is_nil/1)
+          |> Enum.join("  ")
+
+        if play.original,
+          do: [line, "    #{attrs["relationship_type"]} of #{play.original}"],
+          else: [line]
+      end)
+
+    skips =
+      Enum.map(plan.skipped, fn skip ->
+        "skipped #{Enum.join(Enum.reject([skip.code, skip.title], &is_nil/1), "  ")}: " <>
+          @skip_reasons[skip.reason]
+      end)
+
+    creates ++
+      skips ++
+      [
+        "#{length(plan.create)} to create, #{plan.held} already held, #{length(plan.skipped)} skipped"
+      ]
+  end
+
+  @doc """
+  Writes the text FileMaker holds for each play of the plan, when it holds one, to
+  `dir/CODE.xml`, its archivo title set to the code the play is created with, so the TEI
+  import (`mix playcode.import.tei --dir DIR --force`) fills in that play. Needs the
+  texts loaded (`load/2`, `texts: true`). Returns how many it wrote.
+  """
+  def write_texts(plan, dir) do
+    File.mkdir_p!(dir)
+
+    for %{attrs: %{"code" => code}, text: text} <- plan.create,
+        is_binary(text) and text =~ ~r|<body[^>]*>\s*<[^/]| do
+      File.write!(Path.join(dir, code <> ".xml"), with_code(text, code))
+    end
+    |> length()
+  end
+
+  defp with_code(text, code) do
+    if text =~ @archivo,
+      do: Regex.replace(@archivo, text, "\\1#{code}\\2", global: false),
+      else:
+        String.replace(text, "<titleStmt>", ~s(<titleStmt><title key="archivo">#{code}</title>),
+          global: false
+        )
   end
 
   defp skip_reason(code, row, works, held) do
