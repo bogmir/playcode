@@ -56,7 +56,16 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
         "name" => "CLARÍN"
       })
 
-    plays = [english, translation, french, prose, verse]
+    masque = text_play(~s(<sp><speaker>TESTER</speaker><p>Hola.</p></sp>), "A Masque")
+
+    {:ok, _} =
+      PlayContent.create_character(%{
+        "play_id" => masque.id,
+        "xml_id" => "tester",
+        "name" => "TESTER"
+      })
+
+    plays = [english, translation, french, prose, verse, masque]
     dir = site_dir!()
 
     {:ok, _} =
@@ -69,14 +78,18 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
       translation: translation,
       french: french,
       prose: prose,
-      verse: verse
+      verse: verse,
+      masque: masque
     }
   end
 
-  defp text_play(speech) do
+  defp text_play(speech, title \\ "Test Play") do
     play =
       import_tei!(
-        tei(body: ~s(<div1 type="jornada" n="1"><head>Jornada I</head>#{speech}</div1>))
+        tei(
+          title: title,
+          body: ~s(<div1 type="jornada" n="1"><head>Jornada I</head>#{speech}</div1>)
+        )
       )
 
     {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true, "language" => "es"})
@@ -91,6 +104,13 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
       |> LazyHTML.query("#{list} [data-play]:not([hidden])")
       |> LazyHTML.attribute("data-code")
       |> Enum.sort()
+
+  # The plays of Obras in the order the page shows them.
+  defp order(page),
+    do:
+      page
+      |> LazyHTML.query("[data-works] [data-play]:not([hidden])")
+      |> LazyHTML.attribute("data-code")
 
   defp hidden?(page, selector),
     do: page |> LazyHTML.query(selector) |> LazyHTML.attribute("hidden") == [""]
@@ -113,7 +133,7 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
     assert shown(page) == [french.code]
     # --dump-dom prints attributes, not a select's value: the rows show the control was
     # filled, since the page filters on what the form holds, not on the address.
-    assert texts(page, "[data-count]") == ["1 obra de 5"]
+    assert texts(page, "[data-count]") == ["1 obra de 6"]
   end
 
   test "witness fields meet in one witness", %{dir: dir, english: english} do
@@ -218,5 +238,14 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
     assert language =~ ~r/^Idioma: [^(]+×$/
     assert text =~ "Con o sin texto: Con texto"
     assert texts(page, "[data-active]") == ["2"]
+  end
+
+  test "plays found by title, code or author come before those found by a character or a place",
+       %{dir: dir, masque: masque, prose: prose, verse: verse} do
+    # By title alone, "A Masque" (its character TESTER) would come before the two "Test Play"s.
+    page = Browser.dom!(dir, "index.html#q=test&sort=title")
+    assert Enum.sort(Enum.take(order(page), 2)) == Enum.sort([prose.code, verse.code])
+    assert List.last(order(page)) == masque.code
+    assert texts(page, "[data-works] [data-why]") == ["Personaje: TESTER"]
   end
 end

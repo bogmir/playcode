@@ -149,7 +149,7 @@
   var KINDS = { s: 'spoken', d: 'stage', n: 'note' }, FIRST = 5;
   // A datalist's values: where they are in an entry, or in its witnesses or performances.
   var SUGGEST = [['a', '', 'a'], ['wc', 'w', 1], ['rp', 'r', 0], ['rv', 'r', 1], ['rk', 'r', 5], ['ra', 'r', 6], ['p', '', 'p']];
-  var form, list, textList, count, W, works, codes, prepared, raw, loading, engine, found, sorted = '';
+  var form, list, textList, count, W, works, codes, prepared, raw, loading, engine, found;
 
   function say(pair) { return E.say(pair[0], pair[1]); }
   function each(selector, scope, fn) { scope.querySelectorAll(selector).forEach(fn); }
@@ -211,17 +211,15 @@
     });
   }
 
-  function reorder(key) {
-    if (key === sorted) return;
-    key = (sorted = key) || 'author';
-    [list, textList].forEach(function (ol) {
-      Array.from(ol.children).sort(function (a, b) {
-        var x = a.dataset[key] || '', y = b.dataset[key] || '';
-        if (x === y) return 0;
-        if (key === 'date') { x = x ? Number(x) : Infinity; y = y ? Number(y) : Infinity; return x - y; }
-        return x.localeCompare(y);
-      }).forEach(function (item) { ol.appendChild(item); });
-    });
+  // A list's works in the sort's order; those last(work) says go after the rest.
+  function reorder(ol, key, last) {
+    key = key || 'author';
+    Array.from(ol.children).sort(function (a, b) {
+      var x = a.dataset[key] || '', y = b.dataset[key] || '', r = last ? last(a) - last(b) : 0;
+      if (r || x === y) return r;
+      if (key === 'date') { x = x ? Number(x) : Infinity; y = y ? Number(y) : Infinity; return x - y; }
+      return x.localeCompare(y);
+    }).forEach(function (item) { ol.appendChild(item); });
   }
 
   function el(tag, cls, text) {
@@ -328,6 +326,13 @@
       byText[code] = ok && lines[code].length > 0;
       if (byText[code]) total += lines[code].length;
     });
+    // Plays found by title, code or author first; those found only by a character or a place after.
+    reorder(list, state.sort, function (work) {
+      return text && !Array.from(work.querySelectorAll('[data-play]')).some(function (row) {
+        var w = why[row.dataset.code];
+        return w && !w.length;
+      }) ? 1 : 0;
+    });
     var plays = show(list, byRecord, state, why), heads = document.querySelectorAll('.sect');
     list.parentNode.hidden = text && sec === 't';
     textList.parentNode.hidden = !inText;
@@ -365,7 +370,7 @@
     var state = read(), address = R.format(state);
     try { root.history.replaceState(null, '', address ? '#' + address : root.location.pathname); } catch (e) { /* file:// may refuse */ }
     if (recordsAsked(state)) loadRecords();
-    reorder(state.sort || '');
+    reorder(textList, state.sort);
     chips(state);
     filter(state);
   }
