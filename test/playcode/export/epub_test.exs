@@ -12,11 +12,16 @@ defmodule Playcode.Export.EpubTest do
     Catalogue.get_play_with_all!(play.id)
   end
 
-  # A play last changed years ago, so its times cannot pass for the clock's. No context
-  # ages a play, so this reaches the table.
+  # A play whose pages last changed years ago, so its times cannot pass for the clock's or
+  # its row's. Only Postgres writes that time, so this reaches the table.
   defp old_play do
     play = play_with_structure_fixture().play
-    Playcode.Repo.update!(Ecto.Changeset.change(play, updated_at: ~U[2020-03-04 05:06:07Z]))
+
+    Playcode.Repo.query!(
+      "UPDATE plays SET content_changed_at = '2020-03-04 05:06:07' WHERE id = $1",
+      [Ecto.UUID.dump!(play.id)]
+    )
+
     Catalogue.get_play_with_all!(play.id)
   end
 
