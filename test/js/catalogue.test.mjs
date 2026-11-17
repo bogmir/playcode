@@ -25,7 +25,7 @@ const no = (entry, state) => assert.equal(R.match(R.prepare(entry), state), fals
 
 test('an empty state matches every play', () => { yes(hamlet, {}); yes(bare, {}); });
 test('text is a normalised substring', () => {
-  yes(hamlet, { t: 'tragedy' }); yes(hamlet, { t: 'emothe0010' }); yes(hamlet, { a: 'SHAKES' });
+  yes(hamlet, { t: 'tragedy' }); yes(hamlet, { t: 'othe0010' }); yes(hamlet, { a: 'SHAKES' });
   yes(hamlet, { n: 'calderon' }); no(hamlet, { n: 'ofelio' }); yes(bare, { t: 'seville' });
   no(bare, { a: 'x' });                                   // no author matches no author text
 });

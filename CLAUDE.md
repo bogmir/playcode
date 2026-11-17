@@ -45,6 +45,7 @@ session only, and say so. An asdf upgrade edits `env.PATH`; `.tool-versions` say
 | `mix phx.server` | Dev server: import TEI at http://localhost:4000/admin/plays/import, a play's preview at http://localhost:4000/plays/CODE |
 | `mix test` | The whole suite; `mix test 2>&1 \| tail -10` for the summary |
 | `mix test --include slow` | Adds the TEI schema validation and the full corpus sweep in `test/playcode/roundtrip_test.exs` (every tracked `test/fixtures/*.xml` plus the git-ignored `test/fixtures/tei_files/`), a few minutes. The default run covers two of those files. A `DBConnection` timeout or `query_canceled` there: check whether two slow tests import one play code (give one a code of its own, as `apparatus_corpus_test.exs` does); otherwise it is load, and no rerun loop tells more. A deadlock or an assertion failure is real |
+| `mix test --include browser test/playcode/export/static_site_browser_test.exs` | The catalogue's search in headless Chrome over a generated site, through the address; needs `google-chrome` or `chromium`, left out of the default run and of CI |
 | `node --test test/js/*.test.mjs` | The static site's browser JS; CI runs it after `mix test` |
 | `mix format` | After every task: CI checks it, and a noisy diff hides the real change |
 | `mix compile`, `mix compile --warnings-as-errors` | Compile; the pre-commit hook runs the second |
@@ -234,10 +235,10 @@ archive opened as `file://`. The full write-up is `docs/static-site.md`; the rul
 
 - **Every path built from a play code goes through `StaticSite.safe_code!/1`.** `Play.changeset/2` holds a code to `Play.code_format/0`, but not the rows saved before it did, and `apply_changes/2` takes a removed play's code from a socket event.
 - **Every build and deploy goes through `Playcode.Export.SiteBuilder`, one job at a time.** Two builds at once drop a play from the incremental index; a deploy during a build pushes half a site.
-- **The search normaliser has two halves that must agree**: `StaticSite.Search` and `EMOTHE.normalise` in `site.js`, both run against `test/fixtures/search_normalisation.json`. The browser half runs under `node --test`.
+- **The search normaliser has two halves that must agree**: `StaticSite.Search` and `EMOTHE.normalise` in `site.js`, both run against `test/fixtures/search_normalisation.json`. The browser half runs under `node --test`; `catalogue.js` normalises through it and never with one of its own.
 - **Generate rebuilds only what changed** (`build.json`, `StaticSite.Fingerprint`). There is no forced full rebuild: a play Generate misses is a tracking bug. `fingerprint_test.exs` fails when the export calls a module of the app that is neither fingerprinted nor data access.
 - **A page links a style or script as `assets/…?v=` and `@site.assets`**, the assets' stamp, which an asset change moves in every page in place; an unstamped link lets a returning reader's browser pair new pages with an old stylesheet. The font preload is the exception (it must match `style.css`'s `url()`).
-- **Size budgets** for `style.css` (25 KB), `site.js` and `search.js` (15 KB each) and the fonts (300 KB) are asserted in `static_site_test.exs`.
+- **Size budgets** for `style.css` (25 KB), `site.js`, `search.js` and `catalogue.js` (15 KB each), `catalogue.css` (8 KB) and the fonts (300 KB) are asserted in `static_site_test.exs`. The catalogue's code and styles live in `catalogue.js` and `catalogue.css`, which only `index.html` loads.
 - **`assets/js/sync_scroll.mjs` is the comparison's one scroll-sync implementation**: the compare pages' hook imports it and the static site's `StaticSite.Comparison` inlines it at compile time.
 </important>
 

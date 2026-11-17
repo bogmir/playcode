@@ -77,6 +77,7 @@ lib/
 │           ├── comparison.ex         # A derived play beside its original: sync keys, pairs, the inlined script
 │           ├── pages.ex              # embed_templates "pages/*" → HTML strings
 │           ├── components.ex         # Shell, rail, play text, charts, catalogue entry
+│           ├── bilingual.ex          # t/tp/ta/tpc: the interface in Spanish and English at once
 │           ├── search.ex             # Normaliser + full-text index writer
 │           ├── records.ex            # The record index, search/records.js: each published play's record fields
 │           ├── fingerprint.ex        # One hash of the code, assets and settings the pages are built with
