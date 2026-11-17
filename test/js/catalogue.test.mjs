@@ -101,17 +101,24 @@ test('a passage names its place; a note says it is one, and has no speaker', () 
 });
 
 test('the box finds a play when each word is in its titles, code, author, characters or places', () => {
-  assert.deepEqual(plain(R.about(hamlet, ['hamlet'])), []);
-  assert.deepEqual(plain(R.about(hamlet, ['shakes', 'tragedy'])), []);
-  assert.deepEqual(plain(R.about(hamlet, ['othe0010'])), []);
-  assert.equal(R.about(hamlet, ['hamlet', 'nadie']), null);
-  assert.equal(R.about(bare, ['x']), null);
+  assert.deepEqual(plain(R.about(hamlet, 'hamlet')), []);
+  assert.deepEqual(plain(R.about(hamlet, 'shakes tragedy')), []);
+  assert.deepEqual(plain(R.about(hamlet, 'othe0010')), []);
+  assert.equal(R.about(hamlet, 'hamlet nadie'), null);
+  assert.equal(R.about(bare, 'x'), null);
 });
 test('a play the box finds by a character or a place says which, by the place’s own name', () => {
-  assert.deepEqual(plain(R.about(hamlet, ['ofelia'])), [['n', 'OFELIA']]);
-  assert.deepEqual(plain(R.about(hamlet, ['calderon'])), [['n', 'Calderón']]);
-  assert.deepEqual(plain(R.about(hamlet, ['elsinore'])), [['p', 'Elsinor']]);
-  assert.deepEqual(plain(R.about(hamlet, ['hamlet', 'ofe', 'lia'])), [['n', 'OFELIA']]);   // one hint per value
+  assert.deepEqual(plain(R.about(hamlet, 'ofelia')), [['n', 'OFELIA']]);
+  assert.deepEqual(plain(R.about(hamlet, 'calderon')), [['n', 'Calderón']]);
+  assert.deepEqual(plain(R.about(hamlet, 'elsinore')), [['p', 'Elsinor']]);
+  assert.deepEqual(plain(R.about(hamlet, 'hamlet ofe lia')), [['n', 'OFELIA']]);   // one hint per value
+});
+test('quoted words are found together, in order, in one title, author, character or place', () => {
+  assert.deepEqual(plain(R.about(hamlet, '"tragedy of hamlet"')), []);
+  assert.deepEqual(plain(R.about(hamlet, '"william shakespeare" tragedy')), []);
+  assert.equal(R.about(hamlet, '"hamlet tragedy"'), null);      // both words, wrong order
+  assert.equal(R.about(hamlet, '"hamlet ofelia"'), null);       // a title and a character, not one value
+  assert.deepEqual(plain(R.about(hamlet, 'hamlet ofelia')), [['n', 'OFELIA']]);
 });
 test('the address keeps which section the box shows', () => {
   assert.deepEqual(plain(R.parse('#q=vida&sec=t')), { q: 'vida', sec: 't' });
@@ -119,6 +126,6 @@ test('the address keeps which section the box shows', () => {
 });
 
 test('the box finds a place by its own names; the places around it are the place filter’s', () => {
-  assert.equal(R.about(hamlet, ['denmark']), null);
+  assert.equal(R.about(hamlet, 'denmark'), null);
   yes(hamlet, { p: 'denmark' });
 });

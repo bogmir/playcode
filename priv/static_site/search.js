@@ -51,19 +51,6 @@
     return out;
   };
 
-  // Words in quotes are a phrase; every word, in a phrase or not, must occur in the line.
-  S.parse = function (query) {
-    var phrases = [];
-    var rest = String(query || '').replace(/"([^"]*)"/g, function (_, inner) {
-      var words = E.words(inner);
-      if (words.length) phrases.push(words);
-      return ' ';
-    });
-    var all = E.words(rest);
-    phrases.forEach(function (phrase) { all = all.concat(phrase); });
-    return { words: all.filter(function (w, i) { return all.indexOf(w) === i; }), phrases: phrases };
-  };
-
   // A one-letter word has a shard of its own, so it can only match whole.
   S.matches = function (token, word, mode) {
     return mode === 'prefix' && Array.from(word).length > 1 ? token.indexOf(word) === 0 : token === word;
@@ -148,7 +135,7 @@
   // A query's hits by play: { CODE: [[line, kind], …] }, lines ascending; {} for no word.
   // mode is "prefix" or "word".
   S.find = function (query, mode) {
-    var parsed = S.parse(query);
+    var parsed = E.parse(query);
     if (!parsed.words.length) return Promise.resolve({});
     var keys = parsed.words.map(S.shardKey).filter(function (k, i, a) { return a.indexOf(k) === i; });
     return need('plays', 'all', 'search/plays.js')

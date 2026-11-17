@@ -76,11 +76,13 @@
     });
   };
 
-  function has(value, word) { return E.normalise(value).indexOf(word) !== -1; }
+  function has(value, word) { return E.words(value).join(' ').indexOf(word) !== -1; }
 
-  // The box's words (E.words): each must be in the play's titles, code, author, characters or places,
-  // or the play is not found (null). A word found only in a character or a place names it, once.
-  R.about = function (e, words) {
+  // The box's words and phrases (E.parse): each must be in one of the play's titles, its code, author,
+  // characters or places, or the play is not found (null). One found only in a character or a place
+  // names it, once.
+  R.about = function (e, query) {
+    var q = E.parse(query), words = q.words.concat(q.phrases.map(function (p) { return p.join(' '); }));
     var said = [], own = (e.t || []).concat(e.c, e.a).filter(Boolean);
     for (var i = 0; i < words.length; i++) {
       var w = words[i], hint = null;
@@ -256,7 +258,7 @@
 
   // A row's passages, folded: opened, its first lines load, and "show more" the rest.
   function passages(row, lines, state) {
-    var details = el('details', 'passages'), words = E.search.parse(state.q).words;
+    var details = el('details', 'passages'), words = E.parse(state.q).words;
     var mode = modeOf(state), shown = 0;
     details.appendChild(el('summary', null, say(W.open)));
     function more(n) {
@@ -319,7 +321,7 @@
     var byRecord = {}, byText = {}, why = {}, lines = {}, total = 0;
     codes.forEach(function (code) {
       var ok = all || !!prepared[code] && R.match(prepared[code], state);
-      why[code] = text && ok && prepared && raw[code] ? R.about(raw[code], words) : null;
+      why[code] = text && ok && prepared && raw[code] ? R.about(raw[code], state.q) : null;
       byRecord[code] = text ? !!why[code] : ok;
       lines[code] = inText ? (found.hits[code] || []).filter(function (h) { return !kind || h[1] === kind; })
         .map(function (h) { return h[0]; }) : [];
