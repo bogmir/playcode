@@ -428,35 +428,30 @@
     <div class="q" id="q14" data-q="q14" data-n="14">
       <span class="q-num" aria-hidden="true">14</span>
       <div class="q-body">
-        <h3>Nine plays have a web edition in FileMaker but no TEI file in Playcode. Which of them should it have?</h3>
-        <p class="why">FileMaker marks ten versions as having a web edition for which the 370 TEI files we were given hold nothing. One, EMOTHE0203, is FileMaker’s test record (“ZZZ_OBRA_DE_PRUEBA”), so we leave it out. The other nine fall into two groups.</p>
-        <p class="why"><strong>Five can be read on emothe.uv.es today</strong>, but the site’s own “[xml]” link fails for each of them, which is why their files did not reach us. <strong>Four have no page on the site at all</strong>: they look unfinished, or replaced by another version.</p>
+        <h3>Two editions of <i>Pyrame et Thisbé</i>, and three plays with no text anywhere: which should Playcode keep?</h3>
+        <p class="why">This question first listed nine plays that FileMaker marks as having a web edition but that the 370 TEI files we were given lacked. Six of them now have their text in Playcode, as drafts: EMOTHE0391, 0514, 0515 and 0551 from the project’s copy on GitHub, and EMOTHE0202 and 0448 from FileMaker’s own texts, repaired where their XML was broken. Two things are left.</p>
+        <p class="why"><strong>EMOTHE0448 and EMOTHE0530 are two editions of Théophile de Viau’s <i>Les amours tragiques de Pyrame et Thisbé</i></strong>, both in French and by different editors: 0448 by José Enrique López Martínez, 0530 by Evelio Miñano Martínez. They have the same 1261 lines, but 162 of them read differently, most in spelling (0448 “fasse”, 0530 “face”) and some in a word (“ont destiné” against “aient destiné”). 0448 has 2 notes and no variants; 0530 has 77 notes and 62 variants from 4 witnesses. FileMaker calls 0448 a version of 0530, “finalizada”; 0530 is the one readers find on emothe.uv.es, and 0448 has no page there.</p>
+        <p class="why"><strong>Three have no text that we can find.</strong> FileMaker’s records of these plays hold a TEI header with an empty body, and none has a page on emothe.uv.es.</p>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Play</th><th>On emothe.uv.es</th><th>What else we know</th></tr></thead>
+            <thead><tr><th>Play</th><th>In FileMaker</th><th>In Playcode</th></tr></thead>
             <tbody>
-              <tr><td>EMOTHE0202 <i>Le démon blanc (Vittoria Corombona)</i>, Webster, tr. Camille Cè</td><td>Yes</td><td>Playcode holds the English, Spanish and Italian versions</td></tr>
-              <tr><td>EMOTHE0391 <i>El condenado por desconfiado</i>, Tirso de Molina / Andrés de Claramonte, ed. Luis Galván</td><td>Yes</td><td></td></tr>
-              <tr><td>EMOTHE0514 <i>La belle Égyptienne</i>, Alexandre Hardy</td><td>Yes</td><td></td></tr>
-              <tr><td>EMOTHE0515 <i>Felismena</i>, the Spanish version of Hardy’s <i>Félismène</i></td><td>Yes</td><td>Playcode holds the French original, EMOTHE0489</td></tr>
-              <tr><td>EMOTHE0551 <i>La paloma de Toledo</i>, Lope de Vega, ed. Cristina Barreda</td><td>Yes</td><td>Playcode holds ARTELOPE’s AL0790, also edited by Cristina Barreda, as a draft: perhaps the same text</td></tr>
-              <tr><td>EMOTHE0288 <i>Edward II</i>, Marlowe</td><td>No</td><td></td></tr>
-              <tr><td>EMOTHE0355 <i>The Spanish Bawd</i>, James Mabbe</td><td>No</td><td></td></tr>
-              <tr><td>EMOTHE0428 <i>Auto da Índia</i>, Gil Vicente</td><td>No</td><td>FileMaker files it under Massinger’s <i>The Renegado</i>, with that play’s performances. Playcode holds the Spanish version, EMOTHE0432</td></tr>
-              <tr><td>EMOTHE0448 <i>Les amours tragiques de Pyrame et Thisbé</i>, Théophile de Viau</td><td>No</td><td>A second version of EMOTHE0530, which Playcode holds</td></tr>
+              <tr><td>EMOTHE0288 <i>Edward II</i>, Marlowe</td><td>“Sin texto”</td><td>A draft without a text</td></tr>
+              <tr><td>EMOTHE0355 <i>The Spanish Bawd</i>, James Mabbe</td><td>“Sin texto”</td><td>A draft without a text</td></tr>
+              <tr><td>EMOTHE0428 <i>Auto da Índia</i>, Gil Vicente</td><td>“Publicada”, but its work was deleted and it was filed under Massinger’s <i>The Renegado</i></td><td>Left out. Its Spanish version, EMOTHE0432, has no original to point to</td></tr>
             </tbody>
           </table>
         </div>
         <fieldset>
           <legend>Answer</legend>
           <div class="options">
-            <label for="q14-o1"><input type="radio" id="q14-o1" name="q14-choice" value="We will send the five on the site; leave out the four without a page">We will send the five on the site; leave out the four without a page</label>
-            <label for="q14-o2"><input type="radio" id="q14-o2" name="q14-choice" value="We will send all nine">We will send all nine</label>
-            <label for="q14-o3"><input type="radio" id="q14-o3" name="q14-choice" value="Some of each, see my note">Some of each, see my note</label>
+            <label for="q14-o1"><input type="radio" id="q14-o1" name="q14-choice" value="0530 is the play’s text; 0448 can be archived">0530 is the play’s text; 0448 can be archived</label>
+            <label for="q14-o2"><input type="radio" id="q14-o2" name="q14-choice" value="Keep both: 0448 is an edition readers should see">Keep both: 0448 is an edition readers should see</label>
+            <label for="q14-o3"><input type="radio" id="q14-o3" name="q14-choice" value="Not sure, see my note">Not sure, see my note</label>
           </div>
         </fieldset>
         <div>
-          <label class="label" for="q14-text">Notes</label>
+          <label class="label" for="q14-text">Notes, and whether texts of <i>Edward II</i>, <i>The Spanish Bawd</i> or <i>Auto da Índia</i> exist anywhere (a Word file, another copy)</label>
           <textarea id="q14-text"></textarea>
         </div>
         <p class="status" aria-live="polite"></p>
