@@ -54,3 +54,21 @@ test('a place of action is found by any of its names, or a containing place', ()
 });
 test('filters combine with and', () => { no(hamlet, { l: 'es', n: 'nadie' }); });
 test('q, m, in and sort are not record filters', () => { yes(bare, { q: 'honor', m: 'w', in: 'n', sort: 'date' }); });
+
+test('the address round-trips, in the table’s order, empty values left out', () => {
+  const state = { l: 'en', q: 'la vida', wy: '1600-1610', a: 'Calderón' };
+  assert.equal(R.format(state), 'a=Calder%C3%B3n&l=en&q=la%20vida&wy=1600-1610');
+  assert.deepEqual(plain(R.parse('#' + R.format(state))), state);
+  assert.equal(R.format({ l: '', t: '  ' }), '');
+  assert.deepEqual(plain(R.parse('#nope=1&l=en')), { l: 'en' });
+  assert.deepEqual(plain(R.parse('')), {});
+});
+test('a malformed address is read as far as it goes', () => {
+  assert.deepEqual(plain(R.parse('#t=%E0%A4&q=la+vida')), { q: 'la vida' });
+});
+test('a work shows when any of its plays passes; its lead stays, muted, to head it', () => {
+  const works = [['A', 'A1', 'A2'], ['B'], ['C', 'C1']];
+  assert.deepEqual(plain(R.shown(works, { A1: true, B: true })), {
+    rows: { A: 'muted', A1: 'show', A2: 'hide', B: 'show', C: 'hide', C1: 'hide' }, count: 2 });
+  assert.equal(R.shown(works, { A: true, A1: true, A2: true, B: true, C: true, C1: true }).count, 6);
+});

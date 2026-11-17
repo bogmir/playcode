@@ -73,5 +73,38 @@
     });
   };
 
+  // The address's names, in the order it writes them.
+  var NAMES = 't a l o k s f x q m in d wt wc wy wf rp rv rc ry rk ra h p n sort'.split(' ');
+
+  // "#l=en&d=1600-" to { l: "en", d: "1600-" }; unknown names and undecodable values dropped.
+  R.parse = function (hash) {
+    var state = {};
+    String(hash || '').replace(/^#/, '').split('&').forEach(function (pair) {
+      var at = pair.indexOf('='), name = pair.slice(0, at);
+      if (at < 0 || NAMES.indexOf(name) < 0) return;
+      try { state[name] = decodeURIComponent(pair.slice(at + 1).replace(/\+/g, ' ')); } catch (e) { /* skip it */ }
+    });
+    return state;
+  };
+
+  R.format = function (state) {
+    return NAMES.filter(function (name) { return String(state[name] || '').trim(); })
+      .map(function (name) { return name + '=' + encodeURIComponent(state[name]); }).join('&');
+  };
+
+  // works: [[leadCode, code, …], …]; passing: { CODE: true }. A work shows when any of its
+  // plays passes; its lead then stays, muted when it does not pass itself, to head it.
+  R.shown = function (works, passing) {
+    var rows = {}, count = 0;
+    works.forEach(function (codes) {
+      var any = codes.some(function (code) { return passing[code]; });
+      codes.forEach(function (code, i) {
+        if (passing[code]) count++;
+        rows[code] = passing[code] ? 'show' : any && i === 0 ? 'muted' : 'hide';
+      });
+    });
+    return { rows: rows, count: count };
+  };
+
   if (!root.document) return;
 })(typeof window !== 'undefined' ? window : globalThis);
