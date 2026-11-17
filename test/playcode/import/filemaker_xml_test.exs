@@ -17,6 +17,13 @@ defmodule Playcode.Import.FilemakerXmlTest do
            ]
   end
 
+  test "only: keeps the columns named, so a table's large columns are never held" do
+    assert {:ok, rows} = FilemakerXml.read(Path.join(@dump, "T13.1_Ciudad.xml"), ~w(Ciu_Ciudad))
+
+    assert Enum.map(rows, &Map.keys/1) |> Enum.uniq() == [["Ciu_Ciudad"]]
+    assert Enum.map(rows, & &1["Ciu_Ciudad"]) == ["Madrid", "London", "Weinheim", ""]
+  end
+
   test "entities are decoded, so FileMaker's <<…>> italics survive" do
     {:ok, rows} = FilemakerXml.read(Path.join(@dump, "T12.1_BibliografiaSelecta.xml"))
     grilli = Enum.find(rows, &(&1["_kp_IdBiblioSelecta"] == "2"))
