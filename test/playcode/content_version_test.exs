@@ -99,6 +99,27 @@ defmodule Playcode.ContentVersionTest do
     assert version(play) == once
   end
 
+  test "the time a play's pages last changed moves with its version" do
+    %{play: play, verse_line: line} = play_with_structure_fixture()
+    changed_at = fn -> Catalogue.get_play!(play.id).content_changed_at end
+
+    # Ages the time, which only Postgres writes; nothing outside the database can.
+    age = fn ->
+      Playcode.Repo.query!("UPDATE plays SET content_changed_at = '2020-03-04' WHERE id = $1", [
+        Ecto.UUID.dump!(play.id)
+      ])
+    end
+
+    age.()
+    assert changed_at.() == ~U[2020-03-04 00:00:00Z]
+    assert moves?(play, fn -> PlayContent.update_element(line, %{content: "Otro verso"}) end)
+    assert DateTime.after?(changed_at.(), ~U[2020-03-04 00:00:00Z])
+
+    age.()
+    assert moves?(play, fn -> Catalogue.update_play(play, %{"title" => "Nuevo título"}) end)
+    assert DateTime.after?(changed_at.(), ~U[2020-03-04 00:00:00Z])
+  end
+
   test "a change to a play's own fields moves it, its original and its translations" do
     %{original: original, translation: translation} = translation_family_fixture()
     unrelated = play_fixture()

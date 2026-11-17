@@ -23,8 +23,8 @@ defmodule Playcode.Catalogue.Play do
     * `verse_count` and `auto_form` are derived from the text by
       `Catalogue.update_form_and_verse_count/1`; both are nil for a play without a text.
       Read the play's form through `form/1`, and whether it has a text through `has_text?/1`.
-    * `deleted_at` and `content_version` are written only by the functions and the
-      triggers named next to them.
+    * `deleted_at`, `content_version` and `content_changed_at` are written only by the
+      functions and the triggers named next to them.
 
   `is_complete` decides what the static site publishes. `show_variants` decides whether
   readers see the play's textual variants; like `is_complete` it is Playcode's, never written
@@ -96,6 +96,8 @@ defmodule Playcode.Catalogue.Play do
     # Moved by Postgres whenever something this play's static pages show changes
     # (migration 20261005120000_track_play_content_version). Never written from here.
     field :content_version, :integer, writable: :never, read_after_writes: true
+    # When content_version last moved: the date an EPUB of the play gives.
+    field :content_changed_at, :utc_datetime, writable: :never, read_after_writes: true
 
     belongs_to :parent_play, Playcode.Catalogue.Play, define_field: false
     has_many :derived_plays, Playcode.Catalogue.Play, foreign_key: :parent_play_id

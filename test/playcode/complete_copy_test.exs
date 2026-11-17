@@ -34,7 +34,7 @@ defmodule Playcode.CompleteCopyTest do
   # variants are shown, the two switches for what readers see.
   @dropped ~w(id play_id parent_id division_id element_id entry_id place_id parent_place_id
               historical_state_id parent_play_id position origin filemaker_id inserted_at
-              updated_at content_version deleted_at pending_original_code is_complete
+              updated_at content_version content_changed_at deleted_at pending_original_code is_complete
               show_variants source_entry_id company_id actor_id performance_id
               cast_list_id character_id range_end_id)a
 
