@@ -86,6 +86,9 @@ defmodule Playcode.CatalogueTest do
     # {what, attributes, the field it is refused on (nil = accepted)}
     @rules [
       {"no title", %{"title" => nil}, :title},
+      # FileMaker's EMOTHE0797, "A Maior Glória de Portugal e Afronta Maior de Castela…"
+      {"a title of 405 characters", %{"title" => String.duplicate("Glória ", 58)}, nil},
+      {"a sort title of 405 characters", %{"title_sort" => String.duplicate("Glória ", 58)}, nil},
       {"a historical time outside the vocabulary", %{"historical_time" => "siglo_xxi"},
        :historical_time},
       {"a composition year range",

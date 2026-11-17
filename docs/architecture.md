@@ -59,6 +59,7 @@ lib/
 │   │   ├── tei_import.ex             # Writes what TeiParser read, in one transaction; the import preview
 │   │   ├── filemaker_xml.ex          # FMPXMLRESULT reader (one FileMaker table)
 │   │   ├── bibliography.ex           # S4's one-time FileMaker bibliography import
+│   │   ├── filemaker_plays.ex        # FileMaker's records Playcode lacks, created as plays without a text
 │   │   └── witnesses.ex              # S3's one-time FileMaker witness import
 │   │   ├── places.ex                 # S9b's FileMaker places of action; its place rules serve any T10 link
 │   │   └── performances.ex           # S5's one-time FileMaker performance import: the plan, the hand list of works, the write

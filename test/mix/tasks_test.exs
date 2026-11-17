@@ -15,6 +15,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
   alias Playcode.ActivityLog
   alias Playcode.Bibliography
   alias Playcode.Catalogue
+  alias Playcode.Catalogue.Play
   alias Playcode.Performances
   alias Playcode.PlayContent
   alias Playcode.Places
@@ -447,6 +448,81 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     end
   end
 
+  describe "playcode.import.filemaker.plays" do
+    @plays "test/fixtures/filemaker/plays"
+
+    defp plays(args), do: run("playcode.import.filemaker.plays", ["--path", @plays | args])
+
+    defp find(code),
+      do: Enum.find(Catalogue.list_plays(include_deleted: true), &(&1.code == code))
+
+    setup do
+      %{burlador: play_fixture(%{"code" => "EMOTHE0201_ElBurladorDeSevilla"})}
+    end
+
+    test "--dry-run lists what it would create and skip, and writes nothing" do
+      out = plays(["--dry-run"])
+
+      assert out =~ "EMOTHE0596  L’abuseur de Séville  [fr]  Tirso de Molina  (sin texto)"
+      assert out =~ "    traduccion of EMOTHE0201"
+      assert out =~ "EMOTHE0401_Mucedorus  Mucedorus  [en]  [Anonymous]  (finalizada)"
+      assert out =~ "skipped EMOTHE0203  ZZZ_OBRA_DE_PRUEBA: a FileMaker test"
+      assert out =~ "skipped EMOTHE0650: no title"
+      assert out =~ "6 to create, 1 already held, 6 skipped"
+      assert out =~ "dry run, nothing written"
+      assert find("EMOTHE0596") == nil
+    end
+
+    test "creates each as a draft without a text, its kind and original set", %{
+      burlador: burlador
+    } do
+      assert plays([]) =~ "created 6 plays"
+
+      assert %{
+               title: "L’abuseur de Séville",
+               author_name: "Tirso de Molina",
+               language: "fr",
+               is_complete: false,
+               relationship_type: "traduccion",
+               historical_time: "siglo_xvii"
+             } = play = find("EMOTHE0596")
+
+      assert play.parent_play_id == burlador.id
+      refute Play.has_text?(play)
+
+      assert [%{action: "create", metadata: %{"source" => "filemaker_plays"}}] =
+               ActivityLog.list_entries(play_id: play.id)
+
+      # Mucedorus's original, EMOTHE0195, is created in the same run
+      assert find("EMOTHE0401_Mucedorus").parent_play_id == find("EMOTHE0195").id
+    end
+
+    test "a second run creates nothing, nor one after a new play was archived" do
+      plays([])
+      {:ok, _} = Catalogue.delete_play(find("EMOTHE0439"))
+
+      assert plays([]) =~ "0 to create, 7 already held, 6 skipped"
+    end
+
+    @tag :tmp_dir
+    test "--texts writes the texts FileMaker holds for the plays a run would create, and creates none",
+         %{tmp_dir: dir} do
+      assert plays(["--texts", dir]) =~ "wrote 1 text to #{dir}"
+      assert File.ls!(dir) == ["EMOTHE0401_Mucedorus.xml"]
+      assert find("EMOTHE0401_Mucedorus") == nil
+
+      plays([])
+
+      assert run("playcode.import.tei", ["--dir", dir, "--force"]) =~
+               "imported 1, skipped 0, failed 0"
+
+      play = find("EMOTHE0401_Mucedorus")
+      assert Play.has_text?(play)
+      assert play.relationship_type == "version"
+      assert play.parent_play_id == find("EMOTHE0195").id
+    end
+  end
+
   describe "playcode.export.site" do
     test "publishes complete plays into the given directory, and drafts only with --all" do
       complete = play_fixture(%{"is_complete" => true})
@@ -601,6 +677,12 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
         Mix.Task.rerun("playcode.import.bibliography", ["--path", "test/fixtures/filemaker/nope"])
       end
     end
+
+    test "a play without a text gains its bibliography" do
+      play = play_without_text_fixture(%{"code" => "EMOTHE0999_Sin"})
+      run("playcode.import.bibliography", ["--path", @dump])
+      assert Bibliography.list_links(play.id) != []
+    end
   end
 
   describe "playcode.import.witnesses" do
@@ -684,6 +766,13 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.witnesses", ["--path", "test/fixtures/filemaker/nope"])
       end
+    end
+
+    # FileMaker's plays without a text (mix playcode.import.filemaker.plays) are filled too.
+    test "a play without a text gains its witnesses" do
+      play = play_without_text_fixture(%{"code" => "EMOTHE0327_RalphRoisterDoister"})
+      run("playcode.import.witnesses", ["--path", @witnesses])
+      assert witness_lines(play) != []
     end
   end
 
@@ -814,6 +903,12 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert_raise Mix.Error, ~r/cannot read/, fn ->
         Mix.Task.rerun("playcode.import.places", ["--path", "test/fixtures/filemaker/nope"])
       end
+    end
+
+    test "a play without a text gains its places" do
+      play = play_without_text_fixture(%{"code" => "EMOTHE0418_TheFaithfulShepherdess"})
+      run("playcode.import.places", ["--path", @places])
+      assert Places.list_play_places(play.id) != []
     end
   end
 
@@ -1100,6 +1195,14 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
           "test/fixtures/filemaker/nope"
         ])
       end
+    end
+
+    # The sample's one version not held, 0083, has an empty row only.
+    test "a play without a text gains its performances", %{plays: plays} do
+      {:ok, play} = Catalogue.update_play(plays["0714"], %{"auto_form" => nil})
+      refute Play.has_text?(play)
+      run("playcode.import.performances", ["--path", @performances])
+      assert performances(play) != []
     end
   end
 end

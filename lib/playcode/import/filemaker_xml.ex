@@ -5,27 +5,81 @@ defmodule Playcode.Import.FilemakerXml do
   column is `<DATA></DATA>`. FileMaker escapes `<<` as `&lt;&lt;`; Saxy decodes it.
   """
 
-  @doc "`{:ok, [%{field_name => value}]}`, values trimmed and `\"\"` when empty."
-  def read(path) do
-    with {:ok, xml} <- File.read(path),
-         {:ok, {"FMPXMLRESULT", _attrs, children}} <- parse(xml) do
-      names =
-        children |> child("METADATA") |> elements("FIELD") |> Enum.map(&attribute(&1, "NAME"))
+  @behaviour Saxy.Handler
 
-      rows =
-        children
-        |> child("RESULTSET")
-        |> elements("ROW")
-        |> Enum.map(fn row ->
-          names |> Enum.zip(row |> elements("COL") |> Enum.map(&value/1)) |> Map.new()
-        end)
+  @doc """
+  `{:ok, [%{field_name => value}]}`, values trimmed and `""` when empty. With `only`, a
+  list of field names, every other column is dropped as it is read: T01's TEI columns make
+  its export 180 MB, more than the machine holds beside the app as a parsed tree.
+  """
+  def read(path, only \\ nil) do
+    with {:ok, _stat} <- File.stat(path) do
+      state = %{
+        root?: false,
+        keep: only && MapSet.new(only),
+        names: [],
+        columns: [],
+        row: nil,
+        data: nil,
+        rows: []
+      }
 
-      {:ok, rows}
-    else
-      {:ok, _other_root} -> {:error, :not_fmpxmlresult}
-      {:error, reason} -> {:error, reason}
+      case Saxy.parse_stream(File.stream!(path, 65_536), __MODULE__, state) do
+        {:ok, {:error, _reason} = refused} -> refused
+        {:ok, rows} -> {:ok, rows}
+        {:error, reason} -> {:error, reason}
+      end
     end
+  catch
+    # Saxy reports a malformed document as an error tuple; this is only for input that is
+    # not text at all.
+    _kind, reason -> {:error, reason}
   end
+
+  @impl Saxy.Handler
+  def handle_event(:start_element, {"FMPXMLRESULT", _attrs}, %{root?: false} = state),
+    do: {:ok, %{state | root?: true}}
+
+  def handle_event(:start_element, _element, %{root?: false}),
+    do: {:stop, {:error, :not_fmpxmlresult}}
+
+  def handle_event(:start_element, {"FIELD", attrs}, state) do
+    {"NAME", name} = List.keyfind(attrs, "NAME", 0)
+    {:ok, %{state | names: [name | state.names]}}
+  end
+
+  def handle_event(:start_element, {"ROW", _attrs}, state) do
+    names = Enum.reverse(state.names)
+
+    {:ok,
+     %{state | row: [], columns: Enum.map(names, &{&1, is_nil(state.keep) or &1 in state.keep})}}
+  end
+
+  def handle_event(:start_element, {"COL", _attrs}, %{columns: [{_name, keep?} | _]} = state),
+    do: {:ok, %{state | data: if(keep?, do: [], else: :dropped)}}
+
+  def handle_event(:characters, text, %{data: data} = state) when is_list(data),
+    do: {:ok, %{state | data: [data | text]}}
+
+  def handle_event(:end_element, "DATA", %{data: data} = state) when is_list(data),
+    do: {:ok, %{state | data: [data | " "]}}
+
+  def handle_event(:end_element, "COL", %{columns: [{name, keep?} | rest]} = state) do
+    row =
+      if keep?,
+        do: [{name, state.data |> IO.iodata_to_binary() |> String.trim()} | state.row],
+        else: state.row
+
+    {:ok, %{state | row: row, data: nil, columns: rest}}
+  end
+
+  def handle_event(:end_element, "ROW", state),
+    do: {:ok, %{state | rows: [Map.new(state.row) | state.rows]}}
+
+  def handle_event(:end_document, _data, state),
+    do: {:ok, Enum.reverse(state.rows)}
+
+  def handle_event(_event, _data, state), do: {:ok, state}
 
   @doc """
   Reads each of `files` (`[key: file_name]`) from `dir`: `{:ok, %{key => rows}}`, or
@@ -46,34 +100,5 @@ defmodule Playcode.Import.FilemakerXml do
       {number, ""} -> "EMOTHE" <> String.pad_leading(Integer.to_string(number), 4, "0")
       _other -> nil
     end
-  end
-
-  defp parse(xml) do
-    Saxy.SimpleForm.parse_string(xml)
-  catch
-    # Saxy reports a malformed document as an error tuple; this is only for input that is
-    # not text at all.
-    _kind, reason -> {:error, reason}
-  end
-
-  defp child(children, name), do: Enum.find(children, &match?({^name, _attrs, _children}, &1))
-
-  defp elements(nil, _name), do: []
-
-  defp elements({_name, _attrs, children}, name),
-    do: Enum.filter(children, &match?({^name, _attrs, _children}, &1))
-
-  defp attribute({_name, attrs, _children}, key) do
-    {^key, value} = List.keyfind(attrs, key, 0)
-    value
-  end
-
-  defp value(col) do
-    col
-    |> elements("DATA")
-    |> Enum.map_join(" ", fn {_name, _attrs, children} ->
-      children |> Enum.filter(&is_binary/1) |> Enum.join()
-    end)
-    |> String.trim()
   end
 end

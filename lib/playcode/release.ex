@@ -4,7 +4,16 @@ defmodule Playcode.Release do
   alias Playcode.{Catalogue, Repo}
   alias Playcode.Export.{SiteBuilder, StaticSite}
   alias Playcode.PlayContent.Numbering
-  alias Playcode.Import.{Bibliography, FilemakerSync, Performances, Places, TeiCorpus, Witnesses}
+
+  alias Playcode.Import.{
+    Bibliography,
+    FilemakerPlays,
+    FilemakerSync,
+    Performances,
+    Places,
+    TeiCorpus,
+    Witnesses
+  }
 
   @app :playcode
 
@@ -60,6 +69,40 @@ defmodule Playcode.Release do
         else
           {:ok, written} = Bibliography.apply_plan(plan)
           IO.puts("created #{written.entries} entries and #{written.links} links")
+        end
+
+      {:error, {file, reason}} ->
+        IO.puts("cannot read #{Path.join(dir, file)}: #{inspect(reason)}")
+    end
+  end
+
+  @doc """
+  The one-time creation of FileMaker's records Playcode does not hold, as plays without a
+  text, for a release, which has no mix tasks. Run it before the witness, bibliography,
+  place and performance imports, which then reach these plays too. Copy
+  `T01_ObraTitulo.xml` and `T00_ObraIndice.xml` onto the machine first
+  (`fly ssh sftp shell`), then:
+
+      bin/playcode rpc 'Playcode.Release.import_filemaker_plays("/tmp/ctce", dry_run: true)'
+      bin/playcode rpc 'Playcode.Release.import_filemaker_plays("/tmp/ctce")'
+
+  FileMaker's texts are written locally (`mix playcode.import.filemaker.plays --texts DIR`)
+  and go up with `mix playcode.fly.reimport files --dir DIR`, after this.
+  """
+  def import_filemaker_plays(dir, opts \\ []) do
+    load_app()
+    {:ok, _} = Application.ensure_all_started(:playcode)
+
+    case FilemakerPlays.load(dir) do
+      {:ok, data} ->
+        plan = FilemakerPlays.plan(data, Catalogue.list_plays(include_deleted: true))
+        Enum.each(FilemakerPlays.report(plan), &IO.puts/1)
+
+        if opts[:dry_run] do
+          IO.puts("dry run, nothing written")
+        else
+          {:ok, created} = FilemakerPlays.apply_plan(plan)
+          IO.puts("created #{created} plays")
         end
 
       {:error, {file, reason}} ->
