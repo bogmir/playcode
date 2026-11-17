@@ -2,6 +2,7 @@ defmodule Playcode.Import.FilemakerPlaysTest do
   @moduledoc "Which of FileMaker's records become plays, and with what."
   use Playcode.DataCase, async: true
 
+  import Playcode.ImportHelpers
   import Playcode.TestFixtures
 
   alias Playcode.Catalogue
@@ -26,7 +27,7 @@ defmodule Playcode.Import.FilemakerPlaysTest do
     plan = plan(held())
 
     assert Enum.map(plan.create, & &1.attrs["code"]) ==
-             ~w(EMOTHE0110 EMOTHE0401_Mucedorus EMOTHE0439 EMOTHE0596)
+             ~w(EMOTHE0110_Hamlet1603 EMOTHE0401_Mucedorus EMOTHE0439 EMOTHE0596)
 
     abuseur = List.last(plan.create)
 
@@ -75,8 +76,24 @@ defmodule Playcode.Import.FilemakerPlaysTest do
   test "FileMaker's file name is the code when it is one, an HIE file's as EMOTHE" do
     codes = plan([]).create |> Enum.map(& &1.attrs["code"])
     assert "EMOTHE0401_Mucedorus" in codes
-    # "EMOTHE0110_Hamlet(1603)" is no code: the record's number stands
-    assert "EMOTHE0110" in codes
+    # Cleaned as the TEI import cleans a file's code; it used to fall back to the record's
+    # number, which a TEI file named after it could never update (EMOTHE0110 on 2026-11-17)
+    assert "EMOTHE0110_Hamlet1603" in codes
+  end
+
+  test "a play created from a record is the one its TEI file updates" do
+    {:ok, created} = FilemakerPlays.apply_plan(plan([]))
+
+    play =
+      import_tei!(
+        tei(
+          code: "EMOTHE0110_Hamlet(1603)",
+          body: ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Uno.</l></sp></div1>)
+        )
+      )
+
+    assert play.code == "EMOTHE0110_Hamlet1603"
+    assert length(Catalogue.list_plays()) == created
   end
 
   test "a record's original is its work's main record, held and not archived, or created" do
@@ -89,12 +106,12 @@ defmodule Playcode.Import.FilemakerPlaysTest do
     # EMOTHE0195 is archived
     assert held["EMOTHE0401_Mucedorus"].original == nil
     # an original names none, even when FileMaker's work has another main record
-    assert created["EMOTHE0110"].original == nil
+    assert created["EMOTHE0110_Hamlet1603"].original == nil
     assert created["EMOTHE0201_ElBurladorDeSevilla"].original == nil
 
     assert created["EMOTHE0439"].attrs["relationship_type"] == "adaptacion"
     assert created["EMOTHE0401_Mucedorus"].attrs["relationship_type"] == "version"
-    refute Map.has_key?(created["EMOTHE0110"].attrs, "relationship_type")
+    refute Map.has_key?(created["EMOTHE0110_Hamlet1603"].attrs, "relationship_type")
   end
 
   test "an author is turned at its first comma; a lone name stays as it is" do

@@ -3,7 +3,7 @@ defmodule Playcode.TestFixtures do
   alias Playcode.PlayContent
   alias Playcode.Places
 
-  def unique_code, do: "PLAY-#{System.unique_integer([:positive])}"
+  def unique_code, do: "PLAY#{System.unique_integer([:positive])}"
 
   def play_fixture(attrs \\ %{}) do
     attrs =

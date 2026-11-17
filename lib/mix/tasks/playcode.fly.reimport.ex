@@ -71,7 +71,7 @@ defmodule Mix.Tasks.Playcode.Fly.Reimport do
 
   # A dry run's lines a person decides on: hand fixes the re-import loses, an archived
   # play it restores, a file it cannot read.
-  @needs_a_look ~r/edited since their import|undoes|restores it|^  \S+: /
+  @needs_a_look ~r/edited since their import|undoes|restores it|holds its number|^  \S+: /
 
   @impl Mix.Task
   def run(["prepare" | args]) do

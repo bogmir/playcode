@@ -479,7 +479,7 @@ defmodule Playcode.Import.TeiParser do
     %{
       title: title,
       title_sort: safe_text(sort_title) |> normalize_sort_title(title),
-      code: clean_code(code || "UNKNOWN"),
+      code: Play.clean_code(code || "UNKNOWN"),
       original_title: safe_text(original_title_el),
       author_name: safe_text(main_author),
       author_sort: safe_text(sort_author),
@@ -2619,12 +2619,6 @@ defmodule Playcode.Import.TeiParser do
       {num, _} -> num
       :error -> nil
     end
-  end
-
-  defp clean_code(code) do
-    code
-    |> String.trim()
-    |> String.replace(~r/[^a-zA-Z0-9_]/, "")
   end
 
   defp normalize_imported_title(nil), do: nil

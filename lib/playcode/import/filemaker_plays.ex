@@ -231,8 +231,9 @@ defmodule Playcode.Import.FilemakerPlays do
     }
   end
 
-  # FileMaker's file name, an HIE file's as EMOTHE, when it is the record's and a code; its
-  # number otherwise. A file whose code differs, `EMOTHE0283_…` for 627, is a clash.
+  # FileMaker's file name, an HIE file's as EMOTHE, read as its TEI file's code is, when it is
+  # the record's; its number otherwise. A file whose code differs, `EMOTHE0283_…` for 627, is
+  # a clash.
   defp code(code, row) do
     file_code = file_code(row)
 
@@ -241,7 +242,11 @@ defmodule Playcode.Import.FilemakerPlays do
       else: code
   end
 
-  defp file_code(row), do: String.replace_prefix(row["w3em_nombreArchivo"] || "", "HIE", "EMOTHE")
+  defp file_code(row),
+    do:
+      (row["w3em_nombreArchivo"] || "")
+      |> String.replace_prefix("HIE", "EMOTHE")
+      |> Play.clean_code()
 
   defp original(code, row, works, live) do
     main = FilemakerXml.version_code(works[row["_k_IdObraIndice"]]["_k_IdObraTituloPrincipal"])
