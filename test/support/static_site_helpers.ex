@@ -71,6 +71,14 @@ defmodule Playcode.StaticSiteHelpers do
 
   def squish(text), do: text |> String.replace(~r/\s+/u, " ") |> String.trim()
 
+  @doc "The record index's entries, from `search/records.js`: `EMOTHE.records.load(entries);`."
+  def records!(dir) do
+    [_, json] =
+      Regex.run(~r/\AEMOTHE\.records\.load\((.*)\);\n\z/s, read!(dir, "search/records.js"))
+
+    Jason.decode!(json)
+  end
+
   @doc "Decodes a search file: `{kind, key, data}` from `EMOTHE.search.load(kind, key, data);`."
   def load_js!(dir, path) do
     [_, kind, key, json] =

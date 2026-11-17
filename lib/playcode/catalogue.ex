@@ -15,6 +15,8 @@ defmodule Playcode.Catalogue do
   alias Playcode.Catalogue.{Play, PlayEditor, PlaySource, Paratext}
   alias Playcode.Places.{PlaceName, PlayPlace}
   alias Playcode.Witnesses.Witness
+  alias Playcode.Performances.{CastMember, Performance}
+  alias Playcode.PlayContent.Character
 
   # --- Plays ---
 
@@ -499,6 +501,22 @@ defmodule Playcode.Catalogue do
         {from(pp in PlayPlace, order_by: pp.position),
          [place: [names: from(n in PlaceName, order_by: [asc: n.position, asc: n.id])]]}
     ])
+  end
+
+  @doc """
+  `plays` with what the static site's record index reads: characters, witnesses, place
+  links and performances (company, cast and actors), each list in its `position` order.
+  One query per association, whatever the number of plays.
+  """
+  def preload_record(plays) do
+    Repo.preload(plays,
+      characters: from(c in Character, order_by: c.position),
+      witnesses: from(w in Witness, order_by: [asc: w.position, asc: w.inserted_at]),
+      play_places: from(pp in PlayPlace, order_by: pp.position),
+      performances:
+        {from(p in Performance, order_by: [asc: p.position, asc: p.inserted_at]),
+         [:company, cast: {from(c in CastMember, order_by: c.position), :actor}]}
+    )
   end
 
   # Archived plays are invisible everywhere unless a caller explicitly asks for them:

@@ -27,7 +27,17 @@ defmodule Playcode.Export.StaticSite do
   alias Playcode.Catalogue
   alias Playcode.Export.TeiXml
   alias Playcode.Catalogue.Play
-  alias Playcode.Export.StaticSite.{Comparison, Components, Edition, Fingerprint, Pages, Search}
+
+  alias Playcode.Export.StaticSite.{
+    Comparison,
+    Components,
+    Edition,
+    Fingerprint,
+    Pages,
+    Records,
+    Search
+  }
+
   alias Playcode.PlayContent.InlineMarkup
   alias PlaycodeWeb.PlayLabels
 
@@ -100,7 +110,7 @@ defmodule Playcode.Export.StaticSite do
         versions = Map.new(results, &{&1.code, &1.version})
         largest = results |> Enum.map(& &1.largest_page_gzip) |> Enum.max(fn -> 0 end)
         compare = results |> Enum.map(& &1.compare_gzip) |> Enum.max(fn -> 0 end)
-        write_catalogue(plays, dir, opts)
+        records_bytes = write_catalogue(plays, dir, opts)
         # results is not used past here, so the index can let go of postings as it goes:
         # 58 MB less at the peak of a 371-play build.
         report = write_search(plays, Map.new(results, &{&1.code, &1.postings}), dir)
@@ -113,7 +123,8 @@ defmodule Playcode.Export.StaticSite do
            size: dir_size(site_dir),
            output_dir: site_dir,
            largest_page_gzip: largest,
-           largest_compare_gzip: compare
+           largest_compare_gzip: compare,
+           records_bytes: records_bytes
          })}
       end
     end)
@@ -632,7 +643,7 @@ defmodule Playcode.Export.StaticSite do
     end
   end
 
-  # The catalogue, about and search pages.
+  # The catalogue, about and search pages, and the record index; returns the index's size.
   defp write_catalogue(plays, dir, opts) do
     site = site(opts, MapSet.new(plays, & &1.code))
 
@@ -648,6 +659,9 @@ defmodule Playcode.Export.StaticSite do
     File.write!(Path.join(dir, "index.html"), Pages.render(:catalogue, assigns))
     File.write!(Path.join(dir, "about.html"), Pages.render(:about, %{site: site}))
     File.write!(Path.join(dir, "search.html"), Pages.render(:search, %{site: site}))
+
+    by_id = Map.new(plays, &{&1.id, &1})
+    Records.write(dir, plays, Map.new(plays, &{&1.id, by_id[root_id(&1, by_id)]}))
   end
 
   # The search index. `postings` holds freshly computed postings by code; every other

@@ -9,7 +9,7 @@ defmodule Playcode.Export.StaticSiteChangesTest do
   import Playcode.TestFixtures
   import Playcode.StaticSiteHelpers
 
-  alias Playcode.Catalogue
+  alias Playcode.{Catalogue, Performances, PlayContent}
   alias Playcode.Export.StaticSite
 
   defp complete_play(attrs \\ %{}), do: play_fixture(Map.put(attrs, "is_complete", true))
@@ -159,5 +159,52 @@ defmodule Playcode.Export.StaticSiteChangesTest do
 
     assert files.(original) == ["#{original.code}.xml", "index.html"]
     refute "compare.html" in files.(translation)
+  end
+
+  describe "the record index" do
+    test "a renamed company reaches every play it staged, on the next Generate" do
+      [one, two] = [complete_play(), complete_play()]
+
+      for play <- [one, two],
+          do: performance_fixture(play, %{"company_name" => "Lady Elizabeth's Men"})
+
+      dir = generate!([one, two])
+
+      company = Enum.find(Performances.list_companies(), &(&1.name == "Lady Elizabeth's Men"))
+      {:ok, _} = Performances.update_company(company, %{"name" => "Lady Elizabeth’s Men"})
+
+      {:ok, _} = StaticSite.apply_changes(StaticSite.outdated(dir), output_dir: dir)
+
+      for entry <- records!(dir),
+          do: assert([[_, _, _, _, _, "Lady Elizabeth’s Men", _]] = entry["r"])
+    end
+
+    test "a play taken off the site leaves the index, and one added joins it" do
+      [stays, goes] = [complete_play(), complete_play()]
+      dir = generate!([stays, goes])
+      joins = complete_play()
+
+      {:ok, _} =
+        StaticSite.apply_changes([{:remove, goes.code}, {:add, joins.id}], output_dir: dir)
+
+      assert records!(dir) |> Enum.map(& &1["c"]) |> Enum.sort() ==
+               Enum.sort([stays.code, joins.code])
+    end
+
+    test "a new character is in the index after its play alone is built again" do
+      [play, other] = [complete_play(), complete_play()]
+      dir = generate!([play, other])
+
+      {:ok, _} =
+        PlayContent.create_character(%{
+          "play_id" => play.id,
+          "xml_id" => "nuevo",
+          "name" => "NUEVO"
+        })
+
+      assert StaticSite.outdated(dir) == [{:add, play.id}]
+      {:ok, _} = StaticSite.apply_changes(StaticSite.outdated(dir), output_dir: dir)
+      assert "NUEVO" in Enum.find(records!(dir), &(&1["c"] == play.code))["n"]
+    end
   end
 end
