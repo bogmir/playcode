@@ -120,6 +120,11 @@
     return function () { clearTimeout(timer); timer = setTimeout(fn, ms); };
   };
 
+  // A passage's place: its ref and speaker, or for a note the word note and its ref.
+  R.ref = function (p, note) {
+    return p.kind === 'n' ? note + ' ' + p.ref : [p.ref, p.speaker].filter(Boolean).join(' · ');
+  };
+
   if (!root.document) return;
 
   // The page. It never decides a match: R.match and R.shown do.
@@ -244,9 +249,9 @@
       E.search.passages(row.dataset.code, next).then(function (found) {
         each('button', details, function (b) { b.remove(); });
         found.forEach(function (p) {
-          var line = el('p'), link = el('a');
+          var line = el('p', p.kind), link = el('a');
           link.href = p.href;
-          link.appendChild(el('span', 'ref', [p.ref, p.speaker].filter(Boolean).join(' · ')));
+          link.appendChild(el('span', 'ref', R.ref(p, say(W.note))));
           line.appendChild(link);
           // Built with text nodes, never innerHTML: the line text is data.
           R.marked(p.text, words, mode).forEach(function (piece) {
@@ -263,8 +268,9 @@
       });
     }
     details.ontoggle = function () { if (details.open && !shown) more(FIRST); };
-    row.after(el('span', 'meta', counted(lines.length, 'passage', 'passages')), details);
-    row.nextSibling.setAttribute('data-hits', '');
+    var hits = row.appendChild(el('span', 'meta', counted(lines.length, 'passage', 'passages')));
+    hits.setAttribute('data-hits', '');
+    row.after(details);
   }
 
   // Shows the rows the state lets through: every row until the records land; with words, only plays with hits.

@@ -153,6 +153,16 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert values.("h") == ~w(antiguedad_clasica siglo_xvii tiempo_alegorico)
   end
 
+  test "the staging circumstances read as in the mock, agreeing with «Todas»" do
+    play = complete_play(%{})
+    for type <- ~w(other unknown palace), do: performance_fixture(play, %{"venue_type" => type})
+
+    labels =
+      generate!([play]) |> html!("index.html", "es") |> options("rc") |> Enum.map(&elem(&1, 1))
+
+    assert labels == ["Todas", "Palacio", "Otra", "Desconocida"]
+  end
+
   # Review Focus 5 of the plan: a small site, a test site.
   test "a site with no witness, performance or place offers only the first option there" do
     page = html!(generate!([complete_play()]), "index.html", "es")

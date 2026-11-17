@@ -92,3 +92,10 @@ test('a burst of calls runs once, after the pause', () => {
   pending.filter(Boolean).forEach((fn) => fn());
   assert.equal(runs, 1);
 });
+
+test('a passage names its place; a note says it is one, and has no speaker', () => {
+  // Kinds as search.ex writes them: v verse, p prose, s stage direction, n note.
+  assert.equal(R.ref({ kind: 'v', ref: 'I, 63', speaker: 'CLARÍN' }, 'nota'), 'I, 63 · CLARÍN');
+  assert.equal(R.ref({ kind: 's', ref: 'I, 63', speaker: null }, 'nota'), 'I, 63');
+  assert.equal(R.ref({ kind: 'n', ref: 'IV, 971', speaker: 'DON FELIS' }, 'nota'), 'nota IV, 971');
+});

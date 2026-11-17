@@ -3954,6 +3954,7 @@ msgstr ""
 msgid "Where it is now"
 msgstr ""
 
+#: lib/playcode/export/static_site/pages.ex:56
 #: lib/playcode_web/live/admin/activity_log_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "note"
@@ -6530,7 +6531,7 @@ msgstr ""
 msgid "Years of composition"
 msgstr ""
 
-#: lib/playcode/export/static_site/pages.ex:108
+#: lib/playcode/export/static_site/pages.ex:109
 #, elixir-autogen, elixir-format
 msgid "from"
 msgstr ""
@@ -6545,7 +6546,7 @@ msgstr ""
 msgid "passages"
 msgstr ""
 
-#: lib/playcode/export/static_site/pages.ex:114
+#: lib/playcode/export/static_site/pages.ex:115
 #, elixir-autogen, elixir-format
 msgid "to"
 msgstr ""
@@ -6565,4 +6566,52 @@ msgstr ""
 #: lib/playcode/export/static_site/pages.ex:55
 #, elixir-autogen, elixir-format
 msgid "Text search is unavailable."
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:841
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Commercial theatre"
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:847
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Other"
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:844
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Palace"
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:843
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Private theatre"
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:842
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Public theatre"
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:846
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Street, square"
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:845
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "University, inns of court"
+msgstr ""
+
+#: lib/playcode/export/static_site.ex:848
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Unknown"
 msgstr ""

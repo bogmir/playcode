@@ -2,7 +2,7 @@
 .works { list-style: none; margin: 0; padding: 0; max-width: 48rem; }
 .work { padding: .85rem 0; border-top: 1px solid var(--hair-2); }
 .entry { display: flex; flex-wrap: wrap; align-items: baseline; gap: .15rem .6rem; }
-.entry.muted { opacity: .6; }
+.entry.muted .entry-title { color: var(--muted); }
 .entry-title { color: var(--ink); text-decoration: none; }
 .entry-title.lead { font-size: 1.2rem; font-weight: 600; }
 .entry .author { flex-basis: 100%; font: .875rem var(--serif); color: var(--ink-2); }
@@ -36,6 +36,8 @@
 .passages summary { font: .75rem var(--sans); color: var(--accent); cursor: pointer; }
 .passages p { margin: .25rem 0; }
 .passages a { text-decoration: none; color: inherit; }
+.passages .s { font-style: italic; }
+.passages .n { font: .8125rem/1.5 var(--sans); color: var(--ink-2); }
 .passages .ref { margin-right: .6rem; font: .75rem var(--sans); color: var(--muted); font-variant-numeric: tabular-nums; }
 
 @media print {

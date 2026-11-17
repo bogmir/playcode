@@ -140,7 +140,8 @@ defmodule Playcode.Export.StaticSiteBrowserTest do
   test "words in q keep the plays that hold them, each with its count", %{dir: dir, verse: verse} do
     page = Browser.dom!(dir, "index.html#q=sue%C3%B1o")
     assert shown(page) == [verse.code]
-    assert texts(page, ~s([data-code="#{verse.code}"] ~ [data-hits])) == ["2 pasajes"]
+    # Inside the row since the review: beside it, no `.entry .meta` rule set it as the mock does.
+    assert texts(page, ~s([data-code="#{verse.code}"] [data-hits])) == ["2 pasajes"]
   end
 
   test "where narrows the hits", %{dir: dir} do

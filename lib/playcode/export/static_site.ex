@@ -836,6 +836,14 @@ defmodule Playcode.Export.StaticSite do
   # A label function of the app's, said in both languages.
   defp in_both(label), do: fn value -> pair(fn -> label.(value) end) end
 
-  defp venue_type_label(type),
-    do: {Performance.venue_type_label(type, "es"), Performance.venue_type_label(type, "en")}
+  # The mock's words: capitalised, and agreeing with «Todas» (la circunstancia escénica),
+  # where the play pages' inline labels are lower case.
+  defp venue_type_label("commercial_theatre"), do: tpc("venue type", "Commercial theatre")
+  defp venue_type_label("public_theatre"), do: tpc("venue type", "Public theatre")
+  defp venue_type_label("private_theatre"), do: tpc("venue type", "Private theatre")
+  defp venue_type_label("palace"), do: tpc("venue type", "Palace")
+  defp venue_type_label("university"), do: tpc("venue type", "University, inns of court")
+  defp venue_type_label("street"), do: tpc("venue type", "Street, square")
+  defp venue_type_label("other"), do: tpc("venue type", "Other")
+  defp venue_type_label("unknown"), do: tpc("venue type", "Unknown")
 end

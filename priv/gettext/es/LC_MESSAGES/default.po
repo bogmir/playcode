@@ -3960,6 +3960,7 @@ msgstr "Término"
 msgid "Where it is now"
 msgstr "Donde está ahora"
 
+#: lib/playcode/export/static_site/pages.ex:56
 #: lib/playcode_web/live/admin/activity_log_live.ex:128
 #, elixir-autogen, elixir-format
 msgid "note"
@@ -6536,7 +6537,7 @@ msgstr "Año del testimonio, hasta"
 msgid "Years of composition"
 msgstr "Años de composición"
 
-#: lib/playcode/export/static_site/pages.ex:108
+#: lib/playcode/export/static_site/pages.ex:109
 #, elixir-autogen, elixir-format
 msgid "from"
 msgstr "desde"
@@ -6551,7 +6552,7 @@ msgstr "pasaje"
 msgid "passages"
 msgstr "pasajes"
 
-#: lib/playcode/export/static_site/pages.ex:114
+#: lib/playcode/export/static_site/pages.ex:115
 #, elixir-autogen, elixir-format
 msgid "to"
 msgstr "hasta"
@@ -6572,3 +6573,51 @@ msgstr "Lugar"
 #, elixir-autogen, elixir-format
 msgid "Text search is unavailable."
 msgstr "La búsqueda en los textos no está disponible."
+
+#: lib/playcode/export/static_site.ex:841
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Commercial theatre"
+msgstr "Teatro comercial"
+
+#: lib/playcode/export/static_site.ex:847
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Other"
+msgstr "Otra"
+
+#: lib/playcode/export/static_site.ex:844
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Palace"
+msgstr "Palacio"
+
+#: lib/playcode/export/static_site.ex:843
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Private theatre"
+msgstr "Teatro privado"
+
+#: lib/playcode/export/static_site.ex:842
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Public theatre"
+msgstr "Teatro público"
+
+#: lib/playcode/export/static_site.ex:846
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Street, square"
+msgstr "Calle"
+
+#: lib/playcode/export/static_site.ex:845
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "University, inns of court"
+msgstr "Universidad, inns of court"
+
+#: lib/playcode/export/static_site.ex:848
+#, elixir-autogen, elixir-format
+msgctxt "venue type"
+msgid "Unknown"
+msgstr "Desconocida"
