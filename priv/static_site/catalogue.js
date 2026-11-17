@@ -13,6 +13,12 @@
   };
   R.ready = function (callback) { if (R.entries) callback(R.entries); else waiting.push(callback); };
 
+  function flat(value, out) {
+    if (Array.isArray(value)) value.forEach(function (v) { flat(v, out); });
+    else if (value != null) out.push(value);
+    return out;
+  }
+
   function texts(list) {
     return (list || []).filter(function (v) { return v != null; }).map(E.normalise);
   }
@@ -21,7 +27,7 @@
   R.prepare = function (e) {
     return {
       c: e.c, t: texts((e.t || []).concat(e.c)), a: texts([e.a]), l: e.l, o: e.o, k: e.k, s: e.s, f: e.f,
-      x: e.x ? '1' : '0', d: e.d || [], h: e.h, p: texts([].concat.apply([], e.p || [])), n: texts(e.n),
+      x: e.x ? '1' : '0', d: e.d || [], h: e.h, p: texts(flat(e.p, [])), n: texts(e.n),
       w: (e.w || []).map(function (w) { return [w[0], texts([w[1]]), [w[2], w[3]], w[4]]; }),
       r: (e.r || []).map(function (r) {
         return [texts(r[0]), texts([r[1]]), r[2], [r[3], r[4]], texts([r[5]]), texts(r[6])];
@@ -80,7 +86,7 @@
       var w = words[i], hint = null;
       if (own.some(function (v) { return has(v, w); })) continue;
       (e.n || []).some(function (v) { return has(v, w) && (hint = ['n', v]); }) ||
-        (e.p || []).some(function (names) { return names.some(function (v) { return has(v, w); }) && (hint = ['p', names[0]]); });
+        (e.p || []).some(function (place) { return place[0].some(function (v) { return has(v, w); }) && (hint = ['p', place[0][0]]); });
       if (!hint) return null;
       if (!said.some(function (h) { return h[1] === hint[1]; })) said.push(hint);
     }
@@ -193,12 +199,6 @@
   }
 
   function loadRecords() { if (!loading) loading = add('search/records.js'); }
-
-  function flat(value, out) {
-    if (Array.isArray(value)) value.forEach(function (v) { flat(v, out); });
-    else if (value != null) out.push(value);
-    return out;
-  }
 
   function suggest(entries) {
     SUGGEST.forEach(function (s) {

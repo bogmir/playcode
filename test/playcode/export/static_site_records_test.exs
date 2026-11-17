@@ -186,7 +186,9 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
            ]
   end
 
-  test "a place of action is listed with the places containing it" do
+  # Its own names apart from those around it, since the box matches a place by its own
+  # names only: "king" found every play set in London through "United Kingdom".
+  test "a place of action is listed by its own names, then the places containing it" do
     play = complete_play(%{})
     spain = place_fixture(%{"names" => [%{"name" => "España", "language" => "es"}]})
 
@@ -206,7 +208,10 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
       })
 
     play_place_fixture(play, seville)
-    assert entry(generate!([play]), play)["p"] == [["Sevilla", "Seville", "Andalucía", "España"]]
+
+    assert entry(generate!([play]), play)["p"] == [
+             [["Sevilla", "Seville"], ["Andalucía", "España"]]
+           ]
   end
 
   test "a name a place has in several languages is listed once" do
@@ -221,7 +226,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
       })
 
     play_place_fixture(play, madrid)
-    assert entry(generate!([play]), play)["p"] == [["Madrid"]]
+    assert entry(generate!([play]), play)["p"] == [[["Madrid"], []]]
   end
 
   test "its characters are named plain, the hidden ones left out" do

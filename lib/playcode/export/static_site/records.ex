@@ -88,17 +88,23 @@ defmodule Playcode.Export.StaticSite.Records do
     end
   end
 
-  defp places(play_places, gazetteer),
-    do: Enum.map(play_places, &names_around(gazetteer[&1.place_id], gazetteer))
+  # A place of action's own names apart from those of the places containing it: the box
+  # matches the first only, the place filter both.
+  defp places(play_places, gazetteer) do
+    for %{place_id: id} <- play_places, place = gazetteer[id], place do
+      own = names([place])
+      [own, names(Enum.reverse(Places.ancestors(place, gazetteer))) -- own]
+    end
+  end
 
   # Every name of the place, then of each place containing it, nearest first.
   defp names_around(nil, _gazetteer), do: []
 
-  defp names_around(place, gazetteer) do
-    [place | Enum.reverse(Places.ancestors(place, gazetteer))]
-    |> Enum.flat_map(fn place -> Enum.map(place.names, & &1.name) end)
-    |> Enum.uniq()
-  end
+  defp names_around(place, gazetteer),
+    do: names([place | Enum.reverse(Places.ancestors(place, gazetteer))])
+
+  defp names(places),
+    do: places |> Enum.flat_map(fn place -> Enum.map(place.names, & &1.name) end) |> Enum.uniq()
 
   defp characters(characters),
     do: for(c <- characters, not c.is_hidden, do: InlineMarkup.plain(c.name))

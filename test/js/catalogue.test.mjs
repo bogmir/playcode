@@ -18,7 +18,7 @@ const hamlet = { c: 'EMOTHE0010', t: ['Hamlet', 'The Tragedy of Hamlet'], a: 'Wi
   w: [['early_edition', 'London', 1604, 1605, '4º'], ['collection', 'Madrid', 1623, 1623, '2º'], ['manuscript', null, null, null, null]],
   r: [[['London', 'England', 'Inglaterra'], 'The Globe', 'commercial_theatre', 1601, 1601, 'The King’s Men', ['Richard Burbage']],
       [[], null, 'palace', 1619, 1620, null, []]],
-  p: [['Elsinor', 'Elsinore', 'Dinamarca', 'Denmark']], n: ['HAMLET', 'OFELIA', 'Calderón'] };
+  p: [[['Elsinor', 'Elsinore'], ['Dinamarca', 'Denmark']]], n: ['HAMLET', 'OFELIA', 'Calderón'] };
 const bare = { c: 'EMOTHE0596', t: ['L’abuseur de Séville'], l: 'fr', o: 'fr', k: 'original', s: 'EMOTHE' };
 const yes = (entry, state) => assert.equal(R.match(R.prepare(entry), state), true, JSON.stringify(state));
 const no = (entry, state) => assert.equal(R.match(R.prepare(entry), state), false, JSON.stringify(state));
@@ -110,10 +110,15 @@ test('the box finds a play when each word is in its titles, code, author, charac
 test('a play the box finds by a character or a place says which, by the place’s own name', () => {
   assert.deepEqual(plain(R.about(hamlet, ['ofelia'])), [['n', 'OFELIA']]);
   assert.deepEqual(plain(R.about(hamlet, ['calderon'])), [['n', 'Calderón']]);
-  assert.deepEqual(plain(R.about(hamlet, ['denmark'])), [['p', 'Elsinor']]);
+  assert.deepEqual(plain(R.about(hamlet, ['elsinore'])), [['p', 'Elsinor']]);
   assert.deepEqual(plain(R.about(hamlet, ['hamlet', 'ofe', 'lia'])), [['n', 'OFELIA']]);   // one hint per value
 });
 test('the address keeps which section the box shows', () => {
   assert.deepEqual(plain(R.parse('#q=vida&sec=t')), { q: 'vida', sec: 't' });
   assert.equal(R.format({ sec: 'o', q: 'vida' }), 'q=vida&sec=o');
+});
+
+test('the box finds a place by its own names; the places around it are the place filter’s', () => {
+  assert.equal(R.about(hamlet, ['denmark']), null);
+  yes(hamlet, { p: 'denmark' });
 });
