@@ -37,6 +37,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.Performances.Performance,
     Playcode.Statistics,
     Playcode.Statistics.Metrics,
+    Playcode.Catalogue.Families,
     Playcode.Catalogue.Paratext,
     Playcode.Text,
     Playcode.Catalogue.Play,
