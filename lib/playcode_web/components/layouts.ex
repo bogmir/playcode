@@ -295,6 +295,10 @@ defmodule PlaycodeWeb.Layouts do
       do: {:public, gettext("Public page"), url, nil}
   end
 
+  # The two play pages that need the width open with the sidebar folded.
+  defp sidebar_folded?(play_context),
+    do: match?(%{active_tab: tab} when tab in [:content, :compare], play_context)
+
   defp section_action({:preview, _label, _to, _count}), do: :preview_plays
   defp section_action(_section), do: :view_admin
 
