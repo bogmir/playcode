@@ -74,8 +74,11 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
   def handle_event("open_purge", %{"id" => id}, socket) do
     play = Enum.find(Catalogue.list_plays(archived: true), &(&1.id == id))
-    {:noreply, assign(socket, :purging, play)}
+    {:noreply, assign(socket, purging: play, purge_code: "")}
   end
+
+  def handle_event("purge_typed", %{"code" => code}, socket),
+    do: {:noreply, assign(socket, :purge_code, code)}
 
   def handle_event("close_purge", _params, socket), do: {:noreply, assign(socket, :purging, nil)}
 
@@ -450,7 +453,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
             "Its text, notes, records and history go, and cannot be brought back. Its translations, adaptations and versions stay, without their original."
           )}
         </p>
-        <.form for={%{}} phx-submit="purge" class="mt-4 space-y-3">
+        <.form for={%{}} phx-change="purge_typed" phx-submit="purge" class="mt-4 space-y-3">
           <label for="purge-code" class="block text-sm">
             {gettext("To confirm, type the play's code:")}
             <span class="font-mono font-semibold break-all">{@purging.code}</span>
@@ -459,11 +462,16 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
             id="purge-code"
             type="text"
             name="code"
+            value={@purge_code}
             autocomplete="off"
             spellcheck="false"
             class="input input-bordered w-full font-mono"
           />
-          <button type="submit" class="btn btn-error w-full">
+          <button
+            type="submit"
+            class="btn btn-error w-full"
+            disabled={@purge_code != @purging.code}
+          >
             {gettext("Delete this play")}
           </button>
         </.form>

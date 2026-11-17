@@ -150,6 +150,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       confirm_delete(view, "EMOTHE9990_Doomed")
 
       refute has_element?(view, "#play-#{play.id}")
+      assert has_element?(view, "#flash-info", t("%{title} was deleted.", title: "Doomed Play"))
       refute Enum.any?(Catalogue.list_plays(include_deleted: true), &(&1.id == play.id))
 
       assert [%{metadata: %{"code" => "EMOTHE9990_Doomed", "purged" => true}}] =
@@ -161,6 +162,14 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       {:ok, view, _html} = live(conn, ~p"/admin/plays?archived=1")
 
       open_delete(view, play)
+      assert has_element?(view, "#purge-modal button[type=submit][disabled]")
+
+      view |> form("#purge-modal form", %{"code" => "EMOTHE9990"}) |> render_change()
+      assert has_element?(view, "#purge-modal button[type=submit][disabled]")
+
+      view |> form("#purge-modal form", %{"code" => "EMOTHE9990_Doomed"}) |> render_change()
+      refute has_element?(view, "#purge-modal button[type=submit][disabled]")
+
       confirm_delete(view, "Doomed Play")
 
       assert has_element?(view, "#purge-modal")
