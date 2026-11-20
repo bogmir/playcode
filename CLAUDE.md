@@ -114,6 +114,18 @@ LiveViews and controllers; `test/mix/tasks_test.exs` for the mix tasks;
 flow); `test/fixtures/` for TEI, Word and FileMaker sample files.
 </important>
 
+<important if="you are writing a comment in lib/, or test/comment_ratchet_test.exs fails">
+
+## Comments only go down
+
+`test/comment_ratchet_test.exs` holds every file in lib/ to the comments (`#` lines and HEEx
+`<%!-- --%>`) `test/comment_baseline.txt` grants it, a new file none. Say it in a name, a function
+or a test first; a comment is for the why the code cannot show (a question number, a corpus
+fact, a `ponytail:` ceiling), with the baseline raised in the same commit
+(`UPDATE_COMMENT_BASELINE=1 mix test test/comment_ratchet_test.exs`). `/delete-comment` sweeps a
+directory and lowers it.
+</important>
+
 <important if="your test creates a place, or you see a Postgres deadlock in the suite">
 
 ## Two async tests creating the same place deadlock

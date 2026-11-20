@@ -111,8 +111,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
      )}
   end
 
-  # --- All handle_event/3 clauses grouped together ---
-
   @impl true
   def handle_event("close_modal", _, socket) do
     {:noreply, assign(socket, modal: nil, form: nil, editing: nil, editing_character_ids: [])}
@@ -331,8 +329,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end)
   end
 
-  # --- Character Review handlers ---
-
   def handle_event("cr_filter", %{"label" => label, "assigned" => assigned}, socket) do
     filter_label =
       case label do
@@ -365,7 +361,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         do: MapSet.delete(selected, id),
         else: MapSet.put(selected, id)
 
-    # Update tag picker to reflect common characters of new selection
     common = cr_common_character_ids(selected, socket.assigns.speeches)
 
     {:noreply, assign(socket, selected_speeches: selected, cr_selected_character_ids: common)}
@@ -473,8 +468,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   def handle_event("cr_show_more", _, socket) do
     {:noreply, update(socket, :cr_display_limit, &(&1 + 50))}
   end
-
-  # --- Content search handlers ---
 
   def handle_event("content_search", %{"query" => query}, socket) do
     query = String.trim(query)
@@ -712,8 +705,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
      |> reload_elements()}
   end
 
-  # --- Division helpers ---
-
   defp division_deleted(socket, division) do
     LiveHelpers.log_activity(socket, "delete", "division", division.id, %{
       type: division.type,
@@ -893,8 +884,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     Enum.filter(ids, &MapSet.member?(own, &1))
   end
 
-  # --- Element selection helpers ---
-
   defp el_toggle_single(socket, id) do
     selected = socket.assigns.selected_elements
 
@@ -905,8 +894,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
     {:noreply, assign(socket, selected_elements: selected, last_toggled_element: id)}
   end
-
-  # --- Save helpers ---
 
   # A form posts back, as hidden fields, the ids that place its row, and the browser can
   # change them: they come from the server, the row's own when it is edited, its opener's
@@ -1225,8 +1212,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end
   end
 
-  # --- PubSub handler ---
-
   @impl true
   # Archiving notifies too, so the play may be archived by now.
   def handle_info({:play_content_changed, _play_id}, socket) do
@@ -1244,8 +1229,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
   # The notes component's flash would stay in the component, so it asks for ours.
   def handle_info(:note_gone, socket), do: {:noreply, LiveHelpers.put_gone_flash(socket)}
-
-  # --- Reload helpers ---
 
   defp reload_paratexts(socket) do
     assign(socket, paratexts: Catalogue.list_paratexts(socket.assigns.play.id))
@@ -1424,8 +1407,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
     end)
   end
 
-  # --- Render ---
-
   @impl true
   def render(assigns) do
     ~H"""
@@ -1457,7 +1438,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
         </div>
       </div>
 
-      <%!-- Tab Bar --%>
       <div class="border-b border-base-300 mb-6">
         <nav class="-mb-px flex gap-1 overflow-x-auto" aria-label="Editor tabs">
           <.tab_button
@@ -1551,7 +1531,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
 
       <Preview.tab :if={@editor_tab == :preview} preview_divisions={@preview_divisions} />
 
-      <%!-- Modal --%>
       <.modal :if={@modal} id="content-modal" on_cancel={JS.push("close_modal")}>
         <Paratexts.modal :if={@modal == :paratext} form={@form} editing={@editing} />
         <Structure.modal
@@ -1610,8 +1589,6 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
       id -> "div-#{id}"
     end
   end
-
-  # --- Tab button component ---
 
   attr :tab, :atom, required: true
   attr :active, :atom, required: true

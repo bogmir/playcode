@@ -146,10 +146,8 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
         do: maybe_apply_corpus_defaults(play_params),
         else: play_params
 
-    # Auto-derive EMOTHE ID from code
     play_params = maybe_derive_emothe_id(play_params)
 
-    # Handle attribution "Other..." selection
     {play_params, socket} =
       if play_params["author_attribution"] == "__other__" do
         {Map.put(play_params, "author_attribution", ""),
@@ -574,9 +572,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                 <label class="label">
                   <span class="label-text font-medium">{gettext("Original Work")}</span>
                 </label>
-                <%!-- Autocomplete combobox for parent play --%>
                 <div class="relative">
-                  <%!-- Selected state --%>
                   <div
                     :if={@parent_play_id}
                     class="input input-bordered flex items-center justify-between gap-2 h-auto min-h-[2.5rem] py-1.5"
@@ -591,7 +587,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                       <.icon name="hero-x-mark-mini" class="size-3.5" />
                     </button>
                   </div>
-                  <%!-- Search state --%>
                   <div :if={!@parent_play_id}>
                     <input
                       type="text"
@@ -603,7 +598,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                       class="input input-bordered w-full"
                       autocomplete="off"
                     />
-                    <%!-- Suggestions dropdown --%>
                     <ul
                       :if={@parent_play_suggestions != []}
                       class="absolute z-20 mt-1 w-full bg-base-100 border border-base-300 rounded-box shadow-lg max-h-64 overflow-y-auto"
@@ -638,7 +632,6 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                       {gettext("No plays found")}
                     </p>
                   </div>
-                  <%!-- Hidden input carries the value through form submit / validate --%>
                   <input
                     type="hidden"
                     name={@form[:parent_play_id].name}

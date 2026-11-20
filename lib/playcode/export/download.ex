@@ -95,8 +95,6 @@ defmodule Playcode.Export.Download do
     |> IO.iodata_to_binary()
   end
 
-  # --- Front matter ---
-
   # The play a translation or an adaptation is made from, by its title, as the published
   # site's title page names it (`StaticSite.Components.family/1`), in the downloads'
   # English; nothing for an original, or a play linked with no kind. Only a complete
@@ -250,8 +248,6 @@ defmodule Playcode.Export.Download do
     do:
       heading |> InlineMarkup.plain() |> String.trim() |> String.downcase() ==
         "critical apparatus"
-
-  # --- The outline ---
 
   # Each paragraph a <p>; NoteMarkup turns each line break into a <br>, inside the italics
   # too: an EPUB reader need not honour white-space: pre-line.

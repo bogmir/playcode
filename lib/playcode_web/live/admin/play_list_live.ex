@@ -480,7 +480,6 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         {gettext("No plays yet. Import a TEI-XML file or create a new play.")}
       </p>
 
-      <%!-- Pagination --%>
       <div :if={@total_pages > 1} class="mt-6 flex items-center justify-center gap-4">
         <.link
           :if={@page > 1}

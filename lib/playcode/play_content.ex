@@ -86,8 +86,6 @@ defmodule Playcode.PlayContent do
     end
   end
 
-  # --- Characters ---
-
   @doc """
   The play's cast, in cast-list order.
   """
@@ -257,8 +255,6 @@ defmodule Playcode.PlayContent do
   def delete_character(%Character{} = character) do
     refreshing(character.play_id, fn -> character |> Repo.delete() |> ok_or_rollback() end)
   end
-
-  # --- Cast lists ---
 
   @doc """
   The play's cast lists (its `elenco` divisions) in outline order: a list before, between
@@ -442,8 +438,6 @@ defmodule Playcode.PlayContent do
 
     :ok
   end
-
-  # --- Divisions ---
 
   @doc """
   The parts of the play's split verses out of order (`SplitVerses.out_of_order/1`). Every
@@ -669,8 +663,6 @@ defmodule Playcode.PlayContent do
     query |> select([d], coalesce(max(d.position), -1) + 1) |> Repo.one()
   end
 
-  # --- Elements ---
-
   @doc """
   The division's top-level elements in order, three levels deep (speech, line group,
   verse), each with its speakers in order.
@@ -882,8 +874,6 @@ defmodule Playcode.PlayContent do
   defp spoken_lines(element, children),
     do: children |> Map.get(element.id, []) |> Enum.flat_map(&spoken_lines(&1, children))
 
-  # --- Notes ---
-
   @doc """
   As `get_character/2`, for a note: nil for another play's note, a deleted one or a
   malformed id.
@@ -1086,7 +1076,6 @@ defmodule Playcode.PlayContent do
           from(d in Division, order_by: d.position, preload: [:notes, entries: :character])
       ])
 
-    # Load elements per division (including sub-divisions)
     all_division_ids = collect_division_ids(divisions)
 
     ec_preload = from(ec in ElementCharacter, order_by: ec.position, preload: :character)
@@ -1160,8 +1149,6 @@ defmodule Playcode.PlayContent do
 
   defp without_variants(divisions, false),
     do: update_notes(divisions, &Enum.reject(&1, fn note -> Note.variant?(note) end))
-
-  # --- Element-Character associations ---
 
   @doc """
   Replaces all character associations for an element with the given character_ids.

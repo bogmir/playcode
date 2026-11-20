@@ -22,7 +22,6 @@ defmodule PlaycodeWeb.Admin.PlacePicker do
   def place_picker(assigns) do
     ~H"""
     <div class="relative grow">
-      <%!-- Picked state: the place is chosen. --%>
       <div
         :if={@picked}
         class="input input-bordered input-sm flex h-auto min-h-8 items-center justify-between gap-2"

@@ -75,7 +75,6 @@ defmodule Playcode.Export.StaticSite.Deployer do
   end
 
   defp push(site_dir, repo_url, branch, message, token, on_progress) do
-    # Work in the site directory
     git_opts = [cd: site_dir, stderr_to_stdout: true, env: auth_env(repo_url, token)]
 
     steps = [
@@ -165,7 +164,6 @@ defmodule Playcode.Export.StaticSite.Deployer do
   end
 
   defp derive_pages_url(repo_url) do
-    # Extract owner/repo from URL
     cond do
       String.contains?(repo_url, "github.com") ->
         repo_url

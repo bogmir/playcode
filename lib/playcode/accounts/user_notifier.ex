@@ -15,7 +15,6 @@ defmodule Playcode.Accounts.UserNotifier do
     {"Playcode", Application.get_env(:playcode, :mail_from, "noreply@emothe.uv.es")}
   end
 
-  # Delivers the email using the application mailer.
   defp deliver(recipient, subject, body) do
     email =
       new()

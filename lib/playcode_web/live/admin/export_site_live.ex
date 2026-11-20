@@ -150,7 +150,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </span>
       </div>
 
-      <%!-- Configuration form --%>
       <div class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
         <div class="card-body">
           <h2 class="card-title">{gettext("Configuration")}</h2>
@@ -200,7 +199,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </div>
       </div>
 
-      <%!-- Play list --%>
       <div class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
         <div class="card-body">
           <h2 class="card-title">{gettext("Plays")}</h2>
@@ -296,7 +294,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </div>
       </div>
 
-      <%!-- Generation progress --%>
       <div
         :if={@generating}
         class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
@@ -324,7 +321,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </div>
       </div>
 
-      <%!-- Results --%>
       <div
         :if={(@gen_result || MapSet.size(@exported_codes) > 0) && !@generating}
         class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
@@ -368,7 +364,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
               <span class="loading loading-spinner loading-xs"></span>
               {gettext("Updating search…")}
             </span>
-            <%!-- Deploy button --%>
             <button
               :if={@deploy_to}
               phx-click="deploy"
@@ -385,7 +380,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </div>
       </div>
 
-      <%!-- Deploy progress --%>
       <div :if={@deploying} class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
         <div class="card-body">
           <div class="flex items-center gap-3">
@@ -395,7 +389,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </div>
       </div>
 
-      <%!-- Deploy success --%>
       <div
         :if={@deploy_url && !@deploying}
         class="card mb-6 border border-success/30 bg-success/5 shadow-sm"
@@ -418,7 +411,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </div>
       </div>
 
-      <%!-- Info box --%>
       <div class="card border border-base-300 bg-base-200/50">
         <div class="card-body text-sm text-base-content/70">
           <h3 class="font-semibold text-base-content">{gettext("About the Static Site")}</h3>

@@ -14,8 +14,6 @@ defmodule PlaycodeWeb.Telemetry do
       # Telemetry poller will execute the given period measurements
       # every 10_000ms. Learn more here: https://hexdocs.pm/telemetry_metrics
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
-      # Add reporters as children of your supervision tree.
-      # {Telemetry.Metrics.ConsoleReporter, metrics: metrics()}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)
@@ -23,7 +21,6 @@ defmodule PlaycodeWeb.Telemetry do
 
   def metrics do
     [
-      # Phoenix Metrics
       # Each PDF Chrome printed (Export.PdfCache): the evidence for more compute.
       summary("chromic_pdf.print_to_pdf.stop.duration", unit: {:native, :second}),
       summary("phoenix.endpoint.start.system_time",
@@ -55,8 +52,6 @@ defmodule PlaycodeWeb.Telemetry do
         tags: [:event],
         unit: {:native, :millisecond}
       ),
-
-      # Database Metrics
       summary("playcode.repo.query.total_time",
         unit: {:native, :millisecond},
         description: "The sum of the other measurements"
@@ -78,8 +73,6 @@ defmodule PlaycodeWeb.Telemetry do
         description:
           "The time the connection spent waiting before being checked out for the query"
       ),
-
-      # VM Metrics
       summary("vm.memory.total", unit: {:byte, :kilobyte}),
       summary("vm.total_run_queue_lengths.total"),
       summary("vm.total_run_queue_lengths.cpu"),

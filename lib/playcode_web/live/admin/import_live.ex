@@ -169,7 +169,6 @@ defmodule PlaycodeWeb.Admin.ImportLive do
             code: play.code
           })
 
-          # validation_warnings = validate_source_file(path)
           validation_warnings = []
           success = {filename, play.title, play.code, play.id, validation_warnings}
           update(socket, :successes, &[success | &1])
@@ -204,7 +203,6 @@ defmodule PlaycodeWeb.Admin.ImportLive do
         </:subtitle>
       </.page_header>
 
-      <%!-- Upload files from browser --%>
       <div class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
         <div class="card-body">
           <h2 class="card-title">{gettext("Select Files")}</h2>
@@ -253,7 +251,6 @@ defmodule PlaycodeWeb.Admin.ImportLive do
         </div>
       </div>
 
-      <%!-- Replacement confirmation --%>
       <div
         :if={@phase == :confirming}
         id="import-confirmation"
@@ -386,7 +383,6 @@ defmodule PlaycodeWeb.Admin.ImportLive do
         </div>
       </div>
 
-      <%!-- Import progress --%>
       <div
         :if={@phase == :importing}
         class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
@@ -409,7 +405,6 @@ defmodule PlaycodeWeb.Admin.ImportLive do
         </div>
       </div>
 
-      <%!-- Success results --%>
       <div
         :if={@successes != [] && @phase == :idle}
         class="card border border-base-300 bg-base-100 shadow-sm"

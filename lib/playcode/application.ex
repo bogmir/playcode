@@ -1,6 +1,4 @@
 defmodule Playcode.Application do
-  # See https://hexdocs.pm/elixir/Application.html
-  # for more information on OTP Applications
   @moduledoc false
 
   use Application
@@ -18,8 +16,6 @@ defmodule Playcode.Application do
 
     PlaycodeWeb.RateLimit.create_table()
 
-    # See https://hexdocs.pm/elixir/Supervisor.html
-    # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Playcode.Supervisor]
     Supervisor.start_link(children(), opts)
   end
@@ -45,21 +41,15 @@ defmodule Playcode.Application do
       Playcode.Export.SiteBuilder,
       # Tells the export pages when a play changes, as soon as the edit commits.
       Playcode.Export.PlayChangeListener,
-      # Start a worker by calling: Playcode.Worker.start_link(arg)
-      # {Playcode.Worker, arg},
-      # PDF generation via headless Chrome
       {ChromicPDF, Application.get_env(:playcode, ChromicPDF, [])},
       # Each play's PDF, rendered once per version; renders run as tasks.
       {Task.Supervisor, name: Playcode.Export.PdfCache.Tasks},
       Playcode.Export.PdfCache,
-      # Start to serve requests, typically the last entry
       PlaycodeWeb.Endpoint,
       Playcode.Accounts.AdminBootstrap
     ]
   end
 
-  # Tell Phoenix to update the endpoint configuration
-  # whenever the application is updated.
   @impl true
   def config_change(changed, _new, removed) do
     PlaycodeWeb.Endpoint.config_change(changed, removed)

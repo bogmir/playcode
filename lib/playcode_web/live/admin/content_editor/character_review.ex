@@ -24,7 +24,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.CharacterReview do
     limited = Enum.take(all_filtered, assigns.cr_display_limit)
     assigns = assign(assigns, visible_speeches: limited, total_filtered: total)
 
-    # Build lookup of selected character objects for tag display
     selected_chars =
       Enum.filter(assigns.characters, &(&1.id in assigns.cr_selected_character_ids))
       |> Enum.sort_by(fn c ->
@@ -50,7 +49,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.CharacterReview do
       </div>
 
       <div class="grid grid-cols-1 gap-6 lg:grid-cols-4">
-        <%!-- Left: Characters & speaker labels --%>
         <div class="lg:col-span-1">
           <div class="rounded-box border border-base-300 bg-base-100 shadow-sm">
             <div class="border-b border-base-300 px-4 py-3">
@@ -76,7 +74,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.CharacterReview do
           </div>
         </div>
 
-        <%!-- Right: Speeches list --%>
         <div class="lg:col-span-3">
           <div class="mb-4 flex flex-wrap items-center gap-3">
             <form phx-change="cr_filter" class="flex items-center gap-2 flex-1">
@@ -128,7 +125,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.CharacterReview do
               {gettext("%{count} selected", count: MapSet.size(@selected_speeches))}
             </span>
 
-            <%!-- Character assignment section --%>
             <div class="flex flex-wrap items-center gap-2">
               <span class="text-sm text-base-content/70">{gettext("Characters:")}</span>
               <span
@@ -170,7 +166,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.CharacterReview do
 
             <div class="divider my-0 h-0"></div>
 
-            <%!-- Label editing section --%>
             <form phx-submit="cr_set_label" class="flex flex-wrap items-center gap-2">
               <label for="cr-speaker-label" class="text-sm text-base-content/70">
                 {gettext("Label:")}

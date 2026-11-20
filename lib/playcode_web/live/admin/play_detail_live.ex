@@ -73,7 +73,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         case WordParser.import_content(play.id, path) do
           {:ok, _play} ->
             File.rm(path)
-            # Reload play data
             play = Catalogue.get_play_with_all!(play.id)
             divisions = PlayContent.list_top_divisions(play.id)
             statistic = Statistics.recompute(play.id)
