@@ -32,7 +32,7 @@ defmodule Playcode.Import.TeiImport do
 
   # Columns the platform owns, not the TEI file. `language` in particular: every EMOTHE
   # file carries xml:lang="es" for the editorial platform, so a re-import would undo the
-  # FileMaker sync (docs/superpowers/plans/2026-08-01-s1-work-families-and-language.md).
+  # FileMaker sync.
   # New research columns added by later slices belong on this list.
   @platform_owned [
     :language,
@@ -341,8 +341,6 @@ defmodule Playcode.Import.TeiImport do
     )
   end
 
-  # --- Writing ---
-
   # Everything the file supplies, in one transaction: the play, its header records, the
   # cast and front matter, then the text.
   defp write(tei), do: tei |> write_with_numbering() |> elem(0)
@@ -477,8 +475,6 @@ defmodule Playcode.Import.TeiImport do
     Places.delete_tei_play_places(id)
   end
 
-  # --- Witnesses ---
-
   # A siglum the play already has — a witness typed by hand, a modern edition in its
   # bibliography, or one earlier in the same file — is left out (Witnesses.taken_sigla/1,
   # after reset_tei_content/1 removed the file's own). So is a witness printing the same
@@ -507,8 +503,6 @@ defmodule Playcode.Import.TeiImport do
   end
 
   defp printed_line(witness), do: witness |> Witnesses.plain() |> String.split() |> Enum.join(" ")
-
-  # --- Performances ---
 
   # The file's performances replace the play's `tei` ones, which go through
   # `Performances.delete_performance/1` so that the companies, actors and source entries they
@@ -690,8 +684,6 @@ defmodule Playcode.Import.TeiImport do
 
   defp folded(text), do: text |> Text.squeeze() |> then(&(&1 && String.downcase(&1)))
 
-  # --- Bibliography ---
-
   # What an import does with a file's references, decided once for the import and its
   # preview: `{:link, entry_id, ref}` for an entry Playcode has with the reference's
   # description (Bibliography.identical_entries/2) that the play does not link yet,
@@ -749,8 +741,6 @@ defmodule Playcode.Import.TeiImport do
   end
 
   defp valid_entry?(description), do: Bibliography.change_entry(%Entry{}, description).valid?
-
-  # --- Places ---
 
   # A place is found by its slug or created, then the places nested in it. The gazetteer
   # is corpus-global authority data: a place already there is used, never changed.
@@ -845,8 +835,6 @@ defmodule Playcode.Import.TeiImport do
         nil
     end
   end
-
-  # --- Text ---
 
   # The text in a handful of statements, not one per row: an import is one transaction,
   # and production's database timeout covers all of it (7,565 round trips for AL0788).

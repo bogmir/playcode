@@ -6,7 +6,6 @@ defmodule Playcode.Import.WordParser do
   of each paragraph to annotate structural elements of a play text.
   """
 
-  # Extracts paragraphs from a .docx file as a list of strings.
   defp extract_paragraphs(path) do
     with {:ok, zip_handle} <- open_zip(path),
          {:ok, document_xml} <- read_zip_entry(zip_handle, ~c"word/document.xml") do
@@ -43,12 +42,8 @@ defmodule Playcode.Import.WordParser do
   defp extract_paragraphs_from_xml(xml_binary) do
     xml_string = to_string(xml_binary)
 
-    # Parse <w:p> paragraphs, each containing <w:r><w:t> text runs
-    # Using regex-based extraction since the XML namespace handling
-    # with Saxy.SimpleForm would require namespace awareness
     Regex.scan(~r/<w:p\b[^>]*>.*?<\/w:p>/s, xml_string)
     |> Enum.map(fn [paragraph_xml] ->
-      # Extract all <w:t> text content within this paragraph
       Regex.scan(~r/<w:t[^>]*>(.*?)<\/w:t>/s, paragraph_xml)
       |> Enum.map(fn [_full, text] -> unescape_xml(text) end)
       |> Enum.join("")
@@ -66,11 +61,9 @@ defmodule Playcode.Import.WordParser do
     |> Enum.map(fn {tag, text} -> {tag_to_atom(tag), String.trim(text)} end)
   end
 
-  # Tag name regex - case-insensitive
   @tag_pattern ~r/\{(e|ac|ap|p|v|ti|tm|tf|pr|m|a)\}/i
 
   defp split_into_tag_segments(line) do
-    # Split line by tags, keeping the tag names
     parts = Regex.split(@tag_pattern, line, include_captures: true)
 
     parts
@@ -78,14 +71,12 @@ defmodule Playcode.Import.WordParser do
     |> Enum.reject(fn {_tag, text} -> tag_empty_filler?(text) end)
   end
 
-  # Recursively pair tags with their following text
   defp chunk_tag_text([], acc), do: Enum.reverse(acc)
 
   defp chunk_tag_text([head | rest], acc) do
     if Regex.match?(@tag_pattern, head) do
-      # Extract the tag name
       [_, tag_name] = Regex.run(@tag_pattern, head)
-      # Next element (if any) is the text content
+
       {text, remaining} =
         case rest do
           [next | more] ->
@@ -101,7 +92,6 @@ defmodule Playcode.Import.WordParser do
 
       chunk_tag_text(remaining, [{String.downcase(tag_name), text} | acc])
     else
-      # Text before any tag — untagged content
       if String.trim(head) != "" do
         chunk_tag_text(rest, [{"text", head} | acc])
       else
@@ -132,7 +122,6 @@ defmodule Playcode.Import.WordParser do
   defp parse_content(paragraphs) do
     parsed_lines = Enum.map(paragraphs, &parse_line/1)
 
-    # Split front matter (before first {e} or {A} tag) from play content
     {front_lines, content_lines} = split_front_matter(parsed_lines)
 
     {acts, _state} =
@@ -142,10 +131,8 @@ defmodule Playcode.Import.WordParser do
           process_line(segments, acts, state)
       end)
 
-    # Finalize: close any open speech/scene/act
     acts = finalize_structure(acts)
 
-    # If no acts were created, wrap everything in a default act
     acts =
       if acts == [] do
         [%{type: "acto", head: nil, scenes: []}]
@@ -153,7 +140,6 @@ defmodule Playcode.Import.WordParser do
         acts
       end
 
-    # Build front matter text from non-empty lines
     front_matter =
       front_lines
       |> Enum.map(&segments_to_text/1)
@@ -232,7 +218,6 @@ defmodule Playcode.Import.WordParser do
 
   defp process_line(segments, acts, state) do
     cond do
-      # Explicit {A} act tag
       has_tag?(segments, :act) ->
         heading = get_tag_text(segments, :act)
         act_type = detect_act_type(heading)
@@ -241,7 +226,6 @@ defmodule Playcode.Import.WordParser do
         {acts ++ [act],
          %{state | current_act: length(acts), current_scene: nil, current_speech: nil}}
 
-      # Auto-detected act heading from plain text (fallback)
       match?({:ok, _, _}, detect_act_heading(segments)) ->
         {:ok, act_type, heading} = detect_act_heading(segments)
         act = %{type: act_type, head: heading, scenes: [], _direct_elements: [], _open: true}
@@ -280,7 +264,6 @@ defmodule Playcode.Import.WordParser do
 
           true ->
             scene = %{head: scene_text, elements: [], _open: true}
-            # Auto-detect act boundary from M.N scene numbering
             acts = maybe_insert_act_from_scene_number(acts, scene_text)
             acts = ensure_act(acts, state)
             acts = append_scene(acts, scene)
@@ -390,7 +373,6 @@ defmodule Playcode.Import.WordParser do
 
     if has_speaker do
       speaker_label = get_tag_text(segments, :speaker)
-      # Collect content elements from this line
       children = build_children(segments)
       speech = %{type: "speech", speaker_label: speaker_label, children: children, _open: true}
       acts = append_element(acts, speech)
@@ -420,14 +402,12 @@ defmodule Playcode.Import.WordParser do
           end
 
         _ ->
-          # Add as children to current speech if one is open
           children = build_children(segments)
 
           if state.current_speech == :open and children != [] do
             acts = append_children_to_last_speech(acts, children)
             {acts, state}
           else
-            # Standalone elements
             Enum.reduce(children, {acts, state}, fn child, {a, s} ->
               {append_element(a, child), s}
             end)
@@ -607,7 +587,6 @@ defmodule Playcode.Import.WordParser do
       Repo.transaction(fn ->
         play = Catalogue.get_play!(play_id)
 
-        # Delete existing content
         Repo.delete_all(from e in Element, where: e.play_id == ^play_id)
         Repo.delete_all(from d in Division, where: d.play_id == ^play_id)
         Repo.delete_all(from c in Character, where: c.play_id == ^play_id)
@@ -645,7 +624,6 @@ defmodule Playcode.Import.WordParser do
           end
 
         # Create structure in DB; the play's numbering rule numbers it afterwards.
-        # Use reduce to track act numbering (skip prologo/epilogue)
         Enum.with_index(acts, first_act_position)
         |> Enum.reduce(1, fn {act, act_pos}, act_number ->
           is_numbered = act.type not in ["prologo", "epilogue", "induction"]

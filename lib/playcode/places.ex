@@ -26,8 +26,6 @@ defmodule Playcode.Places do
   """
   def names_query, do: from(n in PlaceName, order_by: ^@name_order)
 
-  # --- Places ---
-
   def change_place(%Place{} = place, attrs \\ %{}) do
     place
     |> Place.changeset(attrs)
@@ -382,8 +380,6 @@ defmodule Playcode.Places do
         {:ok, get_place!(id), :existing}
     end
   end
-
-  # --- Play links ---
 
   def list_play_places(play_id) do
     PlayPlace

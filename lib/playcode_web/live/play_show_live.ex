@@ -141,7 +141,6 @@ defmodule PlaycodeWeb.PlayShowLive do
     ~H"""
     <div class="play-text-page min-h-screen">
       <div class="max-w-7xl mx-auto px-4 py-6 lg:grid lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-6">
-        <%!-- Sidebar --%>
         <aside
           id="play-sections-panel"
           class="mb-4 lg:mb-0 lg:sticky lg:top-16 lg:self-start lg:max-h-[calc(100vh-5rem)] lg:overflow-y-auto"
@@ -168,7 +167,6 @@ defmodule PlaycodeWeb.PlayShowLive do
               phx-hook="ScrollSpy"
               class="fold-body border-t border-base-300 max-h-[65vh] overflow-y-auto px-2 py-2 space-y-3"
             >
-              <%!-- View switcher --%>
               <section>
                 <h3 class="px-2 pt-1 text-xs font-semibold uppercase tracking-widest text-base-content/70">
                   {gettext("View")}
@@ -231,7 +229,6 @@ defmodule PlaycodeWeb.PlayShowLive do
               </section>
             </div>
 
-            <%!-- Visual markers (text view only) --%>
             <div
               :if={@active_tab == :text}
               class="fold-body border-t border-base-300 px-3 py-2.5 space-y-2"
@@ -371,7 +368,6 @@ defmodule PlaycodeWeb.PlayShowLive do
             </div>
           </div>
 
-          <%!-- Navigation quick links --%>
           <.link
             navigate={~p"/admin/plays/#{@play.id}"}
             class="mt-2 flex items-center gap-1.5 rounded-box border border-base-300 bg-base-100/90 px-3 py-2 text-xs text-base-content/70 hover:text-primary hover:border-primary/30 transition-colors"
@@ -382,7 +378,6 @@ defmodule PlaycodeWeb.PlayShowLive do
         </aside>
 
         <div>
-          <%!-- Header --%>
           <header
             id="meta-overview"
             class="play-header mb-8 border-b border-base-300/40 pb-6 scroll-mt-20 text-center"
@@ -393,7 +388,6 @@ defmodule PlaycodeWeb.PlayShowLive do
               {@play.original_title}
             </p>
 
-            <%!-- Relationship badge --%>
             <div :if={@play.relationship_type} class="mt-2 text-xs text-base-content/70">
               <span class="badge badge-outline badge-sm">
                 {PlayLabels.relationship_type_label(@play.relationship_type)}
@@ -424,14 +418,12 @@ defmodule PlaycodeWeb.PlayShowLive do
               </span>
             </div>
 
-            <%!-- Source info --%>
             <div :if={@play.sources != []} id="meta-sources" class="scroll-mt-20">
               <div :for={source <- @play.sources} class="mt-4 text-xs text-base-content/70">
                 <p :if={source.note} class="italic"><.inline_content text={source.note} /></p>
               </div>
             </div>
 
-            <%!-- Editors --%>
             <div
               :if={@play.editors != []}
               id="meta-editors"
@@ -467,7 +459,6 @@ defmodule PlaycodeWeb.PlayShowLive do
             </p>
           </header>
 
-          <%!-- Research metadata --%>
           <section
             :if={@play.historical_time || @play.composition_date_from || @play.composition_date_note}
             id="meta-study"
@@ -499,7 +490,6 @@ defmodule PlaycodeWeb.PlayShowLive do
             </dl>
           </section>
 
-          <%!-- Places --%>
           <section
             :if={@play.play_places != []}
             id="meta-places"
@@ -647,7 +637,6 @@ defmodule PlaycodeWeb.PlayShowLive do
             </dl>
           </section>
 
-          <%!-- Text tab --%>
           <%!-- AlignParts: site.js's EMOTHE.align, re-run after each patch (data-switches). --%>
           <div
             :if={@active_tab == :text}
@@ -674,12 +663,10 @@ defmodule PlaycodeWeb.PlayShowLive do
             </p>
           </div>
 
-          <%!-- Statistics tab --%>
           <div :if={@active_tab == :statistics} id="play-tab-statistics">
             <.stats_panel statistic={@statistic} play={@play} />
           </div>
 
-          <%!-- Notes tab --%>
           <div :if={@active_tab == :notes} id="play-tab-notes" class="max-w-2xl mx-auto">
             <.notes_list notes={@notes} type={@note_type} />
           </div>

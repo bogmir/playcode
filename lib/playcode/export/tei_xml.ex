@@ -89,8 +89,6 @@ defmodule Playcode.Export.TeiXml do
       else: %{}
   end
 
-  # --- Header ---
-
   defp build_header(play, performances, gazetteer, divisions) do
     element(
       :teiHeader,
@@ -309,7 +307,6 @@ defmodule Playcode.Export.TeiXml do
         do: children ++ [element(:authority, [element(:orgName, play.authority)])],
         else: children
 
-    # Build availability with optional <p> and <licence>
     availability_children =
       []
       |> then(fn acc ->
@@ -906,8 +903,6 @@ defmodule Playcode.Export.TeiXml do
 
   defp filled?(value), do: is_binary(value) and String.trim(value) != ""
 
-  # --- Text ---
-
   # The outline in order, each item where its place puts it (`Outline.placement/1`): in
   # <front> before the first division of the text, in <body> between, in <back> after.
   defp build_text(play, divisions, performances, gazetteer) do
@@ -968,8 +963,6 @@ defmodule Playcode.Export.TeiXml do
   defp body_item(%Paratext{} = paratext, _cast), do: paratext_element(paratext, :body)
   defp body_item(%Division{type: "elenco"} = list, cast), do: cast_list_div(list, :div1, cast)
   defp body_item(%Division{} = division, cast), do: build_div1(division, cast)
-
-  # --- Cast lists ---
 
   # The play's cast lists in outline order: those an act holds after it.
   defp cast_lists(divisions) do
@@ -1075,8 +1068,6 @@ defmodule Playcode.Export.TeiXml do
         description ++ actor
     )
   end
-
-  # --- Performances (S5) ---
 
   # In the list's order, each named by its place in it: `performance-1` is the file's own
   # name for it, never a database id.
@@ -1770,8 +1761,6 @@ defmodule Playcode.Export.TeiXml do
     do: element(name, Map.put(attrs, @inline, true), content)
 
   defp inline_element(name, attrs, content), do: element(name, attrs, content)
-
-  # --- Identifiers ---
 
   # What each element's identifier counts: lines, paragraphs and line breaks share one
   # counter, as FileMaker's did (question 30); speeches, stage directions, scenes and

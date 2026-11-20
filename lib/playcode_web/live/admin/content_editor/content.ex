@@ -39,7 +39,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           }
         }
       </script>
-      <%!-- Search bar --%>
       <div class="mb-4">
         <form phx-change="content_search" phx-submit="content_search">
           <div class="relative">
@@ -69,7 +68,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
         </form>
       </div>
 
-      <%!-- Search results --%>
       <div :if={@content_search != ""} class="mb-4">
         <p class="text-xs text-base-content/70 mb-2">
           {ngettext(
@@ -117,7 +115,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
         </div>
       </div>
 
-      <%!-- No division selected --%>
       <div
         :if={!@selected_division_id}
         class="rounded-box border border-dashed border-base-300 bg-base-200/30 p-12 text-center"
@@ -135,9 +132,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
         </button>
       </div>
 
-      <%!-- Division selected --%>
       <div :if={@selected_division_id}>
-        <%!-- Content header with division selector --%>
         <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div class="flex flex-col gap-1">
             <div
@@ -152,7 +147,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
               <h2 class="text-lg font-semibold text-base-content">
                 {current_division_label(@divisions, @selected_division_id)}
               </h2>
-              <%!-- Quick division navigation --%>
               <div class="flex gap-1">
                 <button
                   :if={prev_division_id(@divisions, @selected_division_id)}
@@ -338,7 +332,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           <span id={"el-type-#{@element.id}"} class="badge badge-sm badge-outline mr-2 shrink-0">
             {element_type_label(@element.type)}
           </span>
-          <%!-- Speaker label: click opens modal --%>
           <span
             :if={@element.speaker_label}
             id={"el-speaker-#{@element.id}"}
@@ -348,7 +341,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           >
             {@element.speaker_label}
           </span>
-          <%!-- Content: inline editing or click to edit --%>
           <%!-- A browser strips the newlines from the one-line quick edit: a text with a
             line break opens in the form instead. --%>
           <span
@@ -395,7 +387,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           </span>
         </div>
         <div class="flex gap-1">
-          <%!-- Insert Above for top-level elements (speeches, stage dirs, prose) --%>
           <div :if={@depth == 0} class="dropdown dropdown-end">
             <label
               tabindex="0"
@@ -442,7 +433,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
               </li>
             </ul>
           </div>
-          <%!-- Insert Above for verse lines inside line groups --%>
           <button
             :if={@element.type == "verse_line" && @element.parent_id}
             phx-click="new_element_before"
@@ -476,7 +466,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           </button>
         </div>
       </div>
-      <%!-- Children --%>
       <div
         :if={match?([_ | _], Map.get(@element, :children, []))}
         class="border-t border-base-300 bg-base-200/30 px-3 py-2"
@@ -490,7 +479,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
           inline_editing_id={@inline_editing_id}
         />
       </div>
-      <%!-- Add child buttons --%>
       <div :if={@element.type == "speech"} class="border-t border-base-300 px-3 py-2">
         <button
           phx-click="new_element"
@@ -589,7 +577,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
       <.input field={@form[:position]} type="hidden" />
       <.input field={@form[:parent_id]} type="hidden" />
 
-      <%!-- Speech fields --%>
       <div :if={@modal_element_type == "speech"}>
         <div class="mb-4">
           <label class="label" for={@form[:speaker_label].id}>
@@ -664,7 +651,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
         </div>
       </div>
 
-      <%!-- Stage direction fields --%>
       <div :if={@modal_element_type == "stage_direction"}>
         <div class="mb-4">
           <label class="label" for={@form[:content].id}>
@@ -706,7 +692,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
         </div>
       </div>
 
-      <%!-- Prose fields --%>
       <div :if={@modal_element_type == "prose"}>
         <label class="label" for={@form[:content].id}>
           <span class="label-text font-medium">{gettext("Content")}</span>
@@ -756,7 +741,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
         </p>
       </div>
 
-      <%!-- Line group fields --%>
       <div :if={@modal_element_type == "line_group"}>
         <label class="label" for={@form[:verse_type].id}>
           <span class="label-text font-medium">{gettext("Verse Type")}</span>
@@ -771,7 +755,6 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
         </p>
       </div>
 
-      <%!-- Verse line fields --%>
       <div :if={@modal_element_type == "verse_line"}>
         <div class="mb-4">
           <label class="label" for={@form[:content].id}>

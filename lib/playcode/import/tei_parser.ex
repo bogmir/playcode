@@ -115,8 +115,6 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  # --- HTML typed as text ---
-
   # Seven files hold HTML typed into <code> as text (docs/tei-apparatus-and-code.md). On
   # the old site a <span class="folio"> hid Hamlet's Folio passages, each between two
   # superscript F's. A file with such an F has its passages read into <folio> markers
@@ -350,10 +348,7 @@ defmodule Playcode.Import.TeiParser do
   defp typed_text(text) when is_binary(text), do: String.trim(text)
   defp typed_text(_element), do: nil
 
-  # --- Encoding ---
-
   defp normalize_encoding(raw) do
-    # Detect UTF-16 BOM (little-endian or big-endian)
     case raw do
       <<0xFF, 0xFE, rest::binary>> ->
         :unicode.characters_to_binary(rest, {:utf16, :little})
@@ -374,10 +369,7 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  # --- XML Parsing ---
-
   defp parse_xml(xml) do
-    # Strip XML declaration and stylesheet processing instructions
     xml = String.replace(xml, ~r/<\?xml[^?]*\?>/, "")
     xml = String.replace(xml, ~r/<\?xml-stylesheet[^?]*\?>/, "")
     xml = String.trim(xml)
@@ -387,8 +379,6 @@ defmodule Playcode.Import.TeiParser do
       {:error, reason} -> {:error, {:xml_parse_error, reason}}
     end
   end
-
-  # --- Header ---
 
   defp header(children) do
     file_desc = find_child(children, "fileDesc")
@@ -440,30 +430,23 @@ defmodule Playcode.Import.TeiParser do
 
     relationship_type = kind_title && title_kind(kind_title)
 
-    # Extract sponsor and funder from titleStmt
     sponsor_el = if title_stmt, do: find_child(elem(title_stmt, 2), "sponsor"), else: nil
     funder_el = if title_stmt, do: find_child(elem(title_stmt, 2), "funder"), else: nil
 
     main_author = Enum.find(authors, fn {_, attrs, _} -> !has_attr?(attrs, "key") end)
     sort_author = Enum.find(authors, fn {_, attrs, _} -> attr_value(attrs, "key") == "orden" end)
 
-    # Extract code from either archivo title or idno
     code = if code_title, do: text_content(code_title), else: extract_idno(publication_stmt)
 
-    # Extract verse count from extent
     verse_count = if extent, do: extract_verse_count(extent), else: nil
 
-    # Extract publication info
     {pub_place, pub_date, publisher_text, availability, licence_url, licence_text, authority_text} =
       extract_publication(publication_stmt)
 
-    # Extract EMOTHE-specific idno
     emothe_id = extract_emothe_idno(publication_stmt)
 
-    # Extract project/editorial from encodingDesc
     {project_desc, editorial_decl} = extract_encoding(encoding_desc)
 
-    # Extract play language from profileDesc/langUsage/language[@ident]
     language = extract_language_code(profile_desc)
 
     {composition_from, composition_to, composition_note} = extract_creation(profile_desc)
@@ -642,7 +625,6 @@ defmodule Playcode.Import.TeiParser do
     if idno, do: text_content(idno), else: nil
   end
 
-  # Extract the EMOTHE-specific idno (type="EMOTHE")
   defp extract_emothe_idno(nil), do: nil
 
   defp extract_emothe_idno({_name, _attrs, children}) do
@@ -737,7 +719,6 @@ defmodule Playcode.Import.TeiParser do
     availability = find_child(children, "availability")
     authority = find_child(children, "authority")
 
-    # Extract licence details from within availability
     {licence_url, licence_text} =
       case availability do
         {_, _, avail_children} ->
@@ -798,8 +779,6 @@ defmodule Playcode.Import.TeiParser do
       text -> text
     end
   end
-
-  # --- Editors ---
 
   # The principal investigators first (the files write them last), then the titleStmt's
   # <editor>s and respStmts in their order, from position 100, the range the export
@@ -896,8 +875,6 @@ defmodule Playcode.Import.TeiParser do
 
   defp resp_role(nil), do: "digital_editor"
 
-  # --- Sources ---
-
   # <bibl> directly under <sourceDesc>, or inside <listBibl>.
   defp sources(nil), do: []
 
@@ -934,8 +911,6 @@ defmodule Playcode.Import.TeiParser do
       position: position
     }
   end
-
-  # --- Witnesses ---
 
   # `sourceDesc/listWit`, nested lists read in order (S3). Which of them the play keeps
   # depends on the sigla it already has, so that is the writer's call.
@@ -1020,8 +995,6 @@ defmodule Playcode.Import.TeiParser do
   # The first `name` child whose `attr` is `value` (nil: no such attribute).
   defp with_attr(children, name, attr, value),
     do: children |> find_children(name) |> Enum.find(&(attr_value(elem(&1, 1), attr) == value))
-
-  # --- Places ---
 
   # `listPlace` supplies the places and their containment; `setting` supplies this
   # play's links. Reading them separately is what keeps a pure container — Italia in
@@ -1146,7 +1119,7 @@ defmodule Playcode.Import.TeiParser do
   # A place's own note is `<note type="place">`, a direct child of `<place>`. Do not
   # match a bare `<note>` here — that shape belongs to a link's note nested inside
   # `<setting>/<placeName>` (see setting_note/1), one level deeper and without the
-  # type attribute. See task-10-report.md for the export side of this contract.
+  # type attribute.
   defp place_note(children) do
     case Enum.find(children, &match?({"note", _, _}, &1)) do
       {_n, attrs, _c} = el ->
@@ -1198,8 +1171,6 @@ defmodule Playcode.Import.TeiParser do
       el -> text_content(el)
     end
   end
-
-  # --- Text (front, body) ---
 
   defp text(nil),
     do: %{characters: [], paratexts: [], divisions: [], bibliography: [], performances: []}
@@ -1286,8 +1257,6 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.uniq_by(& &1.xml_id)
     |> Enum.with_index(fn character, position -> %{character | position: position} end)
   end
-
-  # --- Back: the bibliography ---
 
   # Every biblStruct of a bibliography's listBibls, read into the entry it describes, as
   # Entry.description/1 gives it, with where the play sits in it (its citedRanges). A
@@ -1391,8 +1360,6 @@ defmodule Playcode.Import.TeiParser do
   defp attrs_of({_name, attrs, _children}), do: attrs
   defp attrs_of(nil), do: []
 
-  # --- Paratexts ---
-
   # A paratext (dedication, editor's introduction, …), kept when it has a heading or
   # paragraphs: 12 head titles are a heading alone.
   defp paratext(type, children, pos) do
@@ -1470,8 +1437,6 @@ defmodule Playcode.Import.TeiParser do
   defp kind("circunstancia_accion"), do: "lugar_accion"
   defp kind(type) when type in ~w(nota front), do: "nota_edicion_digital"
   defp kind(type), do: type
-
-  # --- Cast list ---
 
   # A div (div1, div2) of type `elenco`: its heading, and the castList inside, if any. The
   # line introducing the list and the note after it stand in the div, as the corpus has
@@ -1588,8 +1553,6 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  # --- Body (acts, scenes, speeches, etc.) ---
-
   defp act(type, attrs, act_children, pos) do
     {heading, notes} = text_and_notes(find_child(act_children, "head"))
     {elements, scenes} = act_children |> closing_scene_as_trailer() |> act_content()
@@ -1683,8 +1646,6 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.map(fn {child, pos} -> act_element(child, pos) end)
   end
 
-  # --- Speech ---
-
   defp speech(attrs, children, pos) do
     speaker = find_child(children, "speaker")
     {label, notes} = text_and_notes(speaker)
@@ -1721,8 +1682,6 @@ defmodule Playcode.Import.TeiParser do
     |> Enum.map(&(&1 |> String.replace("#", "") |> String.trim()))
   end
 
-  # --- Line group ---
-
   # A group's <head> ("A Song") is its content, its notes the heading's. A group inside it
   # is not read (EMOTHE0478's song): it is reported, so its lines are not lost unseen.
   defp line_group(attrs, children, pos) do
@@ -1754,8 +1713,6 @@ defmodule Playcode.Import.TeiParser do
         end)
     }
   end
-
-  # --- Verse line ---
 
   defp verse_line({_name, attrs, children} = line, pos) do
     is_aside = aside_delivery?(children)
@@ -1912,8 +1869,6 @@ defmodule Playcode.Import.TeiParser do
     end
   end
 
-  # --- Stage direction, trailer, prose ---
-
   defp stage_direction({_name, attrs, _children} = stage, pos) do
     {content, notes} = text_and_notes(stage)
 
@@ -1960,7 +1915,6 @@ defmodule Playcode.Import.TeiParser do
     }
   end
 
-  # Check if children contain a <seg type="aside"> element
   defp aside_in_children?(children) when is_list(children), do: Enum.any?(children, &aside_seg?/1)
 
   defp aside_in_children?(_), do: false
@@ -1995,8 +1949,6 @@ defmodule Playcode.Import.TeiParser do
     end)
     |> squeeze()
   end
-
-  # --- XML helpers ---
 
   defp find_child(children, name) when is_list(children) do
     Enum.find(children, fn
@@ -2493,8 +2445,6 @@ defmodule Playcode.Import.TeiParser do
   defp safe_text(nil), do: nil
   defp safe_text(element) when is_tuple(element), do: text_content(element)
   defp safe_text(text) when is_binary(text), do: String.trim(text)
-
-  # --- Performances (S5) ---
 
   # A `<performance>` of the front as the export writes it: its <p> has the date (its years
   # the attributes, as a composition date's), the venue and its type, the town with the

@@ -18,8 +18,6 @@ defmodule Playcode.Catalogue do
   alias Playcode.Performances.{CastMember, Performance}
   alias Playcode.PlayContent.Character
 
-  # --- Plays ---
-
   @per_page 25
 
   @origins ~w(tei manual filemaker word)
@@ -381,8 +379,6 @@ defmodule Playcode.Catalogue do
     Repo.one(query) || Map.new(@counted, fn {key, _} -> {key, 0} end)
   end
 
-  # --- Editors ---
-
   @doc """
   The play's editors, in their order.
   """
@@ -431,8 +427,6 @@ defmodule Playcode.Catalogue do
     PlayEditor.changeset(editor, attrs)
   end
 
-  # --- Sources ---
-
   @doc """
   The play's bibliographic sources, in their order.
   """
@@ -479,8 +473,6 @@ defmodule Playcode.Catalogue do
   def change_play_source(%PlaySource{} = source, attrs \\ %{}) do
     PlaySource.changeset(source, attrs)
   end
-
-  # --- Paratexts ---
 
   # A re-import gives the file's paratexts the file's positions, which can equal one an
   # editor gave a hand-entered paratext: the older row goes first, never whichever the
@@ -533,8 +525,6 @@ defmodule Playcode.Catalogue do
   def change_paratext(%Paratext{} = paratext, attrs \\ %{}) do
     Paratext.changeset(paratext, attrs)
   end
-
-  # --- Private ---
 
   defp get_play_row(schema, play_id, id) do
     case Ecto.UUID.cast(id) do

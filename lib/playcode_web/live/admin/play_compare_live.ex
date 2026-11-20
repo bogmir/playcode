@@ -188,7 +188,6 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
       </.async_result>
 
       <div :if={@view == :side}>
-        <%!-- Toolbar --%>
         <div class="mb-4 flex flex-wrap items-center gap-4 rounded-box border border-base-300 bg-base-100 px-4 py-2 shadow-sm">
           <span class="text-xs font-semibold text-base-content/70">{gettext("Display")}</span>
           <label class="flex items-center gap-1.5 text-xs cursor-pointer">
@@ -232,7 +231,6 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
             /> {gettext("Verse type")}
           </label>
 
-          <%!-- Add play --%>
           <div :if={@available != [] && length(@panels) < 4} class="ml-auto flex items-center gap-2">
             <form phx-change="add_play" class="inline">
               <select
@@ -250,7 +248,6 @@ defmodule PlaycodeWeb.Admin.PlayCompareLive do
         </div>
 
         <p :if={@panels == []} class="text-sm text-base-content/70">{gettext("Loading…")}</p>
-        <%!-- N-panel comparison --%>
         <div
           id="sync-scroll"
           phx-hook="SyncScroll"

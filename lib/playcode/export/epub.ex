@@ -29,7 +29,6 @@ defmodule Playcode.Export.Epub do
     File.mkdir_p!(tmp_dir)
 
     try do
-      # Write CSS
       css_path = Path.join(tmp_dir, "style.css")
       File.write!(css_path, css())
 
@@ -155,8 +154,6 @@ defmodule Playcode.Export.Epub do
   defp metadata(nil), do: nil
   defp metadata(text), do: text |> InlineMarkup.plain() |> escape()
 
-  # --- Front matter ---
-
   defp render_front(play, divisions, items) do
     Download.front(play, divisions, :epub) <>
       Enum.map_join(items, "\n", &Download.item(&1, :epub))
@@ -170,8 +167,6 @@ defmodule Playcode.Export.Epub do
 
   defp chapter_title(%{type: "elenco"}, _index), do: "Dramatis personae"
   defp chapter_title(div, index), do: "#{div.type} #{index}"
-
-  # --- CSS (adapted from Html export for EPUB readers) ---
 
   defp css do
     """
@@ -371,8 +366,6 @@ defmodule Playcode.Export.Epub do
     sup a { text-decoration: none; }
     """
   end
-
-  # --- Escaping ---
 
   defp escape(nil), do: ""
 

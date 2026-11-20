@@ -156,8 +156,6 @@ defmodule Playcode.Alignment do
     }
   end
 
-  ## Characters
-
   # A researcher's corrections first: a character with no original is out, one whose
   # pointer names an original character goes with it. The rule pairs the rest; a pointer
   # naming no one is no correction.
@@ -245,8 +243,6 @@ defmodule Playcode.Alignment do
   end
 
   defp norm(v), do: :math.sqrt(Enum.sum(for {_, c} <- v, do: c * c))
-
-  ## Speeches
 
   defp pair_speeches(originals, translations, characters) do
     # A translation's speaker becomes the original character it pairs with; an unpaired one

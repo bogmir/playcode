@@ -253,8 +253,6 @@ defmodule Playcode.Import.Performances do
     })
   end
 
-  # --- what a performance says
-
   defp attrs(row) do
     %{
       "date_text" => value(row, "ObrRep_Fecha"),
@@ -299,8 +297,6 @@ defmodule Playcode.Import.Performances do
     |> Enum.join(": ")
   end
 
-  # --- places
-
   # Each described performance's T10 link, resolved by S9b's rules: the places the plan
   # needs and, by performance id, a performance's place and state.
   defp lookup_places(data, described) do
@@ -322,8 +318,6 @@ defmodule Playcode.Import.Performances do
 
     {Map.delete(placed, :resolved), by_performance}
   end
-
-  # --- companies and actors
 
   # Each company's name by id, and the companies FileMaker keeps under two records: the
   # lowest id of those spelling a name, ignoring case, names them all.
@@ -430,8 +424,6 @@ defmodule Playcode.Import.Performances do
     Enum.filter(people, &MapSet.member?(have, identity(&1)))
   end
 
-  # --- cast
-
   # Each performance's cast as `%{actor: attrs, role: role}` in FileMaker's order. A cast row's
   # actor key ends in "|" ("6|"); the picker leftovers ("1|Actor38|") name no actor.
   defp lookup_cast(data, described, actors) do
@@ -466,8 +458,6 @@ defmodule Playcode.Import.Performances do
         )
     }
   end
-
-  # --- sources
 
   # The work each cited record belongs to (`@works`, else a work of its own), the works as
   # entries, and each performance's source with its own volume and pages. A record T13 does
@@ -627,8 +617,6 @@ defmodule Playcode.Import.Performances do
     |> Map.new()
   end
 
-  # --- writing the plan
-
   @doc """
   Writes the plan in one transaction: the places it creates (`Import.Places.apply_places/1`),
   the entries it cites that Playcode lacks, the companies and actors it names, each
@@ -756,8 +744,6 @@ defmodule Playcode.Import.Performances do
     performance |> Performances.put_cast(rows) |> ok!(:performance, planned.ref)
   end
 
-  # --- the report
-
   @doc "The plan as lines of text, for the mix task and the release."
   def report(plan) do
     names = Places.place_names(plan.places)
@@ -847,8 +833,6 @@ defmodule Playcode.Import.Performances do
     "#{Enum.join(Enum.uniq([work_label(work), title]), " · ")} (T13:#{Enum.join(work.records, ", ")})" <>
       if(work.existing, do: " → #{work.existing}", else: "")
   end
-
-  # --- reading FileMaker
 
   # A field's text as the import copies it: whitespace as a TEI file gives it back, and
   # nothing for a blank and for FileMaker's own filler, "{Falta año pub}" and the like.

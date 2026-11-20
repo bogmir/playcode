@@ -65,8 +65,6 @@ defmodule PlaycodeWeb.Router do
     end
   end
 
-  ## Authentication routes
-
   scope "/", PlaycodeWeb do
     pipe_through [:browser, :redirect_if_user_is_authenticated]
 
@@ -122,7 +120,6 @@ defmodule PlaycodeWeb.Router do
     delete "/users/log-out", UserSessionController, :delete
   end
 
-  # Admin routes - requires the :view_admin permission
   scope "/admin", PlaycodeWeb.Admin do
     pipe_through [:browser, :require_authenticated_user, :require_admin_area]
 
@@ -155,7 +152,6 @@ defmodule PlaycodeWeb.Router do
       live "/export", ExportSiteLive, :index
     end
 
-    # Export endpoints
     get "/plays/:id/export/tei", ExportController, :tei
     get "/plays/:id/export/html", ExportController, :html
     get "/plays/:id/export/pdf", ExportController, :pdf
@@ -177,7 +173,6 @@ defmodule PlaycodeWeb.Router do
     live_dashboard "/dashboard", metrics: PlaycodeWeb.Telemetry
   end
 
-  # Swoosh mailbox preview in development only
   if Application.compile_env(:playcode, :dev_routes) do
     scope "/dev" do
       pipe_through :browser

@@ -38,7 +38,8 @@ npm-debug.log
 /test/fixtures/tei_files
 /docs/screenshots/
 
-/.claude/
+/.claude/*
+!/.claude/skills/
 /.superpowers/
 
 # Static site export output

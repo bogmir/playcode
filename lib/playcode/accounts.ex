@@ -7,8 +7,6 @@ defmodule Playcode.Accounts do
   alias Playcode.Repo
   alias Playcode.Accounts.{User, UserToken}
 
-  ## Database getters
-
   @doc """
   Gets a user by email.
 
@@ -58,8 +56,6 @@ defmodule Playcode.Accounts do
 
   """
   def get_user!(id), do: Repo.get!(User, id)
-
-  ## Invitations
 
   @doc """
   Creates or re-invites a user.
@@ -156,8 +152,6 @@ defmodule Playcode.Accounts do
     end
   end
 
-  ## Settings
-
   @doc """
   Returns an `%Ecto.Changeset{}` for changing the user password.
 
@@ -198,8 +192,6 @@ defmodule Playcode.Accounts do
       {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
-
-  ## Session
 
   @doc """
   Generates a session token, optionally recording the issuing device.
@@ -287,8 +279,6 @@ defmodule Playcode.Accounts do
     :ok
   end
 
-  ## Reset password
-
   @doc ~S"""
   Delivers the reset password email instructions to the given user.
 
@@ -349,8 +339,6 @@ defmodule Playcode.Accounts do
       {:error, :user, changeset, _} -> {:error, changeset}
     end
   end
-
-  ## Role management
 
   @doc """
   True when this user's email is listed in `ADMIN_EMAILS`.
@@ -426,8 +414,6 @@ defmodule Playcode.Accounts do
   def reactivate_user(%User{} = user) do
     user |> Ecto.Changeset.change(deactivated_at: nil) |> Repo.update()
   end
-
-  ## User listing (admin)
 
   @doc """
   Lists users with optional search and pagination.

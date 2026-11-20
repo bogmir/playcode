@@ -274,7 +274,6 @@ defmodule PlaycodeWeb.CoreComponents do
     """
   end
 
-  # All other inputs text, datetime-local, url, password, etc. are handled here...
   def input(assigns) do
     ~H"""
     <div class="fieldset mb-2">
@@ -566,8 +565,6 @@ defmodule PlaycodeWeb.CoreComponents do
     <span class={[@name, @class]} />
     """
   end
-
-  ## JS Commands
 
   def show(js \\ %JS{}, selector) do
     JS.show(js,

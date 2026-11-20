@@ -54,21 +54,7 @@ defmodule PlaycodeWeb.UserAuth do
     conn
   end
 
-  # This function renews the session ID and erases the whole
-  # session to avoid fixation attacks. If there is any data
-  # in the session you may want to preserve after log in/log out,
-  # you must explicitly fetch the session data before clearing
-  # and then immediately set it after clearing, for example:
-  #
-  #     defp renew_session(conn) do
-  #       preferred_locale = get_session(conn, :preferred_locale)
-  #
-  #       conn
-  #       |> configure_session(renew: true)
-  #       |> clear_session()
-  #       |> put_session(:preferred_locale, preferred_locale)
-  #     end
-  #
+  # Renews the session ID and erases the whole session to avoid fixation attacks.
   defp renew_session(conn) do
     preferred_locale = get_session(conn, :locale)
     delete_csrf_token()
