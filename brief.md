@@ -1,33 +1,40 @@
-# Playcode daily brief, 2026-11-20 (commit 66b003d)
+# Playcode daily brief, 2026-11-21 (main @ 3be59b2)
 
-Current focus: none.
+Current focus: none. No earlier brief on the branch, so the speed win has nothing to differ from.
 
-## 18 of 72 questions open ([preguntas](docs/stakeholder/preguntas.html))
-**Easiest**
-- [q54](docs/stakeholder/preguntas.html#q54) English names of the relation kinds: one wording list.
-- [q68](docs/stakeholder/preguntas.html#q68) Word before a cited number: one word.
-- [q72](docs/stakeholder/preguntas.html#q72) Translation links to original's RoleCall chart: yes/no.
-- [q70](docs/stakeholder/preguntas.html#q70) Genders a character may have: a short list.
-- [q71](docs/stakeholder/preguntas.html#q71) Where readers see a character's gender: pick a place.
+## Questions: 18 of 72 questions open
+Links: `docs/stakeholder/preguntas.html#qN`.
 
-**Most important**
-- [q66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: unblocks backlog C1 (listed for the team to confirm).
-- [q69](docs/stakeholder/preguntas.html#q69) Recount 16 hand-numbered plays: the numbering item waits on a yes; plays carry wrong numbers today.
-- [q53](docs/stakeholder/preguntas.html#q53) Which "version" plays are originals: gates the families migration and the whole relations design.
-- [q55](docs/stakeholder/preguntas.html#q55) Transforms or imitates (with q54, q56): the relations model waits on 53-57.
-- [q28](docs/stakeholder/preguntas.html#q28) Show the original cast's actors: `characters.actor` is stored and printed nowhere.
+**5 easiest**
+- q7 The Rover's 40 hidden stage directions: show them? Yes/no.
+- q28 Show the original cast's actors? Yes/no, one fact.
+- q34 Are the two epilogues (0503, 0662) part of the play? Yes/no on the manual's rule.
+- q72 Should a translation link to its original's RoleCall chart? Yes/no.
+- q37 Mark the Additions of The Spanish Tragedy as `Q4`? One choice for the editors.
 
-## Round trip (backlog)
-- Verse/prose limit (q23 follow-up): 61 plays labelled "mixed" by our proposal; corpus copies still say `verso`.
-- Original cast (q28): `characters.actor` written to TEI, printed nowhere.
-- ida-y-vuelta cells short of "yes": the same two, plus the hand-set curated columns kept out of the file by design.
+**5 most important**
+- q66 Confirm the 45 prologues on the wrong side (33 plays): the backlog's whole C1 section waits on it.
+- q68 Word before a number when citing: the Numbering section waits on it, and it affects every play.
+- q69 Recount 16 hand-numbered plays: the same Numbering block.
+- q14 Two Pyrame et Thisbé editions and three plays with no text: decides what the corpus keeps.
+- q54 English names for the relation kinds (q53, q55 and q56 are in the same block): the published site's relations work waits on them.
+
+## Round trip
+- Verse/prose threshold (q23 follow-up): the 61 "mixed" plays are labelled `verso` in our corpus copies.
+- Original cast (`characters.actor`): kept and written to TEI, never printed (q28).
+- `sp@who` naming no cast role: 2,508 references in 29 plays lose their character and the statistics.
+- `stage@n`: 376 dropped on import, mostly Hamlet and Timon; Hamlet v. 2632 is split into 3 stage directions on export.
 
 ## Top 3 features (clear to implement, checked in code)
-1. **Log "mark complete/draft"** - `set_status` changes what the next Generate publishes with no trace (El Adonis, 2026-11-17). `play_detail_live.ex:116` calls `Catalogue.update_play_from_form/2` (`catalogue.ex:329`) without logging; fix: `LiveHelpers.log_activity`, as the delete handler at `:100`.
-2. **Emphasised aside in a stage direction is refused** - one FileMaker play (*The Roman actor*, EMOTHE0398) fails to import whole. `element.ex:297`/`:305`: `holds?(content, :aside)` sees `<aside>` inside `<<aside>>` and errors. Fix: the marker test skips `<<…>>`.
-3. **Shared line's lead has no note numbers** - a later verse part starts up to ~28px short after a part with a note. `play_content/split_verses.ex:44` `leads/1` joins plain content. Fix: print the markers as a plain `<sup>` in the lead, in each renderer.
+1. **Parse the Word `document.xml` with Saxy, not regexes.** `<w:t>` text split by `<w:tab/>` or `<w:br/>` is lost today, and numeric entities are not decoded. `lib/playcode/import/word_parser.ex:45-48` and `:17`. Fix: Saxy SimpleForm, as `TeiParser` does.
+2. **The import page's validation-warnings column is always empty.** `lib/playcode_web/live/admin/import_live.ex:172` sets `validation_warnings = []`, so the column and its gettext strings are dead. Fix: fill it from `Export.TeiValidator` (`lib/playcode/export/tei_validator.ex`). The backlog also allows dropping the column; the fix is stated, but the choice is the owner's.
+3. **Import page writes every file twice.** `import_live.ex:93` calls `preview_import/1`, whose numbering step writes the whole file and rolls it back (`lib/playcode/import/tei_import.ex:178-182`). It costs as much as the import (4.2 s against 4.1 s). Fix: pass `numbering: false` (line 176 already supports it) and show the numbering rule after the import or compute it from the parsed file.
 
-Stale in backlog: none found.
+Passed over: "Folio words still searched" (the backlog offers two options, so it waits on a choice) and the cast-note tabs (the backlog does not say how to fix it).
+Stale in backlog: none found among the candidates read.
 
-## Speed win
-`lib/playcode/catalogue.ex:551` `with_all/2` preloads `:statistic` (a jsonb row) for every `Edition.load`, which then reads it again (`statistics.ex:28`, `edition.ex:67`). Drop it for the export through an opt (`preload_statistic: false`). Saves one query and one jsonb decode per play on Generate; measure with Ecto query counts. Risk: the play page's panel (`statistics_panel.ex:20`) still needs it, so keep it the default.
+## One speed win
+- `lib/playcode/export/static_site/edition.ex:50,67`: `Edition.load` preloads `:statistic` (`Catalogue.with_all`, `catalogue.ex:540`), then `Statistics.get_statistics/2` queries `content_version` and `PlayStatistic` again (`statistics.ex:29-31`).
+- Change: pass the loaded `play` to a `get_statistics` clause that reads `play.content_version` and `play.statistic`, deleting two queries per play.
+- Gain: about 2 round trips per play, roughly 740 over the corpus. Small, but it deletes code. Measure with Ecto query telemetry counts per `Edition.load`; do not expect minutes off the two-hour Generate.
+- Risk: low. `content_version` must be the value `load` read first (the comment at `edition.ex:47` relies on it), which a reuse of `play.content_version` keeps.
