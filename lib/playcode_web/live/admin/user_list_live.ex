@@ -186,194 +186,197 @@ defmodule PlaycodeWeb.Admin.UserListLive do
   defp page_params("", page), do: [page: page]
   defp page_params(search, page), do: [search: search, page: page]
 
-  attr :user, :map, required: true
+  defp role_options, do: [{role_label(:researcher), "researcher"}, {role_label(:admin), "admin"}]
 
-  defp state_badge(assigns) do
+  defp role_label(:admin), do: pgettext("role", "Admin")
+  defp role_label(:researcher), do: pgettext("role", "Researcher")
+
+  attr :user, :map, required: true
+  attr :current_user, :map, required: true
+
+  defp user_row(assigns) do
+    status = Accounts.status(assigns.user)
+    protected? = Accounts.protected_admin?(assigns.user)
+
+    assigns =
+      assign(assigns,
+        status: status,
+        protected?: protected?,
+        can_change_role?:
+          assigns.user.id != assigns.current_user.id and not protected? and status != :deactivated,
+        can_log_out?: status == :active,
+        can_deactivate?: status != :deactivated and not protected?
+      )
+
     ~H"""
-    <span :if={Accounts.protected_admin?(@user)} class="badge badge-sm badge-neutral">
-      {gettext("Protected")}
-    </span>
-    <span :if={Accounts.status(@user) == :deactivated} class="badge badge-sm badge-error">
-      {gettext("Deactivated")}
-    </span>
-    <span :if={Accounts.status(@user) == :invited} class="badge badge-sm badge-warning">
-      {gettext("Invited")}
-    </span>
-    <span :if={Accounts.status(@user) == :active} class="badge badge-sm badge-success">
-      {gettext("Active")}
-    </span>
+    <li
+      id={"user-#{@user.id}"}
+      class="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 first:rounded-t-box last:rounded-b-box hover:bg-base-200"
+    >
+      <span
+        aria-hidden="true"
+        class={[
+          "grid size-8 shrink-0 place-items-center rounded-full text-sm font-semibold",
+          if(@user.role == :admin, do: "bg-primary/20 text-primary", else: "bg-base-300"),
+          @status == :deactivated && "opacity-50"
+        ]}
+      >
+        {@user.email |> String.first() |> String.upcase()}
+      </span>
+      <div class="min-w-48 flex-1">
+        <p class={["break-all font-medium", @status == :deactivated && "text-base-content/70"]}>
+          {@user.email}
+          <span
+            :if={@user.id == @current_user.id}
+            class="ml-1 rounded-full border border-base-300 px-1.5 text-xs font-normal text-base-content/70"
+          >
+            {gettext("you")}
+          </span>
+        </p>
+        <p class="flex flex-wrap items-center gap-x-1.5 text-xs text-base-content/70">
+          <span>{role_label(@user.role)}</span>
+          <span :if={@protected?} class="tooltip" data-tip={gettext("Defined in ADMIN_EMAILS")}>
+            <.icon name="hero-lock-closed-micro" class="size-3.5" />
+            <span class="sr-only">{gettext("Defined in ADMIN_EMAILS")}</span>
+          </span>
+          <span aria-hidden="true">·</span>
+          <span :if={@status == :active} class="text-success">{gettext("Active")}</span>
+          <span :if={@status == :invited} class="text-warning">{gettext("Invited")}</span>
+          <span :if={@status == :deactivated}>{gettext("Deactivated")}</span>
+          <span aria-hidden="true">·</span>
+          <span class="tabular-nums">{Calendar.strftime(@user.inserted_at, "%Y-%m-%d")}</span>
+        </p>
+      </div>
+      <div class="ml-auto flex shrink-0 items-center gap-1">
+        <button
+          :if={@can_change_role? and @user.role == :researcher}
+          phx-click="set_role"
+          phx-value-id={@user.id}
+          phx-value-role="admin"
+          data-confirm={gettext("Promote %{email} to admin?", email: @user.email)}
+          class="btn btn-ghost btn-xs"
+        >
+          {gettext("Make admin")}
+        </button>
+        <button
+          :if={@can_change_role? and @user.role == :admin}
+          phx-click="set_role"
+          phx-value-id={@user.id}
+          phx-value-role="researcher"
+          data-confirm={gettext("Demote %{email} to researcher?", email: @user.email)}
+          class="btn btn-ghost btn-xs"
+        >
+          {gettext("Make researcher")}
+        </button>
+        <button
+          :if={@status == :invited}
+          phx-click="resend_invite"
+          phx-value-id={@user.id}
+          class="btn btn-primary btn-soft btn-xs"
+        >
+          {gettext("Resend invitation")}
+        </button>
+        <button
+          :if={@status == :deactivated}
+          phx-click="reactivate"
+          phx-value-id={@user.id}
+          class="btn btn-primary btn-soft btn-xs"
+        >
+          {gettext("Reactivate")}
+        </button>
+        <div :if={@can_log_out? or @can_deactivate?} class="dropdown dropdown-end">
+          <div
+            tabindex="0"
+            role="button"
+            class="btn btn-ghost btn-xs btn-square"
+            aria-label={gettext("More actions for %{email}", email: @user.email)}
+          >
+            <.icon name="hero-ellipsis-horizontal-mini" class="size-4" />
+          </div>
+          <ul
+            tabindex="0"
+            class="dropdown-content menu z-10 mt-1 w-52 rounded-box border border-base-300 bg-base-100 p-1 shadow-lg"
+          >
+            <li :if={@can_log_out?}>
+              <button phx-click="force_logout" phx-value-id={@user.id}>
+                <.icon name="hero-arrow-right-start-on-rectangle-micro" class="size-4" />
+                {gettext("Log out everywhere")}
+              </button>
+            </li>
+            <li :if={@can_deactivate?}>
+              <button phx-click="deactivate" phx-value-id={@user.id} class="text-error">
+                <.icon name="hero-no-symbol-micro" class="size-4" />
+                {gettext("Deactivate")}
+              </button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </li>
     """
   end
 
   @impl true
   def render(assigns) do
     ~H"""
-    <.page>
+    <.page width={:form}>
       <.page_header>
-        {gettext("User Management")}
-        <:subtitle>
-          {gettext("Manage user roles and email confirmations.")}
-        </:subtitle>
+        {gettext("Users")}
+        <:subtitle>{gettext("Who can open Playcode, and what they may do.")}</:subtitle>
       </.page_header>
 
-      <.form
-        for={@invite_form}
-        id="invite_form"
-        phx-submit="invite"
-        class="flex gap-2 items-end mb-6"
-      >
-        <div class="flex-1">
-          <.input
-            field={@invite_form[:email]}
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <.form
+          for={@invite_form}
+          id="invite_form"
+          phx-submit="invite"
+          class="join w-full sm:w-auto sm:flex-1 sm:max-w-xl"
+        >
+          <input
             type="email"
-            label={gettext("Invite by email")}
+            id={@invite_form[:email].id}
+            name={@invite_form[:email].name}
+            value={@invite_form[:email].value}
             placeholder="persona@uv.es"
+            aria-label={gettext("Invite by email")}
             required
+            class="input join-item min-w-0 flex-1"
           />
-        </div>
-        <div>
-          <.input
-            field={@invite_form[:role]}
-            type="select"
-            label={gettext("Role")}
-            options={[{gettext("Researcher"), "researcher"}, {gettext("Admin"), "admin"}]}
-          />
-        </div>
-        <div class="fieldset mb-2">
-          <.button phx-disable-with={gettext("Inviting...")}>{gettext("Send invitation")}</.button>
-        </div>
-      </.form>
+          <select
+            id={@invite_form[:role].id}
+            name={@invite_form[:role].name}
+            aria-label={gettext("Role")}
+            class="select join-item w-36"
+          >
+            {Phoenix.HTML.Form.options_for_select(role_options(), @invite_form[:role].value)}
+          </select>
+          <button class="btn btn-primary join-item" phx-disable-with={gettext("Inviting...")}>
+            {gettext("Invite")}
+          </button>
+        </.form>
 
-      <form phx-change="search" phx-submit="search" class="mb-5">
-        <input
-          type="text"
-          name="search"
-          value={@search}
-          placeholder={gettext("Search by email...")}
-          phx-debounce="300"
-          class="input input-bordered w-full md:max-w-md"
-        />
-      </form>
-
-      <div
-        class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm"
-        tabindex="0"
-        role="region"
-        aria-label={gettext("Users")}
-      >
-        <table class="table table-zebra">
-          <thead>
-            <tr class="text-xs uppercase tracking-wide text-base-content/70">
-              <th>{gettext("Email")}</th>
-              <th class="w-28">{gettext("Role")}</th>
-              <th class="w-40">{gettext("State")}</th>
-              <th class="w-32">{gettext("Created")}</th>
-              <th class="w-64 text-right">{gettext("Actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr :for={user <- @users} id={"user-#{user.id}"} class="hover">
-              <td class="font-mono text-sm">
-                {user.email}
-                <span
-                  :if={user.id == @current_user.id}
-                  class="ml-1 badge badge-ghost badge-sm"
-                >
-                  {gettext("you")}
-                </span>
-              </td>
-              <td>
-                <%!-- Renders the listed user's role. Not an access decision:
-                      those all go through Playcode.Authz.can?/3. --%>
-                <span class={[
-                  "badge badge-sm",
-                  if(user.role == :admin, do: "badge-primary", else: "badge-ghost")
-                ]}>
-                  {user.role}
-                </span>
-              </td>
-              <td class="space-x-1">
-                <.state_badge user={user} />
-              </td>
-              <td class="text-sm text-base-content/70">
-                {Calendar.strftime(user.inserted_at, "%Y-%m-%d")}
-              </td>
-              <td>
-                <div class="flex items-center justify-end gap-1">
-                  <%= if user.id != @current_user.id do %>
-                    <%= if user.role == :admin do %>
-                      <button
-                        phx-click="set_role"
-                        phx-value-id={user.id}
-                        phx-value-role="researcher"
-                        data-confirm={gettext("Demote %{email} to researcher?", email: user.email)}
-                        class="btn btn-ghost btn-xs tooltip tooltip-left"
-                        aria-label={gettext("Demote to researcher")}
-                        data-tip={gettext("Demote to researcher")}
-                      >
-                        <.icon name="hero-arrow-down-mini" class="size-4" />
-                      </button>
-                    <% else %>
-                      <button
-                        phx-click="set_role"
-                        phx-value-id={user.id}
-                        phx-value-role="admin"
-                        data-confirm={gettext("Promote %{email} to admin?", email: user.email)}
-                        class="btn btn-ghost btn-xs tooltip tooltip-left"
-                        aria-label={gettext("Promote to admin")}
-                        data-tip={gettext("Promote to admin")}
-                      >
-                        <.icon name="hero-arrow-up-mini" class="size-4" />
-                      </button>
-                    <% end %>
-                  <% end %>
-                  <button
-                    :if={Accounts.status(user) == :invited}
-                    class="btn btn-xs btn-ghost"
-                    phx-click="resend_invite"
-                    phx-value-id={user.id}
-                  >
-                    {gettext("Resend invitation")}
-                  </button>
-                  <button
-                    :if={Accounts.status(user) == :active}
-                    class="btn btn-xs btn-ghost"
-                    phx-click="force_logout"
-                    phx-value-id={user.id}
-                  >
-                    {gettext("Force logout")}
-                  </button>
-                  <button
-                    :if={
-                      Accounts.status(user) != :deactivated and not Accounts.protected_admin?(user)
-                    }
-                    class="btn btn-xs btn-ghost text-error"
-                    phx-click="deactivate"
-                    phx-value-id={user.id}
-                  >
-                    {gettext("Deactivate")}
-                  </button>
-                  <button
-                    :if={Accounts.status(user) == :deactivated}
-                    class="btn btn-xs btn-ghost"
-                    phx-click="reactivate"
-                    phx-value-id={user.id}
-                  >
-                    {gettext("Reactivate")}
-                  </button>
-                  <span
-                    :if={Accounts.protected_admin?(user)}
-                    class="tooltip"
-                    data-tip={gettext("Defined in ADMIN_EMAILS")}
-                  >
-                    <.icon name="hero-lock-closed-micro" class="size-4 text-base-content/70" />
-                  </span>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <form phx-change="search" phx-submit="search" role="search" class="w-full sm:w-60">
+          <label class="input w-full">
+            <.icon name="hero-magnifying-glass-mini" class="size-4 text-base-content/70" />
+            <input
+              type="search"
+              name="search"
+              value={@search}
+              placeholder={gettext("Search by email...")}
+              aria-label={gettext("Search by email...")}
+              phx-debounce="300"
+            />
+          </label>
+        </form>
       </div>
+
+      <ul
+        :if={@users != []}
+        aria-label={gettext("Users")}
+        class="divide-y divide-base-300 rounded-box border border-base-300 bg-base-100 shadow-sm"
+      >
+        <.user_row :for={user <- @users} user={user} current_user={@current_user} />
+      </ul>
 
       <p
         :if={@users == []}

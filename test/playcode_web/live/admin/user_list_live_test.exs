@@ -55,9 +55,7 @@ defmodule PlaycodeWeb.Admin.UserListLiveTest do
     {invitee, _token} = invited_user_fixture()
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
-    lv
-    |> element("#user-#{invitee.id} button[aria-label='#{t("Promote to admin")}']")
-    |> render_click()
+    click(lv, invitee, t("Make admin"))
 
     assert has_element?(lv, "#user-#{invitee.id}", t("Invited"))
     click(lv, invitee, t("Resend invitation"))
@@ -89,7 +87,7 @@ defmodule PlaycodeWeb.Admin.UserListLiveTest do
     for _ <- 1..2, do: Accounts.generate_user_session_token(user)
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
-    click(lv, user, t("Force logout"))
+    click(lv, user, t("Log out everywhere"))
 
     assert Accounts.list_user_sessions(user) == []
   end
@@ -98,7 +96,7 @@ defmodule PlaycodeWeb.Admin.UserListLiveTest do
     user = user_fixture(role: :researcher)
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
-    lv |> element("#user-#{user.id} button[phx-value-role=admin]") |> render_click()
+    click(lv, user, t("Make admin"))
 
     assert Accounts.get_user!(user.id).role == :admin
   end
@@ -111,9 +109,7 @@ defmodule PlaycodeWeb.Admin.UserListLiveTest do
     Accounts.generate_user_session_token(admin)
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
-    lv
-    |> element("#user-#{admin.id} button[aria-label='#{t("Demote to researcher")}']")
-    |> render_click()
+    click(lv, admin, t("Make researcher"))
 
     assert Accounts.get_user!(admin.id).role == :researcher
     assert Accounts.list_user_sessions(admin) == []
@@ -129,6 +125,8 @@ defmodule PlaycodeWeb.Admin.UserListLiveTest do
 
     {:ok, lv, _html} = live(conn, ~p"/admin/users")
 
+    # The page used to offer the demotion and then refuse it.
+    refute has_element?(lv, "#user-#{protected.id} button", t("Make researcher"))
     render_change(lv, "set_role", %{"id" => protected.id, "role" => "researcher"})
 
     assert Accounts.get_user!(protected.id).role == :admin

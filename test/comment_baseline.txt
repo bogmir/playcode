@@ -106,7 +106,7 @@ lib/playcode_web/live/admin/play_performances_live.ex 62
 lib/playcode_web/live/admin/play_places_live.ex 14
 lib/playcode_web/live/admin/play_sources_live.ex 3
 lib/playcode_web/live/admin/play_witnesses_live.ex 4
-lib/playcode_web/live/admin/user_list_live.ex 7
+lib/playcode_web/live/admin/user_list_live.ex 6
 lib/playcode_web/live/play_comparison.ex 2
 lib/playcode_web/live/play_sections_hook.ex 2
 lib/playcode_web/live/play_show_live.ex 18
