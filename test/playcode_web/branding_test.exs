@@ -15,7 +15,10 @@ defmodule PlaycodeWeb.BrandingTest do
   test "the login page names the platform", %{conn: conn} do
     html = conn |> get(~p"/users/log-in") |> html_response(200)
 
-    assert html =~ "Iniciar sesión en Playcode"
+    # The heading read "Iniciar sesión en Playcode"; since the split layout (2026-11-21) it
+    # reads "Iniciar sesión" beside a panel that names the platform.
+    assert html |> LazyHTML.from_document() |> LazyHTML.query("main") |> LazyHTML.text() =~
+             "Playcode"
 
     assert html |> LazyHTML.from_document() |> LazyHTML.query("title") |> LazyHTML.text() =~
              "Playcode"
