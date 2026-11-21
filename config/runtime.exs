@@ -175,6 +175,8 @@ if config_env() == :prod do
       tls: :always,
       auth: :always,
       no_mx_lookups: true,
+      # A refused login otherwise surfaces only as {:error, :closed}.
+      trace_fun: &Playcode.Mailer.log_smtp_failure/2,
       # gen_smtp defaults tls_options to versions [tlsv1, tlsv1.1, tlsv1.2].
       # OTP 28 dropped TLS 1.0 and 1.1, so :ssl rejects that list and every
       # STARTTLS attempt fails with {:temporary_failure, host, :tls_failed} —
