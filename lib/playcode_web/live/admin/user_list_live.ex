@@ -239,7 +239,9 @@ defmodule PlaycodeWeb.Admin.UserListLive do
             options={[{gettext("Researcher"), "researcher"}, {gettext("Admin"), "admin"}]}
           />
         </div>
-        <.button phx-disable-with={gettext("Inviting...")}>{gettext("Send invitation")}</.button>
+        <div class="fieldset mb-2">
+          <.button phx-disable-with={gettext("Inviting...")}>{gettext("Send invitation")}</.button>
+        </div>
       </.form>
 
       <form phx-change="search" phx-submit="search" class="mb-5">
