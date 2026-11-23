@@ -121,6 +121,8 @@ defmodule Playcode.Import.TeiImport do
   the platform owns. This is what the admin import page and `--dry-run` print so that
   nobody discovers the replacement afterwards. `:split_verses` lists the file's split-verse
   parts out of order (`%{line_id, part, text, problem}`), which TEI's schema lets through.
+  `:repeated_headings` the headings of paratexts and cast lists whose first line says them
+  again, each printed twice.
 
   Settling `:numbering` writes the whole file in a transaction it rolls back, as costly as the
   import itself; `numbering: false` skips that and returns `nil` there, for a caller that
@@ -152,6 +154,7 @@ defmodule Playcode.Import.TeiImport do
       preserves: preserved_counts(existing),
       preserves_fields: preserved_fields(existing),
       split_verses: parts_out_of_order(tei.divisions),
+      repeated_headings: repeated_headings(tei),
       removes_text: removes_text(tei.divisions, existing),
       same_number: if(existing, do: nil, else: same_number(code)),
       numbering: numbering
@@ -208,6 +211,29 @@ defmodule Playcode.Import.TeiImport do
       }
     end)
   end
+
+  defp repeated_headings(tei) do
+    lists = for division <- tei.divisions, list <- [division | division.divisions], do: list
+
+    for {heading, text} <-
+          Enum.map(tei.paratexts, &{&1.heading, &1.content}) ++
+            for(%{type: "elenco"} = list <- lists, do: {list.title, list.intro}),
+        is_binary(heading) and is_binary(text),
+        text |> String.split("\n") |> hd() |> same_words?(heading),
+        do: heading
+  end
+
+  defp same_words?(text, heading), do: words(heading) != "" and words(text) == words(heading)
+
+  defp words(text),
+    do:
+      text
+      |> InlineMarkup.plain()
+      |> String.trim_trailing()
+      |> String.trim_trailing(".")
+      |> String.trim_trailing(":")
+      |> String.trim()
+      |> String.downcase()
 
   defp removes_text(_divisions, nil), do: nil
 

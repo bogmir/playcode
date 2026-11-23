@@ -58,6 +58,7 @@ defmodule Playcode.TeiRoundtripTest do
       <title>La tragedia del rey Ricardo III</title>
       <author>Shakespeare, William</author>
       <editor role="traductor">Sanderson, John D.</editor>
+      <editor role="canon60">Fernández Mosquera, Santiago</editor>
       <publisher>Miguel Seguí</publisher>
       <pubPlace>Barcelona</pubPlace>
       <date>1908</date>
@@ -97,6 +98,8 @@ defmodule Playcode.TeiRoundtripTest do
     {"source title", "title", "bibl", %{}, "La tragedia del rey Ricardo III"},
     {"source author", "author", "bibl", %{}, "Shakespeare, William"},
     {"source editor and role", "editor", "bibl", %{"role" => "traductor"}, "Sanderson, John D."},
+    {"source's CANON 60 editor", "editor", "bibl", %{"role" => "canon60"},
+     "Fernández Mosquera, Santiago"},
     {"source publisher", "publisher", "bibl", %{}, "Miguel Seguí"},
     {"source place", "pubPlace", "bibl", %{}, "Barcelona"},
     {"source date", "date", "bibl", %{}, "1908"},

@@ -192,7 +192,7 @@ body[data-sh="on"] .l[data-part="M"] .t, .sw[data-part="M"] { background: var(--
 body[data-sh="on"] .l[data-part="F"] .t, .sw[data-part="F"] { background: var(--sh-f); }
 body[data-sdm="on"] .sd, body[data-sdm="on"] .sdi { background: var(--mark); }
 body[data-asm="on"] :is(.l.as .t, .pr.as, span.as) { background: var(--mark); }
-body[data-sh="on"] .l[data-current], body[data-sdm="on"] :is(.sd, .sdi)[data-current], body[data-asm="on"] :is(.aparte, .pr.as)[data-current] { outline: 2px solid var(--accent); outline-offset: 2px; }
+body[data-sh="on"] .l[data-current], body[data-sdm="on"] :is(.sd, .sdi)[data-current], body[data-asm="on"] :is(.aparte, .pr.as, span.as)[data-current] { outline: 2px solid var(--accent); outline-offset: 2px; }
 /* Below 960px the rail is a block above the text: while it is open, the arrows stay at the
    foot of the window, so a reader need not scroll back up for each press. */
 @media (max-width: 959px) {

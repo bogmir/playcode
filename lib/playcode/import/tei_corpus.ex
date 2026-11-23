@@ -218,7 +218,13 @@ defmodule Playcode.Import.TeiCorpus do
     |> Enum.reject(&(elem(&1, 1) == []))
     |> Enum.map_join(fn {verb, refs} -> ", #{verb} #{length(refs)} reference(s)" end)
     |> Kernel.<>(split_verses(preview.split_verses))
+    |> Kernel.<>(repeated_headings(preview.repeated_headings))
   end
+
+  defp repeated_headings([]), do: ""
+
+  defp repeated_headings(headings),
+    do: ", #{length(headings)} heading(s) repeated by the text under them"
 
   defp split_verses([]), do: ""
   defp split_verses(parts), do: ", #{length(parts)} split-verse part(s) out of order"
@@ -226,7 +232,11 @@ defmodule Playcode.Import.TeiCorpus do
   defp added(preview) do
     for(citation <- preview.bibliography_adds, do: {:info, "      + #{citation}"}) ++
       for(citation <- preview.bibliography_skips, do: {:info, "      - #{citation}"}) ++
-      for(part <- preview.split_verses, do: {:info, "      ! " <> split_verse(part)})
+      for(part <- preview.split_verses, do: {:info, "      ! " <> split_verse(part)}) ++
+      for(
+        heading <- preview.repeated_headings,
+        do: {:info, "      ! heading repeated: #{heading}"}
+      )
   end
 
   defp split_verse(%{line_id: id, part: part, text: text, problem: problem}) do

@@ -31,7 +31,8 @@ plays edited by hand), `generate` and, after the preview,
 
 ## FileMaker
 
-Correct `language`, `relationship_type` and `parent_play_id` from the FileMaker published index,
+Correct `language`, `relationship_type`, `parent_play_id` and `author_sort` from the FileMaker
+published index,
 and bootstrap `historical_time`/`historical_time_note` from the version records
 (`doc/w3emothe_T01_tituloEM.ndjson`, git-ignored):
 
@@ -41,10 +42,15 @@ mix playcode.import.filemaker             # apply them
 mix playcode.import.filemaker --force     # also overwrite curated conflicts
 ```
 
-The derived fields (`language`, `relationship_type`, `parent_play_id`) overwrite unconditionally —
+The derived fields (`language`, `relationship_type`, `parent_play_id`, `author_sort`) overwrite
+unconditionally —
 the index is authoritative — but for what it cannot say: it knows only originals and translations, so
 an adaptation, refundición or version keeps its kind and its original (filled when it has none), and
-the families question 15 corrected stay so (`FilemakerSync`'s `@corrected_originals`). The curated fields (`historical_time`, `historical_time_note`) are
+the families question 15 corrected stay so (`FilemakerSync`'s `@corrected_originals`).
+`author_sort` is the work's author as emothe.uv.es's list gave it (`bus_autor`: "Vega y Carpio,
+Félix Lope de"), one form for every play of the work, where the files' `<author key="orden">`
+disagreed (2026-11-23); the TEI export writes it back to the file, so a TEI re-import from files
+exported before the sync undoes it. The curated fields (`historical_time`, `historical_time_note`) are
 fill-only: written when blank, reported as a conflict when they differ, overwritten only under
 `--force`.
 

@@ -25,8 +25,11 @@ defmodule Playcode.Import.FilemakerSyncTest do
   @t01_note "desde o posterior 1605 y anterior o hasta 1607; 1606"
   @historical_note "First century BC. The play dramatizes events taking place between 40 and 30 BC."
 
+  # Sorted as the index files it already, so a test about another field sees that alone.
   defp play(code, attrs \\ %{}) do
-    play_fixture(Map.merge(%{"code" => code, "language" => "es"}, attrs))
+    author_sort = index()[Playcode.Catalogue.Play.short_code(code)][:author_sort]
+    defaults = %{"code" => code, "language" => "es", "author_sort" => author_sort}
+    play_fixture(Map.merge(defaults, attrs))
   end
 
   # The dating the index would fill, already stored: tests about another field merge
@@ -57,6 +60,83 @@ defmodule Playcode.Import.FilemakerSyncTest do
       assert [%{code: "EMOTHE0052", sets: sets}] = plan.changes
       assert {sets.relationship_type, sets.parent_play_id} == {"traduccion", original.id}
       assert plan.unchanged == ["EMOTHE0038"]
+    end
+
+    # As emothe.uv.es's list of authors: one form a work, whatever each play's file says.
+    test "every play of a work is sorted under the work's author" do
+      original =
+        play(
+          "EMOTHE0038_AntonyAndCleopatra",
+          Map.merge(dated(), %{
+            "language" => "en",
+            "author_name" => "William Shakespeare",
+            "author_sort" => "Shakespeare"
+          })
+        )
+
+      translation =
+        play("EMOTHE0052_AntonioYCleopatra", %{
+          "author_name" => "William Shakespeare",
+          "author_sort" => ", Shakespeare"
+        })
+
+      plan = FilemakerSync.plan(index(), [original, translation])
+
+      assert for(change <- plan.changes, do: {change.code, change.sets[:author_sort]}) == [
+               {"EMOTHE0038", "Shakespeare, William"},
+               {"EMOTHE0052", "Shakespeare, William"}
+             ]
+    end
+
+    # Most of Lope's plays are not in the index: they take the form it gives his others.
+    test "a play the index lacks is sorted as the index sorts its author's other plays" do
+      indexed = play("EMOTHE0038_AntonyAndCleopatra", %{"author_name" => "William Shakespeare"})
+
+      lacking =
+        play("EMOTHE0999_Hamlet", %{
+          "author_name" => "William Shakespeare",
+          "author_sort" => ", Shakespeare"
+        })
+
+      other = play("EMOTHE0998_Faustus", %{"author_name" => "Christopher Marlowe"})
+
+      plan = FilemakerSync.plan(index(), [indexed, lacking, other])
+
+      assert [%{code: "EMOTHE0999", sets: %{author_sort: "Shakespeare, William"}}] =
+               Enum.filter(plan.changes, &(&1.code != "EMOTHE0038"))
+    end
+
+    test "a play the index lists takes its own form, and a form with no name in it is none" do
+      index =
+        index()
+        |> put_in(["EMOTHE0052", :author_sort], "Shakespeare, W.")
+        |> put_in(["HIE0393", :author_sort], ", ")
+
+      plays =
+        for code <- ~w(EMOTHE0038_AntonyAndCleopatra EMOTHE0052_AntonioYCleopatra HIE0393_Spanish),
+            do: play(code, %{"author_name" => "William Shakespeare", "author_sort" => "x"})
+
+      sorts =
+        for change <- FilemakerSync.plan(index, plays).changes, do: change.sets[:author_sort]
+
+      assert sorts == ["Shakespeare, William", "Shakespeare, W.", "Shakespeare, William"]
+    end
+
+    # The index files Corneille's Le Menteur under Alarcón's work, and Castro's Mocedades
+    # del Cid under Corneille's: each is sorted as the index sorts its own author, if at all.
+    test "a play by another author than its work's keeps its sort, and lends it to none" do
+      other =
+        play("EMOTHE0052_AntonioYCleopatra", %{
+          "author_name" => "Guillén de Castro",
+          "author_sort" => "de Castro, Guillén"
+        })
+
+      lacking =
+        play("EMOTHE0999_Otra", %{"author_name" => "Guillén de Castro", "author_sort" => "Castro"})
+
+      plan = FilemakerSync.plan(index(), [other, lacking])
+
+      refute Enum.any?(plan.changes, &Map.has_key?(&1.sets, :author_sort))
     end
 
     test "a translation whose original is not imported is marked but not linked" do

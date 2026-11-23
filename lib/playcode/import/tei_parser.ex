@@ -895,13 +895,21 @@ defmodule Playcode.Import.TeiParser do
   end
 
   defp source({{_name, _attrs, children}, position}) do
-    editor_el = find_child(children, "editor")
+    {canon60, editors} =
+      children
+      |> find_children("editor")
+      |> Enum.split_with(fn {_name, attrs, _children} ->
+        attr_value(attrs, "role") == "canon60"
+      end)
+
+    editor_el = List.first(editors)
 
     %{
       title: safe_text(find_child(children, "title")),
       author: safe_text(find_child(children, "author")),
       editor: safe_text(editor_el),
       editor_role: editor_el && attr_value(elem(editor_el, 1), "role"),
+      canon60_editor: safe_text(List.first(canon60)),
       publisher: safe_text(find_child(children, "publisher")),
       pub_place: safe_text(find_child(children, "pubPlace")),
       pub_date: safe_text(find_child(children, "date")),

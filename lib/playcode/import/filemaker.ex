@@ -191,11 +191,13 @@ defmodule Playcode.Import.Filemaker do
     versions = parse_versions(html)
     family = Enum.map(versions, &Map.take(&1, [:code, :role]))
     dating = parse_dating(html)
+    author_sort = field(fields, "bus_autor")
 
     Enum.reduce(versions, index, fn version, acc ->
       version =
         version
         |> Map.put(:family, family)
+        |> Map.put(:author_sort, if(author_sort != "", do: author_sort))
         |> Map.merge(dating_for(version, dating))
 
       Map.put(acc, version.code, version)

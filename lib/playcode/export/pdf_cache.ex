@@ -165,6 +165,7 @@ defmodule Playcode.Export.PdfCache do
       Playcode.Export.Download,
       Playcode.Export.Pdf,
       Playcode.Catalogue.Play,
+      Playcode.Catalogue.PlayEditor,
       Playcode.Catalogue.Paratext,
       Playcode.Places.Place,
       Playcode.Places.PlayPlace,

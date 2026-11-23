@@ -19,6 +19,7 @@ defmodule Playcode.Catalogue.PlaySource do
     field :author, :string
     field :editor, :string
     field :editor_role, :string
+    field :canon60_editor, :string
     field :note, :string
     field :publisher, :string
     field :pub_place, :string
@@ -40,6 +41,7 @@ defmodule Playcode.Catalogue.PlaySource do
       :author,
       :editor,
       :editor_role,
+      :canon60_editor,
       :note,
       :publisher,
       :pub_place,

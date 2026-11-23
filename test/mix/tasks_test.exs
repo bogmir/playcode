@@ -164,6 +164,33 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert out =~ ~r/TASK0009  .*; no text: 2 lines would be removed/
     end
 
+    # EMOTHE0058's dedication opens "The Epistle Dedicatory.", its heading again, and five
+    # cast lists open with a line that repeats theirs: every page printed both.
+    test "--dry-run lists a heading the text under it repeats", %{dir: dir} do
+      File.write!(
+        Path.join(dir, "TASK0006_Sexta.xml"),
+        tei(
+          code: "TASK0006",
+          front: """
+          <div type="dedicatoria"><head>The Epistle Dedicatory.</head>
+            <p>The Epistle Dedicatory.<lb/>TO My much Honoured</p></div>
+          <div type="prologo"><head>To the Reader</head><p>Reader, attend.</p></div>
+          <div type="argumento"><head>:</head><p>:</p></div>
+          <div type="elenco"><head>PERSONAJES</head><p>PERSONAJES</p>
+            <castList><castItem><role xml:id="ANA">ANA</role></castItem></castList></div>
+          """
+        )
+      )
+
+      out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
+
+      assert out =~ "TASK0006  new, 2 heading(s) repeated by the text under them"
+      assert out =~ ~r/\n\s+! heading repeated: The Epistle Dedicatory.\n/
+      assert out =~ ~r/\n\s+! heading repeated: PERSONAJES\n/
+      refute out =~ "repeated: To the Reader"
+      refute out =~ "repeated: :"
+    end
+
     test "--dry-run lists the parts of split verses out of order", %{dir: dir} do
       File.write!(
         Path.join(dir, "TASK0005_Quinta.xml"),

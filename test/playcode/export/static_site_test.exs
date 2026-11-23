@@ -191,9 +191,88 @@ defmodule Playcode.Export.StaticSiteTest do
     {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
     sources = play |> then(&title_page(generate!([&1]), &1)) |> texts("li")
 
-    assert "Aminta. Tasso, Torquato. Aminta." in sources
+    # The note alone when it names the title already: "Aminta. Tasso, Torquato. Aminta."
+    # until 2026-11-23.
+    assert "Tasso, Torquato. Aminta." in sources
     assert "Hamlet" in sources
     assert "El pastor fido" in sources
+  end
+
+  # EMOTHE0058 named author, title and translator, then a note giving them all again;
+  # EMOTHE0357's note says only where the text came from, so the fields stay before it.
+  test "a source's fields print before its note unless the note gives the title" do
+    play =
+      tei(
+        source_desc: """
+          <bibl><title>Aminta: The famous pastoral.</title><author>Torquato Tasso</author>
+            <note>Tasso, Torquato. <emph>Aminta: the famous pastoral</emph>. London, 1660.</note></bibl>
+          <bibl><title>A secreto agravio</title><author>Calderón de la Barca, Pedro</author>
+            <note>Texto incluido en la base Canon 60.</note></bibl>
+          <bibl><title>Il pastor fido</title><author>Guarini, Battista</author>
+            <note>Cotejado con Il pastor fido de 1602.</note></bibl>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    sources = play |> then(&title_page(generate!([&1]), &1)) |> texts("li")
+
+    assert "Tasso, Torquato. Aminta: the famous pastoral. London, 1660." in sources
+
+    assert "Calderón de la Barca, Pedro. A secreto agravio. Texto incluido en la base Canon 60." in sources
+
+    assert "Guarini, Battista. Il pastor fido. Cotejado con Il pastor fido de 1602." in sources
+  end
+
+  # As emothe.uv.es's "Edición digital para CANON 60: …": each part of the work, then who
+  # did it, which needs no word for the person, a man or a woman; every name forename
+  # first, whichever way its file wrote it.
+  test "the edition credits each part of the work, names forename first" do
+    play = complete_play()
+
+    for {name, role, position} <- [
+          {"Joan Oleza Simó", "principal", 1},
+          {"Ros Ferrer, Violeta", "digital_editor", 2},
+          {"Jáuregui, Juan de", "translator", 3},
+          {"Ojeda, María del Valle", "digital_editor", 4}
+        ] do
+      {:ok, _} =
+        Catalogue.create_play_editor(%{
+          play_id: play.id,
+          person_name: name,
+          role: role,
+          position: position
+        })
+    end
+
+    page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+
+    assert texts(page, "#edition li") == [
+             "Dirección del proyecto: Joan Oleza Simó",
+             "Edición digital: Violeta Ros Ferrer, María del Valle Ojeda",
+             "Traducción: Juan de Jáuregui"
+           ]
+  end
+
+  # As emothe.uv.es: the edition CANON 60 made of the printed source, credited beside ours.
+  test "the source's CANON 60 editor is credited under Edition" do
+    play =
+      tei(
+        source_desc: """
+          <bibl><title>A secreto agravio</title>
+            <editor>Fernández Mosquera, Santiago</editor>
+            <editor role="canon60">Fernández Mosquera, Santiago</editor></bibl>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+
+    assert "Edición digital para CANON 60: Santiago Fernández Mosquera" in texts(
+             page,
+             "#edition li"
+           )
   end
 
   # emothe.uv.es heads it "Elenco" when the file gives no heading; it was "Dramatis

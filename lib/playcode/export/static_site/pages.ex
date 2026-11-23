@@ -8,7 +8,7 @@ defmodule Playcode.Export.StaticSite.Pages do
 
   import Playcode.Export.StaticSite.Bilingual
 
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Play, PlayEditor}
   alias Playcode.Export.StaticSite.{Comparison, Components, Edition}
   alias Playcode.PlayContent.{Element, InlineMarkup, Note}
   alias PlaycodeWeb.PlayLabels

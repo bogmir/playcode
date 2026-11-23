@@ -7,10 +7,12 @@ defmodule Playcode.Import.FilemakerSync do
 
   Two write policies, deliberately:
 
-    * **Derived fields** — `language`, `relationship_type`, `parent_play_id`. The
-      published index is authoritative, so a difference is an error in our data and
-      gets overwritten; but the index knows only originals and translations, so an
-      adaptation or version keeps its kind and its original (question 15).
+    * **Derived fields** — `language`, `relationship_type`, `parent_play_id`, and
+      `author_sort`, the work's author as emothe.uv.es listed it (`bus_autor`), the same
+      for every play of the work. The published index is authoritative, so a difference
+      is an error in our data and gets overwritten; but the index knows only originals
+      and translations, so an adaptation or version keeps its kind and its original
+      (question 15).
     * **Curated fields** — `historical_time`, `historical_time_note` and the three
       `composition_date_*` columns. A researcher is expected to edit these in the admin
       form, so the export is a bootstrap: a blank column is filled, a disagreement is
@@ -52,6 +54,20 @@ defmodule Playcode.Import.FilemakerSync do
   @doc "Diffs the export against the given plays. Writes nothing."
   def plan(index, plays, versions \\ %{}) do
     by_code = Map.new(plays, &{Play.short_code(&1.code), &1})
+
+    own_sorts =
+      for play <- plays,
+          %{author_sort: sort} <- [index[Play.short_code(play.code)]],
+          same_author?(play.author_name, sort),
+          into: %{},
+          do: {play.id, sort}
+
+    sorted_as =
+      plays
+      |> Enum.filter(&Map.has_key?(own_sorts, &1.id))
+      |> Enum.group_by(& &1.author_name, &own_sorts[&1.id])
+      |> Map.new(fn {name, sorts} -> {name, most_common(sorts)} end)
+
     empty = %{changes: [], unchanged: [], missing: [], conflicts: [], skipped: []}
 
     plays
@@ -67,6 +83,9 @@ defmodule Playcode.Import.FilemakerSync do
           :error -> {%{}, %{acc | missing: [code | acc.missing]}}
           {:ok, version} -> {changes_for(play, version, by_code), acc}
         end
+
+      sort = own_sorts[play.id] || sorted_as[play.author_name]
+      derived = Map.merge(derived, author_sort(play, sort))
 
       # The composition dating splits across both sources: the index header carries the
       # accepted years, T01 the competing datings. T01's note wins, but only when it has
@@ -175,6 +194,15 @@ defmodule Playcode.Import.FilemakerSync do
   # linked to none gets the index's: no source file names its original.
   @file_kinds Play.relationship_types() -- ["traduccion"]
 
+  defp same_author?(name, sort) when is_binary(name) and is_binary(sort) do
+    case String.split(sort, [",", " "], trim: true) do
+      [surname | _] -> String.contains?(String.downcase(name), String.downcase(surname))
+      [] -> false
+    end
+  end
+
+  defp same_author?(_name, _sort), do: false
+
   # Families the index heads wrongly, since its head is a family's first editor, as
   # question 15 corrected them: each play's original by short code, nil for an original.
   # Ford's 'Tis Pity was under Maeterlinck's adaptation of it, Guarini's Il pastor fido
@@ -214,6 +242,12 @@ defmodule Playcode.Import.FilemakerSync do
     |> Enum.reject(fn {key, value} -> Map.get(play, key) == value end)
     |> Map.new()
   end
+
+  defp author_sort(%{author_sort: current}, sort) when sort in [nil, current], do: %{}
+  defp author_sort(_play, sort), do: %{author_sort: sort}
+
+  defp most_common(sorts),
+    do: Enum.max_by(Enum.uniq(sorts), &Enum.count(sorts, fn s -> s == &1 end))
 
   # Curated fields are filled only when the column is blank. See the moduledoc.
   defp fills_for(play, curated) do
