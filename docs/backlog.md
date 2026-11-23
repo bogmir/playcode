@@ -92,6 +92,8 @@ Questions 29-35 in `docs/stakeholder/preguntas.html`; the design is `docs/superp
 
 - [ ] **EMOTHE0404's front list** (question 29) - the play imports both its lists where its file puts them: 17 names without ids before the text, and the back list "[EDITORIAL CASTLIST", the 20 roles its 893 speeches point at, after it; emothe.uv.es prints both. If the team leaves the 17 out, an editor deletes that list on the Structure tab (it names no one who speaks, so nothing is refused)
 
+- [ ] **Headings the text under them repeats** (2026-11-23) - ten files open a paratext or a cast list with its heading again, so every page prints it twice: EMOTHE0058 (the dedication and "To the reader"), 0147 ("To the reader"), 0159 ("CANZONE"), and the cast lists of 0033, 0182, 0198, 0253, 0267, 0714 and 0779. `mix playcode.import.tei --dry-run` lists them ("heading repeated: …", `TeiImport.preview_import/1`'s `:repeated_headings`). To fix: delete the repeated line in production's copy of each file and send them with `mix playcode.fly.reimport files`
+
 ## Found by the corpus round trip (2026-10-09)
 Method: the 370 production TEI files (`doc/tei_corpus/`) imported into `playcode_dev`, the 360 whose code matches their file name exported again with `TeiXml.generate/1`, and every element and attribute counted in both (per section, `parent>child`). Counts below are source totals over the 360 unless they say otherwise. Nothing here is fixed yet; each is a decision or a project of its own.
 
