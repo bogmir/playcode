@@ -10,7 +10,7 @@ defmodule Playcode.Export.StaticSite.Components do
   import Playcode.Export.StaticSite.Bilingual
 
   alias Playcode.Bibliography.Citation
-  alias Playcode.Catalogue.{Paratext, Play}
+  alias Playcode.Catalogue.{Paratext, Play, PlayEditor}
   alias Playcode.Export.NoteMarkup
   alias Playcode.Export.StaticSite.{Edition, Search}
   alias Playcode.Performances
@@ -779,13 +779,20 @@ defmodule Playcode.Export.StaticSite.Components do
 
   @doc "The citation shown on the title page; JS adds the page's URL when copying."
   def citation(play, site) do
-    editors = for e <- play.editors, e.role in ~w(editor critical_editor), do: e.person_name
+    names = fn roles ->
+      for(e <- play.editors, e.role in roles, do: PlayEditor.display_name(e)) |> Enum.join(", ")
+    end
+
+    {editors, translators, encoders} =
+      {names.(~w(editor critical_editor)), names.(~w(translator)), names.(~w(digital_editor))}
 
     both(fn ->
       [
         play.author_name,
         play.title,
-        editors != [] && "ed. " <> Enum.join(editors, ", "),
+        editors != "" && gettext("Ed. %{names}", names: editors),
+        translators != "" && gettext("Trans. %{names}", names: translators),
+        encoders != "" && gettext("Digital ed. %{names}", names: encoders),
         gettext("EMOTHE, version %{version} (%{year})",
           version: site.version,
           year: String.slice(site.build_date, 0, 4)

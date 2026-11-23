@@ -86,7 +86,8 @@ defmodule Playcode.Export.StaticSiteTest do
     assert text =~ "Source note"
     assert "Editorial heading" in texts(page, "h2")
     assert text =~ "Editorial content"
-    assert text =~ "ed. Editor One"
+    # "Ed.", a sentence of its own, since 2026-11-23.
+    assert text =~ "Ed. Editor One"
     assert "#{play.code}.xml" in hrefs(page)
   end
 
@@ -251,6 +252,35 @@ defmodule Playcode.Export.StaticSiteTest do
              "Dirección del proyecto: Joan Oleza Simó",
              "Edición digital: Violeta Ros Ferrer, María del Valle Ojeda",
              "Traducción: Juan de Jáuregui"
+           ]
+  end
+
+  # Cited as Endings asks, the version a reader saw: who wrote it, who edited, translated
+  # and encoded it, forename first, and the site's version and year.
+  test "the citation names the edition's editors, translators and digital editors" do
+    play = complete_play(%{"author_name" => "Torquato Tasso", "title" => "Aminta"})
+
+    for {name, role, position} <- [
+          {"Iglesias Feijoo, Luis", "critical_editor", 1},
+          {"Dancer, John", "translator", 2},
+          {"Ros Ferrer, Violeta", "digital_editor", 3},
+          {"Joan Oleza Simó", "principal", 4}
+        ] do
+      {:ok, _} =
+        Catalogue.create_play_editor(%{
+          play_id: play.id,
+          person_name: name,
+          role: role,
+          position: position
+        })
+    end
+
+    dir = generate!([play], version: "2.1", build_date: "2026-11-23")
+    page = html!(dir, "plays/#{play.code}/index.html", "es")
+
+    assert texts(page, "[data-citation]") == [
+             "Torquato Tasso. Aminta. Ed. Luis Iglesias Feijoo. Trad. John Dancer. " <>
+               "Ed. digital Violeta Ros Ferrer. EMOTHE, versión 2.1 (2026)."
            ]
   end
 
