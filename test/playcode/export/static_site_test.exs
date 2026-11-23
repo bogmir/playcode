@@ -198,6 +198,36 @@ defmodule Playcode.Export.StaticSiteTest do
 
   # emothe.uv.es heads it "Elenco" when the file gives no heading; it was "Dramatis
   # personae" here until 2026-11-23.
+  # As emothe.uv.es's "Edición digital para CANON 60: …": each part of the work, then who
+  # did it, which needs no word for the person, a man or a woman; every name forename
+  # first, whichever way its file wrote it.
+  test "the edition credits each part of the work, names forename first" do
+    play = complete_play()
+
+    for {name, role, position} <- [
+          {"Joan Oleza Simó", "principal", 1},
+          {"Ros Ferrer, Violeta", "digital_editor", 2},
+          {"Jáuregui, Juan de", "translator", 3},
+          {"Ojeda, María del Valle", "digital_editor", 4}
+        ] do
+      {:ok, _} =
+        Catalogue.create_play_editor(%{
+          play_id: play.id,
+          person_name: name,
+          role: role,
+          position: position
+        })
+    end
+
+    page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+
+    assert texts(page, "#edition li") == [
+             "Dirección del proyecto: Joan Oleza Simó",
+             "Edición digital: Violeta Ros Ferrer, María del Valle Ojeda",
+             "Traducción: Juan de Jáuregui"
+           ]
+  end
+
   test "a cast list with no heading of its own is headed Elenco, Cast list in English" do
     %{play: play} = play_with_structure_fixture()
     dir = generate!([play], all: true)

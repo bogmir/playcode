@@ -8,7 +8,7 @@ defmodule Playcode.Export.StaticSite.Records do
   """
 
   alias Playcode.{Catalogue, Places}
-  alias Playcode.Catalogue.Play
+  alias Playcode.Catalogue.{Play, PlayEditor}
   alias Playcode.Export.StaticSite.Components
   alias Playcode.Performances.Actor
   alias Playcode.PlayContent.InlineMarkup
@@ -38,7 +38,7 @@ defmodule Playcode.Export.StaticSite.Records do
       c: play.code,
       t: titles(play),
       a: plain(play.author_name),
-      e: for(%{role: "translator"} = e <- play.editors, do: plain(e.person_name)),
+      e: for(%{role: "translator"} = e <- play.editors, do: plain(PlayEditor.display_name(e))),
       l: play.language,
       o: roots[play.id].language,
       k: Components.kind(play),

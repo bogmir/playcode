@@ -249,6 +249,16 @@ defmodule PlaycodeWeb.PlayLabels do
   def editor_role_label("reviewer"), do: gettext("Reviewer")
   def editor_role_label(role), do: role
 
+  @doc "The part of the work a `play_editors.role` did, which says nothing of who did it."
+  def editor_activity_label("principal"), do: gettext("Project direction")
+  def editor_activity_label("translator"), do: gettext("Translation")
+  def editor_activity_label("critical_editor"), do: gettext("Critical edition")
+  def editor_activity_label("researcher"), do: gettext("Research")
+  def editor_activity_label("editor"), do: gettext("Edition")
+  def editor_activity_label("digital_editor"), do: gettext("Digital edition")
+  def editor_activity_label("reviewer"), do: gettext("Review")
+  def editor_activity_label(role), do: role
+
   def editor_role_options, do: Enum.map(@editor_roles, &{editor_role_label(&1), &1})
 
   @doc """

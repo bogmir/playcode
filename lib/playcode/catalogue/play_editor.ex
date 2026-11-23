@@ -33,4 +33,25 @@ defmodule Playcode.Catalogue.PlayEditor do
     )
     |> validate_inclusion(:origin, Playcode.Catalogue.origins())
   end
+
+  @doc """
+  The name forename first, as readers see it: "Ros Ferrer, Violeta" is "Violeta Ros
+  Ferrer". A name with no comma, more than one, or a parenthesis is printed as written.
+  """
+  def display_name(%{person_name: name}) do
+    case String.split(name, ", ") do
+      [surname, forename] when surname != "" and forename != "" ->
+        if String.contains?(name, "("), do: name, else: "#{forename} #{surname}"
+
+      _ ->
+        name
+    end
+  end
+
+  @doc "The editors grouped by role, each role where its first editor stands: `[{role, editors}]`."
+  def by_role(editors) do
+    editors
+    |> Enum.group_by(& &1.role)
+    |> Enum.sort_by(fn {_role, [first | _]} -> Enum.find_index(editors, &(&1 == first)) end)
+  end
 end

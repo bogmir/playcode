@@ -178,7 +178,8 @@ defmodule PlaycodeWeb.ExportControllerTest do
     {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
 
     for {format, text} <- [html: html, epub: epub_text(files)] do
-      assert text =~ ~s{Joan Oleza <span class="role">(Principal investigator)</span>},
+      # The part of the work before who did it, as on the published site, since 2026-11-23.
+      assert text =~ ~s{<span class="role">Project direction:</span> Joan Oleza},
              "#{format}"
     end
   end

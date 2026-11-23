@@ -43,6 +43,7 @@ defmodule Playcode.Export.StaticSite.Fingerprint do
     Playcode.Catalogue.Paratext,
     Playcode.Text,
     Playcode.Catalogue.Play,
+    Playcode.Catalogue.PlayEditor,
     Playcode.Outline,
     Playcode.PlayContent.CastListEntry,
     Playcode.PlayContent.Division,
