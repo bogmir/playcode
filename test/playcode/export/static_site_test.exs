@@ -86,7 +86,8 @@ defmodule Playcode.Export.StaticSiteTest do
     assert text =~ "Source note"
     assert "Editorial heading" in texts(page, "h2")
     assert text =~ "Editorial content"
-    assert text =~ "ed. Editor One"
+    # "Ed.", a sentence of its own, since 2026-11-23.
+    assert text =~ "Ed. Editor One"
     assert "#{play.code}.xml" in hrefs(page)
   end
 
@@ -94,7 +95,7 @@ defmodule Playcode.Export.StaticSiteTest do
     %{play: play} = play_with_structure_fixture()
     page = title_page(generate!([play], all: true), play)
 
-    assert "ALFA" in texts(page, "dt")
+    assert Enum.any?(texts(page, ".cast li"), &String.starts_with?(&1, "ALFA"))
     assert "act-1.html" in hrefs(page)
     assert "text.html" in hrefs(page)
     assert "statistics.html" in hrefs(page)
@@ -254,6 +255,35 @@ defmodule Playcode.Export.StaticSiteTest do
            ]
   end
 
+  # Cited as Endings asks, the version a reader saw: who wrote it, who edited, translated
+  # and encoded it, forename first, and the site's version and year.
+  test "the citation names the edition's editors, translators and digital editors" do
+    play = complete_play(%{"author_name" => "Torquato Tasso", "title" => "Aminta"})
+
+    for {name, role, position} <- [
+          {"Iglesias Feijoo, Luis", "critical_editor", 1},
+          {"Dancer, John", "translator", 2},
+          {"Ros Ferrer, Violeta", "digital_editor", 3},
+          {"Joan Oleza Simó", "principal", 4}
+        ] do
+      {:ok, _} =
+        Catalogue.create_play_editor(%{
+          play_id: play.id,
+          person_name: name,
+          role: role,
+          position: position
+        })
+    end
+
+    dir = generate!([play], version: "2.1", build_date: "2026-11-23")
+    page = html!(dir, "plays/#{play.code}/index.html", "es")
+
+    assert texts(page, "[data-citation]") == [
+             "Torquato Tasso. Aminta. Ed. Luis Iglesias Feijoo. Trad. John Dancer. " <>
+               "Ed. digital Violeta Ros Ferrer. EMOTHE, versión 2.1 (2026)."
+           ]
+  end
+
   # As emothe.uv.es: the edition CANON 60 made of the printed source, credited beside ours.
   test "the source's CANON 60 editor is credited under Edition" do
     play =
@@ -273,6 +303,26 @@ defmodule Playcode.Export.StaticSiteTest do
              page,
              "#edition li"
            )
+  end
+
+  # As emothe.uv.es printed it, chosen by the owner on 2026-11-23: a role a line, its
+  # description after a comma, in the case the file writes.
+  test "a cast list prints each role on one line, its description after a comma" do
+    play =
+      tei(
+        front: """
+        <div type="elenco"><head>PERSONAS</head><castList>
+          <castItem><role xml:id="LEO">Leonor</role><roleDesc>dama</roleDesc></castItem>
+          <castItem><role xml:id="BAR">Un barquero</role></castItem>
+        </castList></div>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+
+    assert texts(page, ".cast li") == ["Leonor, dama", "Un barquero"]
   end
 
   # emothe.uv.es heads it "Elenco" when the file gives no heading; it was "Dramatis
