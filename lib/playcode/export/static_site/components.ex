@@ -1254,15 +1254,19 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :rows, :list, required: true
 
   def division_table(assigns) do
-    assigns = assign(assigns, :prose?, Enum.any?(assigns.rows, &(&1["prose"] > 0)))
+    assigns =
+      assign(assigns,
+        prose?: Enum.any?(assigns.rows, &(&1["prose"] > 0)),
+        scenes?: Enum.any?(assigns.rows, & &1["scene"])
+      )
 
     ~H"""
     <section :if={length(@rows) > 1} id="divisions">
-      <h2>{t("By act and scene")}</h2>
+      <h2>{if @scenes?, do: t("By act and scene"), else: t("By act")}</h2>
       <table>
         <thead>
           <tr>
-            <th>{t("Act or scene")}</th>
+            <th>{if @scenes?, do: t("Act or scene"), else: t("Act")}</th>
             <th class="num">{t("Verses")}</th>
             <th class="num">{t("Speeches")}</th>
             <th class="num">{t("Speaking characters")}</th>
@@ -1405,7 +1409,10 @@ defmodule Playcode.Export.StaticSite.Components do
 
   defp form_label(form), do: pair(fn -> PlayLabels.verse_form_label(form) end)
 
-  defp percent(part, total), do: "#{round(part / max(total, 1) * 100)}%"
+  defp percent(part, total) do
+    share = round(part / max(total, 1) * 100)
+    if share == 0 and part > 0, do: "<1%", else: "#{share}%"
+  end
 
   attr :characters, :list, required: true
   attr :unit, :string, required: true, doc: ~s("lines" or "words")

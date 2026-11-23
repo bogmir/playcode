@@ -91,8 +91,16 @@ defmodule Playcode.Export.StaticSitePlayPagesTest do
 
       stats = page(dir, play, "statistics.html")
 
-      assert texts(stats, "#divisions thead th") ==
-               ["Act or scene", "Verses", "Speeches", "Speaking characters"]
+      assert texts(stats, "#divisions thead th") == [
+               "Act",
+               "Verses",
+               "Speeches",
+               "Speaking characters"
+             ]
+
+      assert texts(html!(dir, "plays/#{play.code}/statistics.html", "es"), "#divisions h2") == [
+               "Por acto"
+             ]
 
       assert rows(stats, "#divisions tbody tr") == [
                ["Acto I", "1", "1", "1"],
@@ -105,6 +113,21 @@ defmodule Playcode.Export.StaticSitePlayPagesTest do
         publish!(~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>))
 
       assert dir |> page(play, "statistics.html") |> LazyHTML.query("#divisions") |> Enum.empty?()
+    end
+
+    # A character with a line in 301 is not 0% of the play.
+    test "a share under half a percent reads <1%" do
+      lines = Enum.map_join(1..300, &~s(<l n="#{&1}">verso</l>))
+
+      {play, dir} =
+        publish!("""
+        <div1 type="acto" n="1"><head>Acto I</head>
+          <sp><speaker>A</speaker>#{lines}</sp><sp><speaker>B</speaker><l n="301">uno</l></sp>
+        </div1>
+        """)
+
+      shares = dir |> page(play, "statistics.html") |> texts("#characters td.share")
+      assert shares == ["100%", "<1%"]
     end
 
     # Regression: both tables stopped at 12; Arden has 18, and a reader counting words needs all.
