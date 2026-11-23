@@ -17,6 +17,13 @@ defmodule Playcode.Export.StaticSiteCompareTest do
 
   defp count(page, selector), do: page |> LazyHTML.query(selector) |> Enum.count()
 
+  defp compare_links(dir, play) do
+    dir
+    |> html!("plays/#{play.code}/index.html")
+    |> attribute("main a", "href")
+    |> Enum.filter(&String.ends_with?(&1, "compare.html"))
+  end
+
   defp correct!(play, xml_id, to) do
     character = Enum.find(Playcode.PlayContent.list_characters(play.id), &(&1.xml_id == xml_id))
     {:ok, _} = Playcode.PlayContent.update_character(character, %{original_xml_id: to})
@@ -36,6 +43,7 @@ defmodule Playcode.Export.StaticSiteCompareTest do
 
     refute File.exists?(Path.join(dir, "plays/#{translation.code}/compare.html"))
     assert count(html!(dir, "index.html"), "a.compare") == 0
+    assert compare_links(dir, translation) == []
 
     assert "../#{original.code}/index.html" in attribute(
              html!(dir, "plays/#{translation.code}/index.html"),
@@ -58,6 +66,15 @@ defmodule Playcode.Export.StaticSiteCompareTest do
 
     refute File.exists?(Path.join(dir, "plays/#{translation.code}/compare.html"))
     assert count(html!(dir, "index.html"), "a.compare") == 0
+    assert compare_links(dir, original) == []
+  end
+
+  test "a translation's title page links its comparison, the original's each translation's" do
+    %{original: original, french: french} = split_speech_editions()
+    dir = generate!([original, french])
+
+    assert compare_links(dir, french) == ["compare.html"]
+    assert compare_links(dir, original) == ["../#{french.code}/compare.html"]
   end
 
   test "a translation without a text is not in another's comparison menu" do

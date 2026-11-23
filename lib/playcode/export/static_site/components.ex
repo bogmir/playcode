@@ -453,15 +453,32 @@ defmodule Playcode.Export.StaticSite.Components do
         {relation(@play)}
         <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
       </p>
+      <p :if={@original && comparable?(@original, @play)}>
+        <a
+          href="compare.html"
+          {ta("aria-label", "Compare: %{title}", title: InlineMarkup.plain(@original.title))}
+        >
+          {t("Compare")}
+        </a>
+      </p>
       <ul :if={@derived != []}>
         <li :for={play <- @derived}>
           <a href={"../#{play.code}/index.html"}><cite>{play.title}</cite></a>
           <span class="role">{html(family_role(play))}</span>
+          <a
+            :if={comparable?(@play, play)}
+            href={"../#{play.code}/compare.html"}
+            {ta("aria-label", "Compare: %{title}", title: InlineMarkup.plain(play.title))}
+          >
+            {t("Compare")}
+          </a>
         </li>
       </ul>
     </section>
     """
   end
+
+  defp comparable?(original, play), do: Play.has_text?(original) and Play.has_text?(play)
 
   attr :play, :map, required: true
 
