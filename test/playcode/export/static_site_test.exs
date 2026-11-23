@@ -191,13 +191,37 @@ defmodule Playcode.Export.StaticSiteTest do
     {:ok, play} = Catalogue.update_play(play, %{"is_complete" => true})
     sources = play |> then(&title_page(generate!([&1]), &1)) |> texts("li")
 
-    assert "Aminta. Tasso, Torquato. Aminta." in sources
+    # The note alone when it names the title already: "Aminta. Tasso, Torquato. Aminta."
+    # until 2026-11-23.
+    assert "Tasso, Torquato. Aminta." in sources
     assert "Hamlet" in sources
     assert "El pastor fido" in sources
   end
 
   # emothe.uv.es heads it "Elenco" when the file gives no heading; it was "Dramatis
   # personae" here until 2026-11-23.
+  # EMOTHE0058 named author, title and translator, then a note giving them all again;
+  # EMOTHE0357's note says only where the text came from, so the fields stay before it.
+  test "a source's fields print before its note unless the note gives the title" do
+    play =
+      tei(
+        source_desc: """
+          <bibl><title>Aminta: The famous pastoral.</title><author>Torquato Tasso</author>
+            <note>Tasso, Torquato. <emph>Aminta: the famous pastoral</emph>. London, 1660.</note></bibl>
+          <bibl><title>A secreto agravio</title><author>Calderón de la Barca, Pedro</author>
+            <note>Texto incluido en la base Canon 60.</note></bibl>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    sources = play |> then(&title_page(generate!([&1]), &1)) |> texts("li")
+
+    assert "Tasso, Torquato. Aminta: the famous pastoral. London, 1660." in sources
+
+    assert "Calderón de la Barca, Pedro. A secreto agravio. Texto incluido en la base Canon 60." in sources
+  end
+
   test "a cast list with no heading of its own is headed Elenco, Cast list in English" do
     %{play: play} = play_with_structure_fixture()
     dir = generate!([play], all: true)
