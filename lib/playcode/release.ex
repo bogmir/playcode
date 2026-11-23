@@ -7,6 +7,7 @@ defmodule Playcode.Release do
 
   alias Playcode.Import.{
     Bibliography,
+    Filemaker,
     FilemakerPlays,
     FilemakerSync,
     Performances,
@@ -136,6 +137,45 @@ defmodule Playcode.Release do
 
       {:error, {file, reason}} ->
         IO.puts("cannot read #{Path.join(dir, file)}: #{inspect(reason)}")
+    end
+  end
+
+  @doc """
+  Sorts every play under its author as FileMaker's published index names them
+  (`FilemakerSync`'s `author_sort`), and writes nothing else the index derives. Copy
+  `w3emothe_T01_tituloEM.ndjson` onto the machine first (`fly ssh sftp shell`), then:
+
+      bin/playcode rpc 'Playcode.Release.sync_author_sorts("/tmp/w3emothe.ndjson", dry_run: true)'
+      bin/playcode rpc 'Playcode.Release.sync_author_sorts("/tmp/w3emothe.ndjson")'
+  """
+  def sync_author_sorts(path, opts \\ []) do
+    load_app()
+    {:ok, _} = Application.ensure_all_started(:playcode)
+
+    case Filemaker.load_index(path) do
+      {:ok, index} ->
+        plays = FilemakerSync.all_plays()
+        current = Map.new(plays, &{&1.id, &1.author_sort})
+
+        changes =
+          for %{sets: %{author_sort: sort}} = change <- FilemakerSync.plan(index, plays).changes,
+              do: %{change | sets: %{author_sort: sort}}
+
+        for change <- changes,
+            do:
+              IO.puts(
+                "#{change.code}  #{inspect(current[change.play_id])} -> #{inspect(change.sets.author_sort)}"
+              )
+
+        if opts[:dry_run] do
+          IO.puts("#{length(changes)} to change; dry run, nothing written")
+        else
+          written = FilemakerSync.apply_plan(%{changes: changes, conflicts: []})
+          IO.puts("#{length(written)} play(s) written")
+        end
+
+      {:error, reason} ->
+        IO.puts("cannot read #{path}: #{inspect(reason)}")
     end
   end
 
