@@ -689,12 +689,9 @@ defmodule Playcode.Export.StaticSite.Components do
     <p :for={paragraph <- paragraphs(@list.intro)}><.inline text={paragraph} /></p>
     <%= for [first | _] = group <- CastListEntry.printed_groups(@list.entries) do %>
       <p :if={first.group_heading} class="cast-group"><.inline text={first.group_heading} /></p>
-      <dl class="cast">
-        <%= for entry <- group do %>
-          <dt><.inline text={entry.name} /></dt>
-          <dd><.inline text={entry.description} /></dd>
-        <% end %>
-      </dl>
+      <ul class="cast">
+        <li :for={entry <- group} phx-no-format><.inline text={entry.name} /><span :if={entry.description not in [nil, ""]} class="desc">, <.inline text={entry.description} /></span></li>
+      </ul>
     <% end %>
     <p :for={paragraph <- paragraphs(@list.note)} class="cast-note"><.inline text={paragraph} /></p>
     """

@@ -95,7 +95,7 @@ defmodule Playcode.Export.StaticSiteTest do
     %{play: play} = play_with_structure_fixture()
     page = title_page(generate!([play], all: true), play)
 
-    assert "ALFA" in texts(page, "dt")
+    assert Enum.any?(texts(page, ".cast li"), &String.starts_with?(&1, "ALFA"))
     assert "act-1.html" in hrefs(page)
     assert "text.html" in hrefs(page)
     assert "statistics.html" in hrefs(page)
@@ -303,6 +303,26 @@ defmodule Playcode.Export.StaticSiteTest do
              page,
              "#edition li"
            )
+  end
+
+  # As emothe.uv.es printed it, chosen by the owner on 2026-11-23: a role a line, its
+  # description after a comma, in the case the file writes.
+  test "a cast list prints each role on one line, its description after a comma" do
+    play =
+      tei(
+        front: """
+        <div type="elenco"><head>PERSONAS</head><castList>
+          <castItem><role xml:id="LEO">Leonor</role><roleDesc>dama</roleDesc></castItem>
+          <castItem><role xml:id="BAR">Un barquero</role></castItem>
+        </castList></div>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+
+    assert texts(page, ".cast li") == ["Leonor, dama", "Un barquero"]
   end
 
   # emothe.uv.es heads it "Elenco" when the file gives no heading; it was "Dramatis
