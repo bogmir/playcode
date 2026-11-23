@@ -11,8 +11,8 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
 
   # The form's own fields: the browser could add `play_id`, which the changeset casts, and move
   # the row into another play (CLAUDE.md, *Access control*).
-  @editable ~w(title author editor editor_role note publisher pub_place pub_date language
-               distributor)
+  @editable ~w(title author editor editor_role canon60_editor note publisher pub_place pub_date
+               language distributor)
 
   @impl true
   def mount(%{"id" => id}, _session, socket) do
@@ -210,6 +210,12 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
               />
             </div>
             <div>
+              <label class="label" for={@source_form[:canon60_editor].id}>
+                <span class="label-text font-medium">{gettext("CANON 60 editor")}</span>
+              </label>
+              <.input field={@source_form[:canon60_editor]} type="text" />
+            </div>
+            <div>
               <label class="label" for={@source_form[:language].id}>
                 <span class="label-text font-medium">{gettext("Language")}</span>
               </label>
@@ -301,6 +307,9 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLive do
             <span :if={source.editor_role} class="text-xs text-base-content/70">
               ({source.editor_role})
             </span>
+          </:item>
+          <:item :if={source.canon60_editor} label={gettext("CANON 60 editor")}>
+            {source.canon60_editor}
           </:item>
           <:item :if={source.publisher} label={gettext("Publisher")}>{source.publisher}</:item>
           <:item :if={source.pub_place} label={gettext("Place")}>{source.pub_place}</:item>

@@ -51,7 +51,7 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
   test "a translation's entry names its translator, whom the record index holds" do
     %{original: original, translation: translation} = translation_family_fixture()
 
-    for {role, name} <- [{"translator", "Juan de Jáuregui"}, {"digital_editor", "Eva Soler"}] do
+    for {role, name} <- [{"translator", "Jáuregui, Juan de"}, {"digital_editor", "Eva Soler"}] do
       {:ok, _} =
         Playcode.Catalogue.create_play_editor(%{
           "play_id" => translation.id,

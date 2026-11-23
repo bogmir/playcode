@@ -18,7 +18,7 @@ defmodule Playcode.Export.Download do
   `trailer`. `NoteMarkup` adds its own inside a line's text, `span.aside` among them.
   """
 
-  alias Playcode.Catalogue.{Paratext, Play}
+  alias Playcode.Catalogue.{Paratext, Play, PlayEditor}
   alias Playcode.Export.NoteMarkup
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{CastListEntry, Division, Element, InlineMarkup, Note, SplitVerses}
@@ -53,7 +53,7 @@ defmodule Playcode.Export.Download do
     <h1 class="title">#{escape(play.title)}</h1>
     #{original(play)}
     #{sources(play.sources, format)}
-    #{editors(play.editors)}
+    #{editors(PlayEditor.credits(play.editors, play.sources))}
     #{verse_info(play)}
     #{dating(play)}
     </header>
@@ -116,11 +116,12 @@ defmodule Playcode.Export.Download do
 
   defp editors([]), do: ""
 
-  defp editors(editors) do
+  defp editors(credits) do
     items =
-      Enum.map_join(editors, "\n", fn ed ->
-        role = in_english(fn -> PlayLabels.editor_role_label(ed.role) end)
-        "<span>#{escape(ed.person_name)} <span class=\"role\">(#{escape(role)})</span></span>"
+      Enum.map_join(credits, "\n", fn {role, editors} ->
+        activity = in_english(fn -> PlayLabels.editor_activity_label(role) end)
+        names = Enum.map_join(editors, ", ", &PlayEditor.display_name/1)
+        "<span><span class=\"role\">#{escape(activity)}:</span> #{escape(names)}</span>"
       end)
 
     "<div class=\"editors\">\n#{items}\n</div>"

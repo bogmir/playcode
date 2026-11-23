@@ -167,6 +167,7 @@ defmodule Playcode.CompleteCopyTest do
         author: "Autora, Ana",
         editor: "Sanderson, John D.",
         editor_role: "traductor",
+        canon60_editor: "Fernández Mosquera, Santiago",
         note: "Notas de la fuente.",
         publisher: "Miguel Seguí",
         pub_place: "Barcelona",

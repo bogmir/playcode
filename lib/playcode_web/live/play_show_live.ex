@@ -12,7 +12,7 @@ defmodule PlaycodeWeb.PlayShowLive do
   alias Playcode.Bibliography
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue
-  alias Playcode.Catalogue.{Paratext, Play}
+  alias Playcode.Catalogue.{Paratext, Play, PlayEditor}
   alias Playcode.Outline
   alias Playcode.PlayContent
   alias Playcode.PlayContent.{Element, InlineMarkup, Note, SplitVerses}
@@ -425,15 +425,19 @@ defmodule PlaycodeWeb.PlayShowLive do
             </div>
 
             <div
-              :if={@play.editors != []}
+              :if={PlayEditor.credits(@play.editors, @play.sources) != []}
               id="meta-editors"
               class="mt-3 flex flex-wrap justify-center gap-2 scroll-mt-20"
             >
-              <span :for={editor <- @play.editors} class="text-xs text-base-content/70">
-                {editor.person_name}
-                <span class="text-base-content/70">
-                  ({PlayLabels.editor_role_label(editor.role)})
-                </span>
+              <span
+                :for={{role, editors} <- PlayEditor.credits(@play.editors, @play.sources)}
+                class="text-xs text-base-content/70"
+              >
+                {PlayLabels.editor_activity_label(role)}: {Enum.map_join(
+                  editors,
+                  ", ",
+                  &PlayEditor.display_name/1
+                )}
               </span>
             </div>
 

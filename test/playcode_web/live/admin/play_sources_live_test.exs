@@ -23,6 +23,7 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLiveTest do
         "title" => "El Rey Lear",
         "author" => "Shakespeare, William",
         "pub_place" => "Barcelona",
+        "canon60_editor" => "Fernández Mosquera, Santiago",
         "distributor" => "  Gallica "
       }
     )
@@ -30,6 +31,8 @@ defmodule PlaycodeWeb.Admin.PlaySourcesLiveTest do
 
     assert {bibl(play, "title"), bibl(play, "author"), bibl(play, "pubPlace")} ==
              {["El Rey Lear"], ["Shakespeare, William"], ["Barcelona"]}
+
+    assert bibl(play, "editor") == ["Fernández Mosquera, Santiago"]
 
     # Kept as the file gives it back, and shown on the source's card.
     [source] = Playcode.Catalogue.list_play_sources(play.id)
