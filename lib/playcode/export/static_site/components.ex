@@ -314,7 +314,7 @@ defmodule Playcode.Export.StaticSite.Components do
           <.stepper
             :if={@steppers}
             for="asm"
-            targets=".text .aparte, .text .pr.as"
+            targets=".text .aparte, .text .pr.as, .text .pr:not(.as) span.as"
             previous={ta("aria-label", "Previous aside")}
             next={ta("aria-label", "Next aside")}
           />
@@ -728,7 +728,7 @@ defmodule Playcode.Export.StaticSite.Components do
 
   def source_text(source) do
     fields =
-      if gives_title?(source.note, source.title),
+      if whole_reference?(source),
         do: [],
         else: [
           source.author,
@@ -744,10 +744,26 @@ defmodule Playcode.Export.StaticSite.Components do
     |> Enum.reduce("", &sentence/2)
   end
 
-  defp gives_title?(note, title) when is_binary(note) and is_binary(title),
-    do: String.contains?(searchable(note), searchable(title) |> String.trim_trailing("."))
+  defp whole_reference?(%{note: note, title: title} = source)
+       when is_binary(note) and is_binary(title) do
+    note = searchable(note)
 
-  defp gives_title?(_note, _title), do: false
+    case searchable(title) |> String.trim_trailing(".") do
+      "" -> false
+      title -> String.contains?(note, title) and String.contains?(note, surname(source.author))
+    end
+  end
+
+  defp whole_reference?(_source), do: false
+
+  defp surname(nil), do: ""
+
+  defp surname(author) do
+    case String.split(author, ",") do
+      [surname, _forenames] -> searchable(surname)
+      _ -> author |> searchable() |> String.split() |> List.last("")
+    end
+  end
 
   defp searchable(text), do: text |> InlineMarkup.plain() |> Search.normalise()
 
@@ -1431,7 +1447,7 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :cast, :list, default: [], doc: "the cast lists' members, `cast_members/1`"
 
   def character_table(assigns) do
-    in_cast = MapSet.new(assigns.cast, &elem(&1, 0))
+    in_cast = MapSet.new(assigns.cast, &speaker_key(elem(&1, 0)))
 
     characters =
       assigns.characters
@@ -1439,13 +1455,16 @@ defmodule Playcode.Export.StaticSite.Components do
       |> Enum.map(fn character ->
         character
         |> Map.put("main_forms", main_forms(character["forms"]))
-        |> Map.put("starred", in_cast != MapSet.new() and character["key"] not in in_cast)
+        |> Map.put(
+          "starred",
+          in_cast != MapSet.new() and speaker_key(character["key"]) not in in_cast
+        )
       end)
 
-    speaking = MapSet.new(characters, & &1["key"])
+    speaking = MapSet.new(characters, &speaker_key(&1["key"]))
 
     silent =
-      for {key, name} <- assigns.cast, key not in speaking do
+      for {key, name} <- assigns.cast, speaker_key(key) not in speaking do
         %{"name" => name, "speeches" => 0, "lines" => 0, "words" => 0, "main_forms" => {"", ""}}
       end
 
@@ -1519,6 +1538,11 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   defp first_speaks(_first), do: "—"
+
+  defp speaker_key("label:" <> label),
+    do: label |> InlineMarkup.plain() |> Search.normalise() |> String.trim_trailing(".")
+
+  defp speaker_key(character_id), do: character_id
 
   @doc """
   Who the cast lists name, `{key, name}` with the statistics' key (the character's id, or

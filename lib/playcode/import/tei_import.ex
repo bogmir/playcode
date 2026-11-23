@@ -223,7 +223,7 @@ defmodule Playcode.Import.TeiImport do
         do: heading
   end
 
-  defp same_words?(text, heading), do: words(text) == words(heading)
+  defp same_words?(text, heading), do: words(heading) != "" and words(text) == words(heading)
 
   defp words(text),
     do:

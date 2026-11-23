@@ -208,6 +208,8 @@ defmodule Playcode.Export.StaticSiteTest do
             <note>Tasso, Torquato. <emph>Aminta: the famous pastoral</emph>. London, 1660.</note></bibl>
           <bibl><title>A secreto agravio</title><author>Calderón de la Barca, Pedro</author>
             <note>Texto incluido en la base Canon 60.</note></bibl>
+          <bibl><title>Il pastor fido</title><author>Guarini, Battista</author>
+            <note>Cotejado con Il pastor fido de 1602.</note></bibl>
         """
       )
       |> import_tei!()
@@ -218,6 +220,8 @@ defmodule Playcode.Export.StaticSiteTest do
     assert "Tasso, Torquato. Aminta: the famous pastoral. London, 1660." in sources
 
     assert "Calderón de la Barca, Pedro. A secreto agravio. Texto incluido en la base Canon 60." in sources
+
+    assert "Guarini, Battista. Il pastor fido. Cotejado con Il pastor fido de 1602." in sources
   end
 
   # As emothe.uv.es's "Edición digital para CANON 60: …": each part of the work, then who

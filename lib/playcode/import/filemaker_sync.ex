@@ -55,12 +55,18 @@ defmodule Playcode.Import.FilemakerSync do
   def plan(index, plays, versions \\ %{}) do
     by_code = Map.new(plays, &{Play.short_code(&1.code), &1})
 
-    sorted_as =
-      for %{author_name: name} = play when is_binary(name) <- plays,
-          %{author_sort: sort} when is_binary(sort) <- [index[Play.short_code(play.code)]],
-          same_author?(name, sort),
+    own_sorts =
+      for play <- plays,
+          %{author_sort: sort} <- [index[Play.short_code(play.code)]],
+          same_author?(play.author_name, sort),
           into: %{},
-          do: {name, sort}
+          do: {play.id, sort}
+
+    sorted_as =
+      plays
+      |> Enum.filter(&Map.has_key?(own_sorts, &1.id))
+      |> Enum.group_by(& &1.author_name, &own_sorts[&1.id])
+      |> Map.new(fn {name, sorts} -> {name, most_common(sorts)} end)
 
     empty = %{changes: [], unchanged: [], missing: [], conflicts: [], skipped: []}
 
@@ -78,7 +84,8 @@ defmodule Playcode.Import.FilemakerSync do
           {:ok, version} -> {changes_for(play, version, by_code), acc}
         end
 
-      derived = Map.merge(derived, sorted_as(play, sorted_as))
+      sort = own_sorts[play.id] || sorted_as[play.author_name]
+      derived = Map.merge(derived, author_sort(play, sort))
 
       # The composition dating splits across both sources: the index header carries the
       # accepted years, T01 the competing datings. T01's note wins, but only when it has
@@ -188,8 +195,10 @@ defmodule Playcode.Import.FilemakerSync do
   @file_kinds Play.relationship_types() -- ["traduccion"]
 
   defp same_author?(name, sort) when is_binary(name) and is_binary(sort) do
-    [surname | _] = String.split(sort, [",", " "], trim: true)
-    String.contains?(String.downcase(name), String.downcase(surname))
+    case String.split(sort, [",", " "], trim: true) do
+      [surname | _] -> String.contains?(String.downcase(name), String.downcase(surname))
+      [] -> false
+    end
   end
 
   defp same_author?(_name, _sort), do: false
@@ -234,12 +243,11 @@ defmodule Playcode.Import.FilemakerSync do
     |> Map.new()
   end
 
-  defp sorted_as(play, sorted_as) do
-    case Map.fetch(sorted_as, play.author_name) do
-      {:ok, sort} when sort != play.author_sort -> %{author_sort: sort}
-      _ -> %{}
-    end
-  end
+  defp author_sort(%{author_sort: current}, sort) when sort in [nil, current], do: %{}
+  defp author_sort(_play, sort), do: %{author_sort: sort}
+
+  defp most_common(sorts),
+    do: Enum.max_by(Enum.uniq(sorts), &Enum.count(sorts, fn s -> s == &1 end))
 
   # Curated fields are filled only when the column is blank. See the moduledoc.
   defp fills_for(play, curated) do

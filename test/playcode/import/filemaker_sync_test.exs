@@ -106,6 +106,22 @@ defmodule Playcode.Import.FilemakerSyncTest do
                Enum.filter(plan.changes, &(&1.code != "EMOTHE0038"))
     end
 
+    test "a play the index lists takes its own form, and a form with no name in it is none" do
+      index =
+        index()
+        |> put_in(["EMOTHE0052", :author_sort], "Shakespeare, W.")
+        |> put_in(["HIE0393", :author_sort], ", ")
+
+      plays =
+        for code <- ~w(EMOTHE0038_AntonyAndCleopatra EMOTHE0052_AntonioYCleopatra HIE0393_Spanish),
+            do: play(code, %{"author_name" => "William Shakespeare", "author_sort" => "x"})
+
+      sorts =
+        for change <- FilemakerSync.plan(index, plays).changes, do: change.sets[:author_sort]
+
+      assert sorts == ["Shakespeare, William", "Shakespeare, W.", "Shakespeare, William"]
+    end
+
     # The index files Corneille's Le Menteur under Alarcón's work, and Castro's Mocedades
     # del Cid under Corneille's: each is sorted as the index sorts its own author, if at all.
     test "a play by another author than its work's keeps its sort, and lends it to none" do

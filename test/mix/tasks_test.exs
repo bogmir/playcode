@@ -175,6 +175,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
           <div type="dedicatoria"><head>The Epistle Dedicatory.</head>
             <p>The Epistle Dedicatory.<lb/>TO My much Honoured</p></div>
           <div type="prologo"><head>To the Reader</head><p>Reader, attend.</p></div>
+          <div type="argumento"><head>:</head><p>:</p></div>
           <div type="elenco"><head>PERSONAJES</head><p>PERSONAJES</p>
             <castList><castItem><role xml:id="ANA">ANA</role></castItem></castList></div>
           """
@@ -187,6 +188,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert out =~ ~r/\n\s+! heading repeated: The Epistle Dedicatory.\n/
       assert out =~ ~r/\n\s+! heading repeated: PERSONAJES\n/
       refute out =~ "repeated: To the Reader"
+      refute out =~ "repeated: :"
     end
 
     test "--dry-run lists the parts of split verses out of order", %{dir: dir} do

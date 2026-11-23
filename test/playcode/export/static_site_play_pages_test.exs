@@ -164,6 +164,25 @@ defmodule Playcode.Export.StaticSitePlayPagesTest do
       refute dir |> page(plain, "statistics.html") |> LazyHTML.text() =~ "*"
     end
 
+    test "a cast entry naming no character matches the speeches headed with its name" do
+      play =
+        tei(
+          front: """
+          <div type="elenco"><castList><castItem><role>CRIADO.</role></castItem></castList></div>
+          """,
+          body: """
+          <div1 type="acto" n="1"><sp><speaker>Criado</speaker><l n="1">uno</l></sp></div1>
+          """
+        )
+        |> import_tei!()
+
+      stats = page(generate!([play], all: true), play, "statistics.html")
+
+      assert stats |> rows("#characters tbody tr") |> Enum.map(&Enum.take(&1, 3)) == [
+               ["Criado", "1", "1"]
+             ]
+    end
+
     # Regression: both tables stopped at 12; Arden has 18, and a reader counting words needs all.
     test "the characters table and who shares the stage list every speaking character" do
       speeches = for i <- 1..13, do: "<sp><speaker>P#{i}</speaker><p>Hola.</p></sp>"
@@ -837,7 +856,23 @@ defmodule Playcode.Export.StaticSitePlayPagesTest do
 
     css = read!(dir, "assets/style.css")
     assert css =~ ~s(body[data-asm="on"] :is(.l.as .t, .pr.as, span.as\))
-    assert css =~ ~s(body[data-asm="on"] :is(.aparte, .pr.as\)[data-current])
+
+    # Every aside the switch highlights is a stop: a verse's, by its margin word, and in
+    # prose a whole paragraph or a few words of one.
+    {prose, prose_dir} =
+      publish!("""
+      <div1 type="acto" n="1"><sp><speaker>A</speaker>
+        <p><seg type="aside">Todo aparte.</seg></p><p>Llega. <seg type="aside">¡Qué miedo!</seg></p>
+      </sp></div1>
+      """)
+
+    prose_act = page(prose_dir, prose, "act-1.html")
+
+    [targets] =
+      prose_act |> LazyHTML.query("[data-for=asm]") |> LazyHTML.attribute("data-stepper")
+
+    assert prose_act |> LazyHTML.query(targets) |> Enum.count() == 2
+    assert css =~ ~s(body[data-asm="on"] :is(.aparte, .pr.as, span.as\)[data-current])
     assert read!(dir, "assets/site.js") =~ ~s('asm')
 
     assert page(dir, play, "act-2.html")
