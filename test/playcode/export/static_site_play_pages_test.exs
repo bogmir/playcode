@@ -130,6 +130,40 @@ defmodule Playcode.Export.StaticSitePlayPagesTest do
       assert shares == ["100%", "<1%"]
     end
 
+    # As emothe.uv.es's statistics: a speaker the cast list does not name is starred, and
+    # a member who never speaks is listed with nothing.
+    test "a speaker outside the cast list is starred, a silent member listed with 0" do
+      play =
+        tei(
+          front: """
+          <div type="elenco"><castList>
+            <castItem><role xml:id="ANA">Ana</role></castItem>
+            <castItem><role xml:id="SOL">Dos soldados</role></castItem>
+          </castList></div>
+          """,
+          body: """
+          <div1 type="acto" n="1"><head>Acto I</head>
+            <sp who="#ANA"><speaker>ANA</speaker><l n="1">uno</l><l n="2">dos</l></sp>
+            <sp who="#UNO"><speaker>UNO</speaker><l n="3">tres</l></sp>
+          </div1>
+          """
+        )
+        |> import_tei!()
+
+      stats = page(generate!([play], all: true), play, "statistics.html")
+      rows = rows(stats, "#characters tbody tr")
+
+      assert Enum.map(rows, &Enum.take(&1, 3)) ==
+               [["Ana", "1", "2"], ["UNO *", "1", "1"], ["Dos soldados", "0", "0"]]
+
+      assert "* Not in the cast list." in texts(stats, "#characters p")
+
+      {plain, dir} =
+        publish!(~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">uno</l></sp></div1>))
+
+      refute dir |> page(plain, "statistics.html") |> LazyHTML.text() =~ "*"
+    end
+
     # Regression: both tables stopped at 12; Arden has 18, and a reader counting words needs all.
     test "the characters table and who shares the stage list every speaking character" do
       speeches = for i <- 1..13, do: "<sp><speaker>P#{i}</speaker><p>Hola.</p></sp>"

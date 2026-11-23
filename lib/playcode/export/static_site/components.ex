@@ -1417,16 +1417,38 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :characters, :list, required: true
   attr :unit, :string, required: true, doc: ~s("lines" or "words")
   attr :total, :integer, required: true
+  attr :cast, :list, default: [], doc: "the cast lists' members, `cast_members/1`"
 
   def character_table(assigns) do
+    in_cast = MapSet.new(assigns.cast, &elem(&1, 0))
+
     characters =
       assigns.characters
       |> Enum.sort_by(&(-&1[assigns.unit]))
-      |> Enum.map(&Map.put(&1, "main_forms", main_forms(&1["forms"])))
+      |> Enum.map(fn character ->
+        character
+        |> Map.put("main_forms", main_forms(character["forms"]))
+        |> Map.put("starred", in_cast != MapSet.new() and character["key"] not in in_cast)
+      end)
+
+    speaking = MapSet.new(characters, & &1["key"])
+
+    silent =
+      for {key, name} <- assigns.cast, key not in speaking do
+        %{"name" => name, "speeches" => 0, "lines" => 0, "words" => 0, "main_forms" => {"", ""}}
+      end
 
     max = characters |> Enum.map(& &1[assigns.unit]) |> Enum.max(fn -> 1 end) |> max(1)
     forms? = Enum.any?(characters, &(&1["main_forms"] != {"", ""}))
-    assigns = assign(assigns, characters: characters, max: max, forms?: forms?)
+
+    assigns =
+      assign(assigns,
+        characters: characters,
+        silent: silent,
+        starred?: Enum.any?(characters, & &1["starred"]),
+        max: max,
+        forms?: forms?
+      )
 
     ~H"""
     <section :if={@characters != []} id="characters">
@@ -1456,8 +1478,10 @@ defmodule Playcode.Export.StaticSite.Components do
           </tr>
         </thead>
         <tbody>
-          <tr :for={character <- @characters}>
-            <th scope="row"><.inline text={character["name"]} /></th>
+          <tr :for={character <- @characters ++ @silent}>
+            <th scope="row">
+              <.inline text={character["name"]} /><span :if={character["starred"]}> *</span>
+            </th>
             <td class="num">{number(character["speeches"])}</td>
             <td class="num">{number(character["lines"])}</td>
             <td class="num">{number(character["words"])}</td>
@@ -1472,6 +1496,7 @@ defmodule Playcode.Export.StaticSite.Components do
           </tr>
         </tbody>
       </table>
+      <p :if={@starred?} class="lede">{t("* Not in the cast list.")}</p>
     </section>
     """
   end
@@ -1483,6 +1508,21 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   defp first_speaks(_first), do: "—"
+
+  @doc """
+  Who the cast lists name, `{key, name}` with the statistics' key (the character's id, or
+  the entry's name for one naming none), each once, in the lists' order.
+  """
+  def cast_members(divisions) do
+    for(
+      division <- divisions,
+      list <- [division | Map.get(division, :children, [])],
+      list.type == "elenco",
+      %{name: name} = entry when is_binary(name) <- list.entries,
+      do: {entry.character_id || "label:" <> name, name}
+    )
+    |> Enum.uniq_by(&elem(&1, 0))
+  end
 
   defp main_forms(forms) do
     forms

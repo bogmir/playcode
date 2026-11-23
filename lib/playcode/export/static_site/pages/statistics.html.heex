@@ -16,6 +16,7 @@
   <Components.division_table rows={@edition.stats["divisions"] || []} />
   <Components.character_table
     characters={@edition.stats["characters"] || []}
+    cast={Components.cast_members(@edition.divisions)}
     unit={if words_unit?(@edition), do: "words", else: "lines"}
     total={
       if words_unit?(@edition), do: @edition.stats["words"] || 0, else: @edition.stats["verses"]
