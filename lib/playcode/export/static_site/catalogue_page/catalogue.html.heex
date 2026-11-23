@@ -83,6 +83,7 @@
         <summary>{t("Play")}</summary>
         <.search_text name="t" label={t("Title")} hint={t("(or code)")} />
         <.search_text name="a" label={t("Author")} suggest />
+        <.search_text name="e" label={t("Translator")} suggest />
         <.search_list name="l" label={t("Language")} options={@lists["l"]} />
         <.search_list name="o" label={t("Language of the original")} options={@lists["o"]} />
         <.search_list name="k" label={t("Kind")} options={@lists["k"]} />
@@ -156,10 +157,15 @@
         data-title={work.sort_title}
         data-date={work.date}
       >
-        <.catalogue_entry play={work.play} lead compare={work.compare} />
+        <.catalogue_entry
+          play={work.play}
+          lead
+          compare={work.compare}
+          translators={@translators[work.play.code]}
+        />
         <ul :if={work.translations != []} class="translations">
           <li :for={translation <- work.translations}>
-            <.catalogue_entry play={translation} />
+            <.catalogue_entry play={translation} translators={@translators[translation.code]} />
           </li>
         </ul>
       </li>

@@ -38,6 +38,7 @@ defmodule Playcode.Export.StaticSite.Records do
       c: play.code,
       t: titles(play),
       a: plain(play.author_name),
+      e: for(%{role: "translator"} = e <- play.editors, do: plain(e.person_name)),
       l: play.language,
       o: roots[play.id].language,
       k: Components.kind(play),

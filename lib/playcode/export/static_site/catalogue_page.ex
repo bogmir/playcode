@@ -26,6 +26,7 @@ defmodule Playcode.Export.StaticSite.CataloguePage do
       %{
         site: site,
         works: works(plays),
+        translators: Map.new(entries, &{&1.c, Map.get(&1, :e, [])}),
         lists: lists(entries),
         count: length(plays),
         authors:
@@ -130,6 +131,7 @@ defmodule Playcode.Export.StaticSite.CataloguePage do
   attr :play, :map, required: true
   attr :lead, :boolean, default: false
   attr :compare, :string, default: nil, doc: "the code of the play the Compare link opens"
+  attr :translators, :list, default: []
 
   def catalogue_entry(assigns) do
     ~H"""
@@ -161,6 +163,9 @@ defmodule Playcode.Export.StaticSite.CataloguePage do
         {html(Components.kind_word(@play))}
       </span>
       <span :if={!Play.has_text?(@play)} class="tag">{html(tp("no text"))}</span>
+      <span :if={@translators != []} class="translator">
+        {t("trans. %{names}", names: Enum.join(@translators, ", "))}
+      </span>
       <span class="meta">{entry_meta(@play)}</span>
       <span :if={@lead} class="author">{@play.author_name}</span>
     </div>

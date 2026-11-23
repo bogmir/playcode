@@ -46,6 +46,28 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
              ["plays/#{original.code}/index.html", "plays/#{translation.code}/index.html"]
   end
 
+  # emothe.uv.es named each version's translator in its list ("Juan de Jáuregui, tra.")
+  # and searched by translator.
+  test "a translation's entry names its translator, whom the record index holds" do
+    %{original: original, translation: translation} = translation_family_fixture()
+
+    for {role, name} <- [{"translator", "Juan de Jáuregui"}, {"digital_editor", "Eva Soler"}] do
+      {:ok, _} =
+        Playcode.Catalogue.create_play_editor(%{
+          "play_id" => translation.id,
+          "role" => role,
+          "person_name" => name
+        })
+    end
+
+    dir = generate!([original, translation])
+    index = html!(dir, "index.html", "es")
+
+    assert texts(index, "[data-play] .translator") == ["trad. Juan de Jáuregui"]
+    assert Enum.find(records!(dir), &(&1["c"] == translation.code))["e"] == ["Juan de Jáuregui"]
+    refute Map.has_key?(Enum.find(records!(dir), &(&1["c"] == original.code)), "e")
+  end
+
   test "a translation whose original is not published stands on its own, marked as a translation" do
     %{translation: translation} = translation_family_fixture()
 
@@ -68,7 +90,7 @@ defmodule Playcode.Export.StaticSiteCatalogueTest do
     assert LazyHTML.text(work) =~ "Second-hand"
   end
 
-  @names ~w(t a l o k s f x q sec m in d-from d-to wt wc wy-from wy-to wf rp rv rc ry-from ry-to rk ra h p n sort)
+  @names ~w(t a e l o k s f x q sec m in d-from d-to wt wc wy-from wy-to wf rp rv rc ry-from ry-to rk ra h p n sort)
 
   # The controls of the catalogue's form: inside it, or tied to it by `form=` from above the list.
   defp controls(page, selector) do

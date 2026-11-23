@@ -26,7 +26,7 @@
   // Spec 7.4's entry with text as lists of normalised strings and ranges as pairs.
   R.prepare = function (e) {
     return {
-      c: e.c, t: texts((e.t || []).concat(e.c)), a: texts([e.a]), l: e.l, o: e.o, k: e.k, s: e.s, f: e.f,
+      c: e.c, t: texts((e.t || []).concat(e.c)), a: texts([e.a]), e: texts(e.e), l: e.l, o: e.o, k: e.k, s: e.s, f: e.f,
       x: e.x ? '1' : '0', d: e.d || [], h: e.h, p: texts(flat(e.p, [])), n: texts(e.n),
       w: (e.w || []).map(function (w) { return [w[0], texts([w[1]]), [w[2], w[3]], w[4]]; }),
       r: (e.r || []).map(function (r) {
@@ -37,7 +37,7 @@
 
   // Each filter: its name, how it matches, where it reads in the entry, a witness (w) or a performance (r).
   var FIELDS = {
-    '': [['t', 'text', 't'], ['a', 'text', 'a'], ['l', 'list', 'l'], ['o', 'list', 'o'], ['k', 'list', 'k'],
+    '': [['t', 'text', 't'], ['a', 'text', 'a'], ['e', 'text', 'e'], ['l', 'list', 'l'], ['o', 'list', 'o'], ['k', 'list', 'k'],
       ['s', 'list', 's'], ['f', 'list', 'f'], ['x', 'list', 'x'], ['d', 'range', 'd'], ['h', 'list', 'h'],
       ['p', 'text', 'p'], ['n', 'text', 'n']],
     w: [['wt', 'list', 0], ['wc', 'text', 1], ['wy', 'range', 2], ['wf', 'list', 3]],
@@ -83,7 +83,7 @@
   // names it, once.
   R.about = function (e, query) {
     var q = E.parse(query), words = q.words.concat(q.phrases.map(function (p) { return p.join(' '); }));
-    var said = [], own = (e.t || []).concat(e.c, e.a).filter(Boolean);
+    var said = [], own = (e.t || []).concat(e.c, e.a, e.e || []).filter(Boolean);
     for (var i = 0; i < words.length; i++) {
       var w = words[i], hint = null;
       if (own.some(function (v) { return has(v, w); })) continue;
@@ -96,7 +96,7 @@
   };
 
   // The address's names, in the order it writes them.
-  var NAMES = 't a l o k s f x q sec m in d wt wc wy wf rp rv rc ry rk ra h p n sort'.split(' ');
+  var NAMES = 't a e l o k s f x q sec m in d wt wc wy wf rp rv rc ry rk ra h p n sort'.split(' ');
 
   // "#l=en&d=1600-" to { l: "en", d: "1600-" }; unknown names and undecodable values dropped.
   R.parse = function (hash) {
@@ -156,7 +156,7 @@
   var RANGES = ['d', 'wy', 'ry'], NOT_RECORDS = ['sec', 'm', 'in', 'sort'], NOT_CHIPS = NOT_RECORDS.concat('q');
   var KINDS = { s: 'spoken', d: 'stage', n: 'note' }, FIRST = 5;
   // A datalist's values: where they are in an entry, or in its witnesses or performances.
-  var SUGGEST = [['a', '', 'a'], ['wc', 'w', 1], ['rp', 'r', 0], ['rv', 'r', 1], ['rk', 'r', 5], ['ra', 'r', 6], ['p', '', 'p']];
+  var SUGGEST = [['a', '', 'a'], ['e', '', 'e'], ['wc', 'w', 1], ['rp', 'r', 0], ['rv', 'r', 1], ['rk', 'r', 5], ['ra', 'r', 6], ['p', '', 'p']];
   var form, list, textList, count, W, works, codes, prepared, raw, loading, engine, found;
 
   function say(pair) { return E.say(pair[0], pair[1]); }
