@@ -56,6 +56,36 @@ defmodule Playcode.Export.EpubTest do
     assert Epub.generate(play) == Epub.generate(play)
   end
 
+  test "a cast list with no heading of its own is headed Cast list" do
+    {:ok, epub} = Epub.generate(text_play())
+    files = unzip(epub)
+
+    chapter =
+      Enum.find_value(files, fn {name, body} ->
+        String.ends_with?(name, ".xhtml") and body =~ "cast-list" and body
+      end)
+
+    assert chapter =~ ~r{<h3[^>]*>Cast list</h3>}
+    refute Enum.any?(files, fn {_name, body} -> body =~ "Dramatis personae" end)
+  end
+
+  test "an act's cast list with no heading of its own is headed Cast list" do
+    play =
+      Playcode.ImportHelpers.tei(
+        body: """
+        <div1 type="acto" n="1"><head>ACTO I</head>
+          <castList><castItem><role corresp="#DON">Don Juan</role></castItem></castList>
+          <sp who="#DON"><speaker>DON JUAN</speaker><l>Primer verso.</l></sp>
+        </div1>
+        """
+      )
+      |> Playcode.ImportHelpers.import_tei!()
+
+    {:ok, epub} = Epub.generate(Catalogue.get_play_with_all!(play.id))
+
+    assert Enum.any?(unzip(epub), fn {_name, body} -> body =~ ~r{<h3[^>]*>Cast list</h3>} end)
+  end
+
   test "the archive opens with its mimetype, stored as it is" do
     {:ok, epub} = Epub.generate(text_play())
 

@@ -196,11 +196,32 @@ defmodule Playcode.Export.StaticSiteTest do
     assert "El pastor fido" in sources
   end
 
-  test "a cast list with no heading of its own is the Dramatis personae" do
+  # emothe.uv.es heads it "Elenco" when the file gives no heading; it was "Dramatis
+  # personae" here until 2026-11-23.
+  test "a cast list with no heading of its own is headed Elenco, Cast list in English" do
     %{play: play} = play_with_structure_fixture()
-    page = title_page(generate!([play], all: true), play)
+    dir = generate!([play], all: true)
 
-    assert "Dramatis personae" in texts(page, "h2")
+    assert "Elenco" in texts(html!(dir, "plays/#{play.code}/index.html", "es"), "h2")
+    assert "Cast list" in texts(title_page(dir, play), "h2")
+  end
+
+  test "an act's cast list with no heading of its own is headed too" do
+    play =
+      tei(
+        body: """
+        <div1 type="acto" n="1"><head>ACTO I</head>
+          <castList><castItem><role corresp="#DON">Don Juan</role></castItem></castList>
+          <sp who="#DON"><speaker>DON JUAN</speaker><l>Primer verso.</l></sp>
+        </div1>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = html!(generate!([play]), "plays/#{play.code}/act-1.html")
+
+    assert "Cast list" in texts(page, "main h3")
   end
 
   test "an original's title page links its published translations, and only those" do
@@ -353,11 +374,22 @@ defmodule Playcode.Export.StaticSiteTest do
              )
     end
 
-    test "the full text prints the outline from the first act on", %{play: play, dir: dir} do
+    # The cast list before the first act joined it on 2026-11-23, as on emothe.uv.es; the
+    # other paratexts before it stay on the title page alone.
+    test "the full text prints the cast list, then the outline from the first act on",
+         %{play: play, dir: dir} do
       text = page_text(dir, play, "text.html")
 
-      assert in_order?(text, Enum.drop(outline_headings(), 4))
+      assert in_order?(text, ["PERSONAS", "ANA", "Criados" | Enum.drop(outline_headings(), 4)])
       refute text =~ "DEDICATORIA"
+      refute text =~ "LUGAR DE LA ACCIÓN"
+    end
+
+    test "the Contents names the cast list on the title page", %{play: play, dir: dir} do
+      rail = dir |> html!("plays/#{play.code}/act-1.html") |> LazyHTML.query(".rail nav")
+      links = for link <- LazyHTML.query(rail, "a"), do: hd(LazyHTML.attribute(link, "href"))
+
+      assert "index.html#elenco" in links
     end
 
     test "the Contents names every list and paratext after the title page, linked where it prints",

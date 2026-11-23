@@ -397,7 +397,7 @@ defmodule Playcode.Export.StaticSite.Components do
   defp item_title(list), do: list_title(list)
 
   defp list_title(%{title: title}) when title not in [nil, ""], do: InlineMarkup.plain(title)
-  defp list_title(_list), do: "Dramatis personae"
+  defp list_title(_list), do: t("Cast list")
 
   # A division's scenes show in the rail on its page and on its scene pages.
   defp open?(edition, page, current) do
@@ -625,9 +625,7 @@ defmodule Playcode.Export.StaticSite.Components do
   def outline_item(%{item: %{parent_id: nil}} = assigns) do
     ~H"""
     <section id={@edition.anchors[@item.id]}>
-      <h2 class={@head}>
-        <.inline text={@item.title || "Dramatis personae"} notes={@item.notes} />
-      </h2>
+      <h2 class={@head}><.list_heading list={@item} /></h2>
       <.cast_entries list={@item} />
     </section>
     """
@@ -636,13 +634,18 @@ defmodule Playcode.Export.StaticSite.Components do
   def outline_item(assigns) do
     ~H"""
     <section id={@edition.anchors[@item.id]}>
-      <h3 :if={@item.title} class="scene-head">
-        <.inline text={@item.title} notes={@item.notes} />
-      </h3>
+      <h3 class="scene-head"><.list_heading list={@item} /></h3>
       <.cast_entries list={@item} />
     </section>
     """
   end
+
+  attr :list, :map, required: true
+
+  defp list_heading(%{list: %{title: title}} = assigns) when title in [nil, ""],
+    do: ~H|{t("Cast list")}|
+
+  defp list_heading(assigns), do: ~H"<.inline text={@list.title} notes={@list.notes} />"
 
   attr :list, :map, required: true
 

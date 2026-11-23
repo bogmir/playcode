@@ -153,12 +153,12 @@ defmodule Playcode.Export.StaticSite.Edition do
   end
 
   # Where each paratext and cast list prints. Those before the first division of the text
-  # go on the title page (`front`). Any other prints at the top of the next page, above its
-  # heading (`before`, by the id of that page's division or scene), and those after the
-  # last page at its foot (`back`). An act's own lists print where they stand on its page;
-  # on an act split by scene, those that open it on the act's page, any other on the page
-  # of the scene after it. A play with no
-  # page of text prints them all on the title page.
+  # go on the title page (`front`), a cast list also in the Contents and the full text, as
+  # on emothe.uv.es. Any other prints at the top of the next page, above its heading
+  # (`before`, by the id of that page's division or scene), those after the last page at
+  # its foot (`back`). An act's own lists print where they stand on its page; on an act
+  # split by scene, those that open it on the act's page, any other on the page of the
+  # scene after it. A play with no page of text prints them all on the title page.
   defp outline(paratexts, divisions, []) do
     %{
       front: for(item <- Outline.items(paratexts, divisions), not text_division?(item), do: item),
@@ -177,7 +177,9 @@ defmodule Playcode.Export.StaticSite.Edition do
       |> Outline.placement()
       |> Enum.split_with(&match?({:front, _item}, &1))
 
+    front = Enum.map(front, &elem(&1, 1))
     rest = Enum.map(rest, &elem(&1, 1))
+    front_lists = Enum.filter(front, &match?(%Division{type: "elenco"}, &1))
     page_of = Map.new(pages, &{(&1.scene || &1.division).id, &1})
     reading = Enum.flat_map(rest, &reading(&1, page_of))
 
@@ -200,6 +202,7 @@ defmodule Playcode.Export.StaticSite.Edition do
         do: {item.id, page_of[id].slug}
       )
       |> Map.merge(Map.new(back, &{&1.id, last.slug}))
+      |> Map.merge(Map.new(front_lists, &{&1.id, "index"}))
       |> Map.merge(
         for page <- pages,
             is_nil(page.scene),
@@ -209,10 +212,12 @@ defmodule Playcode.Export.StaticSite.Edition do
       )
 
     %{
-      front: Enum.map(front, &elem(&1, 1)),
+      front: front,
       before: before,
       back: Enum.reverse(back),
-      contents: for(item <- rest, entry <- contents(item, page_of), do: entry),
+      contents:
+        Enum.map(front_lists, &{:item, &1}) ++
+          for(item <- rest, entry <- contents(item, page_of), do: entry),
       item_pages: item_pages,
       anchors: item_anchors(paratexts, divisions)
     }
