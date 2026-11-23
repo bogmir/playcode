@@ -6,6 +6,7 @@
 .entry-title { color: var(--ink); text-decoration: none; }
 .entry-title.lead { font-size: 1.2rem; font-weight: 600; }
 .entry .author { flex-basis: 100%; font: .875rem var(--serif); color: var(--ink-2); }
+.entry .translator { font: .75rem var(--sans); color: var(--muted); }
 .entry .meta { margin-left: auto; font: .75rem var(--sans); color: var(--muted); }
 .entry .compare { display: inline-flex; align-self: center; color: var(--muted); }
 .entry .compare:hover, .entry .compare:focus-visible { color: var(--accent); }

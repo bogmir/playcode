@@ -18,7 +18,8 @@ const hamlet = { c: 'EMOTHE0010', t: ['Hamlet', 'The Tragedy of Hamlet'], a: 'Wi
   w: [['early_edition', 'London', 1604, 1605, '4º'], ['collection', 'Madrid', 1623, 1623, '2º'], ['manuscript', null, null, null, null]],
   r: [[['London', 'England', 'Inglaterra'], 'The Globe', 'commercial_theatre', 1601, 1601, 'The King’s Men', ['Richard Burbage']],
       [[], null, 'palace', 1619, 1620, null, []]],
-  p: [[['Elsinor', 'Elsinore'], ['Dinamarca', 'Denmark']]], n: ['HAMLET', 'OFELIA', 'Calderón'] };
+  p: [[['Elsinor', 'Elsinore'], ['Dinamarca', 'Denmark']]], n: ['HAMLET', 'OFELIA', 'Calderón'],
+  e: ['Leandro Fernández de Moratín'] };
 const bare = { c: 'EMOTHE0596', t: ['L’abuseur de Séville'], l: 'fr', o: 'fr', k: 'original', s: 'EMOTHE' };
 const yes = (entry, state) => assert.equal(R.match(R.prepare(entry), state), true, JSON.stringify(state));
 const no = (entry, state) => assert.equal(R.match(R.prepare(entry), state), false, JSON.stringify(state));
@@ -52,6 +53,11 @@ test('performance fields are met by one performance', () => {
 });
 test('a place of action is found by any of its names, or a containing place', () => {
   yes(hamlet, { p: 'elsinore' }); yes(hamlet, { p: 'dinamarca' }); no(hamlet, { p: 'sevilla' });
+});
+test('a translator is found by any part of the name', () => {
+  yes(hamlet, { e: 'moratin' }); no(hamlet, { e: 'jauregui' }); no(bare, { e: 'x' });
+  assert.deepEqual(plain(R.about(hamlet, 'hamlet moratín')), []);
+  assert.equal(R.parse('#e=Morat%C3%ADn').e, 'Moratín');
 });
 test('filters combine with and', () => { no(hamlet, { l: 'es', n: 'nadie' }); });
 test('q, m, in and sort are not record filters', () => { yes(bare, { q: 'honor', m: 'w', in: 'n', sort: 'date' }); });

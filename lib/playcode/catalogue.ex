@@ -558,6 +558,7 @@ defmodule Playcode.Catalogue do
   """
   def preload_record(plays) do
     Repo.preload(plays,
+      editors: from(e in PlayEditor, order_by: e.position),
       characters: from(c in Character, order_by: c.position),
       witnesses: from(w in Witness, order_by: [asc: w.position, asc: w.inserted_at]),
       play_places: from(pp in PlayPlace, order_by: pp.position),
