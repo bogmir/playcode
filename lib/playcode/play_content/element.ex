@@ -171,6 +171,9 @@ defmodule Playcode.PlayContent.Element do
   def stage_directions?(divisions),
     do: any_element?(divisions, &(&1.type == "stage_direction")) or any_holds?(divisions, :stage)
 
+  @doc "True when `divisions`, loaded as for `folio_passages?/1`, hold an aside, whole or in part."
+  def asides?(divisions), do: any_element?(divisions, & &1.is_aside)
+
   @doc "The verse lines of `divisions`, loaded as for `folio_passages?/1`, in reading order."
   def verse_lines(divisions) do
     Enum.flat_map(divisions, fn division ->

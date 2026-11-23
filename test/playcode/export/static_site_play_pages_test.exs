@@ -749,6 +749,46 @@ defmodule Playcode.Export.StaticSitePlayPagesTest do
     assert plain |> LazyHTML.query(~s(input[data-toggle="rs"])) |> Enum.count() == 0
   end
 
+  # As emothe.uv.es's "Apartes" mark: each aside tinted, the arrows stepping from one's
+  # start to the next.
+  test "the asides are highlighted and stepped through, where a page has one" do
+    play =
+      tei(
+        body: """
+        <div1 type="acto" n="1"><sp><speaker>A</speaker>
+          <l n="1"><seg type="aside">Esto, aparte.</seg></l><l n="2">Y esto, no.</l>
+        </sp></div1>
+        <div1 type="acto" n="2"><sp><speaker>A</speaker><l n="3">Nada aparte.</l></sp></div1>
+        """
+      )
+      |> import_tei!()
+
+    dir = generate!([play], all: true)
+    act = page(dir, play, "act-1.html")
+
+    assert act |> LazyHTML.query(~s(body[data-asm="off"])) |> Enum.count() == 1
+
+    assert act
+           |> LazyHTML.query(~s(input[data-toggle="asm"][aria-label="Highlight asides"]))
+           |> Enum.count() == 1
+
+    for label <- ~w(Next Previous),
+        do:
+          assert(
+            act |> LazyHTML.query(~s(button[aria-label="#{label} aside"])) |> Enum.count() == 1
+          )
+
+    css = read!(dir, "assets/style.css")
+    assert css =~ ~s(body[data-asm="on"] :is(.l.as .t, .pr.as, span.as\))
+    assert css =~ ~s(body[data-asm="on"] :is(.aparte, .pr.as\)[data-current])
+    assert read!(dir, "assets/site.js") =~ ~s('asm')
+
+    assert page(dir, play, "act-2.html")
+           |> LazyHTML.query(~s(input[data-toggle="asm"]))
+           |> Enum.count() ==
+             0
+  end
+
   # Questions 45, 52, 62 and 65: the rail's Highlight switches, each with arrows that step
   # through what it highlights (site.js, test/js/stepper.test.mjs). Offered per page, only
   # where there is one to step to.

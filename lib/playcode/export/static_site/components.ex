@@ -78,7 +78,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <script src={@root <> "assets/site.js?v=" <> @site.assets} defer>
         </script>
       </head>
-      <body data-ln="5" data-fo="off" data-rs="off" data-sh="off" data-sdm="off">
+      <body data-ln="5" data-fo="off" data-rs="off" data-sh="off" data-sdm="off" data-asm="off">
         <header class="bar">
           <a class="skip" href="#main">{t("Skip to content")}</a>
           <a class="wordmark" href={@root <> "index.html"}>
@@ -211,7 +211,8 @@ defmodule Playcode.Export.StaticSite.Components do
       assign(assigns,
         cast: Enum.filter(cast(assigns.edition.characters), & &1.xml_id),
         shared: Element.shared_lines?(shown),
-        stage: Element.stage_directions?(shown)
+        stage: Element.stage_directions?(shown),
+        aside: Element.asides?(shown)
       )
 
     ~H"""
@@ -227,6 +228,7 @@ defmodule Playcode.Export.StaticSite.Components do
       cast={@cast}
       shared={@shared}
       stage={@stage}
+      aside={@aside}
     />
     """
   end
@@ -237,6 +239,7 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :cast, :list, required: true, doc: "the characters the Highlight select offers"
   attr :shared, :boolean, required: true
   attr :stage, :boolean, required: true
+  attr :aside, :boolean, default: false
   attr :steppers, :boolean, default: true, doc: "the arrows, which walk one column"
 
   @doc "The reading tools: line numbers, the Show switches and the Highlight group."
@@ -261,7 +264,7 @@ defmodule Playcode.Export.StaticSite.Components do
       <label :if={@tagged}>
         <input type="checkbox" data-toggle="rs" /> {t("Tagged names")}
       </label>
-      <%= if @cast != [] or @shared or @stage do %>
+      <%= if @cast != [] or @shared or @stage or @aside do %>
         <h2>{t("Highlight")}</h2>
         <select :if={@cast != []} data-highlight {ta("aria-label", "Highlight a character")}>
           <option value="" {ta("label", "No one")}></option>
@@ -301,6 +304,19 @@ defmodule Playcode.Export.StaticSite.Components do
             targets=".text .sd, .text .sdi"
             previous={ta("aria-label", "Previous stage direction")}
             next={ta("aria-label", "Next stage direction")}
+          />
+        <% end %>
+        <%= if @aside do %>
+          <label>
+            <input type="checkbox" data-toggle="asm" {ta("aria-label", "Highlight asides")} />
+            {t("Asides")}
+          </label>
+          <.stepper
+            :if={@steppers}
+            for="asm"
+            targets=".text .aparte, .text .pr.as"
+            previous={ta("aria-label", "Previous aside")}
+            next={ta("aria-label", "Next aside")}
           />
         <% end %>
       <% end %>
