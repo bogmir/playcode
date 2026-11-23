@@ -12,7 +12,7 @@ defmodule Playcode.Export.StaticSite.Components do
   alias Playcode.Bibliography.Citation
   alias Playcode.Catalogue.{Paratext, Play}
   alias Playcode.Export.NoteMarkup
-  alias Playcode.Export.StaticSite.Edition
+  alias Playcode.Export.StaticSite.{Edition, Search}
   alias Playcode.Performances
   alias Playcode.PlayContent.{CastListEntry, Division, Element, InlineMarkup, Note}
   alias Playcode.Witnesses
@@ -727,18 +727,29 @@ defmodule Playcode.Export.StaticSite.Components do
   def number(n) when is_integer(n), do: Integer.to_string(n)
 
   def source_text(source) do
-    [
-      source.author,
-      source.title,
-      source.editor,
-      source.pub_place,
-      source.publisher,
-      source.pub_date,
-      source.note
-    ]
+    fields =
+      if gives_title?(source.note, source.title),
+        do: [],
+        else: [
+          source.author,
+          source.title,
+          source.editor,
+          source.pub_place,
+          source.publisher,
+          source.pub_date
+        ]
+
+    (fields ++ [source.note])
     |> Enum.reject(&(&1 in [nil, ""]))
     |> Enum.reduce("", &sentence/2)
   end
+
+  defp gives_title?(note, title) when is_binary(note) and is_binary(title),
+    do: String.contains?(searchable(note), searchable(title) |> String.trim_trailing("."))
+
+  defp gives_title?(_note, _title), do: false
+
+  defp searchable(text), do: text |> InlineMarkup.plain() |> Search.normalise()
 
   # Each part a sentence of its own, without a second period after one it ends with
   # ("…Paris, 1872. Tasso, Torquato. Aminta.").
