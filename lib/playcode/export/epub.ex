@@ -165,7 +165,7 @@ defmodule Playcode.Export.Epub do
   defp chapter_title(%{title: title}, _index) when title not in [nil, ""],
     do: InlineMarkup.plain(title)
 
-  defp chapter_title(%{type: "elenco"}, _index), do: "Dramatis personae"
+  defp chapter_title(%{type: "elenco"}, _index), do: "Cast list"
   defp chapter_title(div, index), do: "#{div.type} #{index}"
 
   defp css do

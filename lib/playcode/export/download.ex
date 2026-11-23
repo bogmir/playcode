@@ -306,6 +306,9 @@ defmodule Playcode.Export.Download do
     "<div class=\"cast-item\"><span class=\"cast-name\">#{inline(entry.name, format)}</span>#{desc}</div>"
   end
 
+  defp division_heading(%{type: "elenco", title: title} = list, format) when title in [nil, ""],
+    do: division_heading(%{list | title: "Cast list"}, format)
+
   defp division_heading(%{title: title}, _format) when title in [nil, ""], do: ""
 
   defp division_heading(div, format) do
@@ -313,6 +316,9 @@ defmodule Playcode.Export.Download do
       do: "<h2 class=\"act-heading\">#{inline(div.title, div.notes, format)}</h2>\n",
       else: child_heading(div, format)
   end
+
+  defp child_heading(%{type: "elenco", title: title} = list, format) when title in [nil, ""],
+    do: child_heading(%{list | title: "Cast list"}, format)
 
   defp child_heading(%{title: title}, _format) when title in [nil, ""], do: ""
 
