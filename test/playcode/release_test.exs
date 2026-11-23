@@ -57,6 +57,28 @@ defmodule Playcode.ReleaseTest do
              "imported 1, skipped 0"
   end
 
+  # Only the sort: the other columns the index derives were synced in 2026-10 and have
+  # been corrected by hand since.
+  test "sync_author_sorts writes the index's author forms and nothing else" do
+    play =
+      Playcode.TestFixtures.play_fixture(%{
+        "code" => "EMOTHE0038_AntonyAndCleopatra",
+        "author_name" => "William Shakespeare",
+        "author_sort" => "Shakespeare",
+        "language" => "es"
+      })
+
+    path = "test/fixtures/filemaker/index_sample.ndjson"
+    out = capture_io(fn -> Release.sync_author_sorts(path, dry_run: true) end)
+
+    assert out =~ ~s(EMOTHE0038  "Shakespeare" -> "Shakespeare, William")
+    assert out =~ "dry run, nothing written"
+    assert Catalogue.get_play!(play.id).author_sort == "Shakespeare"
+
+    assert capture_io(fn -> Release.sync_author_sorts(path) end) =~ "1 play(s) written"
+    assert %{author_sort: "Shakespeare, William", language: "es"} = Catalogue.get_play!(play.id)
+  end
+
   test "export_tei writes each play's TEI as DIR/CODE.xml, or one play's under code:" do
     play = import_tei!(tei(code: "REL0002_Segunda"))
     out_dir = Path.join(System.tmp_dir!(), "release-out-#{System.unique_integer([:positive])}")
