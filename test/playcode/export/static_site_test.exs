@@ -228,6 +228,27 @@ defmodule Playcode.Export.StaticSiteTest do
            ]
   end
 
+  # As emothe.uv.es: the edition CANON 60 made of the printed source, credited beside ours.
+  test "the source's CANON 60 editor is credited under Edition" do
+    play =
+      tei(
+        source_desc: """
+          <bibl><title>A secreto agravio</title>
+            <editor>Fernández Mosquera, Santiago</editor>
+            <editor role="canon60">Fernández Mosquera, Santiago</editor></bibl>
+        """
+      )
+      |> import_tei!()
+      |> mark_complete!()
+
+    page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
+
+    assert "Edición digital para CANON 60: Santiago Fernández Mosquera" in texts(
+             page,
+             "#edition li"
+           )
+  end
+
   test "a cast list with no heading of its own is headed Elenco, Cast list in English" do
     %{play: play} = play_with_structure_fixture()
     dir = generate!([play], all: true)

@@ -48,10 +48,19 @@ defmodule Playcode.Catalogue.PlayEditor do
     end
   end
 
-  @doc "The editors grouped by role, each role where its first editor stands: `[{role, editors}]`."
-  def by_role(editors) do
+  @doc """
+  The edition's credits, `[{role, people}]`: the editors grouped by role, each role where
+  its first editor stands, then the sources' CANON 60 editors under `"canon60"`.
+  """
+  def credits(editors, sources) do
+    canon60 =
+      for %{canon60_editor: name} when is_binary(name) <- sources,
+          uniq: true,
+          do: %{person_name: name}
+
     editors
     |> Enum.group_by(& &1.role)
     |> Enum.sort_by(fn {_role, [first | _]} -> Enum.find_index(editors, &(&1 == first)) end)
+    |> Enum.concat(for people <- [canon60], people != [], do: {"canon60", people})
   end
 end

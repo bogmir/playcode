@@ -913,6 +913,32 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute has_element?(view, "#meta-sources", "ProcedenciaFuente")
   end
 
+  # As the published site prints them, since 2026-11-23.
+  test "the edition credits each part of the work, names forename first", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          title_stmt: """
+          <respStmt><resp>Edición digital de</resp><persName>Ros Ferrer, Violeta</persName></respStmt>
+          """,
+          source_desc: """
+          <bibl><title>A secreto agravio</title>
+            <editor role="canon60">Fernández Mosquera, Santiago</editor></bibl>
+          """
+        )
+      )
+
+    {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
+
+    assert has_element?(view, "#meta-editors", "Edición digital: Violeta Ros Ferrer")
+
+    assert has_element?(
+             view,
+             "#meta-editors",
+             "Edición digital para CANON 60: Santiago Fernández Mosquera"
+           )
+  end
+
   test "metadata links appear when metadata exists", %{conn: conn} do
     play = TestFixtures.play_with_metadata_fixture()
 

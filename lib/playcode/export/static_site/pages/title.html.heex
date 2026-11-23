@@ -24,10 +24,15 @@
     </dl>
     <Components.family play={@edition.play} published={@site.published} />
     <Components.places play={@edition.play} />
-    <section :if={@edition.play.editors != []} id="edition">
+    <section
+      :if={PlayEditor.credits(@edition.play.editors, @edition.play.sources) != []}
+      id="edition"
+    >
       <h2>{t("Edition")}</h2>
       <ul>
-        <li :for={{role, editors} <- PlayEditor.by_role(@edition.play.editors)}>
+        <li :for={
+          {role, editors} <- PlayEditor.credits(@edition.play.editors, @edition.play.sources)
+        }>
           <span class="role">{both(fn -> PlayLabels.editor_activity_label(role) end)}:</span>
           {Enum.map_join(editors, ", ", &PlayEditor.display_name/1)}
         </li>

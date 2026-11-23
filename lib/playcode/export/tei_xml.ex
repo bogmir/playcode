@@ -342,6 +342,9 @@ defmodule Playcode.Export.TeiXml do
               attrs = if source.editor_role, do: %{role: source.editor_role}, else: %{}
               element(:editor, attrs, source.editor)
             end,
+            if(source.canon60_editor,
+              do: element(:editor, %{role: "canon60"}, source.canon60_editor)
+            ),
             if(source.publisher, do: element(:publisher, source.publisher)),
             if(source.pub_place, do: element(:pubPlace, source.pub_place)),
             if(source.pub_date, do: element(:date, source.pub_date)),

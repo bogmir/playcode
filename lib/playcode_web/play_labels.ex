@@ -257,6 +257,7 @@ defmodule PlaycodeWeb.PlayLabels do
   def editor_activity_label("editor"), do: gettext("Edition")
   def editor_activity_label("digital_editor"), do: gettext("Digital edition")
   def editor_activity_label("reviewer"), do: gettext("Review")
+  def editor_activity_label("canon60"), do: gettext("Digital edition for CANON 60")
   def editor_activity_label(role), do: role
 
   def editor_role_options, do: Enum.map(@editor_roles, &{editor_role_label(&1), &1})

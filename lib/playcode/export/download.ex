@@ -53,7 +53,7 @@ defmodule Playcode.Export.Download do
     <h1 class="title">#{escape(play.title)}</h1>
     #{original(play)}
     #{sources(play.sources, format)}
-    #{editors(play.editors)}
+    #{editors(PlayEditor.credits(play.editors, play.sources))}
     #{verse_info(play)}
     #{dating(play)}
     </header>
@@ -116,9 +116,9 @@ defmodule Playcode.Export.Download do
 
   defp editors([]), do: ""
 
-  defp editors(editors) do
+  defp editors(credits) do
     items =
-      Enum.map_join(PlayEditor.by_role(editors), "\n", fn {role, editors} ->
+      Enum.map_join(credits, "\n", fn {role, editors} ->
         activity = in_english(fn -> PlayLabels.editor_activity_label(role) end)
         names = Enum.map_join(editors, ", ", &PlayEditor.display_name/1)
         "<span><span class=\"role\">#{escape(activity)}:</span> #{escape(names)}</span>"
