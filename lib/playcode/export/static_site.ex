@@ -309,17 +309,17 @@ defmodule Playcode.Export.StaticSite do
 
   @doc """
   The batch that brings the site at `dir` up to date through `apply_changes/2`: each
-  changed play added again, each play on disk no longer published (archived, deleted or
-  no longer complete) removed.
+  published play it lacks or that changed added, each play on disk no longer published
+  (archived, deleted or no longer complete) removed.
   """
   def outdated(dir) do
     published = Catalogue.list_plays(complete: true)
     live = MapSet.new(published, & &1.code)
+    on_disk = list_exported_codes(dir)
+    missing = Enum.reject(published, &(&1.code in on_disk))
 
-    adds = for play <- changed(dir, published), do: {:add, play.id}
-
-    removes =
-      for code <- list_exported_codes(dir), not MapSet.member?(live, code), do: {:remove, code}
+    adds = for play <- missing ++ changed(dir, published), do: {:add, play.id}
+    removes = for code <- on_disk, not MapSet.member?(live, code), do: {:remove, code}
 
     adds ++ removes
   end

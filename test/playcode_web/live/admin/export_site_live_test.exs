@@ -232,20 +232,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert response(preview(conn, "plays/#{b.code}/index.html"), 200)
   end
 
-  # Regression: Generate rebuilt every complete play, so a play switched off came back.
-  test "Generate rebuilds only the plays in the site, so a removed play stays out",
-       %{conn: conn, a: a, b: b} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-    # The page starts from the site's own version, so the site is current and Generate
-    # would only refresh. A new version takes it down the full build, where b came back.
-    set_version(lv, "2.0")
-    generate(lv)
-
-    assert response(preview(conn, "plays/#{a.code}/index.html"), 200)
-    assert response(preview(conn, "plays/#{b.code}/index.html"), 404)
-  end
-
   test "an existing site can be previewed without generating again",
        %{conn: conn, a: a} do
     build_site([a.code])

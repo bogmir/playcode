@@ -9,8 +9,9 @@ defmodule Playcode.Export.SiteBuilder do
   takes the options of the latest ask. When a job ends, the adds and removes at the front
   of the queue run as one batch, which publishes its pages first and rewrites the search
   index once (`StaticSite.apply_changes/2`); a generate or a deploy runs on its own, in
-  its turn. Generate brings the site up to date when it runs: every play in it when the
-  site's code or settings changed since it was built, only the changed plays otherwise.
+  its turn. Generate brings the site in line with the complete plays when it runs: every
+  one rebuilt when the site's code or settings changed since it was built, otherwise only
+  the ones it lacks or that changed written, and the ones no longer complete taken out.
 
   Jobs are `:generate`, `{:batch, [{:add, play_id} | {:remove, code}]}` and `:deploy`.
   It broadcasts on `"static_site"`, so every admin page shows the same state:
@@ -38,12 +39,12 @@ defmodule Playcode.Export.SiteBuilder do
 
   @doc """
   Brings the site up to date. When its code or settings changed since it was built
-  (`StaticSite.site_changed?/2`), or it holds no play, every play in it is rebuilt (every
-  complete play if it is empty) and the result is `StaticSite.generate/1`'s. Otherwise
-  only the plays that changed are written again and the ones no longer published taken
-  out, in one batch, and the result is `{:ok, %{changed: count, skipped: [play_id]}}`,
+  (`StaticSite.site_changed?/2`), or it holds no play, every complete play is built and
+  the result is `StaticSite.generate/1`'s. Otherwise the complete plays it lacks or that
+  changed are written and the ones no longer published taken out, in one batch, and the
+  result is `{:ok, %{changed: count, skipped: [play_id]}}`,
   plus `assets:` and `catalogue:` when no play changed and those alone were written again.
-  `opts` as `StaticSite.generate/1` takes them, but for the directory and plays.
+  `opts` as `StaticSite.generate/1` takes them, but for the directory.
   """
   def generate(opts), do: request(:generate, opts)
 
@@ -127,8 +128,8 @@ defmodule Playcode.Export.SiteBuilder do
   defp change?({:remove, _}), do: true
   defp change?(_request), do: false
 
-  # An empty site gets every complete play, whatever build.json says: the last switch
-  # turned off leaves it the fingerprint of a site that is gone.
+  # An empty site is built whole, whatever build.json says: one build is faster than one
+  # batch adding every play.
   defp run(:generate, opts) do
     dir = StaticSite.output_dir()
 
@@ -152,12 +153,9 @@ defmodule Playcode.Export.SiteBuilder do
     end
   end
 
-  # Rebuilds the site as it stands when the job runs, not when it was asked for: an add
-  # or remove queued before it keeps its change.
   defp build_all(opts) do
     opts
     |> in_site()
-    |> Keyword.put(:play_codes, codes_in_site())
     |> Keyword.put(:on_progress, progress(:generate))
     |> StaticSite.generate()
   end
@@ -182,14 +180,6 @@ defmodule Playcode.Export.SiteBuilder do
       changes ->
         {:ok, %{skipped: skipped}} = StaticSite.apply_changes(changes, in_site(opts))
         {:ok, %{changed: length(changes), skipped: skipped}}
-    end
-  end
-
-  # An empty site gets every complete play: StaticSite drops a nil option.
-  defp codes_in_site do
-    case StaticSite.list_exported_codes(StaticSite.output_dir()) do
-      [] -> nil
-      codes -> codes
     end
   end
 

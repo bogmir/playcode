@@ -94,25 +94,25 @@ defmodule Playcode.Export.SiteBuilderTest do
   # The site is current, so this Generate is incremental and keeps the add because it
   # writes only what changed; the next test covers the full build.
   test "an incremental generate queued behind an add keeps the add" do
-    [a, b, _never_published] = for _ <- 1..3, do: play_fixture(%{"is_complete" => true})
+    [a, b] = for _ <- 1..2, do: play_fixture(%{"is_complete" => true})
+    _draft = play_fixture()
     {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
 
     assert :started = SiteBuilder.add(b.id, [])
-    assert :queued = SiteBuilder.generate(play_codes: [a.code])
+    assert :queued = SiteBuilder.generate([])
     events_until({:done, :generate})
 
     assert in_site() == Enum.sort([a.code, b.code])
   end
 
   test "a full generate queued behind an add rebuilds the site as it stands when it runs" do
-    [a, b, _never_published] = for _ <- 1..3, do: play_fixture(%{"is_complete" => true})
+    [a, b] = for _ <- 1..2, do: play_fixture(%{"is_complete" => true})
     {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
 
     assert :started = SiteBuilder.add(b.id, [])
-    # The admin page used to send the plays it showed when clicked, before b landed;
-    # rebuilding from that list would delete b. A new version makes the site changed,
-    # so this Generate rebuilds every play instead of refreshing.
-    assert :queued = SiteBuilder.generate(version: "2.0", play_codes: [a.code])
+    # A new version makes the site changed, so this Generate rebuilds every play
+    # instead of refreshing.
+    assert :queued = SiteBuilder.generate(version: "2.0")
     assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
 
     assert in_site() == Enum.sort([a.code, b.code])
@@ -338,6 +338,36 @@ defmodule Playcode.Export.SiteBuilderTest do
     refute rewritten?(b)
     assert stamps() == [stamp]
     refute StaticSite.assets_changed?(StaticSite.output_dir())
+  end
+
+  # Regression: a play marked complete reached a site that already held plays only
+  # through its switch, while its page promised the next Generate would put it there.
+  test "Generate adds a play marked complete since the last build" do
+    [a] = complete_plays(1)
+    b = play_fixture()
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+
+    {:ok, _} = Catalogue.update_play(b, %{"is_complete" => true})
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 1}}}, 10_000
+
+    assert in_site() == Enum.sort([a.code, b.code])
+    assert in_search() |> Enum.sort() == Enum.sort([a.code, b.code])
+  end
+
+  test "a whole-site rebuild also adds the complete plays the site lacks and leaves out drafts" do
+    [a, c] = complete_plays(2)
+    b = play_fixture()
+    assert :started = SiteBuilder.generate(version: "1.0")
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
+
+    {:ok, _} = Catalogue.update_play(c, %{"is_complete" => false})
+    {:ok, _} = Catalogue.update_play(b, %{"is_complete" => true})
+    assert :started = SiteBuilder.generate(version: "2.0")
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
+
+    assert in_site() == Enum.sort([a.code, b.code])
   end
 
   test "Generate rebuilds every play when the site's settings changed" do
