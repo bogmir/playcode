@@ -283,7 +283,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert redirected_to(conn) == ~p"/admin/export"
 
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
-             t("No site built yet. Generate the static site first.")
+             t("No site built yet. Generate a preview first.")
   end
 
   describe "the preview" do

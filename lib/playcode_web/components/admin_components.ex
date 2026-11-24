@@ -202,11 +202,12 @@ defmodule PlaycodeWeb.AdminComponents do
     """
   end
 
-  defp site_label(:draft), do: gettext("Not published")
-  defp site_label(:waiting), do: gettext("Waiting to be published")
-  defp site_label(:changed), do: gettext("Unpublished changes")
-  defp site_label(:leaving), do: gettext("Leaving the site")
-  defp site_label(:live), do: gettext("On the site")
+  @doc "What a play's state on the live site (`SiteStatus.state/2`) reads as."
+  def site_label(:draft), do: gettext("Not published")
+  def site_label(:waiting), do: gettext("Waiting to be published")
+  def site_label(:changed), do: gettext("Unpublished changes")
+  def site_label(:leaving), do: gettext("Leaving the site")
+  def site_label(:live), do: gettext("On the site")
 
   defp site_badge_class(:draft), do: "badge-ghost"
   defp site_badge_class(:waiting), do: "badge-info"

@@ -386,7 +386,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       assert has_element?(
                view,
                card(),
-               t("Mark it complete, and it reaches the site at the next Generate.")
+               t("Mark it complete, and it goes online with the next Publish.")
              )
     end
 
