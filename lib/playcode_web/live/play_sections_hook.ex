@@ -2,21 +2,21 @@ defmodule PlaycodeWeb.PlaySectionsHook do
   @moduledoc """
   Assigns `:play_counts`, the counts the sidebar shows beside a play's sections, on a page
   that names its play in `:play_context`. They are read again after every event, so a row
-  a tab adds or deletes is counted at once. Also `:play_deployed`, the `content_version`
-  the last deploy published the play with, or nil when it did not publish it.
+  a tab adds or deletes is counted at once. Also `:play_live`, the play's entry in the live
+  site (`SiteStatus.live/1`), empty when it is not there.
   """
   import Phoenix.Component
   import Phoenix.LiveView
 
   alias Playcode.Catalogue
-  alias Playcode.Export.StaticSite
+  alias Playcode.Export.SiteStatus
 
   def on_mount(:default, _params, _session, socket) do
     {:cont,
      socket
-     |> assign(play_counts: nil, play_deployed: nil)
+     |> assign(play_counts: nil, play_live: %{})
      |> attach_hook(:play_counts, :handle_params, fn _params, _uri, socket ->
-       {:cont, socket |> count() |> deployed()}
+       {:cont, socket |> count() |> live_entry()}
      end)
      # ponytail: one count query per event, keystroke validations included; skip those
      # if it ever shows in the timings.
@@ -35,10 +35,8 @@ defmodule PlaycodeWeb.PlaySectionsHook do
 
   defp count(socket), do: socket
 
-  defp deployed(%{assigns: %{play_context: %{play: play}}} = socket) do
-    deployed = StaticSite.output_dir() |> StaticSite.deployed_plays() |> Map.get(play.code)
-    assign(socket, :play_deployed, deployed)
-  end
+  defp live_entry(%{assigns: %{play_context: %{play: play}}} = socket),
+    do: assign(socket, :play_live, Map.take(SiteStatus.live(), [play.code]))
 
-  defp deployed(socket), do: socket
+  defp live_entry(socket), do: socket
 end

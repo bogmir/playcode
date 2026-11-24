@@ -288,7 +288,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         <% end %>
       </div>
 
-      <.state_band play={@play} deployed={@play_deployed} />
+      <.state_band play={@play} live={@play_live} />
 
       <div
         :if={@play_counts}

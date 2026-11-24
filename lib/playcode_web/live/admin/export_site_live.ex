@@ -10,6 +10,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   on_mount {PlaycodeWeb.UserAuth, {:ensure_can, :deploy_site}}
 
   alias Playcode.Export.{SiteBuilder, StaticSite}
+  alias Playcode.Export.StaticSite.Deployer
 
   @impl true
   def mount(_params, _session, socket) do
@@ -19,7 +20,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       |> assign(:page_title, gettext("Export Static Site"))
       # The site's own version, so it is current for the form until someone changes it.
       |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
-      |> assign(:deploy_to, deploy_target())
+      |> assign(:deploy_to, Deployer.target())
       |> assign(:pending, %{})
       |> assign(:changed, MapSet.new())
       |> assign(:site_changed, false)
@@ -518,20 +519,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     socket
     |> assign(:exported_codes, MapSet.new(StaticSite.list_exported_codes(dir)))
     |> assign_async(:site_size, fn -> {:ok, %{site_size: StaticSite.dir_size(dir)}} end)
-  end
-
-  # Where Deploy goes, from the server's settings (StaticSite.Deployer): the repository,
-  # and the host of the server told to publish, if any. nil when there is no repository.
-  defp deploy_target do
-    settings = Application.get_env(:playcode, :static_site_deploy, [])
-
-    case settings[:repo] do
-      repo when repo in [nil, ""] ->
-        nil
-
-      repo ->
-        %{repo: repo, host: settings[:publish_url] && URI.parse(settings[:publish_url]).host}
-    end
   end
 
   attr :target, :map, default: nil

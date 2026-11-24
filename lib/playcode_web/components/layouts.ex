@@ -137,7 +137,7 @@ defmodule PlaycodeWeb.Layouts do
   attr :current_path, :string, default: ""
   attr :play_context, :map, default: nil
   attr :play_counts, :map, default: nil
-  attr :play_deployed, :integer, default: nil, doc: "the version the last deploy published"
+  attr :play_live, :map, default: %{}, doc: "the play's entry in the live site"
 
   def admin_sidebar(%{play_context: %{play: _}} = assigns) do
     assigns =
@@ -157,7 +157,7 @@ defmodule PlaycodeWeb.Layouts do
         <.section_link to={~p"/admin/plays/#{@play.id}"} current={@active == :overview}>
           {gettext("Overview")}
         </.section_link>
-        <%= for {group, items} <- play_sections(@play, @current_user, @play_deployed) do %>
+        <%= for {group, items} <- play_sections(@play, @current_user, @play_live) do %>
           <h2 class="mx-2 mt-4 mb-1 text-xs font-semibold uppercase tracking-wider text-base-content/70">
             {group}
           </h2>
@@ -239,7 +239,7 @@ defmodule PlaycodeWeb.Layouts do
   # The play's sections as the mockup groups them: {tab, label, path, count key}. Every one
   # is behind :view_admin but the preview, behind :preview_plays; the play is passed for the
   # per-play scoping `Authz` plans.
-  defp play_sections(play, user, deployed) do
+  defp play_sections(play, user, live) do
     # A play without a text is never compared (its comparison page sends it back).
     related? =
       Playcode.Catalogue.Play.has_text?(play) and
@@ -274,7 +274,7 @@ defmodule PlaycodeWeb.Layouts do
            related? &&
              {:compare, gettext("Comparison"), ~p"/admin/plays/#{play.id}/compare", nil},
            {:preview, gettext("Preview"), ~p"/plays/#{play.code}", nil},
-           deployed && public_page(play)
+           Map.has_key?(live, play.code) && public_page(play)
          ],
          &(!&1)
        )}

@@ -92,11 +92,8 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     assert has_element?(lv, "#play-state", t("Draft"))
 
-    assert has_element?(
-             lv,
-             "#play-state",
-             t("Only the team sees it. It is not on the published site.")
-           )
+    assert has_element?(lv, "#play-state", t("Not published"))
+    assert has_element?(lv, "#play-state", t("Only the team sees it."))
 
     assert lv |> element("#play-state button", t("Mark as complete")) |> render_click() =~
              t("Marked as complete.")

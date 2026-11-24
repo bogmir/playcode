@@ -16,6 +16,22 @@ defmodule Playcode.Export.StaticSite.Deployer do
   require Logger
 
   @doc """
+  Where a deploy goes, from the server's settings: the repository, and the host of the
+  server told to publish it, if any. Nil when no repository is set.
+  """
+  def target do
+    settings = Application.get_env(:playcode, :static_site_deploy, [])
+
+    case settings[:repo] do
+      repo when repo in [nil, ""] ->
+        nil
+
+      repo ->
+        %{repo: repo, host: settings[:publish_url] && URI.parse(settings[:publish_url]).host}
+    end
+  end
+
+  @doc """
   Pushes the static site directory to `repo`, then has the publish server fetch it.
 
   ## Options

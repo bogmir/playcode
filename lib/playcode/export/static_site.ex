@@ -330,6 +330,17 @@ defmodule Playcode.Export.StaticSite do
   """
   def deployed_plays(dir), do: dir |> deploy_record() |> read_build_file() |> Map.fetch!(:plays)
 
+  @doc "Each code in the site at `dir` with the `content_version` it was built with."
+  def built_plays(dir), do: read_build(dir).plays
+
+  @doc "When the site at `dir` was last deployed, nil if it never was."
+  def deployed_at(dir) do
+    case File.stat(deploy_record(dir), time: :posix) do
+      {:ok, %{mtime: mtime}} -> DateTime.from_unix!(mtime)
+      {:error, _} -> nil
+    end
+  end
+
   @doc """
   Records that the site at `dir` was just published: a copy of its `build.json`, kept
   beside the directory, not in it, so it is not itself published.
