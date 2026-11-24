@@ -212,6 +212,23 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     assert has_element?(lv, "li", "Acto II · " <> n("%{count} verse", "%{count} verses", 1))
   end
 
+  test "the structure prints a heading's italics as italics, not as markers", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="act" n="1"><head>Acto de <emph>La Celestina</emph></head>
+            <sp who="#a"><speaker>A</speaker><l n="1">Uno</l></sp></div1>
+          """
+        )
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "li em", "La Celestina")
+    refute render(lv) =~ "&lt;&lt;La Celestina"
+  end
+
   test "folds the licence with the project's texts", %{conn: conn} do
     play = play_fixture(%{"licence_text" => "CC BY-NC 4.0", "funder" => "Ministerio"})
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")

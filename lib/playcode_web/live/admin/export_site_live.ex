@@ -325,8 +325,16 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
 
   defp play_row(assigns) do
     ~H"""
-    <li id={"play-#{@play.code}"} class="flex items-center gap-3 py-1.5">
-      <span class="font-mono text-xs text-base-content/70">{@play.code}</span>
+    <li
+      id={"play-#{@play.code}"}
+      class="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3 py-1.5 sm:grid-cols-[17rem_minmax(0,1fr)_auto]"
+    >
+      <span
+        class="truncate font-mono text-xs text-base-content/70 max-sm:col-span-2"
+        title={@play.code}
+      >
+        {@play.code}
+      </span>
       <span class="min-w-0 flex-1 truncate">{@play.title}</span>
       <span class="text-xs text-base-content/70">{@play.reason}</span>
     </li>

@@ -309,7 +309,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         </div>
       </td>
       <td class="max-sm:hidden">
-        <.site_badge state={SiteStatus.state(@play, @live)} />
+        <.site_badge
+          :if={SiteStatus.state(@play, @live) != :draft}
+          state={SiteStatus.state(@play, @live)}
+        />
       </td>
       <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
         {verses(@play)}

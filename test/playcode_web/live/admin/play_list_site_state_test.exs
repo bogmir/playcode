@@ -54,7 +54,9 @@ defmodule PlaycodeWeb.Admin.PlayListSiteStateTest do
 
     {:ok, view, _html} = live(conn, ~p"/admin/plays")
 
-    assert has_element?(view, "#play-#{draft.id}", t("Not published"))
+    # A draft's site cell is empty: "Draft" in the status column already says it, on
+    # most rows of the list (decided 2026-11-25).
+    refute has_element?(view, "#play-#{draft.id}", t("Not published"))
     assert has_element?(view, "#play-#{waiting.id}", t("Waiting to be published"))
     assert has_element?(view, "#play-#{live.id}", t("On the site"))
     assert has_element?(view, "#play-#{changed.id}", t("Unpublished changes"))
