@@ -229,6 +229,22 @@ defmodule PlaycodeWeb.Admin.PlayDetailLiveTest do
     refute render(lv) =~ "&lt;&lt;La Celestina"
   end
 
+  test "the structure names an act with no heading by its kind and number", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="act" n="2">
+            <sp who="#a"><speaker>A</speaker><l n="1">Uno</l></sp></div1>
+          """
+        )
+      )
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+
+    assert has_element?(lv, "li", t("Act") <> " 2")
+  end
+
   test "folds the licence with the project's texts", %{conn: conn} do
     play = play_fixture(%{"licence_text" => "CC BY-NC 4.0", "funder" => "Ministerio"})
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
