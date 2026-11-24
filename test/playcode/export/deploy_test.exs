@@ -25,6 +25,7 @@ defmodule Playcode.Export.DeployTest do
     on_exit(fn ->
       await_idle_builder()
       File.rm_rf!(StaticSite.output_dir())
+      File.rm(Path.expand(StaticSite.output_dir()) <> ".deployed.json")
       Application.put_env(:playcode, :static_site_deploy, previous)
     end)
 

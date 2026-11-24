@@ -12,6 +12,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
   setup %{conn: conn} do
     File.rm_rf!(StaticSite.output_dir())
+    # deploy_test.exs leaves its deploy record behind.
+    File.rm(Path.expand(StaticSite.output_dir()) <> ".deployed.json")
     previous = Application.get_env(:playcode, :static_site_deploy)
 
     on_exit(fn ->
@@ -247,6 +249,60 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     lv |> element("#group-live form") |> render_change(%{"search" => "alpha"})
     assert in_group?(lv, "live", a)
     refute in_group?(lv, "live", List.last(more))
+  end
+
+  # Regression: every play_changed walked the whole site again, seconds on production,
+  # in a task nothing cancelled, so a run of edits piled the walks up.
+  test "a play edit regroups the plays without counting the site again", %{conn: conn, a: a} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    render_async(lv)
+    size = lv |> element("#site-size") |> render()
+
+    File.write!(Path.join(StaticSite.output_dir(), "padding.bin"), :binary.copy("x", 2_000_000))
+    {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+    Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, a.id})
+
+    assert in_group?(lv, "changed", a)
+    render_async(lv)
+    assert lv |> element("#site-size") |> render() == size
+  end
+
+  test "a Generate that rewrote only the styles or the catalogue says so",
+       %{conn: conn, a: a, b: b} do
+    build_site([a.code, b.code])
+    path = Path.join(StaticSite.output_dir(), "build.json")
+    json = path |> File.read!() |> Jason.decode!() |> Map.merge(%{"assets" => "older"})
+    File.write!(path, Jason.encode!(json))
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    generate(lv)
+    assert render(lv) =~ t("The site's styles and scripts are updated.")
+    refute render(lv) =~ t("Nothing has changed since the last build.")
+  end
+
+  test "with nothing waiting but the whole site changed, the headline does not say all is published",
+       %{conn: conn, a: a, b: b} do
+    build_site([a.code, b.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    set_version(lv, "9.9")
+
+    assert has_element?(lv, "#site-changed")
+    refute has_element?(lv, "#publish-card", t("Everything is published."))
+  end
+
+  test "a failed Publish names the step that failed", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
+
+    broadcast.({:site_builder, :started, :publish})
+    broadcast.({:site_builder, :done, :publish, {:error, "no plays"}})
+    assert render(lv) =~ t("Generation failed: %{reason}", reason: "no plays")
+
+    broadcast.({:site_builder, :started, :publish})
+    broadcast.({:site_builder, :progress, :deploy, "Pushing"})
+    broadcast.({:site_builder, :done, :publish, {:error, "rejected"}})
+    assert render(lv) =~ t("Deploy failed: %{reason}", reason: "rejected")
   end
 
   # The size walks every file, seconds on production's volume: counted after connecting.

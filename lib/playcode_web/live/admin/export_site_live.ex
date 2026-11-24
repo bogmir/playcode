@@ -75,16 +75,20 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     do: {:noreply, assign(socket, step: :deploy, deploy_status: status)}
 
   def handle_info({:site_builder, :done, job, result}, socket),
-    do: {:noreply, socket |> finished() |> done(job, result)}
+    do: {:noreply, socket |> done(job, result) |> finished()}
 
   def handle_info({:site_builder, :failed, job, reason}, socket) do
-    {:noreply, socket |> finished() |> put_flash(:error, failed(job, crash_reason(reason)))}
+    {:noreply,
+     socket
+     |> put_flash(:error, failed(failed_step(socket, job), crash_reason(reason)))
+     |> finished()}
   end
 
   def handle_info({:site_builder, _event, _job}, socket), do: {:noreply, socket}
 
   # Postgres says a play changed (Playcode.Export.PlayChangeListener).
-  def handle_info({:play_changed, _play_id}, socket), do: {:noreply, refresh(socket)}
+  # An edit changes no file on disk, so the site is not walked again for it.
+  def handle_info({:play_changed, _play_id}, socket), do: {:noreply, regroup(socket)}
 
   @impl true
   def render(assigns) do
@@ -116,9 +120,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p class="text-xl font-semibold">
-                {if @to_publish > 0,
-                  do: ngettext("One play to publish", "%{count} plays to publish", @to_publish),
-                  else: gettext("Everything is published.")}
+                {headline(@to_publish, @site_changed and @built_count > 0)}
               </p>
               <p class="text-sm text-base-content/70">
                 {live_summary(@live, @deploy_to, @deployed_at)}
@@ -331,9 +333,11 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     """
   end
 
-  # The plays by where they stand on the live site, read again after every job and
-  # every change to a play. A purged play still live has no row left, only its code.
-  defp refresh(socket) do
+  defp refresh(socket), do: socket |> regroup() |> on_disk() |> track_site()
+
+  # The plays by where they stand on the live site. A purged play still live has no row
+  # left, only its code.
+  defp regroup(socket) do
     dir = StaticSite.output_dir()
     live = SiteStatus.live(dir)
     plays = Catalogue.list_plays(sort: :title_sort, include_deleted: true)
@@ -356,8 +360,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       leaving: rows(by_state[:leaving], &leaving_reason/1) ++ purged,
       up_to_date: rows(by_state[:live], fn _ -> nil end)
     )
-    |> on_disk()
-    |> track_site()
   end
 
   defp rows(nil, _reason), do: []
@@ -405,6 +407,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
       live_rows: matching |> Enum.drop((page - 1) * @per_page) |> Enum.take(@per_page)
     )
   end
+
+  defp headline(0, true), do: gettext("Every play is to be rebuilt.")
+  defp headline(0, false), do: gettext("Everything is published.")
+
+  defp headline(count, _site_changed),
+    do: ngettext("One play to publish", "%{count} plays to publish", count)
 
   defp live_summary(live, nil, _deployed_at),
     do: ngettext("One play in the built site", "%{count} plays in the built site", map_size(live))
@@ -513,6 +521,19 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     )
   end
 
+  defp done(socket, :generate, {:ok, %{changed: 0, assets: assets?, catalogue: catalogue?}}) do
+    updated =
+      Enum.filter(
+        [
+          catalogue? && gettext("The catalogue is updated."),
+          assets? && gettext("The site's styles and scripts are updated.")
+        ],
+        & &1
+      )
+
+    put_flash(socket, :info, Enum.join(updated, " "))
+  end
+
   defp done(socket, :generate, {:ok, %{changed: 0}}),
     do: put_flash(socket, :info, gettext("Nothing has changed since the last build."))
 
@@ -528,9 +549,12 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     do: put_flash(socket, :info, gettext("Published at %{url}", url: url))
 
   defp done(socket, job, {:error, reason}),
-    do: put_flash(socket, :error, failed(job, error_text(reason)))
+    do: put_flash(socket, :error, failed(failed_step(socket, job), error_text(reason)))
 
   defp done(socket, _job, _result), do: socket
+
+  defp failed_step(%{assigns: %{step: step}}, :publish) when step != nil, do: step
+  defp failed_step(_socket, job), do: job
 
   defp error_text(reason) when is_binary(reason), do: reason
   defp error_text(reason), do: inspect(reason)
