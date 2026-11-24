@@ -1,132 +1,101 @@
 defmodule PlaycodeWeb.Admin.ExportSiteLive do
   @moduledoc """
-  /admin/export: the static site. Generate brings it up to date, a play's switch adds or
-  removes that play, Deploy publishes it on emothe.uv.es. Every admin sees the same state:
-  the work runs in `Playcode.Export.SiteBuilder`, which broadcasts it. Admins only.
+  /admin/export: the static site. Publish brings it in line with the complete plays and
+  deploys it; the page lists what is waiting to go online, measured against the live site
+  (`Playcode.Export.SiteStatus`). The work runs in `Playcode.Export.SiteBuilder`, which
+  broadcasts it, so every admin sees the same state. Admins only.
   """
 
   use PlaycodeWeb, :live_view
 
   on_mount {PlaycodeWeb.UserAuth, {:ensure_can, :deploy_site}}
 
-  alias Playcode.Export.{SiteBuilder, StaticSite}
+  alias Phoenix.LiveView.JS
+  alias Playcode.Catalogue
+  alias Playcode.Export.{SiteBuilder, SiteStatus, StaticSite}
   alias Playcode.Export.StaticSite.Deployer
+
+  @per_page 50
 
   @impl true
   def mount(_params, _session, socket) do
     socket =
       socket
-      |> load_plays()
       |> assign(:page_title, gettext("Export Static Site"))
       # The site's own version, so it is current for the form until someone changes it.
       |> assign(:version, StaticSite.built_version(StaticSite.output_dir()) || app_version())
       |> assign(:deploy_to, Deployer.target())
-      |> assign(:pending, %{})
-      |> assign(:changed, MapSet.new())
-      |> assign(:site_changed, false)
-      |> assign(:assets_changed, false)
-      |> assign(:catalogue_changed, false)
-      |> assign(:indexing, false)
-      |> assign(:generating, false)
-      |> assign(:deploying, false)
-      |> assign(:gen_current, 0)
-      |> assign(:gen_total, 0)
-      |> assign(:gen_detail, "")
-      |> assign(:gen_result, nil)
-      |> assign(:deploy_status, nil)
-      |> assign(:deploy_url, nil)
+      |> assign(job: nil, step: nil, gen_current: 0, gen_total: 0, gen_detail: "")
+      |> assign(deploy_status: nil, live_search: "", live_page: 1)
 
-    # Subscribed before follow/2 reads the status and the disk, so a job that ends after
-    # that still arrives.
+    # Subscribed before the status and the disk are read, so a job that ends after that
+    # still arrives.
     if connected?(socket) do
       SiteBuilder.subscribe()
-      {:ok, follow(socket, SiteBuilder.status())}
+      %{job: job} = SiteBuilder.status()
+      {:ok, socket |> started(job) |> refresh()}
     else
-      {:ok, on_disk(socket)}
+      {:ok, refresh(socket)}
     end
   end
 
   @impl true
-  def handle_event("update_form", params, socket) do
-    {:noreply,
-     socket
-     |> assign(:version, params["version"] || "")
-     |> track_changes()}
-  end
+  def handle_event("update_form", %{"version" => version}, socket),
+    do: {:noreply, socket |> assign(:version, version) |> track_site()}
 
   def handle_event("generate", _params, socket),
     do: socket |> form_opts() |> SiteBuilder.generate() |> queued_flash(socket)
 
-  # A changed play already in the site: written again, in a batch like any add.
-  def handle_event("refresh_play", %{"id" => id}, socket),
-    do: id |> SiteBuilder.add(form_opts(socket)) |> queued_flash(socket)
-
-  # Every complete play the site lacks, as its switch would add it. Queued behind one
-  # another, the adds land together, in one batch after the first.
-  def handle_event("add_all", _params, socket) do
-    opts = form_opts(socket)
-    %{plays: plays, exported_codes: exported, pending: pending} = socket.assigns
-    Enum.each(missing(plays, exported, pending), &SiteBuilder.add(&1.id, opts))
-    {:noreply, socket}
-  end
-
   # The repository is server config, never typed in: the GitHub token goes only to it.
-  def handle_event("deploy", _params, %{assigns: %{deploy_to: %{repo: repo}}} = socket),
-    do: repo |> SiteBuilder.deploy() |> queued_flash(socket)
+  def handle_event("publish", _params, %{assigns: %{deploy_to: %{repo: repo}}} = socket),
+    do: socket |> form_opts() |> SiteBuilder.publish(repo) |> queued_flash(socket)
 
-  def handle_event("deploy", _params, socket), do: {:noreply, socket}
+  def handle_event("publish", _params, socket), do: {:noreply, socket}
 
-  # A switch with a change on its way is disabled, so this decides by what is on disk.
-  # Any play in the site can be switched off; only a published one can be switched on.
-  def handle_event("toggle_play", %{"id" => id, "code" => code}, socket) do
-    opts = form_opts(socket)
+  def handle_event("search_live", %{"search" => search}, socket),
+    do: {:noreply, assign(socket, live_search: search, live_page: 1)}
 
-    cond do
-      MapSet.member?(socket.assigns.exported_codes, code) -> SiteBuilder.remove(code, opts)
-      Enum.any?(socket.assigns.plays, &(&1.id == id)) -> SiteBuilder.add(id, opts)
-      true -> :not_published
-    end
+  def handle_event("live_page", %{"page" => page}, socket),
+    do: {:noreply, assign(socket, :live_page, String.to_integer(page))}
 
-    {:noreply, socket}
-  end
-
-  # Jobs report back through the builder's broadcasts, which every open page receives,
-  # whoever started the job.
   @impl true
-  def handle_info({:site_builder, :queued, request}, socket),
-    do: {:noreply, queued(socket, request)}
-
   def handle_info({:site_builder, :started, job}, socket), do: {:noreply, started(socket, job)}
-
-  def handle_info({:site_builder, :published, {:batch, changes}}, socket),
-    do: {:noreply, socket |> settle(changes) |> assign(:indexing, true)}
 
   def handle_info({:site_builder, :progress, :generate, info}, socket) do
     {:noreply,
-     socket
-     |> assign(:gen_current, info.current)
-     |> assign(:gen_total, info.total)
-     |> assign(:gen_detail, info.detail)}
+     assign(socket,
+       step: :generate,
+       gen_current: info.current,
+       gen_total: info.total,
+       gen_detail: info.detail
+     )}
   end
 
-  def handle_info({:site_builder, :progress, :deploy, status}, socket) do
-    {:noreply, assign(socket, :deploy_status, status)}
-  end
+  def handle_info({:site_builder, :progress, :deploy, status}, socket),
+    do: {:noreply, assign(socket, step: :deploy, deploy_status: status)}
 
   def handle_info({:site_builder, :done, job, result}, socket),
-    do: {:noreply, socket |> finished(job) |> done(job, result)}
+    do: {:noreply, socket |> finished() |> done(job, result)}
 
   def handle_info({:site_builder, :failed, job, reason}, socket) do
-    {:noreply, socket |> finished(job) |> put_flash(:error, failed(job, crash_reason(reason)))}
+    {:noreply, socket |> finished() |> put_flash(:error, failed(job, crash_reason(reason)))}
   end
 
-  # Postgres says a play changed (Playcode.Export.PlayChangeListener). Any play: the
-  # page reads again which of its plays changed.
-  def handle_info({:play_changed, _play_id}, socket),
-    do: {:noreply, socket |> load_plays() |> track_changes()}
+  def handle_info({:site_builder, _event, _job}, socket), do: {:noreply, socket}
+
+  # Postgres says a play changed (Playcode.Export.PlayChangeListener).
+  def handle_info({:play_changed, _play_id}, socket), do: {:noreply, refresh(socket)}
 
   @impl true
   def render(assigns) do
+    assigns =
+      assigns
+      |> assign(
+        :to_publish,
+        length(assigns.new) + length(assigns.changed) + length(assigns.leaving)
+      )
+      |> assign_live_page()
+
     ~H"""
     <.page width={:form}>
       <.page_header>
@@ -138,297 +107,334 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
         </:subtitle>
       </.page_header>
 
-      <div
-        :if={@site_changed and MapSet.size(@exported_codes) > 0}
-        id="site-changed"
-        class="alert alert-warning mb-6"
+      <section
+        id="publish-card"
+        class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
+        aria-label={gettext("Publish")}
       >
-        <.icon name="hero-exclamation-triangle" class="size-5" />
-        <span>
-          {gettext(
-            "The site's design or settings changed since the last build. Generate will rebuild every play."
-          )}
-        </span>
-      </div>
+        <div class="card-body gap-4">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p class="text-xl font-semibold">
+                {if @to_publish > 0,
+                  do: ngettext("One play to publish", "%{count} plays to publish", @to_publish),
+                  else: gettext("Everything is published.")}
+              </p>
+              <p class="text-sm text-base-content/70">
+                {live_summary(@live, @deploy_to, @deployed_at)}
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+              <a
+                :if={@built_count > 0}
+                href={~p"/admin/export/preview/index.html"}
+                target="_blank"
+                class="btn btn-sm btn-ghost"
+              >
+                {gettext("Open preview")}
+                <.icon name="hero-arrow-top-right-on-square-mini" class="size-4" />
+              </a>
+              <button type="button" phx-click="generate" class="btn btn-sm" disabled={@job != nil}>
+                {gettext("Generate preview")}
+              </button>
+              <button
+                :if={@deploy_to}
+                type="button"
+                phx-click="publish"
+                class="btn btn-sm btn-primary"
+                disabled={@job != nil}
+              >
+                {if @to_publish > 0,
+                  do: ngettext("Publish one play", "Publish %{count} plays", @to_publish),
+                  else: gettext("Publish")}
+              </button>
+            </div>
+          </div>
 
-      <div class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
-        <div class="card-body">
-          <h2 class="card-title">{gettext("Configuration")}</h2>
+          <div :if={@site_changed and @built_count > 0} id="site-changed" class="alert alert-info">
+            <.icon name="hero-information-circle" class="size-5" />
+            <span>
+              {gettext(
+                "Playcode has changed since the last build: the next build rebuilds every complete play (%{count}).",
+                count: @complete_count
+              )}
+              {gettext(
+                "On production's shared CPU that takes over two hours: after the deploy, run mix playcode.fly.reimport generate instead, at a quiet hour, which builds on a faster machine in minutes."
+              )}
+            </span>
+          </div>
 
-          <form phx-change="update_form" phx-submit="generate" class="space-y-4 mt-2">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <label class="form-control">
-                <div class="label">
-                  <span class="label-text">{gettext("Version")}</span>
-                </div>
+          <div :if={@job} id="build-progress">
+            <p class="text-sm text-base-content/70">
+              <span :if={@job == :publish}>
+                {if @step == :deploy, do: gettext("Step 2 of 2"), else: gettext("Step 1 of 2")} ·
+              </span>
+              {progress_text(assigns)}
+            </p>
+            <progress
+              :if={@step == :generate and @gen_total > 0}
+              value={@gen_current}
+              max={@gen_total}
+              class="progress progress-primary w-full"
+            />
+            <progress :if={@step != :generate or @gen_total == 0} class="progress w-full" />
+          </div>
+
+          <div
+            id="site-facts"
+            class="flex flex-wrap items-baseline gap-x-5 gap-y-1 border-t border-base-300 pt-3 text-sm text-base-content/70"
+          >
+            <details id="edition-version" phx-mounted={JS.ignore_attributes(["open"])}>
+              <summary class="cursor-pointer">
+                {gettext("Edition %{version}", version: @version)}
+                <span class="link link-primary">{gettext("change")}</span>
+              </summary>
+              <form phx-change="update_form" class="mt-2 space-y-1" onsubmit="return false">
+                <label for="edition-version-input" class="mr-2">{gettext("Version")}</label>
                 <input
+                  id="edition-version-input"
                   type="text"
                   name="version"
                   value={@version}
-                  class="input input-bordered"
-                  placeholder="1.0"
+                  class="input input-sm input-bordered w-28"
                 />
-              </label>
-            </div>
-
-            <div class="flex items-center gap-4">
-              <button
-                type="submit"
-                class="btn btn-primary"
-                disabled={@generating}
-              >
-                <span :if={@generating} class="loading loading-spinner loading-sm"></span>
-                {if @generating, do: gettext("Generating..."), else: gettext("Generate Static Site")}
-              </button>
-              <span class="text-sm text-base-content/70">
-                {gettext("%{complete} of %{total} plays marked as complete",
-                  complete: @complete_count,
-                  total: @total_count
-                )}
-              </span>
-            </div>
-            <p class="text-xs text-base-content/70">
-              {generate_hint(
-                @exported_codes,
-                @site_changed,
-                shared_hint(@assets_changed, @catalogue_changed),
-                @changed,
-                @plays
-              )}
-            </p>
-          </form>
+                <p class="text-xs">
+                  {gettext(
+                    "Printed in every page's footer, in the citation and on the About page. Changing it rebuilds every play: change it only for a new edition."
+                  )}
+                </p>
+              </form>
+            </details>
+            <span id="site-plays">
+              {ngettext("One play built", "%{count} plays built", @built_count)}
+            </span>
+            <span id="site-size">
+              <.async_result :let={size} assign={@site_size}>
+                <:loading>…</:loading>
+                {format_size(size)}
+              </.async_result>
+            </span>
+            <span>{gettext("Folder")} <code>{StaticSite.output_dir()}/</code></span>
+            <span id="deploy-hint"><.deploy_hint target={@deploy_to} /></span>
+          </div>
         </div>
-      </div>
+      </section>
 
-      <div class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
-        <div class="card-body">
+      <section
+        class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
+        aria-label={gettext("Plays")}
+      >
+        <div class="card-body gap-4">
           <h2 class="card-title">{gettext("Plays")}</h2>
 
-          <div :if={@plays == []} class="text-sm text-base-content/70 text-center py-4">
-            {gettext("No plays marked as complete.")}
-          </div>
-
-          <div :if={@plays != []} class="mb-3 flex items-center justify-between gap-3">
-            <p class="text-sm text-base-content/70">
-              {gettext("%{exported} of %{total} complete plays exported",
-                exported: Enum.count(@plays, &MapSet.member?(@exported_codes, &1.code)),
-                total: length(@plays)
-              )}
-            </p>
-            <button
-              :if={missing(@plays, @exported_codes, @pending) != []}
-              type="button"
-              phx-click="add_all"
-              class="btn btn-sm btn-outline"
-            >
-              {gettext("Add every complete play")} ({length(
-                missing(@plays, @exported_codes, @pending)
-              )})
-            </button>
-          </div>
-
-          <div class="divide-y divide-base-200">
-            <div :for={play <- @plays} id={"play-#{play.id}"} class="flex items-center gap-3 py-2">
-              <.status_dot status={
-                play_status(play, @exported_codes, @changed, @pending, @site_changed)
-              } />
-              <%!-- Only the name labels the switch: a label around Refresh would take it as its control. --%>
-              <label for={"switch-#{play.id}"} class="min-w-0 flex-1 cursor-pointer">
-                <span class="font-mono text-xs text-base-content/70">{play.code}</span>
-                <span class="font-medium ml-2 truncate">{play.title}</span>
-              </label>
-              <button
-                :if={
-                  play_status(play, @exported_codes, @changed, @pending, @site_changed) ==
-                    :changed
-                }
-                id={"refresh-#{play.id}"}
-                type="button"
-                phx-click="refresh_play"
-                phx-value-id={play.id}
-                class="btn btn-ghost btn-xs btn-square"
-                title={gettext("Publish this play's changes")}
-                aria-label={gettext("Refresh %{title}", title: play.title)}
-              >
-                <.icon name="hero-arrow-path-mini" class="size-4" />
-              </button>
-              <span
-                :if={Map.has_key?(@pending, play.id)}
-                class="loading loading-spinner loading-xs text-base-content/70"
-              />
-              <%!-- On means in the site; flipping it adds or removes the play at once. --%>
-              <.site_switch
-                play={play}
-                checked={
-                  (MapSet.member?(@exported_codes, play.code) and @pending[play.id] != :remove) or
-                    @pending[play.id] == :add
-                }
-                pending={Map.has_key?(@pending, play.id)}
-              />
-            </div>
-            <%!-- In the site but a draft or archived now: it stays until switched off or Generate. --%>
-            <div
-              :for={play <- leaving(@exported_codes, @plays, @others)}
-              id={"play-#{play.id || play.code}"}
-              class="flex items-center gap-3 py-2"
-            >
-              <.status_dot status={:leaving} />
-              <label
-                for={"switch-#{play.id || play.code}"}
-                class="min-w-0 flex-1 cursor-pointer text-base-content/70"
-              >
-                <span class="font-mono text-xs">{play.code}</span>
-                <span :if={play.title} class="ml-2 truncate">{play.title}</span>
-              </label>
-              <%!-- A removal is pending under the play's code: it is not among @plays. --%>
-              <span
-                :if={Map.has_key?(@pending, play.code)}
-                class="loading loading-spinner loading-xs text-base-content/70"
-              />
-              <.site_switch
-                play={play}
-                checked={@pending[play.code] != :remove}
-                pending={Map.has_key?(@pending, play.code)}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div
-        :if={@generating}
-        class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
-      >
-        <div class="card-body">
-          <div class="flex items-center gap-3">
-            <span class="loading loading-spinner loading-md text-primary"></span>
-            <span class="font-medium">
-              {if @gen_total > 0,
-                do:
-                  gettext("Generating play %{current} of %{total}: %{detail}",
-                    current: @gen_current,
-                    total: @gen_total,
-                    detail: @gen_detail
-                  ),
-                else: @gen_detail}
-            </span>
-          </div>
-          <progress
-            :if={@gen_total > 0}
-            value={@gen_current}
-            max={@gen_total}
-            class="progress progress-primary w-full mt-2"
+          <.play_group id="group-new" plays={@new} label={gettext("New")} badge="badge-info" />
+          <.play_group
+            id="group-changed"
+            plays={@changed}
+            label={gettext("Changed")}
+            badge="badge-warning"
           />
-        </div>
-      </div>
+          <.play_group
+            id="group-leaving"
+            plays={@leaving}
+            label={gettext("Leaving")}
+            badge="badge-neutral"
+          />
 
-      <div
-        :if={(@gen_result || MapSet.size(@exported_codes) > 0) && !@generating}
-        class="card mb-6 border border-base-300 bg-base-100 shadow-sm"
-      >
-        <div class="card-body">
-          <h2 :if={@gen_result} class="card-title text-success">
-            {gettext("Generation Complete")}
-          </h2>
-          <h2 :if={!@gen_result} class="card-title">{gettext("Built site")}</h2>
-          <%!-- The site on disk, so a switch changes these as much as Generate does. --%>
-          <div class="stats stats-horizontal shadow mt-2">
-            <div class="stat">
-              <div class="stat-title">{gettext("Plays")}</div>
-              <div id="site-plays" class="stat-value text-lg">{MapSet.size(@exported_codes)}</div>
+          <details id="group-live" phx-mounted={JS.ignore_attributes(["open"])}>
+            <summary class="cursor-pointer py-1">
+              <span class="badge badge-sm badge-success">
+                {gettext("Up to date (%{count})", count: length(@up_to_date))}
+              </span>
+            </summary>
+            <form phx-change="search_live" class="my-2" onsubmit="return false">
+              <input
+                type="search"
+                name="search"
+                value={@live_search}
+                placeholder={gettext("Search by title or code")}
+                aria-label={gettext("Search the plays up to date")}
+                class="input input-sm input-bordered w-full"
+                phx-debounce="200"
+              />
+            </form>
+            <ul class="divide-y divide-base-200">
+              <.play_row :for={play <- @live_rows} play={play} />
+            </ul>
+            <div :if={@live_pages > 1} class="mt-2 flex items-center justify-between text-sm">
+              <button
+                type="button"
+                class="btn btn-xs"
+                phx-click="live_page"
+                phx-value-page={@live_page - 1}
+                disabled={@live_page == 1}
+              >
+                {gettext("Previous")}
+              </button>
+              <span>{@live_page} / {@live_pages}</span>
+              <button
+                type="button"
+                class="btn btn-xs"
+                phx-click="live_page"
+                phx-value-page={@live_page + 1}
+                disabled={@live_page == @live_pages}
+              >
+                {gettext("Next")}
+              </button>
             </div>
-            <div class="stat">
-              <div class="stat-title">{gettext("Total Size")}</div>
-              <div id="site-size" class="stat-value text-lg">
-                <.async_result :let={size} assign={@site_size}>
-                  <:loading>…</:loading>
-                  {format_size(size)}
-                </.async_result>
-              </div>
-            </div>
-            <div class="stat">
-              <div class="stat-title">{gettext("Output")}</div>
-              <div class="stat-value text-lg font-mono text-sm">{StaticSite.output_dir()}/</div>
-            </div>
-          </div>
-
-          <div class="flex gap-3 mt-4">
-            <a
-              href={~p"/admin/export/preview/index.html"}
-              target="_blank"
-              class="btn btn-primary btn-outline"
-            >
-              <.icon name="hero-eye-mini" class="size-4" />
-              {gettext("Open preview")}
-            </a>
-            <span :if={@indexing} class="badge badge-ghost gap-1">
-              <span class="loading loading-spinner loading-xs"></span>
-              {gettext("Updating search…")}
-            </span>
-            <button
-              :if={@deploy_to}
-              phx-click="deploy"
-              class="btn btn-primary btn-outline"
-              disabled={@deploying}
-            >
-              <span :if={@deploying} class="loading loading-spinner loading-sm"></span>
-              {if @deploying, do: gettext("Deploying..."), else: gettext("Deploy")}
-            </button>
-          </div>
-          <p id="deploy-hint" class="text-xs text-base-content/70 mt-2">
-            <.deploy_hint target={@deploy_to} />
-          </p>
+          </details>
         </div>
-      </div>
+      </section>
 
-      <div :if={@deploying} class="card mb-6 border border-base-300 bg-base-100 shadow-sm">
-        <div class="card-body">
-          <div class="flex items-center gap-3">
-            <span class="loading loading-spinner loading-md text-secondary"></span>
-            <span class="font-medium">{@deploy_status}</span>
-          </div>
-        </div>
-      </div>
-
-      <div
-        :if={@deploy_url && !@deploying}
-        class="card mb-6 border border-success/30 bg-success/5 shadow-sm"
-      >
-        <div class="card-body">
-          <h2 class="card-title text-success">{gettext("Deployed!")}</h2>
-          <p class="text-sm">
-            {gettext("Your static site is live at:")}
-            <a
-              href={@deploy_url}
-              target="_blank"
-              class="link link-primary font-mono"
-            >
-              {@deploy_url}
-            </a>
-          </p>
-          <p :if={!@deploy_to[:host]} class="text-xs text-base-content/70 mt-1">
-            {gettext("Note: GitHub Pages may take a few minutes to update.")}
-          </p>
-        </div>
-      </div>
-
-      <div class="card border border-base-300 bg-base-200/50">
-        <div class="card-body text-sm text-base-content/70">
-          <h3 class="font-semibold text-base-content">{gettext("About the Static Site")}</h3>
-          <ul class="list-disc ml-4 space-y-1 mt-2">
-            <li>
-              {gettext("Follows the Endings Project principles for long-term digital preservation.")}
-            </li>
-            <li>{gettext("Pure HTML/CSS/JS — no server or database required to view.")}</li>
-            <li>{gettext("TEI-XML source files included alongside each play.")}</li>
-            <li>{gettext("Search needs JavaScript; the catalogue list reads without it.")}</li>
-            <li>{gettext("Can be deployed to GitHub Pages, any web server, or opened locally.")}</li>
-          </ul>
-        </div>
-      </div>
+      <details class="text-sm text-base-content/70" phx-mounted={JS.ignore_attributes(["open"])}>
+        <summary class="cursor-pointer">{gettext("About the Static Site")}</summary>
+        <p class="mt-2 max-w-prose">
+          {gettext("Follows the Endings Project principles for long-term digital preservation.")}
+          {gettext("Pure HTML/CSS/JS — no server or database required to view.")}
+          {gettext("TEI-XML source files included alongside each play.")}
+          {gettext("Search needs JavaScript; the catalogue list reads without it.")}
+          {gettext("Can be deployed to GitHub Pages, any web server, or opened locally.")}
+        </p>
+      </details>
     </.page>
     """
   end
+
+  attr :id, :string, required: true
+  attr :plays, :list, required: true
+  attr :label, :string, required: true
+  attr :badge, :string, required: true
+
+  defp play_group(assigns) do
+    ~H"""
+    <div :if={@plays != []} id={@id}>
+      <h3 class="flex items-center gap-2 border-b border-base-300 pb-1">
+        <span class={["badge badge-sm", @badge]}>{@label}</span>
+        <span class="text-sm text-base-content/70">{length(@plays)}</span>
+      </h3>
+      <ul class="divide-y divide-base-200">
+        <.play_row :for={play <- @plays} play={play} />
+      </ul>
+    </div>
+    """
+  end
+
+  attr :play, :map, required: true
+
+  defp play_row(assigns) do
+    ~H"""
+    <li id={"play-#{@play.code}"} class="flex items-center gap-3 py-1.5">
+      <span class="font-mono text-xs text-base-content/70">{@play.code}</span>
+      <span class="min-w-0 flex-1 truncate">{@play.title}</span>
+      <span class="text-xs text-base-content/70">{@play.reason}</span>
+    </li>
+    """
+  end
+
+  # The plays by where they stand on the live site, read again after every job and
+  # every change to a play. A purged play still live has no row left, only its code.
+  defp refresh(socket) do
+    dir = StaticSite.output_dir()
+    live = SiteStatus.live(dir)
+    plays = Catalogue.list_plays(sort: :title_sort, include_deleted: true)
+    by_state = Enum.group_by(plays, &SiteStatus.state(&1, live))
+    known = MapSet.new(plays, & &1.code)
+
+    purged =
+      for code <- Enum.sort(Map.keys(live)),
+          not MapSet.member?(known, code),
+          do: %{code: code, title: nil, reason: gettext("deleted")}
+
+    socket
+    |> assign(
+      live: live,
+      deployed_at: StaticSite.deployed_at(dir),
+      complete_count: Enum.count(plays, &(&1.is_complete and is_nil(&1.deleted_at))),
+      new: rows(by_state[:waiting], fn _ -> nil end),
+      changed:
+        rows(by_state[:changed], &gettext("edited %{date}", date: date(&1.content_changed_at))),
+      leaving: rows(by_state[:leaving], &leaving_reason/1) ++ purged,
+      up_to_date: rows(by_state[:live], fn _ -> nil end)
+    )
+    |> on_disk()
+    |> track_site()
+  end
+
+  defp rows(nil, _reason), do: []
+
+  defp rows(plays, reason),
+    do: for(play <- plays, do: %{code: play.code, title: play.title, reason: reason.(play)})
+
+  defp leaving_reason(%{deleted_at: nil}), do: gettext("back to draft")
+  defp leaving_reason(_archived), do: gettext("archived")
+
+  defp date(nil), do: ""
+  defp date(datetime), do: Calendar.strftime(datetime, "%Y-%m-%d")
+
+  # The size walks every file of the site, seconds on production's volume: counted apart,
+  # once connected, so the page does not wait for it.
+  defp on_disk(socket) do
+    dir = StaticSite.output_dir()
+
+    socket
+    |> assign(:built_count, length(StaticSite.list_exported_codes(dir)))
+    |> assign_async(:site_size, fn -> {:ok, %{site_size: StaticSite.dir_size(dir)}} end)
+  end
+
+  defp track_site(socket),
+    do:
+      assign(socket,
+        site_changed:
+          StaticSite.site_changed?(StaticSite.output_dir(), version: socket.assigns.version)
+      )
+
+  defp assign_live_page(assigns) do
+    search = String.downcase(String.trim(assigns.live_search))
+
+    matching =
+      Enum.filter(assigns.up_to_date, fn row ->
+        search == "" or String.contains?(String.downcase("#{row.code} #{row.title}"), search)
+      end)
+
+    pages = max(1, ceil(length(matching) / @per_page))
+    page = assigns.live_page |> max(1) |> min(pages)
+
+    assign(assigns,
+      live_pages: pages,
+      live_page: page,
+      live_rows: matching |> Enum.drop((page - 1) * @per_page) |> Enum.take(@per_page)
+    )
+  end
+
+  defp live_summary(live, nil, _deployed_at),
+    do: ngettext("One play in the built site", "%{count} plays in the built site", map_size(live))
+
+  defp live_summary(live, target, deployed_at) do
+    on_site =
+      ngettext("One play on %{host}", "%{count} plays on %{host}", map_size(live),
+        host: target.host || target.repo
+      )
+
+    deploy =
+      if deployed_at,
+        do:
+          gettext("last deploy %{date}", date: Calendar.strftime(deployed_at, "%Y-%m-%d %H:%M")),
+        else: gettext("never deployed")
+
+    on_site <> " · " <> deploy
+  end
+
+  defp progress_text(%{step: :deploy, deploy_status: status}), do: status
+
+  defp progress_text(%{gen_total: total} = assigns) when total > 0 do
+    gettext("Generating play %{current} of %{total}: %{detail}",
+      current: assigns.gen_current,
+      total: total,
+      detail: assigns.gen_detail
+    )
+  end
+
+  defp progress_text(assigns), do: assigns.gen_detail
 
   defp queued_flash(:started, socket), do: {:noreply, socket}
 
@@ -437,89 +443,20 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
      put_flash(socket, :info, gettext("Queued: it starts when the current build finishes."))}
   end
 
-  # What the builder runs and what waits behind it, as a page opened now sees it.
-  # Runs after subscribing, so the disk is read once nothing can end unheard.
-  defp follow(socket, %{job: job, queue: queue}) do
-    queue
-    |> Enum.reduce(started(socket, job), &queued(&2, &1))
-    |> on_disk()
-    |> track_changes()
-  end
-
-  # A change on its way: its switch shows where the play is going until it lands.
-  defp queued(socket, {:add, id}), do: pending(socket, id, :add)
-  defp queued(socket, {:remove, code}), do: pending(socket, play_id(socket, code), :remove)
-  defp queued(socket, _generate_or_deploy), do: socket
-
-  defp pending(socket, id, change) do
-    update(socket, :pending, &Map.put(&1, id, change))
-  end
-
   defp started(socket, nil), do: socket
 
-  defp started(socket, :generate) do
-    socket
-    |> assign(:generating, true)
-    |> assign(:gen_current, 0)
-    |> assign(:gen_total, 0)
-    |> assign(:gen_detail, gettext("Starting..."))
-    |> assign(:gen_result, nil)
-    |> assign(:deploy_status, nil)
-    |> assign(:deploy_url, nil)
+  defp started(socket, job) do
+    assign(socket,
+      job: job,
+      step: if(job == :deploy, do: :deploy, else: :generate),
+      gen_current: 0,
+      gen_total: 0,
+      gen_detail: gettext("Starting..."),
+      deploy_status: gettext("Starting deploy...")
+    )
   end
 
-  defp started(socket, {:batch, changes}),
-    do: Enum.reduce(changes, assign(socket, :indexing, false), &queued(&2, &1))
-
-  defp started(socket, :deploy) do
-    socket
-    |> assign(:deploying, true)
-    |> assign(:deploy_status, gettext("Starting deploy..."))
-  end
-
-  # A batch's pages are published: its switches settle on what is on disk.
-  # Only the marks the batch fulfilled: a play switched the other way since stays pending.
-  # The plays it wrote are current, though build.json says so only once it is :done.
-  defp settle(socket, changes) do
-    landed = Map.new(changes, &{change_id(socket, &1), direction(&1)})
-    written = for play <- socket.assigns.plays, landed[play.id] == :add, do: play.code
-
-    socket
-    |> update(:pending, &Map.reject(&1, fn {id, change} -> landed[id] == change end))
-    |> update(:changed, &MapSet.difference(&1, MapSet.new(written)))
-    |> on_disk()
-  end
-
-  defp direction({:add, _}), do: :add
-  defp direction({:remove, _}), do: :remove
-
-  # A job ended.
-  defp finished(socket, {:batch, changes}),
-    do: socket |> settle(changes) |> idle() |> track_changes()
-
-  defp finished(socket, _job),
-    do: socket |> on_disk() |> idle() |> track_changes()
-
-  defp idle(socket),
-    do: assign(socket, generating: false, deploying: false, indexing: false)
-
-  defp change_id(_socket, {:add, id}), do: id
-  defp change_id(socket, {:remove, code}), do: play_id(socket, code)
-
-  # The switches name plays by id; the builder names a removal by its code.
-  defp play_id(socket, code),
-    do: Enum.find_value(socket.assigns.plays, code, &(&1.code == code && &1.id))
-
-  # What the site on disk holds: the plays the switches show, and its size.
-  # The size walks every file of the site, seconds on production's volume: counted apart,
-  # once connected, so the page does not wait for it.
-  defp on_disk(socket) do
-    dir = StaticSite.output_dir()
-
-    socket
-    |> assign(:exported_codes, MapSet.new(StaticSite.list_exported_codes(dir)))
-    |> assign_async(:site_size, fn -> {:ok, %{site_size: StaticSite.dir_size(dir)}} end)
-  end
+  defp finished(socket), do: socket |> assign(job: nil, step: nil) |> refresh()
 
   attr :target, :map, default: nil
 
@@ -565,187 +502,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   # The form values every build takes.
   defp form_opts(socket), do: [version: socket.assigns.version]
 
-  # Which published plays changed since they were written, and whether the site as a
-  # whole did, for the version in the form.
-  defp track_changes(socket) do
-    dir = StaticSite.output_dir()
-
-    assign(socket,
-      changed: MapSet.new(StaticSite.changed_plays(dir)),
-      site_changed: StaticSite.site_changed?(dir, version: socket.assigns.version),
-      assets_changed: StaticSite.assets_changed?(dir),
-      catalogue_changed: StaticSite.catalogue_changed?(dir)
-    )
-  end
-
-  # A play in the site is :changed while it differs from its pages, :current otherwise.
-  # Nothing while a change of it is on its way (the spinner shows), and nothing for any
-  # play while the whole site changed: the banner covers them all, and none is current.
-  defp play_status(play, exported, changed, pending, site_changed?) do
-    cond do
-      site_changed? or Map.has_key?(pending, play.id) -> nil
-      MapSet.member?(changed, play.code) -> :changed
-      MapSet.member?(exported, play.code) -> :current
-      true -> nil
-    end
-  end
-
-  attr :status, :atom, required: true
-
-  # A fixed-width slot, so every row's name lines up, dot or not.
-  defp status_dot(assigns) do
-    ~H"""
-    <span class="size-2 shrink-0">
-      <span
-        :if={@status == :changed}
-        class="block size-2 rounded-full bg-warning"
-        title={gettext("Unpublished changes")}
-      >
-        <span class="sr-only">{gettext("Unpublished changes")}</span>
-      </span>
-      <span
-        :if={@status == :current}
-        class="block size-2 rounded-full bg-success"
-        title={gettext("Published and up to date")}
-      >
-        <span class="sr-only">{gettext("Published and up to date")}</span>
-      </span>
-      <span
-        :if={@status == :leaving}
-        class="block size-2 rounded-full border border-base-content/40"
-        title={gettext("No longer published (a draft or archived); Generate takes it out.")}
-      >
-        <span class="sr-only">
-          {gettext("No longer published (a draft or archived); Generate takes it out.")}
-        </span>
-      </span>
-    </span>
-    """
-  end
-
-  attr :play, :map, required: true
-  attr :checked, :boolean, required: true
-  attr :pending, :boolean, required: true
-
-  # A play that is gone from the database keeps its row by code until switched off.
-  defp site_switch(assigns) do
-    ~H"""
-    <input
-      id={"switch-#{@play.id || @play.code}"}
-      type="checkbox"
-      role="switch"
-      class="toggle toggle-success toggle-sm"
-      aria-label={gettext("In the site: %{title}", title: @play.title || @play.code)}
-      checked={@checked}
-      disabled={@pending}
-      phx-click="toggle_play"
-      phx-value-id={@play.id}
-      phx-value-code={@play.code}
-    />
-    """
-  end
-
-  # Every play, split: the published ones (complete, not archived) are the list; the
-  # others are kept by code, for the ones still in the site.
-  defp load_plays(socket) do
-    all = Playcode.Catalogue.list_plays(sort: :title_sort, include_deleted: true)
-    {plays, others} = Enum.split_with(all, &(&1.is_complete and is_nil(&1.deleted_at)))
-
-    assign(socket,
-      plays: plays,
-      others: Map.new(others, &{&1.code, &1}),
-      complete_count: length(plays),
-      total_count: Enum.count(all, &is_nil(&1.deleted_at))
-    )
-  end
-
-  # The complete plays not in the site and not already on their way to it.
-  defp missing(plays, exported, pending),
-    do: Enum.reject(plays, &(MapSet.member?(exported, &1.code) or Map.has_key?(pending, &1.id)))
-
-  # The plays in the site that are not published any more, by code; a purged one has
-  # no row left, only its code.
-  defp leaving(exported, plays, others) do
-    published = MapSet.new(plays, & &1.code)
-
-    for code <- Enum.sort(exported), not MapSet.member?(published, code) do
-      Map.get(others, code, %{id: nil, code: code, title: nil})
-    end
-  end
-
-  # What Generate will do, under its button. A play in the site but not in `plays`, the
-  # complete ones, is archived or no longer complete, and Generate takes it out.
-  defp generate_hint(exported, site_changed?, shared, changed, plays) do
-    removed = MapSet.size(MapSet.difference(exported, MapSet.new(plays, & &1.code)))
-
-    cond do
-      MapSet.size(exported) == 0 ->
-        gettext("Builds every complete play.")
-
-      # On production's shared CPU a full rebuild took over two hours (2026-10-17); the
-      # command scales up, builds in minutes and scales back.
-      site_changed? ->
-        Enum.join(
-          [
-            gettext("Rebuilds the %{count} plays in the site.", count: MapSet.size(exported)),
-            gettext(
-              "On production's shared CPU that takes over two hours: after the deploy, run mix playcode.fly.reimport generate instead, at a quiet hour, which builds on a faster machine in minutes."
-            )
-          ],
-          " "
-        )
-
-      MapSet.size(changed) == 0 and removed == 0 and shared == [] ->
-        gettext("Every play in the site is up to date.")
-
-      true ->
-        Enum.join(
-          shared ++
-            changed_hint(MapSet.size(changed)) ++ removed_hint(removed),
-          " "
-        )
-    end
-  end
-
-  # What Generate writes again without rebuilding a play.
-  defp shared_hint(assets?, catalogue?) do
-    Enum.filter(
-      [
-        catalogue? && gettext("The catalogue has changed. Generate rewrites it."),
-        assets? && gettext("The site's styles and scripts have changed. Generate updates them.")
-      ],
-      & &1
-    )
-  end
-
-  defp changed_hint(0), do: []
-
-  defp changed_hint(count) do
-    [
-      ngettext(
-        "One published play has changed. Generate refreshes it.",
-        "%{count} published plays have changed. Generate refreshes them.",
-        count
-      )
-    ]
-  end
-
-  defp removed_hint(0), do: []
-
-  defp removed_hint(count) do
-    [
-      ngettext(
-        "One play in the site is no longer published. Generate takes it out.",
-        "%{count} plays in the site are no longer published. Generate takes them out.",
-        count
-      )
-    ]
-  end
-
-  defp done(socket, :generate, {:ok, %{plays: plays, size: size} = result}) do
-    socket
-    |> assign(:gen_result, result)
-    |> put_flash(
+  defp done(socket, :generate, {:ok, %{plays: plays, size: size}}) do
+    put_flash(
+      socket,
       :info,
       gettext("Static site generated: %{count} plays (%{size})",
         count: plays,
@@ -754,81 +513,31 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     )
   end
 
-  defp done(socket, :generate, {:ok, %{changed: 0, assets: assets?, catalogue: catalogue?}}) do
-    done =
-      Enum.filter(
-        [
-          catalogue? && gettext("The catalogue is updated."),
-          assets? && gettext("The site's styles and scripts are updated.")
-        ],
-        & &1
-      )
-
-    put_flash(socket, :info, Enum.join(done, " "))
-  end
-
   defp done(socket, :generate, {:ok, %{changed: 0}}),
     do: put_flash(socket, :info, gettext("Nothing has changed since the last build."))
 
-  defp done(socket, :generate, {:ok, %{changed: count}}) do
-    put_flash(socket, :info, ngettext("One play refreshed.", "%{count} plays refreshed.", count))
-  end
-
-  defp done(socket, {:batch, [{:add, _}]}, {:ok, %{skipped: []}}),
-    do: put_flash(socket, :info, gettext("Play exported to static site."))
-
-  defp done(socket, {:batch, [{:remove, code}]}, {:ok, %{skipped: []}}),
-    do: put_flash(socket, :info, gettext("Removed %{code} from static site.", code: code))
-
-  defp done(socket, {:batch, changes}, {:ok, %{skipped: []}}) do
-    put_flash(
-      socket,
-      :info,
-      gettext("%{count} changes applied to the static site.", count: length(changes))
-    )
-  end
-
-  defp done(socket, {:batch, _changes}, {:ok, %{skipped: skipped}}) do
-    put_flash(
-      socket,
-      :error,
-      ngettext(
-        "A play that no longer exists was skipped.",
-        "%{count} plays that no longer exist were skipped.",
-        length(skipped)
+  defp done(socket, :generate, {:ok, %{changed: count}}),
+    do:
+      put_flash(
+        socket,
+        :info,
+        ngettext("One play refreshed.", "%{count} plays refreshed.", count)
       )
-    )
-  end
 
-  defp done(socket, :deploy, {:ok, url}) do
-    socket
-    |> assign(:deploy_url, url)
-    |> put_flash(:info, gettext("Deployed to GitHub Pages!"))
-  end
+  defp done(socket, job, {:ok, url}) when job in [:publish, :deploy],
+    do: put_flash(socket, :info, gettext("Published at %{url}", url: url))
 
-  defp done(socket, :generate, {:error, reason}),
-    do: put_flash(socket, :error, failed(:generate, inspect(reason)))
+  defp done(socket, job, {:error, reason}),
+    do: put_flash(socket, :error, failed(job, error_text(reason)))
 
-  defp done(socket, :deploy, {:error, reason}),
-    do: put_flash(socket, :error, failed(:deploy, reason))
+  defp done(socket, _job, _result), do: socket
 
-  defp failed(:generate, reason),
-    do: gettext("Generation failed: %{reason}", reason: reason)
+  defp error_text(reason) when is_binary(reason), do: reason
+  defp error_text(reason), do: inspect(reason)
 
+  defp failed(:generate, reason), do: gettext("Generation failed: %{reason}", reason: reason)
   defp failed(:deploy, reason), do: gettext("Deploy failed: %{reason}", reason: reason)
-
-  defp failed({:batch, [{:add, _}]}, reason),
-    do: gettext("Could not add the play: %{reason}", reason: reason)
-
-  defp failed({:batch, [{:remove, code}]}, reason),
-    do: gettext("Could not remove %{code}: %{reason}", code: code, reason: reason)
-
-  defp failed({:batch, changes}, reason) do
-    gettext("Could not apply %{count} changes to the site: %{reason}",
-      count: length(changes),
-      reason: reason
-    )
-  end
+  defp failed(_publish, reason), do: gettext("Publishing failed: %{reason}", reason: reason)
 
   # A crashed task exits with its exception and stacktrace; the message is what to show.
   defp crash_reason({exception, _stacktrace}) when is_exception(exception),
