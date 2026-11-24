@@ -2,25 +2,19 @@ defmodule Playcode.Export.SiteBuilder do
   @moduledoc """
   The one process that writes and ships the admin's static site, `StaticSite.output_dir/0`.
 
-  Adding or removing a play reads the search index on disk and writes it back, and a
-  deploy pushes the whole directory, so the builder runs one job at a time. A request
-  that arrives while a job runs is queued, not refused: each starter returns `:started`
-  or `:queued`. A request already waiting is not queued twice: it keeps its place and
-  takes the options of the latest ask. When a job ends, the adds and removes at the front
-  of the queue run as one batch, which publishes its pages first and rewrites the search
-  index once (`StaticSite.apply_changes/2`); a generate, a deploy or a publish runs on its own, in
-  its turn. Generate brings the site in line with the complete plays when it runs: every
-  one rebuilt when the site's code or settings changed since it was built, otherwise only
-  the ones it lacks or that changed written, and the ones no longer complete taken out.
+  A build rewrites the search index on disk and a deploy pushes the whole directory, so
+  the builder runs one job at a time. A request that arrives while a job runs is queued,
+  not refused: each starter returns `:started` or `:queued`. A request already waiting is
+  not queued twice: it keeps its place and takes the options of the latest ask.
+  Generate brings the site in line with the complete plays when it runs: every one
+  rebuilt when the site's code or settings changed since it was built, otherwise only the
+  ones it lacks or that changed written, and the ones no longer complete taken out.
 
-  Jobs are `:generate`, `{:batch, [{:add, play_id} | {:remove, code}]}`, `:deploy` and
-  `:publish` (a generate, then a deploy if it succeeded).
-  It broadcasts on `"static_site"`, so every admin page shows the same state:
-  `{:site_builder, :queued, request}` (`:generate`, `{:add, id}`,
-  `{:remove, code}` or `:deploy`), `{:site_builder, :started, job}`,
-  `{:site_builder, :progress, job, info}`, `{:site_builder, :published, job}` (a batch's
-  pages are live, its search is next), `{:site_builder, :done, job, result}` and
-  `{:site_builder, :failed, job, reason}`.
+  Jobs are `:generate`, `:deploy` and `:publish` (a generate, then a deploy if it
+  succeeded). It broadcasts on `"static_site"`, so every admin page shows the same state:
+  `{:site_builder, :queued, job}`, `{:site_builder, :started, job}`,
+  `{:site_builder, :progress, :generate | :deploy, info}`,
+  `{:site_builder, :done, job, result}` and `{:site_builder, :failed, job, reason}`.
   """
 
   # ponytail: one builder for the app's one output_dir/0. Should a second site ever
@@ -49,8 +43,6 @@ defmodule Playcode.Export.SiteBuilder do
   """
   def generate(opts), do: request(:generate, opts)
 
-  def add(play_id, opts), do: request({:add, play_id}, opts)
-  def remove(code, opts), do: request({:remove, code}, opts)
   def deploy(repo), do: request(:deploy, repo)
 
   @doc """
@@ -109,31 +101,15 @@ defmodule Playcode.Export.SiteBuilder do
   # Crashing on a stray message would restart the builder idle while its job ran on.
   def handle_info(_message, state), do: {:noreply, state}
 
-  # Starts what is at the front of the queue: every add and remove there as one batch,
-  # or a generate or a deploy on its own.
   defp run_next(%{queue: []} = state), do: %{state | job: nil, ref: nil}
 
   defp run_next(%{queue: queue} = state) do
-    {job, args, rest} = take(queue)
+    [{job, args} | rest] = queue
     # Announced before the task starts, so no page hears its progress before it.
     broadcast({:site_builder, :started, job})
     task = Task.Supervisor.async_nolink(@tasks, fn -> run(job, args) end)
     %{state | job: job, ref: task.ref, queue: rest}
   end
-
-  defp take([{request, args} | rest]) when request in [:generate, :deploy, :publish],
-    do: {request, args, rest}
-
-  defp take(queue) do
-    {changes, rest} = Enum.split_while(queue, fn {request, _} -> change?(request) end)
-    # A batch takes the form values of its latest request.
-    {_, args} = List.last(changes)
-    {{:batch, Enum.map(changes, &elem(&1, 0))}, args, rest}
-  end
-
-  defp change?({:add, _}), do: true
-  defp change?({:remove, _}), do: true
-  defp change?(_request), do: false
 
   # An empty site is built whole, whatever build.json says: one build is faster than one
   # batch adding every play.
@@ -143,11 +119,6 @@ defmodule Playcode.Export.SiteBuilder do
     if StaticSite.site_changed?(dir, opts) or StaticSite.list_exported_codes(dir) == [],
       do: build_all(opts),
       else: refresh(opts)
-  end
-
-  defp run({:batch, changes} = job, opts) do
-    published = fn -> broadcast({:site_builder, :published, job}) end
-    StaticSite.apply_changes(changes, opts |> in_site() |> Keyword.put(:on_published, published))
   end
 
   defp run(:publish, {opts, repo}) do

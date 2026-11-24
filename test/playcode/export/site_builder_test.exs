@@ -50,123 +50,38 @@ defmodule Playcode.Export.SiteBuilderTest do
   # files, milliseconds, while the next call follows within microseconds, and the
   # builder marks itself busy before it replies to the first.
 
-  test "a request during a build waits its turn, then lands" do
-    a = play_fixture()
-    b = play_fixture()
-
-    assert :started = SiteBuilder.add(a.id, [])
-    assert :queued = SiteBuilder.add(b.id, [])
-
-    events = events_until({:done, {:batch, [{:add, b.id}]}})
-    assert {:queued, {:add, b.id}} in events
-    assert {:done, {:batch, [{:add, a.id}]}} in events
-    assert in_site() == Enum.sort([a.code, b.code])
-    assert Enum.sort(in_search()) == Enum.sort([a.code, b.code])
-  end
-
-  test "the adds and removes that queue during a build run as one batch" do
-    [a, b, c] = for _ <- 1..3, do: play_fixture()
-
-    assert :started = SiteBuilder.add(a.id, [])
-    assert :queued = SiteBuilder.add(b.id, [])
-    assert :queued = SiteBuilder.add(c.id, [])
-    assert :queued = SiteBuilder.remove(a.code, [])
-
-    batch = {:batch, [{:add, b.id}, {:add, c.id}, {:remove, a.code}]}
-    assert {:started, batch} in events_until({:done, batch})
-    assert in_site() == Enum.sort([b.code, c.code])
-    assert Enum.sort(in_search()) == Enum.sort([b.code, c.code])
-  end
-
-  test "a batch announces its pages before its search index" do
-    a = play_fixture()
-    assert :started = SiteBuilder.add(a.id, [])
-
-    batch = {:batch, [{:add, a.id}]}
-
-    assert events_until({:done, batch}) == [
-             {:started, batch},
-             {:published, batch},
-             {:done, batch}
-           ]
-  end
-
-  # The site is current, so this Generate is incremental and keeps the add because it
-  # writes only what changed; the next test covers the full build.
-  test "an incremental generate queued behind an add keeps the add" do
-    [a, b] = for _ <- 1..2, do: play_fixture(%{"is_complete" => true})
-    _draft = play_fixture()
-    {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
-
-    assert :started = SiteBuilder.add(b.id, [])
-    assert :queued = SiteBuilder.generate([])
-    events_until({:done, :generate})
-
-    assert in_site() == Enum.sort([a.code, b.code])
-  end
-
-  test "a full generate queued behind an add rebuilds the site as it stands when it runs" do
-    [a, b] = for _ <- 1..2, do: play_fixture(%{"is_complete" => true})
-    {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: [a.code])
-
-    assert :started = SiteBuilder.add(b.id, [])
-    # A new version makes the site changed, so this Generate rebuilds every play
-    # instead of refreshing.
-    assert :queued = SiteBuilder.generate(version: "2.0")
-    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
-
-    assert in_site() == Enum.sort([a.code, b.code])
-  end
-
-  test "a play that no longer exists is skipped and the rest of its batch lands" do
-    a = play_fixture()
-    b = play_fixture()
-    missing = Ecto.UUID.generate()
-
-    assert :started = SiteBuilder.add(a.id, [])
-    assert :queued = SiteBuilder.add(missing, [])
-    assert :queued = SiteBuilder.add(b.id, [])
-
-    batch = {:batch, [{:add, missing}, {:add, b.id}]}
-    assert_receive {:site_builder, :done, ^batch, {:ok, %{skipped: [^missing]}}}, 10_000
-    assert in_site() == Enum.sort([a.code, b.code])
-  end
-
   @tag :capture_log
-  test "a batch that crashes is reported, and the queue carries on" do
+  test "a job that crashes is reported, and the queue carries on" do
     # A code that is not a plain name cannot be a folder. The play form refuses one now,
     # so this is a row saved before it did.
-    bad = unchecked_code!(play_fixture(), "bad/code")
-    good = play_fixture()
+    unchecked_code!(play_fixture(%{"is_complete" => true}), "bad/code")
 
-    assert :started = SiteBuilder.add(bad.id, [])
-    assert :queued = SiteBuilder.add(good.id, [])
+    assert :started = SiteBuilder.generate([])
+    # Invalid on purpose: Deployer rejects a repository without "/" before it pushes
+    # anything, so this test can never reach GitHub.
+    assert :queued = SiteBuilder.deploy("not a repo")
 
-    events = events_until({:done, {:batch, [{:add, good.id}]}})
-    assert {:failed, {:batch, [{:add, bad.id}]}} in events
-    assert in_site() == [good.code]
+    events = events_until({:done, :deploy})
+    assert {:failed, :generate} in events
     assert SiteBuilder.status() == %{job: nil, queue: []}
   end
 
   test "status names the running job and the requests waiting behind it" do
-    a = play_fixture()
-    b = play_fixture()
+    play_fixture(%{"is_complete" => true})
 
-    assert :started = SiteBuilder.add(a.id, [])
-    assert :queued = SiteBuilder.add(b.id, [])
-    assert SiteBuilder.status() == %{job: {:batch, [{:add, a.id}]}, queue: [{:add, b.id}]}
+    assert :started = SiteBuilder.generate([])
+    assert :queued = SiteBuilder.deploy("not a repo")
+    assert SiteBuilder.status() == %{job: :generate, queue: [:deploy]}
 
-    events_until({:done, {:batch, [{:add, b.id}]}})
+    events_until({:done, :deploy})
     assert SiteBuilder.status() == %{job: nil, queue: []}
   end
 
   # A deploy pushes the whole directory, so it waits for the build before it.
   test "a deploy asked for twice during a build is queued once and runs after it" do
-    a = play_fixture()
-    assert :started = SiteBuilder.add(a.id, [])
+    play_fixture(%{"is_complete" => true})
+    assert :started = SiteBuilder.generate([])
 
-    # Invalid on purpose: Deployer rejects a repository without "/" before it pushes
-    # anything, so this test can never reach GitHub.
     assert :queued = SiteBuilder.deploy("not a repo")
     assert :queued = SiteBuilder.deploy("not a repo")
     assert SiteBuilder.status().queue == [:deploy]
@@ -174,15 +89,15 @@ defmodule Playcode.Export.SiteBuilderTest do
     events = events_until({:done, :deploy})
     assert Enum.count(events, &(&1 == {:started, :deploy})) == 1
 
-    assert Enum.find_index(events, &(&1 == {:done, {:batch, [{:add, a.id}]}})) <
+    assert Enum.find_index(events, &(&1 == {:done, :generate})) <
              Enum.find_index(events, &(&1 == {:started, :deploy}))
   end
 
   # Regression: a deploy to a corrected repository was dropped as a duplicate, so the
   # first, mistyped, one ran.
   test "a request asked for again while waiting runs with the options of the latest ask" do
-    a = play_fixture()
-    assert :started = SiteBuilder.add(a.id, [])
+    play_fixture(%{"is_complete" => true})
+    assert :started = SiteBuilder.generate([])
 
     # Both invalid on purpose (no "/"): the error names the repository that ran.
     assert :queued = SiteBuilder.deploy("old repo")
@@ -273,17 +188,20 @@ defmodule Playcode.Export.SiteBuilderTest do
     assert File.exists?(assets)
   end
 
-  # Regression: the last switch turned off left build.json's fingerprint, so Generate
-  # found the site current and left it empty, under a hint that said it builds every
-  # complete play.
-  test "Generate builds every complete play in a site emptied with the switches" do
-    [a, b] = complete_plays(2)
-    assert :started = SiteBuilder.add(a.id, [])
-    assert_receive {:site_builder, :done, {:batch, [{:add, _}]}, {:ok, _}}, 10_000
-    assert :started = SiteBuilder.remove(a.code, [])
-    assert_receive {:site_builder, :done, {:batch, [{:remove, _}]}, {:ok, _}}, 10_000
+  # Regression: a site emptied of its plays kept build.json's fingerprint, so Generate
+  # found it current and left it empty, under a hint that said it builds every complete
+  # play.
+  test "Generate builds every complete play in a site emptied of them" do
+    [a] = complete_plays(1)
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 1}}}, 10_000
+    {:ok, a} = Catalogue.update_play(a, %{"is_complete" => false})
+    assert :started = SiteBuilder.generate([])
+    assert_receive {:site_builder, :done, :generate, {:ok, %{changed: 1}}}, 10_000
     assert in_site() == []
 
+    {:ok, _} = Catalogue.update_play(a, %{"is_complete" => true})
+    b = complete_play()
     assert :started = SiteBuilder.generate([])
     assert_receive {:site_builder, :done, :generate, {:ok, %{plays: 2}}}, 10_000
     assert in_site() == Enum.sort([a.code, b.code])

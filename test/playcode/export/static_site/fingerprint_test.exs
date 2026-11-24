@@ -44,8 +44,8 @@ defmodule Playcode.Export.StaticSite.FingerprintTest do
     current = fn -> Fingerprint.current(version: "1.0", gettext_dir: dir) end
     before = current.()
 
-    translate(dir, "es", "Deploy", "Publicar", "Publicar ya")
-    translate(dir, "en", "Deploy", "", "Ship")
+    translate(dir, "es", "Generate preview", "Generar vista previa", "Generar ya")
+    translate(dir, "en", "Generate preview", "", "Preview")
     assert current.() == before
 
     translate(dir, "es", "Skip to content", "Saltar al contenido", "Ir al contenido")
