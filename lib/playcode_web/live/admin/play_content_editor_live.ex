@@ -1572,11 +1572,11 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorLive do
   defp selected_division_short_label(divisions, id) do
     Enum.find_value(divisions, nil, fn div ->
       if div.id == id do
-        String.slice(division_label(div), 0..15)
+        div |> division_label() |> InlineMarkup.plain() |> String.slice(0..15)
       else
         Enum.find_value(div.children || [], nil, fn child ->
           if child.id == id do
-            String.slice(division_label(div), 0..15)
+            div |> division_label() |> InlineMarkup.plain() |> String.slice(0..15)
           end
         end)
       end

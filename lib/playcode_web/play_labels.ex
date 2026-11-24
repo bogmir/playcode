@@ -342,6 +342,12 @@ defmodule PlaycodeWeb.PlayLabels do
   def act_label("Act"), do: gettext("Act")
   def act_label(other), do: other
 
+  @doc "A division with no heading, by its kind and number: \"Acto 2\"."
+  def division_name(%{type: type, number: nil}), do: kind_name(type)
+  def division_name(%{type: type, number: number}), do: "#{kind_name(type)} #{number}"
+
+  defp kind_name(type), do: type |> act_label() |> String.capitalize()
+
   @doc "The plural name of an act division type."
   def act_label_plural("acto"), do: gettext("Actos")
   def act_label_plural("jornada"), do: gettext("Jornadas")

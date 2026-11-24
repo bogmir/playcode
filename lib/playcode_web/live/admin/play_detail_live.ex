@@ -197,11 +197,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
     """
   end
 
-  defp unnamed_division(%{type: type, number: nil}), do: PlayLabels.act_label(type)
-
-  defp unnamed_division(%{type: type, number: number}),
-    do: "#{PlayLabels.act_label(type)} #{number}"
-
   defp act_verses(nil, _division), do: nil
 
   defp act_verses(statistic, division),
@@ -414,7 +409,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
             </:action>
             <ol class="list-decimal pl-5">
               <li :for={division <- @divisions} class="py-0.5">
-                <PlayText.inline_content text={division.title || unnamed_division(division)} />
+                <PlayText.inline_content text={division.title || PlayLabels.division_name(division)} />
                 <span
                   :if={division.type == "elenco" && @play_counts}
                   class="text-sm text-base-content/70"

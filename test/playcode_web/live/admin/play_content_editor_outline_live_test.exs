@@ -485,6 +485,46 @@ defmodule PlaycodeWeb.Admin.PlayContentEditorOutlineLiveTest do
 
   # A new one took the count as its position, which falls among the file's: positions are
   # shared with the cast list division, and a div that gives nothing still takes one.
+  test "the structure prints a heading's italics, and names an act with no heading",
+       %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="act" n="1"><head>Acto de <emph>La Celestina</emph></head>
+            <sp who="#a"><speaker>A</speaker><l n="1">Uno</l></sp></div1>
+          <div1 type="act" n="2">
+            <sp who="#a"><speaker>A</speaker><l n="2">Dos</l></sp></div1>
+          """
+        )
+      )
+
+    lv = open_structure(conn, play)
+
+    assert has_element?(lv, "em", "La Celestina")
+    refute render(lv) =~ "&lt;&lt;La Celestina"
+    assert render(lv) =~ t("Act") <> " 2"
+  end
+
+  test "the open scene's heading and its act's print their italics", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body: """
+          <div1 type="act" n="1"><head>Acto de <emph>Celestina</emph></head>
+            <div2 type="scene" n="1"><head>Escena de <emph>Melibea</emph></head>
+              <sp who="#a"><speaker>A</speaker><l n="1">Uno</l></sp></div2></div1>
+          """
+        )
+      )
+
+    lv = open_structure(conn, play)
+    lv |> element("button", "Escena de Melibea") |> render_click()
+
+    assert has_element?(lv, "h2 em", "Melibea")
+    refute render(lv) =~ "&lt;&lt;"
+  end
+
   test "a new paratext goes last", %{conn: conn} do
     play =
       import_tei!(

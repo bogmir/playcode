@@ -9,6 +9,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Characters do
   import PlaycodeWeb.Admin.ContentEditor.Components
 
   alias Playcode.PlayContent.{Character, InlineMarkup}
+  alias PlaycodeWeb.Components.PlayText
 
   attr :characters, :list, required: true
   attr :cast_lists, :list, required: true
@@ -58,7 +59,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Characters do
           >
             <div class="min-w-0 text-sm">
               <span :if={act = list_act(@divisions, list)} class="text-base-content/70">
-                {division_label(act)} ·
+                <PlayText.inline_content text={division_label(act)} /> ·
               </span>
               <span class="font-semibold">{list.title || gettext("Cast list")}</span>
             </div>

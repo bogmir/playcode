@@ -9,6 +9,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
   import PlaycodeWeb.Admin.ContentEditor.Components
 
   alias Playcode.PlayContent.InlineMarkup
+  alias PlaycodeWeb.Components.PlayText
   alias PlaycodeWeb.PlayLabels
 
   attr :content_search, :string, required: true
@@ -140,12 +141,14 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Content do
               class="flex items-center gap-1.5 text-sm text-base-content/70"
             >
               <.icon name="hero-folder-mini" class="size-3.5" />
-              <span>{parent_division_label(@divisions, @selected_division_id)}</span>
+              <PlayText.inline_content text={parent_division_label(@divisions, @selected_division_id)} />
               <.icon name="hero-chevron-right-mini" class="size-3" />
             </div>
             <div class="flex items-center gap-3">
               <h2 class="text-lg font-semibold text-base-content">
-                {current_division_label(@divisions, @selected_division_id)}
+                <PlayText.inline_content text={
+                  current_division_label(@divisions, @selected_division_id)
+                } />
               </h2>
               <div class="flex gap-1">
                 <button
