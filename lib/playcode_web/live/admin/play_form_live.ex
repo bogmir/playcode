@@ -6,6 +6,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   use PlaycodeWeb, :live_view
 
+  alias Playcode.Authz
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
   alias Playcode.PlayContent
@@ -76,7 +77,11 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   @impl true
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, :numbering_changes, nil)}
+    {:ok,
+     assign(socket,
+       numbering_changes: nil,
+       can_change_code: Authz.can?(socket.assigns.current_user, :change_play_code)
+     )}
   end
 
   @impl true
@@ -169,7 +174,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   def handle_event("save", %{"play" => play_params}, socket) do
     play_params =
-      LiveHelpers.drop_blank_rows(play_params, "revisions", ~w(date people description note))
+      play_params
+      |> LiveHelpers.drop_blank_rows("revisions", ~w(date people description note))
+      |> keep_code(socket)
 
     save_play(socket, socket.assigns.live_action, play_params)
   end
@@ -225,6 +232,18 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   def handle_event("set_attribution_mode", %{"mode" => "select"}, socket) do
     {:noreply, assign(socket, :attribution_mode, :select)}
+  end
+
+  # The read-only field is the page's; the browser can still send any code.
+  defp keep_code(params, %{assigns: %{can_change_code: true}}), do: params
+
+  defp keep_code(params, socket) do
+    code =
+      if socket.assigns.live_action == :new,
+        do: Catalogue.next_play_code(),
+        else: socket.assigns.play.code
+
+    params |> Map.put("code", code) |> maybe_derive_emothe_id()
   end
 
   defp maybe_derive_emothe_id(params) do
@@ -534,6 +553,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
                   field={@form[:code]}
                   type="text"
                   required
+                  readonly={not @can_change_code}
                   placeholder={gettext("e.g. AL0569")}
                 />
               </div>

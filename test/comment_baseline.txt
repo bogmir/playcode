@@ -99,7 +99,7 @@ lib/playcode_web/live/admin/play_compare_live.ex 8
 lib/playcode_web/live/admin/play_content_editor_live.ex 44
 lib/playcode_web/live/admin/play_detail_live.ex 6
 lib/playcode_web/live/admin/play_editors_live.ex 4
-lib/playcode_web/live/admin/play_form_live.ex 23
+lib/playcode_web/live/admin/play_form_live.ex 24
 lib/playcode_web/live/admin/play_list_live.ex 10
 lib/playcode_web/live/admin/play_notes_live.ex 11
 lib/playcode_web/live/admin/play_performances_live.ex 62

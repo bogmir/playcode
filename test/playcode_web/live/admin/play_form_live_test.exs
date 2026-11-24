@@ -23,8 +23,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
 
+  # Most tests type a code, which only an admin may; a researcher's form is in "a play's code".
   setup %{conn: conn} do
-    %{conn: log_in_user(conn, user_fixture(role: :researcher))}
+    %{conn: log_in_user(conn, admin_fixture())}
   end
 
   defp error(msg), do: Gettext.dgettext(PlaycodeWeb.Gettext, "errors", msg)
@@ -104,6 +105,53 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
 
     assert has_element?(view, "#play-form input[name='play[code]'][value='EMOTHE0808']")
+  end
+
+  # A play's code is its number among FileMaker's titles and, once published, its address:
+  # a researcher takes the next one and keeps it.
+  describe "a play's code" do
+    setup %{conn: conn} do
+      %{conn: log_in_user(conn, user_fixture(role: :researcher))}
+    end
+
+    test "is the next one for a researcher's new play, whatever the form sends",
+         %{conn: conn} do
+      play_fixture(%{"code" => "EMOTHE0807_LeCid1637"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+      assert has_element?(view, "#play-form input[name='play[code]'][readonly]")
+
+      save(view, %{"title" => "Sémiramis", "code" => "EMOTHE0500"})
+
+      assert Catalogue.get_play_by_code!("EMOTHE0808").title == "Sémiramis"
+    end
+
+    test "stays as it was when a researcher saves a play", %{conn: conn} do
+      play = play_fixture()
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
+
+      assert has_element?(view, "#play-form input[name='play[code]'][readonly]")
+
+      save(view, %{"title" => "Guardada", "code" => unique_code()})
+
+      assert %{code: code, title: "Guardada"} = Catalogue.get_play!(play.id)
+      assert code == play.code
+    end
+
+    test "is changed by an admin", %{conn: conn} do
+      play = play_fixture()
+
+      {:ok, view, _html} =
+        live(log_in_user(conn, admin_fixture()), ~p"/admin/plays/#{play.id}/edit")
+
+      code = unique_code()
+
+      refute has_element?(view, "#play-form input[name='play[code]'][readonly]")
+
+      save(view, %{"code" => code})
+
+      assert Catalogue.get_play!(play.id).code == code
+    end
   end
 
   # The header FileMaker writes into every file, with today's funding project first
