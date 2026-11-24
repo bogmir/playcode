@@ -51,6 +51,35 @@ defmodule Playcode.Export.DeployTest do
     result
   end
 
+  test "Publish builds what changed, then deploys it and records the deploy", %{play: play} do
+    settings([])
+    repo = bare_repo()
+    added = play_fixture(%{"title" => "Added Since", "is_complete" => true})
+
+    assert :started = SiteBuilder.publish([], "file://" <> repo)
+    assert_receive {:site_builder, :done, :publish, {:ok, _url}}, 30_000
+
+    assert {page, 0} = gh_pages(repo, "plays/#{added.code}/index.html")
+    assert page =~ "Added Since"
+
+    assert StaticSite.deployed_plays(StaticSite.output_dir()) |> Map.keys() |> Enum.sort() ==
+             Enum.sort([play.code, added.code])
+  end
+
+  test "a Publish whose build fails deploys nothing", %{play: play} do
+    settings([])
+    repo = bare_repo()
+    {:ok, _} = Playcode.Catalogue.update_play(play, %{"is_complete" => false})
+
+    # A new version rebuilds the whole site, which fails with no complete play, while
+    # the site built in setup is still there to be pushed.
+    assert :started = SiteBuilder.publish([version: "2.0"], "file://" <> repo)
+    assert_receive {:site_builder, :done, :publish, {:error, _reason}}, 30_000
+
+    assert {_, status} = gh_pages(repo, "index.html")
+    assert status != 0
+  end
+
   test "a deploy pushes the site to the repository's gh-pages branch", %{play: play} do
     settings([])
     repo = bare_repo()

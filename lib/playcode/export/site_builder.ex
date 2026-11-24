@@ -8,12 +8,13 @@ defmodule Playcode.Export.SiteBuilder do
   or `:queued`. A request already waiting is not queued twice: it keeps its place and
   takes the options of the latest ask. When a job ends, the adds and removes at the front
   of the queue run as one batch, which publishes its pages first and rewrites the search
-  index once (`StaticSite.apply_changes/2`); a generate or a deploy runs on its own, in
+  index once (`StaticSite.apply_changes/2`); a generate, a deploy or a publish runs on its own, in
   its turn. Generate brings the site in line with the complete plays when it runs: every
   one rebuilt when the site's code or settings changed since it was built, otherwise only
   the ones it lacks or that changed written, and the ones no longer complete taken out.
 
-  Jobs are `:generate`, `{:batch, [{:add, play_id} | {:remove, code}]}` and `:deploy`.
+  Jobs are `:generate`, `{:batch, [{:add, play_id} | {:remove, code}]}`, `:deploy` and
+  `:publish` (a generate, then a deploy if it succeeded).
   It broadcasts on `"static_site"`, so every admin page shows the same state:
   `{:site_builder, :queued, request}` (`:generate`, `{:add, id}`,
   `{:remove, code}` or `:deploy`), `{:site_builder, :started, job}`,
@@ -51,6 +52,12 @@ defmodule Playcode.Export.SiteBuilder do
   def add(play_id, opts), do: request({:add, play_id}, opts)
   def remove(code, opts), do: request({:remove, code}, opts)
   def deploy(repo), do: request(:deploy, repo)
+
+  @doc """
+  Generate with `opts`, then, only when it succeeded, deploy to `repo`, as one job: the
+  result is the deploy's, or the generate's error.
+  """
+  def publish(opts, repo), do: request(:publish, {opts, repo})
 
   @doc "The running job and the requests waiting behind it, oldest first."
   def status, do: GenServer.call(__MODULE__, :status)
@@ -114,7 +121,7 @@ defmodule Playcode.Export.SiteBuilder do
     %{state | job: job, ref: task.ref, queue: rest}
   end
 
-  defp take([{request, args} | rest]) when request in [:generate, :deploy],
+  defp take([{request, args} | rest]) when request in [:generate, :deploy, :publish],
     do: {request, args, rest}
 
   defp take(queue) do
@@ -141,6 +148,10 @@ defmodule Playcode.Export.SiteBuilder do
   defp run({:batch, changes} = job, opts) do
     published = fn -> broadcast({:site_builder, :published, job}) end
     StaticSite.apply_changes(changes, opts |> in_site() |> Keyword.put(:on_published, published))
+  end
+
+  defp run(:publish, {opts, repo}) do
+    with {:ok, _} <- run(:generate, opts), do: run(:deploy, repo)
   end
 
   # The StaticSite entry points set English themselves; Deployer translates nothing.
