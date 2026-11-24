@@ -97,6 +97,15 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     assert_redirect(view, ~p"/admin/plays/#{created.id}")
   end
 
+  # EMOTHE (CTCE before it) numbers its titles as FileMaker does; ARTELOPE counts its own.
+  test "a new play is offered the code after the last EMOTHE title", %{conn: conn} do
+    play_fixture(%{"code" => "EMOTHE0807_LeCid1637"})
+    play_fixture(%{"code" => "AL2000_LaEstrellaDeSevilla"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+    assert has_element?(view, "#play-form input[name='play[code]'][value='EMOTHE0808']")
+  end
+
   # The header FileMaker writes into every file, with today's funding project first
   # (EMOTHE0753 was corrected by hand the same way) and Playcode credited for the files.
   test "a new play starts with the project's header texts", %{conn: conn} do

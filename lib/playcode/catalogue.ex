@@ -333,7 +333,7 @@ defmodule Playcode.Catalogue do
 
   @doc """
   The code the new-play form offers: `EMOTHE` and one more than the highest number any
-  `EMOTHE`, `CTCE` or `AL` code carries, archived plays included, padded to four digits.
+  `EMOTHE` or `CTCE` code carries, archived plays included, padded to four digits.
   """
   def next_play_code do
     max_number =
@@ -341,7 +341,7 @@ defmodule Playcode.Catalogue do
       |> select([p], p.code)
       |> Repo.all()
       |> Enum.map(fn code ->
-        case Regex.run(~r/^(?:EMOTHE|CTCE|AL)(\d+)/i, code || "") do
+        case Regex.run(~r/^(?:EMOTHE|CTCE)(\d+)/i, code || "") do
           [_, num_str] -> String.to_integer(num_str)
           _ -> 0
         end
