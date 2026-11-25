@@ -171,24 +171,30 @@ defmodule Playcode.Export.StaticSitePlayTest do
       assert read!(dir, "plays/#{play.code}/#{play.code}.epub") == before
     end
 
-    test "the title page offers the TEI file, the EPUB and print, each naming its format" do
+    # The files used to be a Downloads section at the foot of the title page, under the
+    # bibliography and the citation, where readers did not find them.
+    test "under the title, the title page offers reading the play, its PDF, EPUB and TEI file" do
       play = tei(body: two_acts()) |> import_tei!() |> mark_complete!()
       page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
-      section = LazyHTML.query(page, "section.downloads")
+      actions = LazyHTML.query(page, "article.title-page > .actions + dl.facts")
 
-      assert texts(section, "h2") == ["Descargas"]
+      assert Enum.count(actions) == 1
+      assert LazyHTML.query(page, "section.downloads") |> Enum.count() == 0
 
-      assert section |> LazyHTML.query("a") |> LazyHTML.attribute("href") ==
-               ["#{play.code}.xml", "#{play.code}.epub", "text.html#print"]
+      links = LazyHTML.query(page, ".actions a")
 
-      assert texts(section, "a") == [
-               "Descargar la fuente TEI-XML",
-               "Descargar el libro electrónico EPUB",
-               # A link opens another page: it names the full text it prints.
-               "Imprimir el texto completo o guardarlo como PDF"
+      assert LazyHTML.attribute(links, "href") ==
+               ["act-1.html", "text.html#print", "#{play.code}.epub", "#{play.code}.xml"]
+
+      assert texts(page, ".actions a") == [
+               "Leer la obra",
+               # Print opens the full text, whose print dialog saves the PDF.
+               "PDF para imprimir",
+               "EPUB libro electrónico",
+               "TEI-XML fuente"
              ]
 
-      assert section |> LazyHTML.query("a[download]") |> Enum.count() == 2
+      assert page |> LazyHTML.query(".actions a[download]") |> Enum.count() == 2
     end
 
     test "the full text has a print button, hidden until the script shows it, and never printed" do
@@ -207,7 +213,7 @@ defmodule Playcode.Export.StaticSitePlayTest do
       play = play_without_text_fixture(%{"is_complete" => true})
       page = html!(generate!([play]), "plays/#{play.code}/index.html")
 
-      assert page |> LazyHTML.query("section.downloads a") |> LazyHTML.attribute("href") ==
+      assert page |> LazyHTML.query(".actions a") |> LazyHTML.attribute("href") ==
                ["#{play.code}.xml"]
     end
   end
