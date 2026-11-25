@@ -50,7 +50,8 @@ defmodule Playcode.Catalogue.PlayEditor do
 
   @doc """
   The edition's credits, `[{role, people}]`: the editors grouped by role, each role where
-  its first editor stands, then the sources' CANON 60 editors under `"canon60"`.
+  its first editor stands, then the sources' CANON 60 editors under `"canon60"`. The project
+  direction is left out: it stays in the file's header only.
   """
   def credits(editors, sources) do
     canon60 =
@@ -59,6 +60,7 @@ defmodule Playcode.Catalogue.PlayEditor do
           do: %{person_name: name}
 
     editors
+    |> Enum.reject(&(&1.role == "principal"))
     |> Enum.group_by(& &1.role)
     |> Enum.sort_by(fn {_role, [first | _]} -> Enum.find_index(editors, &(&1 == first)) end)
     |> Enum.concat(for people <- [canon60], people != [], do: {"canon60", people})
