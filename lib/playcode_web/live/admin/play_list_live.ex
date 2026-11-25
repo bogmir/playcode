@@ -423,7 +423,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         <nav
           :if={!@archived}
           aria-label={gettext("Status")}
-          class="join max-w-full overflow-x-auto"
+          class="join max-w-full overflow-x-auto overflow-y-hidden"
         >
           <.link
             :for={{value, label, count} <- status_choices(@status_counts)}
@@ -438,7 +438,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         <nav
           :if={!@archived}
           aria-label={gettext("Site")}
-          class="join max-w-full overflow-x-auto"
+          class="join max-w-full overflow-x-auto overflow-y-hidden"
         >
           <.link
             :for={state <- site_states()}
