@@ -165,22 +165,28 @@ defmodule PlaycodeWeb.ExportControllerTest do
   end
 
   # As the play page and the published site name them, in the downloads' English.
+  # The project direction stays in the file's header only (2026-11-25).
   test "the HTML and EPUB downloads name each editor's role", %{conn: conn, play: play} do
-    {:ok, _} =
-      Playcode.Catalogue.create_play_editor(%{
-        play_id: play.id,
-        person_name: "Joan Oleza",
-        role: "principal",
-        position: 1
-      })
+    for {name, role, position} <- [
+          {"Joan Oleza", "principal", 1},
+          {"Violeta Ros", "translator", 2}
+        ] do
+      {:ok, _} =
+        Playcode.Catalogue.create_play_editor(%{
+          play_id: play.id,
+          person_name: name,
+          role: role,
+          position: position
+        })
+    end
 
     html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
     {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
 
     for {format, text} <- [html: html, epub: epub_text(files)] do
       # The part of the work before who did it, as on the published site, since 2026-11-23.
-      assert text =~ ~s{<span class="role">Project direction:</span> Joan Oleza},
-             "#{format}"
+      assert text =~ ~s{<span class="role">Translation:</span> Violeta Ros}, "#{format}"
+      refute text =~ "Joan Oleza", "#{format}"
     end
   end
 

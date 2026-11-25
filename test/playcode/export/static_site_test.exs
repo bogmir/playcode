@@ -227,7 +227,8 @@ defmodule Playcode.Export.StaticSiteTest do
 
   # As emothe.uv.es's "Edición digital para CANON 60: …": each part of the work, then who
   # did it, which needs no word for the person, a man or a woman; every name forename
-  # first, whichever way its file wrote it.
+  # first, whichever way its file wrote it. The project direction stays in the file's header
+  # only (2026-11-25).
   test "the edition credits each part of the work, names forename first" do
     play = complete_play()
 
@@ -249,7 +250,6 @@ defmodule Playcode.Export.StaticSiteTest do
     page = html!(generate!([play]), "plays/#{play.code}/index.html", "es")
 
     assert texts(page, "#edition li") == [
-             "Dirección del proyecto: Joan Oleza Simó",
              "Edición digital: Violeta Ros Ferrer, María del Valle Ojeda",
              "Traducción: Juan de Jáuregui"
            ]

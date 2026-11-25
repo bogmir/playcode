@@ -913,12 +913,14 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute has_element?(view, "#meta-sources", "ProcedenciaFuente")
   end
 
-  # As the published site prints them, since 2026-11-23.
+  # As the published site prints them, since 2026-11-23; the project direction stays in the
+  # file's header only (2026-11-25).
   test "the edition credits each part of the work, names forename first", %{conn: conn} do
     play =
       import_tei!(
         tei(
           title_stmt: """
+          <principal>Oleza Simó, Joan</principal>
           <respStmt><resp>Edición digital de</resp><persName>Ros Ferrer, Violeta</persName></respStmt>
           """,
           source_desc: """
@@ -937,6 +939,8 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
              "#meta-editors",
              "Edición digital para CANON 60: Santiago Fernández Mosquera"
            )
+
+    refute has_element?(view, "#meta-editors", "Oleza")
   end
 
   test "metadata links appear when metadata exists", %{conn: conn} do

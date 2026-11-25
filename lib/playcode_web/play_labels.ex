@@ -250,7 +250,6 @@ defmodule PlaycodeWeb.PlayLabels do
   def editor_role_label(role), do: role
 
   @doc "The part of the work a `play_editors.role` did, which says nothing of who did it."
-  def editor_activity_label("principal"), do: gettext("Project direction")
   def editor_activity_label("translator"), do: gettext("Translation")
   def editor_activity_label("critical_editor"), do: gettext("Critical edition")
   def editor_activity_label("researcher"), do: gettext("Research")
