@@ -135,21 +135,39 @@ defmodule Playcode.Export.StaticSite.Components do
     """
   end
 
-  attr :play, :map, required: true
+  attr :edition, :map, required: true
+  attr :published, :any, required: true
 
-  @doc "The play's files: its TEI source, and for a play with a text its EPUB and print."
-  def downloads(assigns) do
+  @doc """
+  What a reader does with the play, under its title: read it, compare a translation with
+  its original, and download its files (its TEI source, and with a text its PDF and EPUB).
+  """
+  def actions(assigns) do
+    play = assigns.edition.play
+    original = published_original(play, assigns.published)
+
+    assigns =
+      assign(assigns,
+        play: play,
+        first: List.first(assigns.edition.pages),
+        compare: original && comparable?(original, play)
+      )
+
     ~H"""
-    <section class="downloads">
-      <h2>{t("Downloads")}</h2>
-      <ul>
-        <li><a href={"#{@play.code}.xml"} download>{t("Download the TEI-XML source")}</a></li>
+    <div class="actions">
+      <p :if={@first || @compare} class="read">
+        <a :if={@first} class="primary" href={@first.slug <> ".html"}>{t("Read the play")}</a>
+        <a :if={@compare} href="compare.html">{t("Compare with the original")}</a>
+      </p>
+      <p class="files">
+        <span class="label">{t("Download")}</span>
         <%= if Play.has_text?(@play) do %>
-          <li><a href={"#{@play.code}.epub"} download>{t("Download the EPUB e-book")}</a></li>
-          <li><a href="text.html#print">{t("Print the full text or save it as PDF")}</a></li>
+          <a href="text.html#print">PDF <span>{t("for printing")}</span></a>
+          <a href={"#{@play.code}.epub"} download>EPUB <span>{t("e-book")}</span></a>
         <% end %>
-      </ul>
-    </section>
+        <a href={"#{@play.code}.xml"} download>TEI-XML <span>{t("source")}</span></a>
+      </p>
+    </div>
     """
   end
 
@@ -449,17 +467,10 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :published, :any, required: true
 
   def family(assigns) do
-    published? = &(&1 && MapSet.member?(assigns.published, &1.code))
-
-    # A play linked with no kind (FileMaker linked a few) names no relation, as the play
-    # page does: "Original of" would be false.
-    named? = kind(assigns.play) != "original"
-
     assigns =
       assign(assigns,
-        original:
-          if(named? and published?.(assigns.play.parent_play), do: assigns.play.parent_play),
-        derived: Enum.filter(assigns.play.derived_plays, published?)
+        original: published_original(assigns.play, assigns.published),
+        derived: Enum.filter(assigns.play.derived_plays, &published?(&1, assigns.published))
       )
 
     ~H"""
@@ -468,14 +479,6 @@ defmodule Playcode.Export.StaticSite.Components do
       <p :if={@original}>
         {relation(@play)}
         <a href={"../#{@original.code}/index.html"}><cite>{@original.title}</cite></a>
-      </p>
-      <p :if={@original && comparable?(@original, @play)}>
-        <a
-          href="compare.html"
-          {ta("aria-label", "Compare: %{title}", title: InlineMarkup.plain(@original.title))}
-        >
-          {t("Compare")}
-        </a>
       </p>
       <ul :if={@derived != []}>
         <li :for={play <- @derived}>
@@ -495,6 +498,15 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   defp comparable?(original, play), do: Play.has_text?(original) and Play.has_text?(play)
+
+  # A play linked with no kind (FileMaker linked a few) names no relation, as the play
+  # page does: "Original of" would be false.
+  defp published_original(play, published) do
+    if kind(play) != "original" and published?(play.parent_play, published),
+      do: play.parent_play
+  end
+
+  defp published?(play, published), do: play && MapSet.member?(published, play.code)
 
   attr :play, :map, required: true
 

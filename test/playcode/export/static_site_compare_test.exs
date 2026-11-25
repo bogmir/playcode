@@ -77,6 +77,14 @@ defmodule Playcode.Export.StaticSiteCompareTest do
     assert compare_links(dir, original) == ["../#{french.code}/compare.html"]
   end
 
+  test "a translation offers its comparison under its title, beside reading it" do
+    %{original: original, french: french} = split_speech_editions()
+    page = [original, french] |> generate!() |> html!("plays/#{french.code}/index.html", "es")
+
+    assert page |> LazyHTML.query(~s(.actions a[href="compare.html"])) |> LazyHTML.text() ==
+             "Comparar con el original"
+  end
+
   test "a translation without a text is not in another's comparison menu" do
     original = play_fixture(%{"is_complete" => true})
 
