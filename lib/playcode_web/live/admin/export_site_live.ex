@@ -487,7 +487,9 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   defp started(socket, nil), do: socket
 
   defp started(socket, job) do
-    assign(socket,
+    socket
+    |> clear_flash()
+    |> assign(
       job: job,
       step: if(job == :deploy, do: :deploy, else: :generate),
       gen_current: 0,
