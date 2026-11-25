@@ -192,7 +192,10 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
       if String.trim(search) == "" do
         []
       else
-        Catalogue.list_plays(search: search)
+        Catalogue.list_plays(
+          search: search,
+          hide_test: not Authz.can?(socket.assigns.current_user, :see_test_plays)
+        )
         |> Enum.reject(&(&1.id == socket.assigns.play.id))
         |> Enum.take(8)
       end
@@ -558,7 +561,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
               </div>
             </div>
 
-            <div class="space-y-3 rounded-box border border-base-300 bg-base-200 p-4">
+            <div id="code-card" class="space-y-3 rounded-box border border-base-300 bg-base-200 p-4">
               <div class="flex flex-wrap items-center gap-3">
                 <span class="font-medium">{gettext("Code")}</span>
                 <.icon

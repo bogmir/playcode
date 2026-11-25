@@ -332,6 +332,19 @@ defmodule Playcode.Catalogue do
     |> link_waiting_translations()
   end
 
+  @doc "The library of the play a page names by its `id` or `code`, nil when it names none."
+  def library_named(%{"id" => id}) do
+    case Ecto.UUID.cast(id) do
+      {:ok, id} -> Repo.one(from p in Play, where: p.id == ^id, select: p.library)
+      :error -> nil
+    end
+  end
+
+  def library_named(%{"code" => code}),
+    do: Repo.one(from p in Play, where: p.code == ^code, select: p.library)
+
+  def library_named(_params), do: nil
+
   @doc "The number a new play takes in `library`: one past its highest, archived plays included."
   def next_number(library) do
     Play

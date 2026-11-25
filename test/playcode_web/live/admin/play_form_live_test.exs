@@ -182,6 +182,16 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
       assert html =~ error("has invalid format")
     end
+
+    test "whose number another play holds is refused, beside the code", %{conn: conn} do
+      play_fixture(%{"code" => "EMOTHE0807_LeCid1637"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+      save(view, %{"title" => "Sda", "library" => "EMOTHE", "number" => "807", "slug" => "Sda"})
+
+      assert has_element?(view, "#code-card", error("has already been taken"))
+      assert Catalogue.list_plays(search: "Sda") == []
+    end
   end
 
   # A play's code is its number among FileMaker's titles and, once published, its address:
@@ -204,6 +214,21 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
       |> render_submit(%{"play" => %{"library" => "AL", "number" => "500"}})
 
       assert Catalogue.get_play_by_code!("EMOTHE0808_Semiramis").title == "Sémiramis"
+    end
+
+    test "is not offered an admin's TEST play as the original", %{conn: conn} do
+      n = System.unique_integer([:positive])
+      play_fixture(%{"code" => "EMOTHE#{n}_Gismonda", "title" => "Gismonda real"})
+      play_fixture(%{"code" => "TEST#{n}_Gismonda", "title" => "Gismonda prueba"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+      html =
+        view
+        |> element("input[name='parent_play_search']")
+        |> render_change(%{"parent_play_search" => "Gismonda"})
+
+      assert html =~ "Gismonda real"
+      refute html =~ "Gismonda prueba"
     end
 
     test "keeps a play's code when saving it, whatever the form sends", %{conn: conn} do
