@@ -99,7 +99,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     socket
     |> assign(:page_title, gettext("New Play"))
     |> assign(:play, play)
-    |> assign(:auto_slug, nil)
+    |> assign(:slug_typed, false)
     |> assign(:form, to_form(Catalogue.change_play_form(play, initial_params)))
     |> assign(:parent_play_id, nil)
     |> assign(:parent_play_label, "")
@@ -154,7 +154,7 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
           |> maybe_apply_corpus_defaults(),
         else: play_params
 
-    {play_params, socket} = name_from_title(play_params, socket)
+    {play_params, socket} = name_from_title(play_params, params["_target"], socket)
     play_params = keep_code(play_params, socket)
 
     {play_params, socket} =
@@ -260,18 +260,18 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     end
   end
 
-  defp name_from_title(params, %{assigns: %{live_action: :new}} = socket) do
-    auto = Play.slug_from_title(params["title"])
+  # A title comes with a name generated keys earlier: only the name's own field owns it.
+  defp name_from_title(params, ["play", "slug"], %{assigns: %{live_action: :new}} = socket),
+    do: {params, assign(socket, :slug_typed, params["slug"] not in [nil, ""])}
 
-    params =
-      if params["slug"] in [nil, "", socket.assigns.auto_slug],
-        do: Map.put(params, "slug", auto),
-        else: params
+  defp name_from_title(
+         params,
+         _target,
+         %{assigns: %{live_action: :new, slug_typed: false}} = socket
+       ),
+       do: {Map.put(params, "slug", Play.slug_from_title(params["title"])), socket}
 
-    {params, assign(socket, :auto_slug, auto)}
-  end
-
-  defp name_from_title(params, socket), do: {params, socket}
+  defp name_from_title(params, _target, socket), do: {params, socket}
 
   defp next_number(library), do: Play.padded_number(%{number: Catalogue.next_number(library)})
 

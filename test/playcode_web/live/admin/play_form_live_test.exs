@@ -144,9 +144,29 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
       view |> form("#play-form", play: %{"title" => "I Suppositi, 1551"}) |> render_change()
       assert code_shown(view) == "EMOTHE0808_ISuppositi1551"
 
-      view |> form("#play-form", play: %{"slug" => "Suppositi"}) |> render_change()
+      # The name is the researcher's only when typed in its own field, which the browser
+      # names as the change's target.
+      view
+      |> form("#play-form", play: %{"slug" => "Suppositi"})
+      |> render_change(%{"_target" => ["play", "slug"]})
+
       view |> form("#play-form", play: %{"title" => "I Suppositi, 1553"}) |> render_change()
       assert code_shown(view) == "EMOTHE0808_Suppositi"
+    end
+
+    # Typing fast, the browser sends a title with a name the server generated a few keys
+    # earlier, before the newer one reached the page.
+    test "follows the title while a reply is still on its way", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+      title_change = %{"_target" => ["play", "title"]}
+
+      for {title, name} <- [{"O", ""}, {"On", ""}, {"One", "O"}, {"One nice", "On"}] do
+        view
+        |> form("#play-form", play: %{"title" => title, "slug" => name})
+        |> render_change(title_change)
+      end
+
+      assert code_shown(view) =~ ~r/_OneNice$/
     end
 
     test "offers the TEST library, which an admin uses to try things out", %{conn: conn} do
