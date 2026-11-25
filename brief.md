@@ -1,36 +1,37 @@
-# Playcode brief 2026-11-24 (c4f77bd)
+# Playcode daily brief 2026-11-25 (main @ d92652d)
+Current focus: none.
 
-Focus: none.
-
-## 19 of 73 questions open
-**5 easiest** ([preguntas](docs/stakeholder/preguntas.html))
-- [q70](docs/stakeholder/preguntas.html#q70) Character genders: pick the words (woman/man/X).
-- [q72](docs/stakeholder/preguntas.html#q72) Translation links to original's RoleCall chart: yes/no.
-- [q54](docs/stakeholder/preguntas.html#q54) English names for relation kinds: a table to correct.
+## 19 of 73 questions open ([preguntas](docs/stakeholder/preguntas.html))
+**5 easiest**
+- [q72](docs/stakeholder/preguntas.html#q72) RoleCall link for translations: yes/no.
+- [q70](docs/stakeholder/preguntas.html#q70) Character genders: pick a word list (Woman/man/X proposed).
 - [q71](docs/stakeholder/preguntas.html#q71) Where readers see gender: tick boxes.
-- [q7](docs/stakeholder/preguntas.html#q7) Show The Rover's 40 hidden stage directions: yes/no.
+- [q28](docs/stakeholder/preguntas.html#q28) Show original-cast actors to readers: yes/no.
+- [q7](docs/stakeholder/preguntas.html#q7) The Rover's 40 hidden stage directions: show or not.
 
 **5 most important**
-- [q66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: 45 texts in 33 plays; blocks backlog C1.
-- [q37](docs/stakeholder/preguntas.html#q37) Hamlet `<app>` form: blocks Q4 Additions and the 13 crossing Folio passages.
-- [q68](docs/stakeholder/preguntas.html#q68) Citation word before a number: every play's numbering output.
-- [q69](docs/stakeholder/preguntas.html#q69) Renumber 16 hand-numbered plays: corpus-wide numbering.
-- [q14](docs/stakeholder/preguntas.html#q14) Pyrame et Thisbé and 3 plays with no text: corpus completeness.
+- [q66](docs/stakeholder/preguntas.html#q66) Prologues on the wrong side: 45 texts in 33 plays wait on a yes (backlog C1).
+- [q69](docs/stakeholder/preguntas.html#q69) Recount 16 hand-numbered plays: blocks the Numbering section, then a Generate.
+- [q53](docs/stakeholder/preguntas.html#q53) Which "version" plays are originals: gates the relations design (q53-57) and family fixes.
+- [q14](docs/stakeholder/preguntas.html#q14) Pyrame et Thisbé editions and three plays with no text: corpus completeness.
+- [q68](docs/stakeholder/preguntas.html#q68) Word before a cited number: every play's numbering already imported, label unset.
 
-## Round trip (cells short of "yes")
-- Verse/prose boundary (q23 follow-up): our 61 mixed-form corpus copies are still labelled `verso`.
-- Original cast (`characters.actor`) is printed nowhere; waits on q28.
-- Also open in backlog: `stage@n` (376) dropped; `sp@who` naming no role (2,508 in 29 plays).
-- Hamlet v. 2632 exports as three stages, where the source has one.
+## Round trip (docs/backlog.md, ida-y-vuelta.html)
+- Verse/prose "mixed" threshold (q23 follow-up): 61 plays labelled `verso` in our corpus copies until the project answers.
+- Original cast (`characters.actor`) is stored and exported but printed nowhere: waits on q28.
+- Backlog item "Found by the corpus round trip": `sp@who` naming no cast role (2,508 refs, 29 plays) and `stage@n` (376) still lost on import.
 
-## Top 3 features (verified in code)
-1. **Import page's validation warnings are never filled**: the results column and its strings are dead. `lib/playcode_web/live/admin/import_live.ex:172` has `validation_warnings = []`. Fix: fill from `TeiValidator`, or drop the column and the tuple's fifth element.
-2. **Word importer reads `document.xml` with regexes**: `<w:t>` text split by `<w:tab/>` or `<w:br/>` is missed, and numeric entities are not decoded. `lib/playcode/import/word_parser.ex:45-48` (`Regex.scan`), `:17` (`unescape_xml`). Fix: parse with Saxy.
-3. **Admin import writes each file twice**: preview rolls back a full write for the numbering rule (4.2 s against 4.1 s on one fixture). `lib/playcode_web/live/admin/import_live.ex:93` calls `preview_import(path)`; `lib/playcode/import/tei_import.ex:140` has the `numbering: false` option. Fix: show the rule after the import, or compute it from the parsed file.
+## TOP 3 FEATURES (clear to implement, verified in code)
+1. **Emphasised "aside" refused**: FileMaker's EMOTHE0398 cannot import as-is (it was imported with italics dropped); `<<aside>>` makes `asides_well_formed?` fail. `lib/playcode/play_content/inline_markup.ex:495-497` and `element.ex:296-308`. Fix: the marker test ignores `<<…>>`.
+2. **Marking complete/draft is not logged**: nobody can tell who published EMOTHE0439. `lib/playcode_web/live/admin/play_detail_live.ex:111-130` calls `update_play_from_form/2` with no `LiveHelpers.log_activity` (the delete handler at line 100 has one). Fix: log it.
+3. **Word importer reads `document.xml` with regexes**: text split by `<w:tab/>`/`<w:br/>` is missed, and only 5 entities are decoded. `lib/playcode/import/word_parser.ex:17-49`. Fix: parse with Saxy.
 
-Not checked (budget): "Folio words still searched" (Next); `search.ex` shows no Folio filter, so it likely stands but is unconfirmed. It needs a choice (open the switch, or drop the words), so it is not "clear".
+Not listed (wait on a choice): Folio search/notes (two options), import-page warnings (fill or drop column, `import_live.ex:172` still `[]`), import page preview written twice.
 
-Stale in backlog: none found.
+**Stale in backlog**: none found among the candidates checked.
 
-## Speed win
-No new candidate found in the budget. `Edition.load` has no Repo calls and `build_plays` already bounds concurrency and loads an original once per family. The one live idea is item 3 above (import-page double write, roughly 2x on every admin import), already listed in the backlog, so not proposed again.
+## ONE SPEED WIN
+- `lib/playcode/export/static_site.ex:433`: `refresh_assets` reads and regex-rewrites every `*.html` of the site (`Path.wildcard` over the whole tree) whenever the assets' fingerprint moves, on top of the rebuild.
+- Change: cheap pre-check, `String.contains?(html, "?v=#{stamp}")` skip before `Regex.replace`; or (simpler) drop the pass for pages the same Generate rewrites anyway, since built pages already carry the new stamp.
+- Gain: only on asset-only deploys; avoids a binary-wide regex per page, likely seconds to a minute of the shared CPU's time over a few thousand pages. Measure: time `refresh_assets/2` on a built `_site`. Unverified: I read, did not run, and found no Repo-in-loop in `edition.ex`.
+- Risk: low; a page that misses the stamp serves a stale stylesheet, so keep `static_site_test.exs` covering it. (No previous brief branch found to avoid repeating.)
