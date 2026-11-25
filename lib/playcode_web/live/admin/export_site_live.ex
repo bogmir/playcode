@@ -32,8 +32,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     # still arrives.
     if connected?(socket) do
       SiteBuilder.subscribe()
-      %{job: job} = SiteBuilder.status()
-      {:ok, socket |> started(job) |> refresh()}
+      %{job: job, progress: progress} = SiteBuilder.status()
+      {:ok, socket |> started(job) |> progressed(progress) |> refresh()}
     else
       {:ok, refresh(socket)}
     end
@@ -55,24 +55,21 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
   def handle_event("search_live", %{"search" => search}, socket),
     do: {:noreply, assign(socket, live_search: search, live_page: 1)}
 
-  def handle_event("live_page", %{"page" => page}, socket),
-    do: {:noreply, assign(socket, :live_page, String.to_integer(page))}
+  def handle_event("live_page", %{"page" => page}, socket) do
+    page =
+      case Integer.parse(page) do
+        {number, ""} -> number
+        _ -> 1
+      end
+
+    {:noreply, assign(socket, :live_page, page)}
+  end
 
   @impl true
   def handle_info({:site_builder, :started, job}, socket), do: {:noreply, started(socket, job)}
 
-  def handle_info({:site_builder, :progress, :generate, info}, socket) do
-    {:noreply,
-     assign(socket,
-       step: :generate,
-       gen_current: info.current,
-       gen_total: info.total,
-       gen_detail: info.detail
-     )}
-  end
-
-  def handle_info({:site_builder, :progress, :deploy, status}, socket),
-    do: {:noreply, assign(socket, step: :deploy, deploy_status: status)}
+  def handle_info({:site_builder, :progress, step, info}, socket),
+    do: {:noreply, progressed(socket, {step, info})}
 
   def handle_info({:site_builder, :done, job, result}, socket),
     do: {:noreply, socket |> done(job, result) |> finished()}
@@ -355,7 +352,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     purged =
       for code <- Enum.sort(Map.keys(live)),
           not MapSet.member?(known, code),
-          do: %{code: code, title: nil, reason: gettext("deleted")}
+          do: %{code: code, title: nil, reason: gettext("no longer in Playcode")}
 
     socket
     |> assign(
@@ -434,11 +431,39 @@ defmodule PlaycodeWeb.Admin.ExportSiteLive do
     deploy =
       if deployed_at,
         do:
-          gettext("last deploy %{date}", date: Calendar.strftime(deployed_at, "%Y-%m-%d %H:%M")),
+          gettext("last deploy %{date}",
+            date: Calendar.strftime(deployed_at, "%Y-%m-%d %H:%M UTC")
+          ),
         else: gettext("never deployed")
 
     on_site <> " · " <> deploy
   end
+
+  defp progressed(socket, nil), do: socket
+
+  defp progressed(socket, {:generate, info}) do
+    assign(socket,
+      step: :generate,
+      gen_current: info.current,
+      gen_total: info.total,
+      gen_detail: generate_detail(info)
+    )
+  end
+
+  defp progressed(socket, {:deploy, status}),
+    do: assign(socket, step: :deploy, deploy_status: deploy_text(status))
+
+  defp generate_detail(%{step: :assets}), do: gettext("Writing assets...")
+  defp generate_detail(%{step: :catalogue}), do: gettext("Generating catalogue...")
+  defp generate_detail(%{detail: code}), do: code
+
+  defp deploy_text(:init), do: gettext("Initializing git repository...")
+  defp deploy_text(:configure), do: gettext("Configuring git...")
+  defp deploy_text(:stage), do: gettext("Staging files...")
+  defp deploy_text(:commit), do: gettext("Creating commit...")
+  defp deploy_text({:push, branch}), do: gettext("Pushing to %{branch}...", branch: branch)
+  defp deploy_text({:publish, host}), do: gettext("Publishing on %{host}...", host: host)
+  defp deploy_text(:deployed), do: gettext("Deployed successfully!")
 
   defp progress_text(%{step: :deploy, deploy_status: status}), do: status
 

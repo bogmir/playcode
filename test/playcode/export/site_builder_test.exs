@@ -63,7 +63,7 @@ defmodule Playcode.Export.SiteBuilderTest do
 
     events = events_until({:done, :deploy})
     assert {:failed, :generate} in events
-    assert SiteBuilder.status() == %{job: nil, queue: []}
+    assert %{job: nil, progress: nil, queue: []} = SiteBuilder.status()
   end
 
   test "status names the running job and the requests waiting behind it" do
@@ -71,10 +71,10 @@ defmodule Playcode.Export.SiteBuilderTest do
 
     assert :started = SiteBuilder.generate([])
     assert :queued = SiteBuilder.deploy("not a repo")
-    assert SiteBuilder.status() == %{job: :generate, queue: [:deploy]}
+    assert %{job: :generate, queue: [:deploy]} = SiteBuilder.status()
 
     events_until({:done, :deploy})
-    assert SiteBuilder.status() == %{job: nil, queue: []}
+    assert %{job: nil, progress: nil, queue: []} = SiteBuilder.status()
   end
 
   # A deploy pushes the whole directory, so it waits for the build before it.
@@ -117,7 +117,7 @@ defmodule Playcode.Export.SiteBuilderTest do
     send(builder, {nil, :x})
 
     # A call is answered only after the messages sent before it.
-    assert SiteBuilder.status() == %{job: nil, queue: []}
+    assert %{job: nil, progress: nil, queue: []} = SiteBuilder.status()
     assert Process.whereis(SiteBuilder) == builder
     refute_receive {:site_builder, _, _, _}
   end

@@ -126,7 +126,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     {:ok, _} = Catalogue.purge_play(archived)
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
 
-    assert has_element?(lv, "#group-leaving #play-#{b.code}", t("deleted"))
+    # It said "deleted", also of a draft whose code was changed: the play is still there.
+    assert has_element?(lv, "#group-leaving #play-#{b.code}", t("no longer in Playcode"))
   end
 
   test "a site built but not deployed is not live while a repository is configured",
@@ -300,9 +301,77 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert render(lv) =~ t("Generation failed: %{reason}", reason: "no plays")
 
     broadcast.({:site_builder, :started, :publish})
-    broadcast.({:site_builder, :progress, :deploy, "Pushing"})
+    broadcast.({:site_builder, :progress, :deploy, {:push, "gh-pages"}})
     broadcast.({:site_builder, :done, :publish, {:error, "rejected"}})
     assert render(lv) =~ t("Deploy failed: %{reason}", reason: "rejected")
+  end
+
+  test "a page opened while a Publish deploys shows its second step, in the page's language",
+       %{conn: conn} do
+    test = self()
+    repo = "file://" <> bare_repo()
+
+    deploy_settings(
+      repo: repo,
+      publish_url: "https://publish.example/playcode-deploy.php",
+      publish_token: "key"
+    )
+
+    Req.Test.set_req_test_to_shared()
+
+    Req.Test.stub(Playcode.Export.StaticSite.Deployer, fn conn ->
+      send(test, {:holding, self()})
+      receive do: (:go -> :ok), after: (10_000 -> :ok)
+      Req.Test.json(conn, %{ok: true, target: "edicion", commit: "abc123"})
+    end)
+
+    Playcode.Export.SiteBuilder.publish([], repo)
+    assert_receive {:holding, server}, 30_000
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert has_element?(lv, "#build-progress", t("Step 2 of 2"))
+
+    assert has_element?(
+             lv,
+             "#build-progress",
+             t("Publishing on %{host}...", host: "publish.example")
+           )
+
+    refute has_element?(lv, "#build-progress", "Publishing on publish.example")
+    send(server, :go)
+  end
+
+  test "a build's progress reads in the page's language", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
+
+    broadcast.({:site_builder, :started, :generate})
+
+    broadcast.(
+      {:site_builder, :progress, :generate,
+       %{step: :assets, current: 0, total: 2, detail: "Writing assets..."}}
+    )
+
+    assert has_element?(lv, "#build-progress", t("Writing assets..."))
+    refute has_element?(lv, "#build-progress", "Writing assets...")
+  end
+
+  test "a page number that is not one shows the first page", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    render_hook(lv, "live_page", %{"page" => "two"})
+
+    assert has_element?(lv, "#publish-card")
+  end
+
+  test "the last deploy's time names its zone", %{conn: conn, a: a} do
+    deployed([a.code])
+    deploy_settings(repo: "file:///not-pushed-to")
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert has_element?(lv, "#publish-card", "UTC")
   end
 
   # The size walks every file, seconds on production's volume: counted after connecting.

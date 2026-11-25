@@ -51,17 +51,22 @@ defmodule Playcode.Export.SiteBuilder do
   """
   def publish(opts, repo), do: request(:publish, {opts, repo})
 
-  @doc "The running job and the requests waiting behind it, oldest first."
+  @doc """
+  The running job, its last progress (`{:generate | :deploy, info}`, or nil before the
+  first) and the requests waiting behind it, oldest first.
+  """
   def status, do: GenServer.call(__MODULE__, :status)
 
   defp request(request, args), do: GenServer.call(__MODULE__, {:request, request, args})
 
   @impl true
-  def init(nil), do: {:ok, %{job: nil, ref: nil, queue: []}}
+  def init(nil), do: {:ok, %{job: nil, ref: nil, progress: nil, queue: []}}
 
   @impl true
   def handle_call(:status, _from, state) do
-    {:reply, %{job: state.job, queue: Enum.map(state.queue, &elem(&1, 0))}, state}
+    {:reply,
+     %{job: state.job, progress: state.progress, queue: Enum.map(state.queue, &elem(&1, 0))},
+     state}
   end
 
   # Idle means the queue is empty: the request runs at once, as a job of its own.
@@ -85,6 +90,14 @@ defmodule Playcode.Export.SiteBuilder do
     end
   end
 
+  # Kept, so a page opened mid-job knows the step it is on before the next message. The
+  # task sends these before its result, so none arrives after the job has ended.
+  @impl true
+  def handle_cast({:progress, step, info}, state) do
+    broadcast({:site_builder, :progress, step, info})
+    {:noreply, %{state | progress: {step, info}}}
+  end
+
   @impl true
   def handle_info({ref, result}, %{ref: ref, job: job} = state) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
@@ -101,14 +114,14 @@ defmodule Playcode.Export.SiteBuilder do
   # Crashing on a stray message would restart the builder idle while its job ran on.
   def handle_info(_message, state), do: {:noreply, state}
 
-  defp run_next(%{queue: []} = state), do: %{state | job: nil, ref: nil}
+  defp run_next(%{queue: []} = state), do: %{state | job: nil, ref: nil, progress: nil}
 
   defp run_next(%{queue: queue} = state) do
     [{job, args} | rest] = queue
     # Announced before the task starts, so no page hears its progress before it.
     broadcast({:site_builder, :started, job})
     task = Task.Supervisor.async_nolink(@tasks, fn -> run(job, args) end)
-    %{state | job: job, ref: task.ref, queue: rest}
+    %{state | job: job, ref: task.ref, progress: nil, queue: rest}
   end
 
   # An empty site is built whole, whatever build.json says: one build is faster than one
@@ -166,7 +179,7 @@ defmodule Playcode.Export.SiteBuilder do
   end
 
   defp in_site(opts), do: Keyword.put(opts, :output_dir, StaticSite.output_dir())
-  defp progress(job), do: &broadcast({:site_builder, :progress, job, &1})
+  defp progress(step), do: &GenServer.cast(__MODULE__, {:progress, step, &1})
 
   defp broadcast(message), do: Phoenix.PubSub.broadcast(Playcode.PubSub, @topic, message)
 end

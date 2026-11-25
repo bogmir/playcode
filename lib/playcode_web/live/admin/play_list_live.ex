@@ -12,7 +12,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   alias Playcode.Authz
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
-  alias Playcode.Export.SiteStatus
+  alias Playcode.Export.{SiteBuilder, SiteStatus}
   alias Playcode.PlayContent
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
@@ -22,6 +22,8 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket), do: SiteBuilder.subscribe()
+
     {:ok,
      socket
      |> assign(:page_title, gettext("Admin - Plays"))
@@ -196,6 +198,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   def handle_info({:play_content_changed, _play_id}, socket) do
     {:noreply, reload(socket)}
   end
+
+  def handle_info({:site_builder, :done, _job, _result}, socket), do: {:noreply, reload(socket)}
+
+  # The rest of the site's topic: a shown play's edit already arrives on its own topic.
+  def handle_info(message, socket) when elem(message, 0) in [:site_builder, :play_changed],
+    do: {:noreply, socket}
 
   # Listens once to each play shown, and stops for the ones no longer shown. Subscribing
   # again on every params change stacked subscriptions, and each copy reloaded the list

@@ -21,7 +21,7 @@ lib/playcode/export/note_markup.ex 6
 lib/playcode/export/pdf.ex 1
 lib/playcode/export/pdf_cache.ex 13
 lib/playcode/export/play_change_listener.ex 11
-lib/playcode/export/site_builder.ex 12
+lib/playcode/export/site_builder.ex 14
 lib/playcode/export/static_site.ex 66
 lib/playcode/export/static_site/catalogue_page.ex 18
 lib/playcode/export/static_site/catalogue_page/catalogue.html.heex 2
@@ -100,7 +100,7 @@ lib/playcode_web/live/admin/play_content_editor_live.ex 44
 lib/playcode_web/live/admin/play_detail_live.ex 6
 lib/playcode_web/live/admin/play_editors_live.ex 4
 lib/playcode_web/live/admin/play_form_live.ex 24
-lib/playcode_web/live/admin/play_list_live.ex 10
+lib/playcode_web/live/admin/play_list_live.ex 11
 lib/playcode_web/live/admin/play_notes_live.ex 11
 lib/playcode_web/live/admin/play_performances_live.ex 62
 lib/playcode_web/live/admin/play_places_live.ex 14

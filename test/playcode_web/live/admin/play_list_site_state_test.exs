@@ -84,6 +84,22 @@ defmodule PlaycodeWeb.Admin.PlayListSiteStateTest do
            )
   end
 
+  test "a Publish that ends moves the list's site states without a reload", %{conn: conn} do
+    waiting = complete("Waiting Play")
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+    assert has_element?(view, "#play-#{waiting.id}", t("Waiting to be published"))
+
+    deployed([waiting])
+
+    Phoenix.PubSub.broadcast(
+      Playcode.PubSub,
+      "static_site",
+      {:site_builder, :done, :publish, {:ok, "https://example.test"}}
+    )
+
+    assert has_element?(view, "#play-#{waiting.id}", t("On the site"))
+  end
+
   test "a translation waiting under an original on the site is listed under it",
        %{conn: conn} do
     original = complete("Original Play")

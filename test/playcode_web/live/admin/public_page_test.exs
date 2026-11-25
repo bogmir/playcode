@@ -70,6 +70,17 @@ defmodule PlaycodeWeb.Admin.PublicPageTest do
     assert has_element?(lv, "#play-state", t("On the site as it is."))
   end
 
+  test "a play's page open during a deploy says it is on the site once it ends",
+       %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+    assert has_element?(lv, "#play-state", t("Waiting to be published"))
+
+    assert {:ok, _url} = deploy(bare_repo())
+
+    assert has_element?(lv, "#play-state", t("On the site as it is."))
+    assert has_element?(lv, "nav[aria-label='#{t("Play sections")}'] " <> public_link(play))
+  end
+
   test "a play changed since the deploy says so", %{conn: conn, play: play} do
     assert {:ok, _url} = deploy(bare_repo())
     {:ok, _} = Playcode.Catalogue.update_play(play, %{title: "Retitled"})
