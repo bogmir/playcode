@@ -41,6 +41,9 @@ defmodule Playcode.Authz do
   """
   def can?(user, action, resource \\ nil)
 
+  def can?(user, action, %{library: "TEST"}) when action != :see_test_plays,
+    do: can?(user, :see_test_plays) and can?(user, action)
+
   def can?(%User{role: :admin} = user, action, _resource),
     do: Accounts.active?(user) and action in @admin_actions
 

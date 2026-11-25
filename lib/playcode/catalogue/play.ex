@@ -338,7 +338,7 @@ defmodule Playcode.Catalogue.Play do
       less_than_or_equal_to: @composition_year_range.last
     )
     |> validate_composition_date_span()
-    |> unique_constraint(:number, name: :plays_library_number_index)
+    |> unique_constraint(:code, name: :plays_library_number_index)
     |> unique_constraint(:code)
   end
 

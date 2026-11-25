@@ -417,7 +417,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
       </section>
 
       <div class="mb-5 flex flex-wrap items-center gap-3">
-        <form phx-change="search" phx-submit="search" class="flex-1 md:max-w-md">
+        <form phx-change="search" phx-submit="search" class="min-w-48 flex-1 md:max-w-md">
           <input
             type="text"
             name="search"

@@ -114,4 +114,4 @@ lib/playcode_web/live/user_settings_live.ex 1
 lib/playcode_web/rate_limit.ex 2
 lib/playcode_web/router.ex 16
 lib/playcode_web/telemetry.ex 6
-lib/playcode_web/user_auth.ex 4
+lib/playcode_web/user_auth.ex 5

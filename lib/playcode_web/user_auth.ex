@@ -11,6 +11,7 @@ defmodule PlaycodeWeb.UserAuth do
 
   alias Playcode.Accounts
   alias Playcode.Authz
+  alias Playcode.Catalogue
 
   # Keep in step with @session_validity_in_days in UserToken.
   @max_age 60 * 60 * 24 * 30
@@ -160,7 +161,7 @@ defmodule PlaycodeWeb.UserAuth do
     end
   end
 
-  def on_mount({:ensure_can, action}, _params, session, socket) do
+  def on_mount({:ensure_can, action}, params, session, socket) do
     socket = mount_current_user(socket, session)
     user = socket.assigns.current_user
 
@@ -168,7 +169,7 @@ defmodule PlaycodeWeb.UserAuth do
       not Accounts.active?(user) ->
         {:halt, redirect_to_login(socket)}
 
-      Authz.can?(user, action) ->
+      Authz.can?(user, action, play_named(params)) ->
         {:cont, socket}
 
       true ->
@@ -270,7 +271,7 @@ defmodule PlaycodeWeb.UserAuth do
       is_nil(user) or not Accounts.active?(user) ->
         require_authenticated_user(conn, [])
 
-      Authz.can?(user, action) ->
+      Authz.can?(user, action, play_named(conn.params)) ->
         conn
 
       true ->
@@ -279,6 +280,11 @@ defmodule PlaycodeWeb.UserAuth do
         |> redirect(to: ~p"/")
         |> halt()
     end
+  end
+
+  # Every gated route with an `id` or a `code` names a play.
+  defp play_named(params) do
+    if library = Catalogue.library_named(params), do: %{library: library}
   end
 
   defp put_token_in_session(conn, token) do

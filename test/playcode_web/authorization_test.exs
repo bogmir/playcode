@@ -106,6 +106,30 @@ defmodule PlaycodeWeb.AuthorizationTest do
     assert missing == []
   end
 
+  # TEST is the library of an admin's trials: no other account sees its plays.
+  describe "a TEST play's pages" do
+    setup do
+      n = System.unique_integer([:positive])
+      %{test_play: play_fixture(%{"code" => "TEST#{n}_Prueba", "is_complete" => false})}
+    end
+
+    test "are open to admins only", %{test_play: play, personas: personas} do
+      for {path, :active} <- @routes, path =~ ~r/:(id|code)/ do
+        path = path |> String.replace(":id", play.id) |> String.replace(":code", play.code)
+
+        assert outcome(get(conn_for(personas.researcher), path)) == :home, path
+        assert outcome(get(conn_for(personas.admin), path)) == :passes, path
+      end
+    end
+
+    test "refuse a researcher who navigates to one from the list",
+         %{test_play: play, personas: personas} do
+      {:ok, lv, _html} = live(conn_for(personas.researcher), ~p"/admin/plays")
+
+      assert {:error, {:redirect, %{to: "/"}}} = live_redirect(lv, to: ~p"/admin/plays/#{play}")
+    end
+  end
+
   describe "navigating inside the admin area" do
     # A live navigation stays in the :admin live_session, so no router plug runs:
     # only each LiveView's own on_mount stands between a researcher and the page.

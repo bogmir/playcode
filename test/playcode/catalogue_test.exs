@@ -142,7 +142,8 @@ defmodule Playcode.CatalogueTest do
       assert {:error, changeset} =
                create(%{"library" => "TEST", "number" => "#{n}", "slug" => "Otra"})
 
-      assert errors_on(changeset)[:number] == ["has already been taken"]
+      # Reported on the code, which the form shows at the top, not on the number field.
+      assert errors_on(changeset)[:code] == ["has already been taken"]
       assert {:ok, _} = create(%{"library" => "AL", "number" => "#{n}", "slug" => "Otra"})
     end
 
