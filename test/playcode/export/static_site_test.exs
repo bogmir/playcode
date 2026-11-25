@@ -523,10 +523,8 @@ defmodule Playcode.Export.StaticSiteTest do
 
     test "the Contents names every list and paratext after the title page, linked where it prints",
          %{play: play, dir: dir} do
-      # The Contents' links, not the Downloads'.
       links =
-        for link <-
-              dir |> title_page(play) |> LazyHTML.query("article section:not(.downloads) li a"),
+        for link <- dir |> title_page(play) |> LazyHTML.query("article section li a"),
             do: {squish(LazyHTML.text(link)), hd(LazyHTML.attribute(link, "href"))}
 
       assert in_order?(

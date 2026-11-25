@@ -11,6 +11,7 @@
     <p :if={@edition.play.original_title not in [nil, @edition.play.title]} class="original-title">
       {@edition.play.original_title}
     </p>
+    <Components.actions edition={@edition} published={@site.published} />
     <dl class="facts">
       <dt>{t("Code")}</dt>
       <dd>{@edition.play.code}</dd>
@@ -67,6 +68,5 @@
     <p :if={Components.licence?(@edition.play)} class="lede">
       <Components.licence play={@edition.play} />
     </p>
-    <Components.downloads play={@edition.play} />
   </article>
 </Components.shell>
