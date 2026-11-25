@@ -6,8 +6,8 @@ return array(
     'repo' => 'OWNER/REPO',
     'branch' => 'gh-pages',
 
-    // The folder, next to playcode-deploy.php, the site goes in: https://emothe.uv.es/edicion_estatica/
-    'target' => 'edicion_estatica',
+    // The folder, next to playcode-deploy.php, the site goes in: https://emothe.uv.es/theca/
+    'target' => 'theca',
 
     // The SHA-256 of the deploy token. The token itself goes to Playcode, never here:
     //   TOKEN=$(openssl rand -hex 32); echo "$TOKEN"; printf %s "$TOKEN" | sha256sum

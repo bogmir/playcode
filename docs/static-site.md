@@ -62,10 +62,10 @@ _site/
 
 Deploy pushes the site to `bogmir/emothe-static` (branch `gh-pages`), then POSTs to
 `https://emothe.uv.es/playcode-deploy.php`, which downloads that branch from GitHub and
-swaps it into `emothe.uv.es/edicion_estatica/` (https://emothe.uv.es/edicion_estatica/). The script lives in
+swaps it into `emothe.uv.es/theca/` (https://emothe.uv.es/theca/). The script lives in
 `deploy/`: `playcode-deploy.php`, its settings template `playcode-deploy.config.example.php`
 (the live `playcode-deploy.config.php` holds the key's SHA-256 and is git-ignored), and
-`test.sh`, which runs it under PHP 7.2, the server's version, against a mock of the site's
+`test.sh`, which runs it under PHP 8.3, the server's version, against a mock of the site's
 folder (docker and python3; `PHP_IMAGE=wordpress:cli-php7.4 deploy/test.sh` for another).
 
 - **It never touches WordPress or the older sections** in the same folder: it writes only
@@ -73,9 +73,10 @@ folder (docker and python3; `PHP_IMAGE=wordpress:cli-php7.4 deploy/test.sh` for 
   and refuses a download holding PHP, `.htaccess` or a path leaving the folder.
 - **`POST …/playcode-deploy.php?check=1`** with the key reports PHP, zip, curl, write access
   and whether GitHub is reachable, and changes nothing.
-- **Updating the script** needs the UV VPN (eduVPN) and the SMB share
-  `smb://entresiglosvm.uv.es/html/emothe.uv.es/`; the server itself needs neither, since
-  Playcode reaches it over HTTPS.
+- **Updating the script** needs the UV VPN (eduVPN) and the server entresiglosvm2
+  (147.156.4.32, since 2026-11-23): SSH as `entresiglos-admin` with `sudo`, or the SMB share
+  `smb://147.156.4.32`; it is `/var/www/uv/emothe.uv.es/httpdocs/playcode-deploy.php`. Playcode
+  needs neither: it reaches the script over HTTPS.
 - **The four Fly secrets**: `STATIC_SITE_REPO` (`bogmir/emothe-static`),
   `GITHUB_DEPLOY_TOKEN` (fine-grained, that repository only, Contents read and write),
   `STATIC_SITE_PUBLISH_URL` (`https://emothe.uv.es/playcode-deploy.php`) and

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Exercises playcode-deploy.php under PHP 7.2 with the zip and curl extensions, as on
+# Exercises playcode-deploy.php under PHP 8.3 with the zip and curl extensions, as on
 # emothe.uv.es, against a mock of its folder holding WordPress and an older
 # section that must survive every deploy. Needs docker and python3. Run: deploy/test.sh
 set -euo pipefail
@@ -10,7 +10,7 @@ php_port=18080
 zip_port=18099
 container=playcode-deploy-test
 # The PHP the server runs; PHP_IMAGE=wordpress:cli-php7.4 deploy/test.sh for another.
-image=${PHP_IMAGE:-wordpress:cli-php7.2}
+image=${PHP_IMAGE:-wordpress:cli-php8.3}
 
 cleanup() {
   docker rm -f "$container" >/dev/null 2>&1 || true
