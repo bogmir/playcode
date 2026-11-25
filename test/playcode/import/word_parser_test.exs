@@ -243,6 +243,31 @@ defmodule Playcode.Import.WordParserTest do
          {"prologo", nil, "PRÓLOGO", ["Escena 1"]},
          {"jornada", "1", "JORNADA PRIMERA", ["Escena 1"]}
        ]},
+      {"an ordinal or an editor's bracket before the act word still starts an act",
+       ["PRIMER ACTO", "{e}Escena 1", "{p}A {v}x", "[ACTO SEGUNDO]", "{e}Escena 1", "{p}B {v}y"],
+       [{"acto", "1", "PRIMER ACTO", ["Escena 1"]}, {"acto", "2", "[ACTO SEGUNDO]", ["Escena 1"]}]},
+      {"a jornada is a jornada wherever the word stands, tagged or not",
+       [
+         "{A}Primera Jornada",
+         "{e}Escena 1",
+         "{p}A {v}x",
+         "[Jornada II]",
+         "{e}Escena 1",
+         "{p}B {v}y"
+       ],
+       [
+         {"jornada", "1", "Primera Jornada", ["Escena 1"]},
+         {"jornada", "2", "[Jornada II]", ["Escena 1"]}
+       ]},
+      {"a sentence naming an act does not start one",
+       [
+         "ACTO PRIMERO",
+         "{e}Escena 1",
+         "{p}A {v}x",
+         "FIN DEL ACTO PRIMERO",
+         "{e}Escena 2",
+         "{p}B {v}y"
+       ], [{"acto", "1", "ACTO PRIMERO", ["Escena 1", "Escena 2"]}]},
       {"prologues and epilogues are recognised in plain text, with or without 'The'",
        [
          "The Prologue to the King's Majesty",

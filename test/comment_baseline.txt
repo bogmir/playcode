@@ -50,7 +50,7 @@ lib/playcode/import/tei_corpus.ex 15
 lib/playcode/import/tei_import.ex 129
 lib/playcode/import/tei_parser.ex 309
 lib/playcode/import/witnesses.ex 8
-lib/playcode/import/word_parser.ex 32
+lib/playcode/import/word_parser.ex 30
 lib/playcode/performances.ex 26
 lib/playcode/performances/actor.ex 2
 lib/playcode/performances/cast_member.ex 1
