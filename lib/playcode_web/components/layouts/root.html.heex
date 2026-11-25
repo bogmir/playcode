@@ -8,6 +8,20 @@
       {assigns[:page_title]}
     </.live_title>
     <link rel="icon" type="image/svg+xml" href={~p"/images/logo.svg"} />
+    <link
+      rel="preload"
+      href="/site-fonts/inter-400-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link
+      rel="preload"
+      href="/site-fonts/source-serif-4-400-latin.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
     <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}>
     </script>
