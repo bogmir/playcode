@@ -15,6 +15,10 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
   defp restore(view, play),
     do: view |> element("#play-#{play.id} button[aria-label='#{t("Restore")}']") |> render_click()
 
+  defp tab_label(msgid), do: Gettext.pgettext(PlaycodeWeb.Gettext, "plays", msgid)
+
+  defp status_tab, do: "nav[aria-label='#{t("Status")}'] a"
+
   defp archive(conn, play) do
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     view |> element("button", t("Archive play")) |> render_click()
@@ -232,14 +236,9 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     end
 
     test "each choice carries its count", %{view: view} do
-      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("All")} · 2")
-      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("Drafts")} · 1")
-
-      assert has_element?(
-               view,
-               "nav[aria-label='#{t("Status")}'] a",
-               "#{t("Complete plays")} · 1"
-             )
+      assert has_element?(view, status_tab(), ~r/#{t("All")}\s+2/)
+      assert has_element?(view, status_tab(), ~r/#{t("Drafts")}\s+1/)
+      assert has_element?(view, status_tab(), ~r/#{tab_label("Complete")}\s+1/)
     end
 
     test "choosing one narrows the list and the address keeps it", %{
@@ -247,12 +246,12 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       draft: draft,
       done: done
     } do
-      view |> element("nav[aria-label='#{t("Status")}'] a", t("Drafts")) |> render_click()
+      view |> element(status_tab(), t("Drafts")) |> render_click()
       assert_patch(view, ~p"/admin/plays?status=draft")
       assert has_element?(view, "#play-#{draft.id}")
       refute has_element?(view, "#play-#{done.id}")
 
-      view |> element("nav[aria-label='#{t("Status")}'] a", t("Complete plays")) |> render_click()
+      view |> element(status_tab(), tab_label("Complete")) |> render_click()
       assert_patch(view, ~p"/admin/plays?status=complete")
       assert has_element?(view, "#play-#{done.id}")
       refute has_element?(view, "#play-#{draft.id}")
@@ -271,7 +270,21 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     end
   end
 
-  describe "pick up where you left off" do
+  test "the archived plays are the last tab, there once a play is archived", %{conn: conn} do
+    play = play_fixture(%{"title" => "Shelved Play"})
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+    refute has_element?(view, status_tab(), tab_label("Archived"))
+
+    {:ok, _} = Catalogue.delete_play(play)
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+    view |> element(status_tab(), tab_label("Archived")) |> render_click()
+
+    assert_patch(view, ~p"/admin/plays?archived=1")
+    assert has_element?(view, "#{status_tab()}[aria-current=page]", tab_label("Archived"))
+    assert has_element?(view, "#play-#{play.id}")
+  end
+
+  describe "recent plays" do
     setup %{conn: conn} do
       user = user_fixture(role: :researcher)
       %{conn: log_in_user(conn, user), user: user}
@@ -292,7 +305,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       view
       |> render()
       |> LazyHTML.from_fragment()
-      |> LazyHTML.query("section[aria-label='#{t("Pick up where you left off")}'] a")
+      |> LazyHTML.query("section[aria-label='#{t("Recent plays")}'] a")
       |> Enum.map(&LazyHTML.text/1)
       |> Enum.map(&String.trim/1)
     end
@@ -326,7 +339,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
       play_fixture()
       {:ok, view, _html} = live(conn, ~p"/admin/plays")
 
-      refute has_element?(view, "section[aria-label='#{t("Pick up where you left off")}']")
+      refute has_element?(view, "section[aria-label='#{t("Recent plays")}']")
     end
   end
 
@@ -373,9 +386,9 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     end
 
     test "has a filter of its own", %{view: view, empty: empty, prose: prose, verse: verse} do
-      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("No text")} · 1")
+      assert has_element?(view, status_tab(), ~r/#{t("No text")}\s+1/)
 
-      view |> element("nav[aria-label='#{t("Status")}'] a", t("No text")) |> render_click()
+      view |> element(status_tab(), t("No text")) |> render_click()
       assert_patch(view, ~p"/admin/plays?status=no_text")
       assert has_element?(view, "#play-#{empty.id}")
       refute has_element?(view, "#play-#{prose.id}")
@@ -509,7 +522,7 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
 
       assert row_ids(view) == ["play-#{original.id}", "play-#{draft.id}"]
       refute has_element?(view, "#play-#{done.id}")
-      assert has_element?(view, "nav[aria-label='#{t("Status")}'] a", "#{t("Drafts")} · 1")
+      assert has_element?(view, status_tab(), ~r/#{t("Drafts")}\s+1/)
     end
 
     test "a derived play whose kind was never set is listed under its original, unnamed",

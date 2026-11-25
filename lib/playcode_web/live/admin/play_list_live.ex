@@ -18,7 +18,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   alias PlaycodeWeb.PlayLabels
 
   @per_page 50
-  @site_states [:waiting, :changed, :leaving, :live]
+  @site_states [:waiting, :changed, :leaving]
 
   @impl true
   def mount(_params, _session, socket) do
@@ -129,8 +129,6 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     Map.new(@site_states, &{&1, Map.get(grouped, &1, [])})
   end
 
-  defp site_states, do: @site_states
-
   defp filter(status, site_codes) when status in @site_states, do: {:codes, site_codes[status]}
   defp filter(status, _site_codes), do: status
 
@@ -193,7 +191,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp parse_status("complete"), do: :complete
   defp parse_status("no_text"), do: :no_text
 
-  defp parse_status(state) when state in ~w(waiting changed leaving live),
+  defp parse_status(state) when state in ~w(waiting changed leaving),
     do: String.to_existing_atom(state)
 
   defp parse_status(_), do: nil
@@ -240,10 +238,39 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     [
       {nil, gettext("All"), counts.all},
       {:draft, gettext("Drafts"), counts.draft},
-      {:complete, gettext("Complete plays"), counts.complete},
+      {:complete, pgettext("plays", "Complete"), counts.complete},
       {:no_text, gettext("No text"), counts.no_text}
     ]
   end
+
+  # A site state is named only while a play is in it, or while it is the chosen filter.
+  defp site_notices(counts, status) do
+    for state <- @site_states, counts[state] > 0 or state == status, do: {state, counts[state]}
+  end
+
+  defp site_notice(:waiting, count),
+    do:
+      ngettext(
+        "%{count} play waits to be published",
+        "%{count} plays wait to be published",
+        count
+      )
+
+  defp site_notice(:changed, count),
+    do:
+      ngettext(
+        "%{count} play has unpublished changes",
+        "%{count} plays have unpublished changes",
+        count
+      )
+
+  defp site_notice(:leaving, count),
+    do:
+      ngettext(
+        "%{count} play leaves the site with the next Publish",
+        "%{count} plays leave the site with the next Publish",
+        count
+      )
 
   defp status_label(%{deleted_at: deleted_at}) when not is_nil(deleted_at),
     do: gettext("Archived")
@@ -401,74 +428,66 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
       <section
         :if={@recent_plays != []}
-        aria-label={gettext("Pick up where you left off")}
-        class="mb-5"
+        aria-label={gettext("Recent plays")}
+        class="mb-4 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm"
       >
-        <h2 class="mb-2 text-sm font-semibold text-base-content/70">
-          {gettext("Pick up where you left off")}
-        </h2>
-        <ul class="flex flex-wrap gap-2">
+        <h2 class="font-semibold text-base-content/70">{gettext("Recent")}</h2>
+        <ul class="contents">
           <li :for={play <- @recent_plays}>
-            <.link navigate={~p"/admin/plays/#{play.id}"} class="btn btn-sm btn-soft">
+            <.link navigate={~p"/admin/plays/#{play.id}"} class="link link-hover link-primary">
               {play.title}
             </.link>
           </li>
         </ul>
       </section>
 
-      <div class="mb-5 flex flex-wrap items-center gap-3">
-        <form phx-change="search" phx-submit="search" class="min-w-48 flex-1 md:max-w-md">
-          <input
-            type="text"
-            name="search"
-            value={@search}
-            placeholder={gettext("Search plays...")}
-            phx-debounce="300"
-            class="input input-bordered w-full"
-          />
-        </form>
+      <form phx-change="search" phx-submit="search" class="mb-4 max-w-md">
+        <input
+          type="text"
+          name="search"
+          value={@search}
+          placeholder={gettext("Search plays...")}
+          phx-debounce="300"
+          class="input input-bordered w-full"
+        />
+      </form>
 
-        <%!-- Four buttons are wider than a small phone: they scroll within the row, not the page. --%>
-        <nav
-          :if={!@archived}
-          aria-label={gettext("Status")}
-          class="join max-w-full overflow-x-auto overflow-y-hidden"
+      <nav
+        aria-label={gettext("Status")}
+        class="tabs tabs-border mb-4 flex-nowrap overflow-x-auto overflow-y-hidden border-b border-base-300"
+      >
+        <.link
+          :for={{value, label, count} <- status_choices(@status_counts)}
+          patch={~p"/admin/plays?#{list_params(@search, value)}"}
+          class={["tab shrink-0 gap-1.5", !@archived && @status == value && "tab-active"]}
+          aria-current={!@archived && @status == value && "page"}
         >
-          <.link
-            :for={{value, label, count} <- status_choices(@status_counts)}
-            patch={~p"/admin/plays?#{list_params(@search, value)}"}
-            class={["btn btn-sm join-item shrink-0", @status == value && "btn-primary"]}
-            aria-current={@status == value && "page"}
-          >
-            {label} · {count}
-          </.link>
-        </nav>
-
-        <nav
-          :if={!@archived}
-          aria-label={gettext("Site")}
-          class="join max-w-full overflow-x-auto overflow-y-hidden"
-        >
-          <.link
-            :for={state <- site_states()}
-            patch={~p"/admin/plays?#{list_params(@search, state)}"}
-            class={["btn btn-sm join-item shrink-0", @status == state && "btn-primary"]}
-            aria-current={@status == state && "page"}
-          >
-            {site_label(state)} · {@site_counts[state]}
-          </.link>
-        </nav>
-
+          {label} <span class="text-base-content/70">{count}</span>
+        </.link>
         <.link
           :if={@archived_count > 0 or @archived}
           patch={if @archived, do: ~p"/admin/plays", else: ~p"/admin/plays?archived=1"}
-          class={["btn btn-sm", @archived && "btn-active"]}
+          class={["tab ml-auto shrink-0 gap-1.5", @archived && "tab-active"]}
+          aria-current={@archived && "page"}
         >
-          <.icon name="hero-archive-box-mini" class="size-4" />
-          {gettext("Archived plays")}
-          <span class="badge badge-sm">{@archived_count}</span>
+          {pgettext("plays", "Archived")} <span class="text-base-content/70">{@archived_count}</span>
         </.link>
-      </div>
+      </nav>
+
+      <nav
+        :if={!@archived and site_notices(@site_counts, @status) != []}
+        aria-label={gettext("Site")}
+        class="mb-4 flex flex-wrap gap-x-4 gap-y-1 rounded-box bg-warning/10 px-3 py-2 text-sm"
+      >
+        <.link
+          :for={{state, count} <- site_notices(@site_counts, @status)}
+          patch={~p"/admin/plays?#{list_params(@search, state)}"}
+          class={["link text-warning", @status == state && "font-semibold"]}
+          aria-current={@status == state && "page"}
+        >
+          {site_notice(state, count)}
+        </.link>
+      </nav>
 
       <div
         class="overflow-x-auto rounded-box border border-base-300 bg-base-100 shadow-sm"
