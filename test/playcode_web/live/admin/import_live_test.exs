@@ -55,6 +55,16 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
            )
   end
 
+  test "a file whose number another play holds is refused, naming that play", %{conn: conn} do
+    holder = play_fixture(%{"code" => "AL7300001_Otra"})
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
+
+    html = import_tei(lv, "AL7300001_Nueva.xml", tei(code: "AL7300001_Nueva", title: "Nueva"))
+
+    assert html =~ t("%{code} already holds this number", code: holder.code)
+    assert [_one] = Catalogue.list_plays()
+  end
+
   test "an uploaded corpus file becomes a play, readable on its preview", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
 
@@ -62,7 +72,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
     # its own code the upload never waits on the sweep's uncommitted plays.code, which it
     # did until the sandbox cancelled it.
     path = "test/fixtures/EMOTHE0759_AutoDeLaBarcaDelInfierno.xml"
-    code = "LIVE0759_AutoDeLaBarcaDelInfierno"
+    code = "AL0759_AutoDeLaBarcaDelInfierno"
     xml = path |> File.read!() |> String.replace("EMOTHE0759_AutoDeLaBarcaDelInfierno", code)
     html = import_tei(lv, Path.basename(path), xml)
 
@@ -82,7 +92,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
   # since one may duplicate a reference Playcode holds under a corrected description.
   test "a new play that would add references is shown first, and imported on confirmation",
        %{conn: conn} do
-    code = "IMP#{System.unique_integer([:positive])}"
+    code = Playcode.TestFixtures.unique_code()
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
 
     html =
@@ -110,7 +120,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
   # TEI's schema lets a split verse's parts out of order through (EMOTHE0284's "O molto",
   # a last part after prose): the curator sees them, by identifier, before the play comes in.
   test "a new play whose split verses have parts out of order is shown first", %{conn: conn} do
-    code = "IMP#{System.unique_integer([:positive])}"
+    code = Playcode.TestFixtures.unique_code()
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
 
     html =
@@ -140,7 +150,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
 
   describe "a file whose code is already a play" do
     setup %{conn: conn} do
-      code = "IMP#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       import_tei!(tei(code: code, title: "Primera versión"))
       {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")
       %{lv: lv, code: code}
@@ -194,7 +204,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
 
     test "the confirmation warns that the play's text will be removed", %{conn: conn} do
       for lines <- [1, 2] do
-        code = "IMP#{System.unique_integer([:positive])}"
+        code = Playcode.TestFixtures.unique_code()
         verses = Enum.map_join(1..lines, &~s(<l n="#{&1}">Verso #{&1}.</l>))
 
         import_tei!(
@@ -351,7 +361,7 @@ defmodule PlaycodeWeb.Admin.ImportLiveTest do
     dir = Path.join(System.tmp_dir!(), "import-dir-#{System.unique_integer([:positive])}")
     File.mkdir_p!(dir)
     on_exit(fn -> File.rm_rf(dir) end)
-    code = "IMP#{System.unique_integer([:positive])}"
+    code = Playcode.TestFixtures.unique_code()
     File.write!(Path.join(dir, "play.xml"), tei(code: code))
 
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/import")

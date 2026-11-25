@@ -48,7 +48,7 @@ defmodule Playcode.CompleteCopyTest do
   }
 
   test "an ordinary play comes back whole from its TEI file" do
-    original = play_fixture(%{"code" => "CCO#{System.unique_integer([:positive])}"})
+    original = play_fixture(%{"code" => Playcode.TestFixtures.unique_code()})
     {built, imported} = round_trip(fn -> ordinary_play(original) end)
 
     # What the round trip loses today: {the item of docs/backlog.md that closes it, the
@@ -145,7 +145,7 @@ defmodule Playcode.CompleteCopyTest do
         Map.merge(record(), %{
           title: "La comedia completa",
           title_sort: "comedia completa",
-          code: "CC#{System.unique_integer([:positive])}",
+          code: Playcode.TestFixtures.unique_code(),
           parent_play_id: original.id,
           relationship_type: "traduccion"
         })
@@ -268,7 +268,6 @@ defmodule Playcode.CompleteCopyTest do
       original_title: "The Complete Comedy",
       licence_url: "https://creativecommons.org/licenses/by-nc-nd/4.0/",
       licence_text: "CC BY-NC-ND 4.0",
-      emothe_id: "0999",
       sponsor: "Plan Nacional",
       funder: "Ministerio",
       authority: "Universitat de València",
@@ -297,7 +296,7 @@ defmodule Playcode.CompleteCopyTest do
       Catalogue.create_play(
         Map.merge(record(), %{
           title: "Una obra sin texto",
-          code: "CN#{System.unique_integer([:positive])}"
+          code: Playcode.TestFixtures.unique_code()
         })
       )
 
@@ -334,7 +333,7 @@ defmodule Playcode.CompleteCopyTest do
     {:ok, play} =
       Catalogue.create_play(%{
         title: "Una comedia rara",
-        code: "CR#{System.unique_integer([:positive])}",
+        code: Playcode.TestFixtures.unique_code(),
         edition_notes: ["Una nota sobre la edición.", "Otra nota,\nen dos líneas."],
         team_note: "Recordatorio para el equipo.",
         # A numbering rule other than the defaults, Manual so no recount touches its text.

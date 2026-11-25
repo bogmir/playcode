@@ -142,7 +142,7 @@ defmodule Playcode.Import.TeiCorpus do
 
   # Matches the fly reimport task's `@needs_a_look`.
   defp same_number(%{same_number: nil}), do: ""
-  defp same_number(%{same_number: code}), do: ", but #{code} holds its number"
+  defp same_number(%{same_number: code}), do: ", refused: #{code} holds its number"
 
   # Matches the fly reimport task's `@needs_a_look`, as `edited/1` does.
   defp kept(count), do: edited(count) <> " (--overwrite-edits replaces them)"

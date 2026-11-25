@@ -327,7 +327,7 @@ defmodule Playcode.Export.TeiValidatorTest do
     play = own_copy(@fixture_file, "TRA")
 
     n = System.unique_integer([:positive])
-    original = Playcode.TestFixtures.play_fixture(%{"code" => "ORIG#{n}_Barca"})
+    original = Playcode.TestFixtures.play_fixture(%{"code" => "EMOTHE#{12_000_000 + n}_Barca"})
 
     {:ok, _} =
       Catalogue.update_play(play, %{
@@ -338,7 +338,7 @@ defmodule Playcode.Export.TeiValidatorTest do
     xml = export_tei(play)
 
     assert xml =~ "<note>Impresos<lb/>Madrid, 1637.</note>"
-    assert xml =~ ~s(<relatedItem target="ORIG#{n}" type="original"/>)
+    assert xml =~ ~s(<relatedItem target="EMOTHE#{12_000_000 + n}" type="original"/>)
     xml
   end
 
@@ -397,7 +397,7 @@ defmodule Playcode.Export.TeiValidatorTest do
     |> File.read!()
     |> String.replace(
       ~s(<title key="archivo">#{archivo}</title>),
-      ~s(<title key="archivo">#{prefix}#{System.unique_integer([:positive])}</title>)
+      ~s(<title key="archivo">AL#{13_000_000 + System.unique_integer([:positive])}_#{prefix}</title>)
     )
     |> edit.()
     |> import_tei!()

@@ -33,6 +33,19 @@ defmodule PlaycodeWeb.Admin.PlayListLiveTest do
     refute html =~ beta.title
   end
 
+  # A TEST play is an admin's trial run, never published and never a researcher's concern.
+  test "only an admin's list shows the plays of the TEST library", %{conn: conn} do
+    trial = play_fixture(%{"code" => "TEST0001_Prueba", "title" => "Obra de prueba"})
+    real = play_fixture(%{"title" => "Obra de verdad"})
+
+    {:ok, _view, html} = live(conn, ~p"/admin/plays")
+    assert html =~ real.title
+    refute html =~ trial.title
+
+    {:ok, _view, html} = live(log_in_user(conn, admin_fixture()), ~p"/admin/plays")
+    assert html =~ trial.title
+  end
+
   # Reads PubSub's registry, past the page: how often the list listens to a play does not
   # show on it, but each extra subscription reloaded the whole list once more per edit,
   # and every page change or search added one.

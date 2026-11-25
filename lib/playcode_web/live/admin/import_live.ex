@@ -190,6 +190,9 @@ defmodule PlaycodeWeb.Admin.ImportLive do
   defp format_error({:play_already_exists, code}),
     do: gettext("Play with code %{code} already exists", code: code)
 
+  defp format_error({:number_taken, code}),
+    do: gettext("%{code} already holds this number", code: code)
+
   defp format_error(reason), do: inspect(reason)
 
   @impl true

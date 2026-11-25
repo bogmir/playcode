@@ -443,8 +443,6 @@ defmodule Playcode.Import.TeiParser do
     {pub_place, pub_date, publisher_text, availability, licence_url, licence_text, authority_text} =
       extract_publication(publication_stmt)
 
-    emothe_id = extract_emothe_idno(publication_stmt)
-
     {project_desc, editorial_decl} = extract_encoding(encoding_desc)
 
     language = extract_language_code(profile_desc)
@@ -475,7 +473,6 @@ defmodule Playcode.Import.TeiParser do
       availability_note: availability,
       licence_url: licence_url,
       licence_text: licence_text,
-      emothe_id: emothe_id,
       sponsor: safe_text(sponsor_el),
       funder: safe_text(funder_el),
       authority: authority_text,
@@ -623,17 +620,6 @@ defmodule Playcode.Import.TeiParser do
   defp extract_idno({_name, _attrs, children}) do
     idno = find_child(children, "idno")
     if idno, do: text_content(idno), else: nil
-  end
-
-  defp extract_emothe_idno(nil), do: nil
-
-  defp extract_emothe_idno({_name, _attrs, children}) do
-    idnos = find_children(children, "idno")
-
-    emothe_idno =
-      Enum.find(idnos, fn {_, attrs, _} -> attr_value(attrs, "type") == "EMOTHE" end)
-
-    if emothe_idno, do: text_content(emothe_idno), else: nil
   end
 
   # <notesStmt><note>: the notes on the edition, a <lb/> a line break in one.

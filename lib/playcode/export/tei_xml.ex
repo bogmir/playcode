@@ -286,8 +286,8 @@ defmodule Playcode.Export.TeiXml do
     idno_children = [element(:idno, %{type: "code"}, play.code)]
 
     idno_children =
-      if play.emothe_id,
-        do: idno_children ++ [element(:idno, %{type: "EMOTHE"}, play.emothe_id)],
+      if play.library,
+        do: idno_children ++ [element(:idno, %{type: play.library}, Play.padded_number(play))],
         else: idno_children
 
     children =
@@ -1790,12 +1790,10 @@ defmodule Playcode.Export.TeiXml do
     resolve(body, state.refs)
   end
 
-  defp id_prefix(%{code: code, language: language}) do
-    case Regex.run(~r/^EMOTHE(\d+)/, code, capture: :all_but_first) do
-      [number] -> "em#{number}-#{language || "es"}-"
-      nil -> "#{language || "es"}-"
-    end
-  end
+  defp id_prefix(%{library: "EMOTHE", language: language} = play),
+    do: "em#{Play.padded_number(play)}-#{language || "es"}-"
+
+  defp id_prefix(%{language: language}), do: "#{language || "es"}-"
 
   defp number(nodes, state) when is_list(nodes), do: Enum.map_reduce(nodes, state, &number/2)
   defp number({name, _, _} = node, state) when name in @not_text, do: {node, state}

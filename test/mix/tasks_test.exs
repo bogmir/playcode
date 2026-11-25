@@ -86,14 +86,19 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
   describe "playcode.import.tei" do
     setup do
       dir = tmp_dir()
-      File.write!(Path.join(dir, "TASK0001_Primera.xml"), tei(code: "TASK0001", title: "Primera"))
+
+      File.write!(
+        Path.join(dir, "AL7000046_Primera.xml"),
+        tei(code: "AL7000046", title: "Primera")
+      )
+
       %{dir: dir}
     end
 
     test "--dry-run reports what it would import and writes nothing", %{dir: dir} do
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
 
-      assert out =~ "TASK0001  new"
+      assert out =~ "AL7000046  new"
       # An empty play: no number to detect, the default rule.
       assert out =~ "numbering V never"
       assert out =~ "dry run, nothing written"
@@ -101,17 +106,17 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     end
 
     test "--dry-run says when a new play's number is another play's", %{dir: dir} do
-      play_fixture(%{"code" => "TASK0001_Otra"})
+      play_fixture(%{"code" => "AL7000046_Otra"})
 
       assert run("playcode.import.tei", ["--dir", dir, "--dry-run"]) =~
-               "TASK0001  new, but TASK0001_Otra holds its number"
+               "AL7000046  new, refused: AL7000046_Otra holds its number"
     end
 
     test "--dry-run lists the references an import would add", %{dir: dir} do
       File.write!(
-        Path.join(dir, "TASK0003_Tercera.xml"),
+        Path.join(dir, "AL7000047_Tercera.xml"),
         tei(
-          code: "TASK0003",
+          code: "AL7000047",
           title: "Tercera",
           back:
             ~s(<div type="bibliografia"><listBibl type="critica"><biblStruct type="libro"><monogr>) <>
@@ -122,15 +127,15 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
 
-      assert out =~ "TASK0003  new, adds 1 reference(s)"
+      assert out =~ "AL7000047  new, adds 1 reference(s)"
       assert out =~ ~r/\n\s+\+ Autor, Ana\. Libro nuevo/
     end
 
     test "--dry-run lists the references an import would skip", %{dir: dir} do
       File.write!(
-        Path.join(dir, "TASK0004_Cuarta.xml"),
+        Path.join(dir, "AL7000048_Cuarta.xml"),
         tei(
-          code: "TASK0004",
+          code: "AL7000048",
           title: "Cuarta",
           back:
             ~s(<div type="bibliografia"><listBibl type="critica"><biblStruct type="libro" xml:lang="la">) <>
@@ -141,7 +146,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
 
-      assert out =~ "TASK0004  new, skips 1 reference(s)"
+      assert out =~ "AL7000048  new, skips 1 reference(s)"
       assert out =~ ~r/\n\s+- Autor, Ana\. Liber/
     end
 
@@ -151,26 +156,26 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     test "--dry-run says a file with no text would remove the play's lines", %{dir: dir} do
       import_tei!(
         tei(
-          code: "TASK0009",
+          code: "AL7000049",
           body:
             ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1">Uno.</l><l n="2">Dos.</l></sp></div1>)
         )
       )
 
-      File.write!(Path.join(dir, "TASK0009_Novena.xml"), tei(code: "TASK0009"))
+      File.write!(Path.join(dir, "AL7000049_Novena.xml"), tei(code: "AL7000049"))
 
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"])
 
-      assert out =~ ~r/TASK0009  .*; no text: 2 lines would be removed/
+      assert out =~ ~r/AL7000049  .*; no text: 2 lines would be removed/
     end
 
     # EMOTHE0058's dedication opens "The Epistle Dedicatory.", its heading again, and five
     # cast lists open with a line that repeats theirs: every page printed both.
     test "--dry-run lists a heading the text under it repeats", %{dir: dir} do
       File.write!(
-        Path.join(dir, "TASK0006_Sexta.xml"),
+        Path.join(dir, "AL7000050_Sexta.xml"),
         tei(
-          code: "TASK0006",
+          code: "AL7000050",
           front: """
           <div type="dedicatoria"><head>The Epistle Dedicatory.</head>
             <p>The Epistle Dedicatory.<lb/>TO My much Honoured</p></div>
@@ -184,7 +189,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
 
-      assert out =~ "TASK0006  new, 2 heading(s) repeated by the text under them"
+      assert out =~ "AL7000050  new, 2 heading(s) repeated by the text under them"
       assert out =~ ~r/\n\s+! heading repeated: The Epistle Dedicatory.\n/
       assert out =~ ~r/\n\s+! heading repeated: PERSONAJES\n/
       refute out =~ "repeated: To the Reader"
@@ -193,9 +198,9 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
     test "--dry-run lists the parts of split verses out of order", %{dir: dir} do
       File.write!(
-        Path.join(dir, "TASK0005_Quinta.xml"),
+        Path.join(dir, "AL7000051_Quinta.xml"),
         tei(
-          code: "TASK0005",
+          code: "AL7000051",
           title: "Quinta",
           body: """
           <div1 type="acto" n="1"><head>Acto I</head>
@@ -216,7 +221,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run"])
 
-      assert out =~ "TASK0005  new, 3 split-verse part(s) out of order"
+      assert out =~ "AL7000051  new, 3 split-verse part(s) out of order"
       assert out =~ ~r/\n\s+! q-0001 last part, completes no verse: O molto\n/
       assert out =~ ~r/\n\s+! q-0004 first part, never completed: Sei qui, fratello\?\n/
       assert out =~ ~r/\n\s+! q-0006 middle part, completes no verse: Hippolita!\n/
@@ -228,7 +233,10 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       assert run("playcode.import.tei", ["--dir", dir]) =~ "imported 1, skipped 0, failed 0"
       assert [%{title: "Primera"}] = Catalogue.list_plays()
 
-      File.write!(Path.join(dir, "TASK0001_Primera.xml"), tei(code: "TASK0001", title: "Segunda"))
+      File.write!(
+        Path.join(dir, "AL7000046_Primera.xml"),
+        tei(code: "AL7000046", title: "Segunda")
+      )
 
       assert run("playcode.import.tei", ["--dir", dir]) =~ "imported 0, skipped 1, failed 0"
       assert [%{title: "Primera"}] = Catalogue.list_plays()
@@ -241,10 +249,10 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     # since its file was written, so running the same command again carries on where the
     # last one stopped; a play never imported, or one that failed, is imported.
     test "--force --resume skips a play imported since its file was written", %{dir: dir} do
-      path = Path.join(dir, "TASK0001_Primera.xml")
+      path = Path.join(dir, "AL7000046_Primera.xml")
       File.touch!(path, System.os_time(:second) - 60)
       run("playcode.import.tei", ["--dir", dir])
-      File.write!(Path.join(dir, "TASK0002_Segunda.xml"), tei(code: "TASK0002"))
+      File.write!(Path.join(dir, "AL7000052_Segunda.xml"), tei(code: "AL7000052"))
 
       assert run("playcode.import.tei", ["--dir", dir, "--force", "--resume"]) =~
                "imported 1, skipped 1, failed 0"
@@ -271,7 +279,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
       out = run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"])
 
-      assert out =~ ~r/TASK0001  replaces .*, undoes 2 hand edit\(s\) to its text/
+      assert out =~ ~r/AL7000046  replaces .*, undoes 2 hand edit\(s\) to its text/
       assert out =~ "1 with hand edits since their last import"
     end
 
@@ -280,8 +288,8 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     # --overwrite-edits such a play is kept, so the count is read under it.
     test "--dry-run --force counts the file's rows edited since their import", %{dir: dir} do
       File.write!(
-        Path.join(dir, "TASK0001_Primera.xml"),
-        tei(code: "TASK0001", front: ~s(<div type="licencia"><p>Privilège.</p></div>))
+        Path.join(dir, "AL7000046_Primera.xml"),
+        tei(code: "AL7000046", front: ~s(<div type="licencia"><p>Privilège.</p></div>))
       )
 
       run("playcode.import.tei", ["--dir", dir])
@@ -299,19 +307,19 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
                "--force",
                "--overwrite-edits"
              ]) =~
-               ~r/TASK0001  replaces .*, 1 row\(s\) from the file edited since their import/
+               ~r/AL7000046  replaces .*, 1 row\(s\) from the file edited since their import/
     end
 
     # A forced re-import replaced edits made by hand with no more than a count in the dry
     # run. It now keeps such a play, and says so, unless told to replace them.
     test "--force keeps a play with rows edited since their import, unless --overwrite-edits",
          %{dir: dir} do
-      path = Path.join(dir, "TASK0001_Primera.xml")
+      path = Path.join(dir, "AL7000046_Primera.xml")
 
       File.write!(
         path,
         tei(
-          code: "TASK0001",
+          code: "AL7000046",
           title: "Primera",
           front: ~s(<div type="licencia"><p>Privilège.</p></div>)
         )
@@ -326,7 +334,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       File.write!(
         path,
         tei(
-          code: "TASK0001",
+          code: "AL7000046",
           title: "Segunda",
           front: ~s(<div type="licencia"><p>Privilège.</p></div>)
         )
@@ -335,12 +343,12 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       dry_run = run("playcode.import.tei", ["--dir", dir, "--dry-run", "--force"])
 
       assert dry_run =~
-               ~r/TASK0001  would be skipped, 1 row\(s\) from the file edited since their import/
+               ~r/AL7000046  would be skipped, 1 row\(s\) from the file edited since their import/
 
       assert dry_run =~ "1 kept for their edits"
 
       out = run("playcode.import.tei", ["--dir", dir, "--force"])
-      assert out =~ ~r/TASK0001  skipped, 1 row\(s\) from the file edited since their import/
+      assert out =~ ~r/AL7000046  skipped, 1 row\(s\) from the file edited since their import/
       assert out =~ "imported 0, skipped 1, failed 0"
       assert [%{title: "Primera"}] = Catalogue.list_plays()
 
@@ -353,9 +361,9 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     # A later list's line keeps its own description: an edit to it changes no character.
     test "--dry-run --force counts a cast list's line edited since its import", %{dir: dir} do
       File.write!(
-        Path.join(dir, "TASK0001_Primera.xml"),
+        Path.join(dir, "AL7000046_Primera.xml"),
         tei(
-          code: "TASK0001",
+          code: "AL7000046",
           front:
             ~s(<div type="elenco"><head>PERSONAS</head><castList><castItem><role xml:id="ANA">ANA</role></castItem></castList></div>) <>
               ~s(<div type="elenco"><head>OTRAS</head><castList><castItem><role corresp="#ANA">ANA</role></castItem></castList></div>)
@@ -377,7 +385,7 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
                "--force",
                "--overwrite-edits"
              ]) =~
-               ~r/TASK0001  replaces .*, 1 row\(s\) from the file edited since their import/
+               ~r/AL7000046  replaces .*, 1 row\(s\) from the file edited since their import/
     end
 
     test "an import logs itself, so edits made before it are not counted again", %{dir: dir} do
@@ -391,12 +399,12 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     end
 
     test "one unreadable file does not stop the rest", %{dir: dir} do
-      File.write!(Path.join(dir, "TASK0002_Rota.xml"), "<TEI><teiHeader>")
+      File.write!(Path.join(dir, "AL7000052_Rota.xml"), "<TEI><teiHeader>")
 
       out = run("playcode.import.tei", ["--dir", dir])
 
       assert out =~ "imported 1, skipped 0, failed 1"
-      assert out =~ "TASK0002"
+      assert out =~ "AL7000052"
     end
   end
 
@@ -404,8 +412,8 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
     # Production is the master copy: its plays written back as a corpus directory, each
     # file as the play's TEI download, named by its code as the corpus files are.
     test "writes each play's TEI as DIR/CODE.xml, or one play's under --code" do
-      first = import_tei!(tei(code: "EXP0001_Primera", title: "Primera"))
-      second = import_tei!(tei(code: "EXP0002_Segunda", title: "Segunda"))
+      first = import_tei!(tei(code: "AL7000053_Primera", title: "Primera"))
+      second = import_tei!(tei(code: "AL7000054_Segunda", title: "Segunda"))
       dir = tmp_dir()
       file = &Path.join(dir, "#{&1.code}.xml")
 
@@ -658,13 +666,13 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
 
     test "a play added later shares the entries already imported" do
       run("playcode.import.bibliography", ["--path", @dump])
-      later = play_fixture(%{"code" => "EMOTHE0038_AntonioYCleopatra"})
+      later = play_fixture(%{"code" => "EMOTHE0999_Despues"})
 
       out = run("playcode.import.bibliography", ["--path", @dump])
 
-      assert out =~ "modern editions: 2 entries (2 already in Playcode), 2 links on 1 plays"
-      assert out =~ "created 0 entries and 5 links"
-      assert length(Bibliography.list_links(later.id)) == 5
+      assert out =~ "bibliography: 1 entries (1 already in Playcode), 1 links on 1 plays"
+      assert out =~ "created 0 entries and 1 links"
+      assert length(Bibliography.list_links(later.id)) == 1
     end
 
     # Found by the final review: the "already imported" marker was the play's filemaker
@@ -687,17 +695,22 @@ defmodule Mix.Tasks.PlaycodeTasksTest do
       antony: antony
     } do
       run("playcode.import.bibliography", ["--path", @dump])
-      later = play_fixture(%{"code" => "EMOTHE0038_AntonioYCleopatra"})
-      [rowe] = for l <- Bibliography.list_links(antony.id), l.entry.volumes_total == "6", do: l
-      {:ok, _} = Bibliography.link_entry(later.id, rowe.entry_id)
+      later = play_fixture(%{"code" => "EMOTHE0999_Despues"})
+
+      [tasso] =
+        for l <- Bibliography.list_links(antony.id),
+            l.entry.analytic_title == "Lope and Tasso",
+            do: l
+
+      {:ok, _} = Bibliography.link_entry(later.id, tasso.entry_id)
 
       dry = run("playcode.import.bibliography", ["--path", @dump, "--dry-run"])
-      assert dry =~ "skipped, already_linked: 1  T04:52 on EMOTHE0038_AntonioYCleopatra"
+      assert dry =~ "skipped, already_linked: 1  T12:1 on EMOTHE0999_Despues"
 
       assert run("playcode.import.bibliography", ["--path", @dump]) =~
-               "created 0 entries and 4 links"
+               "created 0 entries and 0 links"
 
-      assert length(Bibliography.list_links(later.id)) == 5
+      assert length(Bibliography.list_links(later.id)) == 1
     end
 
     test "an archived play is left out", %{antony: antony} do

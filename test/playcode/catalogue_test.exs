@@ -135,6 +135,67 @@ defmodule Playcode.CatalogueTest do
     end
   end
 
+  # A code is its library, the play's number there (FileMaker's title id for EMOTHE) and a
+  # readable name; Postgres writes it from the three.
+  describe "a play's code" do
+    defp create(attrs), do: Catalogue.create_play(Map.put(attrs, "title", "Prueba"))
+
+    test "is its library, its number at four digits or more, and its name" do
+      for {attrs, code} <- [
+            {%{"library" => "TEST", "number" => "7", "slug" => "Prueba"}, "TEST0007_Prueba"},
+            {%{"library" => "TEST", "number" => "12345", "slug" => "Larga"}, "TEST12345_Larga"},
+            {%{"library" => "TEST", "number" => "8"}, "TEST0008"}
+          ] do
+        assert {:ok, play} = create(attrs)
+        assert play.code == code
+        assert Catalogue.get_play_by_code!(code).id == play.id
+      end
+    end
+
+    test "given whole, is taken apart into its library, number and name" do
+      {:ok, play} = create(%{"code" => "TEST0009_Entera"})
+
+      assert {play.library, play.number, play.slug} == {"TEST", 9, "Entera"}
+    end
+
+    test "names one play per number in a library" do
+      n = System.unique_integer([:positive])
+      {:ok, _} = create(%{"library" => "TEST", "number" => "#{n}", "slug" => "Una"})
+
+      assert {:error, changeset} =
+               create(%{"library" => "TEST", "number" => "#{n}", "slug" => "Otra"})
+
+      assert errors_on(changeset)[:number] == ["has already been taken"]
+      assert {:ok, _} = create(%{"library" => "AL", "number" => "#{n}", "slug" => "Otra"})
+    end
+
+    test "that is no library and number is refused" do
+      for code <- ["PLAY123", "EMOTHE 9999", "CTCE0387", "EMOTHE_Sin", "EMOTHE0001_Con-guion"] do
+        assert {:error, changeset} = create(%{"code" => code})
+        assert Map.has_key?(errors_on(changeset), :code), code
+      end
+    end
+
+    # Past the changeset on purpose: the site turns codes into folder names it deletes
+    # and rewrites, and the database is what holds every row, however it was written.
+    test "that is not a plain name cannot be stored at all" do
+      import Ecto.Query
+      alias Playcode.Repo
+      play = play_fixture()
+
+      for parts <- [[slug: "../../etc"], [slug: "a/b"], [library: "X"], [number: 0]] do
+        assert_raise Postgrex.Error, ~r/check_violation/, fn ->
+          Repo.update_all(where(Play, id: ^play.id), set: parts)
+        end
+      end
+    end
+
+    test "of the TEST library is never published" do
+      assert {:error, changeset} = create(%{"code" => "TEST0010", "is_complete" => "true"})
+      assert Map.has_key?(errors_on(changeset), :is_complete)
+    end
+  end
+
   describe "what a paratext may hold" do
     # The kind is written to the file as a div's @type, a TEI token (teidata.enumerated):
     # any one word is kept, a kind of the file's own included; spaces are refused.

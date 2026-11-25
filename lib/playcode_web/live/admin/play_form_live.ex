@@ -93,13 +93,13 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     play = %Play{}
 
     initial_params =
-      %{"code" => Catalogue.next_play_code()}
-      |> maybe_derive_emothe_id()
+      %{"library" => "EMOTHE", "number" => next_number("EMOTHE")}
       |> maybe_apply_corpus_defaults()
 
     socket
     |> assign(:page_title, gettext("New Play"))
     |> assign(:play, play)
+    |> assign(:auto_slug, nil)
     |> assign(:form, to_form(Catalogue.change_play_form(play, initial_params)))
     |> assign(:parent_play_id, nil)
     |> assign(:parent_play_label, "")
@@ -144,14 +144,18 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
 
   @impl true
   def handle_event("validate", %{"play" => play_params} = params, socket) do
-    # A new play's header texts follow the code as it is typed, filling what is blank;
-    # one the researcher empties stays empty.
+    # A new play's header texts follow its library, filling what is blank; one the
+    # researcher empties stays empty.
     play_params =
-      if socket.assigns.live_action == :new and params["_target"] == ["play", "code"],
-        do: maybe_apply_corpus_defaults(play_params),
+      if socket.assigns.live_action == :new and params["_target"] == ["play", "library"],
+        do:
+          play_params
+          |> Map.put("number", next_number(play_params["library"]))
+          |> maybe_apply_corpus_defaults(),
         else: play_params
 
-    play_params = maybe_derive_emothe_id(play_params)
+    {play_params, socket} = name_from_title(play_params, socket)
+    play_params = keep_code(play_params, socket)
 
     {play_params, socket} =
       if play_params["author_attribution"] == "__other__" do
@@ -234,38 +238,50 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
     {:noreply, assign(socket, :attribution_mode, :select)}
   end
 
-  # The read-only field is the page's; the browser can still send any code.
-  defp keep_code(params, %{assigns: %{can_change_code: true}}), do: params
+  defp code_editing(%{can_change_code: true, play: %{is_complete: true}}), do: :none
+  defp code_editing(%{can_change_code: true}), do: :all
+  defp code_editing(%{live_action: :new}), do: :slug
+  defp code_editing(_assigns), do: :none
 
+  # The fields the form leaves out are the page's; the browser can still send any.
   defp keep_code(params, socket) do
-    code =
-      if socket.assigns.live_action == :new,
-        do: Catalogue.next_play_code(),
-        else: socket.assigns.play.code
+    params = Map.delete(params, "code")
 
-    params |> Map.put("code", code) |> maybe_derive_emothe_id()
-  end
+    case code_editing(socket.assigns) do
+      :all ->
+        params
 
-  defp maybe_derive_emothe_id(params) do
-    code = params["code"] || ""
+      :slug ->
+        Map.merge(params, %{"library" => "EMOTHE", "number" => next_number("EMOTHE")})
 
-    case Regex.run(~r/^(?:EMOTHE|CTCE)(\d+)/i, code) do
-      [_, numeric_id] -> Map.put(params, "emothe_id", numeric_id)
-      _ -> params
+      :none ->
+        %{library: library, number: number, slug: slug} = socket.assigns.play
+        Map.merge(params, %{"library" => library, "number" => to_string(number), "slug" => slug})
     end
   end
 
-  defp emothe_id_derived?(form) do
-    code = form_field_value(form, :code)
-    Regex.match?(~r/^(?:EMOTHE|CTCE)\d+/i, code || "")
+  defp name_from_title(params, %{assigns: %{live_action: :new}} = socket) do
+    auto = Play.slug_from_title(params["title"])
+
+    params =
+      if params["slug"] in [nil, "", socket.assigns.auto_slug],
+        do: Map.put(params, "slug", auto),
+        else: params
+
+    {params, assign(socket, :auto_slug, auto)}
   end
 
-  defp form_field_value(form, field) do
-    case form[field] do
-      %{value: val} -> val
-      _ -> nil
-    end
-  end
+  defp name_from_title(params, socket), do: {params, socket}
+
+  defp next_number(library), do: Play.padded_number(%{number: Catalogue.next_number(library)})
+
+  defp number_value(%{value: number}) when is_integer(number),
+    do: Play.padded_number(%{number: number})
+
+  defp number_value(%{value: number}), do: number
+
+  defp library_options,
+    do: [{"EMOTHE", "EMOTHE"}, {"ARTELOPE (AL)", "AL"}, {gettext("TEST (trials)"), "TEST"}]
 
   @attribution_options ~w(fiable dudosa atribuida anónima apócrifa)
 
@@ -286,13 +302,11 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
   end
 
   defp maybe_apply_corpus_defaults(params) do
-    code = params["code"] || ""
-
     corpus_project =
-      cond do
-        String.starts_with?(code, "AL") -> @al_project_description
-        String.starts_with?(code, "EMOTHE") -> @emothe_project_description
-        true -> nil
+      case params["library"] do
+        "AL" -> @al_project_description
+        "EMOTHE" -> @emothe_project_description
+        _other -> nil
       end
 
     if corpus_project do
@@ -544,33 +558,59 @@ defmodule PlaycodeWeb.Admin.PlayFormLive do
               </div>
             </div>
 
-            <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div>
-                <label class="label" for={@form[:code].id}>
-                  <span class="label-text font-medium">{gettext("Code")} *</span>
-                </label>
+            <div class="space-y-3 rounded-box border border-base-300 bg-base-200 p-4">
+              <div class="flex flex-wrap items-center gap-3">
+                <span class="font-medium">{gettext("Code")}</span>
+                <.icon
+                  :if={code_editing(assigns) == :none}
+                  name="hero-lock-closed-mini"
+                  class="size-4"
+                />
+                <span id="play-code" class="font-mono text-xl">{@form[:code].value}</span>
+                <span :if={code_editing(assigns) == :slug} class="text-xs text-base-content/70">
+                  {gettext("EMOTHE, the next number")}
+                </span>
+              </div>
+              <.error :for={msg <- Enum.map(@form[:code].errors, &translate_error/1)}>
+                {msg}
+              </.error>
+              <div
+                :if={code_editing(assigns) == :all}
+                class="grid grid-cols-1 gap-3 md:grid-cols-[10rem_8rem_minmax(0,1fr)]"
+              >
                 <.input
-                  field={@form[:code]}
+                  field={@form[:library]}
+                  type="select"
+                  label={gettext("Library")}
+                  options={library_options()}
+                />
+                <.input
+                  field={@form[:number]}
                   type="text"
-                  required
-                  readonly={not @can_change_code}
-                  placeholder={gettext("e.g. AL0569")}
+                  label={gettext("Number")}
+                  value={number_value(@form[:number])}
+                  class="w-full input font-mono"
+                />
+                <.input
+                  field={@form[:slug]}
+                  type="text"
+                  label={gettext("File name (from the title)")}
+                  class="w-full input font-mono"
                 />
               </div>
-              <div>
-                <label class="label" for={@form[:emothe_id].id}>
-                  <span class="label-text font-medium">{gettext("EMOTHE ID")}</span>
-                  <span :if={emothe_id_derived?(@form)} class="text-xs text-base-content/70 ml-1">
-                    {gettext("(auto)")}
-                  </span>
-                </label>
+              <div :if={code_editing(assigns) == :slug} class="max-w-md">
                 <.input
-                  field={@form[:emothe_id]}
+                  field={@form[:slug]}
                   type="text"
-                  placeholder={gettext("e.g. 0703")}
-                  readonly={emothe_id_derived?(@form)}
+                  label={gettext("File name (from the title)")}
+                  class="w-full input font-mono"
                 />
               </div>
+              <p :if={code_editing(assigns) == :none} class="text-sm text-base-content/70">
+                {if @play.is_complete,
+                  do: gettext("A published play keeps its code: it is its address on the site."),
+                  else: gettext("Only an admin changes the code.")}
+              </p>
             </div>
           </div>
         </.card>

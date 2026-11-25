@@ -726,7 +726,7 @@ defmodule Playcode.RoundtripTest do
 
   describe "places roundtrip" do
     test "export, import and re-export produce the same places" do
-      play = Playcode.TestFixtures.play_fixture(%{"code" => "ROUNDPLACE1"})
+      play = Playcode.TestFixtures.play_fixture(%{"code" => "AL7000030"})
 
       # `places.slug` is globally unique, so two async tests inserting the same chain of
       # slugs in different orders deadlock on the index. This test compares one export

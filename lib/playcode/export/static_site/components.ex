@@ -1716,7 +1716,4 @@ defmodule Playcode.Export.StaticSite.Components do
       _kind -> join([language(play.language), kind_word(play)], ", ")
     end
   end
-
-  def collection(%{code: "AL" <> _}), do: "ARTELOPE"
-  def collection(_play), do: "EMOTHE"
 end

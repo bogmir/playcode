@@ -367,7 +367,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
               <:item :if={@play.edition_title} label={gettext("Edition title")}>
                 {@play.edition_title}
               </:item>
-              <:item :if={@play.emothe_id} label={gettext("EMOTHE ID")}>{@play.emothe_id}</:item>
             </.field_list>
             <details
               :if={

@@ -2,9 +2,11 @@ defmodule Playcode.Catalogue.Play do
   @moduledoc """
   One edition of a play: its metadata. The text lives in `Playcode.PlayContent`.
 
-  `code` (`EMOTHE0010`, `AL0001` for ARTELOPE) is how people and URLs name a play, and
-  it is unique across archived plays too. `emothe_id` is the TEI header's
-  `<idno type="EMOTHE">`, not the application.
+  `code` (`EMOTHE0805_ISuppositi1551`, `AL0514_ElAusenteEnElLugar`) is how people, files and
+  URLs name a play, unique across archived plays too. Postgres writes it from `library`
+  (EMOTHE, AL for ARTELOPE, TEST for an admin's trial), `number` (FileMaker's title id for
+  EMOTHE; one play per number in a library) and `slug`; a code given whole is taken apart
+  (`split_code/1`).
 
   Plays form families. An original has a nil `relationship_type`. A translation,
   adaptation or later version (`relationship_types/0`) points at it through
@@ -50,7 +52,10 @@ defmodule Playcode.Catalogue.Play do
   schema "plays" do
     field :title, :string
     field :title_sort, :string
-    field :code, :string
+    field :library, :string
+    field :number, :integer
+    field :slug, :string
+    field :code, :string, writable: :never, read_after_writes: true
     field :language, :string, default: "es"
     field :author_name, :string
     field :author_sort, :string
@@ -70,7 +75,6 @@ defmodule Playcode.Catalogue.Play do
     field :original_title, :string
     field :licence_url, :string
     field :licence_text, :string
-    field :emothe_id, :string
     field :sponsor, :string
     field :funder, :string
     field :authority, :string
@@ -125,6 +129,10 @@ defmodule Playcode.Catalogue.Play do
   is what `clean_code/1` leaves, so a code always survives its own TEI file's import.
   """
   def code_format, do: ~r/\A[A-Za-z0-9_]+\z/
+
+  @libraries ~w(EMOTHE AL TEST)
+  @slug_format ~r/\A[A-Za-z0-9]+\z/
+  @code_parts ~r/\A(EMOTHE|AL|TEST)(\d+)(?:_([A-Za-z0-9]+))?\z/
 
   @doc "A TEI file's or FileMaker's file name as a code: `EMOTHE0110_Hamlet(1603)` is `EMOTHE0110_Hamlet1603`."
   def clean_code(name), do: name |> String.trim() |> String.replace(~r/[^A-Za-z0-9_]/, "")
@@ -266,7 +274,9 @@ defmodule Playcode.Catalogue.Play do
     |> cast(attrs, [
       :title,
       :title_sort,
-      :code,
+      :library,
+      :number,
+      :slug,
       :language,
       :author_name,
       :author_sort,
@@ -286,7 +296,6 @@ defmodule Playcode.Catalogue.Play do
       :original_title,
       :licence_url,
       :licence_text,
-      :emothe_id,
       :sponsor,
       :funder,
       :authority,
@@ -305,9 +314,14 @@ defmodule Playcode.Catalogue.Play do
     ])
     |> update_change(:edition_notes, &squeeze_notes/1)
     |> cast_embed(:revisions, sort_param: :revisions_order, drop_param: :revisions_delete)
-    |> validate_required([:title, :code])
-    |> validate_format(:code, code_format())
+    |> cast_code(attrs)
+    |> validate_required([:title, :library, :number])
+    |> validate_inclusion(:library, @libraries)
+    |> validate_number(:number, greater_than: 0)
+    |> validate_format(:slug, @slug_format)
+    |> put_code()
     |> validate_code_kept_while_complete()
+    |> validate_test_never_complete()
     |> validate_inclusion(:language, @valid_languages)
     |> validate_number(:verse_count, greater_than_or_equal_to: 0)
     |> validate_inclusion(:relationship_type, @relationship_types)
@@ -324,8 +338,88 @@ defmodule Playcode.Catalogue.Play do
       less_than_or_equal_to: @composition_year_range.last
     )
     |> validate_composition_date_span()
+    |> unique_constraint(:number, name: :plays_library_number_index)
     |> unique_constraint(:code)
   end
+
+  defp cast_code(changeset, attrs) do
+    case Enum.find(attrs, fn {key, _} -> key in ["code", :code] end) do
+      {_key, code} -> put_code_parts(changeset, code)
+      nil -> changeset
+    end
+  end
+
+  defp put_code_parts(changeset, code) do
+    case split_code(code) do
+      {:ok, parts} -> change(changeset, parts)
+      :error -> add_error(changeset, :code, "has invalid format")
+    end
+  end
+
+  # What Postgres will write, so a form shows the code before it is saved.
+  defp put_code(changeset) do
+    case {get_field(changeset, :library), get_field(changeset, :number)} do
+      {library, number} when is_binary(library) and is_integer(number) ->
+        put_change(changeset, :code, compose_code(library, number, get_field(changeset, :slug)))
+
+      _incomplete ->
+        changeset
+    end
+  end
+
+  defp validate_test_never_complete(changeset) do
+    if get_field(changeset, :library) == "TEST" and get_field(changeset, :is_complete),
+      do: add_error(changeset, :is_complete, "a TEST play is never published"),
+      else: changeset
+  end
+
+  @doc "A code as Postgres writes it: the number padded to four digits, never cut."
+  def compose_code(library, number, slug) do
+    code = library <> pad_number(number)
+    if slug, do: code <> "_" <> slug, else: code
+  end
+
+  @doc "The play's number as its code and its file's `<idno>` give it: `0438`, `12345`."
+  def padded_number(%{number: number}), do: pad_number(number)
+
+  defp pad_number(number), do: number |> Integer.to_string() |> String.pad_leading(4, "0")
+
+  @doc "A code's library, number and name, or `:error` for a code that is none of those."
+  def split_code(code) when is_binary(code) do
+    case Regex.run(@code_parts, code, capture: :all_but_first) do
+      [library, number, slug] ->
+        {:ok, %{library: library, number: String.to_integer(number), slug: slug}}
+
+      [library, number] ->
+        {:ok, %{library: library, number: String.to_integer(number), slug: nil}}
+
+      nil ->
+        :error
+    end
+  end
+
+  def split_code(_code), do: :error
+
+  @doc """
+  The name a title gives a code, as the team writes them: accents and apostrophes dropped,
+  each word capitalised. `I Suppositi, 1551` is `ISuppositi1551`.
+  """
+  def slug_from_title(title) when is_binary(title) do
+    title
+    |> String.normalize(:nfd)
+    |> String.replace(~r/[^\x00-\x7F]|['’]/u, "")
+    |> String.split(~r/[^A-Za-z0-9]+/, trim: true)
+    |> Enum.map_join(&String.capitalize/1)
+    |> case do
+      "" -> nil
+      slug -> slug
+    end
+  end
+
+  def slug_from_title(_title), do: nil
+
+  @doc "The libraries a code may start with: EMOTHE (once CTCE), ARTELOPE's AL, and TEST."
+  def libraries, do: @libraries
 
   # A note left blank, in the file or the form, is no note.
   defp squeeze_notes(notes), do: notes |> Enum.map(&Text.squeeze/1) |> Enum.reject(&is_nil/1)
@@ -334,7 +428,7 @@ defmodule Playcode.Catalogue.Play do
   # leave the site at the next Generate. A draft's code is free.
   defp validate_code_kept_while_complete(changeset) do
     if changeset.data.is_complete and get_field(changeset, :is_complete) and
-         get_change(changeset, :code),
+         Enum.any?([:library, :number, :slug], &Map.has_key?(changeset.changes, &1)),
        do: add_error(changeset, :code, "cannot be changed while the play is complete"),
        else: changeset
   end

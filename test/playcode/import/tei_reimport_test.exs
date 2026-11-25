@@ -149,7 +149,7 @@ defmodule Playcode.Import.TeiReimportTest do
   test "a re-import adds the file's paratexts after the text and keeps a hand-entered one" do
     path =
       write_tmp!(
-        tei(code: "TBACK1", body: @act, back: ~s(<div type="colofon"><p>Loado sea.</p></div>))
+        tei(code: "AL7000033", body: @act, back: ~s(<div type="colofon"><p>Loado sea.</p></div>))
       )
 
     {:ok, play} = TeiImport.import_file(path)
@@ -171,7 +171,7 @@ defmodule Playcode.Import.TeiReimportTest do
     path =
       write_tmp!(
         tei(
-          code: "TBACK2",
+          code: "AL7000034",
           front:
             ~s(<div type="dedicatoria"><p>Ded.</p></div><div type="argumento"><p>Arg.</p></div>),
           body: @act

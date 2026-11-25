@@ -690,23 +690,6 @@ defmodule Playcode.Export.StaticSiteTest do
     assert File.exists?(Path.join([dir, "plays", play.code, "index.html"]))
   end
 
-  test "a play code that is not a plain name is refused before anything is deleted" do
-    dir = Path.join(System.tmp_dir!(), "site-#{System.unique_integer([:positive])}")
-    sentinel = Path.join(Path.dirname(dir), "sentinel-#{System.unique_integer([:positive])}")
-    File.mkdir_p!(sentinel)
-    File.write!(Path.join(sentinel, "keep.txt"), "keep")
-    on_exit(fn -> File.rm_rf(sentinel) end)
-
-    evil = unchecked_code!(complete_play(), "../../#{Path.basename(sentinel)}")
-
-    assert_raise ArgumentError, fn ->
-      StaticSite.generate(output_dir: dir, play_codes: [evil.code])
-    end
-
-    assert File.read!(Path.join(sentinel, "keep.txt")) == "keep"
-    File.rm_rf(dir)
-  end
-
   test "the footer carries the play's licence, linked only when it is a web address" do
     web =
       complete_play(%{"licence_url" => "https://example.org/licence", "licence_text" => "CC BY"})
@@ -1048,24 +1031,6 @@ defmodule Playcode.Export.StaticSiteTest do
       assert Enum.sort(Enum.map(plays, & &1["code"])) == Enum.sort([b.code, c.code])
       assert read!(dir, "index.html") =~ "Gamma Batch Farce"
       refute read!(dir, "index.html") =~ "Alfa Batch Tragedy"
-    end
-
-    # Regression: the removes ran before safe_code! rejected an added play, so a batch with
-    # one unusable code left the site half-applied.
-    test "a batch with an unusable code raises before it writes anything" do
-      a = complete_play(%{"title" => "Alfa Untouched Tragedy"})
-      b = complete_play()
-      bad = unchecked_code!(complete_play(), "bad/code")
-      dir = generate!([a])
-
-      assert_raise ArgumentError, fn ->
-        StaticSite.apply_changes([{:remove, a.code}, {:add, bad.id}, {:add, b.id}],
-          output_dir: dir
-        )
-      end
-
-      assert StaticSite.list_exported_codes(dir) == [a.code]
-      assert read!(dir, "index.html") =~ "Alfa Untouched Tragedy"
     end
 
     test "only a play's last change counts" do

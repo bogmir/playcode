@@ -31,7 +31,7 @@ defmodule Playcode.Authz do
                          archive_play)a
 
   @admin_actions @researcher_actions ++
-                   ~w(purge_play change_play_code manage_users view_activity_log deploy_site
+                   ~w(purge_play change_play_code see_test_plays manage_users view_activity_log deploy_site
                       view_dashboard)a
 
   @doc """

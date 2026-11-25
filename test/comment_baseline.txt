@@ -13,7 +13,7 @@ lib/playcode/bibliography/citation.ex 9
 lib/playcode/bibliography/entry.ex 9
 lib/playcode/catalogue.ex 14
 lib/playcode/catalogue/paratext.ex 6
-lib/playcode/catalogue/play.ex 20
+lib/playcode/catalogue/play.ex 21
 lib/playcode/export/download.ex 33
 lib/playcode/export/epub.ex 11
 lib/playcode/export/html.ex 2

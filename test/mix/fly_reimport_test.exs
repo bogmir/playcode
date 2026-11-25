@@ -34,8 +34,8 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
     dir = Path.join(System.tmp_dir!(), "fly-#{System.unique_integer([:positive])}")
     corpus = Path.join(dir, "corpus")
     File.mkdir_p!(corpus)
-    File.write!(Path.join(corpus, "FLY0001_Uno.xml"), tei(code: "FLY0001", title: "Uno"))
-    File.write!(Path.join(corpus, "FLY0002_Dos.xml"), tei(code: "FLY0002", title: "Dos"))
+    File.write!(Path.join(corpus, "AL7000055_Uno.xml"), tei(code: "AL7000055", title: "Uno"))
+    File.write!(Path.join(corpus, "AL7000056_Dos.xml"), tei(code: "AL7000056", title: "Dos"))
 
     flyctl = Path.join(dir, "flyctl")
     File.write!(flyctl, @fake)
@@ -92,7 +92,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       2 file(s) in /data/tei
         EMOTHE0001  replaces 3 division(s), 40 element(s), 5 character(s), 2 TEI record(s)
         EMOTHE0002  replaces 2 division(s), 9 element(s), 4 character(s), 1 TEI record(s), undoes 2 hand edit(s) to its text
-        EMOTHE0003  new, but EMOTHE0003_Otra holds its number, numbering V never
+        EMOTHE0003  new, refused: EMOTHE0003_Otra holds its number, numbering V never
 
       dry run, nothing written — 1 new, 2 already imported (1 with hand edits since their last import), 0 unreadable
       """)
@@ -119,7 +119,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       out = output()
       assert out =~ "2 file(s) uploaded"
       assert out =~ ~r/look.*\n.*EMOTHE0002 .*undoes 2 hand edit/i
-      assert out =~ ~r/look.*\n(.*\n)*.*EMOTHE0003  new, but/i
+      assert out =~ ~r/look.*\n(.*\n)*.*EMOTHE0003  new, refused/i
       refute out =~ ~r/look.*\n.*EMOTHE0001/i
       assert out =~ "mix playcode.fly.reimport run"
     end
@@ -430,7 +430,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
       plays = Path.join(dir, "plays")
       File.mkdir_p!(plays)
 
-      for code <- ~w(FLY0001_Uno FLY0002_Dos),
+      for code <- ~w(AL7000055_Uno AL7000056_Dos),
           do: File.write!(Path.join(plays, "#{code}.xml"), "<TEI/>")
 
       {_, 0} = System.cmd("tar", ["czf", Path.join(dir, "exported.tgz"), "-C", plays, "."])
@@ -455,7 +455,7 @@ defmodule Mix.Tasks.Playcode.Fly.ReimportTest do
         "machine update 7847063c04e7e8 --autostop=stop -a playcode --yes"
       ])
 
-      assert File.read!(Path.join(out, "FLY0002_Dos.xml")) == "<TEI/>"
+      assert File.read!(Path.join(out, "AL7000056_Dos.xml")) == "<TEI/>"
       assert output() =~ "2 file(s) in #{out}"
     end
 

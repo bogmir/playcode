@@ -113,7 +113,7 @@ defmodule Playcode.Import.TeiPreviewTest do
     path =
       write_tmp!(
         tei(
-          code: "TEDIT1",
+          code: "AL7000035",
           source_desc: "<bibl><title>Primera parte</title></bibl>",
           front: """
           <div type="licencia"><p>Privilège.</p></div>
@@ -161,7 +161,7 @@ defmodule Playcode.Import.TeiPreviewTest do
       path =
         write_tmp!(
           tei(
-            code: "PRVP#{System.unique_integer([:positive])}",
+            code: Playcode.TestFixtures.unique_code(),
             front:
               ~s(<performance xml:id="performance-1"><p><date when="1610">1610</date></p></performance>)
           )
@@ -213,7 +213,7 @@ defmodule Playcode.Import.TeiPreviewTest do
   # An import adds the file's references Playcode has no identical entry for. Listing them
   # is how a stale one (an older file's version of a corrected reference) is seen first.
   test "lists the references an import would add, as they print" do
-    code = "PRV#{System.unique_integer([:positive])}"
+    code = Playcode.TestFixtures.unique_code()
 
     file = fn titles ->
       structs =
@@ -273,7 +273,7 @@ defmodule Playcode.Import.TeiPreviewTest do
   end
 
   test "reports the numbering rule the import will set, and writes nothing" do
-    code = "T#{System.unique_integer([:positive])}"
+    code = Playcode.TestFixtures.unique_code()
 
     path =
       write_tmp!(
@@ -297,7 +297,7 @@ defmodule Playcode.Import.TeiPreviewTest do
     path =
       write_tmp!(
         tei(
-          code: "T#{System.unique_integer([:positive])}",
+          code: Playcode.TestFixtures.unique_code(),
           body: """
           <div1 type="acto" n="1"><head>Acto I</head>
             <sp><speaker>ANA</speaker><l n="1">a</l><l n="3170">c</l></sp>

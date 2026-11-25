@@ -365,9 +365,9 @@ defmodule Playcode.Export.StaticSite do
     end
   end
 
-  # Play codes become folder names that are deleted and rewritten. Play validates a code
-  # it is given, but not the rows saved before it did nor a code from a socket event, so
-  # anything but a plain name ("..", "", "a/b") is refused here.
+  # Play codes become folder names that are deleted and rewritten. The database holds a
+  # stored code to a plain name, but not a code from a socket event, so anything else
+  # ("..", "", "a/b") is refused here.
   @doc false
   def safe_code!(code) do
     if is_binary(code) and Regex.match?(Play.code_format(), code) do

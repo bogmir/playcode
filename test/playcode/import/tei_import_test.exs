@@ -42,7 +42,7 @@ defmodule Playcode.Import.TeiImportTest do
     # rows written before it. A stage direction is a stage already, so the changeset
     # refuses a <stage> marker in one.
     test "a row the database refuses rolls the whole import back" do
-      code = "TROLLBACK#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
 
       body =
         ~s(<div1 type="acto" n="1"><head>I</head><stage>&lt;stage&gt;Sale.&lt;/stage&gt;</stage></div1>)
@@ -206,7 +206,7 @@ defmodule Playcode.Import.TeiImportTest do
   end
 
   test "a UTF-16 LE file with a BOM imports" do
-    xml = tei(title: "UTF16 Test", code: "UTF16LE")
+    xml = tei(title: "UTF16 Test", code: "AL7000036")
     utf16 = <<0xFF, 0xFE>> <> :unicode.characters_to_binary(xml, :utf8, {:utf16, :little})
 
     assert {:ok, play} = TeiImport.import_file(write_tmp!(utf16))
@@ -219,15 +219,15 @@ defmodule Playcode.Import.TeiImportTest do
       <teiHeader>
         <fileDesc>
           <titleStmt><title>Header Only</title></titleStmt>
-          <publicationStmt><idno>HEADERONLY01</idno></publicationStmt>
+          <publicationStmt><idno>AL7000037</idno></publicationStmt>
         </fileDesc>
       </teiHeader>
     </TEI>
     """
 
     assert {:ok, play} = TeiImport.import_file(write_tmp!(xml))
-    assert Catalogue.get_play_by_code!("HEADERONLY01").title == "Header Only"
-    assert play.id == Catalogue.get_play_by_code!("HEADERONLY01").id
+    assert Catalogue.get_play_by_code!("AL7000037").title == "Header Only"
+    assert play.id == Catalogue.get_play_by_code!("AL7000037").id
   end
 
   # import_file/1 used to return the play as it stood before the verse count was
@@ -280,7 +280,7 @@ defmodule Playcode.Import.TeiImportTest do
     <TEI xmlns="http://www.tei-c.org/ns/1.0" xml:lang="es">
       <teiHeader>
         <fileDesc>
-          <titleStmt><title>Play With Places</title><title key="archivo">PLACES0001</title></titleStmt>
+          <titleStmt><title>Play With Places</title><title key="archivo">AL7000038</title></titleStmt>
           <publicationStmt><p/></publicationStmt>
           <sourceDesc><p/></sourceDesc>
         </fileDesc>
@@ -399,7 +399,7 @@ defmodule Playcode.Import.TeiImportTest do
   # The statistics cache outlived a re-import, so the play's statistics kept the old
   # text's numbers.
   test "a re-import replaces the play's statistics" do
-    code = "TSTATS#{System.unique_integer([:positive])}"
+    code = Playcode.TestFixtures.unique_code()
 
     body = fn lines ->
       ~s(<div1 type="acto" n="1"><head>ACTO</head><div2 type="escena" n="1"><sp><speaker>A</speaker><lg>#{lines}</lg></sp></div2></div1>)
