@@ -306,6 +306,23 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert render(lv) =~ t("Deploy failed: %{reason}", reason: "rejected")
   end
 
+  test "a Publish that succeeds after one that failed shows only its own result", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
+    failure = t("Deploy failed: %{reason}", reason: "timeout")
+
+    broadcast.({:site_builder, :started, :publish})
+    broadcast.({:site_builder, :progress, :deploy, {:push, "gh-pages"}})
+    broadcast.({:site_builder, :done, :publish, {:error, "timeout"}})
+    assert render(lv) =~ failure
+
+    broadcast.({:site_builder, :started, :publish})
+    broadcast.({:site_builder, :done, :publish, {:ok, "https://example.org/site/"}})
+    html = render(lv)
+    assert html =~ "https://example.org/site/"
+    refute html =~ failure
+  end
+
   test "a page opened while a Publish deploys shows its second step, in the page's language",
        %{conn: conn} do
     test = self()
