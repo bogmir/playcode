@@ -2,23 +2,19 @@ defmodule Playcode.Export.SiteBuilder do
   @moduledoc """
   The one process that writes and ships the admin's static site, `StaticSite.output_dir/0`.
 
-  Adding or removing a play reads the search index on disk and writes it back, and a
-  deploy pushes the whole directory, so the builder runs one job at a time. A request
-  that arrives while a job runs is queued, not refused: each starter returns `:started`
-  or `:queued`. A request already waiting is not queued twice: it keeps its place and
-  takes the options of the latest ask. When a job ends, the adds and removes at the front
-  of the queue run as one batch, which publishes its pages first and rewrites the search
-  index once (`StaticSite.apply_changes/2`); a generate or a deploy runs on its own, in
-  its turn. Generate brings the site up to date when it runs: every play in it when the
-  site's code or settings changed since it was built, only the changed plays otherwise.
+  A build rewrites the search index on disk and a deploy pushes the whole directory, so
+  the builder runs one job at a time. A request that arrives while a job runs is queued,
+  not refused: each starter returns `:started` or `:queued`. A request already waiting is
+  not queued twice: it keeps its place and takes the options of the latest ask.
+  Generate brings the site in line with the complete plays when it runs: every one
+  rebuilt when the site's code or settings changed since it was built, otherwise only the
+  ones it lacks or that changed written, and the ones no longer complete taken out.
 
-  Jobs are `:generate`, `{:batch, [{:add, play_id} | {:remove, code}]}` and `:deploy`.
-  It broadcasts on `"static_site"`, so every admin page shows the same state:
-  `{:site_builder, :queued, request}` (`:generate`, `{:add, id}`,
-  `{:remove, code}` or `:deploy`), `{:site_builder, :started, job}`,
-  `{:site_builder, :progress, job, info}`, `{:site_builder, :published, job}` (a batch's
-  pages are live, its search is next), `{:site_builder, :done, job, result}` and
-  `{:site_builder, :failed, job, reason}`.
+  Jobs are `:generate`, `:deploy` and `:publish` (a generate, then a deploy if it
+  succeeded). It broadcasts on `"static_site"`, so every admin page shows the same state:
+  `{:site_builder, :queued, job}`, `{:site_builder, :started, job}`,
+  `{:site_builder, :progress, :generate | :deploy, info}`,
+  `{:site_builder, :done, job, result}` and `{:site_builder, :failed, job, reason}`.
   """
 
   # ponytail: one builder for the app's one output_dir/0. Should a second site ever
@@ -38,30 +34,39 @@ defmodule Playcode.Export.SiteBuilder do
 
   @doc """
   Brings the site up to date. When its code or settings changed since it was built
-  (`StaticSite.site_changed?/2`), or it holds no play, every play in it is rebuilt (every
-  complete play if it is empty) and the result is `StaticSite.generate/1`'s. Otherwise
-  only the plays that changed are written again and the ones no longer published taken
-  out, in one batch, and the result is `{:ok, %{changed: count, skipped: [play_id]}}`,
+  (`StaticSite.site_changed?/2`), or it holds no play, every complete play is built and
+  the result is `StaticSite.generate/1`'s. Otherwise the complete plays it lacks or that
+  changed are written and the ones no longer published taken out, in one batch, and the
+  result is `{:ok, %{changed: count, skipped: [play_id]}}`,
   plus `assets:` and `catalogue:` when no play changed and those alone were written again.
-  `opts` as `StaticSite.generate/1` takes them, but for the directory and plays.
+  `opts` as `StaticSite.generate/1` takes them, but for the directory.
   """
   def generate(opts), do: request(:generate, opts)
 
-  def add(play_id, opts), do: request({:add, play_id}, opts)
-  def remove(code, opts), do: request({:remove, code}, opts)
   def deploy(repo), do: request(:deploy, repo)
 
-  @doc "The running job and the requests waiting behind it, oldest first."
+  @doc """
+  Generate with `opts`, then, only when it succeeded, deploy to `repo`, as one job: the
+  result is the deploy's, or the generate's error.
+  """
+  def publish(opts, repo), do: request(:publish, {opts, repo})
+
+  @doc """
+  The running job, its last progress (`{:generate | :deploy, info}`, or nil before the
+  first) and the requests waiting behind it, oldest first.
+  """
   def status, do: GenServer.call(__MODULE__, :status)
 
   defp request(request, args), do: GenServer.call(__MODULE__, {:request, request, args})
 
   @impl true
-  def init(nil), do: {:ok, %{job: nil, ref: nil, queue: []}}
+  def init(nil), do: {:ok, %{job: nil, ref: nil, progress: nil, queue: []}}
 
   @impl true
   def handle_call(:status, _from, state) do
-    {:reply, %{job: state.job, queue: Enum.map(state.queue, &elem(&1, 0))}, state}
+    {:reply,
+     %{job: state.job, progress: state.progress, queue: Enum.map(state.queue, &elem(&1, 0))},
+     state}
   end
 
   # Idle means the queue is empty: the request runs at once, as a job of its own.
@@ -85,6 +90,14 @@ defmodule Playcode.Export.SiteBuilder do
     end
   end
 
+  # Kept, so a page opened mid-job knows the step it is on before the next message. The
+  # task sends these before its result, so none arrives after the job has ended.
+  @impl true
+  def handle_cast({:progress, step, info}, state) do
+    broadcast({:site_builder, :progress, step, info})
+    {:noreply, %{state | progress: {step, info}}}
+  end
+
   @impl true
   def handle_info({ref, result}, %{ref: ref, job: job} = state) when is_reference(ref) do
     Process.demonitor(ref, [:flush])
@@ -101,34 +114,18 @@ defmodule Playcode.Export.SiteBuilder do
   # Crashing on a stray message would restart the builder idle while its job ran on.
   def handle_info(_message, state), do: {:noreply, state}
 
-  # Starts what is at the front of the queue: every add and remove there as one batch,
-  # or a generate or a deploy on its own.
-  defp run_next(%{queue: []} = state), do: %{state | job: nil, ref: nil}
+  defp run_next(%{queue: []} = state), do: %{state | job: nil, ref: nil, progress: nil}
 
   defp run_next(%{queue: queue} = state) do
-    {job, args, rest} = take(queue)
+    [{job, args} | rest] = queue
     # Announced before the task starts, so no page hears its progress before it.
     broadcast({:site_builder, :started, job})
     task = Task.Supervisor.async_nolink(@tasks, fn -> run(job, args) end)
-    %{state | job: job, ref: task.ref, queue: rest}
+    %{state | job: job, ref: task.ref, progress: nil, queue: rest}
   end
 
-  defp take([{request, args} | rest]) when request in [:generate, :deploy],
-    do: {request, args, rest}
-
-  defp take(queue) do
-    {changes, rest} = Enum.split_while(queue, fn {request, _} -> change?(request) end)
-    # A batch takes the form values of its latest request.
-    {_, args} = List.last(changes)
-    {{:batch, Enum.map(changes, &elem(&1, 0))}, args, rest}
-  end
-
-  defp change?({:add, _}), do: true
-  defp change?({:remove, _}), do: true
-  defp change?(_request), do: false
-
-  # An empty site gets every complete play, whatever build.json says: the last switch
-  # turned off leaves it the fingerprint of a site that is gone.
+  # An empty site is built whole, whatever build.json says: one build is faster than one
+  # batch adding every play.
   defp run(:generate, opts) do
     dir = StaticSite.output_dir()
 
@@ -137,9 +134,8 @@ defmodule Playcode.Export.SiteBuilder do
       else: refresh(opts)
   end
 
-  defp run({:batch, changes} = job, opts) do
-    published = fn -> broadcast({:site_builder, :published, job}) end
-    StaticSite.apply_changes(changes, opts |> in_site() |> Keyword.put(:on_published, published))
+  defp run(:publish, {opts, repo}) do
+    with {:ok, _} <- run(:generate, opts), do: run(:deploy, repo)
   end
 
   # The StaticSite entry points set English themselves; Deployer translates nothing.
@@ -152,12 +148,9 @@ defmodule Playcode.Export.SiteBuilder do
     end
   end
 
-  # Rebuilds the site as it stands when the job runs, not when it was asked for: an add
-  # or remove queued before it keeps its change.
   defp build_all(opts) do
     opts
     |> in_site()
-    |> Keyword.put(:play_codes, codes_in_site())
     |> Keyword.put(:on_progress, progress(:generate))
     |> StaticSite.generate()
   end
@@ -185,16 +178,8 @@ defmodule Playcode.Export.SiteBuilder do
     end
   end
 
-  # An empty site gets every complete play: StaticSite drops a nil option.
-  defp codes_in_site do
-    case StaticSite.list_exported_codes(StaticSite.output_dir()) do
-      [] -> nil
-      codes -> codes
-    end
-  end
-
   defp in_site(opts), do: Keyword.put(opts, :output_dir, StaticSite.output_dir())
-  defp progress(job), do: &broadcast({:site_builder, :progress, job, &1})
+  defp progress(step), do: &GenServer.cast(__MODULE__, {:progress, step, &1})
 
   defp broadcast(message), do: Phoenix.PubSub.broadcast(Playcode.PubSub, @topic, message)
 end

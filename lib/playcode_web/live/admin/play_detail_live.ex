@@ -16,6 +16,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Statistics
   alias PlaycodeWeb.Admin.LiveHelpers
+  alias PlaycodeWeb.Components.PlayText
   alias PlaycodeWeb.PlayLabels
 
   @impl true
@@ -288,7 +289,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         <% end %>
       </div>
 
-      <.state_band play={@play} deployed={@play_deployed} />
+      <.state_band play={@play} live={@play_live} />
 
       <div
         :if={@play_counts}
@@ -408,7 +409,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
             </:action>
             <ol class="list-decimal pl-5">
               <li :for={division <- @divisions} class="py-0.5">
-                {division.title || division.type}
+                <PlayText.inline_content text={division.title || PlayLabels.division_name(division)} />
                 <span
                   :if={division.type == "elenco" && @play_counts}
                   class="text-sm text-base-content/70"

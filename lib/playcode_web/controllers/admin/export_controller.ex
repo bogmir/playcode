@@ -91,7 +91,7 @@ defmodule PlaycodeWeb.Admin.ExportController do
       do: serve_site_file(conn, root, path),
       else:
         conn
-        |> put_flash(:error, gettext("No site built yet. Generate the static site first."))
+        |> put_flash(:error, gettext("No site built yet. Generate a preview first."))
         |> redirect(to: ~p"/admin/export")
   end
 

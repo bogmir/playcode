@@ -586,6 +586,7 @@ defmodule Playcode.Catalogue do
   defp apply_status(query, :complete), do: where(query, [p], p.is_complete)
 
   defp apply_status(query, :no_text), do: where(query, [p], is_nil(p.auto_form))
+  defp apply_status(query, {:codes, codes}), do: where(query, [p], p.code in ^codes)
 
   defp apply_status(query, _), do: query
 

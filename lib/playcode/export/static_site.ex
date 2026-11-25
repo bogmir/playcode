@@ -309,17 +309,17 @@ defmodule Playcode.Export.StaticSite do
 
   @doc """
   The batch that brings the site at `dir` up to date through `apply_changes/2`: each
-  changed play added again, each play on disk no longer published (archived, deleted or
-  no longer complete) removed.
+  published play it lacks or that changed added, each play on disk no longer published
+  (archived, deleted or no longer complete) removed.
   """
   def outdated(dir) do
     published = Catalogue.list_plays(complete: true)
     live = MapSet.new(published, & &1.code)
+    on_disk = list_exported_codes(dir)
+    missing = Enum.reject(published, &(&1.code in on_disk))
 
-    adds = for play <- changed(dir, published), do: {:add, play.id}
-
-    removes =
-      for code <- list_exported_codes(dir), not MapSet.member?(live, code), do: {:remove, code}
+    adds = for play <- missing ++ changed(dir, published), do: {:add, play.id}
+    removes = for code <- on_disk, not MapSet.member?(live, code), do: {:remove, code}
 
     adds ++ removes
   end
@@ -329,6 +329,17 @@ defmodule Playcode.Export.StaticSite do
   `content_version` it went out with. Empty until one is recorded (`record_deploy/1`).
   """
   def deployed_plays(dir), do: dir |> deploy_record() |> read_build_file() |> Map.fetch!(:plays)
+
+  @doc "Each code in the site at `dir` with the `content_version` it was built with."
+  def built_plays(dir), do: read_build(dir).plays
+
+  @doc "When the site at `dir` was last deployed, nil if it never was."
+  def deployed_at(dir) do
+    case File.stat(deploy_record(dir), time: :posix) do
+      {:ok, %{mtime: mtime}} -> DateTime.from_unix!(mtime)
+      {:error, _} -> nil
+    end
+  end
 
   @doc """
   Records that the site at `dir` was just published: a copy of its `build.json`, kept

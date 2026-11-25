@@ -156,15 +156,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Components do
     """
   end
 
-  def division_label(div) do
-    if div.title do
-      div.title
-    else
-      if div.number,
-        do: "#{String.capitalize(div.type)} #{div.number}",
-        else: String.capitalize(div.type)
-    end
-  end
+  def division_label(div), do: div.title || PlaycodeWeb.PlayLabels.division_name(div)
 
   def editing_label(nil), do: gettext("Add")
   def editing_label(_), do: gettext("Edit")

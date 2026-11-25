@@ -33,7 +33,7 @@ defmodule Playcode.StaticSiteHelpers do
   """
   def await_idle_builder(tries \\ 500) do
     cond do
-      SiteBuilder.status() == %{job: nil, queue: []} -> :ok
+      match?(%{job: nil, queue: []}, SiteBuilder.status()) -> :ok
       tries == 0 -> flunk("the site builder is still busy")
       true -> Process.sleep(10) && await_idle_builder(tries - 1)
     end

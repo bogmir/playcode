@@ -10,6 +10,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Structure do
 
   alias Playcode.Catalogue.Paratext
   alias Playcode.Outline
+  alias PlaycodeWeb.Components.PlayText
   alias PlaycodeWeb.PlayLabels
 
   attr :paratexts, :list, required: true
@@ -111,7 +112,9 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Structure do
           name={if @item.type == "elenco", do: "hero-users-mini", else: "hero-folder-mini"}
           class="size-4 text-base-content/70"
         />
-        <span class="truncate font-semibold">{division_label(@item)}</span>
+        <span class="truncate font-semibold">
+          <PlayText.inline_content text={division_label(@item)} />
+        </span>
         <span class="badge badge-ghost badge-sm">
           {@item.type}{if @item.number, do: " #{@item.number}"}
         </span>
@@ -153,7 +156,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Structure do
           <.drag_handle />
           <span :if={child.type == "elenco"} class="flex items-center gap-2 text-sm">
             <.icon name="hero-users-mini" class="size-3.5" />
-            {division_label(child)}
+            <PlayText.inline_content text={division_label(child)} />
           </span>
           <button
             :if={child.type != "elenco"}
@@ -168,7 +171,7 @@ defmodule PlaycodeWeb.Admin.ContentEditor.Structure do
             ]}
           >
             <.icon name="hero-document-mini" class="size-3.5" />
-            {division_label(child)}
+            <PlayText.inline_content text={division_label(child)} />
             <span :if={@selected_division_id == child.id} class="badge badge-primary badge-sm ml-1">
               {gettext("editing")}
             </span>

@@ -16,12 +16,29 @@ defmodule Playcode.Export.StaticSite.Deployer do
   require Logger
 
   @doc """
+  Where a deploy goes, from the server's settings: the repository, and the host of the
+  server told to publish it, if any. Nil when no repository is set.
+  """
+  def target do
+    settings = Application.get_env(:playcode, :static_site_deploy, [])
+
+    case settings[:repo] do
+      repo when repo in [nil, ""] ->
+        nil
+
+      repo ->
+        %{repo: repo, host: settings[:publish_url] && URI.parse(settings[:publish_url]).host}
+    end
+  end
+
+  @doc """
   Pushes the static site directory to `repo`, then has the publish server fetch it.
 
   ## Options
     * `:branch` - target branch (default: `"gh-pages"`)
     * `:message` - commit message (default: auto-generated with timestamp)
-    * `:on_progress` - `fun(String.t()) -> :ok` callback for status updates
+    * `:on_progress` - `fun(status) -> :ok`, told each step: `:init`, `:configure`,
+      `:stage`, `:commit`, `{:push, branch}`, then `{:publish, host}` or `:deployed`
 
   Returns `{:ok, url}`, the published site's address (or the GitHub Pages one, with no
   publish server), or `{:error, reason}`.
@@ -78,11 +95,11 @@ defmodule Playcode.Export.StaticSite.Deployer do
     git_opts = [cd: site_dir, stderr_to_stdout: true, env: auth_env(repo_url, token)]
 
     steps = [
-      {"Initializing git repository...", fn -> System.cmd("git", ["init"], git_opts) end},
+      {:init, fn -> System.cmd("git", ["init"], git_opts) end},
       # No automatic gc, which repacked the whole site while the push packed it, and no
       # delta search: on production's shared CPU the two kept a push of the 500 MB site
       # going for half an hour (2026-10-18). Files are still compressed.
-      {"Configuring git...",
+      {:configure,
        fn ->
          [
            {"user.email", "playcode-deploy@noreply"},
@@ -93,12 +110,12 @@ defmodule Playcode.Export.StaticSite.Deployer do
          |> Enum.map(fn {key, value} -> System.cmd("git", ["config", key, value], git_opts) end)
          |> Enum.find({"", 0}, fn {_output, code} -> code != 0 end)
        end},
-      {"Staging files...", fn -> System.cmd("git", ["add", "-A"], git_opts) end},
+      {:stage, fn -> System.cmd("git", ["add", "-A"], git_opts) end},
       # Empty when nothing changed since the last deploy, whose .git the site keeps: a
       # retry after a failed push or publish must still push and publish.
-      {"Creating commit...",
+      {:commit,
        fn -> System.cmd("git", ["commit", "--allow-empty", "-m", message], git_opts) end},
-      {"Pushing to #{branch}...",
+      {{:push, branch},
        fn ->
          System.cmd("git", ["push", "--force", repo_url, "HEAD:#{branch}"], git_opts)
        end}
@@ -135,13 +152,13 @@ defmodule Playcode.Export.StaticSite.Deployer do
     do: text |> String.replace(token, "***") |> String.replace(credentials(token), "***")
 
   defp publish(nil, _token, repo_url, on_progress) do
-    on_progress.("Deployed successfully!")
+    on_progress.(:deployed)
     {:ok, derive_pages_url(repo_url)}
   end
 
   # The server answers once it has the site in place, which takes as long as fetching it.
   defp publish(url, token, _repo_url, on_progress) do
-    on_progress.("Publishing on #{URI.parse(url).host}...")
+    on_progress.({:publish, URI.parse(url).host})
 
     options =
       [headers: [{"x-deploy-token", token || ""}], retry: false, receive_timeout: 300_000] ++
@@ -149,7 +166,7 @@ defmodule Playcode.Export.StaticSite.Deployer do
 
     case Req.post(url, options) do
       {:ok, %Req.Response{status: 200, body: %{"ok" => true, "target" => target}}} ->
-        on_progress.("Deployed successfully!")
+        on_progress.(:deployed)
         {:ok, url |> URI.merge(target <> "/") |> URI.to_string()}
 
       {:ok, %Req.Response{body: %{"error" => error}}} ->

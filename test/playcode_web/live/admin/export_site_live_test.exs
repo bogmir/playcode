@@ -12,10 +12,15 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
 
   setup %{conn: conn} do
     File.rm_rf!(StaticSite.output_dir())
+    # deploy_test.exs leaves its deploy record behind.
+    File.rm(Path.expand(StaticSite.output_dir()) <> ".deployed.json")
+    previous = Application.get_env(:playcode, :static_site_deploy)
 
     on_exit(fn ->
       await_idle_builder()
       File.rm_rf!(StaticSite.output_dir())
+      File.rm(Path.expand(StaticSite.output_dir()) <> ".deployed.json")
+      Application.put_env(:playcode, :static_site_deploy, previous)
     end)
 
     complete = %{"is_complete" => true}
@@ -26,20 +31,33 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     %{conn: log_in_user(conn, admin_fixture()), a: a, b: b}
   end
 
-  defp switch(play), do: "#play-#{play.id} input[role=switch]"
-
   defp build_site(codes),
     do: {:ok, _} = StaticSite.generate(output_dir: StaticSite.output_dir(), play_codes: codes)
+
+  # What a deploy leaves behind, without pushing anywhere.
+  defp deployed(codes) do
+    build_site(codes)
+    StaticSite.record_deploy(StaticSite.output_dir())
+  end
+
+  defp deploy_settings(settings),
+    do: Application.put_env(:playcode, :static_site_deploy, settings)
+
+  defp bare_repo do
+    dir = Path.join(System.tmp_dir!(), "page-deploy-#{System.unique_integer([:positive])}.git")
+    {_, 0} = System.cmd("git", ["init", "--bare", "--quiet", dir])
+    on_exit(fn -> File.rm_rf!(dir) end)
+    dir
+  end
 
   defp preview(conn, path), do: get(conn, "/admin/export/preview/" <> path)
 
   defp set_version(lv, version),
-    do: lv |> element("form[phx-submit=generate]") |> render_change(%{"version" => version})
+    do: lv |> element("#edition-version form") |> render_change(%{"version" => version})
 
-  # Generate runs in a task; the result card appears when it finishes.
   defp generate(lv) do
-    lv |> element("form[phx-submit=generate]") |> render_submit()
-    wait_for(fn -> render(lv) =~ t("Generation Complete") end)
+    lv |> element("button", t("Generate preview")) |> render_click()
+    wait_for(fn -> not has_element?(lv, "#build-progress") end)
   end
 
   defp wait_for(fun, tries \\ 500) do
@@ -50,213 +68,313 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     end
   end
 
-  defp row(play), do: "#play-#{play.id}"
+  defp in_group?(lv, group, play), do: has_element?(lv, "#group-#{group} #play-#{play.code}")
 
-  # The dot's screen-reader text: the row says the play has unpublished changes.
-  defp flagged?(lv, play), do: has_element?(lv, row(play), t("Unpublished changes"))
-
-  # The green dot's screen-reader text: in the site and up to date.
-  defp current?(lv, play), do: has_element?(lv, row(play), t("Published and up to date"))
-
-  # The hollow dot's screen-reader text: in the site, but a draft or archived now.
-  defp leaving?(lv, play),
-    do:
-      has_element?(
-        lv,
-        row(play),
-        t("No longer published (a draft or archived); Generate takes it out.")
-      )
-
-  # Nothing in the export reads a base URL: the site links relatively, so it works in any
-  # folder and opened from disk.
-  test "the form asks for no base URL", %{conn: conn} do
-    {:ok, _lv, html} = live(conn, ~p"/admin/export")
-    refute html =~ t("Base URL")
-  end
-
-  test "lists the complete plays, each switched off while no site exists",
-       %{conn: conn, a: a, b: b} do
+  test "a complete play not on the live site is listed as new", %{conn: conn, a: a, b: b} do
     {:ok, lv, html} = live(conn, ~p"/admin/export")
 
-    assert has_element?(lv, switch(a))
-    refute has_element?(lv, "#{switch(a)}[checked]")
-    refute has_element?(lv, "#{switch(b)}[checked]")
+    assert in_group?(lv, "new", a)
+    assert in_group?(lv, "new", b)
     refute html =~ "Gamma Draft"
+
+    assert has_element?(
+             lv,
+             "#publish-card",
+             n("One play to publish", "%{count} plays to publish", 2)
+           )
   end
 
-  test "switching a play on puts it in the site straight away; off takes it out",
-       %{conn: conn, a: a} do
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-    lv |> element(switch(a)) |> render_click()
-    wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
-
-    assert has_element?(lv, "#{switch(a)}[checked]")
-    assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Tragedy"
-    assert html_response(preview(conn, "index.html"), 200) =~ "Alpha Tragedy"
-
-    # Removing rebuilds the index, so it runs in a task like adding does.
-    lv |> element(switch(a)) |> render_click()
-    wait_for(fn -> render(lv) =~ t("Removed %{code} from static site.", code: a.code) end)
-
-    refute has_element?(lv, "#{switch(a)}[checked]")
-    assert response(preview(conn, "plays/#{a.code}/index.html"), 404)
-    refute html_response(preview(conn, "index.html"), 200) =~ "Alpha Tragedy"
-    refute has_element?(lv, "#{switch(a)}[disabled]")
-  end
-
-  # One click for every complete play the site lacks, where a switch each was slow: 161
-  # plays on production on 2026-10-15.
-  test "Add every complete play puts each missing one in the site", %{conn: conn, a: a, b: b} do
-    c = play_fixture(%{"is_complete" => true, "title" => "Delta Farce"})
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-    lv |> element("button", t("Add every complete play")) |> render_click()
-
-    wait_for(fn ->
-      render(lv)
-      Enum.all?([a, b, c], &has_element?(lv, "#{switch(&1)}[checked]:not([disabled])"))
-    end)
-
-    for play <- [a, b, c],
-        do: assert(html_response(preview(conn, "plays/#{play.code}/index.html"), 200))
-  end
-
-  test "with every complete play in the site, there is nothing to add", %{conn: conn, a: a, b: b} do
+  test "with every play live, nothing waits", %{conn: conn, a: a, b: b} do
     build_site([a.code, b.code])
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
 
-    refute has_element?(lv, "button", t("Add every complete play"))
+    refute has_element?(lv, "#group-new")
+    assert has_element?(lv, "#publish-card", t("Everything is published."))
+    assert in_group?(lv, "live", a)
   end
 
-  test "a second admin's page follows a build started on the first", %{conn: conn, a: a} do
+  test "a deployed play edited since is listed as changed, with the day it was edited",
+       %{conn: conn, a: a, b: b} do
+    deploy_settings(repo: "file:///not-pushed-to")
+    deployed([a.code, b.code])
+    {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert in_group?(lv, "changed", a)
+    edited = Calendar.strftime(Catalogue.get_play!(a.id).content_changed_at, "%Y-%m-%d")
+    assert has_element?(lv, "#play-#{a.code}", t("edited %{date}", date: edited))
+    assert in_group?(lv, "live", b)
+  end
+
+  test "a deployed play set back to draft or archived is listed as leaving",
+       %{conn: conn, a: a, b: b} do
+    deploy_settings(repo: "file:///not-pushed-to")
+    deployed([a.code, b.code])
+    {:ok, _} = Catalogue.update_play(a, %{"is_complete" => false})
+    {:ok, _} = Catalogue.delete_play(b)
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert has_element?(lv, "#group-leaving #play-#{a.code}", t("back to draft"))
+    assert has_element?(lv, "#group-leaving #play-#{b.code}", t("archived"))
+  end
+
+  test "a purged play still on the site is listed by its code as deleted",
+       %{conn: conn, a: a, b: b} do
+    deploy_settings(repo: "file:///not-pushed-to")
+    deployed([a.code, b.code])
+    {:ok, archived} = Catalogue.delete_play(b)
+    {:ok, _} = Catalogue.purge_play(archived)
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    # It said "deleted", also of a draft whose code was changed: the play is still there.
+    assert has_element?(lv, "#group-leaving #play-#{b.code}", t("no longer in Playcode"))
+  end
+
+  test "a site built but not deployed is not live while a repository is configured",
+       %{conn: conn, a: a} do
+    deploy_settings(repo: "file:///not-pushed-to")
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert in_group?(lv, "new", a)
+  end
+
+  test "Publish puts every waiting play online and empties the groups",
+       %{conn: conn, a: a, b: b} do
+    repo = bare_repo()
+    deploy_settings(repo: "file://" <> repo)
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
     {:ok, other, _html} = live(log_in_user(build_conn(), admin_fixture()), ~p"/admin/export")
 
-    lv |> element(switch(a)) |> render_click()
+    lv
+    |> element("#publish-card button", n("Publish one play", "Publish %{count} plays", 2))
+    |> render_click()
 
-    # No event goes to the other page: it hears the build from the site builder.
-    wait_for(fn ->
-      has_element?(other, "#{switch(a)}[checked]") and
-        render(other) =~ t("Play exported to static site.")
-    end)
+    wait_for(fn -> render(lv) =~ String.trim(t("Published at %{url}", url: "")) end)
+
+    refute has_element?(lv, "#group-new")
+    assert in_group?(lv, "live", a)
+    assert in_group?(lv, "live", b)
+    assert StaticSite.deployed_plays(StaticSite.output_dir()) |> Map.has_key?(a.code)
+    # A second admin's page follows the job it did not start.
+    wait_for(fn -> render(other) =~ String.trim(t("Published at %{url}", url: "")) end)
+    refute has_element?(other, "#group-new")
   end
 
-  test "switches flipped during a build wait their turn and land together",
-       %{conn: conn, a: a, b: b} do
-    c = play_fixture(%{"is_complete" => true, "title" => "Delta Farce"})
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-    # Not a race: adding a loads a play and writes files, tens of milliseconds, while the
-    # next clicks each take a round trip of well under that, so they reach a busy builder
-    # and queue.
-    lv |> element(switch(a)) |> render_click()
-    lv |> element(switch(b)) |> render_click()
-    lv |> element(switch(c)) |> render_click()
-
-    # On its way in: shown on, and not clickable until it lands.
-    assert has_element?(lv, "#{switch(b)}[checked][disabled]")
-
-    wait_for(fn -> render(lv) =~ t("%{count} changes applied to the static site.", count: 2) end)
-
-    assert has_element?(lv, "#{switch(b)}[checked]")
-    assert has_element?(lv, "#{switch(c)}[checked]")
-    refute has_element?(lv, "#{switch(c)}[disabled]")
-    assert response(preview(conn, "plays/#{c.code}/index.html"), 200)
-  end
-
-  test "Generate pressed while a play is being added keeps that play",
-       %{conn: conn, a: a, b: b} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-    # The page starts from the site's own version, so the site is current and Generate
-    # would only refresh. A new version takes it down the full build, where b was lost.
-    set_version(lv, "2.0")
-
-    lv |> element(switch(b)) |> render_click()
-
-    assert lv |> element("form[phx-submit=generate]") |> render_submit() =~
-             t("Queued: it starts when the current build finishes.")
-
-    wait_for(fn -> render(lv) =~ t("Generation Complete") end)
-    assert response(preview(conn, "plays/#{b.code}/index.html"), 200)
-  end
-
-  # The play is archived after the page drew it, and before the page heard of it: no
-  # notification commits in the sandbox. This used to push the event for a made-up id,
-  # which the page now refuses, since only a play it shows as published can be added.
-  test "a play deleted since the page drew is skipped and says so", %{conn: conn} do
-    gone = play_fixture(%{"title" => "Delta Gone", "is_complete" => true})
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-    {:ok, _} = Catalogue.delete_play(gone)
-
-    lv |> element(switch(gone)) |> render_click()
-
-    # ConnCase's t/2 is gettext/3, which cannot reach a plural entry: ask for its singular.
-    skipped =
-      Gettext.ngettext(
-        PlaycodeWeb.Gettext,
-        "A play that no longer exists was skipped.",
-        "%{count} plays that no longer exist were skipped.",
-        1
-      )
-
-    wait_for(fn -> render(lv) =~ skipped end)
-  end
-
-  # Broadcasts what the builder would: the window between :published and :done cannot be
-  # hit by clicks deterministically, and the broadcasts are the page's interface to it.
-  test "a change queued while a batch was landing keeps its switch pending",
-       %{conn: conn, a: a} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-    assert has_element?(lv, "#{switch(a)}[checked]")
-    refute has_element?(lv, "#{switch(a)}[disabled]")
-
-    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
-    broadcast.({:site_builder, :queued, {:remove, a.code}})
-    broadcast.({:site_builder, :done, {:batch, [{:add, a.id}]}, {:ok, %{skipped: []}}})
-
-    # render/1 is answered after the two broadcasts, which reached the page before it.
-    render(lv)
-    assert has_element?(lv, "#{switch(a)}[disabled]")
-    refute has_element?(lv, "#{switch(a)}[checked]")
-  end
-
-  test "with no site yet, Generate builds every complete play", %{conn: conn, a: a, b: b} do
+  test "Generate preview builds without deploying", %{conn: conn, a: a} do
+    deploy_settings(repo: "file:///not-pushed-to")
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
     generate(lv)
 
-    assert response(preview(conn, "plays/#{a.code}/index.html"), 200)
-    assert response(preview(conn, "plays/#{b.code}/index.html"), 200)
-  end
-
-  # Regression: Generate rebuilt every complete play, so a play switched off came back.
-  test "Generate rebuilds only the plays in the site, so a removed play stays out",
-       %{conn: conn, a: a, b: b} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-    # The page starts from the site's own version, so the site is current and Generate
-    # would only refresh. A new version takes it down the full build, where b came back.
-    set_version(lv, "2.0")
-    generate(lv)
-
-    assert response(preview(conn, "plays/#{a.code}/index.html"), 200)
-    assert response(preview(conn, "plays/#{b.code}/index.html"), 404)
-  end
-
-  test "an existing site can be previewed without generating again",
-       %{conn: conn, a: a} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-    assert has_element?(lv, "#{switch(a)}[checked]")
+    assert in_group?(lv, "new", a)
+    assert StaticSite.deployed_plays(StaticSite.output_dir()) == %{}
+    assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Tragedy"
     assert has_element?(lv, "a[href='/admin/export/preview/index.html']", t("Open preview"))
   end
 
-  # Regression: counting the site's size walks every file, 5 seconds on production's
-  # volume, and the page counted it once to render and twice more to connect.
+  test "without a repository there is no Publish, and the hint says what to set",
+       %{conn: conn} do
+    deploy_settings([])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    refute has_element?(lv, "#publish-card button", t("Publish"))
+
+    refute has_element?(
+             lv,
+             "#publish-card button",
+             n("Publish one play", "Publish %{count} plays", 2)
+           )
+
+    # It used to say "on the server", which read wrong on a laptop running Playcode.
+    assert render(lv) =~ t("To deploy, set STATIC_SITE_REPO where Playcode runs.")
+    refute has_element?(lv, "#deploy-hint a")
+  end
+
+  test "a new version is a change to the whole site, named as Playcode's",
+       %{conn: conn, a: a} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    refute has_element?(lv, "#site-changed")
+
+    set_version(lv, "9.9")
+    assert has_element?(lv, "#site-changed")
+    # Over two hours from this page on production (2026-10-17); the command takes minutes.
+    assert render(lv) =~ "mix playcode.fly.reimport generate"
+
+    generate(lv)
+    refute has_element?(lv, "#site-changed")
+    assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "9.9"
+  end
+
+  # Regression: the field always started at the app's version, so a site built under
+  # another said its design had changed on every visit, and Generate rebuilt it all.
+  test "the next visit starts from the version the site was built with", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    set_version(lv, "2.0")
+    generate(lv)
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    refute has_element?(lv, "#site-changed")
+    assert has_element?(lv, "#edition-version input[name=version][value='2.0']")
+  end
+
+  test "Up to date is searchable and 50 to a page", %{conn: conn, a: a, b: b} do
+    more =
+      for i <- 1..49,
+          do:
+            play_fixture(%{
+              "is_complete" => true,
+              "title" => "Zeta #{String.pad_leading("#{i}", 2, "0")}"
+            })
+
+    build_site(Enum.map([a, b | more], & &1.code))
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert has_element?(
+             lv,
+             "#group-live",
+             t("Up to date (%{count})", count: 51)
+           )
+
+    refute in_group?(lv, "live", List.last(more))
+    lv |> element("#group-live button", t("Next")) |> render_click()
+    assert in_group?(lv, "live", List.last(more))
+
+    # One play edited while page 2 shows: 50 left, one page, and the list shows it.
+    {:ok, _} = Catalogue.update_play(b, %{"title" => "Beta Revised"})
+    # What Playcode.Export.PlayChangeListener sends when the edit commits.
+    Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, b.id})
+    assert in_group?(lv, "changed", b)
+    assert in_group?(lv, "live", a)
+
+    lv |> element("#group-live form") |> render_change(%{"search" => "alpha"})
+    assert in_group?(lv, "live", a)
+    refute in_group?(lv, "live", List.last(more))
+  end
+
+  # Regression: every play_changed walked the whole site again, seconds on production,
+  # in a task nothing cancelled, so a run of edits piled the walks up.
+  test "a play edit regroups the plays without counting the site again", %{conn: conn, a: a} do
+    build_site([a.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    render_async(lv)
+    size = lv |> element("#site-size") |> render()
+
+    File.write!(Path.join(StaticSite.output_dir(), "padding.bin"), :binary.copy("x", 2_000_000))
+    {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
+    Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, a.id})
+
+    assert in_group?(lv, "changed", a)
+    render_async(lv)
+    assert lv |> element("#site-size") |> render() == size
+  end
+
+  test "a Generate that rewrote only the styles or the catalogue says so",
+       %{conn: conn, a: a, b: b} do
+    build_site([a.code, b.code])
+    path = Path.join(StaticSite.output_dir(), "build.json")
+    json = path |> File.read!() |> Jason.decode!() |> Map.merge(%{"assets" => "older"})
+    File.write!(path, Jason.encode!(json))
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    generate(lv)
+    assert render(lv) =~ t("The site's styles and scripts are updated.")
+    refute render(lv) =~ t("Nothing has changed since the last build.")
+  end
+
+  test "with nothing waiting but the whole site changed, the headline does not say all is published",
+       %{conn: conn, a: a, b: b} do
+    build_site([a.code, b.code])
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    set_version(lv, "9.9")
+
+    assert has_element?(lv, "#site-changed")
+    refute has_element?(lv, "#publish-card", t("Everything is published."))
+  end
+
+  test "a failed Publish names the step that failed", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
+
+    broadcast.({:site_builder, :started, :publish})
+    broadcast.({:site_builder, :done, :publish, {:error, "no plays"}})
+    assert render(lv) =~ t("Generation failed: %{reason}", reason: "no plays")
+
+    broadcast.({:site_builder, :started, :publish})
+    broadcast.({:site_builder, :progress, :deploy, {:push, "gh-pages"}})
+    broadcast.({:site_builder, :done, :publish, {:error, "rejected"}})
+    assert render(lv) =~ t("Deploy failed: %{reason}", reason: "rejected")
+  end
+
+  test "a page opened while a Publish deploys shows its second step, in the page's language",
+       %{conn: conn} do
+    test = self()
+    repo = "file://" <> bare_repo()
+
+    deploy_settings(
+      repo: repo,
+      publish_url: "https://publish.example/playcode-deploy.php",
+      publish_token: "key"
+    )
+
+    Req.Test.set_req_test_to_shared()
+
+    Req.Test.stub(Playcode.Export.StaticSite.Deployer, fn conn ->
+      send(test, {:holding, self()})
+      receive do: (:go -> :ok), after: (10_000 -> :ok)
+      Req.Test.json(conn, %{ok: true, target: "edicion", commit: "abc123"})
+    end)
+
+    Playcode.Export.SiteBuilder.publish([], repo)
+    assert_receive {:holding, server}, 30_000
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert has_element?(lv, "#build-progress", t("Step 2 of 2"))
+
+    assert has_element?(
+             lv,
+             "#build-progress",
+             t("Publishing on %{host}...", host: "publish.example")
+           )
+
+    refute has_element?(lv, "#build-progress", "Publishing on publish.example")
+    send(server, :go)
+  end
+
+  test "a build's progress reads in the page's language", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
+
+    broadcast.({:site_builder, :started, :generate})
+
+    broadcast.(
+      {:site_builder, :progress, :generate,
+       %{step: :assets, current: 0, total: 2, detail: "Writing assets..."}}
+    )
+
+    assert has_element?(lv, "#build-progress", t("Writing assets..."))
+    refute has_element?(lv, "#build-progress", "Writing assets...")
+  end
+
+  test "a page number that is not one shows the first page", %{conn: conn} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    render_hook(lv, "live_page", %{"page" => "two"})
+
+    assert has_element?(lv, "#publish-card")
+  end
+
+  test "the last deploy's time names its zone", %{conn: conn, a: a} do
+    deployed([a.code])
+    deploy_settings(repo: "file:///not-pushed-to")
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/export")
+
+    assert has_element?(lv, "#publish-card", "UTC")
+  end
+
+  # The size walks every file, seconds on production's volume: counted after connecting.
   test "the page opens before the site's size is counted, and the size follows",
        %{conn: conn, a: a} do
     build_site([a.code])
@@ -271,33 +389,17 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     refute lv |> element("#site-size") |> render() =~ "…"
   end
 
-  # Regression: the figures were the last Generate's, so a switch left them stale.
-  # The size is counted after the page connects, so each read waits for it (render_async).
-  test "the site's figures are the site on disk, and follow its switches",
-       %{conn: conn, a: a, b: b} do
-    build_site([a.code])
+  # A build cannot be made to fail by clicks, so these are the broadcasts the builder
+  # would send: its ending with an error, and its task crashing.
+  test "a failed Publish or Generate says why", %{conn: conn} do
     {:ok, lv, _html} = live(conn, ~p"/admin/export")
-    assert has_element?(lv, "#site-plays", "1")
-    render_async(lv)
-    size = lv |> element("#site-size") |> render()
+    broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
 
-    lv |> element(switch(b)) |> render_click()
-    wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
+    broadcast.({:site_builder, :done, :publish, {:error, "rejected"}})
+    assert render(lv) =~ t("Publishing failed: %{reason}", reason: "rejected")
 
-    assert has_element?(lv, "#site-plays", "2")
-    render_async(lv)
-    refute lv |> element("#site-size") |> render() == size
-  end
-
-  # Generate already rebuilds every play when the site's code or settings changed, and
-  # only the changed ones otherwise, so a second build button only raised the question
-  # of which to press.
-  test "Generate is the only build button", %{conn: conn, a: a} do
-    build_site([a.code])
-    {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-    assert has_element?(lv, "button", t("Generate Static Site"))
-    refute has_element?(lv, "button", t("Rebuild everything"))
+    broadcast.({:site_builder, :failed, :generate, :killed})
+    assert render(lv) =~ t("Generation failed: %{reason}", reason: ":killed")
   end
 
   test "previewing before anything is built sends you back to the page", %{conn: conn} do
@@ -306,7 +408,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     assert redirected_to(conn) == ~p"/admin/export"
 
     assert Phoenix.Flash.get(conn.assigns.flash, :error) =~
-             t("No site built yet. Generate the static site first.")
+             t("No site built yet. Generate a preview first.")
   end
 
   describe "the preview" do
@@ -341,375 +443,7 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     end
   end
 
-  describe "changes since the last build" do
-    test "a published play edited since is flagged, and Refresh publishes it again",
-         %{conn: conn, a: a, b: b} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      refute flagged?(lv, a)
-
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-      assert flagged?(lv, a)
-      refute flagged?(lv, b)
-
-      assert render(lv) =~
-               n(
-                 "One published play has changed. Generate refreshes it.",
-                 "%{count} published plays have changed. Generate refreshes them.",
-                 1
-               )
-
-      lv |> element("#refresh-#{a.id}") |> render_click()
-      wait_for(fn -> render(lv) =~ t("Play exported to static site.") end)
-
-      refute flagged?(lv, a)
-      assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Revised"
-    end
-
-    # Looks at markup because LiveViewTest cannot click a label, and the bug is what the
-    # label's control is: a label with no `for` is tied to its first labelable descendant,
-    # and a button is one. Refresh before the switch took over the row's label, so a click
-    # on the play's title pressed Refresh instead of flipping the switch.
-    test "on a changed row the label targets the switch, and Refresh is outside it",
-         %{conn: conn, a: a} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert flagged?(lv, a)
-
-      assert has_element?(lv, "#{row(a)} label[for='switch-#{a.id}']")
-      assert has_element?(lv, "#switch-#{a.id}")
-      refute has_element?(lv, "#{row(a)} label button")
-    end
-
-    test "a play in the site and up to date has a green dot; one outside it has none",
-         %{conn: conn, a: a, b: b} do
-      build_site([a.code])
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-      assert current?(lv, a)
-      refute current?(lv, b)
-      refute flagged?(lv, b)
-    end
-
-    test "a changed play shows a dot and an icon-only Refresh", %{conn: conn, a: a} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-      assert flagged?(lv, a)
-      refute current?(lv, a)
-      assert has_element?(lv, "#refresh-#{a.id}")
-      refute has_element?(lv, "#refresh-#{a.id}", t("Refresh"))
-    end
-
-    # The banner and Generate already say every play will be rebuilt: a dot and a
-    # Refresh on each row are noise.
-    test "while the whole site is out of date, no row is flagged on its own",
-         %{conn: conn, a: a, b: b} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert flagged?(lv, a)
-
-      set_version(lv, "9.9")
-
-      assert has_element?(lv, "#site-changed")
-      refute flagged?(lv, a)
-      refute current?(lv, b)
-      refute has_element?(lv, "#refresh-#{a.id}")
-    end
-
-    test "a change announced while the page is open flags the play at once",
-         %{conn: conn, a: a} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      refute flagged?(lv, a)
-
-      # What Playcode.Export.PlayChangeListener sends when the edit commits.
-      Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, a.id})
-      assert flagged?(lv, a)
-    end
-
-    # Broadcasts what the builder would: between a batch's :published and its :done,
-    # build.json still records the play's old version, and clicks cannot stop there.
-    test "a refreshed play loses its dot once its pages are published",
-         %{conn: conn, a: a} do
-      build_site([a.code])
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert flagged?(lv, a)
-
-      Phoenix.PubSub.broadcast(
-        Playcode.PubSub,
-        "static_site",
-        {:site_builder, :published, {:batch, [{:add, a.id}]}}
-      )
-
-      refute flagged?(lv, a)
-    end
-
-    # Review Focus 5.
-    test "a change to a play that no longer exists flags nothing", %{conn: conn, a: a} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-
-      Phoenix.PubSub.broadcast(
-        Playcode.PubSub,
-        "static_site",
-        {:play_changed, Ecto.UUID.generate()}
-      )
-
-      refute flagged?(lv, a)
-    end
-
-    test "Generate refreshes only the changed plays and says how many", %{conn: conn, a: a} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-
-      lv |> element("form[phx-submit=generate]") |> render_submit()
-      wait_for(fn -> render(lv) =~ n("One play refreshed.", "%{count} plays refreshed.", 1) end)
-
-      assert html_response(preview(conn, "plays/#{a.code}/index.html"), 200) =~ "Alpha Revised"
-      refute flagged?(lv, a)
-    end
-
-    # Regression: the hint counted only the changed plays, and a play no longer published
-    # is not in the list either, so the page said the site was up to date.
-    test "a play in the site that is no longer published is announced",
-         %{conn: conn, a: a, b: b} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      {:ok, _} = Catalogue.delete_play(b)
-
-      removed =
-        n(
-          "One play in the site is no longer published. Generate takes it out.",
-          "%{count} plays in the site are no longer published. Generate takes them out.",
-          1
-        )
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert render(lv) =~ removed
-      refute render(lv) =~ t("Every play in the site is up to date.")
-
-      {:ok, _} = Catalogue.update_play(a, %{"title" => "Alpha Revised"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert render(lv) =~ removed
-
-      assert render(lv) =~
-               n(
-                 "One published play has changed. Generate refreshes it.",
-                 "%{count} published plays have changed. Generate refreshes them.",
-                 1
-               )
-    end
-
-    test "assets changed since the build are announced, not as a full rebuild", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-
-      path = Path.join(StaticSite.output_dir(), "build.json")
-      json = path |> File.read!() |> Jason.decode!() |> Map.put("assets", "older")
-      File.write!(path, Jason.encode!(json))
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert render(lv) =~ t("The site's styles and scripts have changed. Generate updates them.")
-      refute render(lv) =~ t("Every play in the site is up to date.")
-
-      # It said "Nothing has changed since the last build." right after updating them.
-      lv |> element("form[phx-submit=generate]") |> render_submit()
-      wait_for(fn -> render(lv) =~ t("The site's styles and scripts are updated.") end)
-      refute render(lv) =~ t("Nothing has changed since the last build.")
-      assert render(lv) =~ t("Every play in the site is up to date.")
-    end
-
-    # The catalogue's code is out of the site fingerprint, so a change to it rebuilds no
-    # play; Generate must still rewrite the catalogue, which it once left as it was.
-    test "a catalogue changed since the build is rewritten, not the plays", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-
-      dir = StaticSite.output_dir()
-      path = Path.join(dir, "build.json")
-      json = path |> File.read!() |> Jason.decode!() |> Map.put("catalogue", "older")
-      File.write!(path, Jason.encode!(json))
-      File.write!(Path.join(dir, "index.html"), "stale")
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert render(lv) =~ t("The catalogue has changed. Generate rewrites it.")
-      refute render(lv) =~ t("Every play in the site is up to date.")
-      refute has_element?(lv, "#site-changed")
-
-      lv |> element("form[phx-submit=generate]") |> render_submit()
-      wait_for(fn -> render(lv) =~ t("The catalogue is updated.") end)
-      assert File.read!(Path.join(dir, "index.html")) =~ "data-works"
-      assert render(lv) =~ t("Every play in the site is up to date.")
-    end
-
-    test "Generate with nothing changed says so", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      assert render(lv) =~ t("Every play in the site is up to date.")
-
-      lv |> element("form[phx-submit=generate]") |> render_submit()
-      wait_for(fn -> render(lv) =~ t("Nothing has changed since the last build.") end)
-    end
-
-    # Review Focus 4: every page's footer shows the version.
-    test "a new version is a change to the whole site: Generate rebuilds every play",
-         %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-      refute has_element?(lv, "#site-changed")
-
-      set_version(lv, "9.9")
-      assert has_element?(lv, "#site-changed")
-      assert render(lv) =~ t("Rebuilds the %{count} plays in the site.", count: 2)
-      # Over two hours from this button on production (2026-10-17); the command takes minutes.
-      assert render(lv) =~ "mix playcode.fly.reimport generate"
-
-      # "Generation Complete" shows only for a full build: starting one hides it first.
-      generate(lv)
-      refute has_element?(lv, "#site-changed")
-    end
-
-    # Regression: the field always started at the app's version, so a site built under
-    # another said its design had changed on every visit, and Generate rebuilt it all.
-    test "the next visit starts from the version the site was built with", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      set_version(lv, "2.0")
-      generate(lv)
-
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      refute has_element?(lv, "#site-changed")
-      assert has_element?(lv, "input[name=version][value='2.0']")
-    end
-
-    # A build cannot be made to fail by clicks, so these are the broadcasts the builder
-    # would send: its ending with an error, and its task crashing. It was written for
-    # Rebuild everything, which is gone; Generate fails the same way.
-    test "a failed Generate says why", %{conn: conn} do
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      broadcast = &Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", &1)
-
-      broadcast.({:site_builder, :done, :generate, {:error, :disk_full}})
-      assert render(lv) =~ t("Generation failed: %{reason}", reason: ":disk_full")
-
-      broadcast.({:site_builder, :failed, :generate, :killed})
-      assert render(lv) =~ t("Generation failed: %{reason}", reason: ":killed")
-    end
-  end
-
-  describe "a play in the site that is no longer published" do
-    test "stays in the list, marked, until its switch takes it out", %{conn: conn, a: a, b: b} do
-      build_site([a.code, b.code])
-      {:ok, _} = Catalogue.update_play(b, %{"is_complete" => false})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-      assert leaving?(lv, b)
-      refute current?(lv, b)
-
-      assert render(lv) =~
-               t("%{exported} of %{total} complete plays exported", exported: 1, total: 1)
-
-      lv |> element(switch(b)) |> render_click()
-      wait_for(fn -> render(lv) =~ t("Removed %{code} from static site.", code: b.code) end)
-
-      refute has_element?(lv, row(b))
-      assert StaticSite.list_exported_codes(StaticSite.output_dir()) == [a.code]
-    end
-
-    test "is marked as soon as it is set to draft", %{conn: conn, a: a, b: b} do
-      build_site([a.code, b.code])
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      assert current?(lv, b)
-
-      {:ok, _} = Catalogue.update_play(b, %{"is_complete" => false})
-      # What Playcode.Export.PlayChangeListener sends when the edit commits.
-      Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, b.id})
-
-      assert leaving?(lv, b)
-      refute current?(lv, b)
-    end
-
-    test "a play marked complete while the page is open joins the list at once",
-         %{conn: conn} do
-      delta = play_fixture(%{"title" => "Delta Draft"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      refute has_element?(lv, row(delta))
-
-      {:ok, _} = Catalogue.update_play(delta, %{"is_complete" => true})
-      Phoenix.PubSub.broadcast(Playcode.PubSub, "static_site", {:play_changed, delta.id})
-
-      assert has_element?(lv, switch(delta))
-    end
-
-    # The switch's event names any play; the page offers switching on only to
-    # published ones, so a draft must not get in by a hand-made event.
-    test "the switch event cannot put a draft in the site", %{conn: conn} do
-      draft = play_fixture(%{"title" => "Delta Draft"})
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-
-      render_hook(lv, "toggle_play", %{"id" => draft.id, "code" => draft.code})
-      await_idle_builder()
-
-      refute draft.code in StaticSite.list_exported_codes(StaticSite.output_dir())
-    end
-  end
-
-  describe "deploy" do
-    setup do
-      previous = Application.get_env(:playcode, :static_site_deploy)
-      on_exit(fn -> Application.put_env(:playcode, :static_site_deploy, previous) end)
-    end
-
-    defp deploy_settings(settings),
-      do: Application.put_env(:playcode, :static_site_deploy, settings)
-
-    defp bare_repo do
-      dir = Path.join(System.tmp_dir!(), "page-deploy-#{System.unique_integer([:positive])}.git")
-      {_, 0} = System.cmd("git", ["init", "--bare", "--quiet", dir])
-      on_exit(fn -> File.rm_rf!(dir) end)
-      dir
-    end
-
-    # The repository is server config, not typed in: the GitHub token goes only to it.
-    test "goes to the configured repository, which the page names", %{conn: conn, a: a} do
-      repo = bare_repo()
-      deploy_settings(repo: "file://" <> repo)
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-
-      assert render(lv) =~ t("Pushes the site to %{repo}.", repo: "file://" <> repo)
-      render_async(lv)
-      size = lv |> element("#site-size") |> render()
-
-      lv |> element("button", t("Deploy")) |> render_click()
-      wait_for(fn -> render(lv) =~ t("Deployed!") end)
-
-      # The push leaves a .git in the site directory; it is not part of the site.
-      render_async(lv)
-      assert lv |> element("#site-size") |> render() == size
-
-      assert {page, 0} =
-               System.cmd("git", [
-                 "--git-dir",
-                 repo,
-                 "show",
-                 "gh-pages:plays/#{a.code}/index.html"
-               ])
-
-      assert page =~ "Alpha Tragedy"
-    end
-
+  describe "the deploy hint" do
     test "names the server it publishes on", %{conn: conn} do
       deploy_settings(
         repo: "owner/site",
@@ -717,7 +451,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
       )
 
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
 
       # The repository is a link inside the sentence, so the text is asserted, not the markup.
       assert has_element?(
@@ -733,7 +466,6 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     test "links the repository the site is pushed to", %{conn: conn} do
       deploy_settings(repo: "owner/site")
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
 
       assert has_element?(
                lv,
@@ -750,21 +482,8 @@ defmodule PlaycodeWeb.Admin.ExportSiteLiveTest do
     test "a repository with no page to open is named without a link", %{conn: conn} do
       deploy_settings(repo: "file:///srv/site.git")
       {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
 
       assert lv |> element("#deploy-hint") |> render() =~ "file:///srv/site.git"
-      refute has_element?(lv, "#deploy-hint a")
-    end
-
-    test "with no repository configured, offers no Deploy and says what to set",
-         %{conn: conn} do
-      deploy_settings([])
-      {:ok, lv, _html} = live(conn, ~p"/admin/export")
-      generate(lv)
-
-      refute has_element?(lv, "button", t("Deploy"))
-      # It used to say "on the server", which read wrong on a laptop running Playcode.
-      assert render(lv) =~ t("To deploy, set STATIC_SITE_REPO where Playcode runs.")
       refute has_element?(lv, "#deploy-hint a")
     end
   end

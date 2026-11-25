@@ -12,14 +12,18 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   alias Playcode.Authz
   alias Playcode.Catalogue
   alias Playcode.Catalogue.Play
+  alias Playcode.Export.{SiteBuilder, SiteStatus}
   alias Playcode.PlayContent
   alias PlaycodeWeb.Admin.LiveHelpers
   alias PlaycodeWeb.PlayLabels
 
   @per_page 50
+  @site_states [:waiting, :changed, :leaving, :live]
 
   @impl true
   def mount(_params, _session, socket) do
+    if connected?(socket), do: SiteBuilder.subscribe()
+
     {:ok,
      socket
      |> assign(:page_title, gettext("Admin - Plays"))
@@ -106,13 +110,25 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
 
   defp reload(socket) do
     %{search: search, status: status, archived: archived, page: page} = socket.assigns
-    {rows, page, total_pages} = rows(search, status, archived, page)
+    live = SiteStatus.live()
+    site_codes = site_codes(live)
+    {rows, page, total_pages} = rows(search, filter(status, site_codes), archived, page)
     socket = if connected?(socket), do: listen_to(socket, Enum.map(rows, & &1.play)), else: socket
 
     socket
-    |> assign(rows: rows, page: page, total_pages: total_pages)
-    |> assign_counts()
+    |> assign(rows: rows, page: page, total_pages: total_pages, live: live)
+    |> assign_counts(site_codes)
   end
+
+  defp site_codes(live) do
+    grouped = Enum.group_by(Catalogue.list_plays(), &SiteStatus.state(&1, live), & &1.code)
+    Map.new(@site_states, &{&1, Map.get(grouped, &1, [])})
+  end
+
+  defp site_states, do: @site_states
+
+  defp filter(status, site_codes) when status in @site_states, do: {:codes, site_codes[status]}
+  defp filter(status, _site_codes), do: status
 
   # Archived plays stay a flat list; the rest are listed by family, a page per 50 families.
   defp rows(search, _status, true, page) do
@@ -147,7 +163,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp total_pages(count), do: max(1, ceil(count / @per_page))
 
   # The filter's counts follow the search; the heading's is the whole corpus.
-  defp assign_counts(socket) do
+  defp assign_counts(socket, site_codes) do
     search = socket.assigns.search
     count = &Catalogue.count_plays(search: search, status: &1)
 
@@ -159,13 +175,18 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         complete: count.(:complete),
         no_text: count.(:no_text)
       },
-      archived_count: Catalogue.count_plays(archived: true)
+      archived_count: Catalogue.count_plays(archived: true),
+      site_counts: Map.new(@site_states, &{&1, count.({:codes, site_codes[&1]})})
     )
   end
 
   defp parse_status("draft"), do: :draft
   defp parse_status("complete"), do: :complete
   defp parse_status("no_text"), do: :no_text
+
+  defp parse_status(state) when state in ~w(waiting changed leaving live),
+    do: String.to_existing_atom(state)
+
   defp parse_status(_), do: nil
 
   defp list_params(search, status, page \\ nil) do
@@ -177,6 +198,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   def handle_info({:play_content_changed, _play_id}, socket) do
     {:noreply, reload(socket)}
   end
+
+  def handle_info({:site_builder, :done, _job, _result}, socket), do: {:noreply, reload(socket)}
+
+  # The rest of the site's topic: a shown play's edit already arrives on its own topic.
+  def handle_info(message, socket) when elem(message, 0) in [:site_builder, :play_changed],
+    do: {:noreply, socket}
 
   # Listens once to each play shown, and stops for the ones no longer shown. Subscribing
   # again on every params change stacked subscriptions, and each copy reloaded the list
@@ -236,6 +263,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   attr :row, :map, required: true
   attr :archived, :boolean, required: true
   attr :can_purge, :boolean, required: true
+  attr :live, :map, required: true
 
   defp play_row(assigns) do
     assigns = assign(assigns, assigns.row)
@@ -287,6 +315,12 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
             {gettext("No text")}
           </span>
         </div>
+      </td>
+      <td class="max-sm:hidden">
+        <.site_badge
+          :if={SiteStatus.state(@play, @live) != :draft}
+          state={SiteStatus.state(@play, @live)}
+        />
       </td>
       <td class="text-sm text-right tabular-nums text-base-content/70 max-sm:hidden">
         {verses(@play)}
@@ -351,7 +385,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         <ol class="flex-1 list-inside list-decimal space-y-1 text-sm">
           <li>{gettext("Find a play in the list, or import one.")}</li>
           <li>{gettext("Edit its record and its text.")}</li>
-          <li>{gettext("Mark it complete, and it reaches the site at the next Generate.")}</li>
+          <li>{gettext("Mark it complete, and it goes online with the next Publish.")}</li>
         </ol>
         <button phx-click="close_welcome" class="btn btn-sm btn-ghost">{gettext("Got it")}</button>
       </section>
@@ -389,7 +423,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
         <nav
           :if={!@archived}
           aria-label={gettext("Status")}
-          class="join max-w-full overflow-x-auto"
+          class="join max-w-full overflow-x-auto overflow-y-hidden"
         >
           <.link
             :for={{value, label, count} <- status_choices(@status_counts)}
@@ -398,6 +432,21 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
             aria-current={@status == value && "page"}
           >
             {label} · {count}
+          </.link>
+        </nav>
+
+        <nav
+          :if={!@archived}
+          aria-label={gettext("Site")}
+          class="join max-w-full overflow-x-auto overflow-y-hidden"
+        >
+          <.link
+            :for={state <- site_states()}
+            patch={~p"/admin/plays?#{list_params(@search, state)}"}
+            class={["btn btn-sm join-item shrink-0", @status == state && "btn-primary"]}
+            aria-current={@status == state && "page"}
+          >
+            {site_label(state)} · {@site_counts[state]}
           </.link>
         </nav>
 
@@ -425,6 +474,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
               <%!-- The title takes the width the others leave. --%>
               <th class="w-full">{gettext("Title")}</th>
               <th>{gettext("Status")}</th>
+              <th class="max-sm:hidden">{gettext("Site")}</th>
               <th class="text-right max-sm:hidden">{gettext("Verses")}</th>
               <th :if={@archived} class="text-right">{gettext("Actions")}</th>
             </tr>
@@ -435,6 +485,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
               row={row}
               archived={@archived}
               can_purge={@can_purge}
+              live={@live}
             />
           </tbody>
         </table>

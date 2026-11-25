@@ -23,7 +23,8 @@ defmodule PlaycodeWeb.Admin.PublicPageTest do
 
     deploy_settings = Application.get_env(:playcode, :static_site_deploy)
     public_url = Application.get_env(:playcode, :static_site_public_url)
-    Application.put_env(:playcode, :static_site_deploy, [])
+    # A repository is configured, so the live site is what the last deploy recorded.
+    Application.put_env(:playcode, :static_site_deploy, repo: "file:///not-pushed-to")
     Application.put_env(:playcode, :static_site_public_url, @public)
 
     on_exit(fn ->
@@ -57,19 +58,27 @@ defmodule PlaycodeWeb.Admin.PublicPageTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     refute has_element?(lv, public_link(play))
 
-    assert has_element?(
-             lv,
-             "#play-state",
-             t(
-               "Everyone sees it here. The next Generate and Deploy put it on the published site."
-             )
-           )
+    # Built but never deployed: waiting, though the site on disk holds it.
+    assert has_element?(lv, "#play-state", t("Waiting to be published"))
+    assert has_element?(lv, "#play-state", t("It goes on the site with the next Publish."))
 
     assert {:ok, _url} = deploy(bare_repo())
 
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     assert has_element?(lv, "nav[aria-label='#{t("Play sections")}'] " <> public_link(play))
-    assert has_element?(lv, "#play-state", t("Published on the site."))
+    assert has_element?(lv, "#play-state", t("On the site"))
+    assert has_element?(lv, "#play-state", t("On the site as it is."))
+  end
+
+  test "a play's page open during a deploy says it is on the site once it ends",
+       %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+    assert has_element?(lv, "#play-state", t("Waiting to be published"))
+
+    assert {:ok, _url} = deploy(bare_repo())
+
+    assert has_element?(lv, "#play-state", t("On the site as it is."))
+    assert has_element?(lv, "nav[aria-label='#{t("Play sections")}'] " <> public_link(play))
   end
 
   test "a play changed since the deploy says so", %{conn: conn, play: play} do
@@ -79,26 +88,31 @@ defmodule PlaycodeWeb.Admin.PublicPageTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
     assert has_element?(lv, public_link(play))
 
+    assert has_element?(lv, "#play-state", t("Unpublished changes"))
+
     assert has_element?(
              lv,
              "#play-state",
-             t("Published on the site; changed since the last deploy.")
+             t("On the site; your changes go online with the next Publish.")
            )
   end
 
-  test "a draft the site still holds says until when", %{conn: conn, play: play} do
+  test "a draft the site still holds is leaving it", %{conn: conn, play: play} do
     assert {:ok, _url} = deploy(bare_repo())
     {:ok, _} = Playcode.Catalogue.update_play(play, %{is_complete: false})
 
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
 
-    assert has_element?(
-             lv,
-             "#play-state",
-             t(
-               "Only the team sees it here. The published site keeps it until the next Generate and Deploy."
-             )
-           )
+    assert has_element?(lv, "#play-state", t("Leaving the site"))
+    assert has_element?(lv, "#play-state", t("The next Publish takes it off the site."))
+  end
+
+  test "without a deploy repository, the built site counts as the live one",
+       %{conn: conn, play: play} do
+    Application.put_env(:playcode, :static_site_deploy, [])
+
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}")
+    assert has_element?(lv, "#play-state", t("On the site"))
   end
 
   test "without the site's public address there is no link", %{conn: conn, play: play} do

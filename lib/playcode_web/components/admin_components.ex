@@ -11,6 +11,8 @@ defmodule PlaycodeWeb.AdminComponents do
 
   import PlaycodeWeb.CoreComponents, only: [icon: 1]
 
+  alias Playcode.Export.SiteStatus
+
   @doc """
   An admin page: `:list` for lists and overviews, `:form` for a form, so the content keeps
   its width from one tab to the next.
@@ -129,13 +131,15 @@ defmodule PlaycodeWeb.AdminComponents do
 
   @doc """
   Who sees the play, here and on the published site, with the one button that changes it.
-  It sends `set_status` with the status the button gives. `deployed` is the
-  `content_version` the last deploy published the play with, nil when it did not.
+  It sends `set_status` with the status the button gives. `live` is the live site's
+  `content_version` by code (`SiteStatus.live/1`), the play's own entry being enough.
   """
   attr :play, :map, required: true
-  attr :deployed, :integer, default: nil
+  attr :live, :map, default: %{}
 
   def state_band(assigns) do
+    assigns = assign(assigns, :site_state, SiteStatus.state(assigns.play, assigns.live))
+
     ~H"""
     <div
       id="play-state"
@@ -154,7 +158,8 @@ defmodule PlaycodeWeb.AdminComponents do
         ]}>
           {if @play.is_complete, do: gettext("Complete"), else: gettext("Draft")}
         </span>
-        {state_sentence(@play, @deployed)}
+        <.site_badge state={@site_state} class="mr-2" />
+        {state_sentence(@site_state)}
       </p>
       <button
         :if={!@play.is_complete}
@@ -176,24 +181,39 @@ defmodule PlaycodeWeb.AdminComponents do
     """
   end
 
-  defp state_sentence(%{is_complete: true, content_version: version}, version),
-    do: gettext("Published on the site.")
+  defp state_sentence(:draft), do: gettext("Only the team sees it.")
+  defp state_sentence(:waiting), do: gettext("It goes on the site with the next Publish.")
 
-  defp state_sentence(%{is_complete: true}, nil),
-    do:
-      gettext("Everyone sees it here. The next Generate and Deploy put it on the published site.")
+  defp state_sentence(:changed),
+    do: gettext("On the site; your changes go online with the next Publish.")
 
-  defp state_sentence(%{is_complete: true}, _older),
-    do: gettext("Published on the site; changed since the last deploy.")
+  defp state_sentence(:leaving), do: gettext("The next Publish takes it off the site.")
+  defp state_sentence(:live), do: gettext("On the site as it is.")
 
-  defp state_sentence(_draft, nil),
-    do: gettext("Only the team sees it. It is not on the published site.")
+  @doc "Where a play stands on the live site (`SiteStatus.state/2`), as a badge."
+  attr :state, :atom, required: true
+  attr :class, :string, default: nil
 
-  defp state_sentence(_draft, _deployed),
-    do:
-      gettext(
-        "Only the team sees it here. The published site keeps it until the next Generate and Deploy."
-      )
+  def site_badge(assigns) do
+    ~H"""
+    <span class={["badge badge-sm whitespace-nowrap", site_badge_class(@state), @class]}>
+      {site_label(@state)}
+    </span>
+    """
+  end
+
+  @doc "What a play's state on the live site (`SiteStatus.state/2`) reads as."
+  def site_label(:draft), do: gettext("Not published")
+  def site_label(:waiting), do: gettext("Waiting to be published")
+  def site_label(:changed), do: gettext("Unpublished changes")
+  def site_label(:leaving), do: gettext("Leaving the site")
+  def site_label(:live), do: gettext("On the site")
+
+  defp site_badge_class(:draft), do: "badge-ghost"
+  defp site_badge_class(:waiting), do: "badge-info"
+  defp site_badge_class(:changed), do: "badge-warning"
+  defp site_badge_class(:leaving), do: "badge-neutral"
+  defp site_badge_class(:live), do: "badge-success"
 
   @doc """
   A file upload as a zone to drop files on or click, named in the page's language rather
