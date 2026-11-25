@@ -5,7 +5,8 @@ defmodule Playcode.Catalogue do
 
   Every play read takes the same options. Archived plays are hidden unless the caller
   passes `archived: true` (only them) or `include_deleted: true` (both), and
-  `complete: true` hides drafts too; only the static site's builder passes it, since every page of Playcode is staff's and shows drafts. The `*_with_all!`
+  `complete: true` hides drafts too; only the static site's builder passes it, since every page of Playcode is staff's and shows drafts. `hide_test: true` leaves out the TEST library's plays, an admin's trials,
+  for a user who may not see them. The `*_with_all!`
   reads also preload what a play's pages show, each list in a fixed order, with the
   parent and derived plays under the same options.
   """
@@ -68,7 +69,7 @@ defmodule Playcode.Catalogue do
     per_page = opts[:per_page] || @per_page
 
     # The whole corpus per call: cheap at ~600 plays; a recursive CTE once it reaches thousands.
-    all = list_plays()
+    all = list_plays(hide_test: opts[:hide_test])
     roots = Families.root_ids(all)
     by_root = Enum.group_by(all, &roots[&1.id])
     ids = &MapSet.new(list_plays(&1), fn play -> play.id end)
@@ -331,25 +332,12 @@ defmodule Playcode.Catalogue do
     |> link_waiting_translations()
   end
 
-  @doc """
-  The code the new-play form offers: `EMOTHE` and one more than the highest number any
-  `EMOTHE` or `CTCE` code carries, archived plays included, padded to four digits.
-  """
-  def next_play_code do
-    max_number =
-      Play
-      |> select([p], p.code)
-      |> Repo.all()
-      |> Enum.map(fn code ->
-        case Regex.run(~r/^(?:EMOTHE|CTCE)(\d+)/i, code || "") do
-          [_, num_str] -> String.to_integer(num_str)
-          _ -> 0
-        end
-      end)
-      |> Enum.max(fn -> 0 end)
-
-    next = max_number + 1
-    "EMOTHE#{String.pad_leading(Integer.to_string(next), 4, "0")}"
+  @doc "The number a new play takes in `library`: one past its highest, archived plays included."
+  def next_number(library) do
+    Play
+    |> where(library: ^library)
+    |> select([p], coalesce(max(p.number), 0) + 1)
+    |> Repo.one()
   end
 
   @counted [
@@ -579,8 +567,14 @@ defmodule Playcode.Catalogue do
         true -> where(query, [p], is_nil(p.deleted_at))
       end
 
-    query |> apply_complete(opts[:complete]) |> apply_status(opts[:status])
+    query
+    |> apply_complete(opts[:complete])
+    |> apply_status(opts[:status])
+    |> hide_test(opts[:hide_test])
   end
+
+  defp hide_test(query, true), do: where(query, [p], p.library != "TEST")
+  defp hide_test(query, _), do: query
 
   defp apply_status(query, :draft), do: where(query, [p], not p.is_complete)
   defp apply_status(query, :complete), do: where(query, [p], p.is_complete)

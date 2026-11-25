@@ -154,7 +154,7 @@ defmodule Playcode.Export.Download do
   # not the editorial statement, the same paragraph in every file.
   defp publication(play, format) do
     inline = &if(filled?(&1), do: inline(&1, format))
-    catalogue_number = if filled?(play.emothe_id), do: "EMOTHE " <> play.emothe_id
+    catalogue_number = if play.library, do: "#{play.library} #{Play.padded_number(play)}"
     project = String.split(play.project_description || "", ~r/\n\s*\n/, trim: true)
 
     paragraphs =

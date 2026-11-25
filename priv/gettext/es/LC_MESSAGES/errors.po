@@ -116,6 +116,9 @@ msgstr "ya se usa en esta obra"
 msgid "cannot be changed while the play is complete"
 msgstr "no se puede cambiar mientras la obra esté completa"
 
+msgid "a TEST play is never published"
+msgstr "una obra TEST nunca se publica"
+
 msgid "must be given together with the end year"
 msgstr "debe indicarse junto con el año final"
 

@@ -42,7 +42,7 @@ defmodule Playcode.Export.StaticSite.Records do
       l: play.language,
       o: roots[play.id].language,
       k: Components.kind(play),
-      s: Components.collection(play),
+      s: library_name(play.library),
       f: Play.form(play),
       x: if(Play.has_text?(play), do: 1),
       d: dating(play),
@@ -122,4 +122,7 @@ defmodule Playcode.Export.StaticSite.Records do
 
   defp dating(%{composition_date_from: nil}), do: nil
   defp dating(%{composition_date_from: from, composition_date_to: to}), do: [from, to || from]
+
+  defp library_name("AL"), do: "ARTELOPE"
+  defp library_name(library), do: library
 end

@@ -23,7 +23,7 @@ defmodule PlaycodeWeb.InlineMarkersTest do
   alias Playcode.PlayContent
 
   defp italics_everywhere do
-    code = "MRK#{System.unique_integer([:positive])}"
+    code = Playcode.TestFixtures.unique_code()
 
     xml =
       tei(

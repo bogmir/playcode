@@ -86,7 +86,9 @@ defmodule RenameGuardTest do
       # for the other side of the line.
       po = File.read!(Path.join(@repo_root, "priv/gettext/es/LC_MESSAGES/default.po"))
 
-      assert po =~ ~s(msgstr "ID EMOTHE"), "the EMOTHE ID label names the corpus identifier"
+      # The "ID EMOTHE" label checked here left with its field (2026-11-25).
+      assert po =~ ~s(msgstr "EMOTHE, número siguiente"),
+             "a new play's code names the library it is numbered in"
 
       # The home page's tagline checked here left with the home page (2026-11-12).
       assert po =~ ~s(msgstr "Portal de EMOTHE"),
@@ -113,22 +115,6 @@ defmodule RenameGuardTest do
       assert disk_grep("w3emothe_T01_tituloEM\\.ndjson", ["lib"]) != [],
              "the default FileMaker export path no longer names w3emothe"
     end
-
-    test "the plays.emothe_id column keeps its corpus name" do
-      # plays.emothe_id holds the EMOTHE project's identifier for a play. It is
-      # corpus vocabulary, like the play code, not the application's name, and
-      # it is a real column in a real database.
-      migration =
-        File.read!(
-          Path.join(
-            @repo_root,
-            "priv/repo/migrations/20260220095242_add_extended_metadata_fields.exs"
-          )
-        )
-
-      assert migration =~ "add :emothe_id, :string"
-      assert disk_grep("field :emothe_id", ["lib"]) != [], "the schema lost its :emothe_id field"
-    end
   end
 
   describe "no stale application identity in our own source" do
@@ -142,8 +128,9 @@ defmodule RenameGuardTest do
       #
       #   emothe.uv.es                 the project's real domain
       #   w3emothe                     the FileMaker export's own database
-      #   emothe_id / emothe_idno      plays.emothe_id, a real column holding
-      #                                the EMOTHE identifier for a play
+      #   emothe_id                    plays.emothe_id, the EMOTHE identifier
+      #                                for a play, a column its migrations
+      #                                still name
       #   emothe_project_description   the EMOTHE project's own blurb
       #   emothe-static                the published EMOTHE site: the example
       #                                GitHub repo in the deploy form and the

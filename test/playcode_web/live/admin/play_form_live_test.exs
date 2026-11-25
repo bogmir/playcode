@@ -87,79 +87,137 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
   defp texts(nodes), do: Enum.map(nodes, &(&1 |> LazyHTML.text() |> String.trim()))
 
+  # What an admin types in the code's three fields to give a play `code`.
+  defp code_fields(code) do
+    {:ok, parts} = Play.split_code(code)
+    %{"library" => parts.library, "number" => "#{parts.number}", "slug" => parts.slug || ""}
+  end
+
+  defp new_code, do: "EMOTHE#{100_000 + System.unique_integer([:positive])}"
+
+  defp code_shown(view),
+    do:
+      view
+      |> element("#play-code")
+      |> render()
+      |> LazyHTML.from_fragment()
+      |> LazyHTML.text()
+      |> String.trim()
+
   test "a new play is saved and opens on its detail page", %{conn: conn} do
-    code = "FORM#{System.unique_integer([:positive])}"
+    code = new_code() <> "_Bdd"
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
 
-    save(view, %{"title" => "BDD Play", "code" => code, "author_name" => "Behavior Author"})
+    save(
+      view,
+      Map.merge(%{"title" => "BDD Play", "author_name" => "Behavior Author"}, code_fields(code))
+    )
 
     created = Catalogue.get_play_by_code!(code)
     assert created.author_name == "Behavior Author"
     assert_redirect(view, ~p"/admin/plays/#{created.id}")
   end
 
-  # EMOTHE (CTCE before it) numbers its titles as FileMaker does; ARTELOPE counts its own.
-  test "a new play is offered the code after the last EMOTHE title", %{conn: conn} do
-    play_fixture(%{"code" => "EMOTHE0807_LeCid1637"})
-    play_fixture(%{"code" => "AL2000_LaEstrellaDeSevilla"})
-    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+  # A code is its library (EMOTHE, which was CTCE, or ARTELOPE's AL), the play's number in
+  # it (FileMaker's title id for EMOTHE) and a name read from the title.
+  describe "a new play's code" do
+    test "takes the next number in its library", %{conn: conn} do
+      play_fixture(%{"code" => "EMOTHE0807_LeCid1637"})
+      play_fixture(%{"code" => "AL2000_LaEstrellaDeSevilla"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
 
-    assert has_element?(view, "#play-form input[name='play[code]'][value='EMOTHE0808']")
+      assert has_element?(view, "#play-form input[name='play[number]'][value='0808']")
+      assert code_shown(view) == "EMOTHE0808"
+
+      view
+      |> form("#play-form", play: %{"library" => "AL"})
+      |> render_change(%{"_target" => ["play", "library"]})
+
+      assert has_element?(view, "#play-form input[name='play[number]'][value='2001']")
+      assert code_shown(view) == "AL2001"
+    end
+
+    test "is named from the title until the name is typed", %{conn: conn} do
+      play_fixture(%{"code" => "EMOTHE0807_LeCid1637"})
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+      view |> form("#play-form", play: %{"title" => "I Suppositi, 1551"}) |> render_change()
+      assert code_shown(view) == "EMOTHE0808_ISuppositi1551"
+
+      view |> form("#play-form", play: %{"slug" => "Suppositi"}) |> render_change()
+      view |> form("#play-form", play: %{"title" => "I Suppositi, 1553"}) |> render_change()
+      assert code_shown(view) == "EMOTHE0808_Suppositi"
+    end
+
+    test "offers the TEST library, which an admin uses to try things out", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+      assert has_element?(view, "#play-form select[name='play[library]'] option[value='TEST']")
+    end
+
+    test "with a name that cannot name a folder is refused", %{conn: conn} do
+      {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
+
+      html = save(view, Map.put(code_fields(new_code()), "slug", "Con espacio"))
+
+      assert html =~ error("has invalid format")
+    end
   end
 
   # A play's code is its number among FileMaker's titles and, once published, its address:
   # a researcher takes the next one and keeps it.
-  describe "a play's code" do
+  describe "a researcher" do
     setup %{conn: conn} do
       %{conn: log_in_user(conn, user_fixture(role: :researcher))}
     end
 
-    test "is the next one for a researcher's new play, whatever the form sends",
+    test "names a new play, which takes the next EMOTHE number whatever the form sends",
          %{conn: conn} do
       play_fixture(%{"code" => "EMOTHE0807_LeCid1637"})
       {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
 
-      assert has_element?(view, "#play-form input[name='play[code]'][readonly]")
+      refute has_element?(view, "#play-form select[name='play[library]']")
+      refute has_element?(view, "#play-form input[name='play[number]']")
 
-      save(view, %{"title" => "Sémiramis", "code" => "EMOTHE0500"})
+      view
+      |> form("#play-form", play: %{"title" => "Sémiramis", "slug" => "Semiramis"})
+      |> render_submit(%{"play" => %{"library" => "AL", "number" => "500"}})
 
-      assert Catalogue.get_play_by_code!("EMOTHE0808").title == "Sémiramis"
+      assert Catalogue.get_play_by_code!("EMOTHE0808_Semiramis").title == "Sémiramis"
     end
 
-    test "stays as it was when a researcher saves a play", %{conn: conn} do
+    test "keeps a play's code when saving it, whatever the form sends", %{conn: conn} do
       play = play_fixture()
       {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
 
-      assert has_element?(view, "#play-form input[name='play[code]'][readonly]")
+      refute has_element?(view, "#play-form input[name='play[slug]']")
+      assert code_shown(view) == play.code
 
-      save(view, %{"title" => "Guardada", "code" => unique_code()})
+      view
+      |> form("#play-form", play: %{"title" => "Guardada"})
+      |> render_submit(%{"play" => %{"library" => "AL", "number" => "500", "slug" => "Otra"}})
 
       assert %{code: code, title: "Guardada"} = Catalogue.get_play!(play.id)
       assert code == play.code
     end
+  end
 
-    test "is changed by an admin", %{conn: conn} do
-      play = play_fixture()
+  test "an admin changes a draft's code", %{conn: conn} do
+    play = play_fixture()
+    code = new_code() <> "_Nueva"
+    {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
 
-      {:ok, view, _html} =
-        live(log_in_user(conn, admin_fixture()), ~p"/admin/plays/#{play.id}/edit")
+    save(view, code_fields(code))
 
-      code = unique_code()
-
-      refute has_element?(view, "#play-form input[name='play[code]'][readonly]")
-
-      save(view, %{"code" => code})
-
-      assert Catalogue.get_play!(play.id).code == code
-    end
+    assert Catalogue.get_play!(play.id).code == code
   end
 
   # The header FileMaker writes into every file, with today's funding project first
   # (EMOTHE0753 was corrected by hand the same way) and Playcode credited for the files.
   test "a new play starts with the project's header texts", %{conn: conn} do
-    code = "EMOTHE#{System.unique_integer([:positive])}"
+    code = new_code()
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
-    save(view, %{"title" => "Sémiramis", "code" => code})
+    save(view, Map.put(code_fields(code), "title", "Sémiramis"))
 
     xml = code |> Catalogue.get_play_by_code!() |> export_tei()
 
@@ -186,24 +244,24 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
 
   # The header texts fill a new play's form once; a researcher who empties one means it.
   test "a header text emptied in a new play's form stays empty", %{conn: conn} do
-    code = "EMOTHE#{System.unique_integer([:positive])}"
+    code = new_code()
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
     view |> form("#play-form", play: %{"funder" => ""}) |> render_change()
-    save(view, %{"title" => "Sémiramis", "code" => code})
+    save(view, Map.put(code_fields(code), "title", "Sémiramis"))
 
     assert code |> Catalogue.get_play_by_code!() |> export_tei() |> xml_texts("funder") == []
   end
 
-  test "a code typed in a new play's form fills the header texts left blank", %{conn: conn} do
-    code = "AL#{System.unique_integer([:positive])}"
+  test "a library chosen in a new play's form fills the header texts left blank", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
     view |> form("#play-form", play: %{"project_description" => ""}) |> render_change()
 
     view
-    |> form("#play-form", play: %{"code" => code})
-    |> render_change(%{"_target" => ["play", "code"]})
+    |> form("#play-form", play: %{"library" => "AL"})
+    |> render_change(%{"_target" => ["play", "library"]})
 
-    save(view, %{"title" => "La discreta enamorada"})
+    save(view, %{"title" => "La discreta enamorada", "slug" => "LaDiscretaEnamorada"})
+    code = "AL0001_LaDiscretaEnamorada"
 
     assert [description] =
              code
@@ -218,9 +276,9 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
   # language: a "Nota a esta edición digital" the team wrote by hand in 25 plays.
   describe "a new play's note on the digital edition" do
     defp new_play_front(conn, language) do
-      code = "EMOTHE#{System.unique_integer([:positive])}"
+      code = new_code()
       {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
-      save(view, %{"title" => "Sémiramis", "code" => code, "language" => language})
+      save(view, Map.merge(code_fields(code), %{"title" => "Sémiramis", "language" => language}))
 
       code
       |> Catalogue.get_play_by_code!()
@@ -261,26 +319,26 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
   end
 
   test "a new play is the original a waiting translation named", %{conn: conn} do
-    n = System.unique_integer([:positive])
-    translation = waiting_translation("FO#{n}")
+    short = new_code()
+    translation = waiting_translation(short)
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
 
-    save(view, %{"title" => "Pyrame", "code" => "FO#{n}_Pyrame"})
+    save(view, Map.put(code_fields(short <> "_Pyrame"), "title", "Pyrame"))
 
-    original = Catalogue.get_play_by_code!("FO#{n}_Pyrame")
+    original = Catalogue.get_play_by_code!(short <> "_Pyrame")
     assert Catalogue.get_play!(translation.id).parent_play_id == original.id
   end
 
   test "an original picked by hand stays when the one the file named arrives",
        %{conn: conn} do
-    n = System.unique_integer([:positive])
-    translation = waiting_translation("FO#{n}")
+    short = new_code()
+    translation = waiting_translation(short)
     chosen = play_fixture(%{"title" => "Chosen"})
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{translation.id}/edit")
 
     render_click(view, "pick_parent", %{"id" => chosen.id, "label" => chosen.title})
     save(view, %{"title" => translation.title})
-    import_tei!(tei(code: "FO#{n}_Pyrame"))
+    import_tei!(tei(code: short <> "_Pyrame"))
 
     assert Catalogue.get_play!(translation.id).parent_play_id == chosen.id
   end
@@ -288,20 +346,10 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
   test "a play without a title is not saved, and the form says why", %{conn: conn} do
     {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
 
-    html = save(view, %{"title" => "", "code" => ""})
+    html = save(view, %{"title" => ""})
 
     assert html =~ error("can't be blank")
     assert Catalogue.list_plays() == []
-  end
-
-  # A code names the play's folder on the static site, and StaticSite.safe_code!/1 takes
-  # no other: one such code used to stop every play queued with it.
-  test "a code that cannot name a folder is refused", %{conn: conn} do
-    {:ok, view, _html} = live(conn, ~p"/admin/plays/new")
-
-    html = save(view, %{"title" => "Sémiramis", "code" => "EMOTHE 9999"})
-
-    assert html =~ error("has invalid format")
   end
 
   # The site files a play's pages under its code: renamed, the play left the site at the
@@ -310,10 +358,16 @@ defmodule PlaycodeWeb.Admin.PlayFormLiveTest do
     play = mark_complete!(play_fixture())
     {:ok, view, _html} = live(conn, ~p"/admin/plays/#{play.id}/edit")
 
-    html = save(view, %{"code" => unique_code()})
+    assert render(view) =~ t("A published play keeps its code: it is its address on the site.")
 
-    assert html =~ error("cannot be changed while the play is complete")
-    assert Catalogue.get_play!(play.id).code == play.code
+    view
+    |> form("#play-form", play: %{"title" => "Publicada"})
+    |> render_submit(%{
+      "play" => %{"number" => "#{100_000 + System.unique_integer([:positive])}"}
+    })
+
+    assert %{code: code, title: "Publicada"} = Catalogue.get_play!(play.id)
+    assert code == play.code
   end
 
   test "an edit is saved", %{conn: conn} do

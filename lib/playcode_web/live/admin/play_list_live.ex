@@ -35,6 +35,7 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
      |> assign(:total_pages, 1)
      |> assign(:purging, nil)
      |> assign(:can_purge, Authz.can?(socket.assigns.current_user, :purge_play))
+     |> assign(:scope, hide_test: not Authz.can?(socket.assigns.current_user, :see_test_plays))
      |> assign(:listening, MapSet.new())}
   end
 
@@ -112,7 +113,10 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
     %{search: search, status: status, archived: archived, page: page} = socket.assigns
     live = SiteStatus.live()
     site_codes = site_codes(live)
-    {rows, page, total_pages} = rows(search, filter(status, site_codes), archived, page)
+
+    {rows, page, total_pages} =
+      rows(search, filter(status, site_codes), archived, page, socket.assigns.scope)
+
     socket = if connected?(socket), do: listen_to(socket, Enum.map(rows, & &1.play)), else: socket
 
     socket
@@ -131,24 +135,28 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   defp filter(status, _site_codes), do: status
 
   # Archived plays stay a flat list; the rest are listed by family, a page per 50 families.
-  defp rows(search, _status, true, page) do
-    total_pages = total_pages(Catalogue.count_plays(search: search, archived: true))
+  defp rows(search, _status, true, page, scope) do
+    total_pages = total_pages(Catalogue.count_plays([search: search, archived: true] ++ scope))
     page = min(page, total_pages)
 
     plays =
-      Catalogue.list_plays(search: search, archived: true, page: page, per_page: @per_page)
+      Catalogue.list_plays(
+        [search: search, archived: true, page: page, per_page: @per_page] ++ scope
+      )
 
     {for(play <- plays, do: %{play: play, derived?: false, match?: true}), page, total_pages}
   end
 
-  defp rows(search, status, false, page) do
+  defp rows(search, status, false, page, scope) do
     {families, total} =
-      Catalogue.list_families(search: search, status: status, page: page, per_page: @per_page)
+      Catalogue.list_families(
+        [search: search, status: status, page: page, per_page: @per_page] ++ scope
+      )
 
     total_pages = total_pages(total)
 
     if page > total_pages do
-      rows(search, status, false, total_pages)
+      rows(search, status, false, total_pages, scope)
     else
       rows =
         Enum.flat_map(families, fn family ->
@@ -165,17 +173,18 @@ defmodule PlaycodeWeb.Admin.PlayListLive do
   # The filter's counts follow the search; the heading's is the whole corpus.
   defp assign_counts(socket, site_codes) do
     search = socket.assigns.search
-    count = &Catalogue.count_plays(search: search, status: &1)
+    scope = socket.assigns.scope
+    count = &Catalogue.count_plays([search: search, status: &1] ++ scope)
 
     assign(socket,
-      plays_total: Catalogue.count_plays(),
+      plays_total: Catalogue.count_plays(scope),
       status_counts: %{
         all: count.(nil),
         draft: count.(:draft),
         complete: count.(:complete),
         no_text: count.(:no_text)
       },
-      archived_count: Catalogue.count_plays(archived: true),
+      archived_count: Catalogue.count_plays([archived: true] ++ scope),
       site_counts: Map.new(@site_states, &{&1, count.({:codes, site_codes[&1]})})
     )
   end

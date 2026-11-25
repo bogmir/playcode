@@ -131,19 +131,22 @@ defmodule Playcode.Import.TeiImport do
   `:removes_text` is the number of verse lines and lines of prose the stored play would lose
   to a file with none, nil when nothing is lost.
 
-  `:same_number` is the code of another play holding a new play's number
-  (`Play.short_code/1`), which the import would leave beside it: nil for none, or for a play
-  that exists.
+  `:same_number` is the code of another play holding a new play's library and number, which
+  makes the import refuse the file (`{:number_taken, code}`): nil for none, or for a play
+  that exists. The numbering is then left unsettled.
   """
   def preview_import(path, opts \\ []) do
-    with {:ok, tei} <- TeiParser.parse_file(path),
-         {:ok, numbering} <- numbering(tei, Keyword.get(opts, :numbering, true)),
-         do: {:ok, preview(tei, numbering)}
+    with {:ok, tei} <- TeiParser.parse_file(path) do
+      existing = Repo.get_by(Play, code: tei.play.code)
+      same_number = if existing, do: nil, else: same_number(tei.play.code)
+      settle? = Keyword.get(opts, :numbering, true) and is_nil(same_number)
+
+      with {:ok, numbering} <- numbering(tei, settle?),
+           do: {:ok, preview(tei, existing, same_number, numbering)}
+    end
   end
 
-  defp preview(%{play: %{code: code, title: title}} = tei, numbering) do
-    existing = Repo.get_by(Play, code: code)
-
+  defp preview(%{play: %{code: code, title: title}} = tei, existing, same_number, numbering) do
     %{
       code: code,
       title: title,
@@ -156,21 +159,20 @@ defmodule Playcode.Import.TeiImport do
       split_verses: parts_out_of_order(tei.divisions),
       repeated_headings: repeated_headings(tei),
       removes_text: removes_text(tei.divisions, existing),
-      same_number: if(existing, do: nil, else: same_number(code)),
+      same_number: same_number,
       numbering: numbering
     }
     |> Map.merge(bibliography_preview(tei.bibliography, existing))
   end
 
   defp same_number(code) do
-    short = Play.short_code(code)
-
-    Repo.one(
-      from p in Play,
-        where: p.code == ^short or like(p.code, ^"#{short}\\_%"),
-        select: p.code,
-        limit: 1
-    )
+    with {:ok, %{library: library, number: number}} <- Play.split_code(code) do
+      Repo.one(
+        from p in Play, where: p.library == ^library and p.number == ^number, select: p.code
+      )
+    else
+      :error -> nil
+    end
   end
 
   # The numbering rule the import would settle, as `Numbering.describe/1` words it: the file
@@ -476,6 +478,8 @@ defmodule Playcode.Import.TeiImport do
         end
 
       nil ->
+        if holder = same_number(attrs.code), do: Repo.rollback({:number_taken, holder})
+
         case Catalogue.create_play(attrs, %Play{pending_original_code: original_code}) do
           {:ok, play} -> play
           {:error, changeset} -> Repo.rollback(changeset)

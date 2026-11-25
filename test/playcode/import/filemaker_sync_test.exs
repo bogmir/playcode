@@ -110,10 +110,11 @@ defmodule Playcode.Import.FilemakerSyncTest do
       index =
         index()
         |> put_in(["EMOTHE0052", :author_sort], "Shakespeare, W.")
-        |> put_in(["HIE0393", :author_sort], ", ")
+        |> Map.put("EMOTHE0393", %{index()["HIE0393"] | author_sort: ", "})
 
       plays =
-        for code <- ~w(EMOTHE0038_AntonyAndCleopatra EMOTHE0052_AntonioYCleopatra HIE0393_Spanish),
+        for code <-
+              ~w(EMOTHE0038_AntonyAndCleopatra EMOTHE0052_AntonioYCleopatra EMOTHE0393_Spanish),
             do: play(code, %{"author_name" => "William Shakespeare", "author_sort" => "x"})
 
       sorts =

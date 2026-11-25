@@ -882,13 +882,15 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
     test "the downloads print the publication details, the identifiers, the licence and the project statement",
          %{conn: conn, play: play} do
+      n = 100_000 + System.unique_integer([:positive])
+
       {:ok, play} =
         Playcode.Catalogue.update_play(play, %{
+          code: "EMOTHE#{n}_Identificada",
           publisher: "Norton & Company",
           pub_place: "Valencia",
           publication_date: "2012",
           authority: "Universitat de València",
-          emothe_id: "0555",
           licence_text: "CC BY-NC-ND 4.0",
           licence_url: "https://creativecommons.org/licenses/by-nc-nd/4.0/",
           availability_note: "Se ruega citar la procedencia.",
@@ -901,7 +903,7 @@ defmodule PlaycodeWeb.ExportControllerTest do
       assert publication_lines(html) == [
                "Publication: Norton & Company, Valencia, 2012",
                "Authority: Universitat de València",
-               "Identifiers: #{play.code}, EMOTHE 0555",
+               "Identifiers: EMOTHE#{n}_Identificada, EMOTHE #{n}",
                "Licence: CC BY-NC-ND 4.0 https://creativecommons.org/licenses/by-nc-nd/4.0/",
                "Se ruega citar la procedencia.",
                "El proyecto EMOTHE.",
@@ -949,14 +951,18 @@ defmodule PlaycodeWeb.ExportControllerTest do
 
     test "the downloads print only what the play has, and link a licence only to a web address",
          %{conn: conn, play: play} do
+      # Every play has a library and a number since the code was split into them, so the
+      # catalogue number is always printed beside the code.
       assert publication_lines(response(get(conn, ~p"/export/#{play.id}/html"), 200)) ==
-               ["Identifiers: #{play.code}"]
+               [
+                 "Identifiers: #{play.code}, #{play.library} #{Playcode.Catalogue.Play.padded_number(play)}"
+               ]
 
       {:ok, play} = Playcode.Catalogue.update_play(play, %{licence_url: "javascript:alert(1)"})
       html = response(get(conn, ~p"/export/#{play.id}/html"), 200)
 
       assert publication_lines(html) == [
-               "Identifiers: #{play.code}",
+               "Identifiers: #{play.code}, #{play.library} #{Playcode.Catalogue.Play.padded_number(play)}",
                "Licence: javascript:alert(1)"
              ]
 

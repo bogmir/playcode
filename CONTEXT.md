@@ -111,6 +111,32 @@ edition, front matter and outline alike; they differ only where the format does 
 EPUB reader may run no script, so a shared line is lined up only when it is short).
 _Avoid_: export (also the TEI file and the static site), the text (the play itself)
 
+### A play's code
+
+**Code**:
+A play's name in Playcode, in its TEI file and in its address on the site: its library, its
+number at four digits or more, and its name (`EMOTHE0805_ISuppositi1551`).
+_Avoid_: id, EMOTHE ID
+
+**Library** (_biblioteca_):
+Whose numbering a play's number belongs to: EMOTHE, AL (ARTELOPE, which counts its own), or
+TEST for trials only admins see. CTCE is EMOTHE's earlier name, not a library (question 74).
+_Avoid_: collection, prefix
+
+**Number** (_número_):
+A play's place in its library's numbering; for EMOTHE, FileMaker's title id. A new play
+takes the next one.
+_Avoid_: id
+
+**Name** (_nombre de archivo_):
+The part of the code after the number, letters and digits made from the title.
+_Avoid_: slug (in prose; the column is `slug`)
+
+**Collection** (_colección_):
+A set of plays a library publishes together, such as CANON 60. Playcode does not record one
+yet.
+_Avoid_: library
+
 ### The critical apparatus
 
 **Variant**:

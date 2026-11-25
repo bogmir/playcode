@@ -13,11 +13,14 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
   alias Playcode.Export.StaticSite
   alias Playcode.Export.StaticSite.Records
 
+  defp numbered_code, do: "EMOTHE#{8_000_000 + System.unique_integer([:positive])}"
+
   defp entry(dir, play), do: Enum.find(records!(dir), &(&1["c"] == play.code))
 
   test "a play's entry holds its own fields, under their keys" do
     play =
       complete_play(%{
+        "code" => numbered_code(),
         "title" => "La <<Celestina>>",
         "original_title" => "Tragicomedia de Calisto y Melibea",
         "author_name" => "Fernando de <<Rojas>>",
@@ -47,6 +50,7 @@ defmodule Playcode.Export.StaticSiteRecordsTest do
     play =
       play_without_text_fixture(%{
         "is_complete" => true,
+        "code" => numbered_code(),
         "title" => "El Adonis",
         "author_name" => nil,
         "composition_date_from" => 1632,

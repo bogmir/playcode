@@ -15,7 +15,7 @@ defmodule Playcode.ReleaseTest do
     dir = Path.join(System.tmp_dir!(), "release-#{System.unique_integer([:positive])}")
     File.mkdir_p!(dir)
     on_exit(fn -> File.rm_rf(dir) end)
-    File.write!(Path.join(dir, "REL0001_Primera.xml"), tei(code: "REL0001", title: "Primera"))
+    File.write!(Path.join(dir, "AL7000031_Primera.xml"), tei(code: "AL7000031", title: "Primera"))
     %{dir: dir}
   end
 
@@ -23,7 +23,7 @@ defmodule Playcode.ReleaseTest do
     out = capture_io(fn -> Release.import_tei(dir, dry_run: true) end)
 
     assert out =~ "1 file(s) in #{dir}"
-    assert out =~ "REL0001  new"
+    assert out =~ "AL7000031  new"
     assert out =~ "dry run, nothing written"
     assert Catalogue.list_plays() == []
 
@@ -38,8 +38,8 @@ defmodule Playcode.ReleaseTest do
 
   test "import_tei keeps a play edited by hand unless told to overwrite the edits", %{dir: dir} do
     File.write!(
-      Path.join(dir, "REL0001_Primera.xml"),
-      tei(code: "REL0001", title: "Primera", front: ~s(<div type="licencia"><p>P.</p></div>))
+      Path.join(dir, "AL7000031_Primera.xml"),
+      tei(code: "AL7000031", title: "Primera", front: ~s(<div type="licencia"><p>P.</p></div>))
     )
 
     capture_io(fn -> Release.import_tei(dir) end)
@@ -49,7 +49,7 @@ defmodule Playcode.ReleaseTest do
     {:ok, _} = Catalogue.update_paratext(paratext, %{kind: "noticia_representacion"})
 
     assert capture_io(fn -> Release.import_tei(dir, dry_run: true, force: true) end) =~
-             "REL0001  would be skipped"
+             "AL7000031  would be skipped"
 
     assert capture_io(fn -> Release.import_tei(dir, force: true) end) =~ "imported 0, skipped 1"
 
@@ -80,14 +80,14 @@ defmodule Playcode.ReleaseTest do
   end
 
   test "export_tei writes each play's TEI as DIR/CODE.xml, or one play's under code:" do
-    play = import_tei!(tei(code: "REL0002_Segunda"))
+    play = import_tei!(tei(code: "AL7000032_Segunda"))
     out_dir = Path.join(System.tmp_dir!(), "release-out-#{System.unique_integer([:positive])}")
     on_exit(fn -> File.rm_rf(out_dir) end)
 
     assert capture_io(fn -> Release.export_tei(out_dir, code: play.code) end) =~
              "wrote 1 file(s) to #{out_dir}"
 
-    assert File.read!(Path.join(out_dir, "REL0002_Segunda.xml")) ==
+    assert File.read!(Path.join(out_dir, "AL7000032_Segunda.xml")) ==
              Playcode.Export.TeiXml.generate(Catalogue.get_play_with_all!(play.id))
   end
 

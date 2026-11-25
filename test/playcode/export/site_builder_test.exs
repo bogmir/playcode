@@ -52,11 +52,10 @@ defmodule Playcode.Export.SiteBuilderTest do
 
   @tag :capture_log
   test "a job that crashes is reported, and the queue carries on" do
-    # A code that is not a plain name cannot be a folder. The play form refuses one now,
-    # so this is a row saved before it did.
-    unchecked_code!(play_fixture(%{"is_complete" => true}), "bad/code")
+    play_fixture(%{"is_complete" => true})
 
-    assert :started = SiteBuilder.generate([])
+    # No code list: generate has no clause for it, so the job raises.
+    assert :started = SiteBuilder.generate(play_codes: :not_a_list)
     # Invalid on purpose: Deployer rejects a repository without "/" before it pushes
     # anything, so this test can never reach GitHub.
     assert :queued = SiteBuilder.deploy("not a repo")

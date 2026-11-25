@@ -65,20 +65,25 @@ defmodule Playcode.Import.TeiCorpusTest do
     # every file first would still find it.
     test "reports each file's line as soon as that file is read" do
       dir = tmp_dir("stream")
-      second = Path.join(dir, "STR0002_Segunda.xml")
-      File.write!(Path.join(dir, "STR0001_Primera.xml"), tei(code: "STR0001", title: "Primera"))
-      File.write!(second, tei(code: "STR0002", title: "Segunda"))
+      second = Path.join(dir, "AL7000040_Segunda.xml")
+
+      File.write!(
+        Path.join(dir, "AL7000039_Primera.xml"),
+        tei(code: "AL7000039", title: "Primera")
+      )
+
+      File.write!(second, tei(code: "AL7000040", title: "Segunda"))
 
       report = fn {_level, line} ->
-        if line =~ "STR0001", do: File.rm!(second)
+        if line =~ "AL7000039", do: File.rm!(second)
         send(self(), {:line, line})
       end
 
       TeiCorpus.dry_run(TeiCorpus.collect_files([dir]), [], report)
 
       # The line names the numbering rule the import would settle; an empty play numbers nothing.
-      assert_received {:line, "  STR0001  new, numbering V never"}
-      assert_received {:line, "  STR0002: " <> _unreadable}
+      assert_received {:line, "  AL7000039  new, numbering V never"}
+      assert_received {:line, "  AL7000040: " <> _unreadable}
     end
   end
 end

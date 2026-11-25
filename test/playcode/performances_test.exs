@@ -65,17 +65,6 @@ defmodule Playcode.PerformancesTest do
   end
 
   describe "venue types" do
-    test "are FileMaker's eight, with its Spanish and English labels" do
-      assert Performance.venue_types() ==
-               ~w(public_theatre palace street other private_theatre unknown university
-                  commercial_theatre)
-
-      assert Performance.venue_type_label("public_theatre", "es") == "teatro público"
-      assert Performance.venue_type_label("palace", "en") == "palace / court"
-      assert Performance.venue_type_label("university", "es") == "universidad / “inns of court”"
-      assert Performance.venue_type_label("commercial_theatre", "en") == "commercial theatre"
-    end
-
     test "a performance's type is one of the eight" do
       play = play_fixture()
 

@@ -63,7 +63,7 @@ defmodule Playcode.Import.TeiParserTest do
   test "a play is read without the database" do
     xml =
       tei(
-        code: "PURE01",
+        code: "AL7000041",
         front:
           ~s(<div type="elenco"><castList><castItem><role xml:id="ALB">Albano</role></castItem></castList></div>),
         body:
@@ -72,7 +72,7 @@ defmodule Playcode.Import.TeiParserTest do
 
     assert {:ok, tei} = TeiParser.parse_file(write_tmp!(xml))
 
-    assert %{code: "PURE01", title: "Test Play"} = tei.play
+    assert %{code: "AL7000041", title: "Test Play"} = tei.play
     assert [%{xml_id: "ALB", name: "Albano"}] = tei.characters
 
     assert [%{type: "elenco"}, %{type: "acto", title: "Acto I", elements: [speech]}] =

@@ -37,7 +37,7 @@ defmodule Playcode.ApparatusCorpusTest do
     |> :unicode.characters_to_binary({:utf16, :little})
     |> String.replace(
       ~r/<title key="archivo">[^_<]+/,
-      ~s(<title key="archivo">APP#{System.unique_integer([:positive])})
+      ~s(<title key="archivo">AL#{7_200_000 + System.unique_integer([:positive])})
     )
   end
 
@@ -46,7 +46,7 @@ defmodule Playcode.ApparatusCorpusTest do
     code = path |> Path.basename() |> String.slice(0, 10)
 
     assert {:ok, first} = path |> own_copy() |> write_tmp!() |> TeiImport.check_round_trip()
-    assert first =~ ~s(<title key="archivo">APP)
+    assert first =~ ~s(<title key="archivo">AL)
 
     assert first |> xml_apps() |> Enum.reject(&(&1.type == "folio")) |> length() ==
              @entries[code]

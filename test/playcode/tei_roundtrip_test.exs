@@ -45,7 +45,6 @@ defmodule Playcode.TeiRoundtripTest do
     publication_stmt: """
     <publisher><orgName>ARTELOPE/EMOTHE, Universitat de València</orgName></publisher>
     <authority><orgName>Universitat de València - Estudi General</orgName></authority>
-    <idno type="EMOTHE">0703</idno>
     <availability>
       <p>Some general availability text.</p>
       <licence target="https://creativecommons.org/licenses/by-nc-nd/4.0/deed.es">CC BY-NC-ND 4.0</licence>
@@ -88,7 +87,6 @@ defmodule Playcode.TeiRoundtripTest do
      "ARTELOPE/EMOTHE, Universitat de València"},
     {"authority", "authority", "publicationStmt", %{},
      "Universitat de València - Estudi General"},
-    {"EMOTHE id", "idno", "publicationStmt", %{"type" => "EMOTHE"}, "0703"},
     {"availability note", "p", "availability", %{}, "Some general availability text."},
     {"licence", "licence", "availability",
      %{"target" => "https://creativecommons.org/licenses/by-nc-nd/4.0/deed.es"},
@@ -346,6 +344,30 @@ defmodule Playcode.TeiRoundtripTest do
     assert {%{"type" => "code"}, "AL0606"} in xml_elements(xml, "idno")
   end
 
+  # CTCE is EMOTHE's old name, with the same numbers (question 74): the file gets the
+  # number under its library's name today, whatever the file it came from said, or none.
+  test "the code's number is written under its library's name" do
+    n = 5000 + System.unique_integer([:positive])
+
+    for {code, idno, expected} <- [
+          {"EMOTHE#{n}_ElCercoDeNumancia", ~s(<idno type="CTCE">#{n}</idno>), "EMOTHE"},
+          {"EMOTHE#{n + 1}_LaPrudenciaEnLaMujer", ~s(<idno type="EMOTHE">#{n + 1}</idno>),
+           "EMOTHE"},
+          {"AL#{n + 2}_LaCoronaMerecida", ~s(<idno type="AL">#{n + 2}</idno>), "AL"},
+          {"EMOTHE#{n + 3}_ElBelloAdonis", "", "EMOTHE"},
+          {"AL0387_ElPadrino", ~s(<idno type="AL">387</idno>), "AL"}
+        ] do
+      xml = roundtrip(tei(code: code, publication_stmt: idno))
+      number = code |> String.split("_") |> hd() |> String.replace(~r/^[A-Z]+/, "")
+
+      assert xml |> xml_elements("idno", within: "publicationStmt") |> Enum.reject(&code_idno?/1) ==
+               [{%{"type" => expected}, number}],
+             code
+    end
+  end
+
+  defp code_idno?({attrs, _}), do: attrs["type"] == "code"
+
   test "several sources keep their order, with or without a listBibl wrapper" do
     for source_desc <- [
           "<bibl><title>First</title></bibl><bibl><title>Second</title></bibl>",
@@ -445,7 +467,7 @@ defmodule Playcode.TeiRoundtripTest do
       play =
         import_tei!(
           tei(
-            code: "NS#{n}",
+            code: "EMOTHE#{1_000_000 + n}",
             file_desc: """
             <notesStmt>
               <note>El epílogo figura en la edición
@@ -468,7 +490,7 @@ defmodule Playcode.TeiRoundtripTest do
       xml = export_tei(play)
       assert [{%{"target" => "EMOTHE0005"}, ""}] = xml_elements(xml, "relatedItem")
 
-      copy = import_tei!(String.replace(xml, "NS#{n}", "NC#{n}"))
+      copy = import_tei!(String.replace(xml, "#{1_000_000 + n}", "#{2_000_000 + n}"))
       assert Catalogue.get_play!(copy.id).edition_notes == notes
     end
   end
@@ -617,7 +639,7 @@ defmodule Playcode.TeiRoundtripTest do
       play =
         import_tei!(
           tei(
-            code: "RV#{n}",
+            code: "EMOTHE#{3_000_000 + n}",
             revision_desc: """
             <change>
               <date>2021</date>
@@ -673,7 +695,9 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert xml_texts(xml, "emph", within: "change") == ["TEI-XML"]
 
-      copy = xml |> String.replace("RV#{n}", "RC#{n}") |> import_tei!()
+      copy =
+        xml |> String.replace("#{3_000_000 + n}", "#{4_000_000 + n}") |> import_tei!()
+
       assert revisions.(copy) == changes
       assert copy |> export_tei() |> xml_texts("emph", within: "change") == ["TEI-XML"]
     end
@@ -730,8 +754,12 @@ defmodule Playcode.TeiRoundtripTest do
 
     test "is named by its short code, and links a play imported after the original" do
       n = System.unique_integer([:positive])
-      original = import_tei!(tei(code: "OR#{n}_Pyrame"))
-      play = import_tei!(tei(code: "TR#{n}", title_stmt: ~s(<title type="traduccion">X</title>)))
+      original = import_tei!(tei(code: "EMOTHE#{5_000_000 + n}_Pyrame"))
+
+      play =
+        import_tei!(
+          tei(code: "EMOTHE#{6_000_000 + n}", title_stmt: ~s(<title type="traduccion">X</title>))
+        )
 
       # as the FileMaker sync links them
       {:ok, _} = Catalogue.update_play(play, %{parent_play_id: original.id})
@@ -739,55 +767,41 @@ defmodule Playcode.TeiRoundtripTest do
       xml = export_tei(play)
 
       assert xml_elements(xml, "relatedItem", within: "notesStmt") == [
-               {%{"type" => "original", "target" => "OR#{n}"}, ""}
+               {%{"type" => "original", "target" => "EMOTHE#{5_000_000 + n}"}, ""}
              ]
 
-      copy = import_tei!(String.replace(xml, "TR#{n}", "TC#{n}"))
+      copy = import_tei!(String.replace(xml, "#{6_000_000 + n}", "#{7_000_000 + n}"))
       assert original_of(copy) == original.id
     end
 
     test "imported before its original, waits for it, and is linked when it arrives" do
       n = System.unique_integer([:positive])
-      play = import_tei!(translation("TR#{n}", "OR#{n}"))
+      play = import_tei!(translation("EMOTHE#{6_000_000 + n}", "EMOTHE#{5_000_000 + n}"))
 
       assert original_of(play) == nil
 
       assert xml_elements(export_tei(play), "relatedItem") == [
-               {%{"type" => "original", "target" => "OR#{n}"}, ""}
+               {%{"type" => "original", "target" => "EMOTHE#{5_000_000 + n}"}, ""}
              ]
 
-      original = import_tei!(tei(code: "OR#{n}_Pyrame"))
+      original = import_tei!(tei(code: "EMOTHE#{5_000_000 + n}_Pyrame"))
       assert original_of(play) == original.id
-    end
-
-    test "is not guessed when two plays share the short code" do
-      n = System.unique_integer([:positive])
-      import_tei!(tei(code: "DU#{n}_Uno"))
-      import_tei!(tei(code: "DU#{n}_Dos"))
-
-      play = import_tei!(translation("TR#{n}", "DU#{n}"))
-
-      assert original_of(play) == nil
-
-      assert xml_elements(export_tei(play), "relatedItem") == [
-               {%{"type" => "original", "target" => "DU#{n}"}, ""}
-             ]
     end
 
     test "a re-import leaves the link alone" do
       n = System.unique_integer([:positive])
-      original = import_tei!(tei(code: "OR#{n}"))
-      other = import_tei!(tei(code: "OT#{n}"))
-      play = import_tei!(translation("TR#{n}", "OR#{n}"))
+      original = import_tei!(tei(code: "EMOTHE#{5_000_000 + n}"))
+      other = import_tei!(tei(code: "EMOTHE#{9_000_000 + n}"))
+      play = import_tei!(translation("EMOTHE#{6_000_000 + n}", "EMOTHE#{5_000_000 + n}"))
 
-      import_tei!(translation("TR#{n}", "OT#{n}"))
+      import_tei!(translation("EMOTHE#{6_000_000 + n}", "EMOTHE#{9_000_000 + n}"))
 
       assert original_of(play) == original.id
       refute original_of(play) == other.id
     end
 
     test "an original never imported leaves the play with none" do
-      play = import_tei!(translation("TR#{System.unique_integer([:positive])}", "NOPE"))
+      play = import_tei!(translation(Playcode.TestFixtures.unique_code(), "NOPE"))
 
       assert original_of(play) == nil
     end
@@ -994,17 +1008,17 @@ defmodule Playcode.TeiRoundtripTest do
     # The file is the truth for the links it wrote (every production file lacks the state):
     # a re-import clears theirs. A curator's link (origin "manual") is theirs to keep.
     test "a file without the state clears it from the file's own links, never from a curator's" do
-      own = import_tei!(state_file("country", with_country(), code: "HSOWN"))
+      own = import_tei!(state_file("country", with_country(), code: "AL7000001"))
       assert [_] = xml_elements(export_tei(own), "country", within: "setting")
 
-      own = import_tei!(state_file("country", without_state(), code: "HSOWN"))
+      own = import_tei!(state_file("country", without_state(), code: "AL7000001"))
       assert xml_elements(export_tei(own), "country", within: "setting") == []
 
-      curated = import_tei!(state_file("country", with_country(), code: "HSCUR"))
+      curated = import_tei!(state_file("country", with_country(), code: "AL7000002"))
       [link] = curated.play_places
       {:ok, _} = Playcode.Places.update_play_place(link, %{"origin" => "manual"})
 
-      curated = import_tei!(state_file("country", without_state(), code: "HSCUR"))
+      curated = import_tei!(state_file("country", without_state(), code: "AL7000002"))
 
       assert xml_elements(export_tei(curated), "country", within: "setting") ==
                [{%{"ref" => "#rt-hs-republica-romana"}, ""}]
@@ -2683,11 +2697,11 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = tei(code: "EMPH1", body: body) |> roundtrip()
-      second = first |> String.replace("EMPH1", "EMPH2") |> roundtrip()
+      first = tei(code: "AL7000003", body: body) |> roundtrip()
+      second = first |> String.replace("7000003", "7100006") |> roundtrip()
 
       assert [%{paragraphs: [", if (OED conj. 2)."]}] = xml_notes(first)
-      assert String.replace(second, "EMPH2", "EMPH1") == first
+      assert String.replace(second, "7100006", "7000003") == first
     end
 
     test "importing a file again replaces its notes, never doubles them" do
@@ -2787,10 +2801,10 @@ defmodule Playcode.TeiRoundtripTest do
     end
 
     test "exporting, re-importing and exporting again changes nothing" do
-      first = tei(code: "APP1", body: @apparatus) |> roundtrip()
-      second = first |> String.replace("APP1", "APP2") |> roundtrip()
+      first = tei(code: "AL7000004", body: @apparatus) |> roundtrip()
+      second = first |> String.replace("7000004", "7100001") |> roundtrip()
 
-      assert String.replace(second, "APP2", "APP1") == first
+      assert String.replace(second, "7100001", "7000004") == first
     end
 
     @placed """
@@ -2900,10 +2914,10 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = tei(code: "APP3", body: body) |> roundtrip()
-      second = first |> String.replace("APP3", "APP4") |> roundtrip()
+      first = tei(code: "AL7000005", body: body) |> roundtrip()
+      second = first |> String.replace("7000005", "7100002") |> roundtrip()
 
-      assert String.replace(second, "APP4", "APP3") == first
+      assert String.replace(second, "7100002", "7000005") == first
     end
 
     # EMOTHE0187 n="481" and EMOTHE0560 n="1106": the entry sits in the "(Aparte)" stage that a
@@ -2916,7 +2930,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = tei(code: "APP5", body: body) |> roundtrip()
+      first = tei(code: "AL7000006", body: body) |> roundtrip()
 
       # "[Aside to Bungay]" says more than "aside": the stage stays (answered 2026-11-07), so the
       # entry stays inside it. It used to be dropped with the stage.
@@ -2933,8 +2947,8 @@ defmodule Playcode.TeiRoundtripTest do
              ] =
                xml_apps(first)
 
-      second = first |> String.replace("APP5", "APP6") |> roundtrip()
-      assert String.replace(second, "APP6", "APP5") == first
+      second = first |> String.replace("7000006", "7100003") |> roundtrip()
+      assert String.replace(second, "7100003", "7000006") == first
     end
 
     # The reviewer's repro: a note inside the stage copies the stage's entry. The note
@@ -2962,13 +2976,13 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = tei(code: "APP7", body: body) |> roundtrip()
+      first = tei(code: "AL7000007", body: body) |> roundtrip()
 
       assert reading_texts(first, "l") == ["(Aparte.) Hola."]
       assert [%{in: "l", n: "9", readings: [{"rdg", "#B", "Aparte", nil}]}] = xml_apps(first)
 
-      second = first |> String.replace("APP7", "APP8") |> roundtrip()
-      assert String.replace(second, "APP8", "APP7") == first
+      second = first |> String.replace("7000007", "7100004") |> roundtrip()
+      assert String.replace(second, "7100004", "7000007") == first
     end
   end
 
@@ -3032,7 +3046,7 @@ defmodule Playcode.TeiRoundtripTest do
       </div1>
       """
 
-      first = roundtrip(tei(code: "FOL1", body: body))
+      first = roundtrip(tei(code: "AL7000008", body: body))
 
       refute first =~ "span"
       assert reading_texts(first, "l") == ["O God, God,", "Very like. Stayed it long?"]
@@ -3049,8 +3063,8 @@ defmodule Playcode.TeiRoundtripTest do
       # The aside keeps the Folio words inside it.
       assert [{_attrs, "’A is far gone, far gone, and truly"}] = xml_elements(first, "seg")
 
-      second = first |> String.replace("FOL1", "FOL2") |> roundtrip()
-      assert String.replace(second, "FOL2", "FOL1") == first
+      second = first |> String.replace("7000008", "7100007") |> roundtrip()
+      assert String.replace(second, "7100007", "7000008") == first
     end
 
     # 13 of Hamlet's 132 passages cross elements, the longest 14 speeches. Each element is a
@@ -3075,7 +3089,7 @@ defmodule Playcode.TeiRoundtripTest do
       </div1>
       """
 
-      first = roundtrip(tei(code: "FOL7", body: body))
+      first = roundtrip(tei(code: "AL7000009", body: body))
       span = ~s(<span class="folio">)
 
       assert reading_texts(first, "p") == [
@@ -3102,8 +3116,8 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert xml_apps(first) == []
 
-      second = first |> String.replace("FOL7", "FOL8") |> roundtrip()
-      assert String.replace(second, "FOL8", "FOL7") == first
+      second = first |> String.replace("7000009", "7100009") |> roundtrip()
+      assert String.replace(second, "7100009", "7000009") == first
     end
 
     # The lines of a passage are pieces like any other element, a note in one staying where
@@ -3119,7 +3133,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = roundtrip(tei(code: "FOL9", body: body))
+      first = roundtrip(tei(code: "AL7000010", body: body))
       span = ~s(<span class="folio">)
 
       assert reading_texts(first, "l") == [
@@ -3130,8 +3144,8 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert [%{in: "l", n: "1", after: ~s(<span class="folio">on through)}] = xml_notes(first)
 
-      second = first |> String.replace("FOL9", "FOLA") |> roundtrip()
-      assert String.replace(second, "FOLA", "FOL9") == first
+      second = first |> String.replace("7000010", "7100010") |> roundtrip()
+      assert String.replace(second, "7100010", "7000010") == first
     end
 
     # A passage may open at a speaker label and close inside the speech's own paragraph
@@ -3154,7 +3168,7 @@ defmodule Playcode.TeiRoundtripTest do
       </div1>
       """
 
-      play = import_tei!(tei(code: "FOLF", body: body))
+      play = import_tei!(tei(code: "AL7000011", body: body))
       folio = fn part, words -> ~s(<folio part="#{part}">#{words}</folio>) end
 
       assert [%{loaded_elements: [_, opens, middle, short]}] =
@@ -3184,8 +3198,8 @@ defmodule Playcode.TeiRoundtripTest do
                  "#{span}<sup>F</sup>2 clown</span>"
                ]
 
-      second = first |> String.replace("FOLF", "FOLG") |> roundtrip()
-      assert String.replace(second, "FOLG", "FOLF") == first
+      second = first |> String.replace("7000011", "7100013") |> roundtrip()
+      assert String.replace(second, "7100013", "7000011") == first
     end
 
     # The texts of the play in the order a file reads them, speaker labels included.
@@ -3220,7 +3234,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      play = import_tei!(tei(code: "FOLL", body: body))
+      play = import_tei!(tei(code: "AL7000012", body: body))
       {:ok, _} = play |> texts() |> Enum.at(3) |> PlayContent.delete_element()
       PlayContent.refresh_derived(play.id)
 
@@ -3235,8 +3249,8 @@ defmodule Playcode.TeiRoundtripTest do
                "#{span}F2 close<sup>F</sup></span> Q2 six"
              ]
 
-      second = first |> String.replace("FOLL", "FOLM") |> roundtrip()
-      assert String.replace(second, "FOLM", "FOLL") == first
+      second = first |> String.replace("7000012", "7100016") |> roundtrip()
+      assert String.replace(second, "7100016", "7000012") == first
     end
 
     test "a line put inside a crossing passage parts it in two" do
@@ -3251,7 +3265,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      play = import_tei!(tei(code: "FOLN", body: body))
+      play = import_tei!(tei(code: "AL7000013", body: body))
       [_speech, first_line | _] = texts(play)
       PlayContent.shift_element_positions(first_line.division_id, first_line.parent_id, 1)
 
@@ -3282,8 +3296,8 @@ defmodule Playcode.TeiRoundtripTest do
                {"rdg", "#F1", "again", nil}
              ]
 
-      second = first |> String.replace("FOLN", "FOLO") |> roundtrip()
-      assert String.replace(second, "FOLO", "FOLN") == first
+      second = first |> String.replace("7000013", "7100017") |> roundtrip()
+      assert String.replace(second, "7100017", "7000013") == first
     end
 
     # A speaker label that is all of a passage's first piece (v. 3226), right after a piece
@@ -3304,7 +3318,7 @@ defmodule Playcode.TeiRoundtripTest do
       </div1>
       """
 
-      play = import_tei!(tei(code: "FOLP", body: body))
+      play = import_tei!(tei(code: "AL7000014", body: body))
       {:ok, _} = play |> texts() |> Enum.at(3) |> PlayContent.delete_element()
       PlayContent.refresh_derived(play.id)
 
@@ -3324,8 +3338,8 @@ defmodule Playcode.TeiRoundtripTest do
                "Q2 words."
              ]
 
-      second = first |> String.replace("FOLP", "FOLQ") |> roundtrip()
-      assert String.replace(second, "FOLQ", "FOLP") == first
+      second = first |> String.replace("7000014", "7100018") |> roundtrip()
+      assert String.replace(second, "7100018", "7000014") == first
     end
 
     # The mirror: a stage direction that is all of a passage's last piece ("Sound a
@@ -3343,7 +3357,7 @@ defmodule Playcode.TeiRoundtripTest do
       </div1>
       """
 
-      play = import_tei!(tei(code: "FOLR", body: body))
+      play = import_tei!(tei(code: "AL7000015", body: body))
       {:ok, _} = play |> texts() |> Enum.at(3) |> PlayContent.delete_element()
       PlayContent.refresh_derived(play.id)
 
@@ -3362,8 +3376,8 @@ defmodule Playcode.TeiRoundtripTest do
                {"rdg", "#F1", "closes", nil}
              ]
 
-      second = first |> String.replace("FOLR", "FOLS") |> roundtrip()
-      assert String.replace(second, "FOLS", "FOLR") == first
+      second = first |> String.replace("7000015", "7100019") |> roundtrip()
+      assert String.replace(second, "7100019", "7000015") == first
     end
 
     # Hamlet's file has three slips in its marks: a </span> set before the passage's words
@@ -3409,7 +3423,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      play = import_tei!(tei(code: "FOLB", body: body))
+      play = import_tei!(tei(code: "AL7000016", body: body))
       stage = fn words -> ~s(<stage type="delivery">#{words}</stage>) end
 
       assert [%{loaded_elements: [%{children: [spaced, glued, whole]}]}] =
@@ -3454,8 +3468,8 @@ defmodule Playcode.TeiRoundtripTest do
                {"delivery", "Within"}
              ]
 
-      second = first |> String.replace("FOLB", "FOLC") |> roundtrip()
-      assert String.replace(second, "FOLC", "FOLB") == first
+      second = first |> String.replace("7000016", "7100011") |> roundtrip()
+      assert String.replace(second, "7100011", "7000016") == first
     end
 
     # A reading that starts or ends with an element: the folio marker beside it gets no
@@ -3470,7 +3484,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      play = import_tei!(tei(code: "FOLD", body: body))
+      play = import_tei!(tei(code: "AL7000017", body: body))
       stage = ~s(<stage type="delivery">within</stage>)
 
       assert [%{loaded_elements: [%{children: [tight, loose, plain]}]}] =
@@ -3481,8 +3495,8 @@ defmodule Playcode.TeiRoundtripTest do
       assert plain.content == ~s(<lb n="3"/>foo<folio> bar</folio>.)
 
       first = export_tei(play)
-      second = first |> String.replace("FOLD", "FOLE") |> roundtrip()
-      assert String.replace(second, "FOLE", "FOLD") == first
+      second = first |> String.replace("7000017", "7100012") |> roundtrip()
+      assert String.replace(second, "7100012", "7000017") == first
     end
 
     # Italics touching a passage that opens or closes in italics stay two <emph>s: merged
@@ -3495,7 +3509,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = roundtrip(tei(code: "FOLH", body: body))
+      first = roundtrip(tei(code: "AL7000018", body: body))
 
       assert for(app <- xml_apps(first), do: List.last(app.readings)) == [
                {"rdg", "#F1", "mother", nil},
@@ -3504,8 +3518,8 @@ defmodule Playcode.TeiRoundtripTest do
 
       assert xml_texts(first, "emph") == ["dear", "mother", "mother", "dear"]
 
-      second = first |> String.replace("FOLH", "FOLI") |> roundtrip()
-      assert String.replace(second, "FOLI", "FOLH") == first
+      second = first |> String.replace("7000018", "7100014") |> roundtrip()
+      assert String.replace(second, "7100014", "7000018") == first
     end
 
     # A note counts graphemes into the text without its markers, the Folio ones included:
@@ -3517,7 +3531,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = roundtrip(tei(code: "FOL5", body: body))
+      first = roundtrip(tei(code: "AL7000019", body: body))
 
       assert [%{in: "l", after: "O God, God,", n: "1"}] = xml_notes(first)
       assert reading_texts(first, "l") == ["O God, God, be"]
@@ -3532,7 +3546,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = roundtrip(tei(code: "FOLJ", body: body))
+      first = roundtrip(tei(code: "AL7000020", body: body))
 
       assert [%{readings: [{"lem", "#Q2", "", nil}, {"rdg", "#F1", "O O", "An oath."}]}] =
                xml_apps(first)
@@ -3540,8 +3554,8 @@ defmodule Playcode.TeiRoundtripTest do
       assert [{%{"wit" => "#F1"}, "O An oath. O"}] = xml_elements(first, "rdg")
       assert reading_texts(first, "l") == ["O God, God,"]
 
-      second = first |> String.replace("FOLJ", "FOLK") |> roundtrip()
-      assert String.replace(second, "FOLK", "FOLJ") == first
+      second = first |> String.replace("7000020", "7100015") |> roundtrip()
+      assert String.replace(second, "7100015", "7000020") == first
     end
 
     # The form a re-encoded file will use (question 36) reads as the same passage. An
@@ -3557,7 +3571,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      play = import_tei!(tei(code: "FOL3", body: body))
+      play = import_tei!(tei(code: "AL7000021", body: body))
       first = export_tei(play)
 
       assert [
@@ -3575,8 +3589,8 @@ defmodule Playcode.TeiRoundtripTest do
       assert [%{} = variant] = entry.notes
       assert Note.variant?(variant)
 
-      second = first |> String.replace("FOL3", "FOL4") |> roundtrip()
-      assert String.replace(second, "FOL4", "FOL3") == first
+      second = first |> String.replace("7000021", "7100008") |> roundtrip()
+      assert String.replace(second, "7100008", "7000021") == first
     end
 
     # A reading with no word would be an empty passage, which the line refuses (and the
@@ -3589,7 +3603,7 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      play = import_tei!(tei(code: "FOL6", body: body))
+      play = import_tei!(tei(code: "AL7000022", body: body))
 
       assert [%{loaded_elements: [%{children: [first, second]}]}] =
                PlayContent.load_play_content(play.id)
@@ -3706,11 +3720,14 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      xml = roundtrip(tei(code: "STG3", body: body))
+      xml = roundtrip(tei(code: "AL7000023", body: body))
 
       # Written out again and read back, the notes do not move.
       again =
-        xml |> String.replace("STG3", "STG4") |> roundtrip() |> String.replace("STG4", "STG3")
+        xml
+        |> String.replace("7000023", "7100021")
+        |> roundtrip()
+        |> String.replace("7100021", "7000023")
 
       assert again == xml
 
@@ -3820,10 +3837,10 @@ defmodule Playcode.TeiRoundtripTest do
       </sp></div1>
       """
 
-      first = tei(code: "STG1", body: body) |> roundtrip()
-      second = first |> String.replace("STG1", "STG2") |> roundtrip()
+      first = tei(code: "AL7000024", body: body) |> roundtrip()
+      second = first |> String.replace("7000024", "7100020") |> roundtrip()
 
-      assert String.replace(second, "STG2", "STG1") == first
+      assert String.replace(second, "7100020", "7000024") == first
     end
   end
 
@@ -3856,10 +3873,10 @@ defmodule Playcode.TeiRoundtripTest do
     end
 
     test "exporting, re-importing and exporting again changes nothing" do
-      first = tei(code: "ASD1", body: @partly) |> roundtrip()
-      second = first |> String.replace("ASD1", "ASD2") |> roundtrip()
+      first = tei(code: "AL7000025", body: @partly) |> roundtrip()
+      second = first |> String.replace("7000025", "7100005") |> roundtrip()
 
-      assert String.replace(second, "ASD2", "ASD1") == first
+      assert String.replace(second, "7100005", "7000025") == first
     end
 
     test "a paragraph all aside keeps the breaks between its asides" do
@@ -3978,10 +3995,10 @@ defmodule Playcode.TeiRoundtripTest do
       body =
         ~s(<p n="7">Uno, <lb/>dos <lb n="8"/>tres<note n="1" type="editor"><p>Glosa <lb/>larga.</p></note>.</p><p><lb/>Cuatro <emph>cinco <lb/>seis</emph>.</p>)
 
-      first = speech(body, "LBR1") |> roundtrip()
-      second = first |> String.replace("LBR1", "LBR2") |> roundtrip()
+      first = speech(body, "AL7400001") |> roundtrip()
+      second = first |> String.replace("7400001", "7400002") |> roundtrip()
 
-      assert String.replace(second, "LBR2", "LBR1") == first
+      assert String.replace(second, "7400002", "7400001") == first
     end
   end
 
@@ -4261,7 +4278,7 @@ defmodule Playcode.TeiRoundtripTest do
 
     test "a play rebuilt from its file gets every reference back, as the file's" do
       n = System.unique_integer([:positive])
-      play = fill_bibliography(import_tei!(tei(code: "BIB#{n}")))
+      play = fill_bibliography(import_tei!(tei(code: "EMOTHE#{10_000_000 + n}")))
       xml = export_tei(play)
 
       before =
@@ -4271,7 +4288,8 @@ defmodule Playcode.TeiRoundtripTest do
       # The entries go with their last link, as in an installation that never had them.
       for link <- Bibliography.list_links(play.id), do: {:ok, _} = Bibliography.unlink(link)
 
-      copy = import_tei!(String.replace(xml, "BIB#{n}", "BIC#{n}"))
+      copy =
+        import_tei!(String.replace(xml, "EMOTHE#{10_000_000 + n}", "EMOTHE#{11_000_000 + n}"))
 
       assert Enum.sort(references(copy)) == Enum.sort(before)
 
@@ -4282,7 +4300,7 @@ defmodule Playcode.TeiRoundtripTest do
     end
 
     test "importing a play's own export again adds nothing" do
-      play = fill_bibliography(import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}")))
+      play = fill_bibliography(import_tei!(tei(code: Playcode.TestFixtures.unique_code())))
       xml = export_tei(play)
 
       assert {:ok, %{bibliography_adds: []}} = TeiImport.preview_import(write_tmp!(xml))
@@ -4295,7 +4313,7 @@ defmodule Playcode.TeiRoundtripTest do
     # reader took for nothing, so "Véase\nFenisa." came back "VéaseFenisa." and the
     # reference no longer matched its entry.
     test "a printed note with a line break is still recognised on re-import" do
-      play = import_tei!(tei(code: "BIB#{System.unique_integer([:positive])}"))
+      play = import_tei!(tei(code: Playcode.TestFixtures.unique_code()))
 
       bibliography_fixture(
         play,
@@ -4315,7 +4333,7 @@ defmodule Playcode.TeiRoundtripTest do
     # FileMaker keeps several people in one field; TEI gives each person an element.
     test "several people in one field are one element each, and one field again" do
       play =
-        import_tei!(tei(code: "BIP#{System.unique_integer([:positive])}"))
+        import_tei!(tei(code: Playcode.TestFixtures.unique_code()))
         |> bibliography_fixture(%{
           "monogr_author" => "Uno, Ana; Dos, Berta",
           "monogr_editors" => "Morris, Brian ; Gill, Roma",
@@ -4338,7 +4356,7 @@ defmodule Playcode.TeiRoundtripTest do
       for link <- Bibliography.list_links(play.id), do: {:ok, _} = Bibliography.unlink(link)
 
       copy =
-        import_tei!(String.replace(xml, play.code, "BIQ#{System.unique_integer([:positive])}"))
+        import_tei!(String.replace(xml, play.code, Playcode.TestFixtures.unique_code()))
 
       assert [%{entry: entry}] = Bibliography.list_links(copy.id)
 
@@ -4363,9 +4381,12 @@ defmodule Playcode.TeiRoundtripTest do
 
     test "one reference in two plays' files is one entry with two links" do
       n = System.unique_integer([:positive])
-      play = fill_bibliography(import_tei!(tei(code: "BIB#{n}")))
+      play = fill_bibliography(import_tei!(tei(code: "EMOTHE#{10_000_000 + n}")))
 
-      copy = import_tei!(String.replace(export_tei(play), "BIB#{n}", "BIC#{n}"))
+      copy =
+        import_tei!(
+          String.replace(export_tei(play), "EMOTHE#{10_000_000 + n}", "EMOTHE#{11_000_000 + n}")
+        )
 
       entry_ids =
         &(&1.id
@@ -4377,7 +4398,7 @@ defmodule Playcode.TeiRoundtripTest do
     end
 
     test "a re-import adds a reference new to its file and changes nothing else" do
-      code = "BIR#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       play = import_tei!(with_bibliography(code, critica: [bibl_struct("Uno")]))
       bibliography_fixture(play, %{"monogr_title" => "A mano"})
 
@@ -4400,7 +4421,7 @@ defmodule Playcode.TeiRoundtripTest do
     # The one way a duplicate gets in: the file's old version no longer matches the
     # corrected entry. The import preview lists it before the import is confirmed.
     test "an older file brings back the old version of a corrected reference, beside it" do
-      code = "BIR#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       file = with_bibliography(code, critica: [bibl_struct("Uno")])
       play = import_tei!(file)
       [link] = Bibliography.list_links(play.id)
@@ -4414,7 +4435,7 @@ defmodule Playcode.TeiRoundtripTest do
     test "a reference that cannot be an entry, or comes twice, does not stop the import" do
       play =
         import_tei!(
-          with_bibliography("BIR#{System.unique_integer([:positive])}",
+          with_bibliography(Playcode.TestFixtures.unique_code(),
             desconocida: [bibl_struct("Sin tipo")],
             critica: [
               bibl_struct("Uno"),
@@ -4529,7 +4550,7 @@ defmodule Playcode.TeiRoundtripTest do
     # EMOTHE0460's listWit lists its early quartos and the modern editions its apparatus
     # cites; the editions live in the bibliography, with their siglum.
     test "a re-import keeps hand-typed witnesses and skips a siglum one of them or an edition holds" do
-      code = "WIT#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       play = import_tei!(tei(code: code))
 
       bibliography_fixture(play, %{
@@ -4570,7 +4591,7 @@ defmodule Playcode.TeiRoundtripTest do
     # Most FileMaker witnesses have no siglum, and they are not the file's own rows, so the
     # re-import keeps them: the file's copy of each must not come in beside it.
     test "re-importing its own export keeps a play's witnesses without siglum, once" do
-      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+      play = import_tei!(tei(code: Playcode.TestFixtures.unique_code()))
 
       {:ok, _} =
         Playcode.Witnesses.create_witness(
@@ -4596,7 +4617,7 @@ defmodule Playcode.TeiRoundtripTest do
     # space outside the italics, so the file's copy no longer printed the same line as the
     # kept witness and came in beside it, one more on every re-import of the export.
     test "a kept witness whose italics end in a space comes back once" do
-      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+      play = import_tei!(tei(code: Playcode.TestFixtures.unique_code()))
 
       {:ok, _} =
         Playcode.Witnesses.create_witness(
@@ -4620,7 +4641,7 @@ defmodule Playcode.TeiRoundtripTest do
     # file names no FileMaker or Playcode identifier (decided 2026-10-13): the record
     # number stays in the installation FileMaker was imported into.
     test "a FileMaker witness's file names no FileMaker record, and comes back as the file's" do
-      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+      play = import_tei!(tei(code: Playcode.TestFixtures.unique_code()))
 
       {:ok, _} =
         Playcode.Witnesses.create_witness(
@@ -4634,7 +4655,7 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_elements(xml, "idno", within: "witness") == []
 
       copy =
-        import_tei!(String.replace(xml, play.code, "WIT#{System.unique_integer([:positive])}"))
+        import_tei!(String.replace(xml, play.code, Playcode.TestFixtures.unique_code()))
 
       assert [%{title: "Octava parte", filemaker_id: nil, origin: "tei"}] =
                Playcode.Witnesses.list_for_play(copy.id)
@@ -4644,7 +4665,7 @@ defmodule Playcode.TeiRoundtripTest do
     # Stored as \n with no spaces around them, and a run of spaces or a tab as one space
     # (which is all any page prints), so the file gives back what it was given.
     test "a witness's line breaks come back, its runs of spaces as one" do
-      play = import_tei!(tei(code: "WIT#{System.unique_integer([:positive])}"))
+      play = import_tei!(tei(code: Playcode.TestFixtures.unique_code()))
 
       {:ok, _} =
         Playcode.Witnesses.create_witness(%{
@@ -4662,7 +4683,7 @@ defmodule Playcode.TeiRoundtripTest do
       assert length(xml_elements(xml, "lb", within: "witness")) == 3
 
       copy =
-        import_tei!(String.replace(xml, play.code, "WIT#{System.unique_integer([:positive])}"))
+        import_tei!(String.replace(xml, play.code, Playcode.TestFixtures.unique_code()))
 
       for p <- [play, copy] do
         assert [witness] = Playcode.Witnesses.list_for_play(p.id)
@@ -4672,12 +4693,12 @@ defmodule Playcode.TeiRoundtripTest do
 
     test "exporting, re-importing and exporting again changes nothing" do
       first =
-        tei(code: "WIT1", source_desc: "<bibl><title>Base</title></bibl>" <> @list_wit)
+        tei(code: "AL7000026", source_desc: "<bibl><title>Base</title></bibl>" <> @list_wit)
         |> roundtrip()
 
-      second = first |> String.replace("WIT1", "WIT2") |> roundtrip()
+      second = first |> String.replace("7000026", "7300004") |> roundtrip()
 
-      assert String.replace(second, "WIT2", "WIT1") == first
+      assert String.replace(second, "7300004", "7000026") == first
     end
   end
 
@@ -4825,14 +4846,14 @@ defmodule Playcode.TeiRoundtripTest do
 
     test "exporting, re-importing and exporting again changes nothing" do
       first =
-        performance_file(performance_xml(unique_company()), code: "RTP1")
+        performance_file(performance_xml(unique_company()), code: "AL7000027")
         |> roundtrip()
 
       assert [_] = xml_elements(first, "performance")
 
-      second = first |> String.replace("RTP1", "RTP2") |> roundtrip()
+      second = first |> String.replace("7000027", "7300003") |> roundtrip()
 
-      assert String.replace(second, "RTP2", "RTP1") == first
+      assert String.replace(second, "7300003", "7000027") == first
     end
 
     test "a company, an actor and a source already in Playcode are reused, not copied" do
@@ -5120,7 +5141,7 @@ defmodule Playcode.TeiRoundtripTest do
     # Review Focus 2 of the spec: the file replaces what it wrote, never what a curator or
     # FileMaker did.
     test "a re-import replaces the file's performances and keeps the others" do
-      code = "RTP#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       play = import_tei!(tei(code: code))
 
       filemaker =
@@ -5172,7 +5193,7 @@ defmodule Playcode.TeiRoundtripTest do
     # read back into the same play, those the play keeps must be told from their copies in it,
     # whatever they hold (a place with its state, a cast, a source with its pages).
     test "re-importing its own export keeps a play's performances, once" do
-      play = import_tei!(tei(code: "RTP#{System.unique_integer([:positive])}"))
+      play = import_tei!(tei(code: Playcode.TestFixtures.unique_code()))
       place = place_fixture(%{"name" => "Londres"})
       state = place_fixture(%{"name" => "Reino de Inglaterra", "type" => "country"})
 
@@ -5215,7 +5236,7 @@ defmodule Playcode.TeiRoundtripTest do
     end
 
     test "a file's performance that differs from one the play keeps in its source alone is kept too" do
-      code = "RTP#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       play = import_tei!(tei(code: code))
 
       performance_fixture(play, %{
@@ -5306,7 +5327,7 @@ defmodule Playcode.TeiRoundtripTest do
       # Exported and read again, the same note: no space comes in beside the italics.
       copy =
         xml
-        |> String.replace(play.code, "RTN#{System.unique_integer([:positive])}")
+        |> String.replace(play.code, Playcode.TestFixtures.unique_code())
         |> import_tei!()
 
       assert [%{note: "Uno, <<dos>>.\nY una línea más.\n\nTres."}] = performances(copy)
@@ -5321,7 +5342,7 @@ defmodule Playcode.TeiRoundtripTest do
     # Actors are found ignoring case (`Actor.twin/1`), so a file naming "POQUELIN" cites the
     # actor the play's own performance does, and is the same performance to a reader.
     test "a file's performance naming a kept one's actor in other case is a copy of it" do
-      code = "RTP#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       play = import_tei!(tei(code: code))
 
       performance_fixture(play, %{
@@ -5339,7 +5360,7 @@ defmodule Playcode.TeiRoundtripTest do
     end
 
     test "a file's cast-list switch yields to one a performance the play keeps already has" do
-      code = "RTP#{System.unique_integer([:positive])}"
+      code = Playcode.TestFixtures.unique_code()
       play = import_tei!(tei(code: code))
 
       kept =
@@ -5431,7 +5452,7 @@ defmodule Playcode.TeiRoundtripTest do
     test "italics typed as text, a space at their edge, come back the same from the export" do
       xml =
         tei(
-          code: "LIT#{System.unique_integer([:positive])}",
+          code: Playcode.TestFixtures.unique_code(),
           source_desc:
             "<bibl><title>Base</title><note>Ms. 14.927,&lt;&lt; La gran comedia &gt;&gt;firmado</note></bibl>"
         )
@@ -5464,11 +5485,11 @@ defmodule Playcode.TeiRoundtripTest do
       body =
         ~s(<div1 type="acto" n="1"><sp><speaker>A</speaker><l n="1"><emph>a</emph><emph>b</emph>, c</l></sp></div1>)
 
-      first = tei(code: "GLU1", body: body) |> roundtrip()
-      second = first |> String.replace("GLU1", "GLU2") |> roundtrip()
+      first = tei(code: "AL7000028", body: body) |> roundtrip()
+      second = first |> String.replace("7000028", "7300002") |> roundtrip()
 
       assert first =~ "<emph>a</emph><emph>b</emph>, c"
-      assert String.replace(second, "GLU2", "GLU1") == first
+      assert String.replace(second, "7300002", "7000028") == first
     end
 
     # EMOTHE0488 glues italics that end in a break: its export was no XML at all (found by
@@ -5537,12 +5558,12 @@ defmodule Playcode.TeiRoundtripTest do
         ~s(<creation><date notBefore="1605" notAfter="1607">hacia 1606</date></creation>)
 
     first =
-      tei(@rich_header ++ [code: "FIX1", front: front, body: body, profile_desc: profile])
+      tei(@rich_header ++ [code: "AL7000029", front: front, body: body, profile_desc: profile])
       |> roundtrip()
 
-    second = first |> String.replace("FIX1", "FIX2") |> roundtrip()
+    second = first |> String.replace("7000029", "7300001") |> roundtrip()
 
-    assert String.replace(second, "FIX2", "FIX1") == first
+    assert String.replace(second, "7300001", "7000029") == first
   end
 
   defp division!(play, attrs) do

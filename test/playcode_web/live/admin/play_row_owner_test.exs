@@ -3,14 +3,14 @@ defmodule PlaycodeWeb.Admin.PlayRowOwnerTest do
   A tab's save posts the form's params, and the browser can add `play_id`: the row's
   changeset casts it, so a crafted save moved an editor, a source, a witness, a performance
   or a place link into another play. A row stays in its play (CLAUDE.md, *Access control*);
-  the Content tab's forms are in play_content_editor_live_test.exs.
+  the Content, Witnesses and Performances tabs' forms are in their own tests.
   """
   use PlaycodeWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Playcode.TestFixtures
 
-  alias Playcode.{Catalogue, Performances, Places, Witnesses}
+  alias Playcode.{Catalogue, Places}
 
   setup %{conn: conn} do
     %{
@@ -54,33 +54,6 @@ defmodule PlaycodeWeb.Admin.PlayRowOwnerTest do
     })
 
     assert %{title: "Comedias nuevas"} = Catalogue.get_play_source(play.id, source.id)
-  end
-
-  test "an edited witness stays in its play", %{conn: conn, play: play, other: other} do
-    {:ok, witness} =
-      Witnesses.create_witness(%{play_id: play.id, siglum: "A", title: "Primera edición"})
-
-    lv = open(conn, play, "witnesses")
-    render_click(lv, "edit_witness", %{"id" => witness.id})
-
-    render_submit(lv, "save_witness", %{
-      "witness" => %{"play_id" => other.id, "siglum" => "B", "title" => "Primera edición"}
-    })
-
-    assert %{siglum: "B"} = Witnesses.get_witness(play.id, witness.id)
-  end
-
-  test "an edited performance stays in its play", %{conn: conn, play: play, other: other} do
-    {:ok, performance} = Performances.create_performance(%{play_id: play.id, date_text: "1610"})
-
-    lv = open(conn, play, "performances")
-    render_click(lv, "edit", %{"id" => performance.id})
-
-    render_submit(lv, "save", %{
-      "performance" => %{"play_id" => other.id, "date_text" => "1611"}
-    })
-
-    assert %{date_text: "1611"} = Performances.get_performance(play.id, performance.id)
   end
 
   test "an edited place link stays in its play, on its place",

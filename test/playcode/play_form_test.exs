@@ -83,7 +83,7 @@ defmodule Playcode.PlayFormTest do
 
       assert label(play) == {"versoprosa", "#equipo", "30 versos"}
 
-      xml = String.replace(export_tei(play), play.code, "#{play.code}B")
+      xml = String.replace(export_tei(play), "#{play.number}", "#{play.number + 9_000_000}")
       imported = import_tei!(xml)
 
       assert Catalogue.get_play!(imported.id).form == "mixed"

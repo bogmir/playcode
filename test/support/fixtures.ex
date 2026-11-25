@@ -3,7 +3,8 @@ defmodule Playcode.TestFixtures do
   alias Playcode.PlayContent
   alias Playcode.Places
 
-  def unique_code, do: "PLAY#{System.unique_integer([:positive])}"
+  # ARTELOPE's: an EMOTHE code would prefix every identifier of the text with its number.
+  def unique_code, do: "AL#{100_000 + System.unique_integer([:positive])}"
 
   def play_fixture(attrs \\ %{}) do
     attrs =
@@ -28,13 +29,6 @@ defmodule Playcode.TestFixtures do
   @doc "A play with no verse line and no line of prose: `Play.has_text?/1` is false."
   def play_without_text_fixture(attrs \\ %{}),
     do: play_fixture(Map.merge(%{"auto_form" => nil}, attrs))
-
-  @doc """
-  Gives `play` a code `Play.changeset/2` refuses, as a row saved before it checked codes
-  may hold one. No context writes such a code, so this reaches the table directly.
-  """
-  def unchecked_code!(play, code),
-    do: Playcode.Repo.update!(Ecto.Changeset.change(play, code: code))
 
   @doc """
   Moves a play's rows a day into the past, so an edit made now is after their import:
