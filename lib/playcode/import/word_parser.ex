@@ -172,41 +172,26 @@ defmodule Playcode.Import.WordParser do
     |> String.trim()
   end
 
-  # Detect act type from heading text (used by both {A} tag and auto-detection)
-  defp detect_act_type(text) do
-    trimmed = String.trim(text)
+  @division_heading ~r/^[\[⸢]?(?:\w+\s+)?(?:JORNADA|ACTO?|ACTE|ATTO|PR[OÓ]LOG(?:O|UE)|EP[IÍ]LOG(?:O|UE)|INDUCTION)\b/iu
 
+  defp division_heading?(text), do: Regex.match?(@division_heading, String.trim(text))
+
+  defp detect_act_type(text) do
     cond do
-      Regex.match?(~r/^JORNADA\b/iu, trimmed) -> "jornada"
-      Regex.match?(~r/^(THE\s+)?PR[OÓ]LOG(O|UE)\b/iu, trimmed) -> "prologo"
-      Regex.match?(~r/^(THE\s+)?EP[IÍ]LOG(O|UE)\b/iu, trimmed) -> "epilogue"
-      Regex.match?(~r/^(THE\s+)?INDUCTION\b/iu, trimmed) -> "induction"
+      Regex.match?(~r/\bJORNADA\b/iu, text) -> "jornada"
+      Regex.match?(~r/\bPR[OÓ]LOG(O|UE)\b/iu, text) -> "prologo"
+      Regex.match?(~r/\bEP[IÍ]LOG(O|UE)\b/iu, text) -> "epilogue"
+      Regex.match?(~r/\bINDUCTION\b/iu, text) -> "induction"
       true -> "acto"
     end
   end
 
-  # Detect act-level headings from plain untagged text (fallback when no {A} tag)
-  defp detect_act_heading(segments) do
-    case segments do
-      [{:text, text}] ->
-        trimmed = String.trim(text)
-
-        cond do
-          Regex.match?(~r/^JORNADA\s/i, trimmed) -> {:ok, "jornada", trimmed}
-          Regex.match?(~r/^ACTO\s/i, trimmed) -> {:ok, "acto", trimmed}
-          Regex.match?(~r/^ACT\s/i, trimmed) -> {:ok, "acto", trimmed}
-          Regex.match?(~r/^ACTE\s/i, trimmed) -> {:ok, "acto", trimmed}
-          Regex.match?(~r/^ATTO\s/i, trimmed) -> {:ok, "acto", trimmed}
-          Regex.match?(~r/^(THE\s+)?PR[OÓ]LOG(O|UE)\b/iu, trimmed) -> {:ok, "prologo", trimmed}
-          Regex.match?(~r/^(THE\s+)?EP[IÍ]LOG(O|UE)\b/iu, trimmed) -> {:ok, "epilogue", trimmed}
-          Regex.match?(~r/^(THE\s+)?INDUCTION\b/iu, trimmed) -> {:ok, "induction", trimmed}
-          true -> :not_act
-        end
-
-      _ ->
-        :not_act
-    end
+  defp detect_act_heading([{:text, text}]) do
+    heading = String.trim(text)
+    if division_heading?(heading), do: {:ok, detect_act_type(heading), heading}, else: :not_act
   end
+
+  defp detect_act_heading(_segments), do: :not_act
 
   defp is_untagged_text?(segments) do
     case segments do
@@ -298,11 +283,7 @@ defmodule Playcode.Import.WordParser do
   end
 
   defp is_act_level_scene?(text) do
-    trimmed = String.trim(text)
-
-    Regex.match?(~r/^(THE\s+)?PR[OÓ]LOG(O|UE)\b/iu, trimmed) or
-      Regex.match?(~r/^(THE\s+)?EP[IÍ]LOG(O|UE)\b/iu, trimmed) or
-      Regex.match?(~r/^(THE\s+)?INDUCTION\b/iu, trimmed)
+    division_heading?(text) and is_sceneless_type?(detect_act_type(text))
   end
 
   defp is_end_marker?(text) do
