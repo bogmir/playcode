@@ -514,3 +514,9 @@ input:-webkit-autofill:focus {
 .stat-matrix td.c.on::before {
   background: var(--color-primary);
 }
+
+/* A filter that shortens a list must not take the scrollbar away: the centred page
+   would shift sideways and the search box change width. */
+html {
+  scrollbar-gutter: stable;
+}
