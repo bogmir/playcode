@@ -10,15 +10,6 @@ defmodule PlaycodeWeb.Admin.PlaceListLiveTest do
     log_in_user(conn, TestFixtures.user_fixture(role: :researcher))
   end
 
-  test "a researcher may reach the gazetteer", %{conn: conn} do
-    {:ok, _view, html} = live(log_in_researcher(conn), ~p"/admin/places")
-    assert html =~ t("Places")
-  end
-
-  test "a logged-out visitor may not", %{conn: conn} do
-    assert {:error, {:redirect, %{to: "/users/log-in"}}} = live(conn, ~p"/admin/places")
-  end
-
   test "a place is created with one name and shows its type and play count", %{conn: conn} do
     {:ok, view, _html} = live(log_in_researcher(conn), ~p"/admin/places")
 

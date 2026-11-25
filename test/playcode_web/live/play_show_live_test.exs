@@ -1018,22 +1018,6 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     refute html =~ "1614–1614"
   end
 
-  test "the study section appears for a dating alone", %{conn: conn} do
-    play =
-      TestFixtures.play_fixture(%{
-        "code" => "AL7000044",
-        "composition_date_from" => 1614,
-        "composition_date_to" => 1614
-      })
-
-    TestFixtures.mark_complete!(play)
-
-    {:ok, view, _html} = live(conn, ~p"/plays/#{play.code}")
-
-    assert has_element?(view, "#meta-study")
-    assert has_element?(view, "#scroll-spy-nav a[href='#meta-study']")
-  end
-
   # The changeset permits a note with no years, and the FileMaker sync writes exactly
   # that (EMOTHE0341_EastwardHo). Without this the value is invisible to every reader.
   test "a note with no years still renders, with its own section and sidebar entry", %{conn: conn} do

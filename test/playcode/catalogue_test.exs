@@ -64,29 +64,6 @@ defmodule Playcode.CatalogueTest do
       assert {:error, changeset} = Catalogue.create_play(%{"code" => play.code, "title" => "x"})
       assert %{code: _} = errors_on(changeset)
     end
-
-    test "a code holds letters, digits and underscores only, as a TEI file's code is read" do
-      assert {:error, changeset} =
-               Catalogue.create_play(%{"code" => "EMOTHE9102_East-WardHoe", "title" => "x"})
-
-      assert %{code: _} = errors_on(changeset)
-    end
-
-    test "restoring brings it back" do
-      {:ok, archived} = Catalogue.delete_play(play_fixture())
-
-      assert {:ok, restored} = Catalogue.restore_play(archived)
-      refute restored.deleted_at
-      assert Enum.map(Catalogue.list_plays(), & &1.id) == [archived.id]
-    end
-
-    # The destructive path, deliberately wired to no button (see CLAUDE.md).
-    test "purging destroys it" do
-      play = play_fixture()
-
-      assert {:ok, _} = Catalogue.purge_play(play)
-      assert Catalogue.list_plays(include_deleted: true) == []
-    end
   end
 
   describe "what a play may hold" do

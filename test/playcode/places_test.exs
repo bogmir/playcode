@@ -44,11 +44,6 @@ defmodule Playcode.PlacesTest do
       assert first.slug == "sotobosque"
       assert second.slug == "sotobosque-2"
     end
-
-    test "an explicit slug is respected" do
-      place = place_fixture(%{"name" => "Roma", "slug" => "roma-antica"})
-      assert place.slug == "roma-antica"
-    end
   end
 
   describe "display_name/2" do

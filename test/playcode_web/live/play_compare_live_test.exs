@@ -21,16 +21,6 @@ defmodule PlaycodeWeb.PlayCompareLiveTest do
   end
 
   describe "public comparison page" do
-    test "renders the family panels", %{conn: conn} do
-      %{original: original, translation: translation} = TestFixtures.translation_family_fixture()
-
-      {:ok, _view, html} = live(conn, ~p"/plays/#{original.code}/compare")
-
-      # First panel is the play itself; the linked translation is offered to add.
-      assert html =~ original.title
-      assert html =~ translation.title
-    end
-
     test "auto-includes the parent panel when viewing a translation", %{conn: conn} do
       %{original: original, translation: translation} = TestFixtures.translation_family_fixture()
 

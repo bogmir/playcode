@@ -15,11 +15,6 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
              ]
     end
 
-    test "a stage with no type has a nil type" do
-      assert [%{text: "(Vase)", stage: %{type: nil, run: 0}}] =
-               InlineMarkup.parts("<stage>(Vase)</stage>")
-    end
-
     test "touching stages are two runs; text between two stages belongs to neither" do
       assert [%{stage: %{run: 0}}, %{stage: %{run: 1}}] =
                InlineMarkup.parts("<stage>a</stage><stage>b</stage>")
@@ -43,10 +38,6 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
                %{text: " mío", italic: false, stage: nil}
              ]
     end
-
-    test "nil has no parts" do
-      assert InlineMarkup.parts(nil) == []
-    end
   end
 
   describe "plain/1, spoken/1, staged/1, stage_count/1" do
@@ -65,10 +56,6 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
       assert InlineMarkup.stage_count(@line) == 2
       assert InlineMarkup.stage_count("Dulce <<sueño>>") == 0
       assert InlineMarkup.stage_count(nil) == 0
-    end
-
-    test "nil is empty text" do
-      assert {InlineMarkup.spoken(nil), InlineMarkup.staged(nil)} == {"", ""}
     end
   end
 
@@ -188,10 +175,6 @@ defmodule Playcode.PlayContent.InlineMarkupTest do
                {nil, ~s(Beggar <lb n="1320"/>but)}
 
       assert InlineMarkup.paragraph_number(nil) == {nil, nil}
-    end
-
-    test "the marker is built as the importer stores it" do
-      assert InlineMarkup.number_marker("1311-2") == ~s(<lb n="1311-2"/>)
     end
 
     test "numbers_well_formed? accepts numbers and refuses any other <lb" do

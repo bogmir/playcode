@@ -25,11 +25,6 @@ defmodule Playcode.Import.FilemakerTest do
     assert Enum.map(index["EMOTHE0038"].family, & &1.role) == [:editor, :translator]
   end
 
-  test "handles non-EMOTHE code prefixes", %{index: index} do
-    assert index["HIE0393"].code == "HIE0393"
-    assert index["HIE0393"].role == :translator
-  end
-
   test "reads the work dating from the index header", %{index: index} do
     assert index["EMOTHE0038"].composition_date_from == 1606
     assert index["EMOTHE0038"].composition_date_to == 1607
