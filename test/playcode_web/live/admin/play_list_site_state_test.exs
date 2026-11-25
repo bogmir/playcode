@@ -39,8 +39,18 @@ defmodule PlaycodeWeb.Admin.PlayListSiteStateTest do
     StaticSite.record_deploy(StaticSite.output_dir())
   end
 
-  defp site_filter(view, label),
-    do: element(view, "nav[aria-label='#{t("Site")}'] a", label)
+  defp site_links, do: "nav[aria-label='#{t("Site")}'] a"
+
+  defp waiting_label(count),
+    do: n("%{count} play waits to be published", "%{count} plays wait to be published", count)
+
+  defp site_link_texts(view) do
+    view
+    |> render()
+    |> LazyHTML.from_fragment()
+    |> LazyHTML.query(site_links())
+    |> Enum.map(&String.trim(LazyHTML.text(&1)))
+  end
 
   test "each play shows where it stands on the site", %{conn: conn} do
     draft = play_fixture(%{"title" => "Draft Play"})
@@ -70,18 +80,34 @@ defmodule PlaycodeWeb.Admin.PlayListSiteStateTest do
     deployed([live])
 
     {:ok, view, _html} = live(conn, ~p"/admin/plays")
-    view |> site_filter(t("Waiting to be published")) |> render_click()
+    view |> element(site_links(), waiting_label(1)) |> render_click()
 
     assert has_element?(view, "#play-#{waiting.id}")
     refute has_element?(view, "#play-#{live.id}")
 
     view |> element("form[phx-change=search]") |> render_change(%{"search" => "Live"})
 
-    assert has_element?(
-             view,
-             "nav[aria-label='#{t("Site")}'] a",
-             "#{t("Waiting to be published")} · 0"
-           )
+    assert has_element?(view, "#{site_links()}[aria-current=page]", waiting_label(0))
+  end
+
+  test "the site line names only the states some play is in, and the plays on the site are no filter",
+       %{conn: conn} do
+    complete("Waiting Play")
+    live = complete("Live Play")
+    deployed([live])
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+    assert site_link_texts(view) == [waiting_label(1)]
+  end
+
+  test "with nothing to publish there is no site line", %{conn: conn} do
+    live = complete("Live Play")
+    deployed([live])
+
+    {:ok, view, _html} = live(conn, ~p"/admin/plays")
+
+    refute has_element?(view, site_links())
   end
 
   test "a Publish that ends moves the list's site states without a reload", %{conn: conn} do
