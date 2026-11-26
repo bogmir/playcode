@@ -434,7 +434,7 @@ defmodule Playcode.Import.WordParserTest do
 
   # A .docx carries no identifiers; the export counts them, in the play's shape (problem 2).
   test "each verse gets an identifier in the play's shape" do
-    number = System.unique_integer([:positive])
+    number = 1000 + System.unique_integer([:positive])
     play = play_fixture(%{"code" => "EMOTHE#{number}", "language" => "en"})
 
     xml = import_word(["{e}Escena 1", "{p}FEBO  {v}uno", "{v}dos", "{p}ANA  {v}tres"], play)
