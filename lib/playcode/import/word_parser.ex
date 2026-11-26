@@ -412,7 +412,25 @@ defmodule Playcode.Import.WordParser do
       {:stage_direction, text} -> %{type: "stage_direction", content: text}
       {_other, text} -> %{type: "text", content: text}
     end)
+    |> Enum.reduce([], &join_pieces_split_by_stage/2)
+    |> Enum.reverse()
   end
+
+  defp join_pieces_split_by_stage(
+         piece,
+         [%{type: "stage_direction"} = stage, before | rest] = acc
+       ) do
+    if piece.type in ["verse_line", "prose"] and
+         Map.delete(piece, :content) == Map.delete(before, :content) do
+      {open, close} = Playcode.PlayContent.InlineMarkup.stage_marker(nil)
+      content = "#{before.content} #{open}#{stage.content}#{close} #{piece.content}"
+      [%{before | content: content} | rest]
+    else
+      [piece | acc]
+    end
+  end
+
+  defp join_pieces_split_by_stage(piece, acc), do: [piece | acc]
 
   defp append_element(acts, element) do
     update_last_scene(acts, fn scene ->
