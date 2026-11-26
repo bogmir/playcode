@@ -59,6 +59,33 @@ defmodule Playcode.Import.WordParserTest do
       assert xml_texts(xml, "stage", within: "sp") == ["Aparte."]
     end
 
+    test "a stage direction between two pieces of one verse or paragraph stays inside it" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}FEBO  {v}Éste dice: {ac}(Lea) {v}«Señor, yo soy Estacio,",
+          "{v}pon a esta puerta el oído.",
+          "{p}JOHN {pr}To be {ac}[Aside.] {pr}or not {ac}[Sighs.] {pr}to be.",
+          "{p}DUKE {ac}Aparte. {v}My lord. {ac}Vase.",
+          "{p}ANA {ti}Hasta {ac}(Vase.) {tf}luego."
+        ])
+
+      assert xml_texts(xml, "l") == [
+               "Éste dice: (Lea) «Señor, yo soy Estacio,",
+               "pon a esta puerta el oído.",
+               "My lord.",
+               "Hasta",
+               "luego."
+             ]
+
+      assert xml_texts(xml, "p", within: "sp") == ["To be [Aside.] or not [Sighs.] to be."]
+      assert xml_texts(xml, "stage", within: "l") == ["(Lea)"]
+      assert xml_texts(xml, "stage", within: "p") == ["[Aside.]", "[Sighs.]"]
+
+      assert xml_texts(xml, "stage", within: "sp") -- ["(Lea)", "[Aside.]", "[Sighs.]"] ==
+               ["Aparte.", "Vase.", "(Vase.)"]
+    end
+
     test "a verse split between speakers keeps its parts" do
       xml =
         import_word([
