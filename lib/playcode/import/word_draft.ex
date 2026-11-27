@@ -23,7 +23,8 @@ defmodule Playcode.Import.WordDraft do
     Division,
     Element,
     ElementCharacter,
-    Numbering
+    Numbering,
+    SplitVerses
   }
 
   def build(%{acts: acts, front_matter: front_matter, warnings: warnings}, play) do
@@ -80,31 +81,15 @@ defmodule Playcode.Import.WordDraft do
   defp row_warning(_element, _labels), do: nil
 
   defp split_verse_warnings(rows) do
-    {warnings, open} =
-      rows |> Enum.filter(&(&1.type == "verse_line")) |> Enum.reduce({[], nil}, &split_part/2)
-
-    warnings ++ List.wrap(open && unfinished(open))
+    rows
+    |> Enum.filter(&(&1.type == "verse_line"))
+    |> Enum.chunk_by(& &1.act_id)
+    |> SplitVerses.out_of_order()
+    |> Enum.map(fn {row, problem} -> {row.id, split_warning(problem)} end)
   end
 
-  defp split_part(row, {warnings, open}) do
-    {warnings, open} =
-      if open && scene(open) != scene(row),
-        do: {[unfinished(open) | warnings], nil},
-        else: {warnings, open}
-
-    case {row.part, open} do
-      {"I", nil} -> {warnings, row}
-      {"I", open} -> {[unfinished(open) | warnings], row}
-      {part, nil} when part in ~w(M F) -> {[{row.id, :part_without_initial} | warnings], nil}
-      {"M", open} -> {warnings, open}
-      {"F", _open} -> {warnings, nil}
-      {_whole, nil} -> {warnings, nil}
-      {_whole, open} -> {[unfinished(open) | warnings], nil}
-    end
-  end
-
-  defp scene(row), do: {row.act_id, row.scene_id}
-  defp unfinished(open), do: {open.id, :initial_unfinished}
+  defp split_warning(:completes_nothing), do: :part_without_initial
+  defp split_warning(:never_completed), do: :initial_unfinished
 
   defp identify(acts, play_id) do
     {acts, {lines, _seen, _play_id}} = Enum.map_reduce(acts, {%{}, %{}, play_id}, &identify_act/2)

@@ -280,6 +280,25 @@ defmodule Playcode.Import.WordDraftTest do
                [{2, :initial_unfinished}]
     end
 
+    test "a split verse may cross a scene, not an act" do
+      assert warnings([
+               "{a}Acte I",
+               "{e}Scène 2",
+               "{p}CTÉSIPHONTE {ti}Alors… mais le Roi vient.",
+               "{e}Scène 3",
+               "{p}SOSARME {tf}Ah dieux ! Il n'est pas mort,"
+             ]) == []
+
+      assert warnings([
+               "{a}Acte I",
+               "{e}Scène 1",
+               "{p}CTÉSIPHONTE {ti}Alors… mais le Roi vient.",
+               "{a}Acte II",
+               "{e}Scène 1",
+               "{p}SOSARME {tf}Ah dieux ! Il n'est pas mort,"
+             ]) == [{2, :initial_unfinished}, {5, :part_without_initial}]
+    end
+
     test "a speaker's name tagged as words" do
       assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{pr} FEBO {pr}¡Qué pronto!"]) ==
                [{2, :speaker_as_words}]
