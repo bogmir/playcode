@@ -657,8 +657,8 @@ defmodule Playcode.Import.WordParser do
       draft = WordDraft.build(parsed, play)
       texts = paragraphs |> Enum.map(&String.trim/1) |> List.to_tuple()
 
-      {:ok,
-       %{draft | warnings: Enum.map(draft.warnings, &Map.put(&1, :text, elem(texts, &1.line)))}}
+      with_text = fn notices -> Enum.map(notices, &Map.put(&1, :text, elem(texts, &1.line))) end
+      {:ok, %{draft | warnings: with_text.(draft.warnings), errors: with_text.(draft.errors)}}
     end
   end
 
@@ -681,7 +681,8 @@ defmodule Playcode.Import.WordParser do
 
     play = Catalogue.get_play_with_all!(play_id)
 
-    with {:ok, draft} <- draft(paragraphs, play) do
+    with {:ok, draft} <- draft(paragraphs, play),
+         [] <- draft.errors do
       Repo.transaction(fn ->
         Repo.delete_all(from e in Element, where: e.play_id == ^play_id)
         Repo.delete_all(from d in Division, where: d.play_id == ^play_id)
@@ -702,6 +703,9 @@ defmodule Playcode.Import.WordParser do
 
         play
       end)
+    else
+      [_ | _] = errors -> {:error, {:refused, errors}}
+      error -> error
     end
   end
 

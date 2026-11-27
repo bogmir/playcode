@@ -31,8 +31,8 @@ defmodule Playcode.Import.WordDraft do
     cast_list = cast_list(characters, play.id)
     first_act_position = if cast_list, do: 2, else: 1
 
-    divisions =
-      List.wrap(cast_list) ++ act_divisions(acts, play.id, first_act_position, characters)
+    {act_divisions, refused} = act_divisions(acts, play.id, first_act_position, characters)
+    divisions = List.wrap(cast_list) ++ act_divisions
 
     divisions = number(divisions, play)
     labels = MapSet.new(characters, fn {label, _character} -> String.upcase(label) end)
@@ -41,6 +41,10 @@ defmodule Playcode.Import.WordDraft do
       divisions: divisions,
       paratexts: kept_paratexts(play) ++ front_matter(front_matter, play.id),
       lines: lines,
+      errors:
+        refused
+        |> Enum.map(&%{line: Map.fetch!(lines, &1), kind: :refused})
+        |> Enum.sort_by(& &1.line),
       warnings: warnings(warnings, row_warnings(divisions, lines, labels)),
       summary: summary(divisions)
     }
@@ -215,27 +219,29 @@ defmodule Playcode.Import.WordDraft do
   defp act_divisions(acts, play_id, first_position, characters) do
     characters = Map.new(characters)
 
-    acts
-    |> Enum.with_index(first_position)
-    |> Enum.map_reduce(1, fn {act, position}, act_number ->
-      numbered? = act.type not in ["prologo", "epilogue", "induction"]
+    {divisions, {_act_number, refused}} =
+      acts
+      |> Enum.with_index(first_position)
+      |> Enum.map_reduce({1, []}, fn {act, position}, {act_number, refused} ->
+        numbered? = act.type not in ["prologo", "epilogue", "induction"]
 
-      scenes =
-        act.scenes
-        |> Enum.with_index()
-        |> Enum.map(fn {scene, index} ->
-          division(scene.id, play_id, act.id, "escena", scene.head, index + 1, index)
-          |> with_elements(scene.elements, characters)
-        end)
+        {scenes, refused} =
+          act.scenes
+          |> Enum.with_index()
+          |> Enum.map_reduce(refused, fn {scene, index}, refused ->
+            division(scene.id, play_id, act.id, "escena", scene.head, index + 1, index)
+            |> with_elements(scene.elements, characters, refused)
+          end)
 
-      division =
-        division(act.id, play_id, nil, act.type, act.head, numbered? && act_number, position)
-        |> with_elements(Map.get(act, :_direct_elements, []), characters)
-        |> Map.put(:children, scenes)
+        {division, refused} =
+          division(act.id, play_id, nil, act.type, act.head, numbered? && act_number, position)
+          |> with_elements(Map.get(act, :_direct_elements, []), characters, refused)
 
-      {division, if(numbered?, do: act_number + 1, else: act_number)}
-    end)
-    |> elem(0)
+        act_number = if numbered?, do: act_number + 1, else: act_number
+        {%{division | children: scenes}, {act_number, refused}}
+      end)
+
+    {divisions, refused}
   end
 
   defp division(id, play_id, parent_id, type, title, number, position) do
@@ -251,34 +257,41 @@ defmodule Playcode.Import.WordDraft do
     |> Ecto.Changeset.apply_changes()
   end
 
-  defp with_elements(division, elements, characters),
-    do: %{division | loaded_elements: elements(elements, division, nil, characters)}
+  defp with_elements(division, elements, characters, refused) do
+    {elements, refused} = elements(elements, division, nil, characters, refused)
+    {%{division | loaded_elements: elements}, refused}
+  end
 
-  defp elements(elements, division, parent_id, characters) do
+  defp elements(elements, division, parent_id, characters, refused) do
     elements
     |> Enum.filter(
       &(&1.type in ~w(speech stage_direction line_group unrecognized verse_line prose))
     )
     |> Enum.with_index()
-    |> Enum.map(fn {element, position} ->
-      %Element{id: element.id, notes: []}
-      |> Element.changeset(%{
-        play_id: division.play_id,
-        division_id: division.id,
-        parent_id: parent_id,
-        type: element.type,
-        content: element[:content],
-        speaker_label: element[:speaker_label],
-        part: element[:part],
-        is_aside: element[:is_aside] || false,
-        aside_continues: element[:aside_continues] || false,
-        position: position
-      })
-      |> Ecto.Changeset.apply_changes()
-      |> Map.merge(%{
-        element_characters: speakers(element, characters),
-        children: elements(element.children, division, element.id, characters)
-      })
+    |> Enum.map_reduce(refused, fn {element, position}, refused ->
+      changeset =
+        Element.changeset(%Element{id: element.id, notes: []}, %{
+          play_id: division.play_id,
+          division_id: division.id,
+          parent_id: parent_id,
+          type: element.type,
+          content: element[:content],
+          speaker_label: element[:speaker_label],
+          part: element[:part],
+          is_aside: element[:is_aside] || false,
+          aside_continues: element[:aside_continues] || false,
+          position: position
+        })
+
+      refused = if changeset.valid?, do: refused, else: [element.id | refused]
+      {children, refused} = elements(element.children, division, element.id, characters, refused)
+
+      element =
+        changeset
+        |> Ecto.Changeset.apply_changes()
+        |> Map.merge(%{element_characters: speakers(element, characters), children: children})
+
+      {element, refused}
     end)
   end
 

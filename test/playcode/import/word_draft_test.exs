@@ -288,4 +288,21 @@ defmodule Playcode.Import.WordDraftTest do
                Map.take(counts, [:speaker_as_words, :untagged, :unknown_tag])
     end
   end
+
+  test "a line with markup the database refuses is an error, and the import refuses the text" do
+    play = play_fixture()
+    assert {:ok, _} = WordParser.import_content(play.id, ["{e}Escena 1", "{p}FEBO {v}Antes."])
+    before = PlayContent.load_play_content(play.id) |> rows()
+
+    paragraphs = ["{e}Escena 1", "{p}FEBO {v}Uno <stage>dos."]
+    draft = draft!(paragraphs, play)
+
+    assert [%{line: 1, kind: :refused, text: "{p}FEBO {v}Uno <stage>dos."}] = draft.errors
+    assert {:error, {:refused, [%{line: 1}]}} = WordParser.import_content(play.id, paragraphs)
+    assert rows(PlayContent.load_play_content(play.id)) == before
+  end
+
+  test "a clean text has no errors" do
+    assert draft!(file_paragraphs(@ejercicio), play_fixture()).errors == []
+  end
 end
