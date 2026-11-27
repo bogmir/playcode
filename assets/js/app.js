@@ -25,13 +25,14 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/playcode"
 import topbar from "../vendor/topbar"
 import {syncPanels} from "./sync_scroll.mjs"
-import {lineAt, rangeOf, nearestMarked} from "./premarked.mjs"
+import {lineAt, rangeOf, nearestMarked, lineAtHeight} from "./premarked.mjs"
 // The published site's script: its EMOTHE.stepper runs the play page's arrows too.
 import "../../priv/static_site/site.js"
 
 // PremarkedText hook: the premarked page's text box. The text is kept in the browser per
-// play until imported; the caret shows its line in the preview, and a click on a line of
-// the preview or on a warning selects that line in the text box.
+// play until imported; the caret shows its line in the preview, a click on a line of the
+// preview or on a warning selects that line in the text box, and scrolling either pane
+// brings the other to the same line.
 const PremarkedText = {
   mounted() {
     this.key = `playcode.premarked.${this.el.dataset.play}`
@@ -41,7 +42,7 @@ const PremarkedText = {
       this.el.value = kept
       this.el.dispatchEvent(new Event("input", {bubbles: true}))
     }
-    this.el.addEventListener("input", () => this.keep())
+    this.el.addEventListener("input", () => { this.keep(); this.lineTops = null })
     const follow = () => this.show(lineAt(this.el.value, this.el.selectionStart))
     this.el.addEventListener("click", follow)
     this.el.addEventListener("keyup", follow)
@@ -50,33 +51,79 @@ const PremarkedText = {
       if (target) this.select(Number(target.dataset.line))
     }
     document.addEventListener("click", this.onClick)
-    this.handleEvent("premarked:fill", ({text}) => { this.el.value = text; this.keep() })
+    // Only the pane scrolled by hand leads: the other one's scroll events are its echo.
+    for (const pane of [this.el, this.preview]) {
+      for (const type of ["wheel", "pointerdown", "touchstart", "keydown"]) {
+        pane.addEventListener(type, () => { this.leader = pane }, {passive: true})
+      }
+    }
+    this.el.addEventListener("scroll", () => {
+      if (this.leader === this.el) this.frame(() => this.previewTo(lineAtHeight(this.tops(), this.el.scrollTop)))
+    })
+    this.preview.addEventListener("scroll", () => {
+      if (this.leader === this.preview) this.frame(() => { this.el.scrollTop = this.tops()[this.previewLine()] ?? 0 })
+    })
+    this.onResize = () => { this.lineTops = null }
+    window.addEventListener("resize", this.onResize)
+    this.handleEvent("premarked:fill", ({text}) => { this.el.value = text; this.lineTops = null; this.keep() })
     this.handleEvent("premarked:clear", () => this.stored(() => localStorage.removeItem(this.key)))
   },
-  destroyed() { document.removeEventListener("click", this.onClick) },
+  destroyed() {
+    document.removeEventListener("click", this.onClick)
+    window.removeEventListener("resize", this.onResize)
+    this.mirror?.remove()
+  },
   keep() { this.stored(() => localStorage.setItem(this.key, this.el.value)) },
   // A private window or blocked storage leaves the page working, without it.
   stored(use) { try { return use() } catch (_error) { return null } },
-  show(line) {
+  frame(step) {
+    cancelAnimationFrame(this.pending)
+    this.pending = requestAnimationFrame(step)
+  },
+  // Where each line of the text starts in the box, wrapped as the box wraps it: measured on
+  // a hidden copy, again after an edit or a resize.
+  tops() {
+    if (this.lineTops) return this.lineTops
+    const style = getComputedStyle(this.el)
+    this.mirror ??= document.body.appendChild(document.createElement("div"))
+    Object.assign(this.mirror.style, {
+      position: "absolute", visibility: "hidden", top: "0", left: "-9999px", boxSizing: "border-box",
+      width: `${this.el.clientWidth}px`, padding: style.padding, font: style.font,
+      letterSpacing: style.letterSpacing, whiteSpace: "pre-wrap", overflowWrap: "break-word",
+    })
+    this.mirror.replaceChildren(...this.el.value.split("\n").map((line) => {
+      const row = document.createElement("div")
+      row.textContent = line || "\u200b"
+      return row
+    }))
+    this.lineTops = [...this.mirror.children].map((row) => row.offsetTop)
+    return this.lineTops
+  },
+  rowFor(line) {
     const marked = [...this.preview.querySelectorAll("[data-line]")]
     const nearest = nearestMarked(marked.map((el) => Number(el.dataset.line)), line)
-    const target = marked.find((el) => Number(el.dataset.line) === nearest)
-    this.preview.querySelectorAll(".premarked-current").forEach((el) => el.classList.remove("premarked-current"))
-    if (!target) return
-    target.classList.add("premarked-current")
-    const offset = target.getBoundingClientRect().top - this.preview.getBoundingClientRect().top
-    this.preview.scrollTop += offset - this.preview.clientHeight / 3
+    return marked.find((el) => Number(el.dataset.line) === nearest)
   },
-  // The height of the text before the line, wrapped as the box wraps it, is where it starts.
+  previewLine() {
+    const top = this.preview.getBoundingClientRect().top
+    const row = [...this.preview.querySelectorAll("[data-line]")].find((el) => el.getBoundingClientRect().bottom > top)
+    return row ? Number(row.dataset.line) : 0
+  },
+  previewTo(line, from = 0) {
+    const target = this.rowFor(line)
+    if (target) this.preview.scrollTop += target.getBoundingClientRect().top - this.preview.getBoundingClientRect().top - from
+    return target
+  },
+  show(line) {
+    this.preview.querySelectorAll(".premarked-current").forEach((el) => el.classList.remove("premarked-current"))
+    this.previewTo(line, this.preview.clientHeight / 3)?.classList.add("premarked-current")
+  },
   select(line) {
-    const text = this.el.value
-    const [start, end] = rangeOf(text, line)
-    this.el.value = text.slice(0, start)
-    const above = this.el.scrollHeight
-    this.el.value = text
+    this.leader = null
+    const [start, end] = rangeOf(this.el.value, line)
     this.el.focus()
     this.el.setSelectionRange(start, end)
-    this.el.scrollTop = Math.max(0, above - this.el.clientHeight / 3)
+    this.el.scrollTop = Math.max(0, (this.tops()[line] ?? 0) - this.el.clientHeight / 3)
     this.show(line)
   },
 }

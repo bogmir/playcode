@@ -14,3 +14,14 @@ export function nearestMarked(lines, line) {
   if (before.length) return Math.max(...before);
   return lines.length ? Math.min(...lines) : null;
 }
+
+export function lineAtHeight(tops, y) {
+  let low = 0;
+  let high = tops.length - 1;
+  while (low < high) {
+    const middle = Math.ceil((low + high) / 2);
+    if (tops[middle] <= y) low = middle;
+    else high = middle - 1;
+  }
+  return Math.max(low, 0);
+}

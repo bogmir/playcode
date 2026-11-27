@@ -2,7 +2,7 @@
 // starts and ends, and which line of the preview stands for it.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lineAt, rangeOf, nearestMarked } from '../../assets/js/premarked.mjs';
+import { lineAt, rangeOf, nearestMarked, lineAtHeight } from '../../assets/js/premarked.mjs';
 
 test('the line a caret offset is on', () => {
   assert.equal(lineAt('a\nbb\nc', 0), 0);
@@ -26,4 +26,13 @@ test('the marked line nearest before a line, else the first after it', () => {
   assert.equal(nearestMarked([2, 5, 9], 5), 5);
   assert.equal(nearestMarked([2, 5], 0), 2);
   assert.equal(nearestMarked([], 3), null);
+});
+
+test('the line at a scroll height, from where each wrapped line starts', () => {
+  const tops = [0, 20, 60, 80];
+  assert.equal(lineAtHeight(tops, 0), 0);
+  assert.equal(lineAtHeight(tops, 59), 1);
+  assert.equal(lineAtHeight(tops, 60), 2);
+  assert.equal(lineAtHeight(tops, 500), 3);
+  assert.equal(lineAtHeight([], 10), 0);
 });
