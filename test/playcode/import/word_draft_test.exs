@@ -11,6 +11,7 @@ defmodule Playcode.Import.WordDraftTest do
   alias Playcode.{Catalogue, Outline, PlayContent}
   alias Playcode.Catalogue.Paratext
   alias Playcode.Import.WordParser
+  alias Playcode.PlayContent.Element
 
   @ejercicio "test/fixtures/word_files/ejercicio.docx"
   @bartholomew "test/fixtures/word_files/bartholomew_fair.docx"
@@ -190,6 +191,27 @@ defmodule Playcode.Import.WordDraftTest do
     assert draft.summary.verses == Catalogue.get_play!(play.id).verse_count
     assert [{"RICARDO", ricardo} | _] = draft.summary.speakers
     assert ricardo > 1
+  end
+
+  # A name in brackets is one the editor supplied: TEI writes <sp who="#MIR"><speaker>[MIRTIL]
+  # </speaker>, the character's own speech under the label as printed.
+  test "a speaker's name in brackets is the same character, printed as written" do
+    play = play_fixture()
+    paragraphs = ["{e}Scène 1", "{p}MÉNON {v}Un.", "{p}[MÉNON] {v}Deux."]
+    draft = draft!(paragraphs, play)
+    assert {:ok, _} = WordParser.import_content(play.id, paragraphs)
+
+    assert draft.summary.speakers == [{"MÉNON", 2}]
+    assert [%{name: "MÉNON", xml_id: "menon"}] = PlayContent.list_characters(play.id)
+
+    [_cast_list, act] = PlayContent.load_play_content(play.id)
+    [scene] = act.children
+
+    assert Enum.map(scene.loaded_elements, &{&1.speaker_label, hd(Element.characters(&1)).name}) ==
+             [
+               {"MÉNON", "MÉNON"},
+               {"[MÉNON]", "MÉNON"}
+             ]
   end
 
   test "the summary's acts leave out the prologue, the induction and the epilogue" do

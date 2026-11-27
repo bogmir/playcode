@@ -139,7 +139,7 @@ defmodule Playcode.Import.WordDraft do
       &(Map.get(&1, :_direct_elements, []) ++ Enum.flat_map(&1.scenes, fn s -> s.elements end))
     )
     |> Enum.filter(&(&1.type == "speech" and &1[:speaker_label] not in [nil, ""]))
-    |> Enum.map(& &1.speaker_label)
+    |> Enum.map(&character_name(&1.speaker_label))
     |> Enum.uniq()
     |> Enum.with_index()
     |> Enum.map_reduce(MapSet.new(), fn {label, index}, taken ->
@@ -157,6 +157,9 @@ defmodule Playcode.Import.WordDraft do
     end)
     |> elem(0)
   end
+
+  # "[MÉNON]" is MÉNON, named by the editor: TEI's <sp who="#menon"><speaker>[MÉNON]</speaker>.
+  defp character_name(label), do: String.replace(label, ~r/^\[(.+)\]$/u, "\\1")
 
   defp unique_xml_id(xml_id, taken) do
     if xml_id in taken,
@@ -291,7 +294,7 @@ defmodule Playcode.Import.WordDraft do
   end
 
   defp speakers(%{type: "speech", speaker_label: label}, characters) do
-    case Map.fetch(characters, label) do
+    case Map.fetch(characters, character_name(label)) do
       {:ok, character} ->
         [%ElementCharacter{character_id: character.id, character: character, position: 0}]
 
@@ -378,7 +381,7 @@ defmodule Playcode.Import.WordDraft do
     speakers =
       elements
       |> Enum.filter(&(&1.type == "speech" and &1.speaker_label not in [nil, ""]))
-      |> Enum.frequencies_by(& &1.speaker_label)
+      |> Enum.frequencies_by(&character_name(&1.speaker_label))
       |> Enum.sort_by(fn {label, count} -> {-count, label} end)
 
     %{
