@@ -80,14 +80,16 @@ defmodule Playcode.Export.Download do
 
   def item(div, format) do
     {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
+    {elements, trailers} = div |> Map.get(:loaded_elements, []) |> Element.split_trailers()
 
     [
       "<div class=\"division\">\n",
       division_heading(div, format),
       cast_list(div, format),
       children(opening, format),
-      elements(Map.get(div, :loaded_elements, []), format),
+      elements(elements, format),
       children(children, format),
+      elements(trailers, format),
       "\n",
       NoteMarkup.endnotes(Note.reading_order(div), format),
       "</div>"

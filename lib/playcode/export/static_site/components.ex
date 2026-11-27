@@ -890,7 +890,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <.inline text={@division.title} notes={@division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
-      <.elements of={@division} edition={@edition} texts={@texts} />
+      <.elements of={@division} edition={@edition} texts={@texts} trailers={false} />
       <%= for child <- @rest do %>
         <%= if child.type == "elenco" do %>
           <.outline_item edition={@edition} item={child} />
@@ -907,6 +907,7 @@ defmodule Playcode.Export.StaticSite.Components do
           </section>
         <% end %>
       <% end %>
+      <.trailers of={@division} edition={@edition} />
     </section>
     """
   end
@@ -944,7 +945,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <.inline text={@page.division.title} notes={@page.division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
-      <.elements of={@page.division} edition={@edition} texts={@texts} />
+      <.elements of={@page.division} edition={@edition} texts={@texts} trailers={false} />
       <nav aria-label="Scenes">
         <ul>
           <li :for={scene_page <- @scene_pages}>
@@ -954,6 +955,7 @@ defmodule Playcode.Export.StaticSite.Components do
           </li>
         </ul>
       </nav>
+      <.trailers of={@page.division} edition={@edition} />
     </section>
     """
   end
@@ -978,6 +980,7 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :of, :map, required: true, doc: "a division or a scene"
   attr :edition, :map, required: true
   attr :texts, :map, default: %{}
+  attr :trailers, :boolean, default: true, doc: "false for a division's, printed after its scenes"
 
   @doc """
   A division's or a scene's own elements: as `texts` holds them, rendered once for both
@@ -987,13 +990,30 @@ defmodule Playcode.Export.StaticSite.Components do
     case assigns.texts[assigns.of.id] do
       nil ->
         ~H"""
-        <.el :for={el <- @of.loaded_elements} el={el} edition={@edition} />
+        <.el :for={el <- own_elements(@of, @trailers)} el={el} edition={@edition} />
         """
 
       html ->
         assigns = assign(assigns, :html, html)
         ~H"{@html}"
     end
+  end
+
+  defp own_elements(of, true), do: of.loaded_elements
+  defp own_elements(of, false), do: of.loaded_elements |> Element.split_trailers() |> elem(0)
+
+  attr :of, :map, required: true, doc: "a division"
+  attr :edition, :map, required: true
+
+  @doc "A division's closing formulas, after its scenes (`Element.split_trailers/1`)."
+  def trailers(assigns) do
+    ~H"""
+    <.el
+      :for={el <- @of.loaded_elements |> Element.split_trailers() |> elem(1)}
+      el={el}
+      edition={@edition}
+    />
+    """
   end
 
   attr :el, :map, required: true

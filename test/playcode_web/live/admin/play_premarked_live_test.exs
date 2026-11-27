@@ -24,7 +24,8 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
     "Nota {p}FEBO {v}Dos.",
     "{p}FEBO {v}Hola ((aparte sin cerrar",
     "OBSERVACIONES:",
-    "{p}RICARDO {ti}pues ¿qué te aflige?"
+    "{p}RICARDO {ti}pues ¿qué te aflige?",
+    "{e}Escena 2"
   ]
 
   setup %{conn: conn} do
@@ -70,7 +71,7 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/premarked")
     paste(lv, Enum.join(@every_kind, "\n"))
 
-    for line <- [2, 3, 4, 5, 6, 7, 8] do
+    for line <- 2..9 do
       assert has_element?(lv, "#premarked-warnings button[data-line='#{line}']")
     end
 

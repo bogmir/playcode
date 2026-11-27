@@ -67,7 +67,13 @@ defmodule Playcode.Import.WordDraft do
     rows =
       for element <- elements, kind = row_warning(element, labels), do: {element.id, kind}
 
-    rows = rows ++ split_verse_warnings(reading_order(divisions))
+    empty_scenes =
+      for act <- divisions,
+          scene <- act.children,
+          scene.loaded_elements == [],
+          do: {scene.id, :empty_scene}
+
+    rows = rows ++ empty_scenes ++ split_verse_warnings(reading_order(divisions))
     for {id, kind} <- rows, do: %{line: Map.fetch!(lines, id), kind: kind}
   end
 

@@ -1359,8 +1359,7 @@ defmodule Playcode.Export.TeiXml do
     attrs = %{type: div.type}
     attrs = if div.number, do: Map.put(attrs, :n, to_string(div.number)), else: attrs
 
-    {trailers, elements} =
-      div |> Map.get(:loaded_elements, []) |> Enum.split_with(&(&1.type == "trailer"))
+    {elements, trailers} = div |> Map.get(:loaded_elements, []) |> Element.split_trailers()
 
     {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
 

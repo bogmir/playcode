@@ -813,7 +813,7 @@ defmodule Playcode.Import.WordParser do
       scenes =
         act.scenes
         |> Enum.map(&Map.drop(&1, [:_open]))
-        |> Enum.reject(&(&1.elements == []))
+        |> Enum.reject(&(&1.elements == [] and &1.head in [nil, ""]))
 
       act |> Map.drop([:_open, :_act_num]) |> Map.put(:scenes, scenes)
     end)

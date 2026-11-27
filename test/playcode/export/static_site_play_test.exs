@@ -111,6 +111,19 @@ defmodule Playcode.Export.StaticSitePlayTest do
     end
   end
 
+  test "an act's closing formula follows its scenes" do
+    {play, dir} =
+      publish!(
+        ~s(<div1 type="acto" n="1"><div2 type="escena"><head>Escena 1</head><sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div2><trailer>FIN DEL PRIMER ACTO</trailer></div1>)
+      )
+
+    for file <- ["act-1.html", "text.html"] do
+      assert dir |> page(play, file) |> LazyHTML.text() =~
+               ~r/Verso de prueba.*FIN DEL PRIMER ACTO/s,
+             file
+    end
+  end
+
   test "a verse group's heading stands before its lines" do
     {play, dir} =
       publish!(

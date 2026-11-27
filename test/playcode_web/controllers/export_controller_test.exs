@@ -96,6 +96,26 @@ defmodule PlaycodeWeb.ExportControllerTest do
     assert Enum.any?(files, fn {_name, content} -> content =~ "FIN DEL PRIMER ACTO" end)
   end
 
+  test "the downloads print an act's closing formula after its scenes", %{conn: conn} do
+    play =
+      import_tei!(
+        tei(
+          body:
+            ~s(<div1 type="acto" n="1"><div2 type="escena"><head>Escena 1</head><sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div2><trailer>FIN DEL PRIMER ACTO</trailer></div1>)
+        )
+      )
+      |> Playcode.TestFixtures.mark_complete!()
+
+    assert response(get(conn, ~p"/export/#{play.id}/html"), 200) =~
+             ~r/Verso de prueba.*FIN DEL PRIMER ACTO/s
+
+    {:ok, files} = :zip.unzip(response(get(conn, ~p"/export/#{play.id}/epub"), 200), [:memory])
+
+    assert Enum.any?(files, fn {_name, content} ->
+             content =~ ~r/Verso de prueba.*FIN DEL PRIMER ACTO/s
+           end)
+  end
+
   # The Broken Heart's "A Song" and "The Epilogue" head their stanzas, centred and in
   # italics as a closing formula is.
   test "the HTML and EPUB downloads print a verse group's heading before its lines", %{conn: conn} do

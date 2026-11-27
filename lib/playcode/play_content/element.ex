@@ -96,6 +96,12 @@ defmodule Playcode.PlayContent.Element do
   def closing_words?(text, opts \\ []),
     do: Regex.match?(if(opts[:alone], do: @closing_alone, else: @closing_start), text)
 
+  @doc """
+  `elements` apart from their trailers, `{elements, trailers}`: a division's closing
+  formulas, printed after its scenes, as TEI allows a trailer only at a division's end.
+  """
+  def split_trailers(elements), do: Enum.split_with(elements, &(&1.type != "trailer"))
+
   @doc "The kinds of stage direction TEI suggests for `<stage type>`, in its order."
   def stage_types, do: @stage_types
 

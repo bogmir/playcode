@@ -125,6 +125,7 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
     do: gettext("A middle or final part with no initial part before it")
 
   defp message(:initial_unfinished), do: gettext("An initial part no final part closes")
+  defp message(:empty_scene), do: gettext("A scene with nothing but its heading")
   defp message(:speaker_as_words), do: gettext("A speaker's name tagged as words")
   defp message(:unclosed_aside), do: gettext("(( with no )): the aside is not read")
   defp message(:refused), do: gettext("Markup Playcode cannot store: correct it to import")

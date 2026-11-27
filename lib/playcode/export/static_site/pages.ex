@@ -51,7 +51,7 @@ defmodule Playcode.Export.StaticSite.Pages do
         of.type != "elenco",
         into: %{} do
       html =
-        %{of: of, edition: edition, texts: %{}, __changed__: nil}
+        %{of: of, edition: edition, texts: %{}, trailers: of != page.division, __changed__: nil}
         |> Components.elements()
         |> Phoenix.HTML.Safe.to_iodata()
         |> IO.iodata_to_binary()

@@ -444,6 +444,17 @@ defmodule Playcode.Import.WordDraftTest do
 
     # A name followed by the speech's own tag is read as the speaker ("what the import
     # mends"); one standing alone is left as typed.
+    # As the TEI import keeps a heading-only scene ("ACTO 2", "SCENA MUTA").
+    test "a scene with nothing but its heading, kept with it" do
+      paragraphs = ["{e}PRIMERA PARTE", "{e}Escena 2", "{p}FEBO {pr}Uno."]
+      draft = assert_draft_is_stored(paragraphs)
+
+      assert for(d <- draft.divisions, c <- d.children, do: c.title) ==
+               ["PRIMERA PARTE", "Escena 2"]
+
+      assert warnings(paragraphs) == [{0, :empty_scene}]
+    end
+
     test "a speaker's name tagged as words" do
       assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{pr} FEBO", "{v}¡Qué pronto!"]) ==
                [{2, :speaker_as_words}]
