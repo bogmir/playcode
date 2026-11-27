@@ -27,6 +27,7 @@ defmodule Playcode.Import.TeiParserTest do
     {Playcode.Catalogue.Play, :short_code, 1},
     {Playcode.Catalogue.Play, :valid_languages, 0},
     {Playcode.Import.Asides, :guess, 1},
+    {Playcode.PlayContent.Element, :closing_words?, 1},
     {Playcode.Places, :slugify, 1},
     {Playcode.Performances.Performance, :venue_types, 0},
     {Playcode.Performances.Performance, :year_range, 0},

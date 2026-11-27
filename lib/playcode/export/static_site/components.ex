@@ -877,7 +877,7 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :texts, :map, default: %{}
 
   def division_text(assigns) do
-    {opening, rest} = Division.split_opening_lists(assigns.division.children)
+    %{opening: opening, children: rest} = Division.parts(assigns.division)
     assigns = assign(assigns, opening: opening, rest: rest)
 
     ~H"""
@@ -904,9 +904,11 @@ defmodule Playcode.Export.StaticSite.Components do
               <.inline text={child.title} notes={child.notes} />
             </h3>
             <.elements of={child} edition={@edition} texts={@texts} />
+            <.trailers of={child} edition={@edition} />
           </section>
         <% end %>
       <% end %>
+      <.trailers of={@division} edition={@edition} />
     </section>
     """
   end
@@ -926,7 +928,7 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   def page_text(%{page: %{scene: nil, split: true}} = assigns) do
-    {opening, _rest} = Division.split_opening_lists(assigns.page.division.children)
+    %{opening: opening} = Division.parts(assigns.page.division)
 
     assigns =
       assign(assigns,
@@ -954,6 +956,7 @@ defmodule Playcode.Export.StaticSite.Components do
           </li>
         </ul>
       </nav>
+      <.trailers of={@page.division} edition={@edition} />
     </section>
     """
   end
@@ -970,6 +973,7 @@ defmodule Playcode.Export.StaticSite.Components do
           <.inline text={@page.scene.title} notes={@page.scene.notes} />
         </h3>
         <.elements of={@page.scene} edition={@edition} texts={@texts} />
+        <.trailers of={@page.scene} edition={@edition} />
       </section>
     </section>
     """
@@ -980,20 +984,35 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :texts, :map, default: %{}
 
   @doc """
-  A division's or a scene's own elements: as `texts` holds them, rendered once for both
+  A division's or a scene's own elements, its closing formulas apart (`trailers/1`): as
+  `texts` holds them, rendered once for both
   its page and text.html (`Pages.texts/1`), or rendered here.
   """
   def elements(assigns) do
     case assigns.texts[assigns.of.id] do
       nil ->
         ~H"""
-        <.el :for={el <- @of.loaded_elements} el={el} edition={@edition} />
+        <.el :for={el <- Division.parts(@of).elements} el={el} edition={@edition} />
         """
 
       html ->
         assigns = assign(assigns, :html, html)
         ~H"{@html}"
     end
+  end
+
+  attr :of, :map, required: true, doc: "a division"
+  attr :edition, :map, required: true
+
+  @doc "A division's closing formulas, after its scenes (`Division.parts/1`)."
+  def trailers(assigns) do
+    ~H"""
+    <.el
+      :for={el <- Division.parts(@of).trailers}
+      el={el}
+      edition={@edition}
+    />
+    """
   end
 
   attr :el, :map, required: true

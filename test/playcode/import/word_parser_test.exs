@@ -33,6 +33,72 @@ defmodule Playcode.Import.WordParserTest do
     end
   end
 
+  describe "pasted text" do
+    test "imports as the .docx it was copied from" do
+      path = "test/fixtures/word_files/ejercicio.docx"
+      {:ok, paragraphs} = WordParser.paragraphs(path)
+      pasted = paragraphs |> Enum.join("\n") |> WordParser.paragraphs_from_text()
+
+      from_text = play_fixture()
+      from_docx = play_fixture()
+      assert {:ok, _} = WordParser.import_content(from_text.id, pasted)
+      assert {:ok, _} = WordParser.import_content(from_docx.id, path)
+
+      text_xml = export_tei(from_text)
+      docx_xml = export_tei(from_docx)
+      assert speeches(text_xml) == speeches(docx_xml)
+      assert xml_texts(text_xml, "l") == xml_texts(docx_xml, "l")
+      assert speeches(text_xml) != []
+    end
+
+    test "reads Windows line endings and keeps blank lines as empty paragraphs" do
+      paragraphs = WordParser.paragraphs_from_text("{e}Escena 1\r\n\r\n{p}FEBO {v}Uno.\r\n")
+
+      assert paragraphs == ["{e}Escena 1", "", "{p}FEBO {v}Uno.", ""]
+
+      play = play_fixture()
+      assert {:ok, _} = WordParser.import_content(play.id, paragraphs)
+      assert xml_texts(export_tei(play), "l") == ["Uno."]
+    end
+  end
+
+  describe "a stage direction on its own line inside a speech" do
+    test "is the speech's, when the speech goes on after it" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}FEBO {pr}Uno.",
+          "{ac}[To Mooncalf]",
+          "{pr}Dos.",
+          "{ac}[Enter WHIT.]",
+          "{ac}[Aside]",
+          "{v}Tres."
+        ])
+
+      assert speeches(xml) == ["FEBO Uno. [To Mooncalf] Dos. [Enter WHIT.] [Aside] Tres."]
+
+      assert xml_texts(xml, "stage", within: "sp") == [
+               "[To Mooncalf]",
+               "[Enter WHIT.]",
+               "[Aside]"
+             ]
+    end
+
+    test "is the same in a prologue, which has no scenes" do
+      xml = import_word(["PROLOGUE", "{p}PROLOGUE {pr}Uno.", "{ac}[Bows]", "{pr}Dos."])
+
+      assert speeches(xml) == ["PROLOGUE Uno. [Bows] Dos."]
+    end
+
+    test "stays between the speeches when the next line starts a new one" do
+      xml = import_word(["{e}Escena 1", "{p}FEBO {v}Uno.", "{ac}Vase.", "{p}RICARDO {v}Dos."])
+
+      assert speeches(xml) == ["FEBO Uno.", "RICARDO Dos."]
+      assert xml_texts(xml, "stage", within: "sp") == []
+      assert xml_texts(xml, "stage") == ["Vase."]
+    end
+  end
+
   describe "the tags" do
     test "speaker, verse, prose and stage direction, in any case" do
       xml =
@@ -161,6 +227,47 @@ defmodule Playcode.Import.WordParserTest do
       assert xml_texts(xml, "seg") == ["aparte en prosa", "aparte en verso"]
       assert Enum.all?(xml_elements(xml, "seg"), &match?({%{"type" => "aside"}, _}, &1))
       assert "en voz alta" in xml_texts(xml, "l")
+    end
+
+    # This read ((…)) as typed and dropped {ap}'s text until the owner decided, 2026-11-27,
+    # that ((…)) is the aside it marks and {ap} before it the aside's delivery.
+    test "((…)) marks the words spoken aside, the rest stays ordinary speech" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}RICARDO {pr}Muy bien. ((En realidad prefiero el verso. –)) Y entonces, ¿qué?"
+        ])
+
+      assert [{%{"type" => "aside"}, "En realidad prefiero el verso. –"}] =
+               xml_elements(xml, "seg")
+
+      assert [text] = xml_texts(xml, "p", within: "sp")
+      assert text =~ "Muy bien."
+      assert text =~ "Y entonces, ¿qué?"
+      refute text =~ "(("
+      refute text =~ "))"
+    end
+
+    test "{ap} before ((…)) is the aside's delivery" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}RICARDO {ap}(Aparte) {pr}Muy bien. ((En realidad…)) Y entonces."
+        ])
+
+      assert xml_texts(xml, "stage", within: "sp") == ["(Aparte)"]
+      assert xml_texts(xml, "seg") == ["En realidad…"]
+      assert [text] = xml_texts(xml, "p", within: "sp")
+      assert text =~ "Muy bien."
+    end
+
+    test "((…)) inside a verse" do
+      xml = import_word(["{e}Escena 1", "{p}DUQUE {v}Bien está ((y mal)) señor"])
+
+      assert xml_texts(xml, "seg") == ["y mal"]
+      assert [line] = xml_texts(xml, "l")
+      assert line =~ "Bien está"
+      assert line =~ "señor"
     end
 
     # Word marks each paragraph aside on its own, so it says nothing of where an aside

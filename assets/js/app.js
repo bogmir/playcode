@@ -25,8 +25,129 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/playcode"
 import topbar from "../vendor/topbar"
 import {syncPanels} from "./sync_scroll.mjs"
+import {lineAt, rangeOf, nearestMarked, lineAtHeight, spanAt, heightAt} from "./premarked.mjs"
 // The published site's script: its EMOTHE.stepper runs the play page's arrows too.
 import "../../priv/static_site/site.js"
+
+// PremarkedText hook: the premarked page's text box. The text is kept in the browser per
+// play until imported; the caret shows its line in the preview, a click on a line of the
+// preview or on a warning selects that line in the text box, and scrolling either pane
+// brings the other to the same line.
+const PremarkedText = {
+  mounted() {
+    this.key = `playcode.premarked.${this.el.dataset.play}`
+    this.preview = document.getElementById("premarked-preview")
+    const kept = this.stored(() => localStorage.getItem(this.key))
+    if (kept && !this.el.value.trim()) {
+      this.el.value = kept
+      this.el.dispatchEvent(new Event("input", {bubbles: true}))
+    }
+    this.el.addEventListener("input", () => { this.keep(); this.lineTops = null })
+    const follow = () => this.show(lineAt(this.el.value, this.el.selectionStart))
+    this.el.addEventListener("click", follow)
+    this.el.addEventListener("keyup", follow)
+    this.onClick = (event) => {
+      const target = event.target.closest("#premarked-preview [data-line], #premarked-warnings [data-line], #premarked-errors [data-line]")
+      if (target) this.select(Number(target.dataset.line))
+    }
+    document.addEventListener("click", this.onClick)
+    // Only the pane scrolled by hand leads: the other one's scroll events are its echo.
+    for (const pane of [this.el, this.preview]) {
+      for (const type of ["wheel", "pointerdown", "touchstart", "keydown"]) {
+        pane.addEventListener(type, () => { this.leader = pane }, {passive: true})
+      }
+    }
+    this.el.addEventListener("scroll", () => {
+      if (this.leader === this.el) this.frame(() => this.previewFollows())
+    })
+    this.preview.addEventListener("scroll", () => {
+      if (this.leader === this.preview) this.frame(() => this.textFollows())
+    })
+    this.onResize = () => { this.lineTops = null }
+    window.addEventListener("resize", this.onResize)
+    this.handleEvent("premarked:fill", ({text}) => { this.el.value = text; this.lineTops = null; this.keep() })
+    this.handleEvent("premarked:clear", () => this.stored(() => localStorage.removeItem(this.key)))
+  },
+  destroyed() {
+    document.removeEventListener("click", this.onClick)
+    window.removeEventListener("resize", this.onResize)
+    this.mirror?.remove()
+  },
+  keep() { this.stored(() => localStorage.setItem(this.key, this.el.value)) },
+  // A private window or blocked storage leaves the page working, without it.
+  stored(use) { try { return use() } catch (_error) { return null } },
+  frame(step) {
+    cancelAnimationFrame(this.pending)
+    this.pending = requestAnimationFrame(step)
+  },
+  // Where each line of the text starts in the box, wrapped as the box wraps it: measured on
+  // a hidden copy, again after an edit or a resize.
+  tops() {
+    if (this.lineTops) return this.lineTops
+    const style = getComputedStyle(this.el)
+    this.mirror ??= document.body.appendChild(document.createElement("div"))
+    Object.assign(this.mirror.style, {
+      position: "absolute", visibility: "hidden", top: "0", left: "-9999px", boxSizing: "border-box",
+      width: `${this.el.clientWidth}px`, padding: style.padding, font: style.font,
+      letterSpacing: style.letterSpacing, whiteSpace: "pre-wrap", overflowWrap: "break-word",
+    })
+    this.mirror.replaceChildren(...this.el.value.split("\n").map((line) => {
+      const row = document.createElement("div")
+      row.textContent = line || "\u200b"
+      return row
+    }))
+    this.lineTops = [...this.mirror.children].map((row) => row.offsetTop)
+    return this.lineTops
+  },
+  rowFor(line) {
+    const marked = [...this.preview.querySelectorAll("[data-line]")]
+    const nearest = nearestMarked(marked.map((el) => Number(el.dataset.line)), line)
+    return marked.find((el) => Number(el.dataset.line) === nearest)
+  },
+  // Each line of the text the preview shows, with where its first row starts, in order.
+  previewSpans() {
+    const offset = this.preview.scrollTop - this.preview.getBoundingClientRect().top
+    const lines = []
+    const starts = []
+    for (const row of this.preview.querySelectorAll("[data-line]")) {
+      const line = Number(row.dataset.line)
+      if (line === lines.at(-1)) continue
+      lines.push(line)
+      starts.push(row.getBoundingClientRect().top + offset)
+    }
+    return {lines, starts}
+  },
+  // As far through its paragraph as the text box's top is, so is the preview's.
+  previewFollows() {
+    const {index: line, fraction} = spanAt(this.tops(), this.el.scrollTop)
+    const {lines, starts} = this.previewSpans()
+    const shown = lineAtHeight(lines, line)
+    const through = lines[shown] === line ? fraction : Number(lines[shown] < line)
+    this.preview.scrollTop = heightAt(starts, shown, through)
+  },
+  textFollows() {
+    const {lines, starts} = this.previewSpans()
+    const {index, fraction} = spanAt(starts, this.preview.scrollTop)
+    if (lines.length) this.el.scrollTop = heightAt(this.tops(), lines[index], fraction)
+  },
+  previewTo(line, from = 0) {
+    const target = this.rowFor(line)
+    if (target) this.preview.scrollTop += target.getBoundingClientRect().top - this.preview.getBoundingClientRect().top - from
+    return target
+  },
+  show(line) {
+    this.preview.querySelectorAll(".premarked-current").forEach((el) => el.classList.remove("premarked-current"))
+    this.previewTo(line, this.preview.clientHeight / 3)?.classList.add("premarked-current")
+  },
+  select(line) {
+    this.leader = null
+    const [start, end] = rangeOf(this.el.value, line)
+    this.el.focus()
+    this.el.setSelectionRange(start, end)
+    this.el.scrollTop = Math.max(0, (this.tops()[line] ?? 0) - this.el.clientHeight / 3)
+    this.show(line)
+  },
+}
 
 // Stepper hook: the arrows that step through the shared lines or the stage directions.
 // Its element carries the switches that re-render the text (data-switches), so turning
@@ -144,7 +265,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss, Stepper, AlignParts},
+  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss, Stepper, AlignParts, PremarkedText},
 })
 
 // Show progress bar on live navigation and form submits

@@ -16,6 +16,14 @@ defmodule Playcode.PlayContent.SplitVerses do
   """
   def out_of_order(acts), do: Enum.flat_map(acts, &in_act/1)
 
+  @doc "`out_of_order/1` over a play's reading-order rows (`PlayContent.reading_order/1`)."
+  def out_of_order_in_rows(rows) do
+    rows
+    |> Enum.filter(&(&1.type == "verse_line"))
+    |> Enum.chunk_by(& &1.act_id)
+    |> out_of_order()
+  end
+
   defp in_act(lines) do
     {problems, open} =
       Enum.reduce(lines, {[], nil}, fn line, {problems, open} ->

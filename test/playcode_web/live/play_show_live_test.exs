@@ -218,6 +218,20 @@ defmodule PlaycodeWeb.PlayShowLiveTest do
     assert html =~ ~r{Introducción\..*NOTA: <em>Œuvres</em> de Rotrou\..*Réplica\.}s
   end
 
+  # TEI allows a trailer only at the end of its division: after the act's scenes.
+  test "an act's closing formula follows its scenes", %{conn: conn} do
+    play =
+      tei(
+        body:
+          ~s(<div1 type="acto" n="1"><div2 type="escena"><head>Escena 1</head><sp><speaker>REY</speaker><l n="1">Verso de prueba</l></sp></div2><trailer>FIN DEL PRIMER ACTO</trailer></div1>)
+      )
+      |> import_tei!()
+      |> TestFixtures.mark_complete!()
+
+    {:ok, _view, html} = live(conn, ~p"/plays/#{play.code}")
+    assert html =~ ~r/Verso de prueba.*FIN DEL PRIMER ACTO/s
+  end
+
   # As emothe.uv.es set them, an act's closing formula and a paratext's.
   test "a closing formula is centred and in italics", %{conn: conn} do
     play =

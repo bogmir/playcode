@@ -57,6 +57,8 @@ lib/
 │   ├── import/
 │   │   ├── tei_parser.ex             # Reads a TEI-XML file into plain data, no database (handles UTF-16 files)
 │   │   ├── tei_import.ex             # Writes what TeiParser read, in one transaction; the import preview
+│   │   ├── word_parser.ex            # A premarked text ({p} {v} {ac}…) from a .docx or pasted: its draft, and the import that stores it
+│   │   ├── word_draft.ex             # The rows a premarked text becomes, in memory, with its warnings and summary
 │   │   ├── filemaker_xml.ex          # FMPXMLRESULT reader (one FileMaker table)
 │   │   ├── bibliography.ex           # S4's one-time FileMaker bibliography import
 │   │   ├── filemaker_plays.ex        # FileMaker's records Playcode lacks, created as plays without a text
@@ -101,6 +103,7 @@ lib/
     │       ├── play_list_live.ex     # Admin: /admin/plays - manage plays
     │       ├── play_form_live.ex     # Admin: /admin/plays/new|:id/edit
     │       ├── play_detail_live.ex   # Admin: /admin/plays/:id - detail + exports
+    │       ├── play_premarked_live.ex # Admin: /admin/plays/:id/premarked - a premarked text beside the play it makes, and its import
     │       ├── import_live.ex        # Admin: /admin/plays/import - TEI file import
     │       ├── activity_log_live.ex  # Admin: /admin/activity-log - activity audit log
     │       ├── export_site_live.ex   # Admin: /admin/export - static site generation UI
@@ -158,6 +161,7 @@ Playcode has no public pages: the published static site is the catalogue (decide
 - `GET /admin/export/preview/*path` - Browse the built `_site/` before deploying; redirects to `/admin/export` when nothing is built (`:deploy_site`)
 - `GET /admin/dashboard` - LiveDashboard (`:view_dashboard`)
 - `GET /admin/places` - Corpus-global gazetteer: places, their names, hierarchy and authority links (`:manage_places`)
+- `GET /admin/plays/:id/premarked` - A draft play's text from Word: paste the premarked text or drop the .docx, see the play it makes with its warnings tied to lines and a summary, then import; a complete play is sent back to its page
 - `GET /admin/plays/:id/places` - The play's place index: role, order, notes (`:manage_places`)
 - `GET /admin/plays/:id/statistics` - The play's statistics as the site draws them (figures, metrical synopsis, characters, who shares the stage), with the computed date and Recompute
 - `GET /admin/plays/:id/notes` - A play's in-text notes in reading order: filter by type, words or no term; edit type, word, term and text in place; delete; open the line in Content (`?element=`/`?division=` opens its modal), where notes are added (`:edit_content`)
@@ -177,6 +181,7 @@ Playcode has no public pages: the published static site is the catalogue (decide
 - **UUID primary keys**: All tables use `binary_id` for eventual distributed deployment
 - **JSONB statistics**: Cached stats stored as a JSON blob, recomputed on demand
 - **A play's text is known from `auto_form`**: the form Playcode works out from the elements on every import and content edit is nil when the play has no verse line and no line of prose; `Play.has_text?/1` reads it, and every output that needs a text asks it (design `docs/superpowers/specs/2026-11-17-plays-without-text-and-record-search-design.md`, 7.1)
+- **The Word preview is the import**: `WordDraft` builds a premarked text's rows in memory, with their ids, once; the premarked page renders them through `PlayText.play_body` and `WordParser.import_content/2` inserts those same rows, so the preview cannot drift from what is stored. A row the changesets refuse is an error and stops the import; everything else is a warning tied to its paragraph
 - **Self-referencing trees**: Both divisions and elements use `parent_id` for hierarchy
 - **bcrypt authentication**: Standard Phoenix auth pattern with session tokens and password reset; accounts arrive by invitation, so accepting the invite replaces a separate confirmation step
 - **One authorization seam**: two roles (`:admin`, `:researcher`) but every access decision goes through `Playcode.Authz.can?/3`, which already takes the resource — per-play scoping becomes one extra clause instead of a rewrite

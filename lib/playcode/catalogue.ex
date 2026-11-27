@@ -499,7 +499,7 @@ defmodule Playcode.Catalogue do
   Creates a paratext; `attrs` carry its `play_id`.
   """
   def create_paratext(attrs) do
-    %Paratext{}
+    %Paratext{id: attrs[:id]}
     |> Paratext.changeset(attrs)
     |> Repo.insert()
   end

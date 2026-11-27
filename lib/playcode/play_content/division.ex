@@ -17,6 +17,8 @@ defmodule Playcode.PlayContent.Division do
   use Ecto.Schema
   import Ecto.Changeset
 
+  alias Playcode.PlayContent.Element
+
   @primary_key {:id, :binary_id, autogenerate: true}
   @foreign_key_type :binary_id
 
@@ -104,6 +106,17 @@ defmodule Playcode.PlayContent.Division do
   """
   def split_opening_lists(children),
     do: Enum.split_while(children, &(&1.type == "elenco" and &1.entries != []))
+
+  @doc """
+  A division's parts in the order its file writes them, which every page prints: the cast
+  lists that open it (`split_opening_lists/1`), its own elements, its other children, then
+  its closing formulas (`Element.split_trailers/1`).
+  """
+  def parts(division) do
+    {opening, children} = division |> Map.get(:children, []) |> split_opening_lists()
+    {elements, trailers} = division |> Map.get(:loaded_elements, []) |> Element.split_trailers()
+    %{opening: opening, elements: elements, children: children, trailers: trailers}
+  end
 
   def changeset(division, attrs) do
     division

@@ -32,6 +32,10 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :shade_stage, :boolean, default: false
   attr :sync_keys, :boolean, default: false
 
+  attr :lines, :map,
+    default: %{},
+    doc: "element id => %{line: n, warn: boolean}: the premarked paragraph each came from"
+
   def play_body(assigns) do
     ~H"""
     <div
@@ -45,6 +49,7 @@ defmodule PlaycodeWeb.Components.PlayText do
     >
       <div
         :for={{division, div_key} <- outline(@paratexts, @divisions, @sync_keys)}
+        :key={division.id}
         class="mb-8 scroll-mt-16"
         id={outline_id(division)}
       >
@@ -53,50 +58,73 @@ defmodule PlaycodeWeb.Components.PlayText do
           <.division_heading division={division} sync_key={div_key} />
           <.cast_list :if={division.type == "elenco"} list={division} />
 
-          <%= for part <- act_parts(division, @sync_keys) do %>
-            <%= case part do %>
-              <% :elements -> %>
-                <div>
-                  <.element_list
-                    elements={Map.get(division, :loaded_elements, [])}
-                    show_line_numbers={@show_line_numbers}
-                    show_stage_directions={@show_stage_directions}
-                    show_split_verses={@show_split_verses}
-                    leads={@leads}
-                    show_verse_type={@show_verse_type}
-                    show_folio={@show_folio}
-                    act_key={div_key}
-                  />
-                </div>
-              <% {child, child_key} -> %>
-                <div
-                  class="mb-6 scroll-mt-16"
-                  id={"div-#{child.id}"}
-                >
-                  <.division_heading
-                    division={child}
-                    sync_key={child_key && "#{div_key}/#{child_key}"}
-                  />
-                  <.cast_list :if={child.type == "elenco"} list={child} />
-                  <div :if={Map.has_key?(child, :loaded_elements)}>
-                    <.element_list
-                      elements={Map.get(child, :loaded_elements, [])}
-                      show_line_numbers={@show_line_numbers}
-                      show_stage_directions={@show_stage_directions}
-                      show_split_verses={@show_split_verses}
-                      leads={@leads}
-                      show_verse_type={@show_verse_type}
-                      show_folio={@show_folio}
-                      act_key={div_key}
-                    />
-                  </div>
-                </div>
-            <% end %>
-          <% end %>
+          <.act_part
+            :for={part <- act_parts(division, @sync_keys)}
+            :key={part_key(part)}
+            part={part}
+            division={division}
+            div_key={div_key}
+            show_line_numbers={@show_line_numbers}
+            show_stage_directions={@show_stage_directions}
+            show_split_verses={@show_split_verses}
+            leads={@leads}
+            show_verse_type={@show_verse_type}
+            show_folio={@show_folio}
+            lines={@lines}
+          />
         <% end %>
       </div>
       <.endnotes notes={Note.reading_order(@divisions)} />
     </div>
+    """
+  end
+
+  defp part_key({own, _elements}) when is_atom(own), do: own
+
+  defp part_key({child, _key}), do: child.id
+
+  defp act_part(assigns) do
+    ~H"""
+    <%= case @part do %>
+      <% {own, elements} when own in [:elements, :trailers] -> %>
+        <div>
+          <.element_list
+            elements={elements}
+            show_line_numbers={@show_line_numbers}
+            show_stage_directions={@show_stage_directions}
+            show_split_verses={@show_split_verses}
+            leads={@leads}
+            show_verse_type={@show_verse_type}
+            show_folio={@show_folio}
+            act_key={@div_key}
+            lines={@lines}
+          />
+        </div>
+      <% {child, child_key} -> %>
+        <div
+          class="mb-6 scroll-mt-16"
+          id={"div-#{child.id}"}
+        >
+          <.division_heading
+            division={child}
+            sync_key={child_key && "#{@div_key}/#{child_key}"}
+          />
+          <.cast_list :if={child.type == "elenco"} list={child} />
+          <div :if={Map.has_key?(child, :loaded_elements)}>
+            <.element_list
+              elements={Map.get(child, :loaded_elements, [])}
+              show_line_numbers={@show_line_numbers}
+              show_stage_directions={@show_stage_directions}
+              show_split_verses={@show_split_verses}
+              leads={@leads}
+              show_verse_type={@show_verse_type}
+              show_folio={@show_folio}
+              act_key={@div_key}
+              lines={@lines}
+            />
+          </div>
+        </div>
+    <% end %>
     """
   end
 
@@ -107,13 +135,18 @@ defmodule PlaycodeWeb.Components.PlayText do
     for item <- Outline.items(paratexts, divisions), do: {item, Map.get(keys, item.id)}
   end
 
-  # An act's parts in its file's order: the lists that open it, its own elements
-  # (`:elements`), then its scenes and other lists, each child with its comparison key.
+  # An act's parts in its file's order: the lists that open it, its own elements, its scenes
+  # and other lists (each child with its comparison key), then its closing formula.
   defp act_parts(division, sync?) do
-    children = Map.get(division, :children, [])
-    {opening, _rest} = Division.split_opening_lists(children)
-    {opening, rest} = children |> sync_keyed(sync?) |> Enum.split(length(opening))
-    opening ++ [:elements] ++ rest
+    parts = Division.parts(division)
+
+    {opening, rest} =
+      (parts.opening ++ parts.children) |> sync_keyed(sync?) |> Enum.split(length(parts.opening))
+
+    %{elements: elements, trailers: trailers} = parts
+
+    opening ++
+      [{:elements, elements}] ++ rest ++ if(trailers == [], do: [], else: [{:trailers, trailers}])
   end
 
   defp outline_id(%Paratext{id: id}), do: "paratext-#{id}"
@@ -224,11 +257,12 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_verse_type, :boolean, default: false
   attr :show_folio, :boolean, default: false
   attr :act_key, :string, default: nil
+  attr :lines, :map, default: %{}
 
   defp element_list(assigns) do
     ~H"""
     <div>
-      <div :for={element <- @elements}>
+      <div :for={element <- @elements} :key={element.id} {line_marks(@lines, element)}>
         <.render_element
           element={element}
           show_line_numbers={@show_line_numbers}
@@ -237,6 +271,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={sync_act(@act_key, element, @show_folio)}
+          lines={@lines}
         />
       </div>
     </div>
@@ -249,6 +284,13 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp sync_act(act_key, element, show_folio),
     do: if(show_folio or not Element.folio_only?(element), do: act_key)
 
+  defp line_marks(lines, element) do
+    case Map.get(lines, element.id) do
+      %{line: line, warn: warn} -> [{"data-line", line}, {"data-warn", warn}]
+      nil -> []
+    end
+  end
+
   attr :element, :map, required: true
   attr :show_line_numbers, :boolean, default: true
   attr :show_stage_directions, :boolean, default: true
@@ -260,6 +302,7 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   attr :show_verse_type, :boolean, default: false
   attr :act_key, :string, default: nil
+  attr :lines, :map, default: %{}
 
   defp render_element(%{element: %{type: "speech"}} = assigns) do
     ~H"""
@@ -278,7 +321,11 @@ defmodule PlaycodeWeb.Components.PlayText do
       >
         <.inline_content text={@element.speaker_label} notes={@element.notes} />
       </div>
-      <div :for={child <- Map.get(@element, :children, [])}>
+      <div
+        :for={child <- Map.get(@element, :children, [])}
+        :key={child.id}
+        {line_marks(@lines, child)}
+      >
         <.render_element
           element={child}
           show_line_numbers={@show_line_numbers}
@@ -287,6 +334,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={@act_key}
+          lines={@lines}
         />
       </div>
     </div>
@@ -312,7 +360,11 @@ defmodule PlaycodeWeb.Components.PlayText do
           {@element.verse_type}
         </span>
       </div>
-      <div :for={child <- Map.get(@element, :children, [])}>
+      <div
+        :for={child <- Map.get(@element, :children, [])}
+        :key={child.id}
+        {line_marks(@lines, child)}
+      >
         <.render_element
           element={child}
           show_line_numbers={@show_line_numbers}
@@ -321,6 +373,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={@act_key}
+          lines={@lines}
         />
       </div>
     </div>

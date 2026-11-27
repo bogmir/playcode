@@ -156,6 +156,23 @@ defmodule PlaycodeWeb.AccessibilityTest do
     assert barriers(html) == []
   end
 
+  # Only a draft's text is replaced from Word; the play the other pages share is complete.
+  test "the premarked page, with a preview and its warnings, has no barrier", %{conn: conn} do
+    play = play_fixture()
+    {:ok, lv, html} = live(conn, ~p"/admin/plays/#{play.id}/premarked")
+    assert barriers(html) == []
+
+    html =
+      lv
+      |> form("#premarked-form",
+        text: "{e}Escena 1\n{p}FEBO {v}Uno.\n{R}Vase.\n{p}RICARDO {v}Uno <stage>dos."
+      )
+      |> render_change()
+
+    assert html =~ "Uno."
+    assert barriers(html) == []
+  end
+
   test "the log-in and password pages have no barrier" do
     for path <- ~w(/users/log-in /users/reset-password) do
       assert {path, build_conn() |> get(path) |> html_response(200) |> barriers()} == {path, []}
