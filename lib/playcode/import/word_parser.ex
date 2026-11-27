@@ -288,7 +288,7 @@ defmodule Playcode.Import.WordParser do
         segments = parse_line(paragraph)
 
         if in_speech? and match?([{:text, _}], segments) and ends_in_prose?(groups) and
-             line not in closings do
+             line not in closings and not opens_act?(segments) do
           [group | rest] = groups
           {[[paragraph | group] | rest], true}
         else

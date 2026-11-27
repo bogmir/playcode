@@ -99,6 +99,18 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
     assert has_element?(lv, "#premarked-preview", "Será remedio casarte.")
   end
 
+  test "a file that is not a .docx is refused, saying why", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/premarked")
+
+    lv
+    |> file_input("#premarked-upload", :docx, [
+      %{name: "ejercicio.doc", content: "old Word", type: "application/msword"}
+    ])
+    |> render_upload("ejercicio.doc")
+
+    assert has_element?(lv, "#premarked-upload [role=alert]", t("Only .docx files are accepted."))
+  end
+
   test "import replaces the text and returns to the play", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/premarked")
     paste(lv, ejercicio_text())

@@ -289,6 +289,20 @@ defmodule Playcode.Import.WordDraftTest do
                {[{:speech, "FEBO"}, "Uno, que llega tarde. más."], []}
     end
 
+    test "an untagged act heading after prose opens its act" do
+      paragraphs = [
+        "JORNADA PRIMERA",
+        "{e}Escena 1",
+        "{p}JUAN {pr}Hablo en prosa.",
+        "JORNADA SEGUNDA",
+        "{e}Escena 1",
+        "{p}PEDRO {pr}Y yo."
+      ]
+
+      draft = assert_draft_is_stored(paragraphs)
+      assert ["JORNADA PRIMERA", "JORNADA SEGUNDA"] -- Enum.map(draft.divisions, & &1.title) == []
+    end
+
     test "an aside cut by such a paragraph break closes" do
       assert {_spoken, []} =
                mended(["{e}Escena 1", "{p}FEBO {pr}Hola ((aparte que", "sigue)) y fin."])

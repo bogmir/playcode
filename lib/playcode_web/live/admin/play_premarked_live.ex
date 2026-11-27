@@ -114,6 +114,11 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
   defp importable?(nil), do: false
   defp importable?(draft), do: draft.errors == []
 
+  defp upload_error(:not_accepted), do: gettext("Only .docx files are accepted.")
+  defp upload_error(:too_large), do: gettext("The file is over 10 MB.")
+  defp upload_error(:too_many_files), do: gettext("One file at a time.")
+  defp upload_error(error), do: inspect(error)
+
   defp message(:untagged), do: gettext("A line with no tag, stored as unrecognised")
 
   defp message(:unknown_tag),
@@ -246,6 +251,17 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
                   {gettext("Drop or choose the .docx")}
                   <.live_file_input upload={@uploads.docx} class="sr-only" />
                 </label>
+                <p
+                  :for={
+                    error <-
+                      upload_errors(@uploads.docx) ++
+                        Enum.flat_map(@uploads.docx.entries, &upload_errors(@uploads.docx, &1))
+                  }
+                  role="alert"
+                  class="text-error text-xs"
+                >
+                  {upload_error(error)}
+                </p>
               </form>
               <details class="dropdown dropdown-end">
                 <summary class="btn btn-xs btn-ghost border-base-300">{gettext("The tags")}</summary>
