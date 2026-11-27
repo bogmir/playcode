@@ -79,8 +79,8 @@ defmodule Playcode.Export.Download do
   end
 
   def item(div, format) do
-    {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
-    {elements, trailers} = div |> Map.get(:loaded_elements, []) |> Element.split_trailers()
+    %{opening: opening, elements: elements, children: children, trailers: trailers} =
+      Division.parts(div)
 
     [
       "<div class=\"division\">\n",

@@ -1359,9 +1359,8 @@ defmodule Playcode.Export.TeiXml do
     attrs = %{type: div.type}
     attrs = if div.number, do: Map.put(attrs, :n, to_string(div.number)), else: attrs
 
-    {elements, trailers} = div |> Map.get(:loaded_elements, []) |> Element.split_trailers()
-
-    {opening, children} = div |> Map.get(:children, []) |> Division.split_opening_lists()
+    %{opening: opening, elements: elements, children: children, trailers: trailers} =
+      Division.parts(div)
 
     element(
       if(div.type in Division.whole_text_types(), do: :div, else: :div1),

@@ -138,10 +138,12 @@ defmodule PlaycodeWeb.Components.PlayText do
   # An act's parts in its file's order: the lists that open it, its own elements, its scenes
   # and other lists (each child with its comparison key), then its closing formula.
   defp act_parts(division, sync?) do
-    children = Map.get(division, :children, [])
-    {opening, _rest} = Division.split_opening_lists(children)
-    {opening, rest} = children |> sync_keyed(sync?) |> Enum.split(length(opening))
-    {elements, trailers} = division |> Map.get(:loaded_elements, []) |> Element.split_trailers()
+    parts = Division.parts(division)
+
+    {opening, rest} =
+      (parts.opening ++ parts.children) |> sync_keyed(sync?) |> Enum.split(length(parts.opening))
+
+    %{elements: elements, trailers: trailers} = parts
 
     opening ++
       [{:elements, elements}] ++ rest ++ if(trailers == [], do: [], else: [{:trailers, trailers}])

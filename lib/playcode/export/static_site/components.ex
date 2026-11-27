@@ -877,7 +877,7 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :texts, :map, default: %{}
 
   def division_text(assigns) do
-    {opening, rest} = Division.split_opening_lists(assigns.division.children)
+    %{opening: opening, children: rest} = Division.parts(assigns.division)
     assigns = assign(assigns, opening: opening, rest: rest)
 
     ~H"""
@@ -890,7 +890,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <.inline text={@division.title} notes={@division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
-      <.elements of={@division} edition={@edition} texts={@texts} trailers={false} />
+      <.elements of={@division} edition={@edition} texts={@texts} />
       <%= for child <- @rest do %>
         <%= if child.type == "elenco" do %>
           <.outline_item edition={@edition} item={child} />
@@ -904,6 +904,7 @@ defmodule Playcode.Export.StaticSite.Components do
               <.inline text={child.title} notes={child.notes} />
             </h3>
             <.elements of={child} edition={@edition} texts={@texts} />
+            <.trailers of={child} edition={@edition} />
           </section>
         <% end %>
       <% end %>
@@ -927,7 +928,7 @@ defmodule Playcode.Export.StaticSite.Components do
   end
 
   def page_text(%{page: %{scene: nil, split: true}} = assigns) do
-    {opening, _rest} = Division.split_opening_lists(assigns.page.division.children)
+    %{opening: opening} = Division.parts(assigns.page.division)
 
     assigns =
       assign(assigns,
@@ -945,7 +946,7 @@ defmodule Playcode.Export.StaticSite.Components do
         <.inline text={@page.division.title} notes={@page.division.notes} />
       </h2>
       <.outline_item :for={list <- @opening} edition={@edition} item={list} />
-      <.elements of={@page.division} edition={@edition} texts={@texts} trailers={false} />
+      <.elements of={@page.division} edition={@edition} texts={@texts} />
       <nav aria-label="Scenes">
         <ul>
           <li :for={scene_page <- @scene_pages}>
@@ -972,6 +973,7 @@ defmodule Playcode.Export.StaticSite.Components do
           <.inline text={@page.scene.title} notes={@page.scene.notes} />
         </h3>
         <.elements of={@page.scene} edition={@edition} texts={@texts} />
+        <.trailers of={@page.scene} edition={@edition} />
       </section>
     </section>
     """
@@ -980,17 +982,17 @@ defmodule Playcode.Export.StaticSite.Components do
   attr :of, :map, required: true, doc: "a division or a scene"
   attr :edition, :map, required: true
   attr :texts, :map, default: %{}
-  attr :trailers, :boolean, default: true, doc: "false for a division's, printed after its scenes"
 
   @doc """
-  A division's or a scene's own elements: as `texts` holds them, rendered once for both
+  A division's or a scene's own elements, its closing formulas apart (`trailers/1`): as
+  `texts` holds them, rendered once for both
   its page and text.html (`Pages.texts/1`), or rendered here.
   """
   def elements(assigns) do
     case assigns.texts[assigns.of.id] do
       nil ->
         ~H"""
-        <.el :for={el <- own_elements(@of, @trailers)} el={el} edition={@edition} />
+        <.el :for={el <- Division.parts(@of).elements} el={el} edition={@edition} />
         """
 
       html ->
@@ -999,17 +1001,14 @@ defmodule Playcode.Export.StaticSite.Components do
     end
   end
 
-  defp own_elements(of, true), do: of.loaded_elements
-  defp own_elements(of, false), do: of.loaded_elements |> Element.split_trailers() |> elem(0)
-
   attr :of, :map, required: true, doc: "a division"
   attr :edition, :map, required: true
 
-  @doc "A division's closing formulas, after its scenes (`Element.split_trailers/1`)."
+  @doc "A division's closing formulas, after its scenes (`Division.parts/1`)."
   def trailers(assigns) do
     ~H"""
     <.el
-      :for={el <- @of.loaded_elements |> Element.split_trailers() |> elem(1)}
+      :for={el <- Division.parts(@of).trailers}
       el={el}
       edition={@edition}
     />
