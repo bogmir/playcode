@@ -110,7 +110,8 @@ defmodule Playcode.PlayContent do
   """
   def create_character(attrs, opts \\ []) do
     refreshing(attr(attrs, :play_id), opts, fn ->
-      with {:ok, character} <- %Character{} |> Character.changeset(attrs) |> Repo.insert(),
+      with {:ok, character} <-
+             %Character{id: attrs[:id]} |> Character.changeset(attrs) |> Repo.insert(),
            {:ok, _entry} <-
              create_entry(
                %{
@@ -535,7 +536,7 @@ defmodule Playcode.PlayContent do
   """
   def create_division(attrs, opts \\ []) do
     refreshing(attr(attrs, :play_id), opts, fn ->
-      %Division{} |> Division.changeset(attrs) |> Repo.insert() |> ok_or_rollback()
+      %Division{id: attrs[:id]} |> Division.changeset(attrs) |> Repo.insert() |> ok_or_rollback()
     end)
   end
 
@@ -753,7 +754,7 @@ defmodule Playcode.PlayContent do
   """
   def create_element(attrs, opts \\ []) do
     refreshing(attr(attrs, :play_id), opts, fn ->
-      %Element{}
+      %Element{id: attrs[:id]}
       |> Element.changeset(attrs)
       |> Repo.insert()
       |> ok_or_rollback()

@@ -6,6 +6,9 @@ defmodule Playcode.Import.WordParser do
   of each paragraph to annotate structural elements of a play text.
   """
 
+  alias Playcode.{Catalogue, PlayContent}
+  alias Playcode.Import.WordDraft
+
   @doc "The paragraphs of the premarked .docx at `path`, in order, as plain text."
   def paragraphs(path) do
     with {:ok, zip_handle} <- open_zip(path),
@@ -127,16 +130,18 @@ defmodule Playcode.Import.WordParser do
   #
   # Returns `{:ok, %{acts: [...], warnings: [...]}}` or `{:error, reason}`.
   defp parse_content(paragraphs) do
-    parsed_lines = Enum.map(paragraphs, &parse_line/1)
+    parsed_lines = paragraphs |> Enum.map(&parse_line/1) |> Enum.with_index()
 
     {front_lines, content_lines} = split_front_matter(parsed_lines)
 
     {acts, _state} =
       content_lines
-      |> Enum.reduce({[], %{current_act: nil, current_scene: nil, current_speech: nil}}, fn
-        segments, {acts, state} ->
-          process_line(segments, acts, state)
-      end)
+      |> Enum.reduce(
+        {[], %{current_act: nil, current_scene: nil, current_speech: nil, line: nil}},
+        fn {segments, line}, {acts, state} ->
+          process_line(segments, acts, %{state | line: line})
+        end
+      )
 
     acts = finalize_structure(acts)
 
@@ -149,7 +154,7 @@ defmodule Playcode.Import.WordParser do
 
     front_matter =
       front_lines
-      |> Enum.map(&segments_to_text/1)
+      |> Enum.map(fn {segments, _line} -> segments_to_text(segments) end)
       |> Enum.filter(&(&1 != ""))
       |> Enum.join("\n")
 
@@ -160,7 +165,7 @@ defmodule Playcode.Import.WordParser do
 
   defp split_front_matter(parsed_lines) do
     boundary =
-      Enum.find_index(parsed_lines, fn segments ->
+      Enum.find_index(parsed_lines, fn {segments, _line} ->
         has_tag?(segments, :scene) or has_tag?(segments, :act) or
           match?({:ok, _, _}, detect_act_heading(segments))
       end)
@@ -213,14 +218,30 @@ defmodule Playcode.Import.WordParser do
       has_tag?(segments, :act) ->
         heading = get_tag_text(segments, :act)
         act_type = detect_act_type(heading)
-        act = %{type: act_type, head: heading, scenes: [], _direct_elements: [], _open: true}
+
+        act = %{
+          type: act_type,
+          head: heading,
+          scenes: [],
+          _direct_elements: [],
+          _open: true,
+          line: state.line
+        }
 
         {acts ++ [act],
          %{state | current_act: length(acts), current_scene: nil, current_speech: nil}}
 
       match?({:ok, _, _}, detect_act_heading(segments)) ->
         {:ok, act_type, heading} = detect_act_heading(segments)
-        act = %{type: act_type, head: heading, scenes: [], _direct_elements: [], _open: true}
+
+        act = %{
+          type: act_type,
+          head: heading,
+          scenes: [],
+          _direct_elements: [],
+          _open: true,
+          line: state.line
+        }
 
         {acts ++ [act],
          %{state | current_act: length(acts), current_scene: nil, current_speech: nil}}
@@ -238,7 +259,8 @@ defmodule Playcode.Import.WordParser do
               head: scene_text,
               scenes: [],
               _direct_elements: [],
-              _open: true
+              _open: true,
+              line: state.line
             }
 
             {acts ++ [act],
@@ -247,7 +269,7 @@ defmodule Playcode.Import.WordParser do
           is_end_marker?(scene_text) ->
             # {e}THE END → store as unrecognized element, not as scene
             if acts != [] do
-              el = %{type: "unrecognized", content: String.trim(scene_text)}
+              el = %{type: "unrecognized", content: String.trim(scene_text), line: state.line}
               acts = append_element_smart(acts, el)
               {acts, %{state | current_speech: nil}}
             else
@@ -255,8 +277,8 @@ defmodule Playcode.Import.WordParser do
             end
 
           true ->
-            scene = %{head: scene_text, elements: [], _open: true}
-            acts = maybe_insert_act_from_scene_number(acts, scene_text)
+            scene = %{head: scene_text, elements: [], _open: true, line: state.line}
+            acts = maybe_insert_act_from_scene_number(acts, scene_text, state.line)
             acts = ensure_act(acts, state)
             acts = append_scene(acts, scene)
             act_idx = length(acts) - 1
@@ -269,7 +291,7 @@ defmodule Playcode.Import.WordParser do
 
         if String.trim(text) != "" and acts != [] do
           # Store unrecognized text as an element so admin can review
-          el = %{type: "unrecognized", content: String.trim(text)}
+          el = %{type: "unrecognized", content: String.trim(text), line: state.line}
           acts = append_element_smart(acts, el)
           {acts, %{state | current_speech: nil}}
         else
@@ -283,7 +305,7 @@ defmodule Playcode.Import.WordParser do
         if is_sceneless_type?(current_act.type) and current_act.scenes == [] do
           process_direct_content(segments, acts, state)
         else
-          acts = ensure_scene(acts)
+          acts = ensure_scene(acts, state.line)
           process_content_segments(segments, acts, state)
         end
     end
@@ -310,7 +332,7 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
-  defp maybe_insert_act_from_scene_number(acts, scene_text) do
+  defp maybe_insert_act_from_scene_number(acts, scene_text, line) do
     case Regex.run(~r/^(\d+)\.(\d+)/, String.trim(scene_text)) do
       [_, act_num_str, _] ->
         act_num = String.to_integer(act_num_str)
@@ -318,7 +340,16 @@ defmodule Playcode.Import.WordParser do
 
         if current == nil or act_num != current do
           acts ++
-            [%{type: "acto", head: "Act #{act_num}", scenes: [], _open: true, _act_num: act_num}]
+            [
+              %{
+                type: "acto",
+                head: "Act #{act_num}",
+                scenes: [],
+                _open: true,
+                _act_num: act_num,
+                line: line
+              }
+            ]
         else
           acts
         end
@@ -334,17 +365,17 @@ defmodule Playcode.Import.WordParser do
     Map.get(List.last(acts), :_act_num)
   end
 
-  defp ensure_act([], _state) do
-    [%{type: "acto", head: nil, scenes: [], _open: true}]
+  defp ensure_act([], state) do
+    [%{type: "acto", head: nil, scenes: [], _open: true, line: state.line}]
   end
 
   defp ensure_act(acts, _state), do: acts
 
-  defp ensure_scene(acts) do
+  defp ensure_scene(acts, line) do
     act = List.last(acts)
 
     if act.scenes == [] do
-      scene = %{head: nil, elements: [], _open: true}
+      scene = %{head: nil, elements: [], _open: true, line: line}
       List.replace_at(acts, -1, %{act | scenes: [scene]})
     else
       acts
@@ -361,8 +392,16 @@ defmodule Playcode.Import.WordParser do
 
     if has_speaker do
       speaker_label = get_tag_text(segments, :speaker)
-      children = build_children(segments)
-      speech = %{type: "speech", speaker_label: speaker_label, children: children, _open: true}
+      children = build_children(segments, state.line)
+
+      speech = %{
+        type: "speech",
+        speaker_label: speaker_label,
+        children: children,
+        _open: true,
+        line: state.line
+      }
+
       acts = append_element(acts, speech)
       {acts, %{state | current_speech: :open}}
     else
@@ -374,12 +413,12 @@ defmodule Playcode.Import.WordParser do
 
       case content_segments do
         [{:stage_direction, text}] ->
-          el = %{type: "stage_direction", content: text}
+          el = %{type: "stage_direction", content: text, line: state.line}
           acts = append_element(acts, el)
           {acts, state}
 
         [{:stanza, _}] ->
-          stanza = %{type: "line_group", children: []}
+          stanza = %{type: "line_group", children: [], line: state.line}
 
           if state.current_speech == :open do
             {append_children_to_last_speech(acts, [stanza]), state}
@@ -390,7 +429,7 @@ defmodule Playcode.Import.WordParser do
           end
 
         _ ->
-          children = build_children(segments)
+          children = build_children(segments, state.line)
 
           if state.current_speech == :open and children != [] do
             acts = append_children_to_last_speech(acts, children)
@@ -405,7 +444,7 @@ defmodule Playcode.Import.WordParser do
   end
 
   # {ap} anywhere in the paragraph makes its verse and prose asides.
-  defp build_children(segments) do
+  defp build_children(segments, line) do
     aside? = has_tag?(segments, :aside)
 
     segments
@@ -419,6 +458,7 @@ defmodule Playcode.Import.WordParser do
       {:stage_direction, text} -> %{type: "stage_direction", content: text}
       {_other, text} -> %{type: "text", content: text}
     end)
+    |> Enum.map(&Map.put(&1, :line, line))
     |> Enum.reduce([], &join_pieces_split_by_stage/2)
     |> Enum.reverse()
   end
@@ -452,7 +492,7 @@ defmodule Playcode.Import.WordParser do
     if is_sceneless_type?(act.type) and act.scenes == [] do
       append_direct_element(acts, element)
     else
-      acts = ensure_scene(acts)
+      acts = ensure_scene(acts, element.line)
       append_element(acts, element)
     end
   end
@@ -469,8 +509,16 @@ defmodule Playcode.Import.WordParser do
 
     if has_speaker do
       speaker_label = get_tag_text(segments, :speaker)
-      children = build_children(segments)
-      speech = %{type: "speech", speaker_label: speaker_label, children: children, _open: true}
+      children = build_children(segments, state.line)
+
+      speech = %{
+        type: "speech",
+        speaker_label: speaker_label,
+        children: children,
+        _open: true,
+        line: state.line
+      }
+
       acts = append_direct_element(acts, speech)
       {acts, %{state | current_speech: :open_direct}}
     else
@@ -481,12 +529,12 @@ defmodule Playcode.Import.WordParser do
 
       case content_segments do
         [{:stage_direction, text}] ->
-          el = %{type: "stage_direction", content: text}
+          el = %{type: "stage_direction", content: text, line: state.line}
           acts = append_direct_element(acts, el)
           {acts, state}
 
         [{:stanza, _}] ->
-          stanza = %{type: "line_group", children: []}
+          stanza = %{type: "line_group", children: [], line: state.line}
 
           if state.current_speech == :open_direct do
             {append_children_to_last_direct_speech(acts, [stanza]), state}
@@ -495,7 +543,7 @@ defmodule Playcode.Import.WordParser do
           end
 
         _ ->
-          children = build_children(segments)
+          children = build_children(segments, state.line)
 
           if state.current_speech in [:open_direct] and children != [] do
             acts = append_children_to_last_direct_speech(acts, children)
@@ -577,8 +625,18 @@ defmodule Playcode.Import.WordParser do
   end
 
   @doc """
-  Imports premarcado content, from a .docx at a path or from its paragraphs, into an existing play.
-  Deletes any existing content (divisions, elements, characters) first.
+  The play `paragraphs` would make, as `WordDraft` builds it, without writing anything:
+  `{:ok, %{divisions, paratexts, lines, warnings, summary}}`. `play` comes with its
+  paratexts, the ones the import keeps printed beside the new ones.
+  """
+  def draft(paragraphs, play) do
+    with {:ok, parsed} <- parse_content(paragraphs), do: {:ok, WordDraft.build(parsed, play)}
+  end
+
+  @doc """
+  Imports premarcado content, from a .docx at a path or from its paragraphs, into an
+  existing play: its text, characters and front matter of origin `"word"` are replaced by
+  the draft's rows (`draft/2`), as they are there, ids included.
 
   Returns `{:ok, play}` or `{:error, reason}`.
   """
@@ -587,15 +645,15 @@ defmodule Playcode.Import.WordParser do
   end
 
   def import_content(play_id, paragraphs) when is_list(paragraphs) do
-    alias Playcode.{Repo, Catalogue, PlayContent}
+    alias Playcode.Repo
     alias Playcode.Catalogue.Paratext
     alias Playcode.PlayContent.{Character, Division, Element}
     import Ecto.Query
 
-    with {:ok, %{acts: acts, front_matter: front_matter}} <- parse_content(paragraphs) do
-      Repo.transaction(fn ->
-        play = Catalogue.get_play!(play_id)
+    play = Catalogue.get_play_with_all!(play_id)
 
+    with {:ok, draft} <- draft(paragraphs, play) do
+      Repo.transaction(fn ->
         Repo.delete_all(from e in Element, where: e.play_id == ^play_id)
         Repo.delete_all(from d in Division, where: d.play_id == ^play_id)
         Repo.delete_all(from c in Character, where: c.play_id == ^play_id)
@@ -603,85 +661,11 @@ defmodule Playcode.Import.WordParser do
         # digital edition a new play starts with among them, stays.
         Repo.delete_all(from n in Paratext, where: n.play_id == ^play_id and n.origin == "word")
 
-        if front_matter do
-          Catalogue.create_paratext(%{
-            play_id: play_id,
-            kind: "nota_edicion_digital",
-            heading: "Front matter",
-            content: front_matter,
-            position: 0,
-            origin: "word"
-          })
+        for %Paratext{origin: "word"} = paratext <- draft.paratexts do
+          {:ok, _} = Catalogue.create_paratext(row(paratext))
         end
 
-        # The cast list, after the front matter, holding a character per speaker label
-        speaker_labels = speaker_labels(acts)
-
-        {character_map, first_act_position} =
-          if speaker_labels != [] do
-            {:ok, cast_list} =
-              insert_division(%{
-                play_id: play_id,
-                type: "elenco",
-                title: "Dramatis Personae",
-                position: 1
-              })
-
-            {create_characters(speaker_labels, play_id, cast_list.id), 2}
-          else
-            {%{}, 1}
-          end
-
-        # Create structure in DB; the play's numbering rule numbers it afterwards.
-        Enum.with_index(acts, first_act_position)
-        |> Enum.reduce(1, fn {act, act_pos}, act_number ->
-          is_numbered = act.type not in ["prologo", "epilogue", "induction"]
-
-          {:ok, act_div} =
-            insert_division(%{
-              play_id: play_id,
-              type: act.type,
-              title: act.head,
-              number: if(is_numbered, do: act_number, else: nil),
-              position: act_pos
-            })
-
-          # Create elements directly on act division (for scene-less types)
-          direct_elements = Map.get(act, :_direct_elements, [])
-
-          if direct_elements != [] do
-            create_elements(
-              direct_elements,
-              play_id,
-              act_div.id,
-              nil,
-              character_map
-            )
-          end
-
-          Enum.with_index(act.scenes)
-          |> Enum.each(fn {scene, scene_pos} ->
-            {:ok, scene_div} =
-              insert_division(%{
-                play_id: play_id,
-                parent_id: act_div.id,
-                type: "escena",
-                title: scene.head,
-                number: scene_pos + 1,
-                position: scene_pos
-              })
-
-            create_elements(
-              scene.elements,
-              play_id,
-              scene_div.id,
-              nil,
-              character_map
-            )
-          end)
-
-          if is_numbered, do: act_number + 1, else: act_number
-        end)
+        Enum.each(draft.divisions, &insert_division/1)
 
         # The text is new, so no number in it was typed by hand: it is counted by the rule.
         {:ok, play} = Catalogue.update_play(play, %{numbering_manual: false})
@@ -692,204 +676,38 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
-  # The text is counted once, when it is all in (`refresh_derived/1` below), not per row.
-  defp insert_element(attrs), do: Playcode.PlayContent.create_element(attrs, refresh: false)
-  defp insert_division(attrs), do: Playcode.PlayContent.create_division(attrs, refresh: false)
+  # The text is counted once, when it is all in (`refresh_derived/1` above), not per row.
+  defp insert_division(division) do
+    {:ok, _} = PlayContent.create_division(row(division), refresh: false)
 
-  defp speaker_labels(acts) do
-    scene_elements =
-      acts
-      |> Enum.flat_map(& &1.scenes)
-      |> Enum.flat_map(& &1.elements)
-
-    direct_elements =
-      acts
-      |> Enum.flat_map(&Map.get(&1, :_direct_elements, []))
-
-    (scene_elements ++ direct_elements)
-    |> Enum.filter(&(&1.type == "speech" && &1[:speaker_label] && &1.speaker_label != ""))
-    |> Enum.map(& &1.speaker_label)
-    |> Enum.uniq()
-  end
-
-  defp create_characters(speaker_labels, play_id, cast_list_id) do
-    alias Playcode.PlayContent
-
-    speaker_labels
-    |> Enum.with_index()
-    |> Enum.reduce(%{}, fn {label, idx}, acc ->
-      {:ok, char} =
-        PlayContent.create_character_unless_exists(
-          %{
-            play_id: play_id,
-            xml_id: character_xml_id(label, idx),
-            name: label,
-            position: idx,
-            cast_list_id: cast_list_id
-          },
+    for entry <- division.entries do
+      {:ok, _} =
+        PlayContent.create_character(
+          entry.character |> row() |> Map.merge(%{cast_list_id: division.id}),
           refresh: false
         )
+    end
 
-      Map.put(acc, label, char.id)
-    end)
+    Enum.each(division.loaded_elements, &insert_element/1)
+    Enum.each(division.children, &insert_division/1)
   end
 
-  # The xml:id every <sp who> of this speaker cites: the label's letters and digits without
-  # their accents ("ABSALÓN" is absalon), a leading number moved last as the corpus's
-  # editors write it ("1ª Dama" is dama_1), since an XML id may not start with a digit.
-  # A label with neither letter nor digit is numbered by its place among the speakers.
-  defp character_xml_id(label, idx) do
-    id =
-      label
-      |> :unicode.characters_to_nfkd_binary()
-      |> String.replace(~r/\p{Mn}/u, "")
-      |> String.downcase()
-      |> String.replace(~r/[^a-z0-9]+/, "_")
-      |> String.trim("_")
-      |> then(
-        &Regex.replace(~r/^(\d+)(?:_?(?:st|nd|rd|th|er|em|me|e|a|o))?_(.+)$/, &1, "\\2_\\1")
+  defp insert_element(element) do
+    {:ok, _} =
+      PlayContent.create_element(row(element),
+        characters: Enum.map(element.element_characters, & &1.character_id),
+        refresh: false
       )
 
-    if id =~ ~r/^[a-z]/, do: id, else: "character_#{idx + 1}"
+    Enum.each(element.children, &insert_element/1)
   end
 
-  defp create_elements(elements, play_id, division_id, parent_id, character_map) do
-    alias Playcode.PlayContent
-
-    elements
-    |> Playcode.Import.Asides.guess()
-    |> Enum.with_index()
-    |> Enum.each(fn {element, pos} ->
-      case element do
-        %{type: "speech"} ->
-          character_id = Map.get(character_map, element.speaker_label)
-
-          {:ok, speech} =
-            PlayContent.create_element(
-              %{
-                play_id: play_id,
-                division_id: division_id,
-                parent_id: parent_id,
-                type: "speech",
-                speaker_label: element.speaker_label,
-                position: pos
-              },
-              characters: List.wrap(character_id),
-              refresh: false
-            )
-
-          children = Map.get(element, :children, [])
-          create_children(children, play_id, division_id, speech.id)
-
-        %{type: "stage_direction"} ->
-          insert_element(%{
-            play_id: play_id,
-            division_id: division_id,
-            parent_id: parent_id,
-            type: "stage_direction",
-            content: element.content,
-            position: pos
-          })
-
-        %{type: "line_group"} ->
-          create_stanza(element, play_id, division_id, parent_id, pos)
-
-        %{type: "unrecognized"} ->
-          insert_element(%{
-            play_id: play_id,
-            division_id: division_id,
-            parent_id: parent_id,
-            type: "unrecognized",
-            content: element.content,
-            position: pos
-          })
-
-        %{type: "verse_line"} ->
-          create_verse(element, play_id, division_id, parent_id, pos)
-
-        %{type: "prose"} ->
-          insert_element(%{
-            play_id: play_id,
-            division_id: division_id,
-            parent_id: parent_id,
-            type: "prose",
-            content: element.content,
-            is_aside: element[:is_aside] || false,
-            aside_continues: element[:aside_continues] || false,
-            position: pos
-          })
-
-        _ ->
-          :ok
-      end
+  defp row(struct) do
+    struct
+    |> Map.from_struct()
+    |> Map.reject(fn {_key, value} ->
+      match?(%Ecto.Association.NotLoaded{}, value) or is_list(value)
     end)
-  end
-
-  defp create_children(children, play_id, division_id, parent_id) do
-    alias Playcode.PlayContent
-
-    children
-    |> Enum.with_index()
-    |> Enum.each(fn {element, pos} ->
-      case element do
-        %{type: "verse_line"} ->
-          create_verse(element, play_id, division_id, parent_id, pos)
-
-        %{type: "prose"} ->
-          insert_element(%{
-            play_id: play_id,
-            division_id: division_id,
-            parent_id: parent_id,
-            type: "prose",
-            content: element.content,
-            is_aside: element[:is_aside] || false,
-            aside_continues: element[:aside_continues] || false,
-            position: pos
-          })
-
-        %{type: "stage_direction"} ->
-          insert_element(%{
-            play_id: play_id,
-            division_id: division_id,
-            parent_id: parent_id,
-            type: "stage_direction",
-            content: element.content,
-            position: pos
-          })
-
-        %{type: "line_group"} ->
-          create_stanza(element, play_id, division_id, parent_id, pos)
-
-        _ ->
-          :ok
-      end
-    end)
-  end
-
-  defp create_verse(element, play_id, division_id, parent_id, pos) do
-    insert_element(%{
-      play_id: play_id,
-      division_id: division_id,
-      parent_id: parent_id,
-      type: "verse_line",
-      content: element.content,
-      part: element[:part],
-      is_aside: element[:is_aside] || false,
-      aside_continues: element[:aside_continues] || false,
-      position: pos
-    })
-  end
-
-  defp create_stanza(stanza, play_id, division_id, parent_id, pos) do
-    {:ok, group} =
-      insert_element(%{
-        play_id: play_id,
-        division_id: division_id,
-        parent_id: parent_id,
-        type: "line_group",
-        position: pos
-      })
-
-    create_children(Map.get(stanza, :children, []), play_id, division_id, group.id)
+    |> Map.drop([:__meta__])
   end
 end
