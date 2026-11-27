@@ -128,7 +128,7 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
 
   test "the .docx is dropped on a zone named in the page's language", %{conn: conn, play: play} do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/premarked")
-    assert has_element?(lv, "#premarked-upload label", t("Or drop the premarked .docx here"))
+    assert has_element?(lv, "#premarked-upload label", t("Drop or choose the .docx"))
   end
 
   test "a submitted text is read again on the server", %{conn: conn, play: play} do

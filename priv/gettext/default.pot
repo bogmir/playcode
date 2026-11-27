@@ -1838,7 +1838,7 @@ msgstr ""
 msgid "Content imported successfully."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:80
+#: lib/playcode_web/live/admin/play_premarked_live.ex:81
 #, elixir-autogen, elixir-format
 msgid "Only .docx files are accepted."
 msgstr ""
@@ -1858,7 +1858,7 @@ msgstr ""
 #: lib/playcode/export/static_site/components.ex:269
 #: lib/playcode/export/static_site/pages/notes.html.heex:17
 #: lib/playcode/export/static_site/pages/stage_directions.html.heex:19
-#: lib/playcode_web/components/play_text.ex:618
+#: lib/playcode_web/components/play_text.ex:647
 #: lib/playcode_web/live/admin/content_editor/character_review.ex:103
 #: lib/playcode_web/live/admin/play_list_live.ex:239
 #, elixir-autogen, elixir-format
@@ -3308,8 +3308,8 @@ msgstr ""
 #: lib/playcode/export/static_site/components.ex:1233
 #: lib/playcode/export/static_site/components.ex:1250
 #: lib/playcode_web/components/core_components.ex:411
-#: lib/playcode_web/components/play_text.ex:677
-#: lib/playcode_web/components/play_text.ex:695
+#: lib/playcode_web/components/play_text.ex:706
+#: lib/playcode_web/components/play_text.ex:724
 #: lib/playcode_web/live/admin/play_bibliography_live.ex:364
 #, elixir-autogen, elixir-format
 msgid "Close"
@@ -3472,7 +3472,7 @@ msgstr ""
 #: lib/playcode/export/static_site/components.ex:1222
 #: lib/playcode/export/static_site/pages/notes.html.heex:9
 #: lib/playcode_web/components/layouts.ex:268
-#: lib/playcode_web/components/play_text.ex:669
+#: lib/playcode_web/components/play_text.ex:698
 #: lib/playcode_web/live/admin/entry_fields.ex:88
 #: lib/playcode_web/live/admin/notes_component.ex:194
 #: lib/playcode_web/live/admin/notes_component.ex:195
@@ -3699,13 +3699,13 @@ msgstr ""
 msgid "Stage direction in the text: <stage type=\"delivery\">…</stage>"
 msgstr ""
 
-#: lib/playcode_web/components/play_text.ex:614
+#: lib/playcode_web/components/play_text.ex:643
 #: lib/playcode_web/live/admin/play_notes_live.ex:216
 #, elixir-autogen, elixir-format
 msgid "Note type"
 msgstr ""
 
-#: lib/playcode_web/components/play_text.ex:582
+#: lib/playcode_web/components/play_text.ex:611
 #, elixir-autogen, elixir-format
 msgid "line %{n}"
 msgstr ""
@@ -4228,7 +4228,7 @@ msgid "Textual variant"
 msgstr ""
 
 #: lib/playcode/export/static_site/components.ex:1243
-#: lib/playcode_web/components/play_text.ex:688
+#: lib/playcode_web/components/play_text.ex:717
 #, elixir-autogen, elixir-format
 msgid "Textual variants"
 msgstr ""
@@ -5965,7 +5965,7 @@ msgid "No text"
 msgstr ""
 
 #: lib/playcode_web/live/admin/play_list_live.ex:294
-#: lib/playcode_web/live/admin/play_premarked_live.ex:220
+#: lib/playcode_web/live/admin/play_premarked_live.ex:258
 #, elixir-autogen, elixir-format
 msgid "prose"
 msgstr ""
@@ -6908,21 +6908,21 @@ msgstr ""
 msgid "(( with no )): the aside is not read"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:249
+#: lib/playcode_web/live/admin/play_premarked_live.ex:185
 #, elixir-autogen, elixir-format
 msgid "1 act"
 msgid_plural "%{count} acts"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:250
+#: lib/playcode_web/live/admin/play_premarked_live.ex:186
 #, elixir-autogen, elixir-format
 msgid "1 scene"
 msgid_plural "%{count} scenes"
 msgstr[0] ""
 msgstr[1] ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:251
+#: lib/playcode_web/live/admin/play_premarked_live.ex:187
 #, elixir-autogen, elixir-format
 msgid "1 verse"
 msgid_plural "%{count} verses"
@@ -6964,12 +6964,12 @@ msgstr ""
 msgid "An initial part no final part closes"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:266
+#: lib/playcode_web/live/admin/play_premarked_live.ex:209
 #, elixir-autogen, elixir-format
 msgid "Errors"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:311
+#: lib/playcode_web/live/admin/play_premarked_live.ex:322
 #, elixir-autogen, elixir-format
 msgid "Import and replace the text"
 msgstr ""
@@ -6979,14 +6979,9 @@ msgstr ""
 msgid "Markup Playcode cannot store: correct it to import"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:282
+#: lib/playcode_web/live/admin/play_premarked_live.ex:189
 #, elixir-autogen, elixir-format
 msgid "No warnings."
-msgstr ""
-
-#: lib/playcode_web/live/admin/play_premarked_live.ex:201
-#, elixir-autogen, elixir-format
-msgid "Or drop the premarked .docx here"
 msgstr ""
 
 #: lib/playcode_web/live/admin/play_detail_live.ex:473
@@ -7002,17 +6997,17 @@ msgstr ""
 #: lib/playcode_web/live/admin/play_detail_live.ex:481
 #: lib/playcode_web/live/admin/play_premarked_live.ex:31
 #: lib/playcode_web/live/admin/play_premarked_live.ex:168
-#: lib/playcode_web/live/admin/play_premarked_live.ex:187
+#: lib/playcode_web/live/admin/play_premarked_live.ex:232
 #, elixir-autogen, elixir-format
 msgid "Premarked text"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:314
+#: lib/playcode_web/live/admin/play_premarked_live.ex:325
 #, elixir-autogen, elixir-format
 msgid "Replaces the play's text, its characters and their notes. Keeps the play's details, editors, sources, bibliography, witnesses, places, performances and the paratexts typed by hand. Warnings do not stop the import: an unrecognised line is stored, to correct in the content editor."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:253
+#: lib/playcode_web/live/admin/play_premarked_live.ex:192
 #, elixir-autogen, elixir-format
 msgid "Speeches by speaker"
 msgstr ""
@@ -7022,17 +7017,17 @@ msgstr ""
 msgid "Text before the line's first tag, which is lost"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:240
+#: lib/playcode_web/live/admin/play_premarked_live.ex:293
 #, elixir-autogen, elixir-format
 msgid "The play as it would be stored"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:205
+#: lib/playcode_web/live/admin/play_premarked_live.ex:243
 #, elixir-autogen, elixir-format
 msgid "The tags"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:244
+#: lib/playcode_web/live/admin/play_premarked_live.ex:182
 #, elixir-autogen, elixir-format
 msgid "The text is too long to read."
 msgstr ""
@@ -7042,27 +7037,27 @@ msgstr ""
 msgid "The text was not imported."
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:273
+#: lib/playcode_web/live/admin/play_premarked_live.ex:216
 #, elixir-autogen, elixir-format
 msgid "Warnings"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:208
+#: lib/playcode_web/live/admin/play_premarked_live.ex:246
 #, elixir-autogen, elixir-format
 msgid "act (or untagged: “JORNADA I”, “ACTO PRIMERO”)"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:225
+#: lib/playcode_web/live/admin/play_premarked_live.ex:263
 #, elixir-autogen, elixir-format
 msgid "aside: the whole paragraph, or how it is said (“(Aparte)”) before ((…))"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:216
+#: lib/playcode_web/live/admin/play_premarked_live.ex:254
 #, elixir-autogen, elixir-format
 msgid "initial, middle and final parts of a verse split between speakers"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:230
+#: lib/playcode_web/live/admin/play_premarked_live.ex:268
 #, elixir-autogen, elixir-format
 msgid "italics"
 msgstr ""
@@ -7072,32 +7067,42 @@ msgstr ""
 msgid "line %{number}"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:210
+#: lib/playcode_web/live/admin/play_premarked_live.ex:248
 #, elixir-autogen, elixir-format
 msgid "scene"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:212
+#: lib/playcode_web/live/admin/play_premarked_live.ex:250
 #, elixir-autogen, elixir-format
 msgid "speaker"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:222
+#: lib/playcode_web/live/admin/play_premarked_live.ex:260
 #, elixir-autogen, elixir-format
 msgid "stage direction"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:218
+#: lib/playcode_web/live/admin/play_premarked_live.ex:256
 #, elixir-autogen, elixir-format
 msgid "stanza"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:228
+#: lib/playcode_web/live/admin/play_premarked_live.ex:266
 #, elixir-autogen, elixir-format
 msgid "the words said aside within a speech"
 msgstr ""
 
-#: lib/playcode_web/live/admin/play_premarked_live.ex:214
+#: lib/playcode_web/live/admin/play_premarked_live.ex:252
 #, elixir-autogen, elixir-format
 msgid "verse"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_premarked_live.ex:238
+#, elixir-autogen, elixir-format
+msgid "Drop or choose the .docx"
+msgstr ""
+
+#: lib/playcode_web/live/admin/play_premarked_live.ex:179
+#, elixir-autogen, elixir-format
+msgid "Summary"
 msgstr ""
