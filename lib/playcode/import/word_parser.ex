@@ -160,7 +160,33 @@ defmodule Playcode.Import.WordParser do
 
     front_matter = if front_matter == "", do: nil, else: front_matter
 
-    {:ok, %{acts: acts, front_matter: front_matter, warnings: []}}
+    warnings =
+      for {paragraph, line} <- Enum.with_index(paragraphs),
+          kind <- paragraph_warnings(paragraph, line >= length(front_lines)),
+          do: %{line: line, kind: kind}
+
+    {:ok, %{acts: acts, front_matter: front_matter, warnings: warnings}}
+  end
+
+  @unknown_tag ~r/\{(?!(?:e|ac|ap|p|v|ti|tm|tf|pr|m|a)\})[a-z]{1,3}\}/i
+
+  defp paragraph_warnings(paragraph, in_text?) do
+    segments = parse_line(paragraph)
+
+    [
+      unknown_tag: Regex.match?(@unknown_tag, paragraph),
+      dropped_text: in_text? and match?([{:text, _}, _ | _], segments),
+      unclosed_aside: in_text? and unclosed_aside?(paragraph)
+    ]
+    |> Enum.filter(&elem(&1, 1))
+    |> Enum.map(&elem(&1, 0))
+  end
+
+  defp unclosed_aside?(paragraph) do
+    case String.split(paragraph, "((", parts: 2) do
+      [_, after_open] -> not String.contains?(after_open, "))")
+      [_] -> false
+    end
   end
 
   defp split_front_matter(parsed_lines) do
@@ -559,15 +585,22 @@ defmodule Playcode.Import.WordParser do
 
   defp append_children_to_last_direct_speech(acts, children) do
     act = List.last(acts)
-    direct = Map.get(act, :_direct_elements, [])
+    direct = continue_speech(Map.get(act, :_direct_elements, []), children)
+    List.replace_at(acts, -1, %{act | _direct_elements: direct})
+  end
 
-    case List.last(direct) do
-      %{type: type} = parent when type in ["speech", "line_group"] ->
-        updated_direct = List.replace_at(direct, -1, add_children(parent, children))
-        List.replace_at(acts, -1, %{act | _direct_elements: updated_direct})
+  # A speech goes on after the stage directions on their own lines that follow it: they
+  # are its, as the premarking rules split a speech around one.
+  defp continue_speech(elements, children) do
+    {stages, before} =
+      elements |> Enum.reverse() |> Enum.split_while(&(&1.type == "stage_direction"))
+
+    case before do
+      [%{type: type} = parent | rest] when type in ["speech", "line_group"] ->
+        Enum.reverse([add_children(parent, Enum.reverse(stages) ++ children) | rest])
 
       _ ->
-        acts
+        elements ++ children
     end
   end
 
@@ -588,17 +621,7 @@ defmodule Playcode.Import.WordParser do
   end
 
   defp append_children_to_last_speech(acts, children) do
-    update_last_scene(acts, fn scene ->
-      elements = scene.elements
-
-      case List.last(elements) do
-        %{type: type} = parent when type in ["speech", "line_group"] ->
-          %{scene | elements: List.replace_at(elements, -1, add_children(parent, children))}
-
-        _ ->
-          scene
-      end
-    end)
+    update_last_scene(acts, &%{&1 | elements: continue_speech(&1.elements, children)})
   end
 
   defp update_last_scene(acts, fun) do
@@ -630,7 +653,13 @@ defmodule Playcode.Import.WordParser do
   paratexts, the ones the import keeps printed beside the new ones.
   """
   def draft(paragraphs, play) do
-    with {:ok, parsed} <- parse_content(paragraphs), do: {:ok, WordDraft.build(parsed, play)}
+    with {:ok, parsed} <- parse_content(paragraphs) do
+      draft = WordDraft.build(parsed, play)
+      texts = paragraphs |> Enum.map(&String.trim/1) |> List.to_tuple()
+
+      {:ok,
+       %{draft | warnings: Enum.map(draft.warnings, &Map.put(&1, :text, elem(texts, &1.line)))}}
+    end
   end
 
   @doc """

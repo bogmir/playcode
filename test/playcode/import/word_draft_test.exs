@@ -206,4 +206,86 @@ defmodule Playcode.Import.WordDraftTest do
     assert draft.lines[uno.id] == 2
     assert draft.lines[dos.id] == 3
   end
+
+  describe "warnings" do
+    defp warnings(paragraphs) do
+      draft = draft!(paragraphs, play_fixture())
+      Enum.map(draft.warnings, &{&1.line, &1.kind})
+    end
+
+    test "an untagged paragraph after the text starts" do
+      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "OBSERVACIONES:"]) == [{2, :untagged}]
+    end
+
+    test "a tag the parser does not know, left as typed" do
+      assert warnings(["{e}Escena 1", "{R}Vase."]) == [{1, :unknown_tag}]
+    end
+
+    test "text before the paragraph's first tag" do
+      assert warnings(["{e}Escena 1", "Nota {p}FEBO {v}Uno."]) == [{1, :dropped_text}]
+    end
+
+    test "a middle or final part with no initial part open" do
+      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{p}RICARDO {tf}¿No lo ves?"]) ==
+               [{2, :part_without_initial}]
+    end
+
+    test "an initial part no final part closes" do
+      assert warnings(["{e}Escena 1", "{p}FEBO {ti}¿Cantan?", "{p}RICARDO {v}Dos."]) ==
+               [{1, :initial_unfinished}]
+
+      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{ti}pues ¿qué te aflige?"]) ==
+               [{2, :initial_unfinished}]
+    end
+
+    test "a speaker's name tagged as words" do
+      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{pr} FEBO {pr}¡Qué pronto!"]) ==
+               [{2, :speaker_as_words}]
+    end
+
+    test "an end marker, kept as an unrecognised line" do
+      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{e}THE END"]) == [{2, :end_marker}]
+    end
+
+    test "an aside opened and never closed" do
+      assert warnings(["{e}Escena 1", "{p}FEBO {pr}Hola ((aparte sin cerrar"]) ==
+               [{1, :unclosed_aside}]
+    end
+
+    test "each warning keeps the text it is about" do
+      draft = draft!(["{e}Escena 1", "{R}Vase."], play_fixture())
+      assert [%{text: "{R}Vase."}] = draft.warnings
+    end
+
+    test "the exercise has none" do
+      assert warnings(file_paragraphs(@ejercicio)) == []
+    end
+
+    # The fixture stops before the exercise's closing notes; these are its lines.
+    test "the exercise's closing notes are untagged lines" do
+      notes = [
+        "OBSERVACIONES: ",
+        "No se marca \"JORNADA I\" o \"ACTO I\".",
+        "No hay que dejar líneas en blanco. ",
+        "Acotación \"Vase\" al final de una línea se reubica en una nueva línea separada.",
+        "Acotación dentro de un parlamento: se reubica en una nueva línea, y se marca también el texto del diálogo que sigue a la acotación"
+      ]
+
+      paragraphs = file_paragraphs(@ejercicio) ++ ["", ""] ++ notes
+      first = length(paragraphs) - 5
+
+      assert warnings(paragraphs) == for(line <- first..(first + 4), do: {line, :untagged})
+    end
+
+    test "Bartholomew Fair: its names tagged as prose, its untagged paragraphs and its {R}" do
+      counts =
+        @bartholomew |> file_paragraphs() |> warnings() |> Enum.frequencies_by(&elem(&1, 1))
+
+      # The brief counted 30 names and 32 untagged paragraphs by eye: the 38 lines of the cast
+      # list and 31 prose lines carried over untagged are stored unrecognised too, and of the
+      # names it counted, CORN-CUTTER never speaks, so it is not a speaker's name.
+      assert %{speaker_as_words: 28, untagged: 69, unknown_tag: 1} =
+               Map.take(counts, [:speaker_as_words, :untagged, :unknown_tag])
+    end
+  end
 end

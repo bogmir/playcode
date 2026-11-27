@@ -25,7 +25,7 @@ defmodule Playcode.Import.WordDraft do
     Numbering
   }
 
-  def build(%{acts: acts, front_matter: front_matter}, play) do
+  def build(%{acts: acts, front_matter: front_matter, warnings: warnings}, play) do
     {acts, lines} = identify(acts)
     characters = characters(acts, play.id)
     cast_list = cast_list(characters, play.id)
@@ -35,15 +35,71 @@ defmodule Playcode.Import.WordDraft do
       List.wrap(cast_list) ++ act_divisions(acts, play.id, first_act_position, characters)
 
     divisions = number(divisions, play)
+    labels = MapSet.new(characters, fn {label, _character} -> String.upcase(label) end)
 
     %{
       divisions: divisions,
       paratexts: kept_paratexts(play) ++ front_matter(front_matter, play.id),
       lines: lines,
-      warnings: [],
+      warnings: warnings(warnings, row_warnings(divisions, lines, labels)),
       summary: summary(divisions)
     }
   end
+
+  defp warnings(paragraph_warnings, row_warnings) do
+    unknown =
+      for %{kind: :unknown_tag, line: line} <- paragraph_warnings, into: MapSet.new(), do: line
+
+    (paragraph_warnings ++
+       Enum.reject(row_warnings, &(&1.kind == :untagged and &1.line in unknown)))
+    |> Enum.sort_by(& &1.line)
+  end
+
+  defp row_warnings(divisions, lines, labels) do
+    elements = Enum.flat_map(divisions, &all_elements/1)
+
+    rows =
+      for element <- elements, kind = row_warning(element, labels), do: {element.id, kind}
+
+    rows = rows ++ split_verse_warnings(reading_order(divisions))
+    for {id, kind} <- rows, do: %{line: Map.fetch!(lines, id), kind: kind}
+  end
+
+  defp row_warning(%{type: "unrecognized", content: content}, _labels),
+    do: if(content =~ ~r/^THE\s+END\b/i, do: :end_marker, else: :untagged)
+
+  defp row_warning(%{type: type, content: content}, labels) when type in ~w(verse_line prose) do
+    if String.upcase(String.trim(content || "")) in labels, do: :speaker_as_words
+  end
+
+  defp row_warning(_element, _labels), do: nil
+
+  defp split_verse_warnings(rows) do
+    {warnings, open} =
+      rows |> Enum.filter(&(&1.type == "verse_line")) |> Enum.reduce({[], nil}, &split_part/2)
+
+    warnings ++ List.wrap(open && unfinished(open))
+  end
+
+  defp split_part(row, {warnings, open}) do
+    {warnings, open} =
+      if open && scene(open) != scene(row),
+        do: {[unfinished(open) | warnings], nil},
+        else: {warnings, open}
+
+    case {row.part, open} do
+      {"I", nil} -> {warnings, row}
+      {"I", open} -> {[unfinished(open) | warnings], row}
+      {part, nil} when part in ~w(M F) -> {[{row.id, :part_without_initial} | warnings], nil}
+      {"M", open} -> {warnings, open}
+      {"F", _open} -> {warnings, nil}
+      {_whole, nil} -> {warnings, nil}
+      {_whole, open} -> {[unfinished(open) | warnings], nil}
+    end
+  end
+
+  defp scene(row), do: {row.act_id, row.scene_id}
+  defp unfinished(open), do: {open.id, :initial_unfinished}
 
   defp identify(acts) do
     {acts, lines} = Enum.map_reduce(acts, %{}, &identify_act/2)

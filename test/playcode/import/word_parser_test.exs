@@ -62,6 +62,43 @@ defmodule Playcode.Import.WordParserTest do
     end
   end
 
+  describe "a stage direction on its own line inside a speech" do
+    test "is the speech's, when the speech goes on after it" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}FEBO {pr}Uno.",
+          "{ac}[To Mooncalf]",
+          "{pr}Dos.",
+          "{ac}[Enter WHIT.]",
+          "{ac}[Aside]",
+          "{v}Tres."
+        ])
+
+      assert speeches(xml) == ["FEBO Uno. [To Mooncalf] Dos. [Enter WHIT.] [Aside] Tres."]
+
+      assert xml_texts(xml, "stage", within: "sp") == [
+               "[To Mooncalf]",
+               "[Enter WHIT.]",
+               "[Aside]"
+             ]
+    end
+
+    test "is the same in a prologue, which has no scenes" do
+      xml = import_word(["PROLOGUE", "{p}PROLOGUE {pr}Uno.", "{ac}[Bows]", "{pr}Dos."])
+
+      assert speeches(xml) == ["PROLOGUE Uno. [Bows] Dos."]
+    end
+
+    test "stays between the speeches when the next line starts a new one" do
+      xml = import_word(["{e}Escena 1", "{p}FEBO {v}Uno.", "{ac}Vase.", "{p}RICARDO {v}Dos."])
+
+      assert speeches(xml) == ["FEBO Uno.", "RICARDO Dos."]
+      assert xml_texts(xml, "stage", within: "sp") == []
+      assert xml_texts(xml, "stage") == ["Vase."]
+    end
+  end
+
   describe "the tags" do
     test "speaker, verse, prose and stage direction, in any case" do
       xml =
