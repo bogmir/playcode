@@ -25,3 +25,14 @@ export function lineAtHeight(tops, y) {
   }
   return Math.max(low, 0);
 }
+
+export function spanAt(starts, y) {
+  const index = lineAtHeight(starts, y);
+  const [start, end] = [starts[index] ?? 0, starts[index + 1] ?? starts[index] ?? 0];
+  return { index, fraction: end > start ? Math.min(1, Math.max(0, (y - start) / (end - start))) : 0 };
+}
+
+export function heightAt(starts, index, fraction) {
+  const [start, end] = [starts[index] ?? 0, starts[index + 1] ?? starts[index] ?? 0];
+  return start + fraction * (end - start);
+}

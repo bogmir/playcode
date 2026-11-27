@@ -25,7 +25,7 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/playcode"
 import topbar from "../vendor/topbar"
 import {syncPanels} from "./sync_scroll.mjs"
-import {lineAt, rangeOf, nearestMarked, lineAtHeight} from "./premarked.mjs"
+import {lineAt, rangeOf, nearestMarked, lineAtHeight, spanAt, heightAt} from "./premarked.mjs"
 // The published site's script: its EMOTHE.stepper runs the play page's arrows too.
 import "../../priv/static_site/site.js"
 
@@ -58,10 +58,10 @@ const PremarkedText = {
       }
     }
     this.el.addEventListener("scroll", () => {
-      if (this.leader === this.el) this.frame(() => this.previewTo(lineAtHeight(this.tops(), this.el.scrollTop)))
+      if (this.leader === this.el) this.frame(() => this.previewFollows())
     })
     this.preview.addEventListener("scroll", () => {
-      if (this.leader === this.preview) this.frame(() => { this.el.scrollTop = this.tops()[this.previewLine()] ?? 0 })
+      if (this.leader === this.preview) this.frame(() => this.textFollows())
     })
     this.onResize = () => { this.lineTops = null }
     window.addEventListener("resize", this.onResize)
@@ -104,10 +104,31 @@ const PremarkedText = {
     const nearest = nearestMarked(marked.map((el) => Number(el.dataset.line)), line)
     return marked.find((el) => Number(el.dataset.line) === nearest)
   },
-  previewLine() {
-    const top = this.preview.getBoundingClientRect().top
-    const row = [...this.preview.querySelectorAll("[data-line]")].find((el) => el.getBoundingClientRect().bottom > top)
-    return row ? Number(row.dataset.line) : 0
+  // Each line of the text the preview shows, with where its first row starts, in order.
+  previewSpans() {
+    const offset = this.preview.scrollTop - this.preview.getBoundingClientRect().top
+    const lines = []
+    const starts = []
+    for (const row of this.preview.querySelectorAll("[data-line]")) {
+      const line = Number(row.dataset.line)
+      if (line === lines.at(-1)) continue
+      lines.push(line)
+      starts.push(row.getBoundingClientRect().top + offset)
+    }
+    return {lines, starts}
+  },
+  // As far through its paragraph as the text box's top is, so is the preview's.
+  previewFollows() {
+    const {index: line, fraction} = spanAt(this.tops(), this.el.scrollTop)
+    const {lines, starts} = this.previewSpans()
+    const shown = lineAtHeight(lines, line)
+    const through = lines[shown] === line ? fraction : Number(lines[shown] < line)
+    this.preview.scrollTop = heightAt(starts, shown, through)
+  },
+  textFollows() {
+    const {lines, starts} = this.previewSpans()
+    const {index, fraction} = spanAt(starts, this.preview.scrollTop)
+    if (lines.length) this.el.scrollTop = heightAt(this.tops(), lines[index], fraction)
   },
   previewTo(line, from = 0) {
     const target = this.rowFor(line)
