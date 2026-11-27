@@ -6,13 +6,20 @@ defmodule Playcode.Import.WordParser do
   of each paragraph to annotate structural elements of a play text.
   """
 
-  defp extract_paragraphs(path) do
+  @doc "The paragraphs of the premarked .docx at `path`, in order, as plain text."
+  def paragraphs(path) do
     with {:ok, zip_handle} <- open_zip(path),
          {:ok, document_xml} <- read_zip_entry(zip_handle, ~c"word/document.xml") do
       paragraphs = extract_paragraphs_from_xml(document_xml)
       {:ok, paragraphs}
     end
   end
+
+  @doc """
+  Pasted text as the paragraphs a .docx would give: one per line, a blank line kept as `""`,
+  so a paragraph's index is its line in the text box.
+  """
+  def paragraphs_from_text(text), do: String.split(text, ~r/\r?\n/)
 
   defp unescape_xml(text) do
     text
@@ -570,19 +577,22 @@ defmodule Playcode.Import.WordParser do
   end
 
   @doc """
-  Imports premarcado content from a .docx file into an existing play.
+  Imports premarcado content, from a .docx at a path or from its paragraphs, into an existing play.
   Deletes any existing content (divisions, elements, characters) first.
 
   Returns `{:ok, play}` or `{:error, reason}`.
   """
-  def import_content(play_id, path) do
+  def import_content(play_id, path) when is_binary(path) do
+    with {:ok, paragraphs} <- paragraphs(path), do: import_content(play_id, paragraphs)
+  end
+
+  def import_content(play_id, paragraphs) when is_list(paragraphs) do
     alias Playcode.{Repo, Catalogue, PlayContent}
     alias Playcode.Catalogue.Paratext
     alias Playcode.PlayContent.{Character, Division, Element}
     import Ecto.Query
 
-    with {:ok, paragraphs} <- extract_paragraphs(path),
-         {:ok, %{acts: acts, front_matter: front_matter}} <- parse_content(paragraphs) do
+    with {:ok, %{acts: acts, front_matter: front_matter}} <- parse_content(paragraphs) do
       Repo.transaction(fn ->
         play = Catalogue.get_play!(play_id)
 

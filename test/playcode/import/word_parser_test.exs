@@ -33,6 +33,35 @@ defmodule Playcode.Import.WordParserTest do
     end
   end
 
+  describe "pasted text" do
+    test "imports as the .docx it was copied from" do
+      path = "test/fixtures/word_files/ejercicio.docx"
+      {:ok, paragraphs} = WordParser.paragraphs(path)
+      pasted = paragraphs |> Enum.join("\n") |> WordParser.paragraphs_from_text()
+
+      from_text = play_fixture()
+      from_docx = play_fixture()
+      assert {:ok, _} = WordParser.import_content(from_text.id, pasted)
+      assert {:ok, _} = WordParser.import_content(from_docx.id, path)
+
+      text_xml = export_tei(from_text)
+      docx_xml = export_tei(from_docx)
+      assert speeches(text_xml) == speeches(docx_xml)
+      assert xml_texts(text_xml, "l") == xml_texts(docx_xml, "l")
+      assert speeches(text_xml) != []
+    end
+
+    test "reads Windows line endings and keeps blank lines as empty paragraphs" do
+      paragraphs = WordParser.paragraphs_from_text("{e}Escena 1\r\n\r\n{p}FEBO {v}Uno.\r\n")
+
+      assert paragraphs == ["{e}Escena 1", "", "{p}FEBO {v}Uno.", ""]
+
+      play = play_fixture()
+      assert {:ok, _} = WordParser.import_content(play.id, paragraphs)
+      assert xml_texts(export_tei(play), "l") == ["Uno."]
+    end
+  end
+
   describe "the tags" do
     test "speaker, verse, prose and stage direction, in any case" do
       xml =
