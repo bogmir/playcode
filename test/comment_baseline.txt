@@ -51,7 +51,7 @@ lib/playcode/import/tei_import.ex 129
 lib/playcode/import/tei_parser.ex 309
 lib/playcode/import/witnesses.ex 8
 lib/playcode/import/word_draft.ex 1
-lib/playcode/import/word_parser.ex 26
+lib/playcode/import/word_parser.ex 31
 lib/playcode/performances.ex 26
 lib/playcode/performances/actor.ex 2
 lib/playcode/performances/cast_member.ex 1

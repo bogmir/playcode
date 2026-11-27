@@ -131,6 +131,7 @@ defmodule Playcode.Import.WordParser do
   #
   # Returns `{:ok, %{acts: [...], warnings: [...]}}` or `{:error, reason}`.
   defp parse_content(paragraphs) do
+    paragraphs = mend(paragraphs)
     parsed_lines = paragraphs |> Enum.map(&parse_line/1) |> Enum.with_index()
 
     {front_lines, content_lines} = split_front_matter(parsed_lines)
@@ -167,6 +168,116 @@ defmodule Playcode.Import.WordParser do
           do: %{line: line, kind: kind}
 
     {:ok, %{acts: acts, front_matter: front_matter, warnings: warnings}}
+  end
+
+  @spaced_tag ~r/\{\s*(e|ac|ap|p|v|ti|tm|tf|pr|m|a)\s*\}/i
+  @braced_name ~r/(\{p\}\s*)\{([^{}]+)\}/i
+
+  # What the text can mean only one way is read that way, each paragraph keeping its line: a
+  # speaker's name under another tag, before the speech's own, is the speaker; an untagged
+  # paragraph after a speech's prose is the rest of it (the .docx breaks prose, often
+  # mid-sentence), joined onto it and left empty itself; an aside such a break cuts, closed
+  # later in the speech, is closed and reopened at each break, for `Asides` to join again.
+  defp mend(paragraphs) do
+    paragraphs = Enum.map(paragraphs, &String.replace(&1, @spaced_tag, "{\\1}"))
+
+    speakers =
+      for paragraph <- paragraphs,
+          {:speaker, name} <- parse_line(paragraph),
+          into: MapSet.new(),
+          do: String.upcase(name)
+
+    paragraphs
+    |> Enum.map(&(&1 |> unbrace_speaker(speakers) |> as_speaker(speakers)))
+    |> join_prose()
+    |> carry_asides()
+  end
+
+  defp unbrace_speaker(paragraph, speakers) do
+    Regex.replace(@braced_name, paragraph, fn whole, tag, name ->
+      if String.upcase(String.trim(name)) in speakers, do: tag <> name <> " ", else: whole
+    end)
+  end
+
+  defp carry_asides([]), do: []
+
+  defp carry_asides([paragraph | rest]) do
+    if unclosed_aside?(paragraph) and closed_later?(rest),
+      do: [paragraph <> "))" | carry_asides(reopen_aside(rest))],
+      else: [paragraph | carry_asides(rest)]
+  end
+
+  @spoken_tag ~r/\{(?:pr|v|ti|tm|tf)\}\s*/iu
+
+  defp reopen_aside([next | rest]) do
+    cond do
+      Regex.match?(@spoken_tag, next) ->
+        [Regex.replace(@spoken_tag, next, "\\0((", global: false) | rest]
+
+      String.contains?(next, "))") ->
+        [String.replace(next, "))", "", global: false) | rest]
+
+      true ->
+        [next | reopen_aside(rest)]
+    end
+  end
+
+  defp closed_later?(rest) do
+    speech =
+      rest |> Enum.take_while(&(not Regex.match?(~r/\{(?:p|e|a)\}/i, &1))) |> Enum.join(" ")
+
+    case {:binary.match(speech, "))"), :binary.match(speech, "((")} do
+      {:nomatch, _} -> false
+      {_close, :nomatch} -> true
+      {{close, _}, {open, _}} -> close < open
+    end
+  end
+
+  @named_before_tag ~r/^\s*\{(?!(?:e|a)\})[a-z]{1,3}\}\s*([^{]+?)\s*(\{.*)$/isu
+
+  defp as_speaker(paragraph, speakers) do
+    case Regex.run(@named_before_tag, paragraph) do
+      [_, name, rest] ->
+        if String.upcase(name) in speakers, do: "{P} #{name} #{rest}", else: paragraph
+
+      nil ->
+        paragraph
+    end
+  end
+
+  defp join_prose(paragraphs) do
+    {groups, _in_speech?} =
+      Enum.reduce(paragraphs, {[], false}, fn paragraph, {groups, in_speech?} ->
+        segments = parse_line(paragraph)
+
+        if in_speech? and match?([{:text, _}], segments) and ends_in_prose?(groups) do
+          [group | rest] = groups
+          {[[paragraph | group] | rest], true}
+        else
+          {[[paragraph] | groups], in_speech?(segments, in_speech?)}
+        end
+      end)
+
+    groups
+    |> Enum.reverse()
+    |> Enum.flat_map(fn group ->
+      [first | rest] = Enum.reverse(group)
+      [Enum.map_join([first | rest], " ", &String.trim/1) | Enum.map(rest, fn _ -> "" end)]
+    end)
+  end
+
+  defp ends_in_prose?([group | _]),
+    do: match?({:prose, _}, group |> List.last() |> parse_line() |> List.last())
+
+  defp ends_in_prose?([]), do: false
+
+  defp in_speech?(segments, in_speech?) do
+    cond do
+      has_tag?(segments, :speaker) -> true
+      has_tag?(segments, :scene) or has_tag?(segments, :act) -> false
+      match?([{:text, _}], segments) -> false
+      true -> in_speech?
+    end
   end
 
   @unknown_tag ~r/\{(?!(?:e|ac|ap|p|v|ti|tm|tf|pr|m|a)\})[a-z]{1,3}\}/i

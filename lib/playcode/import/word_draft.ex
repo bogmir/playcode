@@ -96,14 +96,16 @@ defmodule Playcode.Import.WordDraft do
     {acts, lines}
   end
 
+  defp aside_pieces(elements), do: elements |> Asides.across_breaks() |> Asides.guess()
+
   defp identify_act(act, ids) do
     {act, ids} = with_id(act, ids)
-    {direct, ids} = identify_elements(Asides.guess(Map.get(act, :_direct_elements, [])), ids)
+    {direct, ids} = identify_elements(aside_pieces(Map.get(act, :_direct_elements, [])), ids)
 
     {scenes, ids} =
       Enum.map_reduce(act.scenes, ids, fn scene, ids ->
         {scene, ids} = with_id(scene, ids)
-        {elements, ids} = identify_elements(Asides.guess(scene.elements), ids)
+        {elements, ids} = identify_elements(aside_pieces(scene.elements), ids)
         {%{scene | elements: elements}, ids}
       end)
 

@@ -271,6 +271,88 @@ defmodule Playcode.Import.WordDraftTest do
     assert draft.lines[dos.id] == 3
   end
 
+  describe "what the import mends" do
+    defp spoken(draft) do
+      for {type, content, _n, _part, label, _aside, _continues, _position, _speakers} <-
+            rows(draft.divisions),
+          type in ~w(speech prose verse_line),
+          do: if(type == "speech", do: {:speech, label}, else: content)
+    end
+
+    defp mended(paragraphs) do
+      draft = assert_draft_is_stored(paragraphs)
+      {spoken(draft), Enum.map(draft.warnings, &{&1.line, &1.kind})}
+    end
+
+    test "an untagged paragraph after prose in a speech is the rest of that prose" do
+      assert mended(["{e}Escena 1", "{p}FEBO {pr}Uno, que", "llega tarde.", "más."]) ==
+               {[{:speech, "FEBO"}, "Uno, que llega tarde. más."], []}
+    end
+
+    test "an aside cut by such a paragraph break closes" do
+      assert {_spoken, []} =
+               mended(["{e}Escena 1", "{p}FEBO {pr}Hola ((aparte que", "sigue)) y fin."])
+    end
+
+    test "a speaker's name under another tag, before the speech's own, is the speaker" do
+      assert mended([
+               "{e}Escena 1",
+               "{p}MOONCALF {pr}Uno.",
+               "{pr} MOONCALF {pr}Dos.",
+               "{R} MOONCALF {v}Tres."
+             ]) ==
+               {[
+                  {:speech, "MOONCALF"},
+                  "Uno.",
+                  {:speech, "MOONCALF"},
+                  "Dos.",
+                  {:speech, "MOONCALF"},
+                  "Tres."
+                ], []}
+    end
+
+    test "a tag with spaces inside its braces, and a speaker's name in braces" do
+      assert mended(["{e}Escena 1", "{p}COKES {PR }Uno.", "{p} {COKES}{pr}Dos."]) ==
+               {[{:speech, "COKES"}, "Uno.", {:speech, "COKES"}, "Dos."], []}
+    end
+
+    test "an aside a paragraph break cuts is one aside, across a stage direction too" do
+      draft =
+        assert_draft_is_stored([
+          "{e}Escena 1",
+          "{p}FEBO {pr}Hola ((aparte",
+          "{pr}que sigue)) y fin.",
+          "{p}WASP {pr}((Uno.",
+          "{ac}Se mueve.))",
+          "{p}BRISTLE {pr}Dos."
+        ])
+
+      assert draft.warnings == []
+
+      asides =
+        for {_type, content, _n, _part, _label, true, continues, _position, _speakers} <-
+              rows(draft.divisions),
+            do: {content, continues}
+
+      assert asides == [
+               {"Hola <aside>aparte</aside>", false},
+               {"<aside>que sigue</aside> y fin.", true},
+               {"<aside>Uno.</aside>", false}
+             ]
+
+      assert "Se mueve." in Enum.map(rows(draft.divisions), &elem(&1, 1))
+    end
+
+    test "what cannot be told apart stays as typed, and warned" do
+      assert {_spoken, [{2, :untagged}]} = mended(["{e}Escena 1", "{p}FEBO {v}Uno,", "dos."])
+
+      assert {_spoken, [{3, :untagged}]} =
+               mended(["{e}Escena 1", "{p}FEBO {pr}Uno.", "{ac}Vase.", "Nota."])
+
+      assert {_spoken, [{1, :untagged}]} = mended(["{e}Escena 1", "JOHN LITTLEWIT a proctor"])
+    end
+  end
+
   describe "warnings" do
     defp warnings(paragraphs) do
       draft = draft!(paragraphs, play_fixture())
@@ -321,8 +403,10 @@ defmodule Playcode.Import.WordDraftTest do
              ]) == [{2, :initial_unfinished}, {5, :part_without_initial}]
     end
 
+    # A name followed by the speech's own tag is read as the speaker ("what the import
+    # mends"); one standing alone is left as typed.
     test "a speaker's name tagged as words" do
-      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{pr} FEBO {pr}¡Qué pronto!"]) ==
+      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{pr} FEBO", "{v}¡Qué pronto!"]) ==
                [{2, :speaker_as_words}]
     end
 
@@ -364,11 +448,10 @@ defmodule Playcode.Import.WordDraftTest do
       counts =
         @bartholomew |> file_paragraphs() |> warnings() |> Enum.frequencies_by(&elem(&1, 1))
 
-      # The brief counted 30 names and 32 untagged paragraphs by eye: the 38 lines of the cast
-      # list and 31 prose lines carried over untagged are stored unrecognised too, and of the
-      # names it counted, CORN-CUTTER never speaks, so it is not a speaker's name.
-      assert %{speaker_as_words: 28, untagged: 69, unknown_tag: 1} =
-               Map.take(counts, [:speaker_as_words, :untagged, :unknown_tag])
+      # Its 28 names tagged as prose, its {R}, its 31 prose paragraphs carried over untagged
+      # and the asides they split are mended ("what the import mends"); left are the 38 lines
+      # of the cast list, which premarking has no tag for, and its closing THE END.
+      assert counts == %{untagged: 38, end_marker: 1}
     end
   end
 

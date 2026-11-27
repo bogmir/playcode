@@ -13,14 +13,16 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
 
   @ejercicio "test/fixtures/word_files/ejercicio.docx"
 
+  # What the import mends (a name before the speech's own tag, prose carried over untagged)
+  # warns of nothing, so each line here is a kind it cannot mend.
   @every_kind [
     "{e}Escena 1",
     "{p}FEBO {v}Uno.",
     "{R}Vase.",
-    "{pr} FEBO {pr}¡Qué pronto!",
+    "{pr} FEBO",
     "{p}RICARDO {tf}¿No lo ves?",
     "Nota {p}FEBO {v}Dos.",
-    "{p}FEBO {pr}Hola ((aparte sin cerrar",
+    "{p}FEBO {v}Hola ((aparte sin cerrar",
     "OBSERVACIONES:",
     "{p}RICARDO {ti}pues ¿qué te aflige?",
     "{e}THE END"
