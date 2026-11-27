@@ -39,6 +39,11 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
 
   defp stored(play), do: PlayContent.load_play_content(play.id)
 
+  test "the text box is left to the browser", %{conn: conn, play: play} do
+    {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/premarked")
+    assert has_element?(lv, "#premarked-text[phx-update=ignore]")
+  end
+
   test "pasting text shows the play as it would be stored, and stores nothing",
        %{conn: conn, play: play} do
     before = stored(play)
@@ -85,7 +90,10 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
     ])
     |> render_upload("ejercicio.docx")
 
-    assert has_element?(lv, "#premarked-text", "{e}Escena 1")
+    # The text box is the browser's (phx-update="ignore"): a re-render would otherwise empty
+    # it, and sending it back on every edit doubled each reply. The .docx reaches it as an event.
+    assert_push_event(lv, "premarked:fill", %{text: text})
+    assert text =~ "{e}Escena 1"
     assert has_element?(lv, "#premarked-preview", "Será remedio casarte.")
   end
 

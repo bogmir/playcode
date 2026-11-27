@@ -74,7 +74,8 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
 
       case result do
         {:ok, paragraphs} ->
-          {:noreply, preview(socket, Enum.join(paragraphs, "\n"))}
+          text = Enum.join(paragraphs, "\n")
+          {:noreply, socket |> push_event("premarked:fill", %{text: text}) |> preview(text)}
 
         {:error, _reason} ->
           {:noreply, put_flash(socket, :error, gettext("Only .docx files are accepted."))}
@@ -87,17 +88,16 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
   defp preview(socket, text) do
     cond do
       String.trim(text) == "" ->
-        assign(socket, text: text, draft: nil, too_long?: false)
+        assign(socket, draft: nil, too_long?: false)
 
       byte_size(text) > @max_bytes ->
-        assign(socket, text: text, draft: nil, too_long?: true)
+        assign(socket, draft: nil, too_long?: true)
 
       true ->
         {:ok, draft} =
           WordParser.draft(WordParser.paragraphs_from_text(text), socket.assigns.play)
 
         assign(socket,
-          text: text,
           draft: draft,
           too_long?: false,
           leads: draft.divisions |> Element.verse_lines() |> SplitVerses.leads(),
@@ -191,10 +191,11 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
               name="text"
               phx-debounce="400"
               phx-hook="PremarkedText"
+              phx-update="ignore"
               data-play={@play.id}
               spellcheck="false"
               class="textarea h-[32rem] w-full resize-y font-mono text-xs leading-relaxed"
-            >{@text}</textarea>
+            ></textarea>
           </form>
 
           <form id="premarked-upload" phx-change="validate_upload" class="mt-2">

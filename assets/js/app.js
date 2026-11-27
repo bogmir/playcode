@@ -41,7 +41,7 @@ const PremarkedText = {
       this.el.value = kept
       this.el.dispatchEvent(new Event("input", {bubbles: true}))
     }
-    this.el.addEventListener("input", () => this.stored(() => localStorage.setItem(this.key, this.el.value)))
+    this.el.addEventListener("input", () => this.keep())
     const follow = () => this.show(lineAt(this.el.value, this.el.selectionStart))
     this.el.addEventListener("click", follow)
     this.el.addEventListener("keyup", follow)
@@ -50,9 +50,11 @@ const PremarkedText = {
       if (target) this.select(Number(target.dataset.line))
     }
     document.addEventListener("click", this.onClick)
+    this.handleEvent("premarked:fill", ({text}) => { this.el.value = text; this.keep() })
     this.handleEvent("premarked:clear", () => this.stored(() => localStorage.removeItem(this.key)))
   },
   destroyed() { document.removeEventListener("click", this.onClick) },
+  keep() { this.stored(() => localStorage.setItem(this.key, this.el.value)) },
   // A private window or blocked storage leaves the page working, without it.
   stored(use) { try { return use() } catch (_error) { return null } },
   show(line) {

@@ -27,7 +27,7 @@ defmodule Playcode.Import.WordDraft do
   }
 
   def build(%{acts: acts, front_matter: front_matter, warnings: warnings}, play) do
-    {acts, lines} = identify(acts)
+    {acts, lines} = identify(acts, play.id)
     characters = characters(acts, play.id)
     cast_list = cast_list(characters, play.id)
     first_act_position = if cast_list, do: 2, else: 1
@@ -106,37 +106,46 @@ defmodule Playcode.Import.WordDraft do
   defp scene(row), do: {row.act_id, row.scene_id}
   defp unfinished(open), do: {open.id, :initial_unfinished}
 
-  defp identify(acts) do
-    {acts, lines} = Enum.map_reduce(acts, %{}, &identify_act/2)
+  defp identify(acts, play_id) do
+    {acts, {lines, _seen, _play_id}} = Enum.map_reduce(acts, {%{}, %{}, play_id}, &identify_act/2)
     {acts, lines}
   end
 
-  defp identify_act(act, lines) do
-    {act, lines} = with_id(act, lines)
-    {direct, lines} = identify_elements(Asides.guess(Map.get(act, :_direct_elements, [])), lines)
+  defp identify_act(act, ids) do
+    {act, ids} = with_id(act, ids)
+    {direct, ids} = identify_elements(Asides.guess(Map.get(act, :_direct_elements, [])), ids)
 
-    {scenes, lines} =
-      Enum.map_reduce(act.scenes, lines, fn scene, lines ->
-        {scene, lines} = with_id(scene, lines)
-        {elements, lines} = identify_elements(Asides.guess(scene.elements), lines)
-        {%{scene | elements: elements}, lines}
+    {scenes, ids} =
+      Enum.map_reduce(act.scenes, ids, fn scene, ids ->
+        {scene, ids} = with_id(scene, ids)
+        {elements, ids} = identify_elements(Asides.guess(scene.elements), ids)
+        {%{scene | elements: elements}, ids}
       end)
 
-    {%{act | scenes: scenes} |> Map.put(:_direct_elements, direct), lines}
+    {%{act | scenes: scenes} |> Map.put(:_direct_elements, direct), ids}
   end
 
-  defp identify_elements(elements, lines) do
-    Enum.map_reduce(elements, lines, fn element, lines ->
-      {element, lines} = with_id(element, lines)
-      {children, lines} = identify_elements(Map.get(element, :children, []), lines)
-      {Map.put(element, :children, children), lines}
+  defp identify_elements(elements, ids) do
+    Enum.map_reduce(elements, ids, fn element, ids ->
+      {element, ids} = with_id(element, ids)
+      {children, ids} = identify_elements(Map.get(element, :children, []), ids)
+      {Map.put(element, :children, children), ids}
     end)
   end
 
-  defp with_id(row, lines) do
-    id = Ecto.UUID.generate()
+  defp with_id(row, {lines, seen, play_id}) do
     line = Map.get(row, :line)
-    {Map.put(row, :id, id), if(line, do: Map.put(lines, id, line), else: lines)}
+    nth = Map.get(seen, line, 0)
+    id = stable_id(play_id, {line, nth})
+    lines = if line, do: Map.put(lines, id, line), else: lines
+    {Map.put(row, :id, id), {lines, Map.put(seen, line, nth + 1), play_id}}
+  end
+
+  defp stable_id(play_id, key) do
+    <<a::48, _::4, b::12, _::2, c::62, _::binary>> =
+      :crypto.hash(:sha256, :erlang.term_to_binary({play_id, key}))
+
+    Ecto.UUID.cast!(<<a::48, 8::4, b::12, 2::2, c::62>>)
   end
 
   defp characters(acts, play_id) do
@@ -152,7 +161,7 @@ defmodule Playcode.Import.WordDraft do
       xml_id = unique_xml_id(character_xml_id(label, index), taken)
 
       character = %Character{
-        id: Ecto.UUID.generate(),
+        id: stable_id(play_id, {:character, xml_id}),
         play_id: play_id,
         xml_id: xml_id,
         name: label,
@@ -191,7 +200,7 @@ defmodule Playcode.Import.WordDraft do
   defp cast_list([], _play_id), do: nil
 
   defp cast_list(characters, play_id) do
-    id = Ecto.UUID.generate()
+    id = stable_id(play_id, :cast_list)
 
     entries =
       for {_label, character} <- characters do
@@ -315,7 +324,7 @@ defmodule Playcode.Import.WordDraft do
   defp front_matter(content, play_id) do
     [
       %Paratext{
-        id: Ecto.UUID.generate(),
+        id: stable_id(play_id, :front_matter),
         play_id: play_id,
         kind: "nota_edicion_digital",
         heading: "Front matter",

@@ -197,6 +197,43 @@ defmodule Playcode.Import.WordDraftTest do
     assert %{acts: 5, scenes: 30} = draft.summary
   end
 
+  # The premarked page re-drafts on every edit; rows keeping their ids is what lets it send
+  # only the rows that changed.
+  test "an edit to one paragraph leaves the other rows' ids as they were" do
+    play = play_fixture()
+    paragraphs = file_paragraphs(@ejercicio)
+    edited = List.update_at(paragraphs, 20, &(&1 <> " x"))
+
+    ids = fn draft -> draft.lines |> Map.keys() |> MapSet.new() end
+    first = draft!(paragraphs, play)
+
+    assert ids.(draft!(paragraphs, play)) == ids.(first)
+    assert MapSet.size(MapSet.difference(ids.(first), ids.(draft!(edited, play)))) == 0
+
+    assert Enum.map(first.paratexts, & &1.id) ==
+             Enum.map(draft!(paragraphs, play).paratexts, & &1.id)
+  end
+
+  test "the same text imported twice is stored again, under the same ids" do
+    play = play_fixture()
+    paragraphs = file_paragraphs(@ejercicio)
+
+    assert {:ok, _} = WordParser.import_content(play.id, paragraphs)
+    assert {:ok, _} = WordParser.import_content(play.id, paragraphs)
+
+    assert_same(
+      rows(draft!(paragraphs, play).divisions),
+      rows(PlayContent.load_play_content(play.id))
+    )
+  end
+
+  test "two plays drafted from one text share no id" do
+    paragraphs = file_paragraphs(@ejercicio)
+    a = draft!(paragraphs, play_fixture()).lines |> Map.keys() |> MapSet.new()
+    b = draft!(paragraphs, play_fixture()).lines |> Map.keys() |> MapSet.new()
+    assert MapSet.disjoint?(a, b)
+  end
+
   test "every row knows the paragraph it came from" do
     play = play_fixture()
     draft = draft!(["{e}Escena 1", "", "{p}FEBO {v}Uno.", "{v}Dos."], play)
