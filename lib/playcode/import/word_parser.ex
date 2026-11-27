@@ -8,6 +8,7 @@ defmodule Playcode.Import.WordParser do
 
   alias Playcode.{Catalogue, PlayContent}
   alias Playcode.Import.WordDraft
+  alias Playcode.PlayContent.InlineMarkup
 
   @doc "The paragraphs of the premarked .docx at `path`, in order, as plain text."
   def paragraphs(path) do
@@ -469,12 +470,20 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
-  # {ap} anywhere in the paragraph makes its verse and prose asides.
+  @spoken_tags [:verse, :verse_initial, :verse_middle, :verse_final, :prose]
+  @marked_aside ~r/\(\((.+?)\)\)/s
+
+  # {ap} anywhere in the paragraph makes its verse and prose asides, unless ((…)) marks
+  # the words said aside: then {ap}'s words are the delivery, before the first of them.
   defp build_children(segments, line) do
-    aside? = has_tag?(segments, :aside)
+    partial? = Enum.any?(segments, fn {_tag, text} -> Regex.match?(@marked_aside, text) end)
+    aside? = has_tag?(segments, :aside) and not partial?
+    delivery = if partial?, do: get_tag_text(segments, :aside), else: ""
 
     segments
     |> Enum.reject(fn {tag, _} -> tag in [:speaker, :scene, :aside, :stanza, :text, :act] end)
+    |> Enum.map_reduce(delivery, &mark_asides/2)
+    |> elem(0)
     |> Enum.map(fn
       {:verse, text} -> %{type: "verse_line", content: text, part: nil, is_aside: aside?}
       {:verse_initial, text} -> %{type: "verse_line", content: text, part: "I", is_aside: aside?}
@@ -489,13 +498,34 @@ defmodule Playcode.Import.WordParser do
     |> Enum.reverse()
   end
 
+  defp mark_asides({tag, text}, delivery) when tag in @spoken_tags do
+    {open, close} = InlineMarkup.aside_marker()
+
+    marked =
+      Regex.replace(@marked_aside, text, fn _whole, words ->
+        open <> String.trim(words) <> close
+      end)
+
+    if delivery != "" and marked != text,
+      do: {{tag, with_delivery(marked, delivery)}, ""},
+      else: {{tag, marked}, delivery}
+  end
+
+  defp mark_asides(segment, delivery), do: {segment, delivery}
+
+  defp with_delivery(text, delivery) do
+    {open, _close} = InlineMarkup.aside_marker()
+    {stage_open, stage_close} = InlineMarkup.stage_marker("delivery")
+    String.replace(text, open, "#{stage_open}#{delivery}#{stage_close} #{open}", global: false)
+  end
+
   defp join_pieces_split_by_stage(
          piece,
          [%{type: "stage_direction"} = stage, before | rest] = acc
        ) do
     if piece.type in ["verse_line", "prose"] and
          Map.delete(piece, :content) == Map.delete(before, :content) do
-      {open, close} = Playcode.PlayContent.InlineMarkup.stage_marker(nil)
+      {open, close} = InlineMarkup.stage_marker(nil)
       content = "#{before.content} #{open}#{stage.content}#{close} #{piece.content}"
       [%{before | content: content} | rest]
     else

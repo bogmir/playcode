@@ -229,16 +229,45 @@ defmodule Playcode.Import.WordParserTest do
       assert "en voz alta" in xml_texts(xml, "l")
     end
 
-    test "((…)) is left as typed and {ap}'s text is dropped" do
+    # This read ((…)) as typed and dropped {ap}'s text until the owner decided, 2026-11-27,
+    # that ((…)) is the aside it marks and {ap} before it the aside's delivery.
+    test "((…)) marks the words spoken aside, the rest stays ordinary speech" do
       xml =
         import_word([
           "{e}Escena 1",
-          "{p}RICARDO {ap}(Aparte) {pr}Muy bien. ((En realidad prefiero el verso. –)) Y entonces."
+          "{p}RICARDO {pr}Muy bien. ((En realidad prefiero el verso. –)) Y entonces, ¿qué?"
         ])
 
+      assert [{%{"type" => "aside"}, "En realidad prefiero el verso. –"}] =
+               xml_elements(xml, "seg")
+
       assert [text] = xml_texts(xml, "p", within: "sp")
-      assert text =~ "((En realidad prefiero el verso. –))"
-      assert xml_texts(xml, "stage") == []
+      assert text =~ "Muy bien."
+      assert text =~ "Y entonces, ¿qué?"
+      refute text =~ "(("
+      refute text =~ "))"
+    end
+
+    test "{ap} before ((…)) is the aside's delivery" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}RICARDO {ap}(Aparte) {pr}Muy bien. ((En realidad…)) Y entonces."
+        ])
+
+      assert xml_texts(xml, "stage", within: "sp") == ["(Aparte)"]
+      assert xml_texts(xml, "seg") == ["En realidad…"]
+      assert [text] = xml_texts(xml, "p", within: "sp")
+      assert text =~ "Muy bien."
+    end
+
+    test "((…)) inside a verse" do
+      xml = import_word(["{e}Escena 1", "{p}DUQUE {v}Bien está ((y mal)) señor"])
+
+      assert xml_texts(xml, "seg") == ["y mal"]
+      assert [line] = xml_texts(xml, "l")
+      assert line =~ "Bien está"
+      assert line =~ "señor"
     end
 
     # Word marks each paragraph aside on its own, so it says nothing of where an aside
