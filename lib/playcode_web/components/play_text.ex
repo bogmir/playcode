@@ -79,22 +79,17 @@ defmodule PlaycodeWeb.Components.PlayText do
     """
   end
 
-  defp part_key(part) when is_atom(part), do: part
+  defp part_key({own, _elements}) when is_atom(own), do: own
 
   defp part_key({child, _key}), do: child.id
-
-  defp own_elements(division, part) do
-    {elements, trailers} = division |> Map.get(:loaded_elements, []) |> Element.split_trailers()
-    if part == :trailers, do: trailers, else: elements
-  end
 
   defp act_part(assigns) do
     ~H"""
     <%= case @part do %>
-      <% part when part in [:elements, :trailers] -> %>
+      <% {own, elements} when own in [:elements, :trailers] -> %>
         <div>
           <.element_list
-            elements={own_elements(@division, part)}
+            elements={elements}
             show_line_numbers={@show_line_numbers}
             show_stage_directions={@show_stage_directions}
             show_split_verses={@show_split_verses}
@@ -140,14 +135,16 @@ defmodule PlaycodeWeb.Components.PlayText do
     for item <- Outline.items(paratexts, divisions), do: {item, Map.get(keys, item.id)}
   end
 
-  # An act's parts in its file's order: the lists that open it, its own elements
-  # (`:elements`), then its scenes and other lists, each child with its comparison key.
+  # An act's parts in its file's order: the lists that open it, its own elements, its scenes
+  # and other lists (each child with its comparison key), then its closing formula.
   defp act_parts(division, sync?) do
     children = Map.get(division, :children, [])
     {opening, _rest} = Division.split_opening_lists(children)
     {opening, rest} = children |> sync_keyed(sync?) |> Enum.split(length(opening))
-    {_elements, trailers} = division |> Map.get(:loaded_elements, []) |> Element.split_trailers()
-    opening ++ [:elements] ++ rest ++ if(trailers == [], do: [], else: [:trailers])
+    {elements, trailers} = division |> Map.get(:loaded_elements, []) |> Element.split_trailers()
+
+    opening ++
+      [{:elements, elements}] ++ rest ++ if(trailers == [], do: [], else: [{:trailers, trailers}])
   end
 
   defp outline_id(%Paratext{id: id}), do: "paratext-#{id}"

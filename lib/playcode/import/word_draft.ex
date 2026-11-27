@@ -14,7 +14,7 @@ defmodule Playcode.Import.WordDraft do
   """
 
   alias Playcode.Catalogue.Paratext
-  alias Playcode.Import.Asides
+  alias Playcode.Import.{Asides, WordParser}
   alias Playcode.Statistics.Metrics
 
   alias Playcode.PlayContent.{
@@ -87,9 +87,7 @@ defmodule Playcode.Import.WordDraft do
 
   defp split_verse_warnings(rows) do
     rows
-    |> Enum.filter(&(&1.type == "verse_line"))
-    |> Enum.chunk_by(& &1.act_id)
-    |> SplitVerses.out_of_order()
+    |> SplitVerses.out_of_order_in_rows()
     |> Enum.map(fn {row, problem} -> {row.id, split_warning(problem)} end)
   end
 
@@ -228,7 +226,7 @@ defmodule Playcode.Import.WordDraft do
       acts
       |> Enum.with_index(first_position)
       |> Enum.map_reduce({1, []}, fn {act, position}, {act_number, refused} ->
-        numbered? = act.type not in ["prologo", "epilogue", "induction"]
+        numbered? = not WordParser.sceneless_type?(act.type)
 
         {scenes, refused} =
           act.scenes
@@ -239,7 +237,15 @@ defmodule Playcode.Import.WordDraft do
           end)
 
         {division, refused} =
-          division(act.id, play_id, nil, act.type, act.head, numbered? && act_number, position)
+          division(
+            act.id,
+            play_id,
+            nil,
+            act.type,
+            act.head,
+            if(numbered?, do: act_number),
+            position
+          )
           |> with_elements(Map.get(act, :_direct_elements, []), characters, refused)
 
         act_number = if numbered?, do: act_number + 1, else: act_number
@@ -256,7 +262,7 @@ defmodule Playcode.Import.WordDraft do
       parent_id: parent_id,
       type: type,
       title: title,
-      number: number || nil,
+      number: number,
       position: position
     })
     |> Ecto.Changeset.apply_changes()

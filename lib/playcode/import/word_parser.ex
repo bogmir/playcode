@@ -72,7 +72,8 @@ defmodule Playcode.Import.WordParser do
     |> Enum.map(fn {tag, text} -> {tag_to_atom(tag), String.trim(text)} end)
   end
 
-  @tag_pattern ~r/\{(e|ac|ap|p|v|ti|tm|tf|pr|m|a)\}/i
+  @tags "e|ac|ap|p|v|ti|tm|tf|pr|m|a"
+  @tag_pattern ~r/\{(#{@tags})\}/i
 
   defp split_into_tag_segments(line) do
     parts = Regex.split(@tag_pattern, line, include_captures: true)
@@ -169,15 +170,17 @@ defmodule Playcode.Import.WordParser do
 
     front_matter = if front_matter == "", do: nil, else: front_matter
 
+    text_starts = length(front_lines)
+
     warnings =
-      for {paragraph, line} <- Enum.with_index(paragraphs),
-          kind <- paragraph_warnings(paragraph, line >= length(front_lines)),
+      for {{segments, line}, paragraph} <- Enum.zip(parsed_lines, paragraphs),
+          kind <- paragraph_warnings(paragraph, segments, line >= text_starts),
           do: %{line: line, kind: kind}
 
     {:ok, %{acts: acts, front_matter: front_matter, warnings: warnings}}
   end
 
-  @spaced_tag ~r/\{\s*(e|ac|ap|p|v|ti|tm|tf|pr|m|a)\s*\}/i
+  @spaced_tag ~r/\{\s*(#{@tags})\s*\}/i
   @braced_name ~r/(\{p\}\s*)\{([^{}]+)\}/i
 
   # What the text can mean only one way is read that way, each paragraph keeping its line: a
@@ -318,11 +321,9 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
-  @unknown_tag ~r/\{(?!(?:e|ac|ap|p|v|ti|tm|tf|pr|m|a)\})[a-z]{1,3}\}/i
+  @unknown_tag ~r/\{(?!(?:#{@tags})\})[a-z]{1,3}\}/i
 
-  defp paragraph_warnings(paragraph, in_text?) do
-    segments = parse_line(paragraph)
-
+  defp paragraph_warnings(paragraph, segments, in_text?) do
     [
       unknown_tag: Regex.match?(@unknown_tag, paragraph),
       dropped_text: in_text? and match?([{:text, _}, _ | _], segments),
@@ -478,7 +479,7 @@ defmodule Playcode.Import.WordParser do
         acts = ensure_act(acts, state)
         current_act = List.last(acts)
 
-        if is_sceneless_type?(current_act.type) and current_act.scenes == [] do
+        if sceneless_type?(current_act.type) and current_act.scenes == [] do
           process_direct_content(segments, acts, state)
         else
           acts = ensure_scene(acts, state.line)
@@ -488,10 +489,11 @@ defmodule Playcode.Import.WordParser do
   end
 
   defp is_act_level_scene?(text) do
-    division_heading?(text) and is_sceneless_type?(detect_act_type(text))
+    division_heading?(text) and sceneless_type?(detect_act_type(text))
   end
 
-  defp is_sceneless_type?(type) do
+  @doc false
+  def sceneless_type?(type) do
     type in ["prologo", "epilogue", "induction"]
   end
 
@@ -690,7 +692,7 @@ defmodule Playcode.Import.WordParser do
   defp append_element_smart(acts, element) do
     act = List.last(acts)
 
-    if is_sceneless_type?(act.type) and act.scenes == [] do
+    if sceneless_type?(act.type) and act.scenes == [] do
       append_direct_element(acts, element)
     else
       acts = ensure_scene(acts, element.line)

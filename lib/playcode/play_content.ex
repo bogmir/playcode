@@ -170,39 +170,6 @@ defmodule Playcode.PlayContent do
   end
 
   @doc """
-  Creates a character, silently skipping if the xml_id already exists for this play.
-  Used during TEI import where malformed files may contain duplicate xml:id entries.
-  Returns the existing character when a conflict is detected.
-  """
-  def create_character_unless_exists(attrs, opts \\ []) do
-    play_id = attrs[:play_id] || attrs["play_id"]
-    xml_id = attrs[:xml_id] || attrs["xml_id"]
-    name = attrs[:name] || attrs["name"]
-
-    case find_character_by_xml_id(play_id, xml_id) do
-      nil ->
-        create_character(attrs, opts)
-
-      %Character{name: existing_name} = existing when existing_name == name ->
-        {:ok, existing}
-
-      _different_name ->
-        # Same xml_id but different name — generate a unique suffix
-        unique_id = generate_unique_xml_id(play_id, xml_id, 2)
-        create_character(Map.put(attrs, :xml_id, unique_id), opts)
-    end
-  end
-
-  defp generate_unique_xml_id(play_id, base_id, n) do
-    candidate = "#{base_id}_#{n}"
-
-    case find_character_by_xml_id(play_id, candidate) do
-      nil -> candidate
-      _ -> generate_unique_xml_id(play_id, base_id, n + 1)
-    end
-  end
-
-  @doc """
   The play's character with this `xml_id`, the id `<sp who>` cites, or nil.
   """
   def find_character_by_xml_id(play_id, xml_id) do
@@ -448,9 +415,7 @@ defmodule Playcode.PlayContent do
   def split_verses_out_of_order(play_id) do
     play_id
     |> reading_order()
-    |> Enum.filter(&(&1.type == "verse_line"))
-    |> Enum.chunk_by(& &1.act_id)
-    |> SplitVerses.out_of_order()
+    |> SplitVerses.out_of_order_in_rows()
   end
 
   @doc """

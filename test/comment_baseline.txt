@@ -59,7 +59,7 @@ lib/playcode/performances/performance.ex 12
 lib/playcode/places.ex 14
 lib/playcode/places/authority/wikidata.ex 20
 lib/playcode/places/place.ex 4
-lib/playcode/play_content.ex 29
+lib/playcode/play_content.ex 28
 lib/playcode/play_content/character.ex 3
 lib/playcode/play_content/division.ex 2
 lib/playcode/play_content/element.ex 22
