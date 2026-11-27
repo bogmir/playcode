@@ -192,6 +192,11 @@ defmodule Playcode.Import.WordDraftTest do
     assert ricardo > 1
   end
 
+  test "the summary's acts leave out the prologue, the induction and the epilogue" do
+    draft = draft!(file_paragraphs(@bartholomew), play_fixture())
+    assert %{acts: 5, scenes: 30} = draft.summary
+  end
+
   test "every row knows the paragraph it came from" do
     play = play_fixture()
     draft = draft!(["{e}Escena 1", "", "{p}FEBO {v}Uno.", "{v}Dos."], play)

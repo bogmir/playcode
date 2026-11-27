@@ -15,6 +15,7 @@ defmodule Playcode.Import.WordDraft do
 
   alias Playcode.Catalogue.Paratext
   alias Playcode.Import.Asides
+  alias Playcode.Statistics.Metrics
 
   alias Playcode.PlayContent.{
     CastListEntry,
@@ -376,8 +377,9 @@ defmodule Playcode.Import.WordDraft do
   end
 
   defp summary(divisions) do
-    acts = Enum.reject(divisions, &(&1.type == "elenco"))
-    elements = Enum.flat_map(acts, &all_elements/1)
+    texts = Enum.reject(divisions, &(&1.type == "elenco"))
+    acts = Enum.filter(texts, &(&1.type in Metrics.act_types()))
+    elements = Enum.flat_map(texts, &all_elements/1)
 
     speakers =
       elements

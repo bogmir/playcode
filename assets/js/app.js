@@ -25,8 +25,59 @@ import {LiveSocket} from "phoenix_live_view"
 import {hooks as colocatedHooks} from "phoenix-colocated/playcode"
 import topbar from "../vendor/topbar"
 import {syncPanels} from "./sync_scroll.mjs"
+import {lineAt, rangeOf, nearestMarked} from "./premarked.mjs"
 // The published site's script: its EMOTHE.stepper runs the play page's arrows too.
 import "../../priv/static_site/site.js"
+
+// PremarkedText hook: the premarked page's text box. The text is kept in the browser per
+// play until imported; the caret shows its line in the preview, and a click on a line of
+// the preview or on a warning selects that line in the text box.
+const PremarkedText = {
+  mounted() {
+    this.key = `playcode.premarked.${this.el.dataset.play}`
+    this.preview = document.getElementById("premarked-preview")
+    const kept = this.stored(() => localStorage.getItem(this.key))
+    if (kept && !this.el.value.trim()) {
+      this.el.value = kept
+      this.el.dispatchEvent(new Event("input", {bubbles: true}))
+    }
+    this.el.addEventListener("input", () => this.stored(() => localStorage.setItem(this.key, this.el.value)))
+    const follow = () => this.show(lineAt(this.el.value, this.el.selectionStart))
+    this.el.addEventListener("click", follow)
+    this.el.addEventListener("keyup", follow)
+    this.onClick = (event) => {
+      const target = event.target.closest("#premarked-preview [data-line], #premarked-warnings [data-line], #premarked-errors [data-line]")
+      if (target) this.select(Number(target.dataset.line))
+    }
+    document.addEventListener("click", this.onClick)
+    this.handleEvent("premarked:clear", () => this.stored(() => localStorage.removeItem(this.key)))
+  },
+  destroyed() { document.removeEventListener("click", this.onClick) },
+  // A private window or blocked storage leaves the page working, without it.
+  stored(use) { try { return use() } catch (_error) { return null } },
+  show(line) {
+    const marked = [...this.preview.querySelectorAll("[data-line]")]
+    const nearest = nearestMarked(marked.map((el) => Number(el.dataset.line)), line)
+    const target = marked.find((el) => Number(el.dataset.line) === nearest)
+    this.preview.querySelectorAll(".premarked-current").forEach((el) => el.classList.remove("premarked-current"))
+    if (!target) return
+    target.classList.add("premarked-current")
+    const offset = target.getBoundingClientRect().top - this.preview.getBoundingClientRect().top
+    this.preview.scrollTop += offset - this.preview.clientHeight / 3
+  },
+  // The height of the text before the line, wrapped as the box wraps it, is where it starts.
+  select(line) {
+    const text = this.el.value
+    const [start, end] = rangeOf(text, line)
+    this.el.value = text.slice(0, start)
+    const above = this.el.scrollHeight
+    this.el.value = text
+    this.el.focus()
+    this.el.setSelectionRange(start, end)
+    this.el.scrollTop = Math.max(0, above - this.el.clientHeight / 3)
+    this.show(line)
+  },
+}
 
 // Stepper hook: the arrows that step through the shared lines or the stage directions.
 // Its element carries the switches that re-render the text (data-switches), so turning
@@ -144,7 +195,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss, Stepper, AlignParts},
+  hooks: {...colocatedHooks, ScrollSpy, SyncScroll, ShiftClick, AutoDismiss, Stepper, AlignParts, PremarkedText},
 })
 
 // Show progress bar on live navigation and form submits

@@ -253,9 +253,14 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
             <ul aria-label={gettext("Speeches by speaker")} class="mt-1 flex flex-wrap gap-1">
               <li
                 :for={{speaker, count} <- @draft.summary.speakers}
-                class={["badge badge-sm gap-1", count == 1 && "badge-warning badge-outline"]}
+                class={[
+                  "badge badge-sm max-w-64 gap-1",
+                  count == 1 && "badge-warning badge-outline"
+                ]}
+                title={speaker}
               >
-                {speaker} <span class="text-base-content/70">{count}</span>
+                <span class="truncate">{speaker}</span>
+                <span class="text-base-content/70">{count}</span>
               </li>
             </ul>
           </div>
