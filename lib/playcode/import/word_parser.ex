@@ -8,7 +8,7 @@ defmodule Playcode.Import.WordParser do
 
   alias Playcode.{Catalogue, PlayContent}
   alias Playcode.Import.WordDraft
-  alias Playcode.PlayContent.InlineMarkup
+  alias Playcode.PlayContent.{Element, InlineMarkup}
 
   @doc "The paragraphs of the premarked .docx at `path`, in order, as plain text."
   def paragraphs(path) do
@@ -131,7 +131,7 @@ defmodule Playcode.Import.WordParser do
   #
   # Returns `{:ok, %{acts: [...], warnings: [...]}}` or `{:error, reason}`.
   defp parse_content(paragraphs) do
-    paragraphs = mend(paragraphs)
+    {paragraphs, closings} = mend(paragraphs)
     parsed_lines = paragraphs |> Enum.map(&parse_line/1) |> Enum.with_index()
 
     {front_lines, content_lines} = split_front_matter(parsed_lines)
@@ -139,7 +139,14 @@ defmodule Playcode.Import.WordParser do
     {acts, _state} =
       content_lines
       |> Enum.reduce(
-        {[], %{current_act: nil, current_scene: nil, current_speech: nil, line: nil}},
+        {[],
+         %{
+           current_act: nil,
+           current_scene: nil,
+           current_speech: nil,
+           line: nil,
+           closings: closings
+         }},
         fn {segments, line}, {acts, state} ->
           process_line(segments, acts, %{state | line: line})
         end
@@ -187,10 +194,38 @@ defmodule Playcode.Import.WordParser do
           into: MapSet.new(),
           do: String.upcase(name)
 
-    paragraphs
-    |> Enum.map(&(&1 |> unbrace_speaker(speakers) |> as_speaker(speakers)))
-    |> join_prose()
-    |> carry_asides()
+    paragraphs = Enum.map(paragraphs, &(&1 |> unbrace_speaker(speakers) |> as_speaker(speakers)))
+    closings = closing_lines(paragraphs)
+    {paragraphs |> join_prose(closings) |> carry_asides(), closings}
+  end
+
+  # Closing words ("FIN", "{e}THE END") are their act's trailer when nothing of the act
+  # follows them, as TeiParser reads a last scene holding only them.
+  defp closing_lines(paragraphs) do
+    {closings, _act_ends?} =
+      paragraphs
+      |> Enum.map(&parse_line/1)
+      |> Enum.with_index()
+      |> Enum.reverse()
+      |> Enum.reduce({MapSet.new(), true}, fn {segments, line}, {closings, act_ends?} ->
+        cond do
+          segments == [] -> {closings, act_ends?}
+          act_ends? and closing?(segments) -> {MapSet.put(closings, line), true}
+          opens_act?(segments) -> {closings, true}
+          true -> {closings, false}
+        end
+      end)
+
+    closings
+  end
+
+  defp closing?([{:scene, text}]), do: Element.closing_words?(text)
+  defp closing?([{:text, text}]), do: Element.closing_words?(text, alone: true)
+  defp closing?(_segments), do: false
+
+  defp opens_act?(segments) do
+    has_tag?(segments, :act) or match?({:ok, _, _}, detect_act_heading(segments)) or
+      (has_tag?(segments, :scene) and is_act_level_scene?(get_tag_text(segments, :scene)))
   end
 
   defp unbrace_speaker(paragraph, speakers) do
@@ -245,12 +280,15 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
-  defp join_prose(paragraphs) do
+  defp join_prose(paragraphs, closings) do
     {groups, _in_speech?} =
-      Enum.reduce(paragraphs, {[], false}, fn paragraph, {groups, in_speech?} ->
+      paragraphs
+      |> Enum.with_index()
+      |> Enum.reduce({[], false}, fn {paragraph, line}, {groups, in_speech?} ->
         segments = parse_line(paragraph)
 
-        if in_speech? and match?([{:text, _}], segments) and ends_in_prose?(groups) do
+        if in_speech? and match?([{:text, _}], segments) and ends_in_prose?(groups) and
+             line not in closings do
           [group | rest] = groups
           {[[paragraph | group] | rest], true}
         else
@@ -353,6 +391,16 @@ defmodule Playcode.Import.WordParser do
 
   defp process_line(segments, acts, state) do
     cond do
+      state.line in state.closings ->
+        trailer = %{
+          type: "trailer",
+          content: segments |> segments_to_text() |> String.trim(),
+          line: state.line
+        }
+
+        {acts |> ensure_act(state) |> append_direct_element(trailer),
+         %{state | current_speech: nil}}
+
       has_tag?(segments, :act) ->
         heading = get_tag_text(segments, :act)
         act_type = detect_act_type(heading)
@@ -404,16 +452,6 @@ defmodule Playcode.Import.WordParser do
             {acts ++ [act],
              %{state | current_act: length(acts), current_scene: nil, current_speech: nil}}
 
-          is_end_marker?(scene_text) ->
-            # {e}THE END → store as unrecognized element, not as scene
-            if acts != [] do
-              el = %{type: "unrecognized", content: String.trim(scene_text), line: state.line}
-              acts = append_element_smart(acts, el)
-              {acts, %{state | current_speech: nil}}
-            else
-              {acts, state}
-            end
-
           true ->
             scene = %{head: scene_text, elements: [], _open: true, line: state.line}
             acts = maybe_insert_act_from_scene_number(acts, scene_text, state.line)
@@ -451,10 +489,6 @@ defmodule Playcode.Import.WordParser do
 
   defp is_act_level_scene?(text) do
     division_heading?(text) and is_sceneless_type?(detect_act_type(text))
-  end
-
-  defp is_end_marker?(text) do
-    Regex.match?(~r/^THE\s+END\b/i, String.trim(text))
   end
 
   defp is_sceneless_type?(type) do
@@ -667,7 +701,7 @@ defmodule Playcode.Import.WordParser do
   defp append_direct_element(acts, element) do
     act = List.last(acts)
     direct = Map.get(act, :_direct_elements, [])
-    updated = %{act | _direct_elements: direct ++ [element]}
+    updated = Map.put(act, :_direct_elements, direct ++ [element])
     List.replace_at(acts, -1, updated)
   end
 

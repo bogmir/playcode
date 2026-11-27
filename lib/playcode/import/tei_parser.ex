@@ -41,7 +41,7 @@ defmodule Playcode.Import.TeiParser do
   alias Playcode.Import.Asides
   alias Playcode.Performances.Performance
   alias Playcode.Places
-  alias Playcode.PlayContent.{Division, InlineMarkup, Note}
+  alias Playcode.PlayContent.{Division, Element, InlineMarkup, Note}
   alias Playcode.Text
   alias Playcode.Witnesses
 
@@ -1562,9 +1562,6 @@ defmodule Playcode.Import.TeiParser do
     }
   end
 
-  # The words the corpus closes with: fin, fine, finis, il fine, telón (spaced out once).
-  @closing_words ~r/\A\W*(?:il\s+)?fin(?:e|is)?\b|\A\W*t\s*e\s*l\s*[óo]\s*n\b/iu
-
   # An act whose last scene holds nothing but a heading of closing words ("FIN DE
   # CORIOLANO.", "Finis actus primi.", "T E L Ó N": 70 acts in 39 plays of the corpus)
   # ends with its trailer, encoded as a scene; the heading becomes that trailer.
@@ -1572,7 +1569,7 @@ defmodule Playcode.Import.TeiParser do
     with [{"div2", _, scene_children} | before] <-
            children |> Enum.reject(&is_binary/1) |> Enum.reverse(),
          [{"head", _, words} = head] <- Enum.reject(scene_children, &is_binary/1),
-         true <- head |> text_content() |> String.match?(@closing_words) do
+         true <- head |> text_content() |> Element.closing_words?() do
       Enum.reverse(before, [{"trailer", [], words}])
     else
       _ -> children

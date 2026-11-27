@@ -126,7 +126,6 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLive do
 
   defp message(:initial_unfinished), do: gettext("An initial part no final part closes")
   defp message(:speaker_as_words), do: gettext("A speaker's name tagged as words")
-  defp message(:end_marker), do: gettext("An end marker, stored as an unrecognised line")
   defp message(:unclosed_aside), do: gettext("(( with no )): the aside is not read")
   defp message(:refused), do: gettext("Markup Playcode cannot store: correct it to import")
 

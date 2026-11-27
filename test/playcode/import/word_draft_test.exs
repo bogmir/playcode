@@ -343,6 +343,45 @@ defmodule Playcode.Import.WordDraftTest do
       assert "Se mueve." in Enum.map(rows(draft.divisions), &elem(&1, 1))
     end
 
+    # As the TEI import reads a last scene holding only closing words (tei_roundtrip_test).
+    test "closing words that end an act are its trailer, tagged {e} or not" do
+      draft =
+        assert_draft_is_stored([
+          "{a}Acto I",
+          "{e}Escena 1",
+          "{p}FEBO {pr}Uno.",
+          "{e}FIN DEL PRIMER ACTO",
+          "{a}Acto II",
+          "{e}Escena 1",
+          "{p}FEBO {pr}Dos.",
+          "FIN."
+        ])
+
+      assert draft.warnings == []
+
+      assert for(
+               act <- draft.divisions,
+               e <- act.loaded_elements,
+               e.type == "trailer",
+               do: {act.title, e.content}
+             ) == [{"Acto I", "FIN DEL PRIMER ACTO"}, {"Acto II", "FIN."}]
+    end
+
+    test "closing words with more of the act after them close nothing" do
+      draft =
+        assert_draft_is_stored([
+          "{e}FIN DE LA PRIMERA PARTE",
+          "{e}Escena 2",
+          "{p}FEBO {pr}Uno, ya",
+          "fine words."
+        ])
+
+      assert "Uno, ya fine words." in spoken(draft)
+
+      assert for(d <- draft.divisions, e <- d.loaded_elements, do: e.type)
+             |> Enum.all?(&(&1 != "trailer"))
+    end
+
     test "what cannot be told apart stays as typed, and warned" do
       assert {_spoken, [{2, :untagged}]} = mended(["{e}Escena 1", "{p}FEBO {v}Uno,", "dos."])
 
@@ -410,10 +449,6 @@ defmodule Playcode.Import.WordDraftTest do
                [{2, :speaker_as_words}]
     end
 
-    test "an end marker, kept as an unrecognised line" do
-      assert warnings(["{e}Escena 1", "{p}FEBO {v}Uno.", "{e}THE END"]) == [{2, :end_marker}]
-    end
-
     test "an aside opened and never closed" do
       assert warnings(["{e}Escena 1", "{p}FEBO {pr}Hola ((aparte sin cerrar"]) ==
                [{1, :unclosed_aside}]
@@ -450,8 +485,9 @@ defmodule Playcode.Import.WordDraftTest do
 
       # Its 28 names tagged as prose, its {R}, its 31 prose paragraphs carried over untagged
       # and the asides they split are mended ("what the import mends"); left are the 38 lines
-      # of the cast list, which premarking has no tag for, and its closing THE END.
-      assert counts == %{untagged: 38, end_marker: 1}
+      # of the cast list, which premarking has no tag for; its {e}THE END is the last act's
+      # trailer.
+      assert counts == %{untagged: 38}
     end
   end
 

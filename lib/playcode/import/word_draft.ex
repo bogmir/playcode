@@ -71,8 +71,7 @@ defmodule Playcode.Import.WordDraft do
     for {id, kind} <- rows, do: %{line: Map.fetch!(lines, id), kind: kind}
   end
 
-  defp row_warning(%{type: "unrecognized", content: content}, _labels),
-    do: if(content =~ ~r/^THE\s+END\b/i, do: :end_marker, else: :untagged)
+  defp row_warning(%{type: "unrecognized"}, _labels), do: :untagged
 
   defp row_warning(%{type: type, content: content}, labels) when type in ~w(verse_line prose) do
     if String.upcase(String.trim(content || "")) in labels, do: :speaker_as_words
@@ -265,7 +264,7 @@ defmodule Playcode.Import.WordDraft do
   defp elements(elements, division, parent_id, characters, refused) do
     elements
     |> Enum.filter(
-      &(&1.type in ~w(speech stage_direction line_group unrecognized verse_line prose))
+      &(&1.type in ~w(speech stage_direction line_group unrecognized verse_line prose trailer))
     )
     |> Enum.with_index()
     |> Enum.map_reduce(refused, fn {element, position}, refused ->

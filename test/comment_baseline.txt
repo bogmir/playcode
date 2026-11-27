@@ -48,10 +48,10 @@ lib/playcode/import/performances.ex 58
 lib/playcode/import/places.ex 90
 lib/playcode/import/tei_corpus.ex 15
 lib/playcode/import/tei_import.ex 129
-lib/playcode/import/tei_parser.ex 309
+lib/playcode/import/tei_parser.ex 308
 lib/playcode/import/witnesses.ex 8
 lib/playcode/import/word_draft.ex 1
-lib/playcode/import/word_parser.ex 31
+lib/playcode/import/word_parser.ex 32
 lib/playcode/performances.ex 26
 lib/playcode/performances/actor.ex 2
 lib/playcode/performances/cast_member.ex 1
@@ -62,7 +62,7 @@ lib/playcode/places/place.ex 4
 lib/playcode/play_content.ex 29
 lib/playcode/play_content/character.ex 3
 lib/playcode/play_content/division.ex 2
-lib/playcode/play_content/element.ex 20
+lib/playcode/play_content/element.ex 22
 lib/playcode/play_content/inline_markup.ex 27
 lib/playcode/play_content/note.ex 10
 lib/playcode/play_content/numbering.ex 7

@@ -13,8 +13,8 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
 
   @ejercicio "test/fixtures/word_files/ejercicio.docx"
 
-  # What the import mends (a name before the speech's own tag, prose carried over untagged)
-  # warns of nothing, so each line here is a kind it cannot mend.
+  # What the import mends (a name before the speech's own tag, prose carried over untagged,
+  # a closing THE END) warns of nothing, so each line here is a kind it cannot mend.
   @every_kind [
     "{e}Escena 1",
     "{p}FEBO {v}Uno.",
@@ -24,8 +24,7 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
     "Nota {p}FEBO {v}Dos.",
     "{p}FEBO {v}Hola ((aparte sin cerrar",
     "OBSERVACIONES:",
-    "{p}RICARDO {ti}pues ¿qué te aflige?",
-    "{e}THE END"
+    "{p}RICARDO {ti}pues ¿qué te aflige?"
   ]
 
   setup %{conn: conn} do
@@ -71,7 +70,7 @@ defmodule PlaycodeWeb.Admin.PlayPremarkedLiveTest do
     {:ok, lv, _html} = live(conn, ~p"/admin/plays/#{play.id}/premarked")
     paste(lv, Enum.join(@every_kind, "\n"))
 
-    for line <- [2, 3, 4, 5, 6, 7, 8, 9] do
+    for line <- [2, 3, 4, 5, 6, 7, 8] do
       assert has_element?(lv, "#premarked-warnings button[data-line='#{line}']")
     end
 

@@ -1876,6 +1876,25 @@ defmodule Playcode.TeiRoundtripTest do
       assert xml_texts(xml, "emph", within: "trailer") == ["CORIOLANO"]
     end
 
+    # The Word import's English plays end "THE END"; one encoded in TEI ends the same way.
+    test "an English last scene holding only THE END is its act's trailer" do
+      xml =
+        roundtrip(
+          tei(
+            body: """
+            <div1 type="act" n="5">
+              <div2 type="scene"><head>Scene 1</head>
+                <sp><speaker>X</speaker><l>Line.</l></sp>
+              </div2>
+              <div2 type="scene"><head>THE END</head></div2>
+            </div1>
+            """
+          )
+        )
+
+      assert reading_texts(xml, "trailer") == ["THE END"]
+    end
+
     # The 63 other scenes of the corpus holding only a heading ("ACTO 2", "SCENA MUTA")
     # are not closing words, and closing words before another scene close nothing.
     test "a heading-only scene stays a scene unless it closes its act" do

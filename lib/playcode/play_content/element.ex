@@ -84,6 +84,18 @@ defmodule Playcode.PlayContent.Element do
     timestamps(type: :utc_datetime)
   end
 
+  # The words the corpus closes a play or an act with: fin, fine, finis, il fine, telón
+  # (spaced out once), and the end.
+  @closing_start ~r/\A\W*(?:(?:il\s+)?fin(?:e|is)?|the\s+end|t\s*e\s*l\s*[óo]\s*n)\b/iu
+  @closing_alone ~r/\A\W*(?:(?:il\s+)?fin(?:e|is)?|the\s+end|t\s*e\s*l\s*[óo]\s*n)\W*\z/iu
+
+  @doc """
+  Whether `text` opens with the words a play or an act closes with ("FIN DE CORIOLANO.",
+  "THE END"), the text of a `trailer`; with `alone: true`, whether it is those words alone.
+  """
+  def closing_words?(text, opts \\ []),
+    do: Regex.match?(if(opts[:alone], do: @closing_alone, else: @closing_start), text)
+
   @doc "The kinds of stage direction TEI suggests for `<stage type>`, in its order."
   def stage_types, do: @stage_types
 
