@@ -7,8 +7,6 @@ defmodule Playcode.Import.Asides do
   marks each paragraph aside on its own, for every aside.
   """
 
-  alias Playcode.PlayContent.InlineMarkup
-
   @doc "`elements`, with `aside_continues` guessed on each aside that has none yet."
   def guess(elements) do
     {elements, _previous_aside} = Enum.map_reduce(elements, false, &guess/2)
@@ -31,38 +29,6 @@ defmodule Playcode.Import.Asides do
     do: {element, false}
 
   defp guess(element, previous), do: {element, previous}
-
-  @doc """
-  `elements` of the Word import, with each piece that a paragraph break cut from its aside
-  continuing it: a line or paragraph that starts inside an aside, after one in its speech
-  that ended inside one, with only stage directions between.
-  """
-  def across_breaks(elements), do: Enum.map(elements, &across_breaks_in/1)
-
-  defp across_breaks_in(%{type: "speech"} = speech) do
-    {children, _ended_aside?} =
-      Enum.map_reduce(speech.children, false, fn
-        %{type: type, content: content} = element, ended_aside?
-        when type in ~w(verse_line prose) ->
-          {open, close} = InlineMarkup.aside_marker()
-          content = String.trim(content || "")
-          continues? = ended_aside? and String.starts_with?(content, open)
-
-          element =
-            if continues?,
-              do: Map.merge(element, %{is_aside: true, aside_continues: true}),
-              else: element
-
-          {element, String.ends_with?(content, close)}
-
-        element, ended_aside? ->
-          {element, ended_aside?}
-      end)
-
-    %{speech | children: children}
-  end
-
-  defp across_breaks_in(element), do: element
 
   # The TEI parser nests a speech's lines under :elements, the Word parser under :children.
   defp nested(element), do: if(Map.has_key?(element, :elements), do: :elements, else: :children)

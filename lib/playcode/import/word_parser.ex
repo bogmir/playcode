@@ -73,7 +73,7 @@ defmodule Playcode.Import.WordParser do
   end
 
   @tags "e|ac|ap|p|v|ti|tm|tf|pr|m|a"
-  @tag_pattern ~r/\{(#{@tags})\}/i
+  @tag_pattern ~r/\{\s*(#{@tags})\s*\}/i
 
   defp split_into_tag_segments(line) do
     parts = Regex.split(@tag_pattern, line, include_captures: true)
@@ -132,26 +132,17 @@ defmodule Playcode.Import.WordParser do
   #
   # Returns `{:ok, %{acts: [...], warnings: [...]}}` or `{:error, reason}`.
   defp parse_content(paragraphs) do
-    {paragraphs, closings} = mend(paragraphs)
-    parsed_lines = paragraphs |> Enum.map(&parse_line/1) |> Enum.with_index()
+    {lines, closings, continued} = paragraphs |> Enum.map(&parse_line/1) |> mend()
+    parsed_lines = Enum.with_index(lines)
 
     {front_lines, content_lines} = split_front_matter(parsed_lines)
 
+    state = %{current_speech: nil, line: nil, closings: closings, continued: continued}
+
     {acts, _state} =
-      content_lines
-      |> Enum.reduce(
-        {[],
-         %{
-           current_act: nil,
-           current_scene: nil,
-           current_speech: nil,
-           line: nil,
-           closings: closings
-         }},
-        fn {segments, line}, {acts, state} ->
-          process_line(segments, acts, %{state | line: line})
-        end
-      )
+      Enum.reduce(content_lines, {[], state}, fn {segments, line}, {acts, state} ->
+        process_line(segments, acts, %{state | line: line})
+      end)
 
     acts = finalize_structure(acts)
 
@@ -173,41 +164,38 @@ defmodule Playcode.Import.WordParser do
     text_starts = length(front_lines)
 
     warnings =
-      for {{segments, line}, paragraph} <- Enum.zip(parsed_lines, paragraphs),
-          kind <- paragraph_warnings(paragraph, segments, line >= text_starts),
+      for {segments, line} <- parsed_lines,
+          kind <- paragraph_warnings(segments, line >= text_starts),
           do: %{line: line, kind: kind}
 
     {:ok, %{acts: acts, front_matter: front_matter, warnings: warnings}}
   end
 
-  @spaced_tag ~r/\{\s*(#{@tags})\s*\}/i
-  @braced_name ~r/(\{p\}\s*)\{([^{}]+)\}/i
+  @spoken_tags [:verse, :verse_initial, :verse_middle, :verse_final, :prose]
 
   # What the text can mean only one way is read that way, each paragraph keeping its line: a
   # speaker's name under another tag, before the speech's own, is the speaker; an untagged
   # paragraph after a speech's prose is the rest of it (the .docx breaks prose, often
   # mid-sentence), joined onto it and left empty itself; an aside such a break cuts, closed
-  # later in the speech, is closed and reopened at each break, for `Asides` to join again.
-  defp mend(paragraphs) do
-    paragraphs = Enum.map(paragraphs, &String.replace(&1, @spaced_tag, "{\\1}"))
-
+  # later in the speech, is closed at the break and goes on in the next spoken paragraph.
+  defp mend(lines) do
     speakers =
-      for paragraph <- paragraphs,
-          {:speaker, name} <- parse_line(paragraph),
+      for segments <- lines,
+          {:speaker, name} <- segments,
           into: MapSet.new(),
           do: String.upcase(name)
 
-    paragraphs = Enum.map(paragraphs, &(&1 |> unbrace_speaker(speakers) |> as_speaker(speakers)))
-    closings = closing_lines(paragraphs)
-    {paragraphs |> join_prose(closings) |> carry_asides(), closings}
+    lines = Enum.map(lines, &as_speaker(&1, speakers))
+    closings = closing_lines(lines)
+    {lines, continued} = lines |> join_prose(closings) |> carry_asides()
+    {lines, closings, continued}
   end
 
   # Closing words ("FIN", "{e}THE END") are their act's trailer when nothing of the act
   # follows them, as TeiParser reads a last scene holding only them.
-  defp closing_lines(paragraphs) do
+  defp closing_lines(lines) do
     {closings, _act_ends?} =
-      paragraphs
-      |> Enum.map(&parse_line/1)
+      lines
       |> Enum.with_index()
       |> Enum.reverse()
       |> Enum.reduce({MapSet.new(), true}, fn {segments, line}, {closings, act_ends?} ->
@@ -226,90 +214,71 @@ defmodule Playcode.Import.WordParser do
   defp closing?([{:text, text}]), do: Element.closing_words?(text, alone: true)
   defp closing?(_segments), do: false
 
-  defp opens_act?(segments) do
-    has_tag?(segments, :act) or match?({:ok, _, _}, detect_act_heading(segments)) or
-      (has_tag?(segments, :scene) and is_act_level_scene?(get_tag_text(segments, :scene)))
+  defp opens_act?(segments), do: match?({:ok, _, _}, act_heading(segments))
+
+  @braced_name ~r/^\{([^{}]+)\}/
+
+  defp as_speaker(segments, speakers) do
+    segments =
+      Enum.map(segments, fn
+        {:speaker, label} -> {:speaker, unbrace(label, speakers)}
+        segment -> segment
+      end)
+
+    case segments do
+      [{tag, text} | rest] when rest != [] and tag not in [:scene, :act, :speaker] ->
+        name = if tag == :text, do: under_unknown_tag(text), else: text
+        if name && String.upcase(name) in speakers, do: [{:speaker, name} | rest], else: segments
+
+      _ ->
+        segments
+    end
   end
 
-  defp unbrace_speaker(paragraph, speakers) do
-    Regex.replace(@braced_name, paragraph, fn whole, tag, name ->
-      if String.upcase(String.trim(name)) in speakers, do: tag <> name <> " ", else: whole
+  defp under_unknown_tag(text) do
+    case Regex.run(~r/^\{[a-z]{1,3}\}\s*([^{]+)$/i, text) do
+      [_, name] -> name
+      nil -> nil
+    end
+  end
+
+  defp unbrace(label, speakers) do
+    Regex.replace(@braced_name, label, fn whole, name ->
+      if String.upcase(String.trim(name)) in speakers, do: String.trim(name), else: whole
     end)
   end
 
-  defp carry_asides([]), do: []
-
-  defp carry_asides([paragraph | rest]) do
-    if unclosed_aside?(paragraph) and closed_later?(rest),
-      do: [paragraph <> "))" | carry_asides(reopen_aside(rest))],
-      else: [paragraph | carry_asides(rest)]
-  end
-
-  @spoken_tag ~r/\{(?:pr|v|ti|tm|tf)\}\s*/iu
-
-  defp reopen_aside([next | rest]) do
-    cond do
-      Regex.match?(@spoken_tag, next) ->
-        [Regex.replace(@spoken_tag, next, "\\0((", global: false) | rest]
-
-      String.contains?(next, "))") ->
-        [String.replace(next, "))", "", global: false) | rest]
-
-      true ->
-        [next | reopen_aside(rest)]
-    end
-  end
-
-  defp closed_later?(rest) do
-    speech =
-      rest |> Enum.take_while(&(not Regex.match?(~r/\{(?:p|e|a)\}/i, &1))) |> Enum.join(" ")
-
-    case {:binary.match(speech, "))"), :binary.match(speech, "((")} do
-      {:nomatch, _} -> false
-      {_close, :nomatch} -> true
-      {{close, _}, {open, _}} -> close < open
-    end
-  end
-
-  @named_before_tag ~r/^\s*\{(?!(?:e|a)\})[a-z]{1,3}\}\s*([^{]+?)\s*(\{.*)$/isu
-
-  defp as_speaker(paragraph, speakers) do
-    case Regex.run(@named_before_tag, paragraph) do
-      [_, name, rest] ->
-        if String.upcase(name) in speakers, do: "{P} #{name} #{rest}", else: paragraph
-
-      nil ->
-        paragraph
-    end
-  end
-
-  defp join_prose(paragraphs, closings) do
+  defp join_prose(lines, closings) do
     {groups, _in_speech?} =
-      paragraphs
+      lines
       |> Enum.with_index()
-      |> Enum.reduce({[], false}, fn {paragraph, line}, {groups, in_speech?} ->
-        segments = parse_line(paragraph)
-
+      |> Enum.reduce({[], false}, fn {segments, line}, {groups, in_speech?} ->
         if in_speech? and match?([{:text, _}], segments) and ends_in_prose?(groups) and
              line not in closings and not opens_act?(segments) do
           [group | rest] = groups
-          {[[paragraph | group] | rest], true}
+          {[[segments | group] | rest], true}
         else
-          {[[paragraph] | groups], in_speech?(segments, in_speech?)}
+          {[[segments] | groups], in_speech?(segments, in_speech?)}
         end
       end)
 
     groups
     |> Enum.reverse()
     |> Enum.flat_map(fn group ->
-      [first | rest] = Enum.reverse(group)
-      [Enum.map_join([first | rest], " ", &String.trim/1) | Enum.map(rest, fn _ -> "" end)]
+      [root | rest] = Enum.reverse(group)
+      [join_onto_prose(root, rest) | Enum.map(rest, fn _ -> [] end)]
     end)
   end
 
-  defp ends_in_prose?([group | _]),
-    do: match?({:prose, _}, group |> List.last() |> parse_line() |> List.last())
+  defp join_onto_prose(root, []), do: root
 
+  defp join_onto_prose(root, rest) do
+    {:prose, prose} = List.last(root)
+    texts = for [{:text, text}] <- rest, do: text
+    List.replace_at(root, -1, {:prose, Enum.join([prose | texts], " ")})
+  end
+
+  defp ends_in_prose?([group | _]), do: match?({:prose, _}, group |> List.last() |> List.last())
   defp ends_in_prose?([]), do: false
 
   defp in_speech?(segments, in_speech?) do
@@ -321,20 +290,75 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
+  # `continued`: the lines whose first spoken words go on with the aside a break cut.
+  defp carry_asides(lines), do: carry_asides(Enum.with_index(lines), false, [], MapSet.new())
+
+  defp carry_asides([], _open?, done, continued), do: {Enum.reverse(done), continued}
+
+  defp carry_asides([{segments, line} | rest], open?, done, continued) do
+    {segments, open?, continued} =
+      cond do
+        open? and Enum.any?(segments, &spoken?/1) ->
+          {reopen_aside(segments), false, MapSet.put(continued, line)}
+
+        open? and String.contains?(segments_to_text(segments), "))") ->
+          {close_stray(segments), false, continued}
+
+        true ->
+          {segments, open?, continued}
+      end
+
+    if not open? and unclosed_aside?(segments_to_text(segments)) and closed_later?(rest) do
+      closed = List.update_at(segments, -1, fn {tag, text} -> {tag, text <> "))"} end)
+      carry_asides(rest, true, [closed | done], continued)
+    else
+      carry_asides(rest, open?, [segments | done], continued)
+    end
+  end
+
+  defp spoken?({tag, _text}), do: tag in @spoken_tags
+
+  defp reopen_aside([{tag, text} = segment | rest]) do
+    if spoken?(segment), do: [{tag, "((" <> text} | rest], else: [segment | reopen_aside(rest)]
+  end
+
+  defp close_stray([{tag, text} | rest]) do
+    if String.contains?(text, "))"),
+      do: [{tag, String.replace(text, "))", "", global: false)} | rest],
+      else: [{tag, text} | close_stray(rest)]
+  end
+
+  defp closed_later?(rest) do
+    speech =
+      rest
+      |> Enum.take_while(fn {segments, _line} ->
+        not Enum.any?(segments, fn {tag, _} -> tag in [:speaker, :scene, :act] end)
+      end)
+      |> Enum.map_join(" ", fn {segments, _line} -> segments_to_text(segments) end)
+
+    case {:binary.match(speech, "))"), :binary.match(speech, "((")} do
+      {:nomatch, _} -> false
+      {_close, :nomatch} -> true
+      {{close, _}, {open, _}} -> close < open
+    end
+  end
+
   @unknown_tag ~r/\{(?!(?:#{@tags})\})[a-z]{1,3}\}/i
 
-  defp paragraph_warnings(paragraph, segments, in_text?) do
+  defp paragraph_warnings(segments, in_text?) do
+    text = segments_to_text(segments)
+
     [
-      unknown_tag: Regex.match?(@unknown_tag, paragraph),
+      unknown_tag: Regex.match?(@unknown_tag, text),
       dropped_text: in_text? and match?([{:text, _}, _ | _], segments),
-      unclosed_aside: in_text? and unclosed_aside?(paragraph)
+      unclosed_aside: in_text? and unclosed_aside?(text)
     ]
     |> Enum.filter(&elem(&1, 1))
     |> Enum.map(&elem(&1, 0))
   end
 
-  defp unclosed_aside?(paragraph) do
-    case String.split(paragraph, "((", parts: 2) do
+  defp unclosed_aside?(text) do
+    case String.split(text, "((", parts: 2) do
       [_, after_open] -> not String.contains?(after_open, "))")
       [_] -> false
     end
@@ -382,6 +406,25 @@ defmodule Playcode.Import.WordParser do
 
   defp detect_act_heading(_segments), do: :not_act
 
+  # An act's heading: {a}, an untagged "JORNADA I", or {e} naming a prologue, an epilogue
+  # or an induction, which hold no scenes.
+  defp act_heading(segments) do
+    scene = get_tag_text(segments, :scene)
+
+    cond do
+      has_tag?(segments, :act) ->
+        heading = get_tag_text(segments, :act)
+        {:ok, detect_act_type(heading), heading}
+
+      has_tag?(segments, :scene) and division_heading?(scene) and
+          sceneless_type?(detect_act_type(scene)) ->
+        {:ok, detect_act_type(scene), scene}
+
+      true ->
+        detect_act_heading(segments)
+    end
+  end
+
   defp is_untagged_text?(segments) do
     case segments do
       [{:text, _}] -> true
@@ -402,66 +445,21 @@ defmodule Playcode.Import.WordParser do
         {acts |> ensure_act(state) |> append_direct_element(trailer),
          %{state | current_speech: nil}}
 
-      has_tag?(segments, :act) ->
-        heading = get_tag_text(segments, :act)
-        act_type = detect_act_type(heading)
-
-        act = %{
-          type: act_type,
-          head: heading,
-          scenes: [],
-          _direct_elements: [],
-          _open: true,
-          line: state.line
-        }
-
-        {acts ++ [act],
-         %{state | current_act: length(acts), current_scene: nil, current_speech: nil}}
-
-      match?({:ok, _, _}, detect_act_heading(segments)) ->
-        {:ok, act_type, heading} = detect_act_heading(segments)
-
-        act = %{
-          type: act_type,
-          head: heading,
-          scenes: [],
-          _direct_elements: [],
-          _open: true,
-          line: state.line
-        }
-
-        {acts ++ [act],
-         %{state | current_act: length(acts), current_scene: nil, current_speech: nil}}
+      match?({:ok, _, _}, act_heading(segments)) ->
+        {:ok, act_type, heading} = act_heading(segments)
+        {acts ++ [new_act(act_type, heading, state.line)], %{state | current_speech: nil}}
 
       has_tag?(segments, :scene) ->
         scene_text = get_tag_text(segments, :scene)
+        scene = %{head: scene_text, elements: [], line: state.line}
 
-        cond do
-          is_act_level_scene?(scene_text) ->
-            # {e}EPILOGUE or {e}Prologue or {e}Induction → treat as act-level division
-            act_type = detect_act_type(scene_text)
+        acts =
+          acts
+          |> maybe_insert_act_from_scene_number(scene_text, state.line)
+          |> ensure_act(state)
+          |> append_scene(scene)
 
-            act = %{
-              type: act_type,
-              head: scene_text,
-              scenes: [],
-              _direct_elements: [],
-              _open: true,
-              line: state.line
-            }
-
-            {acts ++ [act],
-             %{state | current_act: length(acts), current_scene: nil, current_speech: nil}}
-
-          true ->
-            scene = %{head: scene_text, elements: [], _open: true, line: state.line}
-            acts = maybe_insert_act_from_scene_number(acts, scene_text, state.line)
-            acts = ensure_act(acts, state)
-            acts = append_scene(acts, scene)
-            act_idx = length(acts) - 1
-            scene_idx = length(List.last(acts).scenes) - 1
-            {acts, %{state | current_act: act_idx, current_scene: scene_idx, current_speech: nil}}
-        end
+        {acts, %{state | current_speech: nil}}
 
       is_untagged_text?(segments) ->
         text = segments_to_text(segments)
@@ -469,28 +467,21 @@ defmodule Playcode.Import.WordParser do
         if String.trim(text) != "" and acts != [] do
           # Store unrecognized text as an element so admin can review
           el = %{type: "unrecognized", content: String.trim(text), line: state.line}
-          acts = append_element_smart(acts, el)
-          {acts, %{state | current_speech: nil}}
+          {append_element_smart(acts, el), %{state | current_speech: nil}}
         else
           {acts, state}
         end
 
       true ->
         acts = ensure_act(acts, state)
-        current_act = List.last(acts)
-
-        if sceneless_type?(current_act.type) and current_act.scenes == [] do
-          process_direct_content(segments, acts, state)
-        else
-          acts = ensure_scene(acts, state.line)
-          process_content_segments(segments, acts, state)
-        end
+        target = target(List.last(acts))
+        acts = if target == :scene, do: ensure_scene(acts, state.line), else: acts
+        process_content(segments, acts, state, target)
     end
   end
 
-  defp is_act_level_scene?(text) do
-    division_heading?(text) and sceneless_type?(detect_act_type(text))
-  end
+  defp target(act),
+    do: if(sceneless_type?(act.type) and act.scenes == [], do: :direct, else: :scene)
 
   @doc false
   def sceneless_type?(type) do
@@ -506,6 +497,9 @@ defmodule Playcode.Import.WordParser do
     end
   end
 
+  defp new_act(type, head, line),
+    do: %{type: type, head: head, scenes: [], _direct_elements: [], line: line}
+
   defp maybe_insert_act_from_scene_number(acts, scene_text, line) do
     case Regex.run(~r/^(\d+)\.(\d+)/, String.trim(scene_text)) do
       [_, act_num_str, _] ->
@@ -513,17 +507,7 @@ defmodule Playcode.Import.WordParser do
         current = get_current_act_number(acts)
 
         if current == nil or act_num != current do
-          acts ++
-            [
-              %{
-                type: "acto",
-                head: "Act #{act_num}",
-                scenes: [],
-                _open: true,
-                _act_num: act_num,
-                line: line
-              }
-            ]
+          acts ++ [Map.put(new_act("acto", "Act #{act_num}", line), :_act_num, act_num)]
         else
           acts
         end
@@ -539,17 +523,14 @@ defmodule Playcode.Import.WordParser do
     Map.get(List.last(acts), :_act_num)
   end
 
-  defp ensure_act([], state) do
-    [%{type: "acto", head: nil, scenes: [], _open: true, line: state.line}]
-  end
-
+  defp ensure_act([], state), do: [new_act("acto", nil, state.line)]
   defp ensure_act(acts, _state), do: acts
 
   defp ensure_scene(acts, line) do
     act = List.last(acts)
 
     if act.scenes == [] do
-      scene = %{head: nil, elements: [], _open: true, line: line}
+      scene = %{head: nil, elements: [], line: line}
       List.replace_at(acts, -1, %{act | scenes: [scene]})
     else
       acts
@@ -561,68 +542,62 @@ defmodule Playcode.Import.WordParser do
     List.replace_at(acts, -1, %{act | scenes: act.scenes ++ [scene]})
   end
 
-  defp process_content_segments(segments, acts, state) do
-    has_speaker = has_tag?(segments, :speaker)
-
-    if has_speaker do
-      speaker_label = get_tag_text(segments, :speaker)
-      children = build_children(segments, state.line)
-
+  defp process_content(segments, acts, state, target) do
+    if has_tag?(segments, :speaker) do
       speech = %{
         type: "speech",
-        speaker_label: speaker_label,
-        children: children,
-        _open: true,
+        speaker_label: get_tag_text(segments, :speaker),
+        children: build_children(segments, state),
         line: state.line
       }
 
-      acts = append_element(acts, speech)
-      {acts, %{state | current_speech: :open}}
+      {append(acts, speech, target), %{state | current_speech: target}}
     else
-      # No speaker — add content to current speech or as standalone elements
-      content_segments =
-        Enum.reject(segments, fn {t, _} ->
-          t in [:text] and String.trim(elem({t, ""}, 1)) == ""
-        end)
-
-      case content_segments do
+      case Enum.reject(segments, &match?({:text, _}, &1)) do
         [{:stage_direction, text}] ->
           el = %{type: "stage_direction", content: text, line: state.line}
-          acts = append_element(acts, el)
-          {acts, state}
+          {append(acts, el, target), state}
 
         [{:stanza, _}] ->
           stanza = %{type: "line_group", children: [], line: state.line}
 
-          if state.current_speech == :open do
-            {append_children_to_last_speech(acts, [stanza]), state}
+          if state.current_speech == target do
+            {continue_last_speech(acts, [stanza], target), state}
           else
             # No speech to hold it: the stanza sits in the scene and takes the verses
             # that follow, exactly as an open speech would.
-            {append_element(acts, stanza), %{state | current_speech: :open}}
+            {append(acts, stanza, target), %{state | current_speech: target}}
           end
 
         _ ->
-          children = build_children(segments, state.line)
+          children = build_children(segments, state)
 
-          if state.current_speech == :open and children != [] do
-            acts = append_children_to_last_speech(acts, children)
-            {acts, state}
+          if state.current_speech == target and children != [] do
+            {continue_last_speech(acts, children, target), state}
           else
-            Enum.reduce(children, {acts, state}, fn child, {a, s} ->
-              {append_element(a, child), s}
-            end)
+            {Enum.reduce(children, acts, &append(&2, &1, target)), state}
           end
       end
     end
   end
 
-  @spoken_tags [:verse, :verse_initial, :verse_middle, :verse_final, :prose]
+  defp append(acts, element, :scene), do: append_element(acts, element)
+  defp append(acts, element, :direct), do: append_direct_element(acts, element)
+
+  defp continue_last_speech(acts, children, :scene),
+    do: update_last_scene(acts, &%{&1 | elements: continue_speech(&1.elements, children)})
+
+  defp continue_last_speech(acts, children, :direct) do
+    act = List.last(acts)
+    direct = continue_speech(act._direct_elements, children)
+    List.replace_at(acts, -1, %{act | _direct_elements: direct})
+  end
+
   @marked_aside ~r/\(\((.+?)\)\)/s
 
   # {ap} anywhere in the paragraph makes its verse and prose asides, unless ((…)) marks
   # the words said aside: then {ap}'s words are the delivery, before the first of them.
-  defp build_children(segments, line) do
+  defp build_children(segments, state) do
     partial? = Enum.any?(segments, fn {_tag, text} -> Regex.match?(@marked_aside, text) end)
     aside? = has_tag?(segments, :aside) and not partial?
     delivery = if partial?, do: get_tag_text(segments, :aside), else: ""
@@ -640,9 +615,17 @@ defmodule Playcode.Import.WordParser do
       {:stage_direction, text} -> %{type: "stage_direction", content: text}
       {_other, text} -> %{type: "text", content: text}
     end)
-    |> Enum.map(&Map.put(&1, :line, line))
+    |> Enum.map(&Map.put(&1, :line, state.line))
     |> Enum.reduce([], &join_pieces_split_by_stage/2)
     |> Enum.reverse()
+    |> continue_aside(state.line in state.continued)
+  end
+
+  defp continue_aside(children, false), do: children
+
+  defp continue_aside(children, true) do
+    index = Enum.find_index(children, &(&1.type in ~w(verse_line prose)))
+    List.update_at(children, index, &Map.merge(&1, %{is_aside: true, aside_continues: true}))
   end
 
   defp mark_asides({tag, text}, delivery) when tag in @spoken_tags do
@@ -688,82 +671,16 @@ defmodule Playcode.Import.WordParser do
     end)
   end
 
-  # Appends element to either _direct_elements (for scene-less types) or scene
   defp append_element_smart(acts, element) do
-    act = List.last(acts)
-
-    if sceneless_type?(act.type) and act.scenes == [] do
-      append_direct_element(acts, element)
-    else
-      acts = ensure_scene(acts, element.line)
-      append_element(acts, element)
+    case target(List.last(acts)) do
+      :direct -> append_direct_element(acts, element)
+      :scene -> acts |> ensure_scene(element.line) |> append_element(element)
     end
   end
 
   defp append_direct_element(acts, element) do
     act = List.last(acts)
-    direct = Map.get(act, :_direct_elements, [])
-    updated = Map.put(act, :_direct_elements, direct ++ [element])
-    List.replace_at(acts, -1, updated)
-  end
-
-  defp process_direct_content(segments, acts, state) do
-    has_speaker = has_tag?(segments, :speaker)
-
-    if has_speaker do
-      speaker_label = get_tag_text(segments, :speaker)
-      children = build_children(segments, state.line)
-
-      speech = %{
-        type: "speech",
-        speaker_label: speaker_label,
-        children: children,
-        _open: true,
-        line: state.line
-      }
-
-      acts = append_direct_element(acts, speech)
-      {acts, %{state | current_speech: :open_direct}}
-    else
-      content_segments =
-        Enum.reject(segments, fn {t, _} ->
-          t in [:text] and String.trim(elem({t, ""}, 1)) == ""
-        end)
-
-      case content_segments do
-        [{:stage_direction, text}] ->
-          el = %{type: "stage_direction", content: text, line: state.line}
-          acts = append_direct_element(acts, el)
-          {acts, state}
-
-        [{:stanza, _}] ->
-          stanza = %{type: "line_group", children: [], line: state.line}
-
-          if state.current_speech == :open_direct do
-            {append_children_to_last_direct_speech(acts, [stanza]), state}
-          else
-            {append_direct_element(acts, stanza), %{state | current_speech: :open_direct}}
-          end
-
-        _ ->
-          children = build_children(segments, state.line)
-
-          if state.current_speech in [:open_direct] and children != [] do
-            acts = append_children_to_last_direct_speech(acts, children)
-            {acts, state}
-          else
-            Enum.reduce(children, {acts, state}, fn child, {a, s} ->
-              {append_direct_element(a, child), s}
-            end)
-          end
-      end
-    end
-  end
-
-  defp append_children_to_last_direct_speech(acts, children) do
-    act = List.last(acts)
-    direct = continue_speech(Map.get(act, :_direct_elements, []), children)
-    List.replace_at(acts, -1, %{act | _direct_elements: direct})
+    List.replace_at(acts, -1, %{act | _direct_elements: act._direct_elements ++ [element]})
   end
 
   # A speech goes on after the stage directions on their own lines that follow it: they
@@ -797,10 +714,6 @@ defmodule Playcode.Import.WordParser do
     end)
   end
 
-  defp append_children_to_last_speech(acts, children) do
-    update_last_scene(acts, &%{&1 | elements: continue_speech(&1.elements, children)})
-  end
-
   defp update_last_scene(acts, fun) do
     act = List.last(acts)
     scene = List.last(act.scenes)
@@ -812,12 +725,8 @@ defmodule Playcode.Import.WordParser do
   defp finalize_structure(acts) do
     acts
     |> Enum.map(fn act ->
-      scenes =
-        act.scenes
-        |> Enum.map(&Map.drop(&1, [:_open]))
-        |> Enum.reject(&(&1.elements == [] and &1.head in [nil, ""]))
-
-      act |> Map.drop([:_open, :_act_num]) |> Map.put(:scenes, scenes)
+      scenes = Enum.reject(act.scenes, &(&1.elements == [] and &1.head in [nil, ""]))
+      act |> Map.delete(:_act_num) |> Map.put(:scenes, scenes)
     end)
     |> Enum.reject(fn act ->
       act.scenes == [] and Map.get(act, :_direct_elements, []) == []
