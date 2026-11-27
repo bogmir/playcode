@@ -97,7 +97,7 @@ lib/playcode_web/live/admin/place_picker.ex 1
 lib/playcode_web/live/admin/play_bibliography_live.ex 10
 lib/playcode_web/live/admin/play_compare_live.ex 8
 lib/playcode_web/live/admin/play_content_editor_live.ex 44
-lib/playcode_web/live/admin/play_detail_live.ex 6
+lib/playcode_web/live/admin/play_detail_live.ex 5
 lib/playcode_web/live/admin/play_editors_live.ex 4
 lib/playcode_web/live/admin/play_form_live.ex 25
 lib/playcode_web/live/admin/play_list_live.ex 11

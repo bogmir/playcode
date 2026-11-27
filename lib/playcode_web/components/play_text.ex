@@ -32,6 +32,10 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :shade_stage, :boolean, default: false
   attr :sync_keys, :boolean, default: false
 
+  attr :lines, :map,
+    default: %{},
+    doc: "element id => %{line: n, warn: boolean}: the premarked paragraph each came from"
+
   def play_body(assigns) do
     ~H"""
     <div
@@ -66,6 +70,7 @@ defmodule PlaycodeWeb.Components.PlayText do
                     show_verse_type={@show_verse_type}
                     show_folio={@show_folio}
                     act_key={div_key}
+                    lines={@lines}
                   />
                 </div>
               <% {child, child_key} -> %>
@@ -88,6 +93,7 @@ defmodule PlaycodeWeb.Components.PlayText do
                       show_verse_type={@show_verse_type}
                       show_folio={@show_folio}
                       act_key={div_key}
+                      lines={@lines}
                     />
                   </div>
                 </div>
@@ -224,11 +230,12 @@ defmodule PlaycodeWeb.Components.PlayText do
   attr :show_verse_type, :boolean, default: false
   attr :show_folio, :boolean, default: false
   attr :act_key, :string, default: nil
+  attr :lines, :map, default: %{}
 
   defp element_list(assigns) do
     ~H"""
     <div>
-      <div :for={element <- @elements}>
+      <div :for={element <- @elements} {line_marks(@lines, element)}>
         <.render_element
           element={element}
           show_line_numbers={@show_line_numbers}
@@ -237,6 +244,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={sync_act(@act_key, element, @show_folio)}
+          lines={@lines}
         />
       </div>
     </div>
@@ -249,6 +257,13 @@ defmodule PlaycodeWeb.Components.PlayText do
   defp sync_act(act_key, element, show_folio),
     do: if(show_folio or not Element.folio_only?(element), do: act_key)
 
+  defp line_marks(lines, element) do
+    case Map.get(lines, element.id) do
+      %{line: line, warn: warn} -> [{"data-line", line}, {"data-warn", warn}]
+      nil -> []
+    end
+  end
+
   attr :element, :map, required: true
   attr :show_line_numbers, :boolean, default: true
   attr :show_stage_directions, :boolean, default: true
@@ -260,6 +275,7 @@ defmodule PlaycodeWeb.Components.PlayText do
 
   attr :show_verse_type, :boolean, default: false
   attr :act_key, :string, default: nil
+  attr :lines, :map, default: %{}
 
   defp render_element(%{element: %{type: "speech"}} = assigns) do
     ~H"""
@@ -278,7 +294,7 @@ defmodule PlaycodeWeb.Components.PlayText do
       >
         <.inline_content text={@element.speaker_label} notes={@element.notes} />
       </div>
-      <div :for={child <- Map.get(@element, :children, [])}>
+      <div :for={child <- Map.get(@element, :children, [])} {line_marks(@lines, child)}>
         <.render_element
           element={child}
           show_line_numbers={@show_line_numbers}
@@ -287,6 +303,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={@act_key}
+          lines={@lines}
         />
       </div>
     </div>
@@ -312,7 +329,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           {@element.verse_type}
         </span>
       </div>
-      <div :for={child <- Map.get(@element, :children, [])}>
+      <div :for={child <- Map.get(@element, :children, [])} {line_marks(@lines, child)}>
         <.render_element
           element={child}
           show_line_numbers={@show_line_numbers}
@@ -321,6 +338,7 @@ defmodule PlaycodeWeb.Components.PlayText do
           leads={@leads}
           show_verse_type={@show_verse_type}
           act_key={@act_key}
+          lines={@lines}
         />
       </div>
     </div>

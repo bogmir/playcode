@@ -11,7 +11,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
   alias Playcode.Catalogue.Play
   alias Playcode.Export.TeiValidator
   alias Playcode.Export.TeiXml
-  alias Playcode.Import.WordParser
   alias Playcode.PlayContent
   alias Playcode.PlayContent.InlineMarkup
   alias Playcode.Statistics
@@ -35,9 +34,7 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
      |> assign(:statistic, statistic)
      |> assign(:play_context, %{play: play, active_tab: :overview})
      |> assign(:validation_result, nil)
-     |> assign(:validating, false)
-     |> assign(:import_result, nil)
-     |> allow_upload(:docx, accept: ~w(.docx), max_entries: 1, max_file_size: 10_000_000)}
+     |> assign(:validating, false)}
   end
 
   @impl true
@@ -47,51 +44,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
     result = TeiValidator.validate(xml)
 
     {:noreply, assign(socket, validation_result: result, validating: false)}
-  end
-
-  def handle_event("validate_upload", _, socket) do
-    {:noreply, socket}
-  end
-
-  def handle_event("import_docx", _, socket) do
-    play = socket.assigns.play
-
-    consumed =
-      consume_uploaded_entries(socket, :docx, fn %{path: path}, _entry ->
-        # Copy to a temp file that persists after consume
-        dest =
-          Path.join(
-            System.tmp_dir!(),
-            "import-#{play.id}-#{System.unique_integer([:positive])}.docx"
-          )
-
-        File.cp!(path, dest)
-        {:ok, dest}
-      end)
-
-    case consumed do
-      [path] ->
-        case WordParser.import_content(play.id, path) do
-          {:ok, _play} ->
-            File.rm(path)
-            play = Catalogue.get_play_with_all!(play.id)
-            divisions = PlayContent.list_top_divisions(play.id)
-            statistic = Statistics.recompute(play.id)
-
-            {:noreply,
-             socket
-             |> assign(play: play, divisions: divisions, statistic: statistic)
-             |> assign(import_result: {:ok, gettext("Content imported successfully.")})
-             |> put_flash(:info, gettext("Content imported successfully."))}
-
-          {:error, reason} ->
-            File.rm(path)
-            {:noreply, assign(socket, import_result: {:error, inspect(reason)})}
-        end
-
-      _ ->
-        {:noreply, assign(socket, import_result: {:error, gettext("No file uploaded.")})}
-    end
   end
 
   def handle_event("archive", _, socket) do
@@ -130,11 +82,6 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
         {:noreply, put_flash(socket, :error, gettext("Failed to update status."))}
     end
   end
-
-  defp error_to_string(:too_large), do: gettext("File is too large (max 10 MB).")
-  defp error_to_string(:not_accepted), do: gettext("Only .docx files are accepted.")
-  defp error_to_string(:too_many_files), do: gettext("Only one file allowed.")
-  defp error_to_string(other), do: inspect(other)
 
   # One change of the file's revision history on a line: "2021 · Muñoz Pons, Carlos · Revisión…".
   defp revision(change) do
@@ -523,33 +470,16 @@ defmodule PlaycodeWeb.Admin.PlayDetailLive do
 
           <.card :if={!@play.is_complete} title={gettext("Replace the text from Word")} dashed>
             <p class="mb-3 text-sm text-base-content/80">
-              {gettext("Upload a premarcado .docx file.")}
-              <strong>{gettext("It replaces all the current text.")}</strong>
-              {gettext("Drafts only.")}
+              {gettext(
+                "Paste the premarked text or drop its .docx, and see the play before importing."
+              )}
             </p>
-            <form id="docx-upload-form" phx-submit="import_docx" phx-change="validate_upload">
-              <.drop_zone
-                upload={@uploads.docx}
-                label={gettext("Drop the Word file here, or choose it")}
-              />
-              <div :for={entry <- @uploads.docx.entries} class="mt-1">
-                <span class="font-mono text-sm">{entry.client_name}</span>
-                <div :for={err <- upload_errors(@uploads.docx, entry)} class="text-error text-xs">
-                  {error_to_string(err)}
-                </div>
-              </div>
-              <button
-                type="submit"
-                class="btn btn-outline btn-primary btn-sm mt-2"
-                disabled={@uploads.docx.entries == []}
-              >
-                {gettext("Replace the text")}
-              </button>
-            </form>
-            <div :if={match?({:error, _}, @import_result)} class="mt-3 alert alert-error text-sm">
-              <.icon name="hero-x-circle-mini" class="size-4" />
-              {elem(@import_result, 1)}
-            </div>
+            <.link
+              navigate={~p"/admin/plays/#{@play.id}/premarked"}
+              class="btn btn-outline btn-primary btn-sm"
+            >
+              {gettext("Premarked text")}
+            </.link>
           </.card>
         </div>
       </div>

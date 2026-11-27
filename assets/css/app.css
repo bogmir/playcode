@@ -520,3 +520,26 @@ input:-webkit-autofill:focus {
 html {
   scrollbar-gutter: stable;
 }
+
+/* The premarked page's preview: a warning's line has a mark in the margin, and the line
+   the text box points at is highlighted for a moment. */
+.premarked-preview [data-warn] {
+  position: relative;
+}
+.premarked-preview [data-warn]::before {
+  content: "!";
+  position: absolute;
+  left: -1.25rem;
+  top: 0.25em;
+  width: 1rem;
+  height: 1rem;
+  border-radius: 9999px;
+  background: var(--color-warning);
+  color: var(--color-warning-content);
+  font: 700 0.65rem/1rem ui-sans-serif, system-ui, sans-serif;
+  text-align: center;
+}
+.premarked-preview .premarked-current {
+  border-radius: 0.25rem;
+  background: color-mix(in oklab, var(--color-primary) 22%, transparent);
+}
