@@ -229,6 +229,18 @@ defmodule Playcode.Import.WordParserTest do
       assert "en voz alta" in xml_texts(xml, "l")
     end
 
+    test "((…)) is left as typed and {ap}'s text is dropped" do
+      xml =
+        import_word([
+          "{e}Escena 1",
+          "{p}RICARDO {ap}(Aparte) {pr}Muy bien. ((En realidad prefiero el verso. –)) Y entonces."
+        ])
+
+      assert [text] = xml_texts(xml, "p", within: "sp")
+      assert text =~ "((En realidad prefiero el verso. –))"
+      assert xml_texts(xml, "stage") == []
+    end
+
     # Word marks each paragraph aside on its own, so it says nothing of where an aside
     # ends: lines aside in a row are taken for one, as a TEI file with nothing else to go by.
     test "{ap} lines in a row are one aside, and a new speech starts another" do
